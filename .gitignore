@@ -1,0 +1,23 @@
+.venv/
+__pycache__/
+*.py[cod]
+.DS_Store
+Thumbs.db
+
+# Local update artifacts / backups
+data/backups/
+data/updates/
+data/update_status.json
+
+# Local executables / tunnel binaries
+cloudflared.exe
+cloudflared.exe.exe
+
+# Generated analysis output
+outputs/
+
+.pytest_cache/
+*.db-wal
+*.db-shm
+data/*.db
+case_studies/skenes/prototype/data/*.csv
