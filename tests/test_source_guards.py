@@ -11,7 +11,6 @@ class SourceGuardTests(unittest.TestCase):
             text = path.read_text(encoding="utf-8")
             self.assertNotIn("/api/skenes/", text, path.name)
 
-
     def test_research_season_selector_is_present(self):
         template = (ROOT / "templates" / "dashboard.html").read_text(encoding="utf-8")
         context = (ROOT / "static" / "pitcher_context.js").read_text(encoding="utf-8")
@@ -48,6 +47,14 @@ class SourceGuardTests(unittest.TestCase):
         for metric in ("release_pos_x", "release_pos_z", "release_extension", "arm_angle"):
             self.assertIn(metric, release)
         self.assertIn("card.hidden = true", release)
+
+    def test_primary_navigation_uses_distinct_views(self):
+        navigation = (ROOT / "static" / "navigation.js").read_text(encoding="utf-8")
+        self.assertIn('ensureViewPanel("location")', navigation)
+        self.assertIn('ensureViewPanel("career")', navigation)
+        self.assertNotIn('panel:\n            "performance"', navigation)
+        self.assertNotIn('panel:\n            "changes"', navigation)
+        self.assertIn('`[data-view-panel="${viewName}"]`', navigation)
 
 
 if __name__ == "__main__":

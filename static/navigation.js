@@ -1,361 +1,173 @@
-// ==================================================
-// Pitcher Research Lab
-// Application Navigation
-// ==================================================
-
+// Pitcher Research Lab navigation
 
 const viewInformation = {
-
     overview: {
-
-        label:
-            "OVERVIEW",
-
-        description:
-            "Executive research summary"
-
+        label: "OVERVIEW",
+        description: "Executive research summary",
     },
-
     arsenal: {
-
-        label:
-            "ARSENAL",
-
-        description:
-            "Pitch characteristics and arsenal evolution"
-
+        label: "ARSENAL",
+        description: "Pitch characteristics and arsenal evolution",
     },
-
     changes: {
-
-        label:
-            "CHANGE DETECTION",
-
-        description:
-            "Statistical departures and transition timing"
-
+        label: "CHANGE DETECTION",
+        description: "Statistical departures and transition timing",
     },
-
     release: {
-
-        label:
-            "RELEASE PROFILE",
-
-        description:
-            "Delivery and release-point investigation"
-
+        label: "RELEASE PROFILE",
+        description: "Delivery and release-point investigation",
     },
-
     performance: {
-
-        label:
-            "PERFORMANCE",
-
-        description:
-            "Command, contact quality and pitch results"
-
+        label: "PERFORMANCE",
+        description: "Game results, hitter response and underlying process",
     },
-
     location: {
-
-        label:
-            "COMMAND & LOCATION",
-
-        description:
-            "Pitch location, hitter response and contact results",
-
-        panel:
-            "performance",
-
-        target:
-            ".location-lab-v2"
-
+        label: "COMMAND & LOCATION",
+        description: "Pitch location, hitter response and contact results",
     },
-
     career: {
-
-        label:
-            "CAREER / TIMELINE",
-
-        description:
-            "Full-career outing and season context",
-
-        panel:
-            "changes",
-
-        target:
-            "#career-audit-panel"
-
-    }
-
+        label: "CAREER / TIMELINE",
+        description: "Full-career outing and season context",
+    },
 };
 
+function ensureViewPanel(viewName) {
+    let panel = document.querySelector(`[data-view-panel="${viewName}"]`);
 
-// ==================================================
-// Open View
-// ==================================================
-
-function openApplicationView(
-    viewName
-) {
-
-    const targetInformation =
-        viewInformation[
-            viewName
-        ];
-
-
-    if (
-        !targetInformation
-    ) {
-
-        return;
-
+    if (panel) {
+        return panel;
     }
 
+    const main = document.querySelector(".main-content");
 
-    // --------------------------------------------------
-    // Hide all views
-    // --------------------------------------------------
+    if (!main) {
+        return null;
+    }
+
+    panel = document.createElement("div");
+    panel.className = "app-view";
+    panel.dataset.viewPanel = viewName;
+    main.appendChild(panel);
+
+    return panel;
+}
+
+function prepareStandaloneViews() {
+    const locationPanel = ensureViewPanel("location");
+    const locationLab = document.querySelector(".location-lab-v2");
+
+    if (
+        locationPanel &&
+        locationLab &&
+        locationLab.parentElement !== locationPanel
+    ) {
+        locationPanel.appendChild(locationLab);
+    }
+
+    const careerPanel = ensureViewPanel("career");
+
+    if (!careerPanel) {
+        return;
+    }
+
+    const moveCareerAudit = () => {
+        const careerAudit = document.getElementById("career-audit-panel");
+
+        if (
+            careerAudit &&
+            careerAudit.parentElement !== careerPanel
+        ) {
+            careerPanel.appendChild(careerAudit);
+        }
+    };
+
+    moveCareerAudit();
+
+    const changesPanel =
+        document.querySelector('[data-view-panel="changes"]');
+
+    if (changesPanel) {
+        const observer = new MutationObserver(moveCareerAudit);
+        observer.observe(changesPanel, {
+            childList: true,
+            subtree: true,
+        });
+    }
+}
+
+function openApplicationView(viewName) {
+    const targetInformation = viewInformation[viewName];
+
+    if (!targetInformation) {
+        return;
+    }
 
     document
-        .querySelectorAll(
-            "[data-view-panel]"
-        )
-        .forEach(
-            panel => {
-
-                panel.classList.remove(
-                    "active"
-                );
-
-            }
-        );
-
-
-    // --------------------------------------------------
-    // Show requested view
-    // --------------------------------------------------
-
-    const panelName =
-        targetInformation.panel
-        ||
-        viewName;
-
+        .querySelectorAll("[data-view-panel]")
+        .forEach(panel => panel.classList.remove("active"));
 
     const targetPanel =
-        document.querySelector(
-            `[data-view-panel="${panelName}"]`
-        );
+        document.querySelector(`[data-view-panel="${viewName}"]`);
 
-
-    if (
-        targetPanel
-    ) {
-
-        targetPanel.classList.add(
-            "active"
-        );
-
+    if (!targetPanel) {
+        return;
     }
 
-
-    // --------------------------------------------------
-    // Sidebar active state
-    // --------------------------------------------------
+    targetPanel.classList.add("active");
 
     document
-        .querySelectorAll(
-            ".nav-item[data-view]"
-        )
-        .forEach(
-            button => {
-
-                button.classList.remove(
-                    "active"
-                );
-
-            }
-        );
-
+        .querySelectorAll(".nav-item[data-view]")
+        .forEach(button => button.classList.remove("active"));
 
     const targetButton =
-        document.querySelector(
-            `.nav-item[data-view="${viewName}"]`
-        );
+        document.querySelector(`.nav-item[data-view="${viewName}"]`);
 
-
-    if (
-        targetButton
-    ) {
-
-        targetButton.classList.add(
-            "active"
-        );
-
+    if (targetButton) {
+        targetButton.classList.add("active");
     }
 
-
-    // --------------------------------------------------
-    // Topbar
-    // --------------------------------------------------
-
-    const label =
-        document.getElementById(
-            "active-view-label"
-        );
-
-
+    const label = document.getElementById("active-view-label");
     const description =
-        document.getElementById(
-            "active-view-description"
-        );
+        document.getElementById("active-view-description");
 
-
-    if (
-        label
-    ) {
-
-        label.textContent =
-            targetInformation.label;
-
+    if (label) {
+        label.textContent = targetInformation.label;
     }
 
-
-    if (
-        description
-    ) {
-
-        description.textContent =
-            targetInformation.description;
-
+    if (description) {
+        description.textContent = targetInformation.description;
     }
 
+    sessionStorage.setItem("pitcherResearchView", viewName);
 
-    // --------------------------------------------------
-    // Save current view
-    // --------------------------------------------------
-
-    sessionStorage.setItem(
-        "pitcherResearchView",
-        viewName
-    );
-
-
-    const targetSection =
-        targetInformation.target
-            ? document.querySelector(targetInformation.target)
-            : null;
-
-
-    if (targetSection) {
-
-        targetSection.scrollIntoView(
-            {
-                block: "start",
-                behavior: "instant"
-            }
-        );
-
-        return;
-
-    }
-
-
-    // --------------------------------------------------
-    // Scroll back to top
-    // --------------------------------------------------
-
-    window.scrollTo(
-        {
-            top: 0,
-            behavior: "instant"
-        }
-    );
-
+    window.scrollTo({
+        top: 0,
+        behavior: "instant",
+    });
 }
 
-
-// ==================================================
-// Sidebar Buttons
-// ==================================================
+prepareStandaloneViews();
 
 document
-    .querySelectorAll(
-        ".nav-item[data-view]"
-    )
-    .forEach(
-        button => {
-
-            button.addEventListener(
-                "click",
-                function () {
-
-                    openApplicationView(
-                        button.dataset.view
-                    );
-
-                }
-            );
-
-        }
-    );
-
-
-// ==================================================
-// In-page Navigation
-// ==================================================
+    .querySelectorAll(".nav-item[data-view]")
+    .forEach(button => {
+        button.addEventListener("click", () => {
+            openApplicationView(button.dataset.view);
+        });
+    });
 
 document
-    .querySelectorAll(
-        "[data-view-link]"
-    )
-    .forEach(
-        button => {
+    .querySelectorAll("[data-view-link]")
+    .forEach(button => {
+        button.addEventListener("click", () => {
+            openApplicationView(button.dataset.viewLink);
+        });
+    });
 
-            button.addEventListener(
-                "click",
-                function () {
+const savedView = sessionStorage.getItem("pitcherResearchView");
 
-                    openApplicationView(
-                        button.dataset.viewLink
-                    );
-
-                }
-            );
-
-        }
-    );
-
-
-// ==================================================
-// Restore Last View
-// ==================================================
-
-const savedView =
-    sessionStorage.getItem(
-        "pitcherResearchView"
-    );
-
-
-if (
-    savedView
-    &&
-    viewInformation[
-        savedView
-    ]
-) {
-
-    openApplicationView(
-        savedView
-    );
-
-}
-
-else {
-
-    openApplicationView(
-        "overview"
-    );
-
+if (savedView && viewInformation[savedView]) {
+    openApplicationView(savedView);
+} else {
+    openApplicationView("overview");
 }
