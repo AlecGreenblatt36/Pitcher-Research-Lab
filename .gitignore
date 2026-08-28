@@ -1,23 +1,43 @@
 .venv/
+venv/
+env/
 __pycache__/
 *.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
 .DS_Store
 Thumbs.db
 
-# Local update artifacts / backups
-data/backups/
-data/updates/
-data/update_status.json
+# Local environment / secrets
+.env
+.env.*
+!.env.example
+
+# Generated databases and data artifacts
+data/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Logs, backups, archives, and temporary output
+*.log
+*.bak
+*.backup
+*.tmp
+*.temp
+*.zip
+outputs/
+tmp/
+temp/
+scratch/
 
 # Local executables / tunnel binaries
 cloudflared.exe
 cloudflared.exe.exe
 
-# Generated analysis output
-outputs/
-
-.pytest_cache/
-*.db-wal
-*.db-shm
-data/*.db
+# Prototype exports are regenerated locally
 case_studies/skenes/prototype/data/*.csv

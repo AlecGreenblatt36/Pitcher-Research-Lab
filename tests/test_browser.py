@@ -62,11 +62,37 @@ class BrowserRegressionTests(unittest.TestCase):
         self.assertEqual(page.locator("#pitcher-loading-overlay").count(), 0)
 
         self._select_fixture(page, 100001, "Veteran Starter")
+        page.locator("#career-audit-panel").wait_for(state="attached")
+
         for view in ("overview", "arsenal", "changes", "release", "performance", "location", "career"):
             button = page.locator(f'[data-view="{view}"]')
             self.assertEqual(button.count(), 1, view)
             button.click()
             self.assertIn("active", button.get_attribute("class"))
+
+            active_panels = page.locator(".app-view.active")
+            self.assertEqual(active_panels.count(), 1, view)
+            self.assertEqual(
+                active_panels.get_attribute("data-view-panel"),
+                view,
+                f"{view} should have its own application panel",
+            )
+
+        page.locator('[data-view="performance"]').click()
+        self.assertTrue(page.locator(".performance-page-header").is_visible())
+        self.assertFalse(page.locator(".location-lab-v2").is_visible())
+
+        page.locator('[data-view="location"]').click()
+        self.assertTrue(page.locator(".location-lab-v2").is_visible())
+        self.assertFalse(page.locator(".performance-page-header").is_visible())
+
+        page.locator('[data-view="changes"]').click()
+        self.assertTrue(page.locator('[data-view-panel="changes"] .view-page-header').is_visible())
+        self.assertFalse(page.locator("#career-audit-panel").is_visible())
+
+        page.locator('[data-view="career"]').click()
+        self.assertTrue(page.locator("#career-audit-panel").is_visible())
+        self.assertFalse(page.locator('[data-view-panel="changes"] .view-page-header').is_visible())
 
         release = page.locator('[data-view="release"]')
         release.click()
