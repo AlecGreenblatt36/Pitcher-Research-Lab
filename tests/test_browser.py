@@ -32,6 +32,13 @@ class BrowserRegressionTests(unittest.TestCase):
         cls.server.shutdown()
         cls.thread.join(timeout=5)
 
+    def _wait_for_pitcher_ready(self, page):
+        page.wait_for_function("() => Boolean(window.pitcherResearchLab?.ready)")
+        page.evaluate("async () => { await window.pitcherResearchLab.ready; }")
+        overlay = page.locator("#pitcher-loading-overlay")
+        if overlay.count():
+            overlay.wait_for(state="hidden")
+
     def _select_fixture(self, page, pitcher_id: int, name: str):
         page.evaluate(
             """([id, name]) => {
@@ -40,8 +47,8 @@ class BrowserRegressionTests(unittest.TestCase):
             }""",
             [pitcher_id, name],
         )
-        page.reload(wait_until="networkidle")
-        page.locator("#pitcher-loading-overlay").wait_for(state="hidden")
+        page.reload(wait_until="domcontentloaded")
+        self._wait_for_pitcher_ready(page)
         self.assertEqual(page.locator("#pitcher-name").inner_text(), name)
 
     def test_neutral_all_views_season_pitch_and_pitcher_switching(self):
@@ -104,24 +111,26 @@ class BrowserRegressionTests(unittest.TestCase):
         page.locator("#research-window-end").fill("2026-04-15")
         with page.expect_navigation(wait_until="domcontentloaded"):
             page.locator("#research-window-apply").click()
-        page.locator("#pitcher-loading-overlay").wait_for(state="hidden")
+        self._wait_for_pitcher_ready(page)
         self.assertIn("Custom mode is active", page.locator("#research-window-note").inner_text())
         with page.expect_navigation(wait_until="domcontentloaded"):
             page.locator("#research-window-reset").click()
-        page.locator("#pitcher-loading-overlay").wait_for(state="hidden")
+        self._wait_for_pitcher_ready(page)
         self.assertIn("Optional", page.locator("#research-window-note").inner_text())
 
         season = page.locator("#research-season-select")
         self.assertIn("2025", season.locator("option").all_text_contents())
         with page.expect_navigation(wait_until="domcontentloaded"):
             season.select_option("2025")
-        page.locator("#pitcher-loading-overlay").wait_for(state="hidden")
+        self._wait_for_pitcher_ready(page)
+        season = page.locator("#research-season-select")
         self.assertEqual(season.input_value(), "2025")
 
         pitch = page.locator("#pitch-select")
-        options = pitch.locator("option").all()
-        self.assertGreater(len(options), 1)
-        pitch.select_option(options[1].get_attribute("value"))
+        self.assertTrue(pitch.is_visible(), "Primary pitch selector should be visible after season reload")
+        values = pitch.locator("option").evaluate_all("options => options.map(option => option.value)")
+        self.assertGreater(len(values), 1)
+        pitch.select_option(values[1])
 
         self._select_fixture(page, 100002, "Veteran Lefty")
         self.assertNotIn("Veteran Starter", page.locator("body").inner_text())
