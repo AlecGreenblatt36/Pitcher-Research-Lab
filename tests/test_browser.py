@@ -39,6 +39,14 @@ class BrowserRegressionTests(unittest.TestCase):
         if overlay.count():
             overlay.wait_for(state="hidden")
 
+    def _wait_for_release_ready(self, page):
+        page.wait_for_function(
+            """() => {
+                const title = document.getElementById('release-context-title');
+                return title && !title.textContent.includes('Select a pitcher');
+            }"""
+        )
+
     def _select_fixture(self, page, pitcher_id: int, name: str):
         page.evaluate(
             """([id, name]) => {
@@ -103,6 +111,7 @@ class BrowserRegressionTests(unittest.TestCase):
 
         release = page.locator('[data-view="release"]')
         release.click()
+        self._wait_for_release_ready(page)
         self.assertGreater(page.locator(".release-preview-card:not([hidden]) .release-measurement").count(), 0)
         self.assertNotIn("Select a pitcher", page.locator("#release-context-title").inner_text())
 
