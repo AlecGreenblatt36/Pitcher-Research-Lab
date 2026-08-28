@@ -15,6 +15,6 @@ The Skenes case remains the origin example, but the application no longer assume
 
 Statcast can directly measure release position, velocity, movement, spin, extension, pitch location and pitch outcomes. Those measurements can be compared with video observations, but the application does not treat a statistical association as proof of a mechanical cause, injury, fatigue or organizational intent.
 
-## Prototype archive
+## From case study to application
 
-`prototype/` contains the one-pitcher scripts and raw files used while the original Skenes case study was being developed. They are kept separate from the production application so the main codebase remains pitcher-agnostic.
+The one-player investigation established the research questions and metric definitions that informed the generalized application. The main branch now contains the reusable production system and this case-study context rather than the early exploratory scripts.
