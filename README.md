@@ -3,7 +3,7 @@
 Pitcher Research Lab is a local MLB research application for studying how a pitcher's tracked profile moves over time. It establishes pitcher-specific context, screens for meaningful changes in either direction, and connects pitch characteristics with usage, release, location, hitter response, and results.
 
 <img width="1440" height="1000" alt="overview-skubal" src="https://github.com/user-attachments/assets/ed95e392-17d6-474e-b91d-0a7829adff13" />
-![Pitcher Research Lab overview using live Tarik Skubal data]
+Pitcher Research Lab overview using live Tarik Skubal data
 
 ## What it does
 
@@ -31,15 +31,15 @@ New browser sessions open in a neutral state with no pitcher selected. Refreshin
 
 The landing state requires an intentional pitcher selection.
 <img width="1440" height="1000" alt="landing" src="https://github.com/user-attachments/assets/daa8624f-78a8-4487-838e-d6159867d4b3" />
-![Neutral search-first landing screen] 
+Neutral search-first landing screen 
 
 Change Detection places the selected season inside the pitcher's full cached MLB timeline and overlays an optional three-outing rolling average.
 <img width="1440" height="1000" alt="what-changed-skubal" src="https://github.com/user-attachments/assets/a22c06a2-9bbe-4b84-9083-f955467fee6c" />
-![Change Detection using live Tarik Skubal data]
+Change Detection using live Tarik Skubal data
 
 Release Profile compares pitch-specific release measurements across the active baseline and comparison periods. Arm angle appears only when the source field is populated.
 <img width="1440" height="1000" alt="release-skubal" src="https://github.com/user-attachments/assets/154cf0c9-bbf9-4982-af72-2dfb121e9f83" />
-![Release Profile using live Tarik Skubal data]![Uploading release-skubal.png…]()
+Release Profile using live Tarik Skubal data
 
 
 ## Research views
