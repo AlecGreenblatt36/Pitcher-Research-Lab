@@ -1,9 +1,10 @@
 # Pitcher Research Lab
 
+[![CI](https://github.com/AlecGreenblatt36/Pitcher-Research-Lab/actions/workflows/ci.yml/badge.svg)](https://github.com/AlecGreenblatt36/Pitcher-Research-Lab/actions/workflows/ci.yml)
+
 Pitcher Research Lab is a local MLB research application for studying how a pitcher's tracked profile moves over time. It establishes pitcher-specific context, screens for meaningful changes in either direction, and connects pitch characteristics with usage, release, location, hitter response, and results.
 
-<img width="1440" height="1000" alt="overview-skubal" src="https://github.com/user-attachments/assets/ed95e392-17d6-474e-b91d-0a7829adff13" />
-Pitcher Research Lab overview using live Tarik Skubal data
+![Pitcher Research Lab overview](docs/images/overview-live.png)
 
 ## What it does
 
@@ -30,17 +31,16 @@ New browser sessions open in a neutral state with no pitcher selected. Refreshin
 ## Application views
 
 The landing state requires an intentional pitcher selection.
-<img width="1440" height="1000" alt="landing" src="https://github.com/user-attachments/assets/daa8624f-78a8-4487-838e-d6159867d4b3" />
-Neutral search-first landing screen 
+
+![Neutral search-first landing screen](docs/images/landing-neutral.png)
 
 Change Detection places the selected season inside the pitcher's full cached MLB timeline and overlays an optional three-outing rolling average.
-<img width="1440" height="1000" alt="what-changed-skubal" src="https://github.com/user-attachments/assets/a22c06a2-9bbe-4b84-9083-f955467fee6c" />
-Change Detection using live Tarik Skubal data
+
+![Change Detection using live MLB data](docs/images/change-detection-live.png)
 
 Release Profile compares pitch-specific release measurements across the active baseline and comparison periods. Arm angle appears only when the source field is populated.
-<img width="1440" height="1000" alt="release-skubal" src="https://github.com/user-attachments/assets/154cf0c9-bbf9-4982-af72-2dfb121e9f83" />
-Release Profile using live Tarik Skubal data
 
+![Release Profile using live MLB data](docs/images/release-profile-live.png)
 
 ## Research views
 
@@ -48,8 +48,9 @@ Release Profile using live Tarik Skubal data
 - **Arsenal** — tracks velocity, movement, spin, extension and release characteristics by pitch type and season.
 - **Change Detection** — compares the selected season with the pitcher's own prior history and screens for sustained departures.
 - **Release Profile** — connects measurable release information with pitch-characteristic changes while keeping mechanical claims separate from tracking data.
-- **Performance & Location** — compares whiffs, chase, hard contact, run value, pitch location and official game outcomes across research periods.
-- **Career Audit** — places the selected research window inside the pitcher's complete cached MLB trajectory.
+- **Performance** — compares hitter response, contact quality, pitch value and official game outcomes across research periods.
+- **Command & Location** — maps pitch location and compares zone, chase, whiff, hard-contact and run-value patterns by period.
+- **Career / Timeline** — places the selected research window inside the pitcher's complete cached MLB trajectory.
 
 ## Automated data pipeline
 
@@ -69,7 +70,7 @@ The global **Research Season** selector changes the target year used by the anal
 
 Automatic mode uses up to two prior MLB seasons as the baseline and the selected research season as the comparison. If no prior MLB season exists, it compares earlier and later outings within the selected season. Custom mode accepts two explicit, non-overlapping periods from anywhere in the pitcher's cached MLB career.
 
-The same inclusive dates propagate to Overview, Change Detection, Location, and Performance. Invalid, overlapping, reversed, incomplete, or out-of-coverage periods are rejected by both the interface and API. Automatic periods are not described as detected change points.
+The same inclusive dates propagate across the research views. Invalid, overlapping, reversed, incomplete, or out-of-coverage periods are rejected by both the interface and API. Automatic periods are not described as detected change points.
 
 The screening score is `(comparison mean - baseline mean) / baseline outing standard deviation`. It is a descriptive baseline-standardized difference, not an inferential z-test, confidence level, formal change-point result, or causal claim.
 
@@ -97,7 +98,7 @@ The screening score is `(comparison mean - baseline mean) / baseline outing stan
 - `schema.sql` — recreates the wide pitch-cache schema on a clean database.
 - `schema_version` — records the initialized schema version.
 
-The active application is pitcher-agnostic. The original one-player work is isolated under `case_studies/skenes/`.
+The active application is pitcher-agnostic. The original one-player research context is isolated under `case_studies/skenes/`.
 
 `comparison.py` owns the shared Baseline/Comparison validation used by the research, location and performance APIs. The generated SQLite cache is excluded from version control and is created automatically on first launch.
 
@@ -107,7 +108,8 @@ The active application is pitcher-agnostic. The original one-player work is isol
 - SQLite with schema initialization, integrity checks, indexes, and duplicate protection
 - Browser-native JavaScript, HTML, CSS, and SVG visualizations
 - `unittest`, pytest, and Playwright browser regression tests
-- Windows launcher and GitHub Actions validation workflow
+- GitHub Actions continuous validation
+- Windows convenience launcher plus terminal setup for Windows, macOS, and Linux
 
 ## Run on Windows
 
@@ -119,14 +121,25 @@ START_HERE.bat
 
 It creates the local virtual environment when necessary, installs the runtime dependencies, starts Flask and opens `http://127.0.0.1:5050`. The dedicated port prevents older local copies of the project from being mistaken for this build.
 
-## Run from a terminal
+### Windows terminal
 
-```bash
+```powershell
 python -m venv .venv
 .venv\Scripts\activate
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 python app.py
 ```
+
+## Run on macOS or Linux
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python app.py
+```
+
+Then open `http://127.0.0.1:5050` in a browser.
 
 ## Updating cached pitchers
 
@@ -158,17 +171,17 @@ Run the built-in project validator:
 python validate_project.py
 ```
 
-It checks Python syntax, JavaScript syntax when Node is installed, SQLite integrity, duplicate pitch identities and generalized frontend-route safeguards.
+It checks required project structure, Python syntax, JavaScript syntax when Node is installed, frontend dependencies, repository hygiene, common secret patterns, SQLite integrity and duplicate pitch identities.
 
 For the full regression suite:
 
 ```bash
-pip install -r requirements-dev.txt
+python -m pip install -r requirements-dev.txt
 python -m playwright install chromium
 pytest -q
 ```
 
-The regression suite uses deterministic temporary databases and does not depend on a packaged player cache or live network access. It covers multiple pitcher shapes, explicit career periods, corrected overlap updates, duplicate replacement, malformed ingestion, retries, rollback, metric definitions, neutral startup and mobile overflow. Unsupported samples are expected to return a clear empty/error state instead of a server crash.
+The regression suite uses deterministic temporary databases and does not depend on a packaged player cache or live network access. It covers multiple pitcher profiles, explicit career periods, corrected overlap updates, duplicate replacement, malformed ingestion, retries, rollback, metric definitions, neutral startup, primary-view separation, pitcher switching and mobile overflow. Unsupported samples are expected to return a clear empty/error state instead of a server crash.
 
 ## API examples
 
@@ -186,11 +199,11 @@ GET  /api/pitchers/<mlbam_id>/performance?season=2025
 GET  /api/pitchers/<mlbam_id>/career?season=2025
 ```
 
-The production API exposes only pitcher-scoped routes. Player-specific prototype code remains isolated under `case_studies/`.
+Analysis endpoints are pitcher-scoped. `/api/health` is the general application-status endpoint.
 
 ## Paul Skenes case study
 
-The project was prompted by 2026 reporting on Paul Skenes that discussed changes in his delivery and release position. The initial version tested whether public tracking data could identify and quantify those changes. The current application keeps that origin story while allowing the same research workflow to be used on other pitchers and seasons without changing code.
+The project was prompted by 2026 reporting on Paul Skenes that discussed changes in his delivery and release position. The initial investigation tested whether public tracking data could identify and quantify those changes. The current application keeps that origin story while allowing the same research workflow to be used on other pitchers and seasons without changing code.
 
 See `case_studies/skenes/README.md` for the original research context and source articles.
 

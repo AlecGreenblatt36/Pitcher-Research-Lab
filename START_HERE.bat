@@ -43,7 +43,7 @@ if errorlevel 1 (
     echo Installing required packages...
     "%VENV_PY%" -m pip install --upgrade pip
     if errorlevel 1 goto :failed
-    "%VENV_PY%" -m pip install -r requirements-runtime.txt
+    "%VENV_PY%" -m pip install -r requirements.txt
     if errorlevel 1 goto :failed
 )
 
@@ -65,7 +65,7 @@ exit /b 0
 echo.
 echo ==============================================
 echo STARTUP FAILED
- echo ==============================================
+echo ==============================================
 echo.
 echo The error is shown above. Keep this window open while
 echo troubleshooting the startup failure.

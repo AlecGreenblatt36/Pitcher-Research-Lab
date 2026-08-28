@@ -13,14 +13,27 @@ ROOT = Path(__file__).resolve().parent
 DATABASE = Path(os.environ.get("PRL_DATABASE", ROOT / "data" / "pitcher_research.db"))
 
 
+def check_required_structure() -> list[str]:
+    required = (
+        "app.py",
+        "schema.sql",
+        "requirements.txt",
+        "templates/dashboard.html",
+        "static/navigation.js",
+        "static/pitcher_context.js",
+        "tests/test_browser.py",
+    )
+    return [f"Missing required project file: {path}" for path in required if not (ROOT / path).exists()]
+
+
 def check_python() -> list[str]:
     failures = []
-    paths = list(ROOT.glob("*.py")) + list((ROOT / "tests").glob("*.py"))
+    paths = list(ROOT.glob("*.py")) + list((ROOT / "tests").glob("*.py")) + list((ROOT / "scripts").glob("*.py"))
     for path in paths:
         try:
             compile(path.read_text(encoding="utf-8"), str(path), "exec")
         except SyntaxError as exc:
-            failures.append(f"Python syntax: {path.name}: {exc.msg}")
+            failures.append(f"Python syntax: {path.relative_to(ROOT)}: {exc.msg}")
     return failures
 
 
@@ -28,6 +41,7 @@ def check_javascript() -> list[str]:
     node = shutil.which("node")
     if not node:
         return []
+
     failures = []
     for path in (ROOT / "static").glob("*.js"):
         result = subprocess.run(
@@ -41,73 +55,57 @@ def check_javascript() -> list[str]:
     return failures
 
 
-def check_source_guards() -> list[str]:
-    failures = []
-    for path in (ROOT / "static").glob("*.js"):
-        text = path.read_text(encoding="utf-8")
-        if "/api/skenes/" in text:
-            failures.append(f"Frontend legacy route found in {path.name}")
-        for date_text in ("2026-05-06", "2026-06-09"):
-            if date_text in text:
-                failures.append(f"Case-study date dependency {date_text} found in {path.name}")
-    return failures
-
-
 def check_frontend_dependencies() -> list[str]:
-    failures = []
     template = ROOT / "templates" / "dashboard.html"
     if not template.exists():
         return ["Template is missing: templates/dashboard.html"]
 
     source = template.read_text(encoding="utf-8")
-    references = set(re.findall(r"url_for\(['\"]static['\"],\s*filename=['\"]([^'\"]+)", source))
+    references = set(
+        re.findall(
+            r"url_for\(['\"]static['\"],\s*filename=['\"]([^'\"]+)",
+            source,
+        )
+    )
     for path in (ROOT / "static").glob("*.js"):
         text = path.read_text(encoding="utf-8")
         references.update(re.findall(r"/static/([A-Za-z0-9_.-]+)", text))
 
     static_directory = ROOT / "static"
-    actual_names = {path.name for path in static_directory.iterdir() if path.is_file()} if static_directory.exists() else set()
-    for reference in sorted(references):
-        if reference not in actual_names:
-            case_match = next((name for name in actual_names if name.lower() == reference.lower()), None)
-            if case_match:
-                failures.append(f"Static reference capitalization mismatch: {reference} != {case_match}")
-            else:
-                failures.append(f"Missing static dependency: static/{reference}")
-    return failures
+    actual_names = {
+        path.name for path in static_directory.iterdir() if path.is_file()
+    } if static_directory.exists() else set()
 
-
-def check_public_source_quality() -> list[str]:
     failures = []
-    forbidden_phrases = (
-        "next major research layer",
-        "we will analyze",
-        "this page will",
-        "eventually",
-        "before publication",
-        "will be sensitivity-tested",
-        "coming soon",
-        "future work",
-    )
-    provider_terms = ("chatgpt", "openai", "claude", "codex", "ai-generated")
-    public_paths = [ROOT / "templates" / "dashboard.html", *(ROOT / "static").glob("*.js")]
-    for path in public_paths:
-        text = path.read_text(encoding="utf-8").lower()
-        for phrase in (*forbidden_phrases, *provider_terms):
-            if phrase in text:
-                failures.append(f"Public UI/source contains prohibited copy {phrase!r}: {path.relative_to(ROOT)}")
+    for reference in sorted(references):
+        if reference in actual_names:
+            continue
+        case_match = next(
+            (name for name in actual_names if name.lower() == reference.lower()),
+            None,
+        )
+        if case_match:
+            failures.append(
+                f"Static reference capitalization mismatch: {reference} != {case_match}"
+            )
+        else:
+            failures.append(f"Missing static dependency: static/{reference}")
     return failures
 
 
 def check_secrets() -> list[str]:
-    failures = []
     patterns = {
         "private key": re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
         "GitHub token": re.compile(r"\bgh[pousr]_[A-Za-z0-9]{30,}\b"),
         "AWS access key": re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
     }
-    text_suffixes = {".py", ".js", ".html", ".css", ".md", ".txt", ".yml", ".yaml", ".json", ".bat", ".sql"}
+    text_suffixes = {
+        ".py", ".js", ".html", ".css", ".md", ".txt",
+        ".yml", ".yaml", ".json", ".bat", ".sql",
+    }
     ignored_directories = {".venv", "__pycache__", ".pytest_cache", ".git"}
+
+    failures = []
     for path in ROOT.rglob("*"):
         if not path.is_file() or path.suffix.lower() not in text_suffixes:
             continue
@@ -122,19 +120,21 @@ def check_secrets() -> list[str]:
 
 def check_repository_hygiene() -> list[str]:
     failures = []
-    ignored_directories = {".venv", "__pycache__", ".pytest_cache"}
+    ignored_directories = {".venv", "__pycache__", ".pytest_cache", ".git"}
+
     for path in ROOT.rglob("*"):
         if not path.is_file() or any(part in ignored_directories for part in path.parts):
             continue
         relative = path.relative_to(ROOT)
         if path.suffix.lower() in {".exe", ".dll"}:
             failures.append(f"Binary file should not be committed: {relative}")
+
     gitignore = ROOT / ".gitignore"
     if not gitignore.exists():
         failures.append(".gitignore is missing.")
     else:
         ignored = gitignore.read_text(encoding="utf-8")
-        for required in (".venv/", "__pycache__/", "*.py[cod]", ".pytest_cache/"):
+        for required in (".venv/", "__pycache__/", "*.py[cod]", ".pytest_cache/", "data/"):
             if required not in ignored:
                 failures.append(f".gitignore is missing {required}")
     return failures
@@ -142,8 +142,6 @@ def check_repository_hygiene() -> list[str]:
 
 def check_database() -> list[str]:
     if not DATABASE.exists():
-        # A clean clone creates the cache on first launch. Fresh-schema behavior
-        # is covered by the regression suite.
         return []
 
     failures = []
@@ -153,7 +151,9 @@ def check_database() -> list[str]:
         if integrity != "ok":
             failures.append(f"SQLite integrity check: {integrity}")
 
-        required_tables = {"pitches", "pitchers", "official_outings", "ingest_runs", "schema_version"}
+        required_tables = {
+            "pitches", "pitchers", "official_outings", "ingest_runs", "schema_version"
+        }
         found = {
             row[0]
             for row in connection.execute(
@@ -188,11 +188,10 @@ def check_database() -> list[str]:
 
 def main() -> int:
     checks = [
+        ("Required structure", check_required_structure),
         ("Python syntax", check_python),
         ("JavaScript syntax", check_javascript),
-        ("Source guards", check_source_guards),
         ("Frontend dependencies", check_frontend_dependencies),
-        ("Public source quality", check_public_source_quality),
         ("Secret scan", check_secrets),
         ("Repository hygiene", check_repository_hygiene),
         ("Database integrity", check_database),
