@@ -1,0 +1,997 @@
+/* ================================================== */
+/* Pitcher Research Lab                               */
+/* Command & Location Lab V2                         */
+/* ================================================== */
+
+
+/* ================================================== */
+/* Main Section */
+/* ================================================== */
+
+.location-lab-v2 {
+
+    margin:
+        38px
+        0;
+
+}
+
+
+.location-v2-header {
+
+    display:
+        flex;
+
+    justify-content:
+        space-between;
+
+    align-items:
+        flex-end;
+
+    gap:
+        24px;
+
+    margin-bottom:
+        18px;
+
+}
+
+
+.location-v2-header h2 {
+
+    margin:
+        3px
+        0
+        0;
+
+    font-size:
+        27px;
+
+    font-weight:
+        550;
+
+}
+
+
+.location-v2-controls {
+
+    display:
+        flex;
+
+    flex-wrap:
+        wrap;
+
+    justify-content:
+        flex-end;
+
+    gap:
+        10px;
+
+}
+
+
+/* ================================================== */
+/* Research Finding */
+/* ================================================== */
+
+.location-finding {
+
+    padding:
+        22px;
+
+    margin-bottom:
+        18px;
+
+    background:
+        #11161d;
+
+    border:
+        1px solid #252c35;
+
+    border-left:
+        3px solid #d8b253;
+
+}
+
+
+.location-finding-top {
+
+    display:
+        flex;
+
+    justify-content:
+        space-between;
+
+    align-items:
+        flex-start;
+
+    gap:
+        20px;
+
+}
+
+
+.location-finding h3 {
+
+    margin:
+        5px
+        0
+        0;
+
+    color:
+        #f0f2f5;
+
+    font-size:
+        18px;
+
+    font-weight:
+        600;
+
+}
+
+
+.location-finding-tag {
+
+    padding:
+        6px
+        9px;
+
+    color:
+        #88929e;
+
+    background:
+        #171c23;
+
+    border:
+        1px solid #252c35;
+
+    font-size:
+        8px;
+
+    letter-spacing:
+        0.8px;
+
+    text-transform:
+        uppercase;
+
+}
+
+
+.location-finding-text {
+
+    max-width:
+        1050px;
+
+    margin:
+        13px
+        0
+        0;
+
+    color:
+        #b2bac4;
+
+    font-size:
+        12px;
+
+    line-height:
+        1.75;
+
+}
+
+
+/* ================================================== */
+/* Early vs Post Delta Cards */
+/* ================================================== */
+
+.location-delta-grid {
+
+    display:
+        grid;
+
+    grid-template-columns:
+        repeat(
+            4,
+            minmax(0, 1fr)
+        );
+
+    gap:
+        1px;
+
+    margin-top:
+        20px;
+
+    background:
+        #252c35;
+
+    border:
+        1px solid #252c35;
+
+}
+
+
+.location-delta-card {
+
+    padding:
+        15px
+        16px;
+
+    background:
+        #10151b;
+
+}
+
+
+.location-delta-card span {
+
+    display:
+        block;
+
+    color:
+        #7d8793;
+
+    font-size:
+        8px;
+
+    letter-spacing:
+        0.6px;
+
+    text-transform:
+        uppercase;
+
+}
+
+
+.location-delta-card strong {
+
+    display:
+        block;
+
+    margin-top:
+        7px;
+
+    color:
+        #f0f2f5;
+
+    font-size:
+        18px;
+
+    font-weight:
+        600;
+
+    font-variant-numeric:
+        tabular-nums;
+
+}
+
+
+.location-delta-card small {
+
+    display:
+        block;
+
+    margin-top:
+        5px;
+
+    color:
+        #68717c;
+
+    font-size:
+        8px;
+
+}
+
+
+/* ================================================== */
+/* Three Period Heatmaps */
+/* ================================================== */
+
+.location-map-grid {
+
+    display:
+        grid;
+
+    grid-template-columns:
+        repeat(
+            3,
+            minmax(0, 1fr)
+        );
+
+    gap:
+        14px;
+
+}
+
+
+.location-map-card {
+
+    overflow:
+        hidden;
+
+    background:
+        #11161d;
+
+    border:
+        1px solid #252c35;
+
+}
+
+
+.location-map-header {
+
+    display:
+        flex;
+
+    justify-content:
+        space-between;
+
+    align-items:
+        center;
+
+    padding:
+        15px
+        17px;
+
+    border-bottom:
+        1px solid #252c35;
+
+}
+
+
+.location-map-header h3 {
+
+    margin:
+        3px
+        0
+        0;
+
+    color:
+        #f0f2f5;
+
+    font-size:
+        13px;
+
+    font-weight:
+        600;
+
+}
+
+
+.location-map-meta {
+
+    color:
+        #7d8793;
+
+    font-size:
+        9px;
+
+    font-variant-numeric:
+        tabular-nums;
+
+}
+
+
+.location-heatmap-v2 {
+
+    display:
+        block;
+
+    box-sizing:
+        border-box;
+
+    width:
+        100%;
+
+    height:
+        auto;
+
+    padding:
+        10px;
+
+    background:
+        #0f141a;
+
+}
+
+
+/* Individual 7x7 cells */
+
+.location-v2-bin {
+
+    stroke:
+        #10151b;
+
+    stroke-width:
+        1.25;
+
+}
+
+
+/* Actual normalized strike-zone outline */
+
+.location-v2-zone {
+
+    fill:
+        none;
+
+    stroke:
+        #eef1f4;
+
+    stroke-width:
+        3;
+
+    pointer-events:
+        none;
+
+}
+
+
+/* 3x3 subdivisions */
+
+.location-v2-zone-grid {
+
+    stroke:
+        #9ba5af;
+
+    stroke-width:
+        1;
+
+    opacity:
+        0.55;
+
+    pointer-events:
+        none;
+
+}
+
+
+/* ================================================== */
+/* Legend */
+/* ================================================== */
+
+.location-legend-panel {
+
+    display:
+        flex;
+
+    justify-content:
+        space-between;
+
+    align-items:
+        center;
+
+    gap:
+        30px;
+
+    padding:
+        15px
+        18px;
+
+    margin-bottom:
+        18px;
+
+    background:
+        #10151b;
+
+    border-left:
+        1px solid #252c35;
+
+    border-right:
+        1px solid #252c35;
+
+    border-bottom:
+        1px solid #252c35;
+
+}
+
+
+.location-legend-title {
+
+    color:
+        #f0f2f5;
+
+    font-size:
+        10px;
+
+    font-weight:
+        600;
+
+}
+
+
+.location-sample-note {
+
+    max-width:
+        680px;
+
+    margin-top:
+        5px;
+
+    color:
+        #7d8793;
+
+    font-size:
+        9px;
+
+    line-height:
+        1.5;
+
+}
+
+
+.location-legend {
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        8px;
+
+    min-width:
+        330px;
+
+}
+
+
+.location-legend span {
+
+    color:
+        #7d8793;
+
+    font-size:
+        8px;
+
+    white-space:
+        nowrap;
+
+}
+
+
+.location-legend-bar {
+
+    width:
+        150px;
+
+    height:
+        8px;
+
+    border-radius:
+        999px;
+
+}
+
+
+/* -------------------------------------------------- */
+/* Pitch frequency                                   */
+/* -------------------------------------------------- */
+
+.legend-density {
+
+    background:
+        linear-gradient(
+            90deg,
+            #343b45 0%,
+            #74aaf5 50%,
+            #174f9e 100%
+        );
+
+}
+
+
+/* -------------------------------------------------- */
+/* Pitch result                                      */
+/* -------------------------------------------------- */
+
+.legend-results {
+
+    background:
+        linear-gradient(
+            90deg,
+            #d85d63 0%,
+            #29313b 50%,
+            #2aa88f 100%
+        );
+
+}
+
+
+/* -------------------------------------------------- */
+/* Contact damage                                    */
+/* -------------------------------------------------- */
+
+.legend-contact {
+
+    background:
+        linear-gradient(
+            90deg,
+            #29313b 0%,
+            #d8893b 55%,
+            #d54c4c 100%
+        );
+
+}
+
+
+/* ================================================== */
+/* Comparison Table */
+/* ================================================== */
+
+.location-comparison-panel {
+
+    overflow:
+        hidden;
+
+    background:
+        #11161d;
+
+    border:
+        1px solid #252c35;
+
+}
+
+
+.location-comparison-table {
+
+    width:
+        100%;
+
+    min-width:
+        900px;
+
+    border-collapse:
+        collapse;
+
+}
+
+
+.location-comparison-table th {
+
+    padding:
+        12px
+        14px;
+
+    color:
+        #7d8793;
+
+    background:
+        #0f141a;
+
+    border-bottom:
+        1px solid #252c35;
+
+    text-align:
+        left;
+
+    font-size:
+        8px;
+
+    font-weight:
+        600;
+
+    letter-spacing:
+        0.5px;
+
+    text-transform:
+        uppercase;
+
+}
+
+
+.location-comparison-table td {
+
+    padding:
+        13px
+        14px;
+
+    color:
+        #b8c0ca;
+
+    border-bottom:
+        1px solid #202730;
+
+    font-size:
+        10px;
+
+    font-variant-numeric:
+        tabular-nums;
+
+}
+
+
+.location-comparison-table tbody tr:last-child td {
+
+    border-bottom:
+        none;
+
+}
+
+
+.location-comparison-table tbody tr:hover {
+
+    background:
+        #151b22;
+
+}
+
+
+.location-metric-name {
+
+    color:
+        #eef1f4 !important;
+
+    font-weight:
+        600;
+
+}
+
+
+.location-metric-meaning {
+
+    max-width:
+        290px;
+
+    color:
+        #7d8793 !important;
+
+    line-height:
+        1.45;
+
+}
+
+
+/* ================================================== */
+/* Change Colors */
+/* ================================================== */
+
+
+/* Favorable result */
+
+.location-delta-good {
+
+    color:
+        #55bea8 !important;
+
+    font-weight:
+        600;
+
+}
+
+
+/* Unfavorable result */
+
+.location-delta-bad {
+
+    color:
+        #df6b70 !important;
+
+    font-weight:
+        600;
+
+}
+
+
+/* Direction isn't automatically good/bad */
+
+.location-delta-neutral {
+
+    color:
+        #8fa6c4 !important;
+
+    font-weight:
+        600;
+
+}
+
+
+/* ================================================== */
+/* Explanation / Method */
+/* ================================================== */
+
+.location-method-note {
+
+    padding:
+        15px
+        17px;
+
+    margin-top:
+        10px;
+
+    color:
+        #7d8793;
+
+    background:
+        #0e1318;
+
+    border:
+        1px solid #252c35;
+
+    font-size:
+        9px;
+
+    line-height:
+        1.65;
+
+}
+
+
+.location-method-note strong {
+
+    color:
+        #b8c0ca;
+
+}
+
+
+/* ================================================== */
+/* Controls */
+/* ================================================== */
+
+.location-v2-controls .investigation-control {
+
+    display:
+        flex;
+
+    flex-direction:
+        column;
+
+    gap:
+        5px;
+
+}
+
+
+.location-v2-controls .investigation-control label {
+
+    color:
+        #7d8793;
+
+    font-size:
+        8px;
+
+    letter-spacing:
+        0.5px;
+
+    text-transform:
+        uppercase;
+
+}
+
+
+.location-v2-controls select {
+
+    min-width:
+        130px;
+
+    padding:
+        8px
+        10px;
+
+    color:
+        #dce1e6;
+
+    background:
+        #11161d;
+
+    border:
+        1px solid #2b333d;
+
+    border-radius:
+        3px;
+
+    outline:
+        none;
+
+    font-size:
+        10px;
+
+}
+
+
+.location-v2-controls select:hover {
+
+    border-color:
+        #46515e;
+
+}
+
+
+.location-v2-controls select:focus {
+
+    border-color:
+        #657486;
+
+}
+
+
+/* ================================================== */
+/* Responsive */
+/* ================================================== */
+
+@media (
+    max-width: 1180px
+) {
+
+    .location-map-grid {
+
+        grid-template-columns:
+            1fr;
+
+    }
+
+
+    .location-delta-grid {
+
+        grid-template-columns:
+            repeat(
+                2,
+                1fr
+            );
+
+    }
+
+
+    .location-v2-header {
+
+        flex-direction:
+            column;
+
+        align-items:
+            stretch;
+
+    }
+
+
+    .location-v2-controls {
+
+        justify-content:
+            flex-start;
+
+    }
+
+}
+
+
+@media (
+    max-width: 720px
+) {
+
+    .location-delta-grid {
+
+        grid-template-columns:
+            1fr;
+
+    }
+
+
+    .location-legend-panel {
+
+        flex-direction:
+            column;
+
+        align-items:
+            flex-start;
+
+    }
+
+
+    .location-legend {
+
+        min-width:
+            0;
+
+        width:
+            100%;
+
+    }
+
+
+    .location-legend-bar {
+
+        flex:
+            1;
+
+    }
+
+}

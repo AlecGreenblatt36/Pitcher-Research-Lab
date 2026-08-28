@@ -1,0 +1,2182 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Pitcher Research Lab
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='location_v2.css') }}"
+    >
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='views.css') }}"
+    >
+
+</head>
+
+
+<body>
+
+
+<div class="app-shell">
+
+
+    <!-- ================================================== -->
+    <!-- Sidebar -->
+    <!-- ================================================== -->
+
+    <aside class="sidebar">
+
+
+        <div class="brand">
+
+            <div class="brand-mark">
+                PR
+            </div>
+
+
+            <div>
+
+                <div class="brand-title">
+                    Pitcher Research Lab
+                </div>
+
+                <div class="brand-subtitle">
+                    Baseball Research
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <nav class="navigation">
+
+            <button
+                class="nav-item active"
+                data-view="overview"
+            >
+                Overview
+            </button>
+
+            <button
+                class="nav-item"
+                data-view="arsenal"
+            >
+                Arsenal
+            </button>
+
+            <button
+                class="nav-item"
+                data-view="changes"
+            >
+                Change Detection
+            </button>
+
+            <button
+                class="nav-item"
+                data-view="release"
+            >
+                Release Profile
+            </button>
+
+            <button
+                class="nav-item"
+                data-view="performance"
+            >
+                Performance
+            </button>
+
+            <button
+                class="nav-item"
+                data-view="location"
+            >
+                Command &amp; Location
+            </button>
+
+            <button
+                class="nav-item"
+                data-view="career"
+            >
+                Career / Timeline
+            </button>
+
+        </nav>
+
+
+        <div class="sidebar-footer">
+
+            <div>
+                MLB Statcast Research
+            </div>
+
+            <div id="sidebar-case-study" class="sidebar-version">
+                Pitcher Research Lab
+            </div>
+
+        </div>
+
+
+    </aside>
+
+
+    <!-- ================================================== -->
+    <!-- Main -->
+    <!-- ================================================== -->
+
+    <main class="main-content">
+
+
+        <!-- ================================================== -->
+        <!-- Topbar -->
+        <!-- ================================================== -->
+
+        <header class="topbar">
+
+            <div>
+
+                <span
+                    id="active-view-label"
+                    class="section-label"
+                >
+                    OVERVIEW
+                </span>
+
+                <span
+                    id="active-view-description"
+                    class="view-description"
+                >
+                    Executive research summary
+                </span>
+
+            </div>
+
+
+            <div class="topbar-pitcher-tools">
+                <label class="research-season-control" for="research-season-select">
+                    <span>Research Season</span>
+                    <select id="research-season-select" aria-label="Research season">
+                        <option value="">Latest</option>
+                    </select>
+                </label>
+
+                <div class="pitcher-search">
+                    <input
+                        id="pitcher-search-input"
+                        type="search"
+                        autocomplete="off"
+                        placeholder="Search any MLB pitcher…"
+                        aria-label="Search MLB pitcher"
+                    >
+                    <div
+                        id="pitcher-search-results"
+                        class="pitcher-search-results"
+                        hidden
+                    ></div>
+                </div>
+
+                <div id="database-status" class="status">
+                    Database Connected
+                </div>
+            </div>
+
+        </header>
+
+
+        <!-- ================================================== -->
+        <!-- Pitcher Header -->
+        <!-- ================================================== -->
+
+        <section class="pitcher-header">
+
+
+            <div>
+
+                <h1 id="pitcher-name">
+                    Select a pitcher to begin
+                </h1>
+
+
+                <div id="pitcher-details" class="pitcher-details">
+                    Search for any MLB pitcher to build or open a research profile.
+                </div>
+
+            </div>
+
+
+            <div class="header-controls">
+
+                <label for="pitch-select">
+                    Primary Pitch
+                </label>
+
+
+                <select id="pitch-select">
+                    <option value="">
+                        Select a pitcher
+                    </option>
+
+                </select>
+
+            </div>
+
+
+        </section>
+
+
+        <!-- ================================================== -->
+        <!-- OVERVIEW VIEW -->
+        <!-- ================================================== -->
+
+        <div
+            class="app-view active"
+            data-view-panel="overview"
+        >
+
+
+            <!-- ============================================== -->
+            <!-- Executive Case Study -->
+            <!-- ============================================== -->
+
+            <section class="executive-summary">
+
+
+                <div class="executive-heading">
+
+                    <div>
+
+                        <div class="eyebrow">
+                            FLAGSHIP RESEARCH WORKFLOW
+                        </div>
+
+                        <h2>
+                            How has this pitcher’s profile moved over time?
+                        </h2>
+
+                    </div>
+
+
+                    <div class="executive-status">
+                        Current Research
+                    </div>
+
+                </div>
+
+
+                <div class="executive-primary">
+
+                    <div class="executive-primary-label">
+                        PRIMARY FINDING
+                    </div>
+
+                    <div
+                        id="overview-primary-finding"
+                        class="executive-primary-text"
+                    >
+                        Loading target-season research summary...
+                    </div>
+
+                    <p
+                        id="overview-primary-detail"
+                        class="executive-primary-detail"
+                    >
+                    </p>
+
+                </div>
+
+
+                <div class="overview-kpi-grid">
+
+
+                    <div class="overview-kpi">
+
+                        <span>
+                            Overall Whiff %
+                        </span>
+
+                        <strong id="overview-whiff-delta">
+                            --
+                        </strong>
+
+                        <small>
+                            Early → Later
+                        </small>
+
+                    </div>
+
+
+                    <div class="overview-kpi">
+
+                        <span>
+                            Hard-Hit %
+                        </span>
+
+                        <strong id="overview-hard-hit-delta">
+                            --
+                        </strong>
+
+                        <small>
+                            Early → Later
+                        </small>
+
+                    </div>
+
+
+                    <div class="overview-kpi">
+
+                        <span>
+                            Avg Exit Velocity
+                        </span>
+
+                        <strong id="overview-ev-delta">
+                            --
+                        </strong>
+
+                        <small>
+                            Early → Later
+                        </small>
+
+                    </div>
+
+
+                    <div class="overview-kpi">
+
+                        <span>
+                            Pitcher RV / 100
+                        </span>
+
+                        <strong id="overview-rv-delta">
+                            --
+                        </strong>
+
+                        <small>
+                            Early → Later
+                        </small>
+
+                    </div>
+
+
+                </div>
+
+
+            </section>
+
+
+            <!-- ============================================== -->
+            <!-- Investigation Window -->
+            <!-- ============================================== -->
+
+            <section class="overview-window-panel">
+
+
+                <div>
+
+                    <div class="eyebrow">
+                        PRIMARY COMPARISON WINDOW
+                    </div>
+
+                    <div
+                        id="overview-transition-window"
+                        class="overview-window-value"
+                    >
+                        --
+                    </div>
+
+                </div>
+
+
+                <div class="overview-window-copy">
+
+                    This window provides a consistent early, middle and later-season comparison. When sustained flags are present, it also focuses the deeper research views around those dates.
+
+                </div>
+
+                <div class="research-window-controls" aria-label="Custom research window">
+                    <span>Custom window</span>
+                    <input id="research-window-start" type="date" aria-label="Research window start">
+                    <span>to</span>
+                    <input id="research-window-end" type="date" aria-label="Research window end">
+                    <button id="research-window-apply" type="button">Apply</button>
+                    <button id="research-window-reset" type="button">Use Auto</button>
+                    <small id="research-window-note">Optional. Auto mode uses sustained flags when available.</small>
+                </div>
+
+
+            </section>
+
+
+            <!-- ============================================== -->
+            <!-- Most Important Signals -->
+            <!-- ============================================== -->
+
+            <section class="overview-signal-grid">
+
+
+                <article class="overview-signal-card">
+
+                    <div class="signal-card-number">
+                        01
+                    </div>
+
+                    <div class="signal-card-label">
+                        STUFF
+                    </div>
+
+                    <h3 id="overview-stuff-title">
+                        Loading...
+                    </h3>
+
+                    <p id="overview-stuff-copy">
+                    </p>
+
+                    <button
+                        class="signal-link"
+                        data-view-link="changes"
+                    >
+                        Open Change Detection
+                    </button>
+
+                </article>
+
+
+                <article class="overview-signal-card">
+
+                    <div class="signal-card-number">
+                        02
+                    </div>
+
+                    <div class="signal-card-label">
+                        ARSENAL
+                    </div>
+
+                    <h3 id="overview-arsenal-title">
+                        Loading...
+                    </h3>
+
+                    <p id="overview-arsenal-copy">
+                    </p>
+
+                    <button
+                        class="signal-link"
+                        data-view-link="arsenal"
+                    >
+                        Open Arsenal Analysis
+                    </button>
+
+                </article>
+
+
+                <article class="overview-signal-card">
+
+                    <div class="signal-card-number">
+                        03
+                    </div>
+
+                    <div class="signal-card-label">
+                        PERFORMANCE
+                    </div>
+
+                    <h3 id="overview-performance-title">
+                        Loading...
+                    </h3>
+
+                    <p id="overview-performance-copy">
+                    </p>
+
+                    <button
+                        class="signal-link"
+                        data-view-link="performance"
+                    >
+                        Open Performance Lab
+                    </button>
+
+                </article>
+
+
+            </section>
+
+
+            <!-- ============================================== -->
+            <!-- Research Command Center -->
+            <!-- ============================================== -->
+
+            <section class="command-center">
+
+
+                <div class="command-header">
+
+                    <div>
+
+                        <div class="eyebrow">
+                            EVIDENCE SUMMARY
+                        </div>
+
+                        <h2>
+                            Research Command Center
+                        </h2>
+
+                        <p class="command-description">
+                            The strongest physical, strategic and
+                            performance signals currently detected
+                            in the public tracking data.
+                        </p>
+
+                    </div>
+
+
+                    <div class="transition-window-card">
+
+                        <div class="transition-label">
+                            RESEARCH WINDOW
+                        </div>
+
+                        <div
+                            id="transition-window-value"
+                            class="transition-value"
+                        >
+                            --
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="research-question-box">
+
+                    <div class="eyebrow">
+                        CURRENT RESEARCH SIGNAL
+                    </div>
+
+                    <div
+                        id="research-signal-text"
+                        class="research-signal-text"
+                    >
+                        Loading analysis...
+                    </div>
+
+                </div>
+
+
+                <div class="command-grid">
+
+
+                    <div class="command-card">
+
+                        <div class="command-card-heading">
+
+                            <span class="command-number">
+                                01
+                            </span>
+
+                            <div>
+
+                                <div class="command-category">
+                                    STUFF
+                                </div>
+
+                                <div class="command-title">
+                                    Pitch Characteristics
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <div
+                            id="stuff-signals"
+                            class="signal-list"
+                        >
+                        </div>
+
+                    </div>
+
+
+                    <div class="command-card">
+
+                        <div class="command-card-heading">
+
+                            <span class="command-number">
+                                02
+                            </span>
+
+                            <div>
+
+                                <div class="command-category">
+                                    STRATEGY
+                                </div>
+
+                                <div class="command-title">
+                                    Arsenal Usage
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <div
+                            id="strategy-signals"
+                            class="signal-list"
+                        >
+                        </div>
+
+                    </div>
+
+
+                    <div class="command-card">
+
+                        <div class="command-card-heading">
+
+                            <span class="command-number">
+                                03
+                            </span>
+
+                            <div>
+
+                                <div class="command-category">
+                                    RESULTS
+                                </div>
+
+                                <div class="command-title">
+                                    Performance Response
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <div
+                            id="result-signals"
+                            class="signal-list"
+                        >
+                        </div>
+
+                    </div>
+
+
+                </div>
+
+
+            </section>
+
+
+            <!-- ============================================== -->
+            <!-- Research Workflow -->
+            <!-- ============================================== -->
+
+            <section class="research-workflow">
+
+
+                <div class="panel-header">
+
+                    <div>
+
+                        <div class="eyebrow">
+                            INVESTIGATION STRUCTURE
+                        </div>
+
+                        <h3>
+                            Follow the evidence
+                        </h3>
+
+                    </div>
+
+                </div>
+
+
+                <div class="workflow-grid">
+
+
+                    <button
+                        class="workflow-card"
+                        data-view-link="arsenal"
+                    >
+
+                        <span>
+                            01
+                        </span>
+
+                        <strong>
+                            Arsenal
+                        </strong>
+
+                        <small>
+                            How have pitch shape,
+                            velocity and usage moved?
+                        </small>
+
+                    </button>
+
+
+                    <button
+                        class="workflow-card"
+                        data-view-link="changes"
+                    >
+
+                        <span>
+                            02
+                        </span>
+
+                        <strong>
+                            Change Detection
+                        </strong>
+
+                        <small>
+                            When did sustained departures
+                            from baseline emerge?
+                        </small>
+
+                    </button>
+
+
+                    <button
+                        class="workflow-card"
+                        data-view-link="release"
+                    >
+
+                        <span>
+                            03
+                        </span>
+
+                        <strong>
+                            Release Profile
+                        </strong>
+
+                        <small>
+                            How have release characteristics
+                            moved over time?
+                        </small>
+
+                    </button>
+
+
+                    <button
+                        class="workflow-card"
+                        data-view-link="performance"
+                    >
+
+                        <span>
+                            04
+                        </span>
+
+                        <strong>
+                            Performance
+                        </strong>
+
+                        <small>
+                            What happened to command,
+                            contact and pitch value?
+                        </small>
+
+                    </button>
+
+
+                </div>
+
+
+            </section>
+
+
+        </div>
+
+
+        <!-- ================================================== -->
+        <!-- ARSENAL VIEW -->
+        <!-- ================================================== -->
+
+        <div
+            class="app-view"
+            data-view-panel="arsenal"
+        >
+
+
+            <section class="view-page-header">
+
+                <div>
+
+                    <div class="eyebrow">
+                        PITCH CHARACTERISTICS
+                    </div>
+
+                    <h2>
+                        Arsenal Evolution
+                    </h2>
+
+                    <p>
+                        How the selected pitcher’s individual pitches have changed
+                        across the pitcher’s available MLB seasons.
+                    </p>
+
+                </div>
+
+            </section>
+
+
+            <!-- Current Pitch Metrics -->
+
+            <section class="metrics-grid">
+
+
+                <div class="metric">
+
+                    <div class="metric-label">
+                        Velocity
+                    </div>
+
+                    <div
+                        class="metric-value"
+                        id="metric-velocity"
+                    >
+                        --
+                    </div>
+
+                    <div
+                        class="metric-change"
+                        id="velocity-change"
+                    >
+                        --
+                    </div>
+
+                </div>
+
+
+                <div class="metric">
+
+                    <div class="metric-label">
+                        Spin Rate
+                    </div>
+
+                    <div
+                        class="metric-value"
+                        id="metric-spin"
+                    >
+                        --
+                    </div>
+
+                    <div class="metric-unit">
+                        rpm
+                    </div>
+
+                </div>
+
+
+                <div class="metric">
+
+                    <div class="metric-label">
+                        Extension
+                    </div>
+
+                    <div
+                        class="metric-value"
+                        id="metric-extension"
+                    >
+                        --
+                    </div>
+
+                    <div class="metric-unit">
+                        ft
+                    </div>
+
+                </div>
+
+
+                <div class="metric">
+
+                    <div class="metric-label">
+                        Vertical Movement
+                    </div>
+
+                    <div
+                        class="metric-value"
+                        id="metric-vmov"
+                    >
+                        --
+                    </div>
+
+                    <div class="metric-unit">
+                        in
+                    </div>
+
+                </div>
+
+
+                <div class="metric">
+
+                    <div class="metric-label">
+                        Horizontal Movement
+                    </div>
+
+                    <div
+                        class="metric-value"
+                        id="metric-hmov"
+                    >
+                        --
+                    </div>
+
+                    <div class="metric-unit">
+                        in
+                    </div>
+
+                </div>
+
+
+            </section>
+
+
+            <!-- Velocity -->
+
+            <section class="panel">
+
+
+                <div class="panel-header">
+
+                    <div>
+
+                        <div class="eyebrow">
+                            YEAR-OVER-YEAR
+                        </div>
+
+                        <h3>
+                            Velocity Evolution
+                        </h3>
+
+                    </div>
+
+
+                    <div class="panel-note">
+                        Regular season
+                    </div>
+
+                </div>
+
+
+                <div class="chart-area">
+
+                    <svg
+                        id="velocity-chart"
+                        viewBox="0 0 760 280"
+                        preserveAspectRatio="none"
+                    >
+                    </svg>
+
+                </div>
+
+
+            </section>
+
+
+            <!-- Season Comparison -->
+
+            <section class="panel">
+
+
+                <div class="panel-header">
+
+                    <div>
+
+                        <div class="eyebrow">
+                            SEASON COMPARISON
+                        </div>
+
+                        <h3>
+                            Pitch Characteristics
+                        </h3>
+
+                    </div>
+
+                </div>
+
+
+                <div class="table-wrapper">
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+
+                                <th>
+                                    Season
+                                </th>
+
+                                <th>
+                                    Pitches
+                                </th>
+
+                                <th>
+                                    Velocity
+                                </th>
+
+                                <th>
+                                    Spin
+                                </th>
+
+                                <th>
+                                    Extension
+                                </th>
+
+                                <th>
+                                    H-Mov
+                                </th>
+
+                                <th>
+                                    V-Mov
+                                </th>
+
+                                <th>
+                                    Release X
+                                </th>
+
+                                <th>
+                                    Release Z
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody id="season-table-body">
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+
+            </section>
+
+
+            <!-- Early vs Post Pitch Matrix -->
+
+            <section class="command-table-panel">
+
+
+                <div class="panel-header">
+
+                    <div>
+
+                        <div class="eyebrow">
+                            TARGET-SEASON ARSENAL SHIFT
+                        </div>
+
+                        <h3>
+                            Early vs Later Period
+                        </h3>
+
+                    </div>
+
+
+                    <div class="panel-note">
+                        Stuff • Strategy • Results
+                    </div>
+
+                </div>
+
+
+                <div class="table-wrapper">
+
+                    <table class="research-table">
+
+                        <thead>
+
+                            <tr>
+
+                                <th rowspan="2">
+                                    Pitch
+                                </th>
+
+                                <th colspan="2">
+                                    Usage
+                                </th>
+
+                                <th colspan="2">
+                                    Velocity
+                                </th>
+
+                                <th colspan="2">
+                                    V-Mov
+                                </th>
+
+                                <th colspan="2">
+                                    Whiff %
+                                </th>
+
+                                <th colspan="2">
+                                    RV / 100
+                                </th>
+
+                                <th colspan="2">
+                                    Avg EV
+                                </th>
+
+                            </tr>
+
+
+                            <tr>
+
+                                <th>Early</th>
+                                <th>Post</th>
+
+                                <th>Early</th>
+                                <th>Post</th>
+
+                                <th>Early</th>
+                                <th>Post</th>
+
+                                <th>Early</th>
+                                <th>Post</th>
+
+                                <th>Early</th>
+                                <th>Post</th>
+
+                                <th>Early</th>
+                                <th>Post</th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody id="research-comparison-body">
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+
+            </section>
+
+
+        </div>
+
+
+        <!-- ================================================== -->
+        <!-- CHANGE DETECTION VIEW -->
+        <!-- ================================================== -->
+
+        <div
+            class="app-view"
+            data-view-panel="changes"
+        >
+
+
+            <section class="view-page-header">
+
+                <div>
+
+                    <div class="eyebrow">
+                        STATISTICAL INVESTIGATION
+                    </div>
+
+                    <h2>
+                        Change Detection
+                    </h2>
+
+                    <p>
+                        Identifying unusual departures from the pitcher’s
+                        own historical baseline and estimating when
+                        sustained changes appeared.
+                    </p>
+
+                </div>
+
+
+                <div id="change-baseline-badge" class="view-method-badge">
+                    Baseline: loading…
+                </div>
+
+            </section>
+
+
+            <section class="research-grid">
+
+
+                <div class="panel research-panel">
+
+                    <div class="panel-header">
+
+                        <div>
+
+                            <div class="eyebrow">
+                                SEASON-LEVEL
+                            </div>
+
+                            <h3>
+                                Largest Deviations
+                            </h3>
+
+                        </div>
+
+
+                        <div class="panel-note">
+                            Ranked by |z-score|
+                        </div>
+
+                    </div>
+
+
+                    <div
+                        id="deviation-list"
+                        class="deviation-list"
+                    >
+                    </div>
+
+                </div>
+
+
+                <div class="panel research-panel">
+
+                    <div class="panel-header">
+
+                        <div>
+
+                            <div class="eyebrow">
+                                SUSTAINED CHANGE DETECTION
+                            </div>
+
+                            <h3>
+                                Change Timeline
+                            </h3>
+
+                        </div>
+
+
+                        <div class="panel-note">
+                            3-outing rolling window
+                        </div>
+
+                    </div>
+
+
+                    <div
+                        id="change-timeline"
+                        class="timeline"
+                    >
+                    </div>
+
+                </div>
+
+
+            </section>
+
+
+            <section class="panel investigation-panel">
+
+
+                <div class="panel-header">
+
+                    <div>
+
+                        <div class="eyebrow">
+                            OUTING-BY-OUTING RESEARCH
+                        </div>
+
+                        <h3>
+                            Target-Season Investigation Timeline
+                        </h3>
+
+                    </div>
+
+
+                    <div class="investigation-controls">
+
+
+                        <div class="investigation-control">
+
+                            <label for="investigation-pitch">
+                                Pitch
+                            </label>
+
+                            <select id="investigation-pitch">
+
+                                <option value="FF">
+                                    Four-Seam
+                                </option>
+
+                                <option value="SI">
+                                    Sinker
+                                </option>
+
+                                <option value="SL">
+                                    Slider
+                                </option>
+
+                                <option value="ST">
+                                    Sweeper
+                                </option>
+
+                                <option value="FS">
+                                    Splitter
+                                </option>
+
+                                <option value="CH">
+                                    Changeup
+                                </option>
+
+                                <option value="CU">
+                                    Curveball
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <div class="investigation-control">
+
+                            <label for="investigation-metric">
+                                Metric
+                            </label>
+
+                            <select id="investigation-metric">
+
+                                <option value="avg_velocity">
+                                    Velocity
+                                </option>
+
+                                <option value="avg_spin">
+                                    Spin Rate
+                                </option>
+
+                                <option value="avg_extension">
+                                    Extension
+                                </option>
+
+                                <option value="avg_vertical_movement">
+                                    Vertical Movement
+                                </option>
+
+                                <option value="avg_horizontal_movement">
+                                    Horizontal Movement
+                                </option>
+
+                                <option value="usage_pct">
+                                    Usage %
+                                </option>
+
+                                <option value="whiff_pct">
+                                    Whiff %
+                                </option>
+
+                                <option value="run_value_per_100">
+                                    Run Value / 100
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                    </div>
+
+                </div>
+
+
+                <div class="investigation-subheader">
+
+                    <div id="investigation-title">
+                        Four-Seam — Velocity
+                    </div>
+
+                    <div id="investigation-sample-note">
+                        Outings with 5+ pitches
+                    </div>
+
+                </div>
+
+
+                <div class="investigation-chart-wrapper">
+
+                    <svg
+                        id="investigation-chart"
+                        viewBox="0 0 900 320"
+                        preserveAspectRatio="none"
+                    >
+                    </svg>
+
+                </div>
+
+
+            </section>
+
+
+            <section class="methodology-panel">
+
+
+                <div>
+
+                    <div class="eyebrow">
+                        CURRENT DETECTION METHOD
+                    </div>
+
+                    <h3>
+                        Sustained-deviation screening
+                    </h3>
+
+                </div>
+
+
+                <p>
+                    Current sustained-change detection uses a
+                    three-outing rolling average against the pitcher’s
+                    historical outing-level mean and standard deviation.
+                    Three consecutive rolling values beyond ±2 standard
+                    deviations create a sustained-change flag.
+                </p>
+
+
+                <p>
+                    The comparison cards report every eligible baseline-to-target
+                    window. A sustained-change label appears only when three
+                    consecutive rolling values exceed the ±2 standard-deviation
+                    threshold. A detected date is an investigation point, not proof
+                    of when or why a physical change occurred.
+                </p>
+
+
+            </section>
+
+
+        </div>
+
+
+        <!-- ================================================== -->
+        <!-- RELEASE VIEW -->
+        <!-- ================================================== -->
+
+        <div
+            class="app-view"
+            data-view-panel="release"
+        >
+
+
+            <section class="view-page-header">
+
+                <div>
+
+                    <div class="eyebrow">
+                        DELIVERY + RELEASE
+                    </div>
+
+                    <h2>
+                        Release Profile
+                    </h2>
+
+                    <p>
+                        Measured release position, extension and arm angle for the
+                        selected pitcher, season and comparison context. Metrics
+                        appear only when the source data support them.
+                    </p>
+
+                </div>
+
+
+                <div class="view-method-badge">
+                    Measured Statcast Signals
+                </div>
+
+            </section>
+
+
+            <section class="release-preview-grid">
+
+
+                <article class="release-preview-card" data-release-metric="release_pos_x">
+
+                    <div class="eyebrow">
+                        RELEASE X
+                    </div>
+
+                    <h3>
+                        Horizontal release position
+                    </h3>
+
+                    <div class="release-measurement" id="release-x-value">No measured data</div>
+                    <p id="release-x-detail">Select a pitcher to compare horizontal release position.</p>
+
+                </article>
+
+
+                <article class="release-preview-card" data-release-metric="release_pos_z">
+
+                    <div class="eyebrow">
+                        RELEASE Z
+                    </div>
+
+                    <h3>
+                        Vertical release position
+                    </h3>
+
+                    <div class="release-measurement" id="release-z-value">No measured data</div>
+                    <p id="release-z-detail">Select a pitcher to compare vertical release position.</p>
+
+                </article>
+
+
+                <article class="release-preview-card" data-release-metric="release_extension">
+
+                    <div class="eyebrow">
+                        EXTENSION
+                    </div>
+
+                    <h3>
+                        Release extension
+                    </h3>
+
+                    <div class="release-measurement" id="release-extension-value">No measured data</div>
+                    <p id="release-extension-detail">Select a pitcher to compare extension.</p>
+
+                </article>
+
+
+                <article class="release-preview-card" data-release-metric="arm_angle">
+
+                    <div class="eyebrow">
+                        ARM ANGLE
+                    </div>
+
+                    <h3>
+                        Arm-slot evolution
+                    </h3>
+
+                    <div class="release-measurement" id="release-arm-angle-value">No measured data</div>
+                    <p id="release-arm-angle-detail">Arm angle appears only when the selected sample contains the measured field.</p>
+
+                </article>
+
+
+            </section>
+
+
+            <section class="release-next-panel" id="release-context-panel">
+
+                <div class="eyebrow">
+                    WHY THIS MATTERS
+                </div>
+
+                <h3 id="release-context-title">
+                    Select a pitcher to load release measurements
+                </h3>
+
+                <p id="release-context-copy">
+                    Release measurements are summarized from eligible outing-level
+                    comparisons. Detected deviations are labeled separately from
+                    generic comparison windows, and direction is reported without
+                    assuming improvement or deterioration.
+                </p>
+
+            </section>
+
+
+        </div>
+
+
+        <!-- ================================================== -->
+        <!-- PERFORMANCE VIEW -->
+        <!-- ================================================== -->
+
+        <div
+            class="app-view"
+            data-view-panel="performance"
+        >
+
+
+            <section class="view-page-header">
+
+                <div>
+
+                    <div class="eyebrow">
+                        COMMAND + RESULTS
+                    </div>
+
+                    <h2>
+                        Performance Lab
+                    </h2>
+
+                    <p>
+                        Understanding how command, hitter response,
+                        contact quality and pitch value move across
+                        the selected research periods.
+                    </p>
+
+                </div>
+
+            </section>
+
+
+            <!-- ================================================== -->
+            <!-- Location Lab -->
+            <!-- ================================================== -->
+
+            <section class="location-lab-v2">
+
+
+                <div class="location-v2-header">
+
+
+                    <div>
+
+                        <div class="eyebrow">
+                            COMMAND + CONTACT
+                        </div>
+
+                        <h2>
+                            Command & Location Lab
+                        </h2>
+
+                        <p class="command-description">
+                            Comparing where the selected pitcher is throwing each pitch,
+                            how hitters are responding, and how those
+                            patterns move across the selected research
+                            window.
+                        </p>
+
+                    </div>
+
+
+                    <div class="location-v2-controls">
+
+
+                        <div class="investigation-control">
+
+                            <label for="location-pitch">
+                                Pitch
+                            </label>
+
+                            <select id="location-pitch">
+
+                                <option value="FF">
+                                    Four-Seam
+                                </option>
+
+                                <option value="SI">
+                                    Sinker
+                                </option>
+
+                                <option value="CH">
+                                    Changeup
+                                </option>
+
+                                <option value="FS">
+                                    Splitter
+                                </option>
+
+                                <option value="SL">
+                                    Slider
+                                </option>
+
+                                <option value="ST">
+                                    Sweeper
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <div class="investigation-control">
+
+                            <label for="location-hand">
+                                Batter
+                            </label>
+
+                            <select id="location-hand">
+
+                                <option value="ALL">
+                                    All Hitters
+                                </option>
+
+                                <option value="R">
+                                    RHH
+                                </option>
+
+                                <option value="L">
+                                    LHH
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <div class="investigation-control">
+
+                            <label for="location-mode">
+                                Show
+                            </label>
+
+                            <select id="location-mode">
+
+                                <option value="density">
+                                    Pitch Locations
+                                </option>
+
+                                <option value="run_value">
+                                    Pitch Results
+                                </option>
+
+                                <option value="hard_hit">
+                                    Contact Damage
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                    </div>
+
+
+                </div>
+
+
+                <!-- Finding -->
+
+                <div class="location-finding">
+
+
+                    <div class="location-finding-top">
+
+
+                        <div>
+
+                            <div class="eyebrow">
+                                DATA SUMMARY
+                            </div>
+
+                            <h3 id="location-finding-title">
+                                Loading location analysis...
+                            </h3>
+
+                        </div>
+
+
+                        <div class="location-finding-tag">
+                            Early → Later
+                        </div>
+
+
+                    </div>
+
+
+                    <p
+                        id="location-finding-text"
+                        class="location-finding-text"
+                    >
+                        Loading...
+                    </p>
+
+
+                    <div class="location-delta-grid">
+
+
+                        <div class="location-delta-card">
+
+                            <span>
+                                Zone %
+                            </span>
+
+                            <strong id="location-delta-zone">
+                                --
+                            </strong>
+
+                            <small>
+                                Later vs Early
+                            </small>
+
+                        </div>
+
+
+                        <div class="location-delta-card">
+
+                            <span>
+                                Whiff %
+                            </span>
+
+                            <strong id="location-delta-whiff">
+                                --
+                            </strong>
+
+                            <small>
+                                Later vs Early
+                            </small>
+
+                        </div>
+
+
+                        <div class="location-delta-card">
+
+                            <span>
+                                Hard-Hit %
+                            </span>
+
+                            <strong id="location-delta-hard-hit">
+                                --
+                            </strong>
+
+                            <small>
+                                Later vs Early
+                            </small>
+
+                        </div>
+
+
+                        <div class="location-delta-card">
+
+                            <span>
+                                Pitcher RV / 100
+                            </span>
+
+                            <strong id="location-delta-rv">
+                                --
+                            </strong>
+
+                            <small>
+                                Later vs Early
+                            </small>
+
+                        </div>
+
+
+                    </div>
+
+
+                </div>
+
+
+                <!-- Maps -->
+
+                <div class="location-map-grid">
+
+
+                    <div class="location-map-card">
+
+                        <div class="location-map-header">
+
+                            <div>
+
+                                <div class="eyebrow">
+                                    BEFORE
+                                </div>
+
+                                <h3>
+                                    Early Period
+                                </h3>
+
+                            </div>
+
+
+                            <div
+                                id="location-meta-early"
+                                class="location-map-meta"
+                            >
+                                --
+                            </div>
+
+                        </div>
+
+
+                        <svg
+                            id="location-heatmap-early"
+                            class="location-heatmap-v2"
+                            viewBox="0 0 500 500"
+                        >
+                        </svg>
+
+                    </div>
+
+
+                    <div class="location-map-card">
+
+                        <div class="location-map-header">
+
+                            <div>
+
+                                <div class="eyebrow">
+                                    COMPARISON WINDOW
+                                </div>
+
+                                <h3>
+                                    Middle Period
+                                </h3>
+
+                            </div>
+
+
+                            <div
+                                id="location-meta-transition"
+                                class="location-map-meta"
+                            >
+                                --
+                            </div>
+
+                        </div>
+
+
+                        <svg
+                            id="location-heatmap-transition"
+                            class="location-heatmap-v2"
+                            viewBox="0 0 500 500"
+                        >
+                        </svg>
+
+                    </div>
+
+
+                    <div class="location-map-card">
+
+                        <div class="location-map-header">
+
+                            <div>
+
+                                <div class="eyebrow">
+                                    AFTER
+                                </div>
+
+                                <h3>
+                                    Later Period
+                                </h3>
+
+                            </div>
+
+
+                            <div
+                                id="location-meta-post"
+                                class="location-map-meta"
+                            >
+                                --
+                            </div>
+
+                        </div>
+
+
+                        <svg
+                            id="location-heatmap-post"
+                            class="location-heatmap-v2"
+                            viewBox="0 0 500 500"
+                        >
+                        </svg>
+
+                    </div>
+
+
+                </div>
+
+
+                <!-- Legend -->
+
+                <div class="location-legend-panel">
+
+
+                    <div>
+
+                        <div
+                            id="location-legend-title"
+                            class="location-legend-title"
+                        >
+                            Pitch Frequency
+                        </div>
+
+                        <div
+                            id="location-sample-note"
+                            class="location-sample-note"
+                        >
+                        </div>
+
+                    </div>
+
+
+                    <div class="location-legend">
+
+                        <span id="location-legend-left">
+                            Fewer pitches
+                        </span>
+
+                        <div
+                            id="location-legend-bar"
+                            class="location-legend-bar legend-density"
+                        >
+                        </div>
+
+                        <span id="location-legend-right">
+                            More pitches
+                        </span>
+
+                    </div>
+
+
+                </div>
+
+
+                <!-- Comparison -->
+
+                <div class="location-comparison-panel">
+
+
+                    <div class="panel-header">
+
+                        <div>
+
+                            <div class="eyebrow">
+                                LOCATION PROFILE BY PERIOD
+                            </div>
+
+                            <h3>
+                                Early → Middle → Later
+                            </h3>
+
+                        </div>
+
+
+                        <div class="panel-note">
+                            Same pitch • Same target season
+                        </div>
+
+                    </div>
+
+
+                    <div class="table-wrapper">
+
+                        <table class="location-comparison-table">
+
+                            <thead>
+
+                                <tr>
+
+                                    <th>
+                                        Metric
+                                    </th>
+
+                                    <th>
+                                        What it means
+                                    </th>
+
+                                    <th>
+                                        Early
+                                    </th>
+
+                                    <th>
+                                        Middle
+                                    </th>
+
+                                    <th>
+                                        Later
+                                    </th>
+
+                                    <th>
+                                        Later vs Early
+                                    </th>
+
+                                </tr>
+
+                            </thead>
+
+
+                            <tbody id="location-comparison-body">
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+
+                </div>
+
+
+                <div class="location-method-note">
+
+                    <strong>
+                        How to read this:
+                    </strong>
+
+                    The strike zones are normalized for batter height
+                    and shown from the catcher's perspective. Color
+                    meanings change with the selected display mode.
+                    Small samples are intentionally muted. These views
+                    identify associations, not proof of cause.
+
+                </div>
+
+
+            </section>
+
+
+        </div>
+
+
+    </main>
+
+
+</div>
+
+
+<!-- ================================================== -->
+<!-- Application Scripts -->
+<!-- ================================================== -->
+
+<script
+    src="{{ url_for('static', filename='pitcher_context.js') }}"
+></script>
+
+<script
+    src="{{ url_for('static', filename='dashboard.js') }}"
+></script>
+
+<script
+    src="{{ url_for('static', filename='research.js') }}"
+></script>
+
+<script
+    src="{{ url_for('static', filename='location.js') }}"
+></script>
+
+
+<!-- ================================================== -->
+<!-- Supporting Scripts -->
+<!-- ================================================== -->
+
+<script
+    src="{{ url_for('static', filename='overview.js') }}"
+></script>
+
+<script
+    src="{{ url_for('static', filename='navigation.js') }}"
+></script>
+
+<script
+    src="{{ url_for('static', filename='performance.js') }}"
+></script>
+
+<script
+    src="{{ url_for('static', filename='career.js') }}"
+></script>
+
+<script
+    src="{{ url_for('static', filename='release.js') }}"
+></script>
+
+</body>
+
+</html>

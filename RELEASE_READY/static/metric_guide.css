@@ -1,0 +1,936 @@
+/* ================================================== */
+/* Pitcher Research Lab                               */
+/* Global Metric Guide                               */
+/* ================================================== */
+
+
+/* ================================================== */
+/* Overview Change Colors */
+/* ================================================== */
+
+.overview-change-good {
+
+    color:
+        #55bea8 !important;
+
+}
+
+
+.overview-change-bad {
+
+    color:
+        #df6b70 !important;
+
+}
+
+
+.overview-change-neutral {
+
+    color:
+        #9aa5b1 !important;
+
+}
+
+
+/* ================================================== */
+/* Inline Info Buttons */
+/* ================================================== */
+
+.metric-inline-info {
+
+    display:
+        inline-flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        center;
+
+    width:
+        15px;
+
+    height:
+        15px;
+
+    margin-left:
+        6px;
+
+    padding:
+        0;
+
+    color:
+        #8faed4;
+
+    background:
+        #17202a;
+
+    border:
+        1px solid #334153;
+
+    border-radius:
+        50%;
+
+    cursor:
+        pointer;
+
+    font-size:
+        9px;
+
+    font-weight:
+        700;
+
+    line-height:
+        1;
+
+}
+
+
+.metric-inline-info:hover {
+
+    color:
+        #dce9f8;
+
+    background:
+        #213044;
+
+    border-color:
+        #52749c;
+
+}
+
+
+/* ================================================== */
+/* Floating Launcher */
+/* ================================================== */
+
+.metric-guide-launcher {
+
+    position:
+        fixed;
+
+    right:
+        24px;
+
+    bottom:
+        24px;
+
+    z-index:
+        900;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        8px;
+
+    padding:
+        10px
+        13px;
+
+    color:
+        #dce1e6;
+
+    background:
+        #141a21;
+
+    border:
+        1px solid #303945;
+
+    border-radius:
+        4px;
+
+    box-shadow:
+        0
+        12px
+        28px
+        rgba(
+            0,
+            0,
+            0,
+            0.28
+        );
+
+    cursor:
+        pointer;
+
+    font-size:
+        10px;
+
+    font-weight:
+        600;
+
+}
+
+
+.metric-guide-launcher:hover {
+
+    background:
+        #1a222b;
+
+    border-color:
+        #465464;
+
+}
+
+
+.metric-guide-icon {
+
+    display:
+        inline-flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        center;
+
+    width:
+        17px;
+
+    height:
+        17px;
+
+    color:
+        #8faed4;
+
+    border:
+        1px solid #506884;
+
+    border-radius:
+        50%;
+
+    font-size:
+        10px;
+
+    font-weight:
+        700;
+
+}
+
+
+/* ================================================== */
+/* Overlay */
+/* ================================================== */
+
+.metric-guide-overlay {
+
+    position:
+        fixed;
+
+    inset:
+        0;
+
+    z-index:
+        1100;
+
+    display:
+        none;
+
+    align-items:
+        center;
+
+    justify-content:
+        center;
+
+    padding:
+        30px;
+
+    background:
+        rgba(
+            4,
+            7,
+            10,
+            0.82
+        );
+
+    backdrop-filter:
+        blur(
+            5px
+        );
+
+}
+
+
+.metric-guide-overlay.open {
+
+    display:
+        flex;
+
+}
+
+
+body.metric-guide-open {
+
+    overflow:
+        hidden;
+
+}
+
+
+/* ================================================== */
+/* Modal */
+/* ================================================== */
+
+.metric-guide-modal {
+
+    width:
+        min(
+            1020px,
+            100%
+        );
+
+    max-height:
+        88vh;
+
+    overflow-y:
+        auto;
+
+    background:
+        #0f141a;
+
+    border:
+        1px solid #303844;
+
+    box-shadow:
+        0
+        28px
+        80px
+        rgba(
+            0,
+            0,
+            0,
+            0.55
+        );
+
+}
+
+
+/* ================================================== */
+/* Header */
+/* ================================================== */
+
+.metric-guide-header {
+
+    display:
+        flex;
+
+    justify-content:
+        space-between;
+
+    align-items:
+        flex-start;
+
+    gap:
+        30px;
+
+    padding:
+        24px;
+
+    border-bottom:
+        1px solid #252c35;
+
+}
+
+
+.metric-guide-eyebrow {
+
+    color:
+        #d8b253;
+
+    font-size:
+        8px;
+
+    font-weight:
+        600;
+
+    letter-spacing:
+        0.9px;
+
+}
+
+
+.metric-guide-header h2 {
+
+    margin:
+        5px
+        0
+        0;
+
+    color:
+        #f0f2f5;
+
+    font-size:
+        25px;
+
+    font-weight:
+        550;
+
+}
+
+
+.metric-guide-header p {
+
+    max-width:
+        610px;
+
+    margin:
+        7px
+        0
+        0;
+
+    color:
+        #858f9a;
+
+    font-size:
+        10px;
+
+    line-height:
+        1.6;
+
+}
+
+
+.metric-guide-close {
+
+    width:
+        34px;
+
+    height:
+        34px;
+
+    padding:
+        0;
+
+    color:
+        #8e98a3;
+
+    background:
+        #141a21;
+
+    border:
+        1px solid #2d3540;
+
+    cursor:
+        pointer;
+
+    font-size:
+        20px;
+
+}
+
+
+.metric-guide-close:hover {
+
+    color:
+        #ffffff;
+
+    background:
+        #1c242d;
+
+}
+
+
+/* ================================================== */
+/* Intro */
+/* ================================================== */
+
+.metric-guide-intro {
+
+    display:
+        grid;
+
+    grid-template-columns:
+        repeat(
+            2,
+            minmax(
+                0,
+                1fr
+            )
+        );
+
+    gap:
+        1px;
+
+    margin:
+        18px
+        24px
+        0;
+
+    background:
+        #252c35;
+
+    border:
+        1px solid #252c35;
+
+}
+
+
+.metric-guide-intro > div {
+
+    padding:
+        14px;
+
+    background:
+        #121820;
+
+}
+
+
+.metric-guide-intro strong {
+
+    display:
+        block;
+
+    color:
+        #dce1e6;
+
+    font-size:
+        9px;
+
+}
+
+
+.metric-guide-intro span {
+
+    display:
+        block;
+
+    margin-top:
+        5px;
+
+    color:
+        #7f8994;
+
+    font-size:
+        9px;
+
+    line-height:
+        1.5;
+
+}
+
+
+/* ================================================== */
+/* Color Guide */
+/* ================================================== */
+
+.metric-color-guide {
+
+    display:
+        flex;
+
+    flex-wrap:
+        wrap;
+
+    gap:
+        14px;
+
+    padding:
+        14px
+        24px;
+
+    margin-top:
+        12px;
+
+    color:
+        #7f8994;
+
+    font-size:
+        8px;
+
+    border-top:
+        1px solid #202730;
+
+    border-bottom:
+        1px solid #202730;
+
+}
+
+
+.metric-color-guide > div {
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        6px;
+
+}
+
+
+.metric-color-dot {
+
+    width:
+        8px;
+
+    height:
+        8px;
+
+    border-radius:
+        50%;
+
+}
+
+
+.metric-color-dot.frequency {
+
+    background:
+        #4c8bd4;
+
+}
+
+
+.metric-color-dot.favorable {
+
+    background:
+        #55bea8;
+
+}
+
+
+.metric-color-dot.unfavorable {
+
+    background:
+        #df6b70;
+
+}
+
+
+.metric-color-dot.neutral {
+
+    background:
+        #6d7680;
+
+}
+
+
+.metric-color-dot.accent {
+
+    background:
+        #d8b253;
+
+}
+
+
+/* ================================================== */
+/* Search */
+/* ================================================== */
+
+.metric-guide-search-wrap {
+
+    padding:
+        18px
+        24px
+        0;
+
+}
+
+
+.metric-guide-search {
+
+    box-sizing:
+        border-box;
+
+    width:
+        100%;
+
+    padding:
+        11px
+        13px;
+
+    color:
+        #e2e6ea;
+
+    background:
+        #121820;
+
+    border:
+        1px solid #303946;
+
+    outline:
+        none;
+
+    font-size:
+        10px;
+
+}
+
+
+.metric-guide-search:focus {
+
+    border-color:
+        #526b87;
+
+}
+
+
+.metric-guide-search::placeholder {
+
+    color:
+        #626d78;
+
+}
+
+
+/* ================================================== */
+/* Definitions */
+/* ================================================== */
+
+.metric-guide-list {
+
+    padding:
+        20px
+        24px
+        28px;
+
+}
+
+
+.metric-guide-category {
+
+    margin-top:
+        24px;
+
+}
+
+
+.metric-guide-category:first-child {
+
+    margin-top:
+        0;
+
+}
+
+
+.metric-guide-category-title {
+
+    margin-bottom:
+        8px;
+
+    color:
+        #d8b253;
+
+    font-size:
+        8px;
+
+    font-weight:
+        600;
+
+    letter-spacing:
+        0.8px;
+
+    text-transform:
+        uppercase;
+
+}
+
+
+.metric-guide-category-items {
+
+    display:
+        grid;
+
+    grid-template-columns:
+        repeat(
+            2,
+            minmax(
+                0,
+                1fr
+            )
+        );
+
+    gap:
+        10px;
+
+}
+
+
+.metric-definition {
+
+    padding:
+        15px;
+
+    background:
+        #121820;
+
+    border:
+        1px solid #252d37;
+
+    transition:
+        border-color
+        0.15s
+        ease,
+        background
+        0.15s
+        ease;
+
+}
+
+
+.metric-definition:hover {
+
+    background:
+        #151c24;
+
+    border-color:
+        #364250;
+
+}
+
+
+.metric-definition-highlight {
+
+    border-color:
+        #6d88a7;
+
+    background:
+        #17212c;
+
+}
+
+
+.metric-definition-name {
+
+    color:
+        #eef1f4;
+
+    font-size:
+        11px;
+
+    font-weight:
+        600;
+
+}
+
+
+.metric-definition-short {
+
+    margin-top:
+        5px;
+
+    color:
+        #9ba4ae;
+
+    font-size:
+        9px;
+
+    line-height:
+        1.55;
+
+}
+
+
+.metric-definition-why,
+.metric-definition-note {
+
+    margin-top:
+        10px;
+
+    color:
+        #75808b;
+
+    font-size:
+        8.5px;
+
+    line-height:
+        1.55;
+
+}
+
+
+.metric-definition-why strong,
+.metric-definition-note strong {
+
+    display:
+        block;
+
+    margin-bottom:
+        2px;
+
+    color:
+        #9ca6b1;
+
+    font-size:
+        8px;
+
+    text-transform:
+        uppercase;
+
+}
+
+
+.metric-guide-empty {
+
+    padding:
+        40px;
+
+    color:
+        #7d8793;
+
+    text-align:
+        center;
+
+    font-size:
+        10px;
+
+}
+
+
+/* ================================================== */
+/* Responsive */
+/* ================================================== */
+
+@media (
+    max-width: 760px
+) {
+
+    .metric-guide-overlay {
+
+        padding:
+            12px;
+
+    }
+
+
+    .metric-guide-modal {
+
+        max-height:
+            94vh;
+
+    }
+
+
+    .metric-guide-intro {
+
+        grid-template-columns:
+            1fr;
+
+    }
+
+
+    .metric-guide-category-items {
+
+        grid-template-columns:
+            1fr;
+
+    }
+
+
+    .metric-guide-launcher {
+
+        right:
+            14px;
+
+        bottom:
+            14px;
+
+    }
+
+}

@@ -1,0 +1,1097 @@
+/* ================================================== */
+/* Pitcher Research Lab                               */
+/* Application Views                                 */
+/* ================================================== */
+
+
+/* ================================================== */
+/* View Switching */
+/* ================================================== */
+
+.app-view {
+
+    display:
+        none;
+
+}
+
+
+.app-view.active {
+
+    display:
+        block;
+
+}
+
+
+/* ================================================== */
+/* Topbar View Description */
+/* ================================================== */
+
+.view-description {
+
+    margin-left:
+        12px;
+
+    color:
+        #68727e;
+
+    font-size:
+        9px;
+
+}
+
+
+/* ================================================== */
+/* Sidebar */
+/* ================================================== */
+
+.nav-item {
+
+    position:
+        relative;
+
+}
+
+
+.nav-item.active::before {
+
+    content:
+        "";
+
+    position:
+        absolute;
+
+    left:
+        0;
+
+    top:
+        8px;
+
+    bottom:
+        8px;
+
+    width:
+        2px;
+
+    background:
+        #d8b253;
+
+}
+
+
+.sidebar-version {
+
+    margin-top:
+        4px;
+
+    color:
+        #59626d;
+
+    font-size:
+        8px;
+
+}
+
+
+/* ================================================== */
+/* Standard View Header */
+/* ================================================== */
+
+.view-page-header {
+
+    display:
+        flex;
+
+    justify-content:
+        space-between;
+
+    align-items:
+        flex-end;
+
+    gap:
+        30px;
+
+    padding:
+        5px
+        0
+        22px;
+
+    margin-bottom:
+        22px;
+
+    border-bottom:
+        1px solid #252c35;
+
+}
+
+
+.view-page-header h2 {
+
+    margin:
+        4px
+        0
+        0;
+
+    color:
+        #f1f3f5;
+
+    font-size:
+        30px;
+
+    font-weight:
+        550;
+
+}
+
+
+.view-page-header p {
+
+    max-width:
+        720px;
+
+    margin:
+        9px
+        0
+        0;
+
+    color:
+        #858f9a;
+
+    font-size:
+        11px;
+
+    line-height:
+        1.65;
+
+}
+
+
+.view-method-badge {
+
+    padding:
+        8px
+        11px;
+
+    color:
+        #a3abb4;
+
+    background:
+        #11161d;
+
+    border:
+        1px solid #2a323c;
+
+    font-size:
+        8px;
+
+    letter-spacing:
+        0.6px;
+
+    text-transform:
+        uppercase;
+
+}
+
+
+/* ================================================== */
+/* Executive Overview */
+/* ================================================== */
+
+.executive-summary {
+
+    margin-bottom:
+        22px;
+
+}
+
+
+.executive-heading {
+
+    display:
+        flex;
+
+    justify-content:
+        space-between;
+
+    align-items:
+        flex-end;
+
+    gap:
+        20px;
+
+    margin-bottom:
+        16px;
+
+}
+
+
+.executive-heading h2 {
+
+    margin:
+        4px
+        0
+        0;
+
+    color:
+        #f1f3f5;
+
+    font-size:
+        30px;
+
+    font-weight:
+        550;
+
+}
+
+
+.executive-status {
+
+    padding:
+        7px
+        10px;
+
+    color:
+        #d8b253;
+
+    background:
+        #171711;
+
+    border:
+        1px solid #4b4329;
+
+    font-size:
+        8px;
+
+    letter-spacing:
+        0.7px;
+
+    text-transform:
+        uppercase;
+
+}
+
+
+/* ================================================== */
+/* Primary Finding */
+/* ================================================== */
+
+.executive-primary {
+
+    padding:
+        24px;
+
+    background:
+        #11161d;
+
+    border:
+        1px solid #252c35;
+
+    border-left:
+        3px solid #d8b253;
+
+}
+
+
+.executive-primary-label {
+
+    color:
+        #d8b253;
+
+    font-size:
+        8px;
+
+    font-weight:
+        600;
+
+    letter-spacing:
+        1px;
+
+}
+
+
+.executive-primary-text {
+
+    max-width:
+        1000px;
+
+    margin-top:
+        9px;
+
+    color:
+        #f0f2f4;
+
+    font-size:
+        21px;
+
+    font-weight:
+        500;
+
+    line-height:
+        1.45;
+
+}
+
+
+.executive-primary-detail {
+
+    max-width:
+        1050px;
+
+    margin:
+        12px
+        0
+        0;
+
+    color:
+        #969faa;
+
+    font-size:
+        11px;
+
+    line-height:
+        1.7;
+
+}
+
+
+/* ================================================== */
+/* Overview KPI Strip */
+/* ================================================== */
+
+.overview-kpi-grid {
+
+    display:
+        grid;
+
+    grid-template-columns:
+        repeat(
+            4,
+            minmax(0, 1fr)
+        );
+
+    margin-top:
+        12px;
+
+    border:
+        1px solid #252c35;
+
+}
+
+
+.overview-kpi {
+
+    padding:
+        16px;
+
+    background:
+        #10151b;
+
+    border-right:
+        1px solid #252c35;
+
+}
+
+
+.overview-kpi:last-child {
+
+    border-right:
+        none;
+
+}
+
+
+.overview-kpi span {
+
+    display:
+        block;
+
+    color:
+        #7d8793;
+
+    font-size:
+        8px;
+
+    letter-spacing:
+        0.5px;
+
+    text-transform:
+        uppercase;
+
+}
+
+
+.overview-kpi strong {
+
+    display:
+        block;
+
+    margin-top:
+        7px;
+
+    color:
+        #f0f2f5;
+
+    font-size:
+        20px;
+
+    font-weight:
+        600;
+
+    font-variant-numeric:
+        tabular-nums;
+
+}
+
+
+.overview-kpi small {
+
+    display:
+        block;
+
+    margin-top:
+        4px;
+
+    color:
+        #606a75;
+
+    font-size:
+        8px;
+
+}
+
+
+/* ================================================== */
+/* Transition Window */
+/* ================================================== */
+
+.overview-window-panel {
+
+    display:
+        grid;
+
+    grid-template-columns:
+        260px
+        1fr;
+
+    gap:
+        25px;
+
+    align-items:
+        center;
+
+    padding:
+        18px
+        20px;
+
+    margin-bottom:
+        18px;
+
+    background:
+        #0f141a;
+
+    border:
+        1px solid #252c35;
+
+}
+
+
+.overview-window-value {
+
+    margin-top:
+        6px;
+
+    color:
+        #d8b253;
+
+    font-size:
+        18px;
+
+    font-weight:
+        600;
+
+}
+
+
+.overview-window-copy {
+
+    color:
+        #858f9a;
+
+    font-size:
+        10px;
+
+    line-height:
+        1.7;
+
+}
+
+
+/* ================================================== */
+/* Three Key Signals */
+/* ================================================== */
+
+.overview-signal-grid {
+
+    display:
+        grid;
+
+    grid-template-columns:
+        repeat(
+            3,
+            minmax(0, 1fr)
+        );
+
+    gap:
+        14px;
+
+    margin-bottom:
+        24px;
+
+}
+
+
+.overview-signal-card {
+
+    min-height:
+        205px;
+
+    padding:
+        19px;
+
+    background:
+        #11161d;
+
+    border:
+        1px solid #252c35;
+
+}
+
+
+.signal-card-number {
+
+    color:
+        #58626e;
+
+    font-size:
+        8px;
+
+}
+
+
+.signal-card-label {
+
+    margin-top:
+        12px;
+
+    color:
+        #d8b253;
+
+    font-size:
+        8px;
+
+    font-weight:
+        600;
+
+    letter-spacing:
+        0.8px;
+
+}
+
+
+.overview-signal-card h3 {
+
+    margin:
+        7px
+        0
+        0;
+
+    color:
+        #eef1f4;
+
+    font-size:
+        14px;
+
+    font-weight:
+        600;
+
+}
+
+
+.overview-signal-card p {
+
+    min-height:
+        67px;
+
+    margin:
+        9px
+        0
+        0;
+
+    color:
+        #89939e;
+
+    font-size:
+        10px;
+
+    line-height:
+        1.6;
+
+}
+
+
+.signal-link {
+
+    margin-top:
+        12px;
+
+    padding:
+        0;
+
+    color:
+        #8faed4;
+
+    background:
+        transparent;
+
+    border:
+        none;
+
+    cursor:
+        pointer;
+
+    font-size:
+        9px;
+
+    text-align:
+        left;
+
+}
+
+
+.signal-link:hover {
+
+    color:
+        #b5cef0;
+
+}
+
+
+/* ================================================== */
+/* Research Workflow */
+/* ================================================== */
+
+.research-workflow {
+
+    margin:
+        25px
+        0;
+
+    background:
+        #11161d;
+
+    border:
+        1px solid #252c35;
+
+}
+
+
+.workflow-grid {
+
+    display:
+        grid;
+
+    grid-template-columns:
+        repeat(
+            4,
+            minmax(0, 1fr)
+        );
+
+}
+
+
+.workflow-card {
+
+    min-height:
+        135px;
+
+    padding:
+        18px;
+
+    color:
+        inherit;
+
+    background:
+        transparent;
+
+    border:
+        none;
+
+    border-right:
+        1px solid #252c35;
+
+    cursor:
+        pointer;
+
+    text-align:
+        left;
+
+}
+
+
+.workflow-card:last-child {
+
+    border-right:
+        none;
+
+}
+
+
+.workflow-card:hover {
+
+    background:
+        #151b22;
+
+}
+
+
+.workflow-card span {
+
+    display:
+        block;
+
+    color:
+        #d8b253;
+
+    font-size:
+        8px;
+
+}
+
+
+.workflow-card strong {
+
+    display:
+        block;
+
+    margin-top:
+        10px;
+
+    color:
+        #edf0f3;
+
+    font-size:
+        12px;
+
+}
+
+
+.workflow-card small {
+
+    display:
+        block;
+
+    margin-top:
+        7px;
+
+    color:
+        #7e8893;
+
+    font-size:
+        9px;
+
+    line-height:
+        1.55;
+
+}
+
+
+/* ================================================== */
+/* Methodology */
+/* ================================================== */
+
+.methodology-panel {
+
+    padding:
+        20px;
+
+    margin-top:
+        18px;
+
+    background:
+        #0f141a;
+
+    border:
+        1px solid #252c35;
+
+}
+
+
+.methodology-panel h3 {
+
+    margin:
+        5px
+        0
+        0;
+
+    color:
+        #eef1f4;
+
+    font-size:
+        14px;
+
+}
+
+
+.methodology-panel p {
+
+    max-width:
+        1000px;
+
+    margin:
+        10px
+        0
+        0;
+
+    color:
+        #848e99;
+
+    font-size:
+        10px;
+
+    line-height:
+        1.65;
+
+}
+
+
+/* ================================================== */
+/* Release Profile */
+/* ================================================== */
+
+.release-preview-grid {
+
+    display:
+        grid;
+
+    grid-template-columns:
+        repeat(
+            2,
+            minmax(0, 1fr)
+        );
+
+    gap:
+        14px;
+
+}
+
+
+.release-preview-card {
+
+    padding:
+        20px;
+
+    background:
+        #11161d;
+
+    border:
+        1px solid #252c35;
+
+}
+
+
+.release-preview-card h3 {
+
+    margin:
+        6px
+        0
+        0;
+
+    color:
+        #eef1f4;
+
+    font-size:
+        14px;
+
+}
+
+
+.release-preview-card p {
+
+    margin:
+        9px
+        0
+        0;
+
+    color:
+        #858f9a;
+
+    font-size:
+        10px;
+
+    line-height:
+        1.65;
+
+}
+
+
+.release-next-panel {
+
+    padding:
+        22px;
+
+    margin-top:
+        16px;
+
+    background:
+        #0f141a;
+
+    border:
+        1px solid #252c35;
+
+    border-left:
+        3px solid #527ba8;
+
+}
+
+
+.release-next-panel h3 {
+
+    margin:
+        6px
+        0
+        0;
+
+    color:
+        #eef1f4;
+
+    font-size:
+        16px;
+
+}
+
+
+.release-next-panel p {
+
+    max-width:
+        950px;
+
+    margin:
+        10px
+        0
+        0;
+
+    color:
+        #858f9a;
+
+    font-size:
+        10px;
+
+    line-height:
+        1.7;
+
+}
+
+
+/* ================================================== */
+/* Responsive */
+/* ================================================== */
+
+@media (
+    max-width: 1100px
+) {
+
+    .overview-kpi-grid {
+
+        grid-template-columns:
+            repeat(
+                2,
+                1fr
+            );
+
+    }
+
+
+    .overview-signal-grid {
+
+        grid-template-columns:
+            1fr;
+
+    }
+
+
+    .workflow-grid {
+
+        grid-template-columns:
+            repeat(
+                2,
+                1fr
+            );
+
+    }
+
+
+    .release-preview-grid {
+
+        grid-template-columns:
+            1fr;
+
+    }
+
+}
+
+
+@media (
+    max-width: 720px
+) {
+
+    .overview-kpi-grid {
+
+        grid-template-columns:
+            1fr;
+
+    }
+
+
+    .overview-window-panel {
+
+        grid-template-columns:
+            1fr;
+
+    }
+
+
+    .workflow-grid {
+
+        grid-template-columns:
+            1fr;
+
+    }
+
+
+    .view-page-header {
+
+        flex-direction:
+            column;
+
+        align-items:
+            stretch;
+
+    }
+
+}
+.release-measurement {
+    margin: 18px 0 8px;
+    color: var(--text-primary, #f4f7fb);
+    font-size: clamp(1.45rem, 2vw, 2rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+}
+
+.release-preview-card[hidden] {
+    display: none;
+}
+
+body.pitcher-neutral-state .app-view {
+    display: none !important;
+}
