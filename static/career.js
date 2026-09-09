@@ -537,10 +537,11 @@
                     </h3>
 
                     <p>
+                        xwOBA uses available contact estimates and excludes unestimated contact.
                         Inspect every regular-season outing before
                         deciding which periods deserve closer study.
-                        The current screening window is a comparison
-                        aid, not an assumed starting point.
+                        The shaded baseline and comparison periods show
+                        the active dates within the full career.
                     </p>
 
                 </div>
@@ -2055,26 +2056,7 @@
         );
 
 
-        const screen =
-            careerData?.current_screen_window;
-
-
-        if (
-            screen
-
-            &&
-
-            (
-                season === "ALL"
-
-                ||
-
-                season === String(
-                    new Date(`${screen.start}T00:00:00`).getFullYear()
-                )
-            )
-        ) {
-
+        for (const screen of Object.values(careerData?.comparison_periods || {}).filter(value => value?.start && value?.end)) {
             const inWindow =
 
                 fullOutings.filter(
@@ -2188,7 +2170,7 @@
 
                     "career-window-label",
 
-                    "Current screen window",
+                    screen.label,
 
                     "middle"
                 );

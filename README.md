@@ -26,15 +26,15 @@ The project began with a Paul Skenes research question: could reported changes i
 
 The analysis is intentionally direction-neutral. A pitcher can improve, decline, remain stable, or show mixed signals. Large statistical departures are screening signals, not conclusions about cause.
 
-New browser sessions open in a neutral state with no pitcher selected. Refreshing the same tab keeps the active pitcher, but the application never substitutes a hard-coded player.
+A browser with no saved selection opens in a neutral state. The selected pitcher, research season and custom periods are remembered in local browser storage across reloads and later visits. The application never substitutes a hard-coded player.
 
 ## Application views
 
-The landing state requires an intentional pitcher selection.
+The first visit requires an intentional pitcher selection.
 
 ![Neutral search-first landing screen](docs/images/landing-neutral.png)
 
-Change Detection places the selected season inside the pitcher's full cached MLB timeline and overlays an optional three-outing rolling average.
+Change Detection screens the active baseline and comparison periods. Career / Timeline shows all cached outings with an optional three-outing rolling average.
 
 ![Change Detection using live MLB data](docs/images/change-detection-live.png)
 
@@ -46,7 +46,7 @@ Release Profile compares pitch-specific release measurements across the active b
 
 - **Overview** — summarizes the strongest current signals without assuming that movement is positive or negative.
 - **Arsenal** — tracks velocity, movement, spin, extension and release characteristics by pitch type and season.
-- **Change Detection** — compares the selected season with the pitcher's own prior history and screens for sustained departures.
+- **Change Detection** — compares the active periods and screens for sustained departures from baseline.
 - **Release Profile** — connects measurable release information with pitch-characteristic changes while keeping mechanical claims separate from tracking data.
 - **Performance** — compares hitter response, contact quality, pitch value and official game outcomes across research periods.
 - **Command & Location** — maps pitch location and compares zone, chase, whiff, hard-contact and run-value patterns by period.
@@ -58,19 +58,21 @@ Pitch-level data are retrieved from Baseball Savant and cached in SQLite. The fi
 
 Official pitching lines are retrieved from MLB boxscores and cached separately. Selecting a historical research season can also populate official outings for that season when they are not already stored.
 
-Downloads and validation finish before the write transaction begins. Transient Savant connection and server errors receive bounded retries. The database supports multiple pitchers in the same cache, records ingestion attempts in `ingest_runs`, and exposes `/api/health` for integrity and pipeline-status checks.
+Downloads and validation finish before the write transaction begins. All pitch batches commit together; a failed batch rolls back both replacements and inserts. If a refresh fails, a usable cache still opens with its data date, a warning and a retry action. A failed first load offers retry or another pitcher selection. Transient Savant connection and server errors receive bounded retries. The database supports multiple pitchers in the same cache, records ingestion attempts in `ingest_runs`, and exposes `/api/health` for integrity and pipeline-status checks.
 
 ## Research controls
 
 ### Research season
 
-The global **Research Season** selector changes the target year used by the analysis. Baselines, outing timelines, pitch profiles, research periods, location and performance views all follow the selected year.
+The global **Research Season** selector changes the target year used by the analysis. It determines the automatic comparison and the Arsenal year. Custom dates override the comparison periods while Arsenal retains season context and Career retains the full cached timeline.
 
 ### Baseline and comparison periods
 
-Automatic mode uses up to two prior MLB seasons as the baseline and the selected research season as the comparison. If no prior MLB season exists, it compares earlier and later outings within the selected season. Custom mode accepts two explicit, non-overlapping periods from anywhere in the pitcher's cached MLB career.
+Automatic mode uses up to two prior MLB seasons as the baseline and the selected research season as the comparison. If no prior MLB season exists, it compares the first and last thirds of distinct outing dates within the selected season, with at least one date in each period. Doubleheader games remain separate outings in calculations; games on one date stay in the same date period. Custom mode accepts two explicit, non-overlapping periods from anywhere in the pitcher's cached MLB career.
 
-The same inclusive dates propagate across the research views. Invalid, overlapping, reversed, incomplete, or out-of-coverage periods are rejected by both the interface and API. Automatic periods are not described as detected change points.
+The same inclusive dates propagate across Overview, Change Detection, Release Profile, Location and Performance; Career shades both periods within the full timeline. Invalid, overlapping, reversed, incomplete, empty, or out-of-coverage periods are rejected by both the interface and API. Automatic periods are not described as detected change points.
+
+Release cards use all available measured outing averages for the exact selected pitch, independently of screening eligibility or rank. The screen requires at least five measured pitches per outing, three baseline outings, two comparison outings and nonzero baseline variation. A missing measurement is shown as unavailable.
 
 The screening score is `(comparison mean - baseline mean) / baseline outing standard deviation`. It is a descriptive baseline-standardized difference, not an inferential z-test, confidence level, formal change-point result, or causal claim.
 
@@ -85,9 +87,11 @@ The screening score is `(comparison mean - baseline mean) / baseline outing stan
 | Heart rate | Pitches in the center half of both normalized zone axes divided by pitches with usable location. This is a project-specific location region, not an official Savant leaderboard field. |
 | Edge rate | Located pitches inside the normalized zone and in its outer third on either axis, divided by pitches with usable location. This is a project-specific in-zone edge definition. |
 | Chase rate | Swings outside that normalized zone divided by located pitches outside it. |
-| Hard-hit rate | Batted balls at 95 mph or higher divided by tracked batted balls. |
-| Expected wOBA allowed | Statcast estimated wOBA on tracked contact plus actual values for non-contact outcomes. This constructed measure may differ from an official leaderboard value. |
+| Hard-hit rate | Balls in play at 95 mph or higher divided by balls in play with exit velocity. Foul balls are excluded from both hard-hit rate and average exit velocity. |
+| Expected wOBA allowed | Available Statcast estimates on balls in play plus actual wOBA values for walks, HBP and strikeouts. Contact without an estimate stays missing and is excluded. APIs expose covered/eligible PA counts and missing contact; Performance marks partial coverage with an asterisk. This constructed measure may differ from an official leaderboard value. |
 | Pitch value per 100 | Negative Statcast `delta_run_exp`, so positive values favor the pitcher, divided by pitches with a valid run-value field and scaled to 100. |
+
+Zone comparisons spanning 2025 and 2026 need care: the [Statcast CSV documentation](https://baseballsavant.mlb.com/csv-docs) describes `sz_top` and `sz_bot` as ABS-defined starting in 2026. Earlier seasons used operator-set bounds, so normalized zone measures can reflect that source-definition change.
 
 ## Architecture
 
@@ -100,7 +104,7 @@ The screening score is `(comparison mean - baseline mean) / baseline outing stan
 
 The active application is pitcher-agnostic. The original one-player research context is isolated under `case_studies/skenes/`.
 
-`comparison.py` owns the shared Baseline/Comparison validation used by the research, location and performance APIs. The generated SQLite cache is excluded from version control and is created automatically on first launch.
+`comparison.py` owns shared period validation across the comparison APIs. `change_analysis.py` separates outing-level screening from measured release summaries, and `metrics.py` shares run-value and expected-outcome eligibility rules. The generated SQLite cache is excluded from version control and is created automatically on first launch.
 
 ## Technology
 

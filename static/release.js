@@ -1,124 +1,79 @@
 (() => {
     "use strict";
-
     const METRICS = {
-        release_pos_x: {
-            card: "[data-release-metric='release_pos_x']",
-            value: "release-x-value",
-            detail: "release-x-detail",
-            label: "Release X",
-        },
-        release_pos_z: {
-            card: "[data-release-metric='release_pos_z']",
-            value: "release-z-value",
-            detail: "release-z-detail",
-            label: "Release Z",
-        },
-        release_extension: {
-            card: "[data-release-metric='release_extension']",
-            value: "release-extension-value",
-            detail: "release-extension-detail",
-            label: "Extension",
-        },
-        arm_angle: {
-            card: "[data-release-metric='arm_angle']",
-            value: "release-arm-angle-value",
-            detail: "release-arm-angle-detail",
-            label: "Arm angle",
-        },
+        release_pos_x: {value: "release-x-value", detail: "release-x-detail"},
+        release_pos_z: {value: "release-z-value", detail: "release-z-detail"},
+        release_extension: {value: "release-extension-value", detail: "release-extension-detail"},
+        arm_angle: {value: "release-arm-angle-value", detail: "release-arm-angle-detail"},
     };
+    let requestVersion = 0;
 
     function formatNumber(value, unit) {
-        const number = Number(value);
-        if (!Number.isFinite(number)) return null;
-        const suffix = unit === "deg" ? "°" : unit ? ` ${unit}` : "";
-        return `${number.toFixed(2)}${suffix}`;
+        if (value === null || value === undefined || !Number.isFinite(Number(value))) return null;
+        return `${Number(value).toFixed(2)}${unit === "deg" ? "°" : unit ? ` ${unit}` : ""}`;
     }
 
-    function preferredPitch(meta) {
-        const selected = document.getElementById("pitch-select")?.value;
-        if (selected) return selected;
-        return meta?.database?.arsenal?.[0]?.pitch_type || null;
-    }
-
-    function selectMetricRow(rows, metricKey, pitchType) {
-        const candidates = rows.filter(row => row?.metric_key === metricKey);
-        return candidates.find(row => row.pitch_type === pitchType) || candidates[0] || null;
-    }
-
-    function renderMetric(metricKey, row) {
-        const config = METRICS[metricKey];
-        const card = document.querySelector(config.card);
-        const value = document.getElementById(config.value);
-        const detail = document.getElementById(config.detail);
+    function renderMetric(key, row) {
+        const card = document.querySelector(`[data-release-metric='${key}']`);
+        const value = document.getElementById(METRICS[key].value);
+        const detail = document.getElementById(METRICS[key].detail);
         if (!card || !value || !detail) return false;
-
         const baseline = formatNumber(row?.baseline_mean, row?.unit);
         const comparison = formatNumber(row?.current_mean, row?.unit);
         const delta = formatNumber(row?.change, row?.unit);
-        if (!baseline || !comparison || !delta) {
+        if (!baseline && !comparison) {
             card.hidden = true;
+            value.textContent = "--";
+            detail.textContent = "No measured values for this pitch in either period.";
             return false;
         }
-
         card.hidden = false;
-        const sign = Number(row.change) > 0 ? "+" : "";
-        value.textContent = `${comparison} (${sign}${delta})`;
-        const detection = row.first_sustained_change
-            ? `Sustained deviation detected ${row.first_sustained_change}.`
-            : "Comparison-window difference; no sustained deviation detected.";
-        const baselineSeasons = Array.isArray(row.baseline_seasons)
-            ? row.baseline_seasons.join("–")
-            : "prior";
-        detail.textContent = `${row.pitch_type || "Pitch"}: ${baseline} baseline (${baselineSeasons}) to ${comparison}. ${detection}`;
+        value.textContent = comparison
+            ? `${comparison}${delta ? ` (${row.change > 0 ? "+" : ""}${delta})` : ""}`
+            : "Comparison unavailable";
+        const detection = !row.screen_eligible
+            ? "Sustained-change screen unavailable: too few eligible outings or no baseline variation."
+            : row.first_sustained_change
+                ? `Sustained deviation detected ${row.first_sustained_change}.`
+                : "No sustained deviation detected.";
+        detail.textContent = `${row.pitch_type}: ${baseline || "unavailable"} baseline (${row.baseline_outings} outings, ${row.baseline_pitches} measured pitches) to ${comparison || "unavailable"} comparison (${row.current_outings} outings, ${row.current_pitches} measured pitches). ${detection}`;
         return true;
     }
 
-    async function initializeReleaseProfile() {
-        if (window.pitcherResearchLab?.ready) {
-            await window.pitcherResearchLab.ready;
-        }
-        if (!window.pitcherResearchLab?.pitcherId) return;
-
+    async function loadReleaseProfile() {
+        const version = ++requestVersion;
+        const pitch = document.getElementById("pitch-select")?.value;
         const title = document.getElementById("release-context-title");
         const copy = document.getElementById("release-context-copy");
-
+        Object.keys(METRICS).forEach(key => renderMetric(key, null));
+        if (!pitch) return;
+        title.textContent = `Loading ${pitch} release measurements…`;
+        copy.textContent = window.pitcherResearchLab.periodText();
         try {
-            const response = await fetch(window.pitcherResearchLab.apiUrl("changes"));
-            if (!response.ok) throw new Error(`Release measurements API ${response.status}`);
-            const rows = await response.json();
-            const measurements = Array.isArray(rows) ? rows : [];
-            const pitchType = preferredPitch(window.pitcherResearchLab.meta);
+            const response = await fetch(window.pitcherResearchLab.apiUrl("release", {pitch}));
+            const payload = await response.json();
+            if (version !== requestVersion) return;
+            if (!response.ok) throw new Error(payload.error || "Release comparison could not load.");
+            const rows = payload.measurements || [];
             let shown = 0;
-            let detected = 0;
-
-            Object.keys(METRICS).forEach(metricKey => {
-                const row = selectMetricRow(measurements, metricKey, pitchType);
-                if (renderMetric(metricKey, row)) {
-                    shown += 1;
-                    if (row.first_sustained_change) detected += 1;
-                }
+            Object.keys(METRICS).forEach(key => {
+                const row = rows.find(row => row.metric_key === key && row.pitch_type === pitch);
+                if (renderMetric(key, row)) shown += 1;
             });
-
-            if (!shown) {
-                if (title) title.textContent = "Release measurements unavailable for this sample";
-                if (copy) copy.textContent = "The selected pitcher and season do not contain enough eligible outings with measured release fields for the current comparison.";
-                return;
-            }
-
-            if (title) {
-                title.textContent = detected
-                    ? `${detected} sustained release deviation${detected === 1 ? "" : "s"} detected`
-                    : "Measured release comparison; no sustained deviation detected";
-            }
-            if (copy) {
-                copy.textContent = `${shown} release metric${shown === 1 ? " is" : "s are"} available for ${pitchType || "the selected pitch"}. Values compare the documented baseline with the selected target-season window; higher or lower measurements do not by themselves imply improvement or deterioration.`;
-            }
+            title.textContent = shown ? `${pitch}: measured release comparison` : `${pitch}: release measurements unavailable`;
+            copy.textContent = `${shown} release metrics available. ${window.pitcherResearchLab.periodText(payload.comparison_periods)}. Values are means of measured outing averages; higher or lower does not by itself indicate improvement.`;
         } catch (error) {
-            if (title) title.textContent = "Release measurements unavailable";
-            if (copy) copy.textContent = "The release comparison could not be loaded from the current pitcher sample.";
+            if (version !== requestVersion) return;
+            title.textContent = "Release measurements unavailable";
+            copy.textContent = error.message;
         }
     }
 
+    async function initializeReleaseProfile() {
+        const meta = await window.pitcherResearchLab.ready;
+        if (!meta) return;
+        document.getElementById("pitch-select")?.addEventListener("change", loadReleaseProfile);
+        await loadReleaseProfile();
+    }
     initializeReleaseProfile();
 })();

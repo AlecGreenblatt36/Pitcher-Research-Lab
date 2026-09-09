@@ -166,7 +166,13 @@ def _write_batch(connection: sqlite3.Connection, data: pd.DataFrame) -> int:
         """,
         identity_rows,
     )
-    aligned.to_sql("pitches", connection, if_exists="append", index=False)
+    # pandas.to_sql commits raw SQLite connections, breaking the outer transaction.
+    quoted = ", ".join('"' + column.replace('"', '""') + '"' for column in columns)
+    placeholders = ", ".join("?" for _ in columns)
+    connection.executemany(
+        f"INSERT INTO pitches ({quoted}) VALUES ({placeholders})",
+        aligned.itertuples(index=False, name=None),
+    )
     return len(aligned)
 
 
@@ -244,6 +250,7 @@ def sync_pitcher_statcast(pitcher_id: int, force_full: bool = False) -> dict[str
 
     rows_fetched = 0
     rows_written = 0
+    write_committed = False
     try:
         prepared_batches = []
         for window_start, window_end in _windows(start_date, today):
@@ -252,11 +259,12 @@ def sync_pitcher_statcast(pitcher_id: int, force_full: bool = False) -> dict[str
             prepared_batches.append(_prepare(raw, pitcher_id))
 
         with closing(connect_database()) as connection:
-            connection.execute("BEGIN")
-            for incoming in prepared_batches:
-                rows_written += _write_batch(connection, incoming)
-            connection.commit()
+            with connection:
+                connection.execute("BEGIN")
+                for incoming in prepared_batches:
+                    rows_written += _write_batch(connection, incoming)
 
+        write_committed = True
         update_sync_metadata(pitcher_id, statcast=True)
         summary_after = database_pitcher_summary(pitcher_id)
         completed_at = datetime.now().astimezone().isoformat(timespec="seconds")
@@ -281,6 +289,8 @@ def sync_pitcher_statcast(pitcher_id: int, force_full: bool = False) -> dict[str
             **summary_after,
         }
     except Exception as exc:
+        if not write_committed:
+            rows_written = 0
         completed_at = datetime.now().astimezone().isoformat(timespec="seconds")
         with closing(connect_database()) as connection:
             connection.execute(

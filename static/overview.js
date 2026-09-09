@@ -547,38 +547,11 @@ function renderExecutiveSummary() {
 // ==================================================
 
 function renderTransitionWindow() {
-
-    const windowData =
-        overviewResearchData
-        ?.transition_window;
-
-    if (!windowData) {
-        return;
+        const element = document.getElementById("overview-transition-window");
+        if (element) element.textContent = window.pitcherResearchLab.periodText(overviewResearchData?.comparison_periods);
     }
 
-
-    const element =
-        document.getElementById(
-            "overview-transition-window"
-        );
-
-
-    if (element) {
-
-        element.textContent =
-
-            `${formatDate(
-                windowData.start
-            )} — ${formatDate(
-                windowData.end
-            )}`;
-
-    }
-
-}
-
-
-// ==================================================
+    // ==================================================
 // Stuff Signal
 // ==================================================
 
@@ -940,9 +913,9 @@ function renderArsenalSignal() {
 
             `${pitchName} usage moved from ${formatNumber(
                 largest.early.usage_pct
-            )}% in the early period to ${formatNumber(
+            )}% in the baseline to ${formatNumber(
                 largest.post.usage_pct
-            )}% in the later period — a change of ${Math.abs(
+            )}% in the comparison — a change of ${Math.abs(
                 largest.usage_delta
             ).toFixed(1)} percentage points. This is a change in arsenal deployment, not automatically evidence that the pitch itself became better or worse.`;
 
@@ -1122,10 +1095,7 @@ async function initializeExecutiveOverview() {
 
         const researchResponse =
             await fetch(
-                window.pitcherResearchLab.apiUrl("research", {
-                    start: windowRange.start,
-                    end: windowRange.end,
-                })
+                window.pitcherResearchLab.apiUrl("research")
             );
 
         if (!researchResponse.ok) {

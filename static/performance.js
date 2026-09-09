@@ -44,6 +44,8 @@
       ? "--"
       : Number(v).toFixed(d);
 
+  const xwobaText = summary => `${fmt(summary.xwoba_allowed, 3)}${summary.xwoba_missing_contact > 0 ? " *" : ""}`;
+
   const signed=(v,d=2)=>
     num(v)===null
       ? "--"
@@ -64,10 +66,10 @@
 
   const periodName=p=>
     p==="early"
-      ? "Early Period"
+      ? "Baseline"
       : p==="transition"
-        ? "Middle Period"
-        : "Later Period";
+        ? "Between periods"
+        : "Comparison";
 
   const opp=o=>
     `${o?.home_away==="Away"?"@":"vs"} ${o?.opponent??"--"}`;
@@ -379,7 +381,7 @@
             ${processCard(
               "xwOBA Allowed",
               "latest-xwoba",
-              "Expected PA quality"
+              "Available estimates; * missing contact estimates"
             )}
 
             ${processCard(
@@ -988,10 +990,7 @@
 
     text(
       "latest-xwoba",
-      fmt(
-        p.xwoba_allowed,
-        3
-      )
+      xwobaText(p)
     );
 
 
@@ -1142,10 +1141,7 @@
 
             ${periodMetric(
               "xwOBA",
-              fmt(
-                p.xwoba_allowed,
-                3
-              )
+              xwobaText(p)
             )}
 
             ${periodMetric(
@@ -1443,97 +1439,19 @@
         );
 
 
-    // Research-window shading
-
-    const start=
-      new Date(
-        `${data.transition_window.start}T00:00:00`
-      ).getTime();
-
-
-    const end=
-      new Date(
-        `${data.transition_window.end}T00:00:00`
-      ).getTime();
-
-
-    if(
-      end>=t0
-      &&
-      start<=t1
-    ){
-
-      const x1=
-        xp(
-          Math.max(
-            start,
-            t0
-          )
-        );
-
-      const x2=
-        xp(
-          Math.min(
-            end,
-            t1
-          )
-        );
-
-
-      const rect=
-        document.createElementNS(
-          "http://www.w3.org/2000/svg",
-          "rect"
-        );
-
-
-      rect.setAttribute(
-        "x",
-        x1
-      );
-
-      rect.setAttribute(
-        "y",
-        M.t
-      );
-
-      rect.setAttribute(
-        "width",
-        Math.max(
-          x2-x1,
-          1
-        )
-      );
-
-      rect.setAttribute(
-        "height",
-        H-M.t-M.b
-      );
-
-      rect.setAttribute(
-        "class",
-        "performance-transition-shade"
-      );
-
-
-      svg.appendChild(
-        rect
-      );
-
-
-      svgText(
-        svg,
-        (
-          x1+x2
-        )/2,
-        M.t+15,
-        "performance-transition-label",
-        "Research window",
-        "middle"
-      );
-
+    // The actual baseline and comparison dates, inclusive.
+    for (const period of Object.values(data.comparison_periods || {}).filter(value => value?.start && value?.end)) {
+      const start = new Date(`${period.start}T00:00:00`).getTime();
+      const end = new Date(`${period.end}T00:00:00`).getTime();
+      if (end < t0 || start > t1) continue;
+      const x1 = xp(Math.max(start, t0));
+      const x2 = xp(Math.min(end, t1));
+      const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      Object.entries({x: x1, y: M.t, width: Math.max(x2-x1, 1), height: H-M.t-M.b,
+        class: "performance-transition-shade"}).forEach(([key, value]) => rect.setAttribute(key, value));
+      svg.appendChild(rect);
+      svgText(svg, (x1+x2)/2, M.t+15, "performance-transition-label", period.label, "middle");
     }
-
 
     // Y grid
 
@@ -1899,10 +1817,7 @@
           </td>
 
           <td>
-            ${fmt(
-              p.xwoba_allowed,
-              3
-            )}
+            ${xwobaText(p)}
           </td>
 
           <td>
@@ -2051,10 +1966,7 @@
         ],
         [
           "xwOBA",
-          fmt(
-            p.xwoba_allowed,
-            3
-          )
+          xwobaText(p)
         ],
         [
           "Pitch Value",
@@ -2254,6 +2166,7 @@
       status
       &&
       latest
+      && !window.pitcherResearchLab.syncWarning
     ){
 
       status.textContent=
@@ -2305,10 +2218,7 @@
 
       const res=
         await fetch(
-          window.pitcherResearchLab.apiUrl("performance", {
-            start: windowRange.start,
-            end: windowRange.end,
-          })
+          window.pitcherResearchLab.apiUrl("performance")
         );
 
 

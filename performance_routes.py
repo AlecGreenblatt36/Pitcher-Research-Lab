@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+from metrics import xwoba_components, xwoba_coverage, run_value_summary
 
 from pitcher_core import (
     DATABASE_FILE,
@@ -302,926 +303,132 @@ def classify_period(
     return "post"
 
 
-def add_pitch_flags(
-    data
-):
-
-    data = (
-        data.copy()
-    )
-
-
+def add_pitch_flags(data):
+    data = data.copy()
     numeric_columns = [
-
         "plate_x",
-
         "plate_z",
-
         "sz_top",
-
         "sz_bot",
-
         "launch_speed",
-
         "launch_angle",
-
         "estimated_woba_using_speedangle",
-
         "woba_value",
-
         "woba_denom",
-
         "delta_run_exp",
-
         "bat_score",
-
-        "post_bat_score"
-
+        "post_bat_score",
     ]
-
-
     for column in numeric_columns:
-
-        data[
-            column
-        ] = (
-
-            pd.to_numeric(
-                data[
-                    column
-                ],
-                errors="coerce"
-            )
-
-        )
-
-
-    data[
-        "is_swing"
-    ] = (
-
-        data[
-            "description"
-        ]
-        .isin(
-            SWING_DESCRIPTIONS
-        )
-
-    )
-
-
-    data[
-        "is_whiff"
-    ] = (
-
-        data[
-            "description"
-        ]
-        .isin(
-            WHIFF_DESCRIPTIONS
-        )
-
-    )
-
-
+        data[column] = pd.to_numeric(data[column], errors="coerce")
+    data["is_swing"] = data["description"].isin(SWING_DESCRIPTIONS)
+    data["is_whiff"] = data["description"].isin(WHIFF_DESCRIPTIONS)
     valid_zone = (
-
-        data[
-            "plate_x"
-        ].notna()
-
-        &
-
-        data[
-            "plate_z"
-        ].notna()
-
-        &
-
-        data[
-            "sz_top"
-        ].notna()
-
-        &
-
-        data[
-            "sz_bot"
-        ].notna()
-
-        &
-
-        (
-            data[
-                "sz_top"
-            ]
-            >
-            data[
-                "sz_bot"
-            ]
-        )
-
+        data["plate_x"].notna()
+        & data["plate_z"].notna()
+        & data["sz_top"].notna()
+        & data["sz_bot"].notna()
+        & (data["sz_top"] > data["sz_bot"])
     )
-
-
-    data[
-        "zone_eligible"
-    ] = (
+    data["zone_eligible"] = valid_zone
+    zone_center = (data["sz_top"] + data["sz_bot"]) / 2.0
+    zone_half_height = (data["sz_top"] - data["sz_bot"]) / 2.0
+    data["normalized_x"] = data["plate_x"] / 0.83
+    data["normalized_z"] = (data["plate_z"] - zone_center) / zone_half_height
+    data["in_zone"] = (
         valid_zone
+        & (data["normalized_x"].abs() <= 1.0)
+        & (data["normalized_z"].abs() <= 1.0)
     )
-
-
-    zone_center = (
-
-        data[
-            "sz_top"
-        ]
-
-        +
-
-        data[
-            "sz_bot"
-        ]
-
-    ) / 2.0
-
-
-    zone_half_height = (
-
-        data[
-            "sz_top"
-        ]
-
-        -
-
-        data[
-            "sz_bot"
-        ]
-
-    ) / 2.0
-
-
-    data[
-        "normalized_x"
-    ] = (
-
-        data[
-            "plate_x"
-        ]
-
-        /
-
-        0.83
-
+    data["out_of_zone"] = valid_zone & ~data["in_zone"]
+    data["is_chase"] = data["out_of_zone"] & data["is_swing"]
+    data["tracked_contact"] = data["launch_speed"].notna() & data["description"].eq(
+        "hit_into_play"
     )
-
-
-    data[
-        "normalized_z"
-    ] = (
-
-        (
-            data[
-                "plate_z"
-            ]
-            -
-            zone_center
-        )
-
-        /
-
-        zone_half_height
-
-    )
-
-
-    data[
-        "in_zone"
-    ] = (
-
-        valid_zone
-
-        &
-
-        (
-            data[
-                "normalized_x"
-            ]
-            .abs()
-            <=
-            1.0
-        )
-
-        &
-
-        (
-            data[
-                "normalized_z"
-            ]
-            .abs()
-            <=
-            1.0
-        )
-
-    )
-
-
-    data[
-        "out_of_zone"
-    ] = (
-
-        valid_zone
-
-        &
-
-        ~data[
-            "in_zone"
-        ]
-
-    )
-
-
-    data[
-        "is_chase"
-    ] = (
-
-        data[
-            "out_of_zone"
-        ]
-
-        &
-
-        data[
-            "is_swing"
-        ]
-
-    )
-
-
-    # Hard-hit rate should use tracked balls in play,
-    # not every pitch that happens to carry an EV field.
-
-    data[
-        "tracked_contact"
-    ] = (
-
-        data[
-            "launch_speed"
-        ].notna()
-
-        &
-
-        data[
-            "description"
-        ].eq(
-            "hit_into_play"
-        )
-
-    )
-
-
-    data[
-        "hard_hit"
-    ] = (
-
-        data[
-            "tracked_contact"
-        ]
-
-        &
-
-        (
-            data[
-                "launch_speed"
-            ]
-            >=
-            95.0
-        )
-
-    )
-
-
-    # Existing project convention:
-    # positive pitcher value = good.
-
-    data[
-        "pitcher_run_value"
-    ] = (
-
-        -data[
-            "delta_run_exp"
-        ]
-
-    )
-
-
-    data[
-        "is_terminal_pa"
-    ] = (
-
-        data[
-            "events"
-        ].notna()
-
-    )
-
-
-    data[
-        "is_strikeout"
-    ] = (
-
-        data[
-            "events"
-        ]
-        .isin(
-            STRIKEOUT_EVENTS
-        )
-
-    )
-
-
-    data[
-        "is_walk"
-    ] = (
-
-        data[
-            "events"
-        ]
-        .isin(
-            WALK_EVENTS
-        )
-
-    )
-
-
-    data[
-        "is_hbp"
-    ] = (
-
-        data[
-            "events"
-        ]
-        .eq(
-            "hit_by_pitch"
-        )
-
-    )
-
-
-    data[
-        "is_hit"
-    ] = (
-
-        data[
-            "events"
-        ]
-        .isin(
-            HIT_EVENTS
-        )
-
-    )
-
-
-    data[
-        "is_home_run"
-    ] = (
-
-        data[
-            "events"
-        ]
-        .eq(
-            "home_run"
-        )
-
-    )
-
-
-    score_change = (
-
-        data[
-            "post_bat_score"
-        ]
-
-        -
-
-        data[
-            "bat_score"
-        ]
-
-    )
-
-
-    data[
-        "runs_scored_on_pitch"
-    ] = (
-
-        score_change
-        .where(
-            score_change > 0,
-            0
-        )
-        .fillna(
-            0
-        )
-
-    )
-
-
-    # Expected wOBA:
-    #
-    # Use Statcast's estimated value on batted-ball
-    # contact when it exists.
-    #
-    # On BB/HBP/K/non-contact outcomes, retain
-    # the actual wOBA value.
-
-    data[
-        "xwoba_component"
-    ] = (
-
-        data[
-            "estimated_woba_using_speedangle"
-        ]
-
-    )
-
-
-    missing_estimate = (
-
-        data[
-            "xwoba_component"
-        ].isna()
-
-    )
-
-
-    data.loc[
-        missing_estimate,
-        "xwoba_component"
-    ] = (
-
-        data.loc[
-            missing_estimate,
-            "woba_value"
-        ]
-
-    )
-
-
+    data["hard_hit"] = data["tracked_contact"] & (data["launch_speed"] >= 95.0)
+    data["pitcher_run_value"] = -data["delta_run_exp"]
+    data["is_terminal_pa"] = data["events"].notna()
+    data["is_strikeout"] = data["events"].isin(STRIKEOUT_EVENTS)
+    data["is_walk"] = data["events"].isin(WALK_EVENTS)
+    data["is_hbp"] = data["events"].eq("hit_by_pitch")
+    data["is_hit"] = data["events"].isin(HIT_EVENTS)
+    data["is_home_run"] = data["events"].eq("home_run")
+    score_change = data["post_bat_score"] - data["bat_score"]
+    data["runs_scored_on_pitch"] = score_change.where(score_change > 0, 0).fillna(0)
+    data["xwoba_component"] = xwoba_components(data)
     return data
 
 
-def process_summary(
-    data
-):
-
-    pitch_count = len(
-        data
-    )
-
-
-    swings = int(
-
-        data[
-            "is_swing"
-        ].sum()
-
-    )
-
-
-    whiffs = int(
-
-        data[
-            "is_whiff"
-        ].sum()
-
-    )
-
-
-    zone_eligible = int(
-
-        data[
-            "zone_eligible"
-        ].sum()
-
-    )
-
-
-    in_zone = int(
-
-        data[
-            "in_zone"
-        ].sum()
-
-    )
-
-
-    out_of_zone = int(
-
-        data[
-            "out_of_zone"
-        ].sum()
-
-    )
-
-
-    chases = int(
-
-        data[
-            "is_chase"
-        ].sum()
-
-    )
-
-
-    tracked_contact = int(
-
-        data[
-            "tracked_contact"
-        ].sum()
-
-    )
-
-
-    hard_hits = int(
-
-        data[
-            "hard_hit"
-        ].sum()
-
-    )
-
-
-    terminal_pas = (
-
-        data[
-            data[
-                "is_terminal_pa"
-            ]
-        ]
-        .copy()
-
-    )
-
-
-    batters_faced = len(
-        terminal_pas
-    )
-
-
+def process_summary(data):
+    pitch_count = len(data)
+    swings = int(data["is_swing"].sum())
+    whiffs = int(data["is_whiff"].sum())
+    zone_eligible = int(data["zone_eligible"].sum())
+    in_zone = int(data["in_zone"].sum())
+    out_of_zone = int(data["out_of_zone"].sum())
+    chases = int(data["is_chase"].sum())
+    tracked_contact = int(data["tracked_contact"].sum())
+    hard_hits = int(data["hard_hit"].sum())
+    terminal_pas = data[data["is_terminal_pa"]].copy()
+    batters_faced = len(terminal_pas)
     woba_rows = terminal_pas[
-
-        terminal_pas[
-            "woba_value"
-        ].notna()
-
-        &
-
-        terminal_pas[
-            "woba_denom"
-        ].notna()
-
-        &
-
-        (
-            terminal_pas[
-                "woba_denom"
-            ]
-            >
-            0
-        )
-
+        terminal_pas["woba_value"].notna()
+        & terminal_pas["woba_denom"].notna()
+        & (terminal_pas["woba_denom"] > 0)
     ]
-
-
-    woba_denominator = (
-
-        woba_rows[
-            "woba_denom"
-        ].sum()
-
-    )
-
-
+    woba_denominator = woba_rows["woba_denom"].sum()
     woba_allowed = None
-
-
-    if (
-        woba_denominator
-        >
-        0
-    ):
-
+    if woba_denominator > 0:
         woba_allowed = (
-
-            (
-
-                woba_rows[
-                    "woba_value"
-                ]
-
-                *
-
-                woba_rows[
-                    "woba_denom"
-                ]
-
-            ).sum()
-
-            /
-
-            woba_denominator
-
-        )
-
-
+            woba_rows["woba_value"] * woba_rows["woba_denom"]
+        ).sum() / woba_denominator
     xwoba_rows = terminal_pas[
-
-        terminal_pas[
-            "xwoba_component"
-        ].notna()
-
-        &
-
-        terminal_pas[
-            "woba_denom"
-        ].notna()
-
-        &
-
-        (
-            terminal_pas[
-                "woba_denom"
-            ]
-            >
-            0
-        )
-
+        terminal_pas["xwoba_component"].notna()
+        & terminal_pas["woba_denom"].notna()
+        & (terminal_pas["woba_denom"] > 0)
     ]
-
-
-    xwoba_denominator = (
-
-        xwoba_rows[
-            "woba_denom"
-        ].sum()
-
-    )
-
-
+    xwoba_denominator = xwoba_rows["woba_denom"].sum()
     xwoba_allowed = None
-
-
-    if (
-        xwoba_denominator
-        >
-        0
-    ):
-
+    if xwoba_denominator > 0:
         xwoba_allowed = (
-
-            (
-
-                xwoba_rows[
-                    "xwoba_component"
-                ]
-
-                *
-
-                xwoba_rows[
-                    "woba_denom"
-                ]
-
-            ).sum()
-
-            /
-
-            xwoba_denominator
-
-        )
-
-
-    run_value = (
-
-        data[
-            "pitcher_run_value"
-        ]
-        .sum(
-            min_count=1
-        )
-
-    )
-
-
-    run_value_per_100 = None
-
-
-    if (
-        pitch_count > 0
-
-        and
-
-        pd.notna(
-            run_value
-        )
-    ):
-
-        run_value_per_100 = (
-
-            run_value
-
-            /
-
-            pitch_count
-
-            *
-
-            100.0
-
-        )
-
-
-    avg_ev = (
-
-        data.loc[
-
-            data[
-                "tracked_contact"
-            ],
-
-            "launch_speed"
-
-        ]
-        .mean()
-
-    )
-
-
-    strikeouts = int(
-
-        terminal_pas[
-            "is_strikeout"
-        ].sum()
-
-    )
-
-
-    walks = int(
-
-        terminal_pas[
-            "is_walk"
-        ].sum()
-
-    )
-
-
-    hbp = int(
-
-        terminal_pas[
-            "is_hbp"
-        ].sum()
-
-    )
-
-
-    hits = int(
-
-        terminal_pas[
-            "is_hit"
-        ].sum()
-
-    )
-
-
-    home_runs = int(
-
-        terminal_pas[
-            "is_home_run"
-        ].sum()
-
-    )
-
-
-    runs_while_pitching = int(
-
-        round(
-
-            data[
-                "runs_scored_on_pitch"
-            ].sum()
-
-        )
-
-    )
-
-
+            xwoba_rows["xwoba_component"] * xwoba_rows["woba_denom"]
+        ).sum() / xwoba_denominator
+    run_value, run_value_pitches, run_value_per_100 = run_value_summary(data)
+    avg_ev = data.loc[data["tracked_contact"], "launch_speed"].mean()
+    strikeouts = int(terminal_pas["is_strikeout"].sum())
+    walks = int(terminal_pas["is_walk"].sum())
+    hbp = int(terminal_pas["is_hbp"].sum())
+    hits = int(terminal_pas["is_hit"].sum())
+    home_runs = int(terminal_pas["is_home_run"].sum())
+    runs_while_pitching = int(round(data["runs_scored_on_pitch"].sum()))
     return {
-
-        "pitches":
-            int(
-                pitch_count
-            ),
-
-        "batters_faced_statcast":
-            int(
-                batters_faced
-            ),
-
-        "strikeouts_statcast":
-            strikeouts,
-
-        "walks_statcast":
-            walks,
-
-        "hit_by_pitch_statcast":
-            hbp,
-
-        "hits_statcast":
-            hits,
-
-        "home_runs_statcast":
-            home_runs,
-
-        "runs_while_pitching_statcast":
-            runs_while_pitching,
-
-        "swings":
-            swings,
-
-        "whiffs":
-            whiffs,
-
-        "whiff_pct":
-            pct(
-                whiffs,
-                swings
-            ),
-
-        "zone_eligible_pitches":
-            zone_eligible,
-
-        "in_zone_pitches":
-            in_zone,
-
-        "zone_pct":
-            pct(
-                in_zone,
-                zone_eligible
-            ),
-
-        "out_of_zone_pitches":
-            out_of_zone,
-
-        "chases":
-            chases,
-
-        "chase_pct":
-            pct(
-                chases,
-                out_of_zone
-            ),
-
-        "tracked_batted_balls":
-            tracked_contact,
-
-        "hard_hits":
-            hard_hits,
-
-        "hard_hit_pct":
-            pct(
-                hard_hits,
-                tracked_contact
-            ),
-
-        "avg_exit_velocity":
-            safe_number(
-                avg_ev,
-                1
-            ),
-
-        "woba_allowed":
-            safe_number(
-                woba_allowed,
-                3
-            ),
-
-        "xwoba_allowed":
-            safe_number(
-                xwoba_allowed,
-                3
-            ),
-
-        "pitcher_run_value":
-            safe_number(
-                run_value,
-                2
-            ),
-
-        "pitch_value_per_100":
-            safe_number(
-                run_value_per_100,
-                2
-            )
-
+        **xwoba_coverage(data),
+        "run_value_pitches": run_value_pitches,
+        "pitches": int(pitch_count),
+        "batters_faced_statcast": int(batters_faced),
+        "strikeouts_statcast": strikeouts,
+        "walks_statcast": walks,
+        "hit_by_pitch_statcast": hbp,
+        "hits_statcast": hits,
+        "home_runs_statcast": home_runs,
+        "runs_while_pitching_statcast": runs_while_pitching,
+        "swings": swings,
+        "whiffs": whiffs,
+        "whiff_pct": pct(whiffs, swings),
+        "zone_eligible_pitches": zone_eligible,
+        "in_zone_pitches": in_zone,
+        "zone_pct": pct(in_zone, zone_eligible),
+        "out_of_zone_pitches": out_of_zone,
+        "chases": chases,
+        "chase_pct": pct(chases, out_of_zone),
+        "tracked_batted_balls": tracked_contact,
+        "hard_hits": hard_hits,
+        "hard_hit_pct": pct(hard_hits, tracked_contact),
+        "avg_exit_velocity": safe_number(avg_ev, 1),
+        "woba_allowed": safe_number(woba_allowed, 3),
+        "xwoba_allowed": safe_number(xwoba_allowed, 3),
+        "pitcher_run_value": safe_number(run_value, 2),
+        "pitch_value_per_100": safe_number(run_value_per_100, 2),
     }
 
 

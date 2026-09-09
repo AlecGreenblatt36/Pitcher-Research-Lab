@@ -5,6 +5,7 @@
 
 
 let locationData = null;
+let locationRequestVersion = 0;
 
 
 let locationTransitionStart = null;
@@ -967,6 +968,7 @@ function getBinColor(
 // ==================================================
 
 async function loadLocationData() {
+    const requestVersion = ++locationRequestVersion;
 
     const pitchElement =
         document.getElementById(
@@ -1004,10 +1006,20 @@ async function loadLocationData() {
         window.pitcherResearchLab.apiUrl("location", {
             pitch,
             hand,
-            start: locationTransitionStart,
-            end: locationTransitionEnd,
         });
 
+
+    locationData = null;
+    ["zone", "whiff", "hard-hit", "rv"].forEach(key => {
+        const el = document.getElementById(`location-delta-${key}`);
+        if (el) el.textContent = "--";
+    });
+    locationPeriods.forEach(period => {
+        const svg = document.getElementById(`location-heatmap-${period}`);
+        const meta = document.getElementById(`location-meta-${period}`);
+        if (svg) svg.replaceChildren();
+        if (meta) meta.textContent = "No qualifying pitches";
+    });
 
     try {
 
@@ -1028,8 +1040,9 @@ async function loadLocationData() {
         }
 
 
-        locationData =
-            await response.json();
+        const payload = await response.json();
+        if (requestVersion !== locationRequestVersion) return;
+        locationData = payload;
 
 
         renderLocationLab();
@@ -1040,6 +1053,7 @@ async function loadLocationData() {
         error
     ) {
 
+        if (requestVersion !== locationRequestVersion) return;
         console.error(
 
             "Location API error:",
@@ -1094,264 +1108,35 @@ function renderLocationLab() {
 // ==================================================
 
 function renderLocationFinding() {
-
-    const early =
-        getSummary(
-            "early"
-        );
-
-
-    const post =
-        getSummary(
-            "post"
-        );
-
-
-    if (
-        !early
-        ||
-        !post
-    ) {
-
-        return;
-
-    }
-
-
-    const pitchType =
-        document.getElementById(
-            "location-pitch"
-        ).value;
-
-
-    const pitchName =
-        locationPitchNames[
-            pitchType
-        ]
-        ??
-        pitchType;
-
-
-    const zoneDelta =
-
-        Number(
-            post.zone_pct
-        )
-
-        -
-
-        Number(
-            early.zone_pct
-        );
-
-
-    const whiffDelta =
-
-        Number(
-            post.whiff_pct
-        )
-
-        -
-
-        Number(
-            early.whiff_pct
-        );
-
-
-    const hardHitDelta =
-
-        Number(
-            post.hard_hit_pct
-        )
-
-        -
-
-        Number(
-            early.hard_hit_pct
-        );
-
-
-    const rvDelta =
-
-        Number(
-            post.run_value_per_100
-        )
-
-        -
-
-        Number(
-            early.run_value_per_100
-        );
-
-
-    // --------------------------------------------------
-    // Delta cards
-    // --------------------------------------------------
-
-    document.getElementById(
-        "location-delta-zone"
-    ).textContent =
-
-        signedDelta(
-            zoneDelta,
-            " pts"
-        );
-
-
-    document.getElementById(
-        "location-delta-whiff"
-    ).textContent =
-
-        signedDelta(
-            whiffDelta,
-            " pts"
-        );
-
-
-    document.getElementById(
-        "location-delta-hard-hit"
-    ).textContent =
-
-        signedDelta(
-            hardHitDelta,
-            " pts"
-        );
-
-
-    document.getElementById(
-        "location-delta-rv"
-    ).textContent =
-
-        signedDelta(
-            rvDelta,
-            "",
-            2
-        );
-
-
-    // --------------------------------------------------
-    // Automatic finding headline
-    // --------------------------------------------------
-
-    let title =
-        "Mixed later-period profile";
-
-
-    if (
-        whiffDelta > 0
-        &&
-        rvDelta < 0
-    ) {
-
-        title =
-            "More swing-and-miss, less overall pitch value";
-
-    }
-
-
-    else if (
-        whiffDelta < 0
-        &&
-        rvDelta < 0
-    ) {
-
-        title =
-            "Swing-and-miss and pitch value both moved lower";
-
-    }
-
-
-    else if (
-        whiffDelta > 0
-        &&
-        rvDelta > 0
-    ) {
-
-        title =
-            "Swing-and-miss and pitch value both improved";
-
-    }
-
-
-    document.getElementById(
-        "location-finding-title"
-    ).textContent =
-
-        `${pitchName}: ${title}`;
-
-
-    // --------------------------------------------------
-    // Automatic explanatory paragraph
-    // --------------------------------------------------
-
-    const zoneDirection =
-
-        zoneDelta >= 0
-
-            ? "increased"
-
-            : "decreased";
-
-
-    const whiffDirection =
-
-        whiffDelta >= 0
-
-            ? "increased"
-
-            : "decreased";
-
-
-    const hardHitDirection =
-
-        hardHitDelta >= 0
-
-            ? "increased"
-
-            : "decreased";
-
-
-    const rvDirection =
-
-        rvDelta >= 0
-
-            ? "improved"
-
-            : "declined";
-
-
-    const text =
-
-        `${pitchName} zone rate ${zoneDirection} by ${Math.abs(
-            zoneDelta
-        ).toFixed(1)} percentage points from the early period to the later comparison period. `
-
-        +
-
-        `Whiff rate ${whiffDirection} by ${Math.abs(
-            whiffDelta
-        ).toFixed(1)} points, while hard-hit rate ${hardHitDirection} by ${Math.abs(
-            hardHitDelta
-        ).toFixed(1)} points. `
-
-        +
-
-        `Pitcher RV/100 ${rvDirection} by ${Math.abs(
-            rvDelta
-        ).toFixed(2)}. `
-
-        +
-
-        `This combination identifies what deserves further investigation, but it does not by itself establish a mechanical or strategic cause.`;
-
-
-    document.getElementById(
-        "location-finding-text"
-    ).textContent =
-        text;
-
+    const baseline = getSummary("early");
+    const comparison = getSummary("post");
+    const pitch = document.getElementById("location-pitch").value;
+    const pitchName = locationPitchNames[pitch] || pitch;
+    const metrics = [
+        ["zone_pct", "location-delta-zone", "Zone rate", " pts", 1],
+        ["whiff_pct", "location-delta-whiff", "Whiff rate", " pts", 1],
+        ["hard_hit_pct", "location-delta-hard-hit", "Hard-hit rate", " pts", 1],
+        ["run_value_per_100", "location-delta-rv", "Pitcher RV/100", "", 2],
+    ];
+    const sentences = [];
+    let available = 0;
+    metrics.forEach(([key, id, label, suffix, digits]) => {
+        const before = baseline?.[key];
+        const after = comparison?.[key];
+        const valid = before != null && after != null && Number.isFinite(Number(before)) && Number.isFinite(Number(after));
+        const delta = valid ? Number(after) - Number(before) : null;
+        document.getElementById(id).textContent = valid ? signedDelta(delta, suffix, digits) : "--";
+        if (!valid) {
+            sentences.push(`${label} comparison unavailable because one or both periods lack eligible data.`);
+        } else {
+            available += 1;
+            sentences.push(delta === 0 ? `${label} was unchanged.`
+                : `${label} ${delta > 0 ? "increased" : "decreased"} by ${Math.abs(delta).toFixed(digits)}${suffix ? " percentage points" : ""}.`);
+        }
+    });
+    document.getElementById("location-finding-title").textContent = `${pitchName}: ${available ? "baseline to comparison" : "comparison unavailable"}`;
+    document.getElementById("location-finding-text").textContent = sentences.join(" ") + " These differences do not establish a mechanical or strategic cause.";
 }
-
 
 // ==================================================
 // Render three maps
@@ -2143,36 +1928,26 @@ function renderLocationComparisonTable() {
         );
 
 
-    if (
-        !early
-        ||
-        !transition
-        ||
-        !post
-    ) {
 
-        return;
-
-    }
 
 
     locationMetrics.forEach(
         metric => {
 
             const earlyValue =
-                early[
+                early?.[
                     metric.key
                 ];
 
 
             const transitionValue =
-                transition[
+                transition?.[
                     metric.key
                 ];
 
 
             const postValue =
-                post[
+                post?.[
                     metric.key
                 ];
 
