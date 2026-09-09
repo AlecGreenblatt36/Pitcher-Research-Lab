@@ -338,6 +338,15 @@ class BrowserRegressionTests(unittest.TestCase):
                 page.locator(f'[data-view="{view}"]').click()
                 panel = page.locator(f'.app-view.active[data-view-panel="{view}"]')
                 self.assertTrue(panel.is_visible())
+                if view == "overview":
+                    self.assertIn(
+                        "usage was unchanged",
+                        page.locator("#overview-arsenal-title").inner_text(),
+                    )
+                    self.assertNotIn(
+                        "redistributed",
+                        page.locator("#research-signal-text").inner_text(),
+                    )
                 self.assertNotRegex(panel.inner_text(), r"\bundefined\b|\bNaN\b")
                 if artifacts:
                     page.screenshot(

@@ -1120,17 +1120,9 @@
                 ??
                 largestUsage.pitch_type;
 
-            sentences.push(
-
-                `${name} usage changed from ${largestUsage.early.toFixed(
-                    1
-                )}% to ${largestUsage.post.toFixed(
-                    1
-                )}% (${percentagePointChange(
-                    largestUsage.delta
-                ).toLowerCase()}), showing that the arsenal itself was redistributed.`
-
-            );
+            sentences.push(Math.abs(largestUsage.delta) < 0.05
+                ? `${name} usage was unchanged at ${largestUsage.post.toFixed(1)}% at the displayed precision.`
+                : `${name} usage moved from ${largestUsage.early.toFixed(1)}% to ${largestUsage.post.toFixed(1)}% (${percentagePointChange(largestUsage.delta).toLowerCase()}).`);
 
         }
 
