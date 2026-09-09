@@ -51,7 +51,7 @@
       ? "--"
       : `${Number(v)>0?"+":""}${Number(v).toFixed(d)}`;
 
-  const dateFmt=(v,year=false)=>{
+  const dateFmt=(v,year=true)=>{
     if(!v)return"--";
 
     const d=new Date(`${v}T00:00:00`);
