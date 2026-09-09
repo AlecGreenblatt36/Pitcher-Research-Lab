@@ -269,10 +269,10 @@ const metricGuideDefinitions = [
     {
         key: "transition_window",
         category: "Statistics",
-        name: "Transition Window",
-        short: "The date range used to focus a comparison around sustained pitch changes when they are present.",
-        why: "It gives the investigation a focused period for comparing early, middle and later performance.",
-        note: "The window is descriptive. It does not prove that every change shares one cause."
+        name: "Baseline and Comparison Periods",
+        short: "Two inclusive, non-overlapping date ranges shared across the comparison views.",
+        why: "Automatic periods use prior seasons or a rookie outing split. Custom periods can use any cached career dates.",
+        note: "These periods are selected independently of the detected flags. Dates between them are shown separately when data exist."
     },
 
     {

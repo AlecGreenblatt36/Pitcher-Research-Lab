@@ -639,7 +639,7 @@
             showEmptyState(
                 container,
                 "Usage comparison unavailable",
-                "No pitch had both an early-period and later-period usage value. This is a data-shape issue, not evidence that nothing changed."
+                "No pitch has usage data in both selected periods."
             );
 
             return;
@@ -666,7 +666,7 @@
                             1
                         )}% → ${row.post.toFixed(
                             1
-                        )}% usage • ${row.early_count} early pitches / ${row.post_count} later pitches`,
+                        )}% usage • ${row.early_count} baseline pitches / ${row.post_count} comparison pitches`,
 
                         "usage"
 
@@ -870,7 +870,7 @@
             showEmptyState(
                 container,
                 "Performance comparison limited",
-                "No pitch met the current minimum of 10 swings in both the early and later comparison periods."
+                "No pitch met the current minimum of 10 swings in both the baseline and comparison periods."
             );
 
             return;
@@ -1120,17 +1120,9 @@
                 ??
                 largestUsage.pitch_type;
 
-            sentences.push(
-
-                `${name} usage changed from ${largestUsage.early.toFixed(
-                    1
-                )}% to ${largestUsage.post.toFixed(
-                    1
-                )}% (${percentagePointChange(
-                    largestUsage.delta
-                ).toLowerCase()}), showing that the arsenal itself was redistributed.`
-
-            );
+            sentences.push(Math.abs(largestUsage.delta) < 0.05
+                ? `${name} usage was unchanged at ${largestUsage.post.toFixed(1)}% at the displayed precision.`
+                : `${name} usage moved from ${largestUsage.early.toFixed(1)}% to ${largestUsage.post.toFixed(1)}% (${percentagePointChange(largestUsage.delta).toLowerCase()}).`);
 
         }
 
@@ -1315,44 +1307,9 @@
     // ==================================================
 
     function renderTransitionWindow() {
-        const element =
-            document.getElementById(
-                "transition-window-value"
-            );
-
-        if (!element) {
-            return;
-        }
-
-        const start =
-            researchData
-                ?.transition_window
-                ?.start;
-
-        const end =
-            researchData
-                ?.transition_window
-                ?.end;
-
-        element.textContent =
-
-            start
-            &&
-            end
-
-                ?
-
-                `${formatDate(
-                    start
-                )} — ${formatDate(
-                    end
-                )}`
-
-                :
-
-                "Window unavailable";
+        const element = document.getElementById("transition-window-value");
+        if (element) element.textContent = window.pitcherResearchLab.periodText(researchData?.comparison_periods);
     }
-
 
     // ==================================================
     // Initialize
@@ -1410,10 +1367,7 @@
             const researchResponse =
                 await fetch(
 
-                    window.pitcherResearchLab.apiUrl("research", {
-                        start,
-                        end,
-                    })
+                    window.pitcherResearchLab.apiUrl("research")
 
                 );
 

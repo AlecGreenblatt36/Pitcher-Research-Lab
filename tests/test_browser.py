@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import threading
+import os
+from pathlib import Path
 import unittest
 
 import _test_environment
@@ -40,12 +42,10 @@ class BrowserRegressionTests(unittest.TestCase):
             overlay.wait_for(state="hidden")
 
     def _wait_for_release_ready(self, page):
-        page.wait_for_function(
-            """() => {
+        page.wait_for_function("""() => {
                 const title = document.getElementById('release-context-title');
-                return title && !title.textContent.includes('Select a pitcher');
-            }"""
-        )
+                return title && !title.textContent.includes('Select a pitcher') && !title.textContent.includes('Loading');
+            }""")
 
     def _select_fixture(self, page, pitcher_id: int, name: str):
         page.evaluate(
@@ -66,20 +66,45 @@ class BrowserRegressionTests(unittest.TestCase):
         page_errors = []
         failed_responses = []
         failed_requests = []
-        page.on("console", lambda message: console_errors.append(message.text) if message.type == "error" else None)
+        page.on(
+            "console",
+            lambda message: (
+                console_errors.append(message.text) if message.type == "error" else None
+            ),
+        )
         page.on("pageerror", lambda error: page_errors.append(str(error)))
-        page.on("response", lambda response: failed_responses.append(f"{response.status} {response.url}") if response.status >= 400 else None)
+        page.on(
+            "response",
+            lambda response: (
+                failed_responses.append(f"{response.status} {response.url}")
+                if response.status >= 400
+                else None
+            ),
+        )
         page.on("requestfailed", lambda request: failed_requests.append(request.url))
 
         page.goto(f"http://127.0.0.1:{self.port}/", wait_until="networkidle")
-        self.assertEqual(page.locator("#pitcher-name").inner_text(), "Select a pitcher to begin")
-        self.assertEqual(page.locator("#database-status").inner_text(), "Waiting for pitcher selection")
+        self.assertEqual(
+            page.locator("#pitcher-name").inner_text(), "Select a pitcher to begin"
+        )
+        self.assertEqual(
+            page.locator("#database-status").inner_text(),
+            "Waiting for pitcher selection",
+        )
         self.assertEqual(page.locator("#pitcher-loading-overlay").count(), 0)
 
         self._select_fixture(page, 100001, "Veteran Starter")
         page.locator("#career-audit-panel").wait_for(state="attached")
 
-        for view in ("overview", "arsenal", "changes", "release", "performance", "location", "career"):
+        for view in (
+            "overview",
+            "arsenal",
+            "changes",
+            "release",
+            "performance",
+            "location",
+            "career",
+        ):
             button = page.locator(f'[data-view="{view}"]')
             self.assertEqual(button.count(), 1, view)
             button.click()
@@ -102,26 +127,41 @@ class BrowserRegressionTests(unittest.TestCase):
         self.assertFalse(page.locator(".performance-page-header").is_visible())
 
         page.locator('[data-view="changes"]').click()
-        self.assertTrue(page.locator('[data-view-panel="changes"] .view-page-header').is_visible())
+        self.assertTrue(
+            page.locator('[data-view-panel="changes"] .view-page-header').is_visible()
+        )
         self.assertFalse(page.locator("#career-audit-panel").is_visible())
 
         page.locator('[data-view="career"]').click()
         self.assertTrue(page.locator("#career-audit-panel").is_visible())
-        self.assertFalse(page.locator('[data-view-panel="changes"] .view-page-header').is_visible())
+        self.assertFalse(
+            page.locator('[data-view-panel="changes"] .view-page-header').is_visible()
+        )
 
         release = page.locator('[data-view="release"]')
         release.click()
         self._wait_for_release_ready(page)
-        self.assertGreater(page.locator(".release-preview-card:not([hidden]) .release-measurement").count(), 0)
-        self.assertNotIn("Select a pitcher", page.locator("#release-context-title").inner_text())
+        self.assertGreater(
+            page.locator(
+                ".release-preview-card:not([hidden]) .release-measurement"
+            ).count(),
+            0,
+        )
+        self.assertNotIn(
+            "Select a pitcher", page.locator("#release-context-title").inner_text()
+        )
 
         page.locator('[data-view="overview"]').click()
-        page.locator("#research-window-start").fill("2026-04-15")
-        page.locator("#research-window-end").fill("2026-04-15")
+        page.locator("#research-baseline-start").fill("2024-04-01")
+        page.locator("#research-baseline-end").fill("2025-06-03")
+        page.locator("#research-comparison-start").fill("2026-04-01")
+        page.locator("#research-comparison-end").fill("2026-06-03")
         with page.expect_navigation(wait_until="domcontentloaded"):
             page.locator("#research-window-apply").click()
         self._wait_for_pitcher_ready(page)
-        self.assertIn("Custom mode is active", page.locator("#research-window-note").inner_text())
+        self.assertIn(
+            "Custom mode is active", page.locator("#research-window-note").inner_text()
+        )
         with page.expect_navigation(wait_until="domcontentloaded"):
             page.locator("#research-window-reset").click()
         self._wait_for_pitcher_ready(page)
@@ -136,8 +176,13 @@ class BrowserRegressionTests(unittest.TestCase):
         self.assertEqual(season.input_value(), "2025")
 
         pitch = page.locator("#pitch-select")
-        self.assertTrue(pitch.is_visible(), "Primary pitch selector should be visible after season reload")
-        values = pitch.locator("option").evaluate_all("options => options.map(option => option.value)")
+        self.assertTrue(
+            pitch.is_visible(),
+            "Primary pitch selector should be visible after season reload",
+        )
+        values = pitch.locator("option").evaluate_all(
+            "options => options.map(option => option.value)"
+        )
         self.assertGreater(len(values), 1)
         pitch.select_option(values[1])
 
@@ -155,13 +200,184 @@ class BrowserRegressionTests(unittest.TestCase):
         self.assertEqual(failed_requests, [])
         context.close()
 
+    def test_release_refreshes_when_primary_pitch_changes(self):
+        context = self.browser.new_context()
+        page = context.new_page()
+        page.goto(f"http://127.0.0.1:{self.port}/")
+        self._select_fixture(page, 100001, "Veteran Starter")
+        page.locator('[data-view="release"]').click()
+        for pitch in ("SL", "FF"):
+            page.locator("#pitch-select").select_option(pitch)
+            page.wait_for_function(
+                "pitch => document.getElementById('release-context-title').textContent.startsWith(pitch + ':')",
+                arg=pitch,
+            )
+            for text in page.locator(
+                ".release-preview-card:not([hidden]) .release-preview-detail"
+            ).all_text_contents():
+                self.assertTrue(text.startswith(pitch + ":"), text)
+            self.assertTrue(
+                page.locator("#release-x-detail").inner_text().startswith(pitch + ":")
+            )
+        context.close()
+
+    def test_cached_data_survives_failed_refresh(self):
+        context = self.browser.new_context()
+        page = context.new_page()
+
+        def stale_meta(route):
+            payload = route.fetch().json()
+            payload["pitcher"]["last_statcast_sync"] = None
+            route.fulfill(json=payload)
+
+        page.route("**/api/pitchers/100001/meta**", stale_meta)
+        page.route(
+            "**/api/pitchers/100001/sync",
+            lambda route: route.fulfill(
+                status=502, json={"error": "Refresh unavailable"}
+            ),
+        )
+        page.goto(f"http://127.0.0.1:{self.port}/")
+        self._select_fixture(page, 100001, "Veteran Starter")
+        self.assertIn(
+            "Using cached data through",
+            page.locator("#pitcher-sync-warning").inner_text(),
+        )
+        self.assertTrue(page.get_by_role("button", name="Retry update").is_enabled())
+        page.locator('[data-view="release"]').click()
+        self._wait_for_release_ready(page)
+        self.assertGreater(
+            page.locator(".release-preview-card:not([hidden])").count(), 0
+        )
+        self.assertEqual(
+            page.locator("#database-status").get_attribute("data-state"), "warning"
+        )
+        context.close()
+
+    def test_uncached_failure_offers_retry_and_new_selection(self):
+        context = self.browser.new_context()
+        page = context.new_page()
+
+        def no_cache(route):
+            payload = route.fetch().json()
+            payload["database"]["pitch_rows"] = 0
+            route.fulfill(json=payload)
+
+        page.route("**/api/pitchers/100001/meta**", no_cache)
+        page.route(
+            "**/api/pitchers/100001/sync",
+            lambda route: route.fulfill(
+                status=502, json={"error": "Refresh unavailable"}
+            ),
+        )
+        page.goto(f"http://127.0.0.1:{self.port}/")
+        page.evaluate(
+            "localStorage.setItem('pitcherResearchLab.selectedPitcherId', '100001')"
+        )
+        page.reload()
+        page.get_by_role("button", name="Choose another pitcher").wait_for(
+            state="visible"
+        )
+        self.assertTrue(
+            page.get_by_role("button", name="Retry", exact=True).is_enabled()
+        )
+        with page.expect_navigation():
+            page.get_by_role("button", name="Choose another pitcher").click()
+        self._wait_for_pitcher_ready(page)
+        self.assertEqual(
+            page.locator("#pitcher-name").inner_text(), "Select a pitcher to begin"
+        )
+        context.close()
+
+    def test_missing_location_metrics_display_unavailable(self):
+        context = self.browser.new_context()
+        page = context.new_page()
+
+        def missing_metrics(route):
+            payload = route.fetch().json()
+            for name in ("early", "post"):
+                for key in ("whiff_pct", "hard_hit_pct", "run_value_per_100"):
+                    payload["periods"][name]["summary"][key] = None
+            route.fulfill(json=payload)
+
+        page.route("**/api/pitchers/100001/location?**", missing_metrics)
+        page.goto(f"http://127.0.0.1:{self.port}/")
+        self._select_fixture(page, 100001, "Veteran Starter")
+        page.locator('[data-view="location"]').click()
+        page.wait_for_function(
+            "() => document.getElementById('location-finding-text').textContent.includes('lack eligible data')"
+        )
+        for key in ("whiff", "hard-hit", "rv"):
+            self.assertEqual(page.locator(f"#location-delta-{key}").inner_text(), "--")
+        self.assertNotIn(
+            "improved by 0", page.locator("#location-finding-text").inner_text()
+        )
+        context.close()
+
+    def test_loaded_pages_fit_desktop_and_mobile(self):
+        artifacts = os.environ.get("PRL_SCREENSHOT_DIR")
+        if artifacts:
+            Path(artifacts).mkdir(parents=True, exist_ok=True)
+        for width, height in ((1440, 1000), (390, 844)):
+            context = self.browser.new_context(
+                viewport={"width": width, "height": height}
+            )
+            page = context.new_page()
+            page.goto(f"http://127.0.0.1:{self.port}/", wait_until="networkidle")
+            self._select_fixture(page, 100001, "Veteran Starter")
+            page.wait_for_load_state("networkidle")
+            for view in (
+                "overview",
+                "arsenal",
+                "changes",
+                "release",
+                "performance",
+                "location",
+                "career",
+            ):
+                page.locator(f'[data-view="{view}"]').click()
+                panel = page.locator(f'.app-view.active[data-view-panel="{view}"]')
+                self.assertTrue(panel.is_visible())
+                if view == "overview":
+                    self.assertIn(
+                        "usage was unchanged",
+                        page.locator("#overview-arsenal-title").inner_text(),
+                    )
+                    self.assertNotIn(
+                        "redistributed",
+                        page.locator("#research-signal-text").inner_text(),
+                    )
+                self.assertNotRegex(panel.inner_text(), r"\bundefined\b|\bNaN\b")
+                if artifacts:
+                    page.screenshot(
+                        path=str(Path(artifacts) / f"{width}-{view}.png"),
+                        full_page=True,
+                    )
+                overflow = page.evaluate(
+                    "() => document.documentElement.scrollWidth - document.documentElement.clientWidth"
+                )
+                if overflow > 1:
+                    offenders = page.evaluate(
+                        """() => [...document.querySelectorAll('.main-content *')]
+                        .filter(el => {const r = el.getBoundingClientRect(); return r.width && r.right > innerWidth;})
+                        .slice(0, 15).map(el => ({tag: el.tagName, id: el.id, class: el.className, right: el.getBoundingClientRect().right}))"""
+                    )
+                else:
+                    offenders = []
+                self.assertLessEqual(overflow, 1, f"{width}px {view}: {offenders}")
+            context.close()
+
     def test_neutral_mobile_has_no_horizontal_overflow(self):
         context = self.browser.new_context(viewport={"width": 390, "height": 844})
         page = context.new_page()
         page.goto(f"http://127.0.0.1:{self.port}/", wait_until="networkidle")
-        overflow = page.evaluate("() => document.documentElement.scrollWidth - document.documentElement.clientWidth")
+        overflow = page.evaluate(
+            "() => document.documentElement.scrollWidth - document.documentElement.clientWidth"
+        )
         self.assertLessEqual(overflow, 1)
-        self.assertEqual(page.locator("#pitcher-name").inner_text(), "Select a pitcher to begin")
+        self.assertEqual(
+            page.locator("#pitcher-name").inner_text(), "Select a pitcher to begin"
+        )
         context.close()
 
 

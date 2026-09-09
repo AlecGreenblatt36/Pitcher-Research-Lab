@@ -4,16 +4,15 @@
     const STORAGE_KEY = "pitcherResearchLab.selectedPitcherId";
     const PROFILE_KEY = "pitcherResearchLab.selectedPitcherProfile";
     const SEASON_STORAGE_PREFIX = "pitcherResearchLab.researchSeason.";
-    const WINDOW_STORAGE_PREFIX = "pitcherResearchLab.researchWindow.";
+    const WINDOW_STORAGE_PREFIX = "pitcherResearchLab.comparisonPeriods.";
     const originalFetch = window.fetch.bind(window);
 
     let currentMeta = null;
+    let syncWarning = null;
     let resolveReady;
-    let rejectReady;
 
-    const ready = new Promise((resolve, reject) => {
+    const ready = new Promise(resolve => {
         resolveReady = resolve;
-        rejectReady = reject;
     });
 
     function selectedPitcherId() {
@@ -55,7 +54,15 @@
         const season = selectedResearchSeason();
         if (season) url.searchParams.set("season", String(season));
 
-        Object.entries(params || {}).forEach(([key, value]) => {
+        // Every comparison endpoint receives the same explicit, inclusive dates.
+        const shared = ["changes", "research", "release", "location", "performance", "career"].includes(resource);
+        const queryParams = {...params};
+        if (shared) {
+            delete queryParams.start;
+            delete queryParams.end;
+            Object.assign(queryParams, customResearchWindow() || {});
+        }
+        Object.entries(queryParams).forEach(([key, value]) => {
             if (value !== null && value !== undefined && value !== "") {
                 url.searchParams.set(key, String(value));
             }
@@ -64,39 +71,47 @@
         return `${url.pathname}${url.search}`;
     }
 
-    function customResearchWindow() {
-        const season = selectedResearchSeason();
-        if (!season) return null;
-        const key = `${WINDOW_STORAGE_PREFIX}${selectedPitcherId()}.${season}`;
-        try {
-            const saved = JSON.parse(localStorage.getItem(key) || "null");
-            if (!saved?.start || !saved?.end || saved.start > saved.end) return null;
-            if (!saved.start.startsWith(`${season}-`) || !saved.end.startsWith(`${season}-`)) return null;
-            return { start: saved.start, end: saved.end, source: "custom" };
-        } catch (_) {
-            return null;
+    const PERIOD_KEYS = ["baseline_start", "baseline_end", "comparison_start", "comparison_end"];
+    function periodError(periods) {
+        if (!PERIOD_KEYS.every(key => /^\d{4}-\d{2}-\d{2}$/.test(periods?.[key] || ""))) {
+            return "Choose all four dates.";
         }
+        const {baseline_start: bs, baseline_end: be, comparison_start: cs, comparison_end: ce} = periods;
+        if (bs > be || cs > ce || be >= cs) return "Periods must be ordered and must not overlap.";
+        const db = currentMeta?.database;
+        if (db && (bs < db.first_game_date || ce > db.last_game_date)) {
+            return `Choose dates within cached coverage: ${db.first_game_date} to ${db.last_game_date}.`;
+        }
+        return null;
     }
 
-    function researchWindow(changes = []) {
-        const custom = customResearchWindow();
-        if (custom) return custom;
+    function customResearchWindow() {
+        const key = `${WINDOW_STORAGE_PREFIX}${selectedPitcherId()}.${selectedResearchSeason()}`;
+        try {
+            const saved = JSON.parse(localStorage.getItem(key) || "null");
+            return saved && !periodError(saved) ? saved : null;
+        } catch (_) { return null; }
+    }
 
-        const dates = (Array.isArray(changes) ? changes : [])
-            .filter(row => row?.first_sustained_change)
-            .map(row => row.first_sustained_change)
-            .sort();
+    function comparisonParams() {
+        const periods = customResearchWindow() || currentMeta?.research_defaults?.comparison_periods || {};
+        return Object.fromEntries(PERIOD_KEYS.filter(key => periods[key]).map(key => [key, periods[key]]));
+    }
 
-        if (dates.length) {
-            return { start: dates[0], end: dates[dates.length - 1], source: "detected" };
-        }
+    function researchWindow() {
+        const periods = comparisonParams();
+        return {...periods, start: periods.baseline_end, end: periods.comparison_start,
+            source: customResearchWindow() ? "custom" : "automatic"};
+    }
 
-        const defaults = currentMeta?.research_defaults || {};
-        return {
-            start: defaults.transition_start || null,
-            end: defaults.transition_end || null,
-            source: "comparison",
-        };
+    function periodText(payload = null) {
+        const p = payload || (() => {
+            const dates = comparisonParams();
+            return {baseline: {start: dates.baseline_start, end: dates.baseline_end},
+                comparison: {start: dates.comparison_start, end: dates.comparison_end}};
+        })();
+        if (!p.baseline?.start || !p.comparison?.end) return "Comparison periods unavailable";
+        return `Baseline: ${p.baseline.start} to ${p.baseline.end} • Comparison: ${p.comparison.start} to ${p.comparison.end}`;
     }
 
     window.pitcherResearchLab = {
@@ -106,6 +121,9 @@
         apiPath,
         apiUrl,
         researchWindow,
+        comparisonParams,
+        periodText,
+        get syncWarning() { return syncWarning; },
         customResearchWindow,
         ready,
     };
@@ -170,6 +188,25 @@
         if (title) title.textContent = "Pitcher data could not load";
         if (description) description.textContent = message || "Check the Flask window for the exact error, then refresh the page.";
         overlay.classList.add("pitcher-loading-error");
+        let actions = overlay.querySelector(".pitcher-loading-actions");
+        if (!actions) {
+            actions = document.createElement("div");
+            actions.className = "pitcher-loading-actions";
+            const retry = document.createElement("button");
+            retry.type = "button";
+            retry.textContent = "Retry";
+            retry.onclick = () => window.location.reload();
+            const choose = document.createElement("button");
+            choose.type = "button";
+            choose.textContent = "Choose another pitcher";
+            choose.onclick = () => {
+                localStorage.removeItem(STORAGE_KEY);
+                localStorage.removeItem(PROFILE_KEY);
+                window.location.reload();
+            };
+            actions.append(retry, choose);
+            overlay.querySelector(".pitcher-loading-card").append(actions);
+        }
         overlay.hidden = false;
         document.body.classList.add("pitcher-data-loading");
     }
@@ -224,17 +261,19 @@
     }
 
     function renderResearchDefaults(meta) {
+        const dates = comparisonParams();
         const badge = document.getElementById("change-baseline-badge");
-        if (!badge) return;
-        const baseline = meta?.research_defaults?.baseline_seasons || [];
-        const target = meta?.research_defaults?.target_season;
-        if (baseline.length) {
-            badge.textContent = `Baseline: ${baseline.join("–")}`;
-        } else if (target) {
-            badge.textContent = `Baseline: earlier ${target} outings`;
-        } else {
-            badge.textContent = "Baseline unavailable";
+        if (badge) badge.textContent = dates.baseline_start
+            ? `Baseline: ${dates.baseline_start} to ${dates.baseline_end}`
+            : "Baseline unavailable";
+        let context = document.getElementById("active-comparison-periods");
+        if (!context) {
+            context = document.createElement("p");
+            context.id = "active-comparison-periods";
+            context.className = "active-comparison-periods";
+            document.querySelector(".pitcher-header").after(context);
         }
+        context.textContent = periodText();
     }
 
     function renderSeasonSelector(meta) {
@@ -280,48 +319,40 @@
     }
 
     function setupResearchWindowControls(meta) {
-        const startInput = document.getElementById("research-window-start");
-        const endInput = document.getElementById("research-window-end");
-        const applyButton = document.getElementById("research-window-apply");
-        const resetButton = document.getElementById("research-window-reset");
+        const inputs = Object.fromEntries(PERIOD_KEYS.map(key => [key, document.getElementById(`research-${key.replaceAll("_", "-")}`)]));
+        const apply = document.getElementById("research-window-apply");
+        const reset = document.getElementById("research-window-reset");
         const note = document.getElementById("research-window-note");
-        if (!startInput || !endInput || !applyButton || !resetButton) return;
-
-        const season = Number(meta?.research_defaults?.target_season);
-        const key = `${WINDOW_STORAGE_PREFIX}${selectedPitcherId()}.${season}`;
-        const custom = customResearchWindow();
-        startInput.value = custom?.start || "";
-        endInput.value = custom?.end || "";
-        startInput.min = Number.isFinite(season) ? `${season}-01-01` : "";
-        startInput.max = Number.isFinite(season) ? `${season}-12-31` : "";
-        endInput.min = startInput.min;
-        endInput.max = startInput.max;
-
-        if (note) {
-            note.textContent = custom
-                ? "Custom mode is active for this pitcher and season."
-                : "Optional. Auto mode uses sustained flags when available.";
-        }
-
-        applyButton.onclick = () => {
-            const start = startInput.value;
-            const end = endInput.value;
-            if (!start || !end) {
-                if (note) note.textContent = "Choose both a start and end date.";
-                return;
-            }
-            if (start > end) {
-                if (note) note.textContent = "The end date must be on or after the start date.";
-                return;
-            }
-            localStorage.setItem(key, JSON.stringify({ start, end }));
-            showLoading(meta?.pitcher, "Applying the custom research window.");
-            window.location.reload();
+        if (!apply || !reset || Object.values(inputs).some(input => !input)) return;
+        const key = `${WINDOW_STORAGE_PREFIX}${selectedPitcherId()}.${selectedResearchSeason()}`;
+        const dates = comparisonParams();
+        Object.entries(inputs).forEach(([name, input]) => {
+            input.value = dates[name] || "";
+            input.min = meta.database.first_game_date || "";
+            input.max = meta.database.last_game_date || "";
+        });
+        note.textContent = customResearchWindow()
+            ? "Custom mode is active. These dates apply across the comparison views."
+            : "Optional. Automatic periods use prior seasons, or earlier and later outing dates for a rookie.";
+        apply.onclick = async () => {
+            const periods = Object.fromEntries(Object.entries(inputs).map(([key, input]) => [key, input.value]));
+            const error = periodError(periods);
+            if (error) { note.textContent = error; return; }
+            apply.disabled = true;
+            try {
+                const query = new URLSearchParams({...periods, season: selectedResearchSeason()});
+                const response = await originalFetch(`${apiPath("research")}?${query}`);
+                const payload = await response.json();
+                if (!response.ok) throw new Error(payload.error || "These periods have no usable pitches.");
+                localStorage.setItem(key, JSON.stringify(periods));
+                showLoading(meta.pitcher, "Applying the baseline and comparison periods.");
+                window.location.reload();
+            } catch (error) { note.textContent = error.message; }
+            finally { apply.disabled = false; }
         };
-
-        resetButton.onclick = () => {
+        reset.onclick = () => {
             localStorage.removeItem(key);
-            showLoading(meta?.pitcher, "Returning to the automatic research window.");
+            showLoading(meta.pitcher, "Restoring automatic comparison periods.");
             window.location.reload();
         };
     }
@@ -407,6 +438,39 @@
         setStatus(parts.length ? parts.join(" • ") : "No cached pitches", parts.length ? "ready" : "error");
     }
 
+    function renderSyncWarning(meta) {
+        setStatus(`Cached data through ${meta.database.last_game_date}`, "warning");
+        let banner = document.getElementById("pitcher-sync-warning");
+        if (!banner) {
+            banner = document.createElement("div");
+            banner.id = "pitcher-sync-warning";
+            banner.className = "pitcher-sync-warning";
+            banner.setAttribute("role", "status");
+            document.querySelector(".topbar").after(banner);
+        }
+        banner.replaceChildren();
+        const message = document.createElement("span");
+        message.textContent = `Using cached data through ${meta.database.last_game_date}. ${syncWarning}`;
+        const retry = document.createElement("button");
+        retry.type = "button";
+        retry.textContent = "Retry update";
+        retry.onclick = async () => {
+            retry.disabled = true;
+            try {
+                const result = await syncSelectedPitcher();
+                if (["error", "partial"].includes(result.official_outings?.status)) {
+                    throw new Error("Official game lines could not be fully refreshed.");
+                }
+                window.location.reload();
+            } catch (error) {
+                syncWarning = error.message;
+                hideLoading();
+                renderSyncWarning(meta);
+            }
+        };
+        banner.append(message, retry);
+    }
+
     async function initializeSelectedPitcher() {
         const pitcherId = selectedPitcherId();
         if (!pitcherId) {
@@ -431,8 +495,16 @@
             localStorage.setItem(PROFILE_KEY, JSON.stringify(meta.pitcher));
 
             if (needsAutomaticSync(meta.pitcher, meta.database)) {
-                await syncSelectedPitcher();
-                meta = await fetchMeta(pitcherId);
+                try {
+                    const result = await syncSelectedPitcher();
+                    if (["error", "partial"].includes(result.official_outings?.status)) {
+                        syncWarning = "Official game lines could not be fully refreshed.";
+                    }
+                    meta = await fetchMeta(pitcherId);
+                } catch (error) {
+                    if (!meta.database?.pitch_rows) throw error;
+                    syncWarning = error.message;
+                }
                 currentMeta = meta;
                 renderProfile(meta.pitcher, meta.database);
                 renderResearchDefaults(meta);
@@ -448,6 +520,7 @@
             }
 
             renderDatabaseStatus(meta);
+            if (syncWarning) renderSyncWarning(meta);
             hideLoading();
             resolveReady(meta);
             window.dispatchEvent(new CustomEvent("pitcherResearchLab:ready", { detail: meta }));
@@ -456,8 +529,8 @@
             console.error(error);
             setStatus("Pitcher data unavailable", "error");
             showLoadingError(error.message);
-            rejectReady(error);
-            throw error;
+            resolveReady(null);
+            return null;
         }
     }
 
@@ -517,7 +590,7 @@
                         results.appendChild(button);
                     });
                 } catch (error) {
-                    results.innerHTML = `<div class="pitcher-search-message">${error.message}</div>`;
+                    results.textContent = error.message;
                 }
             }, 250);
         });

@@ -2031,3 +2031,39 @@ tbody tr:hover {
     width: 100%;
     opacity: 0.66;
 }
+
+/* Comparison controls and recovery states */
+.research-window-controls { align-items: flex-end; }
+.research-window-controls fieldset { border: 1px solid #394354; border-radius: 8px; padding: 10px; display: flex; flex-wrap: wrap; gap: 10px; min-width: 0; }
+.research-window-controls legend { padding: 0 5px; font-weight: 600; }
+.research-window-controls label { display: grid; gap: 5px; font-size: 12px; }
+.research-window-controls input { max-width: 100%; min-width: 0; color-scheme: dark; }
+.research-window-controls small { flex-basis: 100%; line-height: 1.6; }
+.overview-window-value { overflow-wrap: anywhere; }
+.research-window-actions, .pitcher-loading-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.pitcher-loading-actions { margin-top: 20px; }
+.pitcher-sync-warning { margin: 16px 0; padding: 14px; border: 1px solid #8c7147; border-radius: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; line-height: 1.5; }
+.pitcher-sync-warning span { flex: 1 1 280px; }
+.pitcher-sync-warning button, .pitcher-loading-actions button { border: 1px solid #68758a; background: #182333; color: #fff; border-radius: 6px; padding: 10px 14px; cursor: pointer; }
+@media (max-width: 600px) {
+  .research-window-controls fieldset { width: 100%; }
+  .research-window-controls label { flex: 1 1 120px; }
+  .overview-window-value { font-size: 18px; }
+}
+
+.active-comparison-periods { font-size: 12px; color: #b7c4d7; line-height: 1.6; overflow-wrap: anywhere; margin: -8px 0 24px; }
+
+.location-map-card[hidden] { display: none; }
+@media (min-width: 1001px) { .main-content .location-map-grid { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); } }
+.main-content .performance-period-grid { grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); }
+
+.overview-window-panel .research-window-controls { grid-column: 1 / -1; width: 100%; }
+.overview-window-panel .research-window-controls fieldset { flex: 0 1 auto; }
+@media (max-width: 720px) {
+  .main-content .topbar { flex-wrap: wrap; align-items: flex-start; }
+  .topbar .topbar-pitcher-tools { width: 100%; min-width: 0; align-items: stretch; }
+  .topbar .pitcher-search { width: 100%; }
+  .topbar .research-season-control { width: 100%; min-width: 0; justify-content: space-between; }
+  .topbar .research-season-control select { flex: 1; min-width: 0; max-width: 220px; }
+  .topbar .status { white-space: normal; overflow-wrap: anywhere; }
+}

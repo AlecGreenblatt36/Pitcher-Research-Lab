@@ -316,7 +316,7 @@
                         </strong>
 
                         <small>
-                            Early → Later
+                            Baseline → Comparison
                         </small>
 
                     </div>
@@ -333,7 +333,7 @@
                         </strong>
 
                         <small>
-                            Early → Later
+                            Baseline → Comparison
                         </small>
 
                     </div>
@@ -350,7 +350,7 @@
                         </strong>
 
                         <small>
-                            Early → Later
+                            Baseline → Comparison
                         </small>
 
                     </div>
@@ -367,7 +367,7 @@
                         </strong>
 
                         <small>
-                            Early → Later
+                            Baseline → Comparison
                         </small>
 
                     </div>
@@ -389,7 +389,7 @@
                 <div>
 
                     <div class="eyebrow">
-                        PRIMARY COMPARISON WINDOW
+                        BASELINE AND COMPARISON PERIODS
                     </div>
 
                     <div
@@ -404,18 +404,24 @@
 
                 <div class="overview-window-copy">
 
-                    This window provides a consistent early, middle and later-season comparison. When sustained flags are present, it also focuses the deeper research views around those dates.
+                    These inclusive dates apply to Change Detection, Release Profile, Performance and Location. Arsenal and Career retain their full-season and career context.
 
                 </div>
 
-                <div class="research-window-controls" aria-label="Custom research window">
-                    <span>Custom window</span>
-                    <input id="research-window-start" type="date" aria-label="Research window start">
-                    <span>to</span>
-                    <input id="research-window-end" type="date" aria-label="Research window end">
-                    <button id="research-window-apply" type="button">Apply</button>
-                    <button id="research-window-reset" type="button">Use Auto</button>
-                    <small id="research-window-note">Optional. Auto mode uses sustained flags when available.</small>
+                <div class="research-window-controls" aria-label="Comparison periods">
+                    <fieldset><legend>Baseline</legend>
+                        <label>From <input id="research-baseline-start" type="date"></label>
+                        <label>Through <input id="research-baseline-end" type="date"></label>
+                    </fieldset>
+                    <fieldset><legend>Comparison</legend>
+                        <label>From <input id="research-comparison-start" type="date"></label>
+                        <label>Through <input id="research-comparison-end" type="date"></label>
+                    </fieldset>
+                    <div class="research-window-actions">
+                        <button id="research-window-apply" type="button">Apply periods</button>
+                        <button id="research-window-reset" type="button">Use Auto</button>
+                    </div>
+                    <small id="research-window-note" role="status">Optional. Choose any non-overlapping periods within cached career coverage.</small>
                 </div>
 
 
@@ -1067,7 +1073,7 @@
             </section>
 
 
-            <!-- Early vs Post Pitch Matrix -->
+            <!-- Baseline vs Comparison Pitch Matrix -->
 
             <section class="command-table-panel">
 
@@ -1081,7 +1087,7 @@
                         </div>
 
                         <h3>
-                            Early vs Later Period
+                            Baseline vs Comparison Period
                         </h3>
 
                     </div>
@@ -1135,23 +1141,23 @@
 
                             <tr>
 
-                                <th>Early</th>
-                                <th>Post</th>
+                                <th>Baseline</th>
+                                <th>Comparison</th>
 
-                                <th>Early</th>
-                                <th>Post</th>
+                                <th>Baseline</th>
+                                <th>Comparison</th>
 
-                                <th>Early</th>
-                                <th>Post</th>
+                                <th>Baseline</th>
+                                <th>Comparison</th>
 
-                                <th>Early</th>
-                                <th>Post</th>
+                                <th>Baseline</th>
+                                <th>Comparison</th>
 
-                                <th>Early</th>
-                                <th>Post</th>
+                                <th>Baseline</th>
+                                <th>Comparison</th>
 
-                                <th>Early</th>
-                                <th>Post</th>
+                                <th>Baseline</th>
+                                <th>Comparison</th>
 
                             </tr>
 
@@ -1774,7 +1780,7 @@
 
 
                         <div class="location-finding-tag">
-                            Early → Later
+                            Baseline → Comparison
                         </div>
 
 
@@ -1803,7 +1809,7 @@
                             </strong>
 
                             <small>
-                                Later vs Early
+                                Comparison vs Baseline
                             </small>
 
                         </div>
@@ -1820,7 +1826,7 @@
                             </strong>
 
                             <small>
-                                Later vs Early
+                                Comparison vs Baseline
                             </small>
 
                         </div>
@@ -1837,7 +1843,7 @@
                             </strong>
 
                             <small>
-                                Later vs Early
+                                Comparison vs Baseline
                             </small>
 
                         </div>
@@ -1854,7 +1860,7 @@
                             </strong>
 
                             <small>
-                                Later vs Early
+                                Comparison vs Baseline
                             </small>
 
                         </div>
@@ -1882,7 +1888,7 @@
                                 </div>
 
                                 <h3>
-                                    Early Period
+                                    Baseline Period
                                 </h3>
 
                             </div>
@@ -1915,11 +1921,11 @@
                             <div>
 
                                 <div class="eyebrow">
-                                    COMPARISON WINDOW
+                                    BETWEEN SELECTED PERIODS
                                 </div>
 
                                 <h3>
-                                    Middle Period
+                                    Between periods
                                 </h3>
 
                             </div>
@@ -1956,7 +1962,7 @@
                                 </div>
 
                                 <h3>
-                                    Later Period
+                                    Comparison Period
                                 </h3>
 
                             </div>
@@ -2044,14 +2050,14 @@
                             </div>
 
                             <h3>
-                                Early → Middle → Later
+                                Baseline → Between periods → Comparison
                             </h3>
 
                         </div>
 
 
                         <div class="panel-note">
-                            Same pitch • Same target season
+                            Same pitch • Active comparison periods
                         </div>
 
                     </div>
@@ -2074,19 +2080,19 @@
                                     </th>
 
                                     <th>
-                                        Early
+                                        Baseline
                                     </th>
 
                                     <th>
-                                        Middle
+                                        Between periods
                                     </th>
 
                                     <th>
-                                        Later
+                                        Comparison
                                     </th>
 
                                     <th>
-                                        Later vs Early
+                                        Comparison vs Baseline
                                     </th>
 
                                 </tr>

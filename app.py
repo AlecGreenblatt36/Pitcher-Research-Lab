@@ -6,6 +6,8 @@ import socket
 import threading
 import webbrowser
 from pathlib import Path
+from change_analysis import compare_metrics, sustained_change
+from comparison import ComparisonError, resolve_comparison
 from research_routes import research_bp
 from location_routes import location_bp
 from performance_routes import performance_bp
@@ -58,71 +60,8 @@ def dashboard():
 # Find first sustained change
 # ==================================================
 
-def find_first_sustained_change(
-    current_outings,
-    baseline_mean,
-    baseline_std
-):
-
-    current_outings = (
-        current_outings
-        .sort_values("game_date")
-        .copy()
-    )
-
-    current_outings["rolling_average"] = (
-        current_outings["value"]
-        .rolling(window=3)
-        .mean()
-    )
-
-    current_outings["rolling_z"] = (
-        (
-            current_outings["rolling_average"]
-            - baseline_mean
-        )
-        /
-        baseline_std
-    )
-
-    for index in range(
-        2,
-        len(current_outings)
-    ):
-
-        window = (
-            current_outings["rolling_z"]
-            .iloc[index - 2:index + 1]
-        )
-
-        if window.isna().any():
-            continue
-
-        if (window <= -2).all():
-
-            change_date = (
-                current_outings
-                .iloc[index - 2]["game_date"]
-            )
-
-            return (
-                change_date.strftime("%Y-%m-%d"),
-                "Below baseline"
-            )
-
-        if (window >= 2).all():
-
-            change_date = (
-                current_outings
-                .iloc[index - 2]["game_date"]
-            )
-
-            return (
-                change_date.strftime("%Y-%m-%d"),
-                "Above baseline"
-            )
-
-    return None, None
+def find_first_sustained_change(current_outings, baseline_mean, baseline_std):
+    return sustained_change(current_outings, baseline_mean, baseline_std)
 
 
 # ==================================================
@@ -131,149 +70,37 @@ def find_first_sustained_change(
 
 @app.route("/api/pitchers/<int:pitcher_id>/changes")
 def pitcher_changes(pitcher_id):
-
-    target_season = request.args.get("season", type=int)
-    if target_season is None:
-        target_season = current_research_season(pitcher_id)
-
-    if target_season is None:
+    season = request.args.get("season", type=int) or current_research_season(pitcher_id)
+    if season is None:
         return jsonify([])
+    try:
+        comparison = resolve_comparison(request.args, pitcher_id, season)
+    except ComparisonError as exc:
+        return jsonify({"error": str(exc), "code": "invalid_comparison_periods"}), 400
+    return jsonify(compare_metrics(database_file, pitcher_id, season, comparison))
 
-    baseline_seasons = default_baseline_seasons(
-        pitcher_id,
-        target_season
+
+@app.route("/api/pitchers/<int:pitcher_id>/release")
+def pitcher_release(pitcher_id):
+    season = request.args.get("season", type=int) or current_research_season(pitcher_id)
+    if season is None:
+        return jsonify({"error": "No regular-season Statcast data found."}), 404
+    try:
+        comparison = resolve_comparison(request.args, pitcher_id, season)
+    except ComparisonError as exc:
+        return jsonify({"error": str(exc), "code": "invalid_comparison_periods"}), 400
+    pitch = request.args.get("pitch", "").upper()
+    if not pitch:
+        return jsonify({"error": "Select a pitch for release measurements."}), 400
+    return jsonify(
+        {
+            "pitch_type": pitch,
+            "comparison_periods": comparison.payload(),
+            "measurements": compare_metrics(
+                database_file, pitcher_id, season, comparison, pitch=pitch, release=True
+            ),
+        }
     )
-
-    connection = sqlite3.connect(database_file)
-
-    query = """
-    SELECT
-        season,
-        game_date,
-        pitch_type,
-        release_speed,
-        release_spin_rate,
-        release_extension,
-        release_pos_x,
-        release_pos_z,
-        pfx_x,
-        pfx_z,
-        arm_angle
-    FROM pitches
-    WHERE game_type = 'R'
-      AND CAST(pitcher AS INTEGER) = ?
-      AND pitch_type IS NOT NULL
-      AND CAST(season AS INTEGER) <= ?;
-    """
-
-    data = pd.read_sql_query(
-        query,
-        connection,
-        params=(int(pitcher_id), int(target_season))
-    )
-    connection.close()
-
-    if data.empty:
-        return jsonify([])
-
-    data["game_date"] = pd.to_datetime(data["game_date"], errors="coerce")
-    data["season"] = pd.to_numeric(data["season"], errors="coerce")
-    data = data.dropna(subset=["game_date", "season", "pitch_type"]).copy()
-
-    metric_specs = [
-        ("Velocity", "release_speed", 1.0, "mph"),
-        ("Spin Rate", "release_spin_rate", 1.0, "rpm"),
-        ("Extension", "release_extension", 1.0, "ft"),
-        ("Horizontal Release", "release_pos_x", 1.0, "ft"),
-        ("Vertical Release", "release_pos_z", 1.0, "ft"),
-        ("Horizontal Movement", "pfx_x", 12.0, "in"),
-        ("Vertical Movement", "pfx_z", 12.0, "in"),
-        ("Arm Angle", "arm_angle", 1.0, "deg"),
-    ]
-
-    pitch_counts = (
-        data[data["season"] == target_season]
-        .groupby("pitch_type")
-        .size()
-        .sort_values(ascending=False)
-    )
-    pitch_types = pitch_counts[pitch_counts >= 20].index.tolist()
-
-    results = []
-
-    for pitch_type in pitch_types:
-        pitch_data = data[data["pitch_type"] == pitch_type].copy()
-
-        for label, column, multiplier, unit in metric_specs:
-            pitch_data["value"] = (
-                pd.to_numeric(pitch_data[column], errors="coerce")
-                * multiplier
-            )
-            usable = pitch_data.dropna(subset=["value"]).copy()
-            if usable.empty:
-                continue
-
-            outings = (
-                usable.groupby(["season", "game_date"])
-                .agg(pitches=("value", "count"), value=("value", "mean"))
-                .reset_index()
-            )
-            outings = outings[outings["pitches"] >= 5].copy()
-
-            if baseline_seasons:
-                baseline = outings[outings["season"].isin(baseline_seasons)].copy()
-                current = outings[outings["season"] == target_season].copy()
-                baseline_label = baseline_seasons
-            else:
-                # Rookie / no-prior-season fallback: compare the later part of
-                # the target season with the pitcher's own earlier outings.
-                current_season_outings = outings[
-                    outings["season"] == target_season
-                ].sort_values("game_date").copy()
-                split = max(3, int(len(current_season_outings) * 0.6))
-                if len(current_season_outings) < 6 or split >= len(current_season_outings):
-                    continue
-                baseline = current_season_outings.iloc[:split].copy()
-                current = current_season_outings.iloc[split:].copy()
-                baseline_label = [target_season]
-
-            if len(baseline) < 3 or len(current) < 2:
-                continue
-
-            baseline_mean = baseline["value"].mean()
-            baseline_std = baseline["value"].std()
-            current_mean = current["value"].mean()
-
-            if pd.isna(baseline_std) or baseline_std == 0:
-                continue
-
-            change = current_mean - baseline_mean
-            z_score = change / baseline_std
-            first_change_date, direction = find_first_sustained_change(
-                current,
-                baseline_mean,
-                baseline_std
-            )
-
-            results.append({
-                "metric": f"{pitch_type} {label}",
-                "pitch_type": pitch_type,
-                "metric_key": column,
-                "unit": unit,
-                "target_season": int(target_season),
-                "baseline_seasons": [int(value) for value in baseline_label],
-                "baseline_outings": int(len(baseline)),
-                "current_outings": int(len(current)),
-                "baseline_mean": round(float(baseline_mean), 2),
-                "current_mean": round(float(current_mean), 2),
-                "change": round(float(change), 2),
-                "z_score": round(float(z_score), 2),
-                "first_sustained_change": first_change_date,
-                "direction": direction,
-            })
-
-    results.sort(key=lambda row: abs(row["z_score"]), reverse=True)
-    return jsonify(results[:30])
 
 
 # ==================================================

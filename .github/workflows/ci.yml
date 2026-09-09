@@ -49,4 +49,15 @@ jobs:
         run: python validate_project.py
 
       - name: Run regression suite
+        env:
+          PRL_SCREENSHOT_DIR: outputs/browser-screenshots
         run: pytest -q
+
+      - name: Save browser screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-screenshots
+          path: outputs/browser-screenshots
+          retention-days: 7
+          if-no-files-found: ignore
