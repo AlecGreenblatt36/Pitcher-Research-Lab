@@ -2052,3 +2052,18 @@ tbody tr:hover {
 }
 
 .active-comparison-periods { font-size: 12px; color: #b7c4d7; line-height: 1.6; overflow-wrap: anywhere; margin: -8px 0 24px; }
+
+.location-map-card[hidden] { display: none; }
+@media (min-width: 1001px) { .location-map-grid { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); } }
+.performance-period-grid { grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); }
+
+.overview-window-panel .research-window-controls { grid-column: 1 / -1; width: 100%; }
+.overview-window-panel .research-window-controls fieldset { flex: 0 1 auto; }
+@media (max-width: 720px) {
+  .main-content .topbar { flex-wrap: wrap; align-items: flex-start; }
+  .topbar .topbar-pitcher-tools { width: 100%; min-width: 0; align-items: stretch; }
+  .topbar .pitcher-search { width: 100%; }
+  .topbar .research-season-control { width: 100%; min-width: 0; justify-content: space-between; }
+  .topbar .research-season-control select { flex: 1; min-width: 0; max-width: 220px; }
+  .topbar .status { white-space: normal; overflow-wrap: anywhere; }
+}

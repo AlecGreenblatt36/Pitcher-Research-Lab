@@ -347,9 +347,15 @@ class BrowserRegressionTests(unittest.TestCase):
                 overflow = page.evaluate(
                     "() => document.documentElement.scrollWidth - document.documentElement.clientWidth"
                 )
-                self.assertLessEqual(
-                    overflow, 1, f"{width}px {view} overflows by {overflow}px"
-                )
+                if overflow > 1:
+                    offenders = page.evaluate(
+                        """() => [...document.querySelectorAll('.main-content *')]
+                        .filter(el => {const r = el.getBoundingClientRect(); return r.width && r.right > innerWidth;})
+                        .slice(0, 15).map(el => ({tag: el.tagName, id: el.id, class: el.className, right: el.getBoundingClientRect().right}))"""
+                    )
+                else:
+                    offenders = []
+                self.assertLessEqual(overflow, 1, f"{width}px {view}: {offenders}")
             context.close()
 
     def test_neutral_mobile_has_no_horizontal_overflow(self):

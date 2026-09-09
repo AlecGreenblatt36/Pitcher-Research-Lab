@@ -155,7 +155,7 @@
 
         controls.classList.toggle(
           "context-hidden",
-          active!=="arsenal"
+          active!=="arsenal" && active!=="release"
         );
 
       }
@@ -413,7 +413,7 @@
           <div>
 
             <div class="eyebrow">
-              TARGET-SEASON PERIOD COMPARISON
+              BASELINE AND COMPARISON PERIODS
             </div>
 
             <h3>
@@ -630,7 +630,7 @@
           <div>
 
             <div class="eyebrow">
-              TARGET-SEASON OUTING LOG
+              OUTINGS IN SELECTED PERIODS
             </div>
 
             <h3>
@@ -777,8 +777,8 @@
     const p=
       o?.process??{};
 
-    const s=
-      currentSeasonSummary()?.process??{};
+    const outingSeason = Number(o?.game_date?.slice(0, 4));
+    const s = data?.seasons?.find(row => row.season === outingSeason)?.process ?? {};
 
     const notes=[];
 
@@ -832,7 +832,7 @@
           w-sw
         ).toFixed(
           1
-        )} percentage points ${w>sw?"above":"below"} his target-season average.`
+        )} percentage points ${w>sw?"above":"below"} his ${outingSeason} season average.`
 
       );
 
@@ -855,7 +855,7 @@
           x-sx
         ).toFixed(
           3
-        )} ${x<sx?"lower":"higher"} than his target-season average.`
+        )} ${x<sx?"lower":"higher"} than his ${outingSeason} season average.`
 
       );
 
@@ -868,6 +868,7 @@
       h!==null
       &&
       sh!==null
+      && Math.abs(h-sh) >= 0.05
     ){
 
       notes.push(
@@ -876,7 +877,7 @@
           h-sh
         ).toFixed(
           1
-        )} percentage points ${h<sh?"lower":"higher"} than his target-season average.`
+        )} percentage points ${h<sh?"lower":"higher"} than his ${outingSeason} season average.`
 
       );
 
@@ -887,7 +888,9 @@
       notes.length
         ? notes
         : [
-            "The underlying process metrics were close to his target-season averages."
+            (w !== null && sw !== null) || (x !== null && sx !== null) || (h !== null && sh !== null)
+              ? `Available process metrics were close to his ${outingSeason} season averages.`
+              : "Not enough eligible data to compare this outing with its season averages."
           ]
     )
     .slice(
@@ -1052,7 +1055,7 @@
           );
 
 
-        if(!r){
+        if(!r || (name === "transition" && !r.outing_count)){
           return;
         }
 
@@ -1560,7 +1563,8 @@
           "en-US",
           {
             month:"short",
-            day:"numeric"
+            day:"numeric",
+            year: new Date(t0).getFullYear() === new Date(t1).getFullYear() ? undefined : "2-digit"
           }
         ),
         "middle"

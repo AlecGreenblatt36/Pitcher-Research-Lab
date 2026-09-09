@@ -231,3 +231,20 @@ def test_doubleheaders_remain_separate_outings_in_research_and_screen(cached_app
     )
     changes = client.get(path("changes")).get_json()
     assert changes and all(row["current_outings"] == 11 for row in changes)
+
+
+def test_legacy_period_labels_describe_the_data_actually_selected(cached_app):
+    client, _ = cached_app
+    response = client.get(path("research", start="2026-04-15", end="2026-05-13"))
+    assert response.status_code == 200
+    periods = response.get_json()["comparison_periods"]
+    assert periods["baseline"] == {
+        "start": "2026-04-01",
+        "end": "2026-04-14",
+        "label": "Baseline",
+    }
+    assert periods["comparison"] == {
+        "start": "2026-05-14",
+        "end": "2026-06-03",
+        "label": "Comparison",
+    }

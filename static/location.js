@@ -1092,6 +1092,8 @@ function renderLocationLab() {
     }
 
 
+    const middleCard = document.getElementById("location-heatmap-transition")?.closest(".location-map-card");
+    if (middleCard) middleCard.hidden = !locationData.periods?.transition;
     renderLocationFinding();
 
     renderLocationMaps();

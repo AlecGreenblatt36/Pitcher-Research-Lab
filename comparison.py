@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from contextlib import closing
 
 import pandas as pd
 import re
@@ -9,7 +10,6 @@ from pitcher_core import (
     connect_database,
     comparison_periods_are_valid,
     default_comparison_periods,
-    default_transition_window,
     research_window_is_within_career,
     research_window_is_within_season,
 )
@@ -46,17 +46,28 @@ class ComparisonContext:
         return None
 
     def payload(self) -> dict:
+        baseline_end = (
+            self.baseline_end - pd.Timedelta(days=1)
+            if self.legacy_boundaries
+            else self.baseline_end
+        )
+        comparison_start = (
+            self.comparison_start + pd.Timedelta(days=1)
+            if self.legacy_boundaries
+            else self.comparison_start
+        )
+
+        def period(start, end, label):
+            # A legacy boundary at the edge of coverage can leave an empty side.
+            return {
+                "start": start.strftime("%Y-%m-%d") if start <= end else None,
+                "end": end.strftime("%Y-%m-%d") if start <= end else None,
+                "label": label,
+            }
+
         return {
-            "baseline": {
-                "start": self.baseline_start.strftime("%Y-%m-%d"),
-                "end": self.baseline_end.strftime("%Y-%m-%d"),
-                "label": "Baseline",
-            },
-            "comparison": {
-                "start": self.comparison_start.strftime("%Y-%m-%d"),
-                "end": self.comparison_end.strftime("%Y-%m-%d"),
-                "label": "Comparison",
-            },
+            "baseline": period(self.baseline_start, baseline_end, "Baseline"),
+            "comparison": period(comparison_start, self.comparison_end, "Comparison"),
             "source": self.source,
             "scope": self.scope,
         }
@@ -98,7 +109,7 @@ def resolve_comparison(args, pitcher_id: int, target_season: int) -> ComparisonC
             raise ComparisonError(
                 "Periods must be ordered, must not overlap, and must fall within the pitcher's cached MLB career."
             )
-        with connect_database() as connection:
+        with closing(connect_database()) as connection:
             for label, start, end in (
                 ("Baseline", values[0], values[1]),
                 ("Comparison", values[2], values[3]),
@@ -138,11 +149,18 @@ def resolve_comparison(args, pitcher_id: int, target_season: int) -> ComparisonC
             raise ComparisonError(
                 "Comparison dates must fall within the selected scope's available outings."
             )
+        with closing(connect_database()) as connection:
+            query = "SELECT MIN(game_date), MAX(game_date) FROM pitches WHERE game_type='R' AND CAST(pitcher AS INTEGER)=?"
+            params = [int(pitcher_id)]
+            if scope == "season":
+                query += " AND CAST(season AS INTEGER)=?"
+                params.append(int(target_season))
+            first, last = connection.execute(query, params).fetchone()
         return ComparisonContext(
-            start,
+            pd.Timestamp(first),
             start,
             end,
-            end,
+            pd.Timestamp(last),
             source="legacy_boundaries",
             scope=scope,
             legacy_boundaries=True,

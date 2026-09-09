@@ -715,7 +715,7 @@ function renderStuffSignal() {
             )} ${change.unit ?? ""} historical baseline → ${formatNumber(
                 change.current_mean,
                 2
-            )} ${change.unit ?? ""} in the target season. ${zText}${dateText} This tells us the change is unusual relative to the pitcher's own history; it does not tell us why it happened.`;
+            )} ${change.unit ?? ""} in the comparison period. ${zText}${dateText} This tells us the change is unusual relative to the pitcher's own history; it does not tell us why it happened.`;
 
     }
 
@@ -881,10 +881,9 @@ function renderArsenalSignal() {
         largest.pitch_type;
 
 
-    const direction =
-        largest.usage_delta > 0
-            ? "increased"
-            : "decreased";
+    const direction = Math.abs(largest.usage_delta) < 0.05
+        ? "was unchanged"
+        : largest.usage_delta > 0 ? "increased" : "decreased";
 
 
     const title =
@@ -917,7 +916,7 @@ function renderArsenalSignal() {
                 largest.post.usage_pct
             )}% in the comparison — a change of ${Math.abs(
                 largest.usage_delta
-            ).toFixed(1)} percentage points. This is a change in arsenal deployment, not automatically evidence that the pitch itself became better or worse.`;
+            ).toFixed(1)} percentage points. Usage describes arsenal deployment; it does not by itself show whether the pitch became better or worse.`;
 
     }
 
