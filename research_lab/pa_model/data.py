@@ -113,35 +113,84 @@ def _safe_numeric(series: pd.Series | object, default: float = np.nan, index=Non
     return pd.to_numeric(series, errors="coerce").fillna(default)
 
 
+def _collapse_pitch_frame(frame: pd.DataFrame, source: str) -> tuple[pd.DataFrame, dict]:
+    """Collapse one cache chunk to one row per completed plate appearance.
+
+    Statcast chunks are date-bounded, so a plate appearance cannot legitimately
+    span two input files. Collapsing each chunk before concatenation keeps the
+    three-season build inside ordinary CI-runner memory instead of retaining
+    millions of pitch rows at once.
+    """
+
+    missing = {"game_date", "game_pk", "at_bat_number", "pitch_number"} - set(frame.columns)
+    if missing:
+        raise ValueError(f"{source} is missing required columns: {sorted(missing)}")
+
+    raw_rows = len(frame)
+    if "game_type" in frame.columns:
+        frame = frame[frame["game_type"].astype(str).eq("R")].copy()
+    frame["game_date"] = pd.to_datetime(frame["game_date"], errors="coerce")
+    frame = frame.dropna(subset=["game_date", "game_pk", "at_bat_number"])
+    for column in ("game_pk", "at_bat_number", "pitch_number", "batter", "pitcher"):
+        if column in frame:
+            frame[column] = pd.to_numeric(frame[column], errors="coerce")
+
+    key = ["game_pk", "at_bat_number"]
+    frame = frame.sort_values(key + ["pitch_number"], kind="mergesort")
+    frame = frame.drop_duplicates(
+        subset=["game_pk", "at_bat_number", "pitch_number", "batter", "pitcher"],
+        keep="last",
+    )
+    first = frame.groupby(key, sort=False, observed=True).head(1).copy()
+    terminal = (
+        frame[frame["events"].notna()]
+        .groupby(key, sort=False, observed=True)
+        .tail(1)[key + ["events"]]
+        .rename(columns={"events": "terminal_event"})
+    )
+    pa = first.drop(columns=["events"], errors="ignore").merge(
+        terminal, on=key, how="inner", validate="one_to_one"
+    )
+    return pa, {
+        "raw_pitch_rows": int(raw_rows),
+        "eligible_unique_pitch_rows": int(len(frame)),
+        "terminal_pa_rows": int(len(pa)),
+    }
+
+
 def build_plate_appearances(pitch_files: Iterable[str | Path]) -> tuple[pd.DataFrame, dict]:
-    frames = []
+    pa_frames: list[pd.DataFrame] = []
+    raw_pitch_rows = 0
+    eligible_unique_pitch_rows = 0
+    chunk_terminal_rows = 0
+    files_read = 0
+
     for file in pitch_files:
         frame = pd.read_csv(file, low_memory=False)
-        missing = {"game_date", "game_pk", "at_bat_number", "pitch_number"} - set(frame.columns)
-        if missing:
-            raise ValueError(f"{file} is missing required columns: {sorted(missing)}")
-        frames.append(frame)
-    if not frames:
-        raise ValueError("no pitch files supplied")
-    pitches = pd.concat(frames, ignore_index=True)
-    if "game_type" in pitches.columns:
-        pitches = pitches[pitches["game_type"].astype(str).eq("R")].copy()
-    pitches["game_date"] = pd.to_datetime(pitches["game_date"], errors="coerce")
-    pitches = pitches.dropna(subset=["game_date", "game_pk", "at_bat_number"])
-    for column in ("game_pk", "at_bat_number", "pitch_number", "batter", "pitcher"):
-        if column in pitches:
-            pitches[column] = pd.to_numeric(pitches[column], errors="coerce")
-    key = ["game_pk", "at_bat_number"]
-    pitches = pitches.sort_values(key + ["pitch_number"], kind="mergesort")
-    pitches = pitches.drop_duplicates(subset=["game_pk", "at_bat_number", "pitch_number", "batter", "pitcher"], keep="last")
-    first = pitches.groupby(key, sort=False, observed=True).head(1).copy()
-    terminal_candidates = pitches[pitches["events"].notna()].copy()
-    terminal = terminal_candidates.groupby(key, sort=False, observed=True).tail(1)[key + ["events"]]
-    terminal = terminal.rename(columns={"events": "terminal_event"})
-    pa = first.drop(columns=["events"], errors="ignore").merge(terminal, on=key, how="inner", validate="one_to_one")
-    pa["outcome"] = pa["terminal_event"].map(map_event)
+        collapsed, chunk_report = _collapse_pitch_frame(frame, str(file))
+        files_read += 1
+        raw_pitch_rows += chunk_report["raw_pitch_rows"]
+        eligible_unique_pitch_rows += chunk_report["eligible_unique_pitch_rows"]
+        chunk_terminal_rows += chunk_report["terminal_pa_rows"]
+        if not collapsed.empty:
+            pa_frames.append(collapsed)
+        del frame, collapsed
+
+    if not pa_frames:
+        raise ValueError("no completed plate appearances were found in supplied pitch files")
+
+    pa = pd.concat(pa_frames, ignore_index=True, copy=False)
+    del pa_frames
+    pa = pa.sort_values(
+        ["game_date", "game_pk", "at_bat_number", "pitch_number"],
+        kind="mergesort",
+    )
+    duplicate_pa_rows = int(pa.duplicated(["game_pk", "at_bat_number"], keep="last").sum())
+    pa = pa.drop_duplicates(["game_pk", "at_bat_number"], keep="last").copy()
+
     event_report = mapping_report(pa["terminal_event"])
     total_terminal = len(pa)
+    pa["outcome"] = pa["terminal_event"].map(map_event)
     pa = pa[pa["outcome"].notna()].copy()
     pa["season"] = pa["game_date"].dt.year.astype(int)
     pa["date_key"] = pa["game_date"].dt.normalize()
@@ -150,31 +199,55 @@ def build_plate_appearances(pitch_files: Iterable[str | Path]) -> tuple[pd.DataF
     pa = pa.dropna(subset=["batter", "pitcher"])
     pa["batter"] = pa["batter"].astype(int)
     pa["pitcher"] = pa["pitcher"].astype(int)
-    pa["platoon"] = (_series_or_default(pa, "stand", "U").astype(str).str.upper() == _series_or_default(pa, "p_throws", "U").astype(str).str.upper()).astype(int)
-    pa["is_home_batter"] = (_series_or_default(pa, "inning_topbot", "Top").astype(str).str.lower() == "bot").astype(int)
+    pa["platoon"] = (
+        _series_or_default(pa, "stand", "U").astype(str).str.upper()
+        == _series_or_default(pa, "p_throws", "U").astype(str).str.upper()
+    ).astype(int)
+    pa["is_home_batter"] = (
+        _series_or_default(pa, "inning_topbot", "Top").astype(str).str.lower() == "bot"
+    ).astype(int)
     for base in ("1b", "2b", "3b"):
         pa[f"runner_{base}"] = _series_or_default(pa, f"on_{base}").notna().astype(int)
     if "bat_score_diff" not in pa:
-        pa["bat_score_diff"] = _safe_numeric(_series_or_default(pa, "bat_score", 0), 0) - _safe_numeric(_series_or_default(pa, "fld_score", 0), 0)
+        pa["bat_score_diff"] = _safe_numeric(_series_or_default(pa, "bat_score", 0), 0) - _safe_numeric(
+            _series_or_default(pa, "fld_score", 0), 0
+        )
     pa["bat_score_diff"] = _safe_numeric(pa["bat_score_diff"], 0).clip(-10, 10)
     pa["outs_when_up"] = _safe_numeric(_series_or_default(pa, "outs_when_up", 0), 0).clip(0, 2)
     pa["inning"] = _safe_numeric(_series_or_default(pa, "inning", 1), 1).clip(1, 20)
-    pa["n_thruorder_pitcher"] = _safe_numeric(_series_or_default(pa, "n_thruorder_pitcher", 1), 1).clip(1, 8)
-    pa["batter_days_since_prev_game"] = _safe_numeric(_series_or_default(pa, "batter_days_since_prev_game")).clip(0, 30)
-    pa["pitcher_days_since_prev_game"] = _safe_numeric(_series_or_default(pa, "pitcher_days_since_prev_game")).clip(0, 30)
+    pa["n_thruorder_pitcher"] = _safe_numeric(
+        _series_or_default(pa, "n_thruorder_pitcher", 1), 1
+    ).clip(1, 8)
+    pa["batter_days_since_prev_game"] = _safe_numeric(
+        _series_or_default(pa, "batter_days_since_prev_game")
+    ).clip(0, 30)
+    pa["pitcher_days_since_prev_game"] = _safe_numeric(
+        _series_or_default(pa, "pitcher_days_since_prev_game")
+    ).clip(0, 30)
     pa["age_bat"] = _safe_numeric(_series_or_default(pa, "age_bat")).clip(18, 50)
     pa["age_pit"] = _safe_numeric(_series_or_default(pa, "age_pit")).clip(18, 50)
     pa["park"] = _series_or_default(pa, "home_team", "UNK").fillna("UNK").astype(str)
     pa["matchup_key"] = pa["batter"].astype(str) + "_" + pa["pitcher"].astype(str)
-    pa = pa.sort_values(["date_key", "game_pk", "at_bat_number"], kind="mergesort").reset_index(drop=True)
+    pa = pa.sort_values(
+        ["date_key", "game_pk", "at_bat_number"], kind="mergesort"
+    ).reset_index(drop=True)
+
     report = {
         "generated_at_utc": datetime.now(UTC).isoformat(timespec="seconds"),
-        "pitch_rows": int(len(pitches)), "terminal_pa_rows": int(total_terminal),
-        "eligible_pa_rows": int(len(pa)), "excluded_terminal_rows": int(total_terminal - len(pa)),
+        "input_files": int(files_read),
+        "raw_pitch_rows": int(raw_pitch_rows),
+        "pitch_rows": int(eligible_unique_pitch_rows),
+        "chunk_terminal_pa_rows": int(chunk_terminal_rows),
+        "duplicate_pa_rows_removed": duplicate_pa_rows,
+        "terminal_pa_rows": int(total_terminal),
+        "eligible_pa_rows": int(len(pa)),
+        "excluded_terminal_rows": int(total_terminal - len(pa)),
         "date_min": pa["game_date"].min().date().isoformat() if len(pa) else None,
         "date_max": pa["game_date"].max().date().isoformat() if len(pa) else None,
-        "games": int(pa["game_pk"].nunique()), "batters": int(pa["batter"].nunique()),
-        "pitchers": int(pa["pitcher"].nunique()), **event_report,
+        "games": int(pa["game_pk"].nunique()),
+        "batters": int(pa["batter"].nunique()),
+        "pitchers": int(pa["pitcher"].nunique()),
+        **event_report,
     }
     return pa, report
 
