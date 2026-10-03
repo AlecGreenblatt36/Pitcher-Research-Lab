@@ -153,9 +153,11 @@
 
       if(controls){
 
-        controls.classList.toggle(
-          "context-hidden",
-          active!=="arsenal" && active!=="release"
+        // The primary-pitch selector is a global research control. Keeping it
+        // visible prevents a reload or view change from leaving the selected
+        // pitch inaccessible and removes a timing-dependent browser failure.
+        controls.classList.remove(
+          "context-hidden"
         );
 
       }

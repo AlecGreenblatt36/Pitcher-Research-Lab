@@ -370,8 +370,13 @@
                 option.value = "";
                 option.textContent = "No pitch data available";
                 select.appendChild(option);
+                select.disabled = true;
                 return;
             }
+
+            // Neutral state disables these controls. Explicitly re-enable them
+            // when a valid pitcher arsenal is loaded.
+            select.disabled = false;
 
             arsenal.forEach((pitch, index) => {
                 const option = document.createElement("option");
