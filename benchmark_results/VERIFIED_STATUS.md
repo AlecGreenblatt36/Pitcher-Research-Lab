@@ -4,7 +4,9 @@ Verified on October 3, 2026.
 
 ## Verdict
 
-The pre-plate-appearance probability layer is **prospectively verified on a locked 2026 chronological holdout**. It provides a small but statistically precise improvement over a strong fitted empirical-Bayes matchup baseline and remains well calibrated.
+The pre-plate-appearance probability layer is **verified on a locked, chronological, out-of-sample 2026 historical replay**. It provides a small but statistically precise improvement over a strong fitted empirical-Bayes matchup baseline and remains well calibrated.
+
+This is stronger than an ordinary retrospective split because the candidate and gates were frozen, every feature was limited to information from dates before the target PA, and the entire 2026 block was scored without tuning to its results. It is **not the same as a live prospective forecast recorded before the games were played**. That distinction is preserved explicitly.
 
 The full-game prediction system is **not** promoted by this result. Runner transitions, between-pitch events, pitcher removal, bullpen selection, team-run distributions, winner probabilities, and exact-score forecasts remain separate unverified layers.
 
@@ -18,11 +20,12 @@ Protocol:
 
 - training: 2023–2024
 - tuning, classwise calibration, and ensemble selection: disjoint chronological blocks of 2025
-- locked test: 2026
+- locked temporal test: 2026
 - test coverage: 183,849 PAs across 2,429 games
 - test dates: March 25 through September 27, 2026
 - game-clustered bootstrap replicates: 1,000
 - candidate: 90% calibrated multinomial model / 10% empirical-Bayes matchup baseline
+- each 2026 PA may use completed PAs from earlier 2026 dates, but never the target date or a later date
 
 | Model | Log loss | Multiclass Brier | Classwise ECE |
 |---|---:|---:|---:|
@@ -42,11 +45,19 @@ Verified incremental value:
 - game-clustered 95% CI: **-0.002215 to -0.001627**
 - maximum absolute class calibration gap: **0.003955**
 
-All frozen PA-layer gates passed. The PA layer is promoted; the game model is not.
+All frozen PA-layer gates passed. The PA layer advances as the canonical Research Lab PA model; the game model does not.
+
+## Evidence status
+
+- **Reported:** the old summary-only `ROLLING_PA_RESULT.json` claim is not accepted as evidence.
+- **Reproduced and locked temporal validation:** the 2025 development replay and frozen 2026 out-of-sample replay are complete, row-level predictions and metrics are preserved, and the 2026 result passed.
+- **Live prospective validation:** not yet complete. This requires saving predictions before future PAs or games occur, then revealing and scoring outcomes afterward.
 
 ## Development replication
 
-The architecture had previously passed the 2025 development holdout on 182,926 PAs across 2,430 games. That result was correctly relabeled as development evidence after it informed the final calibration and ensemble design. The separate locked 2026 result above is the primary validation claim.
+The architecture had previously passed the 2025 development holdout on 182,926 PAs across 2,430 games. That result was correctly relabeled as development evidence after it informed the final calibration and ensemble design. The separate frozen 2026 replay is the primary current validation claim.
+
+The near-identical incremental results in the two seasons are important: the candidate improved log loss over empirical Bayes by 0.294% in the 2025 development replay and 0.291% in the frozen 2026 replay, with both game-clustered confidence intervals fully below zero. This is evidence of transportability, not proof of live prospective performance.
 
 ## Reproducibility and integrity
 
@@ -82,10 +93,11 @@ Any solver change or convergence-focused refit must be evaluated on a new future
 
 ## What can be claimed now
 
-> Using only information available before each plate appearance, the frozen model produced better-calibrated seven-outcome PA probabilities than a strong empirical-Bayes batter/pitcher/platoon/park/recent-form baseline over 183,849 locked 2026 PAs. The gain was modest but statistically precise and repeated the direction and magnitude of the 2025 development result.
+> In a frozen chronological replay using only information available before each target PA, the model produced better seven-outcome PA probabilities than a strong empirical-Bayes batter/pitcher/platoon/park/recent-form baseline over 183,849 out-of-sample 2026 PAs. The gain was modest, statistically precise, well calibrated, and almost identical to the prior-season development result.
 
 ## What cannot be claimed now
 
+- It has not yet been scored from predictions saved live before the games occurred.
 - It does not predict the exact next PA outcome with certainty.
 - It does not yet validate pitch-by-pitch sequencing.
 - It does not validate the runner-state kernel or remove its outcome-conditioning concern.
