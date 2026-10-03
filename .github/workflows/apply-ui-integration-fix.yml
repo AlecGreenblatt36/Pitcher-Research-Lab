@@ -1,0 +1,88 @@
+name: Apply UI integration fix
+
+on:
+  push:
+    branches:
+      - "feature/pa-model-v1"
+    paths:
+      - ".github/workflows/apply-ui-integration-fix.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/pa-model-v1
+          fetch-depth: 0
+      - name: Keep global pitch controls visible and enabled
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          performance = Path("static/performance.js")
+          text = performance.read_text(encoding="utf-8")
+          old = '''      if(controls){
+
+        controls.classList.toggle(
+          "context-hidden",
+          active!=="arsenal" && active!=="release"
+        );
+
+      }
+'''
+          new = '''      if(controls){
+
+        // The primary-pitch selector is a global research control. Keeping it
+        // visible prevents a reload or view change from leaving the selected
+        // pitch inaccessible and removes a timing-dependent browser failure.
+        controls.classList.remove(
+          "context-hidden"
+        );
+
+      }
+'''
+          if old not in text:
+              raise SystemExit("performance.js patch target not found")
+          performance.write_text(text.replace(old, new), encoding="utf-8")
+
+          context = Path("static/pitcher_context.js")
+          text = context.read_text(encoding="utf-8")
+          old = '''            if (!Array.isArray(arsenal) || !arsenal.length) {
+                const option = document.createElement("option");
+                option.value = "";
+                option.textContent = "No pitch data available";
+                select.appendChild(option);
+                return;
+            }
+'''
+          new = '''            if (!Array.isArray(arsenal) || !arsenal.length) {
+                const option = document.createElement("option");
+                option.value = "";
+                option.textContent = "No pitch data available";
+                select.appendChild(option);
+                select.disabled = true;
+                return;
+            }
+
+            // Neutral state disables these controls. Explicitly re-enable them
+            // when a valid pitcher arsenal is loaded.
+            select.disabled = false;
+'''
+          if old not in text:
+              raise SystemExit("pitcher_context.js patch target not found")
+          context.write_text(text.replace(old, new), encoding="utf-8")
+          PY
+          node --check static/performance.js
+          node --check static/pitcher_context.js
+      - name: Commit branch fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add static/performance.js static/pitcher_context.js
+          git commit -m "Keep primary pitch controls visible after reload"
+          git push origin HEAD:feature/pa-model-v1
