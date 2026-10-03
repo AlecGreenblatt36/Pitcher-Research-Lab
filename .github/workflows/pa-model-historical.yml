@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 300
     permissions:
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -41,6 +41,63 @@ jobs:
           --start "${{ inputs.start || '2023-03-20' }}"
           --end "${{ inputs.end || '2025-11-05' }}"
           --work-dir model_runs/pa_v1
+      - name: Publish benchmark receipt
+        if: success() && github.event_name == 'push'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p benchmark_results
+          cp model_runs/pa_v1/artifacts/PA_BENCHMARK_RESULT.json benchmark_results/pa_model_latest.json
+          cp model_runs/pa_v1/plate_appearances.csv.gz.receipt.json benchmark_results/pa_dataset_latest_receipt.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("benchmark_results/pa_model_latest.json")
+          result = json.loads(path.read_text(encoding="utf-8"))
+          full = result["models"]["talent_plus_context"]["metrics"]
+          talent = result["models"]["talent_only"]["metrics"]
+          league = result["baselines"]["league"]
+          eb = result["baselines"]["empirical_bayes_matchup"]
+          value = result["incremental_value"]
+          ci_eb = value["full_vs_empirical_bayes_clustered_ci"]
+          ci_context = value["context_vs_talent_only_clustered_ci"]
+          promotion = result["promotion"]
+          lines = [
+              "# Latest chronological PA benchmark",
+              "",
+              f"Generated: `{result['generated_at_utc']}`",
+              f"Data: {result['data']['rows_test']:,} untouched test PAs across {result['data']['games_test']:,} games.",
+              "",
+              "| Model | Log loss | Multiclass Brier | Classwise ECE |",
+              "|---|---:|---:|---:|",
+              f"| League | {league['log_loss']:.6f} | {league['multiclass_brier']:.6f} | {league['classwise_ece']:.6f} |",
+              f"| Empirical Bayes matchup | {eb['log_loss']:.6f} | {eb['multiclass_brier']:.6f} | {eb['classwise_ece']:.6f} |",
+              f"| Talent only | {talent['log_loss']:.6f} | {talent['multiclass_brier']:.6f} | {talent['classwise_ece']:.6f} |",
+              f"| Talent + context | {full['log_loss']:.6f} | {full['multiclass_brier']:.6f} | {full['classwise_ece']:.6f} |",
+              "",
+              f"Relative log-loss gain vs league: **{100 * value['relative_log_loss_gain_vs_league']:.3f}%**",
+              f"Relative log-loss gain vs empirical Bayes: **{100 * value['relative_log_loss_gain_vs_empirical_bayes']:.3f}%**",
+              f"Full minus empirical-Bayes log loss: **{ci_eb['difference_nats_per_pa']:.6f}** "
+              f"(game-clustered 95% CI {ci_eb['ci_95_low']:.6f} to {ci_eb['ci_95_high']:.6f}).",
+              f"Context minus talent-only log loss: **{ci_context['difference_nats_per_pa']:.6f}** "
+              f"(game-clustered 95% CI {ci_context['ci_95_low']:.6f} to {ci_context['ci_95_high']:.6f}).",
+              "",
+              f"Promotion: **{'PASS' if promotion['promoted'] else 'FAIL'}**",
+              "",
+              "This file is generated from the frozen chronological benchmark. It validates pre-PA probabilities only; it does not validate runner transitions, bullpen selection, team-run distributions, winner probabilities, or exact scores.",
+          ]
+          Path("benchmark_results/pa_model_latest_summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add benchmark_results/pa_model_latest.json \
+                  benchmark_results/pa_dataset_latest_receipt.json \
+                  benchmark_results/pa_model_latest_summary.md
+          if ! git diff --cached --quiet; then
+            git commit -m "Record PA benchmark for ${GITHUB_SHA::7} [skip ci]"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
