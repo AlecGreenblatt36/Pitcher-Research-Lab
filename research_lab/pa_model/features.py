@@ -67,19 +67,65 @@ def _log_ratio(prob: np.ndarray, league: np.ndarray, eps: float) -> np.ndarray:
 
 
 def build_time_valid_features(pa: pd.DataFrame, config: PAConfig | None = None) -> tuple[pd.DataFrame, list[str]]:
+    """Construct pre-PA features with strict date blocking.
+
+    The implementation preallocates a float32 matrix rather than retaining one
+    Python dictionary per PA. A full three-season MLB build is therefore
+    practical on a standard CI runner while preserving the exact same temporal
+    information boundary.
+    """
+
     config = config or PAConfig()
-    required = {"date_key", "game_pk", "at_bat_number", "batter", "pitcher", "outcome", "stand", "p_throws", "park"}
+    required = {
+        "date_key", "game_pk", "at_bat_number", "batter", "pitcher",
+        "outcome", "stand", "p_throws", "park",
+    }
     missing = required - set(pa.columns)
     if missing:
         raise ValueError(f"PA data missing feature columns: {sorted(missing)}")
+
     labels = list(config.outcome_labels)
     label_to_index = {label: i for i, label in enumerate(labels)}
     unknown = sorted(set(pa["outcome"]) - set(labels))
     if unknown:
         raise ValueError(f"unknown outcomes: {unknown}")
-    ordered = pa.sort_values(["date_key", "game_pk", "at_bat_number"], kind="mergesort").reset_index(drop=True)
+
+    ordered = pa.sort_values(
+        ["date_key", "game_pk", "at_bat_number"], kind="mergesort"
+    ).reset_index(drop=True)
     n_classes = len(labels)
     eps = config.min_probability
+
+    group_prefixes = (
+        "league", "batter", "pitcher", "batter_split", "pitcher_split",
+        "park", "batter_recent", "pitcher_recent",
+    )
+    ratio_prefixes = tuple(prefix for prefix in group_prefixes if prefix != "league")
+    context_columns = (
+        "platoon", "is_home_batter", "inning", "outs_when_up",
+        "runner_1b", "runner_2b", "runner_3b", "bat_score_diff",
+        "n_thruorder_pitcher", "batter_days_since_prev_game",
+        "pitcher_days_since_prev_game", "age_bat", "age_pit",
+        "batter_history_pa", "pitcher_history_pa",
+        "batter_split_history_pa", "pitcher_split_history_pa",
+    )
+
+    feature_columns: list[str] = []
+    probability_slices: dict[str, slice] = {}
+    ratio_slices: dict[str, slice] = {}
+    cursor = 0
+    for prefix in group_prefixes:
+        probability_slices[prefix] = slice(cursor, cursor + n_classes)
+        feature_columns.extend(f"p_{prefix}_{label}" for label in labels)
+        cursor += n_classes
+    for prefix in ratio_prefixes:
+        ratio_slices[prefix] = slice(cursor, cursor + n_classes)
+        feature_columns.extend(f"lr_{prefix}_{label}" for label in labels)
+        cursor += n_classes
+    context_slice = slice(cursor, cursor + len(context_columns))
+    feature_columns.extend(context_columns)
+    matrix = np.empty((len(ordered), len(feature_columns)), dtype=np.float32)
+
     league = _OnlineCounter(n_classes)
     batter = _OnlineCounter(n_classes)
     pitcher = _OnlineCounter(n_classes)
@@ -90,65 +136,101 @@ def build_time_valid_features(pa: pd.DataFrame, config: PAConfig | None = None) 
     pitcher_recent = _RollingCounter(n_classes, config.pitcher_recent_window)
     fixed_prior = np.array([0.49, 0.22, 0.09, 0.10, 0.035, 0.03, 0.035])
     fixed_prior /= fixed_prior.sum()
-    records = []
-    feature_columns = []
-    for current_date, date_rows in ordered.groupby("date_key", sort=True):
+
+    for _, date_rows in ordered.groupby("date_key", sort=True):
+        # Freeze the league prior once for the whole date. No result from date D
+        # can influence another PA on date D, including doubleheaders.
         league_prob = _posterior(league.get("league"), fixed_prior, 500.0, eps)
-        for row in date_rows.itertuples(index=False):
-            stand, throws = str(getattr(row, "stand", "U")), str(getattr(row, "p_throws", "U"))
-            batter_id, pitcher_id = int(row.batter), int(row.pitcher)
-            b_split_key, p_split_key = (batter_id, throws), (pitcher_id, stand)
-            b_prob = _posterior(batter.get(batter_id), league_prob, config.player_prior_pa, eps)
-            p_prob = _posterior(pitcher.get(pitcher_id), league_prob, config.player_prior_pa, eps)
+
+        for row in date_rows.itertuples(index=True):
+            position = int(row.Index)
+            stand = str(getattr(row, "stand", "U"))
+            throws = str(getattr(row, "p_throws", "U"))
+            batter_id = int(row.batter)
+            pitcher_id = int(row.pitcher)
+            b_split_key = (batter_id, throws)
+            p_split_key = (pitcher_id, stand)
+
+            b_state = batter.get(batter_id)
+            p_state = pitcher.get(pitcher_id)
+            bs_state = batter_split.get(b_split_key)
+            ps_state = pitcher_split.get(p_split_key)
+            park_key = str(getattr(row, "park", "UNK"))
+
+            b_prob = _posterior(b_state, league_prob, config.player_prior_pa, eps)
+            p_prob = _posterior(p_state, league_prob, config.player_prior_pa, eps)
             groups = {
                 "league": league_prob,
                 "batter": b_prob,
                 "pitcher": p_prob,
-                "batter_split": _posterior(batter_split.get(b_split_key), b_prob, config.split_prior_pa, eps),
-                "pitcher_split": _posterior(pitcher_split.get(p_split_key), p_prob, config.split_prior_pa, eps),
-                "park": _posterior(park.get(str(getattr(row, "park", "UNK"))), league_prob, config.park_prior_pa, eps),
-                "batter_recent": _posterior(batter_recent.get(batter_id), b_prob, config.recent_prior_pa, eps),
-                "pitcher_recent": _posterior(pitcher_recent.get(pitcher_id), p_prob, config.recent_prior_pa, eps),
+                "batter_split": _posterior(bs_state, b_prob, config.split_prior_pa, eps),
+                "pitcher_split": _posterior(ps_state, p_prob, config.split_prior_pa, eps),
+                "park": _posterior(
+                    park.get(park_key), league_prob, config.park_prior_pa, eps
+                ),
+                "batter_recent": _posterior(
+                    batter_recent.get(batter_id), b_prob, config.recent_prior_pa, eps
+                ),
+                "pitcher_recent": _posterior(
+                    pitcher_recent.get(pitcher_id), p_prob, config.recent_prior_pa, eps
+                ),
             }
-            record = {"date_key": current_date, "season": int(row.season), "game_pk": int(row.game_pk), "at_bat_number": int(row.at_bat_number), "batter": batter_id, "pitcher": pitcher_id, "outcome": str(row.outcome)}
-            for prefix, probs in groups.items():
-                for idx, label in enumerate(labels):
-                    col = f"p_{prefix}_{label}"
-                    record[col] = float(probs[idx])
-                    if col not in feature_columns:
-                        feature_columns.append(col)
-            for prefix, probs in groups.items():
-                if prefix == "league":
-                    continue
-                for idx, label in enumerate(labels):
-                    col = f"lr_{prefix}_{label}"
-                    record[col] = float(_log_ratio(probs, league_prob, eps)[idx])
-                    if col not in feature_columns:
-                        feature_columns.append(col)
-            context = {
-                "platoon": float(getattr(row, "platoon", 0)), "is_home_batter": float(getattr(row, "is_home_batter", 0)),
-                "inning": float(getattr(row, "inning", 1)), "outs_when_up": float(getattr(row, "outs_when_up", 0)),
-                "runner_1b": float(getattr(row, "runner_1b", 0)), "runner_2b": float(getattr(row, "runner_2b", 0)),
-                "runner_3b": float(getattr(row, "runner_3b", 0)), "bat_score_diff": float(getattr(row, "bat_score_diff", 0)),
-                "n_thruorder_pitcher": float(getattr(row, "n_thruorder_pitcher", 1)),
-                "batter_days_since_prev_game": float(getattr(row, "batter_days_since_prev_game", np.nan)),
-                "pitcher_days_since_prev_game": float(getattr(row, "pitcher_days_since_prev_game", np.nan)),
-                "age_bat": float(getattr(row, "age_bat", np.nan)), "age_pit": float(getattr(row, "age_pit", np.nan)),
-                "batter_history_pa": float(batter.get(batter_id).total), "pitcher_history_pa": float(pitcher.get(pitcher_id).total),
-                "batter_split_history_pa": float(batter_split.get(b_split_key).total), "pitcher_split_history_pa": float(pitcher_split.get(p_split_key).total),
-            }
-            for col, value in context.items():
-                record[col] = value
-                if col not in feature_columns:
-                    feature_columns.append(col)
-            records.append(record)
+
+            for prefix, probabilities in groups.items():
+                matrix[position, probability_slices[prefix]] = probabilities
+            for prefix in ratio_prefixes:
+                matrix[position, ratio_slices[prefix]] = _log_ratio(
+                    groups[prefix], league_prob, eps
+                )
+
+            matrix[position, context_slice] = np.asarray(
+                [
+                    float(getattr(row, "platoon", 0)),
+                    float(getattr(row, "is_home_batter", 0)),
+                    float(getattr(row, "inning", 1)),
+                    float(getattr(row, "outs_when_up", 0)),
+                    float(getattr(row, "runner_1b", 0)),
+                    float(getattr(row, "runner_2b", 0)),
+                    float(getattr(row, "runner_3b", 0)),
+                    float(getattr(row, "bat_score_diff", 0)),
+                    float(getattr(row, "n_thruorder_pitcher", 1)),
+                    float(getattr(row, "batter_days_since_prev_game", np.nan)),
+                    float(getattr(row, "pitcher_days_since_prev_game", np.nan)),
+                    float(getattr(row, "age_bat", np.nan)),
+                    float(getattr(row, "age_pit", np.nan)),
+                    float(b_state.total),
+                    float(p_state.total),
+                    float(bs_state.total),
+                    float(ps_state.total),
+                ],
+                dtype=np.float32,
+            )
+
+        # Only after the full date is scored do its outcomes become historical
+        # information for subsequent dates.
         for row in date_rows.itertuples(index=False):
-            idx, batter_id, pitcher_id = label_to_index[str(row.outcome)], int(row.batter), int(row.pitcher)
-            stand, throws = str(getattr(row, "stand", "U")), str(getattr(row, "p_throws", "U"))
-            league.update("league", idx); batter.update(batter_id, idx); pitcher.update(pitcher_id, idx)
-            batter_split.update((batter_id, throws), idx); pitcher_split.update((pitcher_id, stand), idx)
-            park.update(str(getattr(row, "park", "UNK")), idx); batter_recent.update(batter_id, idx); pitcher_recent.update(pitcher_id, idx)
-    return pd.DataFrame.from_records(records), feature_columns
+            class_index = label_to_index[str(row.outcome)]
+            batter_id = int(row.batter)
+            pitcher_id = int(row.pitcher)
+            stand = str(getattr(row, "stand", "U"))
+            throws = str(getattr(row, "p_throws", "U"))
+            park_key = str(getattr(row, "park", "UNK"))
+            league.update("league", class_index)
+            batter.update(batter_id, class_index)
+            pitcher.update(pitcher_id, class_index)
+            batter_split.update((batter_id, throws), class_index)
+            pitcher_split.update((pitcher_id, stand), class_index)
+            park.update(park_key, class_index)
+            batter_recent.update(batter_id, class_index)
+            pitcher_recent.update(pitcher_id, class_index)
+
+    metadata_columns = [
+        "date_key", "season", "game_pk", "at_bat_number",
+        "batter", "pitcher", "outcome",
+    ]
+    metadata = ordered.loc[:, metadata_columns].reset_index(drop=True)
+    numeric = pd.DataFrame(matrix, columns=feature_columns)
+    return pd.concat([metadata, numeric], axis=1, copy=False), feature_columns
 
 
 def empirical_bayes_matchup_probabilities(features: pd.DataFrame, labels: Iterable[str], eps: float = 1e-7, parameters: dict[str, float] | None = None) -> np.ndarray:
