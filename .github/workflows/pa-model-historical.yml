@@ -57,17 +57,26 @@ jobs:
           result = json.loads(path.read_text(encoding="utf-8"))
           full = result["models"]["talent_plus_context"]["metrics"]
           talent = result["models"]["talent_only"]["metrics"]
+          candidate_entry = result["models"].get(
+              "blended_candidate", result["models"]["talent_plus_context"]
+          )
+          candidate = candidate_entry["metrics"]
+          candidate_tuning = candidate_entry.get("tuning", {})
           league = result["baselines"]["league"]
           eb = result["baselines"]["empirical_bayes_matchup"]
           value = result["incremental_value"]
           ci_eb = value["full_vs_empirical_bayes_clustered_ci"]
           ci_context = value["context_vs_talent_only_clustered_ci"]
           promotion = result["promotion"]
+          development_pass = promotion.get(
+              "development_gate_passed", promotion.get("promoted", False)
+          )
           lines = [
               "# Latest chronological PA benchmark",
               "",
               f"Generated: `{result['generated_at_utc']}`",
-              f"Data: {result['data']['rows_test']:,} untouched test PAs across {result['data']['games_test']:,} games.",
+              f"Claim status: `{result.get('claim_status', 'unknown')}`",
+              f"Data: {result['data']['rows_test']:,} test PAs across {result['data']['games_test']:,} games.",
               "",
               "| Model | Log loss | Multiclass Brier | Classwise ECE |",
               "|---|---:|---:|---:|",
@@ -75,19 +84,31 @@ jobs:
               f"| Empirical Bayes matchup | {eb['log_loss']:.6f} | {eb['multiclass_brier']:.6f} | {eb['classwise_ece']:.6f} |",
               f"| Talent only | {talent['log_loss']:.6f} | {talent['multiclass_brier']:.6f} | {talent['classwise_ece']:.6f} |",
               f"| Talent + context | {full['log_loss']:.6f} | {full['multiclass_brier']:.6f} | {full['classwise_ece']:.6f} |",
+              f"| Calibrated candidate | {candidate['log_loss']:.6f} | {candidate['multiclass_brier']:.6f} | {candidate['classwise_ece']:.6f} |",
               "",
               f"Relative log-loss gain vs league: **{100 * value['relative_log_loss_gain_vs_league']:.3f}%**",
               f"Relative log-loss gain vs empirical Bayes: **{100 * value['relative_log_loss_gain_vs_empirical_bayes']:.3f}%**",
-              f"Full minus empirical-Bayes log loss: **{ci_eb['difference_nats_per_pa']:.6f}** "
+              f"Candidate minus empirical-Bayes log loss: **{ci_eb['difference_nats_per_pa']:.6f}** "
               f"(game-clustered 95% CI {ci_eb['ci_95_low']:.6f} to {ci_eb['ci_95_high']:.6f}).",
               f"Context minus talent-only log loss: **{ci_context['difference_nats_per_pa']:.6f}** "
               f"(game-clustered 95% CI {ci_context['ci_95_low']:.6f} to {ci_context['ci_95_high']:.6f}).",
+              f"Maximum absolute class calibration gap: **{promotion.get('max_absolute_class_calibration_gap', float('nan')):.4f}**",
               "",
-              f"Promotion: **{'PASS' if promotion['promoted'] else 'FAIL'}**",
-              "",
-              "This file is generated from the frozen chronological benchmark. It validates pre-PA probabilities only; it does not validate runner transitions, bullpen selection, team-run distributions, winner probabilities, or exact scores.",
+              f"Development gate: **{'PASS' if development_pass else 'FAIL'}**",
+              f"Production promoted: **{'YES' if promotion.get('production_promoted', promotion.get('promoted', False)) else 'NO'}**",
           ]
-          Path("benchmark_results/pa_model_latest_summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+          if "model_weight" in candidate_tuning:
+              lines.extend(
+                  [
+                      "",
+                      f"Candidate blend: {100 * candidate_tuning['model_weight']:.1f}% calibrated model / "
+                      f"{100 * candidate_tuning['empirical_bayes_weight']:.1f}% empirical Bayes.",
+                  ]
+              )
+          lines.extend(["", result.get("interpretation_boundary", "")])
+          Path("benchmark_results/pa_model_latest_summary.md").write_text(
+              "\n".join(lines) + "\n", encoding="utf-8"
+          )
           PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
