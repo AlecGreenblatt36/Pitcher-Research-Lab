@@ -151,11 +151,14 @@
         )?.dataset?.viewPanel;
 
 
-      if(controls){
+      if(
+        controls &&
+        controls.classList.contains("context-hidden")
+      ){
 
-        // The primary-pitch selector is a global research control. Keeping it
-        // visible prevents a reload or view change from leaving the selected
-        // pitch inaccessible and removes a timing-dependent browser failure.
+        // Guard the mutation. The observer watches class attributes, so
+        // repeatedly removing an absent class can create a self-sustaining
+        // MutationObserver loop in Chromium and freeze every navigation click.
         controls.classList.remove(
           "context-hidden"
         );
