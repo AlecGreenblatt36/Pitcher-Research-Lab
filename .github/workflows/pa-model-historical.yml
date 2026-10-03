@@ -1,0 +1,51 @@
+name: PA model historical benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      start:
+        description: First Statcast date
+        default: "2023-03-20"
+        required: true
+      end:
+        description: Last Statcast date
+        default: "2025-11-05"
+        required: true
+  push:
+    branches:
+      - "feature/pa-model-v1"
+    paths:
+      - ".github/workflows/pa-model-historical.yml"
+      - "research_lab/pa_model/**"
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt -r requirements-model.txt
+      - uses: actions/cache@v4
+        with:
+          path: model_runs/pa_v1/raw
+          key: statcast-pa-v1-${{ inputs.start || '2023-03-20' }}-${{ inputs.end || '2025-11-05' }}
+      - name: Run frozen benchmark
+        run: >-
+          python -m research_lab.pa_model.cli --verbose run-all
+          --start "${{ inputs.start || '2023-03-20' }}"
+          --end "${{ inputs.end || '2025-11-05' }}"
+          --work-dir model_runs/pa_v1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pa-model-v1-artifacts
+          path: |
+            model_runs/pa_v1/artifacts/
+            model_runs/pa_v1/plate_appearances.csv.gz.receipt.json
+          retention-days: 30
