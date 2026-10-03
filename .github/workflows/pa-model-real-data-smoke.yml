@@ -1,0 +1,51 @@
+name: PA model real-data smoke
+
+on:
+  push:
+    branches:
+      - "feature/pa-model-v1"
+    paths:
+      - ".github/workflows/pa-model-real-data-smoke.yml"
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt -r requirements-model.txt
+      - name: Download three independent April cohorts
+        run: |
+          python -m research_lab.pa_model.cli --verbose download --start 2023-04-01 --end 2023-04-30 --cache-dir model_runs/pa_smoke/raw
+          python -m research_lab.pa_model.cli --verbose download --start 2024-04-01 --end 2024-04-30 --cache-dir model_runs/pa_smoke/raw
+          python -m research_lab.pa_model.cli --verbose download --start 2025-04-01 --end 2025-04-30 --cache-dir model_runs/pa_smoke/raw
+      - name: Build PA table
+        run: >-
+          python -m research_lab.pa_model.cli --verbose build-pa
+          --input-dir model_runs/pa_smoke/raw
+          --output model_runs/pa_smoke/plate_appearances.csv.gz
+      - name: Run chronological smoke benchmark
+        run: >-
+          python -m research_lab.pa_model.cli --verbose benchmark
+          --pa-file model_runs/pa_smoke/plate_appearances.csv.gz
+          --output-dir model_runs/pa_smoke/artifacts
+          --train-years 2023
+          --validation-years 2024
+          --test-years 2025
+          --bootstrap-replicates 200
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pa-model-real-data-smoke
+          path: |
+            model_runs/pa_smoke/artifacts/
+            model_runs/pa_smoke/plate_appearances.csv.gz.receipt.json
+          retention-days: 30
+          if-no-files-found: warn
