@@ -121,9 +121,11 @@ def run_benchmark(
     blend_frame = features.loc[partitions["blend"]].reset_index(drop=True)
     y_blend = blend_frame["outcome"].map(label_to_index).to_numpy(int)
 
+    # Pandas 3 can expose a read-only array here. Request an owned copy because
+    # normalization is intentionally in-place for memory efficiency.
     league_prob = test[
         [f"p_league_{label}" for label in labels]
-    ].to_numpy(float)
+    ].to_numpy(dtype=float, copy=True)
     league_prob /= league_prob.sum(axis=1, keepdims=True)
     eb_parameters, eb_tuning = fit_empirical_bayes_baseline(
         eb_fit,
