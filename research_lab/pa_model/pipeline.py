@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -93,6 +95,23 @@ def _select_blend(
     }
 
 
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _candidate_fingerprint(payload: dict) -> str:
+    encoded = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
 def run_benchmark(
     pa: pd.DataFrame,
     output_dir: str | Path,
@@ -150,9 +169,8 @@ def run_benchmark(
     fitted_models: dict[str, object] = {}
     test_probabilities: dict[str, np.ndarray] = {}
     blend_probabilities: dict[str, np.ndarray] = {}
-    for family_name, family_columns in _feature_families(
-        all_feature_columns
-    ).items():
+    feature_families = _feature_families(all_feature_columns)
+    for family_name, family_columns in feature_families.items():
         fitted, tuning = fit_frozen_model(features, family_columns, config)
         probabilities = fitted.predict_proba(test)
         fitted_models[family_name] = fitted
@@ -203,21 +221,28 @@ def run_benchmark(
         abs(row["calibration_gap"])
         for row in candidate_metrics["calibration"]
     )
-    development_gates = {
+    gates = {
         "beat_empirical_bayes_with_clustered_ci": ci_vs_eb["ci_95_high"] < 0,
         "context_adds_signal_with_clustered_ci": ci_context["ci_95_high"] < 0,
         "max_absolute_class_calibration_gap_below_0_015": max_abs_gap < 0.015,
     }
-    development_gate_passed = all(development_gates.values())
+    gate_passed = all(gates.values())
+    locked_final = config.evaluation_mode == "locked_final"
     promotion = {
-        **development_gates,
+        **gates,
+        "evaluation_mode": config.evaluation_mode,
         "max_absolute_class_calibration_gap": float(max_abs_gap),
-        "development_gate_passed": development_gate_passed,
-        "promoted_to_locked_final_evaluation": development_gate_passed,
-        "production_holdout_required": True,
+        "development_gate_passed": gate_passed,
+        "promoted_to_locked_final_evaluation": (
+            gate_passed if not locked_final else False
+        ),
+        "locked_final_holdout_passed": gate_passed if locked_final else False,
+        "production_pa_layer_promoted": gate_passed if locked_final else False,
+        "production_holdout_required": not locked_final,
+        "game_model_promoted": False,
         "production_promoted": False,
-        # Kept for backward compatibility. A development result cannot by
-        # itself promote a production game model.
+        # Kept for backward compatibility. A PA result cannot promote the full
+        # game model or production application on its own.
         "promoted": False,
     }
 
@@ -237,16 +262,86 @@ def run_benchmark(
         predictions[f"p_eb_{label}"] = eb_prob[:, i]
         predictions[f"p_model_{label}"] = full_prob[:, i]
         predictions[f"p_ensemble_{label}"] = candidate_prob[:, i]
-    predictions.to_csv(
-        output / "test_predictions.csv.gz",
-        index=False,
-        compression="gzip",
+    predictions_path = output / "test_predictions.csv.gz"
+    predictions.to_csv(predictions_path, index=False, compression="gzip")
+
+    tuning_audit = {
+        "validation_partitions": partition_audit,
+        "empirical_bayes": eb_tuning,
+        "talent_only": model_runs["talent_only"]["tuning"],
+        "talent_plus_context": model_runs["talent_plus_context"]["tuning"],
+        "blended_candidate": blend_tuning,
+    }
+    tuning_path = output / "TUNING_AUDIT.json"
+    tuning_path.write_text(
+        json.dumps(tuning_audit, indent=2, sort_keys=True),
+        encoding="utf-8",
     )
 
+    model_bundle = {
+        "talent_plus_context": fitted_models["talent_plus_context"],
+        "talent_only": fitted_models["talent_only"],
+        "empirical_bayes_parameters": eb_parameters,
+        "model_weight": float(model_weight),
+        "empirical_bayes_weight": float(1.0 - model_weight),
+        "labels": labels,
+        "feature_columns": feature_families,
+        "config": config.to_dict(),
+    }
+    model_path = output / "pa_model.joblib"
+    joblib.dump(model_bundle, model_path, compress=3)
+
+    candidate_contract = {
+        "contract_schema": "baseball_research_lab.pa_candidate.v1",
+        "labels": labels,
+        "feature_columns": feature_families,
+        "config": config.to_dict(),
+        "empirical_bayes_parameters": eb_parameters,
+        "model_weight": float(model_weight),
+        "empirical_bayes_weight": float(1.0 - model_weight),
+        "talent_only_tuning": model_runs["talent_only"]["tuning"],
+        "talent_plus_context_tuning": model_runs["talent_plus_context"]["tuning"],
+    }
+    candidate_fingerprint = _candidate_fingerprint(candidate_contract)
+
+    public_model_runs = json.loads(json.dumps(model_runs))
+    for details in public_model_runs.values():
+        details["tuning"] = {
+            key: value
+            for key, value in details["tuning"].items()
+            if key != "trials"
+        }
+
+    claim_status = (
+        "chronological_locked_final_holdout_executed"
+        if locked_final
+        else "chronological_development_holdout_executed"
+    )
+    if locked_final:
+        interpretation_boundary = (
+            "The test seasons in this run are the locked final PA holdout. "
+            "This result may validate the pre-PA probability layer, but it "
+            "does not validate runner transitions, bullpen logic, team-run "
+            "distributions, winner probabilities, exact scores, or the full "
+            "production application. The same holdout may not be used to "
+            "retune the architecture and then be described as untouched."
+        )
+    else:
+        interpretation_boundary = (
+            "The test seasons in this run are a development holdout because "
+            "earlier results informed subsequent architecture work. This "
+            "result can advance the model to a locked final evaluation, but "
+            "it cannot validate runner transitions, bullpen logic, team-run "
+            "distributions, winner probabilities, exact scores, or a "
+            "production deployment."
+        )
+
     result = {
-        "schema": "baseball_research_lab.pa_benchmark.v2",
+        "schema": "baseball_research_lab.pa_benchmark.v3",
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
-        "claim_status": "chronological_development_holdout_executed",
+        "claim_status": claim_status,
+        "source_commit_sha": os.environ.get("GITHUB_SHA"),
+        "candidate_fingerprint_sha256": candidate_fingerprint,
         "config": config.to_dict(),
         "validation_partitions": partition_audit,
         "data": {
@@ -261,6 +356,8 @@ def run_benchmark(
             "games_test": int(test["game_pk"].nunique()),
             "date_min": str(features["date_key"].min()),
             "date_max": str(features["date_key"].max()),
+            "test_date_min": str(test["date_key"].min()),
+            "test_date_max": str(test["date_key"].max()),
             "feature_receipt_sha256": dataframe_sha256(
                 features,
                 [
@@ -273,6 +370,11 @@ def run_benchmark(
                 ],
             ),
         },
+        "artifacts": {
+            "test_predictions_sha256": _file_sha256(predictions_path),
+            "tuning_audit_sha256": _file_sha256(tuning_path),
+            "model_joblib_sha256": _file_sha256(model_path),
+        },
         "baselines": {
             "league": league_metrics,
             "empirical_bayes_matchup": {
@@ -280,7 +382,7 @@ def run_benchmark(
                 "tuning": eb_tuning,
             },
         },
-        "models": model_runs,
+        "models": public_model_runs,
         "incremental_value": {
             "relative_log_loss_gain_vs_league": float(
                 (league_metrics["log_loss"] - candidate_metrics["log_loss"])
@@ -290,52 +392,18 @@ def run_benchmark(
                 (eb_metrics["log_loss"] - candidate_metrics["log_loss"])
                 / eb_metrics["log_loss"]
             ),
+            "candidate_vs_empirical_bayes_clustered_ci": ci_vs_eb,
+            # Backward-compatible key retained for the existing summary job.
             "full_vs_empirical_bayes_clustered_ci": ci_vs_eb,
             "context_vs_talent_only_clustered_ci": ci_context,
         },
         "promotion": promotion,
-        "interpretation_boundary": (
-            "The 2025 season is now a development holdout because its v1 "
-            "results informed subsequent architecture work. This result can "
-            "advance the model to a locked 2026 evaluation, but it cannot "
-            "validate runner transitions, bullpen logic, team-run "
-            "distributions, winner probabilities, exact scores, or a "
-            "production deployment."
-        ),
+        "interpretation_boundary": interpretation_boundary,
     }
 
-    tuning_audit = {
-        "validation_partitions": partition_audit,
-        "empirical_bayes": eb_tuning,
-        "talent_only": model_runs["talent_only"]["tuning"],
-        "talent_plus_context": model_runs["talent_plus_context"]["tuning"],
-        "blended_candidate": blend_tuning,
-    }
-    for details in result["models"].values():
-        details["tuning"] = {
-            key: value
-            for key, value in details["tuning"].items()
-            if key != "trials"
-        }
-    (output / "PA_BENCHMARK_RESULT.json").write_text(
+    result_path = output / "PA_BENCHMARK_RESULT.json"
+    result_path.write_text(
         json.dumps(result, indent=2, sort_keys=True),
         encoding="utf-8",
-    )
-    (output / "TUNING_AUDIT.json").write_text(
-        json.dumps(tuning_audit, indent=2, sort_keys=True),
-        encoding="utf-8",
-    )
-    joblib.dump(
-        {
-            "talent_plus_context": fitted_models["talent_plus_context"],
-            "talent_only": fitted_models["talent_only"],
-            "empirical_bayes_parameters": eb_parameters,
-            "model_weight": float(model_weight),
-            "empirical_bayes_weight": float(1.0 - model_weight),
-            "labels": labels,
-            "config": config.to_dict(),
-        },
-        output / "pa_model.joblib",
-        compress=3,
     )
     return result

@@ -12,41 +12,59 @@ This package is the predictive foundation of the Baseball Research Lab. It estim
 
 ## Scientific boundary
 
-The model uses only information that can exist before the target PA. Same-PA velocity, location, launch speed, launch angle, xwOBA, wOBA value, run value and terminal result-derived fields are not predictors. All player, platoon, park and recent-form counters are **date blocked**: every PA on date D is scored before outcomes from D are revealed.
+The model uses only information that can exist before the target PA. Same-PA velocity, location, launch speed, launch angle, xwOBA, wOBA value, run value, and terminal result-derived fields are not predictors. All player, platoon, park, and recent-form counters are **date blocked**: every PA on date D is scored before outcomes from D are revealed.
 
-## Evaluation design
+The validation period is divided chronologically into separate model-tuning, calibration, and ensemble-selection blocks. The final candidate is a validation-selected blend of a calibrated multinomial model and an empirical-Bayes matchup baseline.
 
-The default freeze is:
+## Development evaluation
+
+The reproducible development benchmark uses:
 
 - train: 2023
-- tune/calibrate: 2024
-- untouched test: 2025
+- tune/calibrate/blend: disjoint date blocks in 2024
+- development holdout: 2025
 
-The benchmark compares:
+The benchmark compares prior-date league rates, a shrunk empirical-Bayes batter/pitcher/platoon/park/recent baseline, a talent-only multinomial model, a pre-PA context model, and the calibrated candidate ensemble.
 
-1. prior-date league outcome rates
-2. a shrunk empirical-Bayes batter/pitcher/platoon/park/recent baseline
-3. a regularized multinomial model using talent features
-4. the same model plus pre-PA context
+Primary metrics are multiclass log loss, multiclass Brier score, calibration, and game-clustered uncertainty. The candidate must beat the empirical-Bayes baseline with a clustered confidence interval that excludes zero, show incremental context signal, and keep maximum absolute class calibration error below 0.015.
 
-Primary metrics are multiclass log loss, multiclass Brier score, calibration and game-clustered uncertainty. There is no arbitrary two-percent promotion gate. The candidate must beat the strong empirical-Bayes baseline with a clustered confidence interval that excludes zero, add context signal beyond talent alone, and remain acceptably calibrated.
+Because the first 2025 result informed the final calibration and ensemble architecture, 2025 is now labeled a **development holdout**, not an untouched production test.
 
-## Reproducible run
+## Locked final evaluation
+
+A locked final run uses:
+
+- train: 2023–2024
+- tune/calibrate/blend: disjoint date blocks in 2025
+- locked test: 2026
+- `--evaluation-mode locked_final`
+
+No architecture, threshold, or hyperparameter may be changed after seeing the locked result and then re-scored as though the same 2026 data remained untouched.
+
+## Reproducible development run
 
 Install the project requirements plus `requirements-model.txt`, then run:
 
 ```text
-python -m research_lab.pa_model.cli --verbose run-all --work-dir model_runs/pa_v1
+python -m research_lab.pa_model.cli --verbose run-all \
+  --start 2023-03-20 \
+  --end 2025-11-05 \
+  --work-dir model_runs/pa_v1 \
+  --train-years 2023 \
+  --validation-years 2024 \
+  --test-years 2025 \
+  --evaluation-mode development
 ```
 
-Raw public Statcast chunks are cached outside Git. The run produces:
+The run produces:
 
 - `plate_appearances.csv.gz` and a provenance receipt
 - `PA_BENCHMARK_RESULT.json`
 - `TUNING_AUDIT.json`
 - `test_predictions.csv.gz`
 - `pa_model.joblib`
+- source, model, prediction, tuning, feature, and candidate fingerprints
 
-## What this does not yet prove
+## What a passing PA result does not prove
 
-A passing PA model does not validate the existing outcome-conditioned runner kernel, between-pitch events, batting-order logic, bullpen selection, team-run distributions, winner probabilities or exact scores. Those layers are promoted only after a frozen PA model survives the untouched test.
+A passing PA model does not validate the outcome-conditioned runner kernel, between-pitch events, batting-order logic, pitcher removal, bullpen selection, team-run distributions, winner probabilities, or exact scores. Those layers require their own frozen prospective tests after the PA layer survives the locked final holdout.

@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from research_lab.pa_model.config import PAConfig
 from research_lab.pa_model.data import build_plate_appearances
@@ -28,6 +29,15 @@ def test_outcome_mapping_is_explicit():
     assert map_event("grounded_into_double_play") == "BIP_OUT"
     assert map_event("field_error") == "OTHER_REACH"
     assert map_event("wild_pitch") is None
+
+
+def test_config_requires_disjoint_chronological_periods():
+    with pytest.raises(ValueError, match="disjoint"):
+        PAConfig(train_years=(2023,), validation_years=(2023,), test_years=(2025,))
+    with pytest.raises(ValueError, match="chronological"):
+        PAConfig(train_years=(2024,), validation_years=(2023,), test_years=(2025,))
+    with pytest.raises(ValueError, match="evaluation_mode"):
+        PAConfig(evaluation_mode="unknown")
 
 
 def test_builder_uses_first_pitch_context_and_terminal_outcome(tmp_path: Path):
@@ -152,11 +162,39 @@ def test_full_synthetic_benchmark_writes_reproducible_artifacts(tmp_path: Path):
         config,
     )
     assert result["data"]["rows_test"] == 1200
+    assert result["claim_status"] == "chronological_development_holdout_executed"
     assert (tmp_path / "PA_BENCHMARK_RESULT.json").exists()
     assert (tmp_path / "TUNING_AUDIT.json").exists()
     assert (tmp_path / "test_predictions.csv.gz").exists()
     assert (tmp_path / "pa_model.joblib").exists()
     saved = json.loads((tmp_path / "PA_BENCHMARK_RESULT.json").read_text())
-    assert saved["schema"] == "baseball_research_lab.pa_benchmark.v2"
+    assert saved["schema"] == "baseball_research_lab.pa_benchmark.v3"
     assert "blended_candidate" in saved["models"]
     assert saved["promotion"]["production_holdout_required"] is True
+    assert saved["promotion"]["production_pa_layer_promoted"] is False
+    assert len(saved["candidate_fingerprint_sha256"]) == 64
+    assert all(len(value) == 64 for value in saved["artifacts"].values())
+
+
+def test_locked_final_mode_has_conservative_promotion_semantics(tmp_path: Path):
+    config = PAConfig(
+        evaluation_mode="locked_final",
+        regularization_grid=(1e-4,),
+        blend_grid=(0.0, 0.5, 1.0),
+        bootstrap_replicates=25,
+        max_iter=80,
+    )
+    result = run_benchmark(
+        make_synthetic_pa(rows_per_year=800, seed=23),
+        tmp_path,
+        config,
+    )
+    promotion = result["promotion"]
+    assert result["claim_status"] == "chronological_locked_final_holdout_executed"
+    assert promotion["production_holdout_required"] is False
+    assert promotion["production_pa_layer_promoted"] == promotion[
+        "locked_final_holdout_passed"
+    ]
+    assert promotion["game_model_promoted"] is False
+    assert promotion["production_promoted"] is False
+    assert promotion["promoted"] is False

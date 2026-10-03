@@ -16,6 +16,7 @@ class PAConfig:
     train_years: tuple[int, ...] = (2023,)
     validation_years: tuple[int, ...] = (2024,)
     test_years: tuple[int, ...] = (2025,)
+    evaluation_mode: str = "development"
     outcome_labels: tuple[str, ...] = (
         "BIP_OUT",
         "K",
@@ -45,6 +46,44 @@ class PAConfig:
     request_timeout_seconds: int = 180
     request_retries: int = 5
     user_agent: str = "BaseballResearchLab/1.0 (+public research; contact repository owner)"
+
+    def __post_init__(self) -> None:
+        allowed_modes = {"development", "locked_final"}
+        if self.evaluation_mode not in allowed_modes:
+            raise ValueError(
+                f"evaluation_mode must be one of {sorted(allowed_modes)}"
+            )
+        if not self.train_years or not self.validation_years or not self.test_years:
+            raise ValueError("train, validation, and test years must be non-empty")
+        train = set(self.train_years)
+        validation = set(self.validation_years)
+        test = set(self.test_years)
+        if train & validation or train & test or validation & test:
+            raise ValueError("train, validation, and test years must be disjoint")
+        if max(train) >= min(validation) or max(validation) >= min(test):
+            raise ValueError(
+                "train, validation, and test years must be strictly chronological"
+            )
+        if self.validation_tuning_fraction <= 0:
+            raise ValueError("validation_tuning_fraction must be positive")
+        if self.validation_calibration_fraction <= 0:
+            raise ValueError("validation_calibration_fraction must be positive")
+        if (
+            self.validation_tuning_fraction
+            + self.validation_calibration_fraction
+            >= 1
+        ):
+            raise ValueError(
+                "validation fractions must leave a final ensemble-selection block"
+            )
+        if not self.regularization_grid or any(
+            value <= 0 for value in self.regularization_grid
+        ):
+            raise ValueError("regularization_grid values must be positive")
+        if not self.blend_grid or any(
+            value < 0 or value > 1 for value in self.blend_grid
+        ):
+            raise ValueError("blend_grid values must be between zero and one")
 
     def to_dict(self) -> dict:
         return asdict(self)
