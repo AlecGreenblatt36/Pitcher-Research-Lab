@@ -1,0 +1,38 @@
+name: Game simulator CI
+
+on:
+  pull_request:
+    paths:
+      - "research_lab/game_sim/**"
+      - "tests/test_game_sim.py"
+      - "templates/game_simulator.html"
+      - "static/game_simulator.*"
+      - "cloud_game_sim_app.py"
+      - "docs/GAME_SIMULATOR.md"
+      - ".github/workflows/game-simulator-ci.yml"
+  push:
+    branches:
+      - "feature/game-simulator-v1"
+    paths:
+      - "research_lab/game_sim/**"
+      - "tests/test_game_sim.py"
+      - "templates/game_simulator.html"
+      - "static/game_simulator.*"
+      - "cloud_game_sim_app.py"
+      - "docs/GAME_SIMULATOR.md"
+      - ".github/workflows/game-simulator-ci.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      - run: python -m compileall -q research_lab/game_sim cloud_game_sim_app.py
+      - run: node --check static/game_simulator.js
+      - run: pytest -q tests/test_game_sim.py
