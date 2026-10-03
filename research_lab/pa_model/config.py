@@ -8,8 +8,9 @@ from typing import Sequence
 class PAConfig:
     """Configuration for the chronological PA benchmark.
 
-    All feature windows are computed with a one-date lag by default, so every
-    plate appearance on date D only uses outcomes observed strictly before D.
+    Feature histories are date blocked: every PA on date D is scored before any
+    result from date D is revealed. The validation season is also split by date
+    into disjoint tuning, calibration, and ensemble-selection periods.
     """
 
     train_years: tuple[int, ...] = (2023,)
@@ -31,7 +32,10 @@ class PAConfig:
     batter_recent_window: int = 100
     pitcher_recent_window: int = 150
     regularization_grid: tuple[float, ...] = (1e-5, 1e-4, 1e-3, 1e-2, 0.1, 1.0)
-    temperature_grid: tuple[float, ...] = tuple(x / 100 for x in range(50, 251, 5))
+    validation_tuning_fraction: float = 0.50
+    validation_calibration_fraction: float = 0.25
+    calibration_l2: float = 1e-4
+    blend_grid: tuple[float, ...] = tuple(x / 100 for x in range(101))
     bootstrap_replicates: int = 1000
     random_seed: int = 36
     min_probability: float = 1e-7
