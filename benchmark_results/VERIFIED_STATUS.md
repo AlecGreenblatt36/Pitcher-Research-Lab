@@ -47,6 +47,20 @@ Verified incremental value:
 
 All frozen PA-layer gates passed. The PA layer advances as the canonical Research Lab PA model; the game model does not.
 
+## Outcome calibration
+
+| Outcome | Observed | Predicted | Gap |
+|---|---:|---:|---:|
+| BIP out | 45.316% | 45.504% | +0.188 pp |
+| Strikeout | 22.138% | 22.033% | -0.105 pp |
+| BB/HBP | 10.038% | 9.643% | -0.395 pp |
+| Single | 14.202% | 14.117% | -0.085 pp |
+| Double/triple | 4.441% | 4.727% | +0.286 pp |
+| Home run | 3.032% | 3.208% | +0.176 pp |
+| Other reach | 0.833% | 0.768% | -0.065 pp |
+
+The largest remaining aggregate calibration issue is underprediction of BB/HBP by about 0.40 percentage points. It remains comfortably inside the frozen 1.5-percentage-point gate, but it is an explicit future diagnostic rather than a hidden weakness.
+
 ## Evidence status
 
 - **Reported:** the old summary-only `ROLLING_PA_RESULT.json` claim is not accepted as evidence.
@@ -71,6 +85,23 @@ Artifact hashes:
 - reproducibility-package ZIP: `a75b982f8e814cd427fc553e798a7b8533a46fcf7c9f880cd26d8a3dde722c95`
 
 The 50,369,372-byte reproducibility package contains the model artifacts, all locked predictions, the complete PA dataset and receipt, model source, tests, requirements, documentation, and the exact locked workflow. It is retained by GitHub Actions for 90 days from the run.
+
+### Independent downloaded-package verification
+
+After GitHub Actions completed, the published ZIP was downloaded separately and checked outside the workflow:
+
+- ZIP SHA-256 exactly matched the GitHub artifact digest
+- `unzip -t` found no compressed-data errors
+- all required model, prediction, tuning, data, source, and test files were present
+- internal model, prediction, and tuning hashes exactly matched the result receipt
+- PA dataset contained exactly **733,328 rows**
+- locked prediction file contained exactly **183,849 rows**
+- all seven ensemble-probability columns were present
+- there were **zero missing probability values**
+- every row summed to one within maximum floating-point error of `8.881784197001252e-16`
+- all probabilities were strictly between zero and one
+
+This closes the earlier handoff failure in which only summary pages and hashes were supplied without the underlying code, data, model, or predictions.
 
 ## Test status
 
