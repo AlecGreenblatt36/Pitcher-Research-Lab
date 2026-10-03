@@ -1,6 +1,6 @@
 # Latest chronological PA benchmark
 
-Generated: `2026-10-03T22:34:39.941981+00:00`
+Generated: `2026-10-03T22:45:37.342909+00:00`
 Claim status: `chronological_development_holdout_executed`
 Data: 182,926 test PAs across 2,430 games.
 
@@ -23,4 +23,4 @@ Production promoted: **NO**
 
 Candidate blend: 86.0% calibrated model / 14.0% empirical Bayes.
 
-The 2025 season is now a development holdout because its v1 results informed subsequent architecture work. This result can advance the model to a locked 2026 evaluation, but it cannot validate runner transitions, bullpen logic, team-run distributions, winner probabilities, exact scores, or a production deployment.
+The test seasons in this run are a development holdout because earlier results informed subsequent architecture work. This result can advance the model to a locked final evaluation, but it cannot validate runner transitions, bullpen logic, team-run distributions, winner probabilities, exact scores, or a production deployment.
