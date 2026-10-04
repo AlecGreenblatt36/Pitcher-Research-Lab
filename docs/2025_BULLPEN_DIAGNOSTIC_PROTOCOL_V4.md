@@ -40,6 +40,34 @@ Rules:
 The placebo measures the value of a more realistic bullpen identity/role list
 without using the target game's realized usage.
 
+## Week-before forecast-valid bullpen baseline
+
+After the clean benchmark and week-ahead diagnostic finish, run a second
+candidate-set baseline using each team's reliever sequence from a different
+game 5-9 calendar days **before** the target game, preferring exactly 7 days.
+
+This can be forecast-valid only if every target-game roster decision uses an
+as-of-first-pitch cutoff:
+
+- roster membership must come from an official roster snapshot or transactions
+  effective strictly before the target game's first pitch;
+- transactions announced later, retroactive knowledge, the target game's box
+  score, target-game participants, and the set of pitchers who actually
+  appeared are forbidden inputs;
+- a source reliever who was optioned, designated, released, traded away, or
+  placed on an inactive list before first pitch must be removed using only the
+  pregame transaction record;
+- same-day transactions are usable only when their effective timestamp is known
+  to precede first pitch; otherwise fail closed or label the roster status
+  unresolved;
+- unresolved roster sides must fall back to the normal pregame candidate set and
+  be counted explicitly;
+- roster-source timestamp, transaction cutoff, overlap rate, removed-player
+  count, supplemented-player count, and fallback rate must appear in receipts.
+
+The target game's box score may be used later for scoring the forecast, but it
+must never be used to construct or filter the pregame bullpen list.
+
 ## Revised decision logic
 
 1. **Placebo minus current engine**
@@ -57,6 +85,28 @@ without using the target game's realized usage.
    - Promotion requires a pregame-only 2025 replay against the current engine
      with the same games, 1,000 paths, seeds, and proper-score metrics.
    - Oracle performance is not a promotion threshold.
+
+## Locked PA pinned-environment gate
+
+Before any clean benchmark result is interpreted, the serialized locked PA
+provider must reproduce the saved locked predictions under the exact replay
+environment lock, including pandas 3.0.6 and scikit-learn 1.9.1.
+
+The compatibility receipt must include:
+
+- Python and package versions;
+- model, PA-history, and saved-prediction SHA-256 hashes;
+- the three fixed verification dates and expected row counts;
+- maximum absolute differences for the fitted model component, empirical-Bayes
+  component, and 90/10 ensemble;
+- fast NumPy path versus serialized sklearn pipeline;
+- text-column dtypes after `read_csv` and the provider's normalization boundary;
+- a fail-closed tolerance decision.
+
+The clean full-game benchmark remains provisional until this receipt is PASS.
+The reproduction receipt must be attached to the final benchmark certification;
+it does not require rerunning completed game simulations if the simulation code,
+artifact hashes, and environment lock are identical.
 
 ## Recovery validity and clean-rerun requirement
 
