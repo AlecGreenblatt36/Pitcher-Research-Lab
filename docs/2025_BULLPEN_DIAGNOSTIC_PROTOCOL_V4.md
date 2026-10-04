@@ -58,13 +58,24 @@ without using the target game's realized usage.
      with the same games, 1,000 paths, seeds, and proper-score metrics.
    - Oracle performance is not a promotion threshold.
 
-## Recovery validity
+## Recovery validity and clean-rerun requirement
 
-Targeted recovery of games omitted by the pandas read-only-array error is valid
-because chronological PA history is advanced from the immutable historical
-PA table by cutoff date. It does not depend on whether an earlier simulated
-game succeeded. At the next date, all actual prior-date PAs enter the counters;
-same-date outcomes remain excluded by design.
+The immutable historical PA table means a clean replay does not learn from a
+prior simulated outcome. However, the original read-only error could occur
+midway through `SequentialHistoryState.advance_to`, after some counters were
+mutated but before the history position was committed. The game runner also
+updated its current-date marker before `advance_to` returned. Therefore, later
+games in the same original shard may have inherited partially advanced or
+partly double-applied history.
+
+Consequently:
+
+- the missing-game-only recovery is retained only as a debugging artifact;
+- it is **not** accepted as final benchmark evidence;
+- candidate, flat, and oracle must be rerun from scratch in clean shards under
+  the fixed implementation and exact environment lock;
+- each clean shard must fail if any game fails;
+- the final merge must require exactly 2,430 unique games.
 
 Safeguards now required:
 
