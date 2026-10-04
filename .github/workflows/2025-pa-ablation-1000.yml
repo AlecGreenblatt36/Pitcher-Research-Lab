@@ -1,20 +1,9 @@
 name: 2025 PA ablation and bullpen oracle — 1000 paths
 
+# Manual-only after the first completed shard run. This prevents an expensive
+# 72-job replay from being relaunched by unrelated source edits.
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - feature/game-simulator-v2-locked-model
-    paths:
-      - "research_lab/game_sim/**"
-      - "scripts/run_2025_variant_shard_v2.py"
-      - "scripts/run_2025_variant_parallel_v2.py"
-      - "scripts/merge_2025_variant_shards_v2.py"
-      - "scripts/finalize_2025_benchmark_v2.py"
-      - "scripts/render_2025_benchmark_v2.py"
-      - "model_runs/starter_hazard_2025_dev/**"
-      - "requirements-model.txt"
-      - ".github/workflows/2025-pa-ablation-1000.yml"
 
 concurrency:
   group: brl-2025-pa-ablation-1000
@@ -39,10 +28,18 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.12.14"
           cache: pip
+          cache-dependency-path: requirements-replay-lock.txt
       - run: python -m pip install --upgrade pip
-      - run: pip install -r requirements.txt -r requirements-model.txt
+      - run: pip install -r requirements-replay-lock.txt
+      - name: Record replay environment
+        run: |
+          python - <<'PY'
+          import importlib.metadata as md, json, platform
+          names=['Flask','pandas','numpy','requests','joblib','scikit-learn','scipy']
+          print(json.dumps({'python':platform.python_version(),'packages':{n:md.version(n) for n in names}},indent=2,sort_keys=True))
+          PY
       - name: Download locked PA model reference package
         uses: actions/download-artifact@v4
         with:
@@ -79,10 +76,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.12.14"
           cache: pip
+          cache-dependency-path: requirements-replay-lock.txt
       - run: python -m pip install --upgrade pip
-      - run: pip install -r requirements.txt -r requirements-model.txt
+      - run: pip install -r requirements-replay-lock.txt
       - name: Download locked PA model reference package
         uses: actions/download-artifact@v4
         with:
