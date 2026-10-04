@@ -1,20 +1,10 @@
 name: Locked PA pinned-environment reproduction
 
 on:
-  push:
-    branches:
-      - feature/game-simulator-v2-locked-model
-    paths:
-      - "scripts/verify_locked_pa_pinned_environment.py"
-      - "research_lab/game_sim/locked_pa_provider.py"
-      - "research_lab/pa_model/**"
-      - "requirements-replay-lock.txt"
-      - ".github/workflows/locked-pa-pinned-reproduction.yml"
   workflow_dispatch:
 
 permissions:
   contents: write
-  actions: read
 
 jobs:
   verify:
@@ -29,19 +19,16 @@ jobs:
           cache-dependency-path: requirements-replay-lock.txt
       - run: python -m pip install --upgrade pip
       - run: pip install -r requirements-replay-lock.txt
-      - name: Download locked PA reproducibility package
-        uses: actions/download-artifact@v4
-        with:
-          name: pa-model-locked-2026-reproducibility-package
-          path: pa_model_reference
-          github-token: ${{ github.token }}
-          repository: AlecGreenblatt36/Pitcher-Research-Lab
-          run-id: 37159593828
+      - name: Restore private PA package
+        env:
+          BRL_RCLONE_CONFIG_B64: ${{ secrets.BRL_RCLONE_CONFIG_B64 }}
+          BRL_PRIVATE_PA_REMOTE: ${{ secrets.BRL_PRIVATE_PA_REMOTE }}
+        run: bash scripts/restore_private_pa_package.sh
       - name: Reproduce locked predictions under pinned replay environment
         run: >-
           python scripts/verify_locked_pa_pinned_environment.py
           --output benchmark_results/locked_pa_pinned_reproduction/LOCKED_PA_PINNED_REPRODUCTION.json
-      - name: Upload reproduction receipt
+      - name: Upload compact reproduction receipt
         uses: actions/upload-artifact@v4
         with:
           name: locked-pa-pinned-reproduction-receipt
