@@ -1,0 +1,37 @@
+name: Cancel public-data-dependent runs
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/game-simulator-v2-locked-model
+    paths:
+      - ".github/workflows/cancel-public-data-dependent-runs.yml"
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cancel:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel runs that referenced the deleted public PA package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          run_ids=(
+            37239573633
+            37239731316
+            37240675559
+            37238085894
+          )
+          for run_id in "${run_ids[@]}"; do
+            status=$(gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" --jq '.status' 2>/dev/null || echo missing)
+            echo "run ${run_id}: ${status}"
+            if [[ "$status" == "queued" || "$status" == "in_progress" || "$status" == "waiting" || "$status" == "requested" || "$status" == "pending" ]]; then
+              gh api --method POST "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/cancel" || true
+              echo "cancel requested for ${run_id}"
+            fi
+          done
