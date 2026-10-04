@@ -1,0 +1,144 @@
+name: Recover 2025 PA ablation — 1000 paths
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/game-simulator-v2-locked-model
+    paths:
+      - "scripts/recover_2025_variant_v2.py"
+      - ".github/workflows/recover-2025-pa-ablation-1000.yml"
+
+concurrency:
+  group: brl-recover-2025-pa-ablation-1000
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  recover:
+    name: recover ${{ matrix.variant }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [candidate, flat, oracle]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -r requirements.txt -r requirements-model.txt
+      - name: Download locked PA model reference package
+        uses: actions/download-artifact@v4
+        with:
+          name: pa-model-locked-2026-reproducibility-package
+          path: pa_model_reference
+          github-token: ${{ github.token }}
+          repository: AlecGreenblatt36/Pitcher-Research-Lab
+          run-id: 37159593828
+      - name: Download preserved replay shards
+        uses: actions/download-artifact@v4
+        with:
+          pattern: replay-2025-${{ matrix.variant }}-*
+          path: old_shards
+          merge-multiple: true
+          github-token: ${{ github.token }}
+          repository: AlecGreenblatt36/Pitcher-Research-Lab
+          run-id: 37231443466
+      - name: Replay only missing games and verify complete season
+        run: >-
+          python scripts/recover_2025_variant_v2.py
+          --variant "${{ matrix.variant }}"
+          --old-shards old_shards
+          --output-dir model_runs/2025_ablation_1000/recovered/${{ matrix.variant }}
+          --sims 1000
+          --expected-games 2430
+      - uses: actions/upload-artifact@v4
+        with:
+          name: recovered-2025-${{ matrix.variant }}
+          path: |
+            model_runs/2025_ablation_1000/recovered/${{ matrix.variant }}/${{ matrix.variant }}_predictions.csv.gz
+            model_runs/2025_ablation_1000/recovered/${{ matrix.variant }}/${{ matrix.variant }}_recovery_receipt.json
+          retention-days: 90
+          if-no-files-found: error
+
+  finalize:
+    runs-on: ubuntu-latest
+    needs: recover
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -r requirements.txt -r requirements-model.txt
+      - name: Download locked PA model reference package
+        uses: actions/download-artifact@v4
+        with:
+          name: pa-model-locked-2026-reproducibility-package
+          path: pa_model_reference
+          github-token: ${{ github.token }}
+          repository: AlecGreenblatt36/Pitcher-Research-Lab
+          run-id: 37159593828
+      - name: Download recovered complete variants
+        uses: actions/download-artifact@v4
+        with:
+          pattern: recovered-2025-*
+          path: recovered
+          merge-multiple: true
+      - name: Finalize corrected benchmark
+        run: >-
+          python scripts/finalize_2025_benchmark_v2.py
+          --candidate recovered/candidate_predictions.csv.gz
+          --flat recovered/flat_predictions.csv.gz
+          --oracle recovered/oracle_predictions.csv.gz
+          --output-dir benchmark_results/2025_ablation_1000
+          --simulations 1000
+          --bootstrap-replicates 5000
+      - name: Render report
+        run: >-
+          python scripts/render_2025_benchmark_v2.py
+          --result benchmark_results/2025_ablation_1000/2025_PA_ABLATION_1000_RESULT.json
+          --output benchmark_results/2025_ablation_1000/2025_PA_ABLATION_1000_REPORT.md
+      - name: Verify final result
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('benchmark_results/2025_ablation_1000/2025_PA_ABLATION_1000_RESULT.json')
+          r=json.loads(p.read_text())
+          assert r['protocol']['games']==2430
+          assert r['protocol']['simulations_per_game_per_variant']==1000
+          assert r['protocol']['2026_rerun'] is False
+          assert r['starter_hazard']['train_seasons']==[2023, 2024]
+          assert r['starter_hazard']['2026_accessed'] is False
+          assert 'oracle_actual_reliever_order' in r['variants']
+          print(json.dumps(r['decision'],indent=2,sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: brl-2025-pa-ablation-1000-recovered-final
+          path: |
+            benchmark_results/2025_ablation_1000/
+            recovered/*_recovery_receipt.json
+          retention-days: 90
+          if-no-files-found: error
+      - name: Publish compact result to branch
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add benchmark_results/2025_ablation_1000/2025_PA_ABLATION_1000_RESULT.json \
+                  benchmark_results/2025_ablation_1000/2025_PA_ABLATION_1000_REPORT.md
+          if ! git diff --cached --quiet; then
+            git commit -m "Record recovered 2025 1000-path ablation and oracle [skip ci]"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
