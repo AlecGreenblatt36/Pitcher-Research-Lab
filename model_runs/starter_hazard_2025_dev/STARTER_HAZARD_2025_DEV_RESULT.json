@@ -1,0 +1,57 @@
+{
+  "development_2025": {
+    "bf_only": {
+      "brier": 0.03036617604472082,
+      "log_loss": 0.11192869586693759
+    },
+    "fitted": {
+      "brier": 0.02927811799830322,
+      "log_loss": 0.10376293162858014
+    },
+    "fitted_minus_bf_only_log_loss_ci": [
+      -0.008165764238357456,
+      -0.00913562713724112,
+      -0.007253913222635079
+    ],
+    "fitted_minus_heuristic_log_loss_ci": [
+      -0.11886300024568767,
+      -0.12503971131481384,
+      -0.11273209409439815
+    ],
+    "heuristic": {
+      "brier": 0.060035627865610806,
+      "log_loss": 0.22262593187426777
+    },
+    "n_decisions": 106500,
+    "n_starts": 4860
+  },
+  "league_mean_bf_training": 21.876131687242797,
+  "protocol": {
+    "2026_accessed": false,
+    "development_score_season": 2025,
+    "refit_seasons": [
+      2023,
+      2024
+    ],
+    "regularization_selection_season": 2024,
+    "train_season": 2023
+  },
+  "regularization_trials_2024": [
+    {
+      "C": 0.01,
+      "log_loss": 0.10341534690697367
+    },
+    {
+      "C": 0.1,
+      "log_loss": 0.10292374980072735
+    },
+    {
+      "C": 1.0,
+      "log_loss": 0.10272583413517541
+    }
+  ],
+  "runtime_seconds": 5.64600133895874,
+  "schema": "baseball_research_lab.starter_hazard.2025_development.v1",
+  "selected_2024_log_loss": 0.10272583413517541,
+  "selected_C": 1.0
+}
