@@ -78,6 +78,8 @@ jobs:
           git rm -f .bootstrap/game_v2_core_patch.zip || true
           git rm -f .bootstrap/game_v2_core_patch.part*.b64
           git rm -f .github/workflows/apply-game-v2-core-patch.yml
-          git add requirements-model.txt research_lab scripts model_runs .github/workflows/2025-pa-ablation-1000.yml
+          git add requirements-model.txt research_lab scripts .github/workflows/2025-pa-ablation-1000.yml
+          git add -f model_runs/starter_hazard_2025_dev/STARTER_HAZARD_2025_DEV_RESULT.json \
+                     model_runs/starter_hazard_2025_dev/starter_hazard_2025_dev.joblib
           git commit -m "Add locked-model 2025 ablation and bullpen oracle benchmark"
           git push origin HEAD:feature/game-simulator-v2-locked-model
