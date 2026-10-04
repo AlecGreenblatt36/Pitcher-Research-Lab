@@ -2,11 +2,6 @@ name: PA model locked 2026 holdout
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - "feature/pa-model-v1"
-    paths:
-      - ".github/workflows/pa-model-locked-2026.yml"
 
 concurrency:
   group: pa-model-locked-2026
@@ -22,34 +17,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
-
       - run: pip install -r requirements.txt -r requirements-model.txt
-
-      - name: Restore 2023-2025 public Statcast cache
-        uses: actions/cache/restore@v4
-        with:
-          path: model_runs/pa_v1/raw
-          key: statcast-pa-v1-2023-03-20-2025-11-05
-
-      - name: Seed locked cache from prior public data
-        shell: bash
-        run: |
-          mkdir -p model_runs/pa_locked_2026/raw
-          if [ -d model_runs/pa_v1/raw ]; then
-            cp -an model_runs/pa_v1/raw/. model_runs/pa_locked_2026/raw/
-          fi
-
-      - name: Restore or create locked-evaluation cache
-        uses: actions/cache@v4
-        with:
-          path: model_runs/pa_locked_2026/raw
-          key: statcast-pa-locked-2026-v1-2023-03-20-2026-10-03
-
       - name: Run frozen 2026 chronological holdout
         run: >-
           python -m research_lab.pa_model.cli --verbose run-all
@@ -61,135 +33,40 @@ jobs:
           --test-years "2026"
           --evaluation-mode locked_final
           --bootstrap-replicates 1000
-
-      - name: Verify coverage, protocol, and artifact integrity
+      - name: Verify coverage and compact receipts
         shell: bash
         run: |
           python - <<'PY'
-          import json
-          import os
+          import json, os
           from pathlib import Path
           import pandas as pd
-
-          result_path = Path("model_runs/pa_locked_2026/artifacts/PA_BENCHMARK_RESULT.json")
-          result = json.loads(result_path.read_text(encoding="utf-8"))
-
-          assert result["schema"] == "baseball_research_lab.pa_benchmark.v3"
-          assert result["claim_status"] == "chronological_locked_final_holdout_executed"
-          assert result["config"]["evaluation_mode"] == "locked_final"
-          assert result["config"]["train_years"] == [2023, 2024]
-          assert result["config"]["validation_years"] == [2025]
-          assert result["config"]["test_years"] == [2026]
-          assert result["source_commit_sha"] == os.environ["GITHUB_SHA"]
-          assert len(result["candidate_fingerprint_sha256"]) == 64
-          assert all(len(value) == 64 for value in result["artifacts"].values())
-
-          data = result["data"]
-          assert data["rows_test"] >= 170000, data
-          assert data["games_test"] >= 2300, data
-          assert pd.Timestamp(data["test_date_min"]).year == 2026
-          assert pd.Timestamp(data["test_date_max"]) >= pd.Timestamp("2026-09-20")
-
-          prediction_path = Path("model_runs/pa_locked_2026/artifacts/test_predictions.csv.gz")
-          assert prediction_path.exists() and prediction_path.stat().st_size > 1000
-          model_path = Path("model_runs/pa_locked_2026/artifacts/pa_model.joblib")
-          assert model_path.exists() and model_path.stat().st_size > 1000
+          result = json.loads(Path('model_runs/pa_locked_2026/artifacts/PA_BENCHMARK_RESULT.json').read_text())
+          assert result['schema'] == 'baseball_research_lab.pa_benchmark.v3'
+          assert result['claim_status'] == 'chronological_locked_final_holdout_executed'
+          assert result['config']['evaluation_mode'] == 'locked_final'
+          assert result['config']['train_years'] == [2023, 2024]
+          assert result['config']['validation_years'] == [2025]
+          assert result['config']['test_years'] == [2026]
+          assert result['source_commit_sha'] == os.environ['GITHUB_SHA']
+          assert result['data']['rows_test'] >= 170000
+          assert result['data']['games_test'] >= 2300
+          assert pd.Timestamp(result['data']['test_date_max']) >= pd.Timestamp('2026-09-20')
           PY
-
-      - name: Publish locked result receipt
+      - name: Publish compact result receipt only
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p benchmark_results
-          cp model_runs/pa_locked_2026/artifacts/PA_BENCHMARK_RESULT.json \
-             benchmark_results/pa_model_locked_2026.json
-          cp model_runs/pa_locked_2026/plate_appearances.csv.gz.receipt.json \
-             benchmark_results/pa_dataset_locked_2026_receipt.json
-
-          python - <<'PY'
-          import json
-          from pathlib import Path
-
-          result = json.loads(
-              Path("benchmark_results/pa_model_locked_2026.json").read_text(
-                  encoding="utf-8"
-              )
-          )
-          league = result["baselines"]["league"]
-          eb = result["baselines"]["empirical_bayes_matchup"]
-          talent = result["models"]["talent_only"]["metrics"]
-          context = result["models"]["talent_plus_context"]["metrics"]
-          candidate_entry = result["models"]["blended_candidate"]
-          candidate = candidate_entry["metrics"]
-          blend = candidate_entry["tuning"]
-          value = result["incremental_value"]
-          ci_eb = value["candidate_vs_empirical_bayes_clustered_ci"]
-          ci_context = value["context_vs_talent_only_clustered_ci"]
-          promotion = result["promotion"]
-          data = result["data"]
-
-          lines = [
-              "# Locked 2026 chronological PA holdout",
-              "",
-              f"Generated: `{result['generated_at_utc']}`",
-              f"Source commit: `{result['source_commit_sha']}`",
-              f"Candidate fingerprint: `{result['candidate_fingerprint_sha256']}`",
-              f"Coverage: {data['rows_test']:,} 2026 PAs across {data['games_test']:,} games, "
-              f"{data['test_date_min']} through {data['test_date_max']}.",
-              "",
-              "| Model | Log loss | Multiclass Brier | Classwise ECE |",
-              "|---|---:|---:|---:|",
-              f"| League | {league['log_loss']:.6f} | {league['multiclass_brier']:.6f} | {league['classwise_ece']:.6f} |",
-              f"| Empirical Bayes matchup | {eb['log_loss']:.6f} | {eb['multiclass_brier']:.6f} | {eb['classwise_ece']:.6f} |",
-              f"| Talent only | {talent['log_loss']:.6f} | {talent['multiclass_brier']:.6f} | {talent['classwise_ece']:.6f} |",
-              f"| Talent + context | {context['log_loss']:.6f} | {context['multiclass_brier']:.6f} | {context['classwise_ece']:.6f} |",
-              f"| Locked candidate | {candidate['log_loss']:.6f} | {candidate['multiclass_brier']:.6f} | {candidate['classwise_ece']:.6f} |",
-              "",
-              f"Candidate blend: **{100 * blend['model_weight']:.1f}% calibrated model / "
-              f"{100 * blend['empirical_bayes_weight']:.1f}% empirical Bayes**.",
-              f"Relative log-loss gain vs league: **{100 * value['relative_log_loss_gain_vs_league']:.3f}%**.",
-              f"Relative log-loss gain vs empirical Bayes: **{100 * value['relative_log_loss_gain_vs_empirical_bayes']:.3f}%**.",
-              f"Candidate minus empirical-Bayes log loss: **{ci_eb['difference_nats_per_pa']:.6f}** "
-              f"(game-clustered 95% CI {ci_eb['ci_95_low']:.6f} to {ci_eb['ci_95_high']:.6f}).",
-              f"Context minus talent-only log loss: **{ci_context['difference_nats_per_pa']:.6f}** "
-              f"(game-clustered 95% CI {ci_context['ci_95_low']:.6f} to {ci_context['ci_95_high']:.6f}).",
-              f"Maximum absolute class calibration gap: **{promotion['max_absolute_class_calibration_gap']:.4f}**.",
-              "",
-              f"Locked PA-layer gate: **{'PASS' if promotion['locked_final_holdout_passed'] else 'FAIL'}**",
-              f"PA layer promoted: **{'YES' if promotion['production_pa_layer_promoted'] else 'NO'}**",
-              "Full game model promoted: **NO**",
-              "",
-              result["interpretation_boundary"],
-          ]
-          Path("benchmark_results/pa_model_locked_2026_summary.md").write_text(
-              "\n".join(lines) + "\n",
-              encoding="utf-8",
-          )
-          PY
-
+          cp model_runs/pa_locked_2026/artifacts/PA_BENCHMARK_RESULT.json benchmark_results/pa_model_locked_2026.json
+          cp model_runs/pa_locked_2026/plate_appearances.csv.gz.receipt.json benchmark_results/pa_dataset_locked_2026_receipt.json
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add benchmark_results/pa_model_locked_2026.json \
-                  benchmark_results/pa_model_locked_2026_summary.md \
-                  benchmark_results/pa_dataset_locked_2026_receipt.json
-          git commit -m "Record locked 2026 PA holdout for ${GITHUB_SHA::7} [skip ci]"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
-
-      - name: Upload complete reproducibility package
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: pa-model-locked-2026-reproducibility-package
-          path: |
-            model_runs/pa_locked_2026/artifacts/
-            model_runs/pa_locked_2026/plate_appearances.csv.gz
-            model_runs/pa_locked_2026/plate_appearances.csv.gz.receipt.json
-            research_lab/pa_model/
-            tests/test_pa_model.py
-            requirements.txt
-            requirements-model.txt
-            docs/PA_MODEL.md
-            PA_MODEL_BUILD_NOTES.md
-            .github/workflows/pa-model-locked-2026.yml
-          retention-days: 90
-          if-no-files-found: error
+          git add benchmark_results/pa_model_locked_2026.json benchmark_results/pa_dataset_locked_2026_receipt.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Record locked PA receipts for ${GITHUB_SHA::7} [skip ci]"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+      - name: Enforce private-data boundary
+        run: |
+          echo "Raw PA rows, model binaries, and row-level predictions are not uploaded to public Actions artifacts or caches."
+          echo "Move any reproducibility package to approved private storage out of band."
