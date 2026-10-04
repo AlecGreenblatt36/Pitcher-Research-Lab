@@ -1,11 +1,7 @@
 name: 2025 week-ahead bullpen placebo — 1000 paths
 
+# Manual-only after the initial launch.
 on:
-  push:
-    branches:
-      - feature/game-simulator-v2-locked-model
-    paths:
-      - ".github/workflows/week-ahead-placebo-1000.yml"
   workflow_dispatch:
 
 concurrency:
