@@ -1,0 +1,79 @@
+name: Purge public PA-data artifacts
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/game-simulator-v2-locked-model
+    paths:
+      - ".github/workflows/purge-public-data-artifacts.yml"
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete artifacts that can contain bulk PA or Statcast rows
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          # Exact known package plus conservative name patterns used by prior
+          # PA/Statcast build and reproducibility workflows.
+          pattern='^(pa-model-locked-2026-reproducibility-package)$|pa[-_ ]?model.*(historical|locked|reproducibility|package)|plate[-_ ]?appearances|pa[-_ ]?dataset|statcast.*(data|raw|historical)'
+
+          gh api --paginate "/repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" \
+            --jq '.artifacts[] | [.id, .name, .size_in_bytes, .expired] | @tsv' \
+            > all_artifacts.tsv
+
+          : > deleted_artifacts.tsv
+          while IFS=$'\t' read -r artifact_id artifact_name size_bytes expired; do
+            [[ -z "${artifact_id:-}" ]] && continue
+            if printf '%s\n' "$artifact_name" | grep -Eiq "$pattern"; then
+              printf 'Deleting artifact id=%s name=%s size=%s expired=%s\n' \
+                "$artifact_id" "$artifact_name" "$size_bytes" "$expired"
+              gh api --method DELETE "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}"
+              printf '%s\t%s\t%s\n' "$artifact_id" "$artifact_name" "$size_bytes" \
+                >> deleted_artifacts.tsv
+            fi
+          done < all_artifacts.tsv
+
+          # The exact artifact known to contain the 733,328-row PA table must
+          # not remain, even if a historical naming convention changed.
+          if gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/11287257159" \
+              >/dev/null 2>&1; then
+            gh api --method DELETE "/repos/${GITHUB_REPOSITORY}/actions/artifacts/11287257159"
+            printf '%s\t%s\t%s\n' \
+              '11287257159' 'pa-model-locked-2026-reproducibility-package' 'known-id' \
+              >> deleted_artifacts.tsv
+          fi
+
+          gh api --paginate "/repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" \
+            --jq '.artifacts[] | .name' > remaining_artifact_names.txt
+
+          if grep -Eiq "$pattern" remaining_artifact_names.txt; then
+            echo 'ERROR: one or more PA/Statcast data artifacts remain:' >&2
+            grep -Ei "$pattern" remaining_artifact_names.txt >&2
+            exit 1
+          fi
+
+          deleted_count=$(wc -l < deleted_artifacts.tsv | tr -d ' ')
+          {
+            echo '## Public bulk-data artifact purge'
+            echo
+            echo "Deleted artifacts: ${deleted_count}"
+            echo
+            if [[ "$deleted_count" -gt 0 ]]; then
+              echo '| Artifact ID | Name | Size bytes |'
+              echo '|---:|---|---:|'
+              awk -F '\t' '{printf "| %s | %s | %s |\n", $1, $2, $3}' deleted_artifacts.tsv
+            else
+              echo 'No matching artifacts were present.'
+            fi
+            echo
+            echo 'Verification: no matching PA/Statcast bulk-data artifact names remain.'
+          } >> "$GITHUB_STEP_SUMMARY"
