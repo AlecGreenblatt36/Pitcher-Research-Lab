@@ -54,6 +54,7 @@ jobs:
           mkdir -p /tmp/brl-game-v2-patch
           unzip -q /tmp/game_v2_core_patch.zip -d /tmp/brl-game-v2-patch
           rsync -a /tmp/brl-game-v2-patch/ ./
+          rm -f .github/workflows/2025-pa-ablation-1000.yml
           python -m compileall -q research_lab scripts
       - name: Install and smoke-test benchmark modules
         run: |
@@ -69,7 +70,7 @@ jobs:
           from research_lab.game_sim.oracle import OracleRelieverOrderPolicy
           print('benchmark modules import successfully')
           PY
-      - name: Commit applied patch
+      - name: Commit applied source patch
         shell: bash
         run: |
           set -euo pipefail
@@ -77,9 +78,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm -f .bootstrap/game_v2_core_patch.zip || true
           git rm -f .bootstrap/game_v2_core_patch.part*.b64
-          git rm -f .github/workflows/apply-game-v2-core-patch.yml
-          git add requirements-model.txt research_lab scripts .github/workflows/2025-pa-ablation-1000.yml
+          git add requirements-model.txt research_lab scripts
           git add -f model_runs/starter_hazard_2025_dev/STARTER_HAZARD_2025_DEV_RESULT.json \
                      model_runs/starter_hazard_2025_dev/starter_hazard_2025_dev.joblib
-          git commit -m "Add locked-model 2025 ablation and bullpen oracle benchmark"
+          git commit -m "Add locked-model 2025 ablation and bullpen oracle source"
           git push origin HEAD:feature/game-simulator-v2-locked-model
