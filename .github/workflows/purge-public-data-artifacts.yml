@@ -1,4 +1,4 @@
-name: Purge public PA-data artifacts
+name: Purge public PA-data artifacts and caches
 
 on:
   workflow_dispatch:
@@ -22,9 +22,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Exact known package plus conservative name patterns used by prior
-          # PA/Statcast build and reproducibility workflows.
-          pattern='^(pa-model-locked-2026-reproducibility-package)$|pa[-_ ]?model.*(historical|locked|reproducibility|package)|plate[-_ ]?appearances|pa[-_ ]?dataset|statcast.*(data|raw|historical)'
+          artifact_pattern='^(pa-model-locked-2026-reproducibility-package)$|pa[-_ ]?model.*(historical|locked|reproducibility|package)|plate[-_ ]?appearances|pa[-_ ]?dataset|statcast.*(data|raw|historical)'
 
           gh api --paginate "/repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" \
             --jq '.artifacts[] | [.id, .name, .size_in_bytes, .expired] | @tsv' \
@@ -33,7 +31,7 @@ jobs:
           : > deleted_artifacts.tsv
           while IFS=$'\t' read -r artifact_id artifact_name size_bytes expired; do
             [[ -z "${artifact_id:-}" ]] && continue
-            if printf '%s\n' "$artifact_name" | grep -Eiq "$pattern"; then
+            if printf '%s\n' "$artifact_name" | grep -Eiq "$artifact_pattern"; then
               printf 'Deleting artifact id=%s name=%s size=%s expired=%s\n' \
                 "$artifact_id" "$artifact_name" "$size_bytes" "$expired"
               gh api --method DELETE "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}"
@@ -42,8 +40,6 @@ jobs:
             fi
           done < all_artifacts.tsv
 
-          # The exact artifact known to contain the 733,328-row PA table must
-          # not remain, even if a historical naming convention changed.
           if gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/11287257159" \
               >/dev/null 2>&1; then
             gh api --method DELETE "/repos/${GITHUB_REPOSITORY}/actions/artifacts/11287257159"
@@ -54,10 +50,9 @@ jobs:
 
           gh api --paginate "/repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" \
             --jq '.artifacts[] | .name' > remaining_artifact_names.txt
-
-          if grep -Eiq "$pattern" remaining_artifact_names.txt; then
+          if grep -Eiq "$artifact_pattern" remaining_artifact_names.txt; then
             echo 'ERROR: one or more PA/Statcast data artifacts remain:' >&2
-            grep -Ei "$pattern" remaining_artifact_names.txt >&2
+            grep -Ei "$artifact_pattern" remaining_artifact_names.txt >&2
             exit 1
           fi
 
@@ -66,14 +61,56 @@ jobs:
             echo '## Public bulk-data artifact purge'
             echo
             echo "Deleted artifacts: ${deleted_count}"
-            echo
             if [[ "$deleted_count" -gt 0 ]]; then
+              echo
               echo '| Artifact ID | Name | Size bytes |'
               echo '|---:|---|---:|'
               awk -F '\t' '{printf "| %s | %s | %s |\n", $1, $2, $3}' deleted_artifacts.tsv
-            else
-              echo 'No matching artifacts were present.'
             fi
             echo
             echo 'Verification: no matching PA/Statcast bulk-data artifact names remain.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Delete Actions caches that can contain bulk PA or Statcast rows
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cache_pattern='statcast-pa-v1|plate[-_ ]?appearances|pa[-_ ]?dataset|statcast.*(data|raw|historical)'
+
+          gh cache list --repo "$GITHUB_REPOSITORY" --limit 100 \
+            --json id,key,sizeInBytes \
+            --jq ".[] | select(.key | test(\"${cache_pattern}\"; \"i\")) | [.id,.key,.sizeInBytes] | @tsv" \
+            > matching_caches.tsv
+
+          : > deleted_caches.tsv
+          while IFS=$'\t' read -r cache_id cache_key size_bytes; do
+            [[ -z "${cache_id:-}" ]] && continue
+            echo "Deleting cache id=${cache_id} key=${cache_key} size=${size_bytes}"
+            gh cache delete "$cache_id" --repo "$GITHUB_REPOSITORY" --confirm
+            printf '%s\t%s\t%s\n' "$cache_id" "$cache_key" "$size_bytes" >> deleted_caches.tsv
+          done < matching_caches.tsv
+
+          remaining=$(gh cache list --repo "$GITHUB_REPOSITORY" --limit 100 \
+            --json key --jq ".[] | select(.key | test(\"${cache_pattern}\"; \"i\")) | .key")
+          if [[ -n "$remaining" ]]; then
+            echo 'ERROR: matching raw-data caches remain:' >&2
+            printf '%s\n' "$remaining" >&2
+            exit 1
+          fi
+
+          deleted_count=$(wc -l < deleted_caches.tsv | tr -d ' ')
+          {
+            echo
+            echo '## Public raw-data cache purge'
+            echo
+            echo "Deleted caches: ${deleted_count}"
+            if [[ "$deleted_count" -gt 0 ]]; then
+              echo
+              echo '| Cache ID | Key | Size bytes |'
+              echo '|---:|---|---:|'
+              awk -F '\t' '{printf "| %s | %s | %s |\n", $1, $2, $3}' deleted_caches.tsv
+            fi
+            echo
+            echo 'Verification: no matching PA/Statcast cache keys remain.'
           } >> "$GITHUB_STEP_SUMMARY"
