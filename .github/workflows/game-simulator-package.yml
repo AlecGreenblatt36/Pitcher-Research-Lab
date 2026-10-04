@@ -1,0 +1,88 @@
+name: Game simulator development package
+
+on:
+  push:
+    branches:
+      - feature/game-simulator-v1
+    paths:
+      - .github/workflows/game-simulator-package.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/game-simulator-v1
+
+      - name: Download locked PA model reference package
+        uses: actions/download-artifact@v4
+        with:
+          name: pa-model-locked-2026-reproducibility-package
+          path: pa_model_reference
+          github-token: ${{ github.token }}
+          repository: AlecGreenblatt36/Pitcher-Research-Lab
+          run-id: 37159593828
+
+      - name: Assemble honest development bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p bundle
+          rsync -a \
+            --exclude '.git/' \
+            --exclude '.github/workflows/game-simulator-package.yml' \
+            --exclude 'data/' \
+            --exclude 'model_runs/' \
+            ./ bundle/
+          mkdir -p bundle/pa_model_reference
+          rsync -a pa_model_reference/ bundle/pa_model_reference/
+          cat > bundle/IMPORTANT_STATUS.md <<'EOF'
+          # Important status
+
+          This package contains the current `feature/game-simulator-v1` source and the separately validated locked-2026 PA model reference package.
+
+          The current game simulator is a **development engine**. Its `RatingsProbabilityProvider` is a transparent fallback based on league rates and player/context ratings. The saved locked PA model is included for integration work, but the current simulator source does not yet call that serialized model directly.
+
+          No verified full-game benchmark report or machine-readable full-game benchmark result is included because none is committed on this branch. Do not describe the game simulator as prospectively validated or as having verified winner/final-score accuracy.
+
+          What is real in this package:
+
+          - inning/base/out/score game-state engine;
+          - batting order and Monte Carlo simulation code;
+          - starter-removal and bullpen-selection development logic;
+          - browser interface and Flask routes;
+          - tests and CI workflow;
+          - separately validated seven-outcome PA model artifacts for the next integration step.
+
+          What remains before a trustworthy live game forecast:
+
+          1. connect the serialized PA model to live pre-PA feature construction;
+          2. validate runner transitions without outcome leakage;
+          3. validate starter and bullpen decision models;
+          4. run frozen chronological full-game backtests;
+          5. save live pregame forecasts before games and score them afterward.
+          EOF
+          cat > bundle/.replit <<'EOF'
+          run = "python cloud_game_sim_app.py"
+          entrypoint = "cloud_game_sim_app.py"
+          EOF
+          cat > bundle/replit.nix <<'EOF'
+          { pkgs }: {
+            deps = [ pkgs.python312 pkgs.python312Packages.pip ];
+          }
+          EOF
+          python -m compileall -q research_lab cloud_game_sim_app.py app.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: baseball-research-lab-game-simulator-development-package
+          path: bundle/
+          retention-days: 90
+          if-no-files-found: error
