@@ -26,6 +26,16 @@ model_runs/
 *.sqlite
 *.sqlite3
 
+# Externally downloaded MLB/Statcast reproducibility inputs.
+# Keep hashes/receipts and build code in Git; do not redistribute bulk source rows.
+pa_model_reference/
+**/plate_appearances*.csv
+**/plate_appearances*.csv.gz
+**/test_predictions*.csv
+**/test_predictions*.csv.gz
+**/statcast_raw*.csv
+**/statcast_raw*.csv.gz
+
 # Logs, backups, archives, and temporary output
 *.log
 *.bak
