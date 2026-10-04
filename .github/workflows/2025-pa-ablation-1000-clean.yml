@@ -1,14 +1,7 @@
 name: 2025 PA ablation — clean 1000-path rerun
 
-# One clean rerun after discovering that a failed SequentialHistoryState
-# advance could partially mutate counters and contaminate later games in the
-# same shard. Every shard starts from scratch under an exact environment lock.
+# Manual-only after the initial clean launch.
 on:
-  push:
-    branches:
-      - feature/game-simulator-v2-locked-model
-    paths:
-      - ".github/workflows/2025-pa-ablation-1000-clean.yml"
   workflow_dispatch:
 
 concurrency:
