@@ -1,13 +1,9 @@
 name: Recover 2025 PA ablation — 1000 paths
 
+# Manual-only. The first recovery run is already in progress; later retries
+# must be explicit so a workflow edit cannot launch another expensive replay.
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - feature/game-simulator-v2-locked-model
-    paths:
-      - "scripts/recover_2025_variant_v2.py"
-      - ".github/workflows/recover-2025-pa-ablation-1000.yml"
 
 concurrency:
   group: brl-recover-2025-pa-ablation-1000
@@ -30,10 +26,18 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.12.14"
           cache: pip
+          cache-dependency-path: requirements-replay-lock.txt
       - run: python -m pip install --upgrade pip
-      - run: pip install -r requirements.txt -r requirements-model.txt
+      - run: pip install -r requirements-replay-lock.txt
+      - name: Record replay environment
+        run: |
+          python - <<'PY'
+          import importlib.metadata as md, json, platform
+          names=['Flask','pandas','numpy','requests','joblib','scikit-learn','scipy']
+          print(json.dumps({'python':platform.python_version(),'packages':{n:md.version(n) for n in names}},indent=2,sort_keys=True))
+          PY
       - name: Download locked PA model reference package
         uses: actions/download-artifact@v4
         with:
@@ -76,10 +80,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.12.14"
           cache: pip
+          cache-dependency-path: requirements-replay-lock.txt
       - run: python -m pip install --upgrade pip
-      - run: pip install -r requirements.txt -r requirements-model.txt
+      - run: pip install -r requirements-replay-lock.txt
       - name: Download locked PA model reference package
         uses: actions/download-artifact@v4
         with:
