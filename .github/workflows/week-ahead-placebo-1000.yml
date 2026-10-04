@@ -1,20 +1,18 @@
-name: 2025 week-ahead bullpen placebo — 1000 paths
+name: 2025 week-ahead bullpen placebo — private package, 1000 paths
 
-# Manual-only after the initial launch.
 on:
   workflow_dispatch:
 
 concurrency:
-  group: brl-2025-week-ahead-placebo-1000
+  group: brl-2025-week-ahead-placebo-1000-private
   cancel-in-progress: false
 
 permissions:
   contents: read
-  actions: read
 
 jobs:
   replay:
-    name: placebo shard ${{ matrix.shard }}
+    name: placebo private shard ${{ matrix.shard }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     strategy:
@@ -31,14 +29,11 @@ jobs:
           cache-dependency-path: requirements-replay-lock.txt
       - run: python -m pip install --upgrade pip
       - run: pip install -r requirements-replay-lock.txt
-      - name: Download locked PA model reference package
-        uses: actions/download-artifact@v4
-        with:
-          name: pa-model-locked-2026-reproducibility-package
-          path: pa_model_reference
-          github-token: ${{ github.token }}
-          repository: AlecGreenblatt36/Pitcher-Research-Lab
-          run-id: 37159593828
+      - name: Restore private PA package
+        env:
+          BRL_RCLONE_CONFIG_B64: ${{ secrets.BRL_RCLONE_CONFIG_B64 }}
+          BRL_PRIVATE_PA_REMOTE: ${{ secrets.BRL_PRIVATE_PA_REMOTE }}
+        run: bash scripts/restore_private_pa_package.sh
       - name: Run week-ahead placebo shard
         run: >-
           python scripts/run_2025_week_ahead_placebo_shard.py
@@ -55,7 +50,7 @@ jobs:
             model_runs/2025_week_ahead_placebo_1000/shards/placebo_week_shard_*.csv.gz
             model_runs/2025_week_ahead_placebo_1000/shards/placebo_week_shard_*_progress.json
             model_runs/2025_week_ahead_placebo_1000/shards/placebo_week_shard_*_receipt.json
-          retention-days: 90
+          retention-days: 30
           if-no-files-found: error
 
   merge:
@@ -71,8 +66,7 @@ jobs:
           cache-dependency-path: requirements-replay-lock.txt
       - run: python -m pip install --upgrade pip
       - run: pip install -r requirements-replay-lock.txt
-      - name: Download placebo shards
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           pattern: week-ahead-placebo-*
           path: shard_outputs
