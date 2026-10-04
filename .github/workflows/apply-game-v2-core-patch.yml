@@ -5,7 +5,7 @@ on:
     branches:
       - feature/game-simulator-v2-locked-model
     paths:
-      - ".bootstrap/game_v2_core_patch.zip"
+      - ".bootstrap/game_v2_core_patch.part*.b64"
       - ".github/workflows/apply-game-v2-core-patch.yml"
 
 permissions:
@@ -24,12 +24,35 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+      - name: Reassemble and verify source patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .bootstrap/game_v2_core_patch.part*.b64 > /tmp/game_v2_core_patch.b64
+          base64 --decode /tmp/game_v2_core_patch.b64 > /tmp/game_v2_core_patch.zip
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import zipfile
+
+          path = Path('/tmp/game_v2_core_patch.zip')
+          expected = '0149b7b12ec827873898056f06a124176e07ea1814d5f6755292ac5ab845b0af'
+          observed = hashlib.sha256(path.read_bytes()).hexdigest()
+          if observed != expected:
+              raise SystemExit(f'patch SHA-256 mismatch: {observed} != {expected}')
+          with zipfile.ZipFile(path) as archive:
+              corrupt = archive.testzip()
+              if corrupt is not None:
+                  raise SystemExit(f'corrupt archive member: {corrupt}')
+          print(f'verified patch {observed} ({path.stat().st_size} bytes)')
+          PY
       - name: Apply source patch
+        shell: bash
         run: |
           set -euo pipefail
           rm -rf /tmp/brl-game-v2-patch
           mkdir -p /tmp/brl-game-v2-patch
-          unzip -q .bootstrap/game_v2_core_patch.zip -d /tmp/brl-game-v2-patch
+          unzip -q /tmp/game_v2_core_patch.zip -d /tmp/brl-game-v2-patch
           rsync -a /tmp/brl-game-v2-patch/ ./
           python -m compileall -q research_lab scripts
       - name: Install and smoke-test benchmark modules
@@ -37,17 +60,24 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt -r requirements-model.txt
           python - <<'PY'
-          from research_lab.game_sim.ablation_v2 import fit_nb2_dispersion, finite_path_log_loss_correction, denoised_calibration
-          from research_lab.game_sim.oracle import OracleRelieverOrderPolicy
+          from research_lab.game_sim.ablation_v2 import (
+              denoised_calibration,
+              finite_path_log_loss_correction,
+              fit_nb2_dispersion,
+          )
           from research_lab.game_sim.locked_pa_provider import LockedPAModelProvider
+          from research_lab.game_sim.oracle import OracleRelieverOrderPolicy
           print('benchmark modules import successfully')
           PY
       - name: Commit applied patch
+        shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm -f .bootstrap/game_v2_core_patch.zip .github/workflows/apply-game-v2-core-patch.yml
+          git rm -f .bootstrap/game_v2_core_patch.zip || true
+          git rm -f .bootstrap/game_v2_core_patch.part*.b64
+          git rm -f .github/workflows/apply-game-v2-core-patch.yml
           git add requirements-model.txt research_lab scripts model_runs .github/workflows/2025-pa-ablation-1000.yml
           git commit -m "Add locked-model 2025 ablation and bullpen oracle benchmark"
           git push origin HEAD:feature/game-simulator-v2-locked-model
