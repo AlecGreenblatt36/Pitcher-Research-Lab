@@ -1,0 +1,20 @@
+{
+  "schema": "baseball_research_lab.dynamic_engine_manifest.v1",
+  "status": "foundation_only_not_promoted",
+  "production_source_of_truth": "feature/game-simulator-v2-locked-model",
+  "research_branch": "feature/dynamic-state-engine-v1",
+  "components": {
+    "event_keyed_random_streams": "implemented_and_unit_tested_in_foundation_package",
+    "pitch_count_markov_state": "implemented_as_fail_closed_interface_and_state_machine",
+    "fatigue_feature_contract": "implemented_no_unfitted_adjustments",
+    "empirical_bayes_shrinkage": "implemented_conjugate_baselines",
+    "discrete_forecast_diagnostics": "implemented_randomized_pit_fractional_coverage_and_proper_scores",
+    "batted_ball_kernel": "implemented_hierarchical_table_backoff_interface",
+    "bullpen_choice_policy": "implemented_fitted_conditional_logit_interface",
+    "full_game_integration": "not_started",
+    "trained_pitch_model": "not_started",
+    "trained_fatigue_model": "not_started",
+    "trained_batted_ball_defense_model": "not_started"
+  },
+  "promotion_rule": "No component enters the accepted engine without a paired pregame-valid replay improvement on frozen proper scores and calibration diagnostics."
+}
