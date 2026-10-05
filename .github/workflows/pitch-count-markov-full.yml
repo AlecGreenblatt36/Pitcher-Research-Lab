@@ -1,5 +1,5 @@
 name: Pitch-count Markov full historical benchmark
-# execution revision: canonical chunks with semantic script validation
+# execution revision: preserve reconstructed script for debugging
 
 on:
   workflow_dispatch:
@@ -45,10 +45,6 @@ jobs:
           set -euo pipefail
           mkdir -p scripts benchmark_inputs
 
-          # script_mid was a temporary overlapping repair chunk for bytes
-          # 4200-8999 of an older partial first chunk. script_00 is now the
-          # restored canonical first chunk, so the repair chunk must not be
-          # concatenated with it.
           cat \
             .markov_exec/script_00.b64 \
             .markov_exec/script_01.b64 \
@@ -101,14 +97,12 @@ jobs:
           python - <<'PY'
           import json
           from pathlib import Path
-
           path = Path("pitch_markov_output/PITCH_COUNT_MARKOV_RESULT.json")
           result = json.loads(path.read_text())
           metrics = result["metrics"]
           base = metrics["frozen_pa_baseline"]
           cand = metrics["pitch_count_markov_eb"]
           diff = metrics["candidate_minus_frozen"]
-          decision = result["decision"]
           print(f"PAs: {result['test_boundary']['pas']:,}")
           print(f"Games: {result['test_boundary']['games']:,}")
           print(f"Frozen Brier: {base['multiclass_brier']:.9f}")
@@ -117,7 +111,7 @@ jobs:
           print(f"Brier 95% CI: [{diff['multiclass_brier']['ci_95_low']:+.9f}, {diff['multiclass_brier']['ci_95_high']:+.9f}]")
           print(f"Frozen log loss: {base['log_loss']:.9f}")
           print(f"Markov log loss: {cand['log_loss']:.9f}")
-          print(f"Promote: {decision['promote_over_frozen_pa_baseline']}")
+          print(f"Promote: {result['decision']['promote_over_frozen_pa_baseline']}")
           assert result["test_boundary"]["pas"] == 183849
           assert result["test_boundary"]["games"] == 2429
           PY
@@ -150,12 +144,13 @@ jobs:
             echo "# Pitch-count Markov run did not produce a result receipt" >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Upload compact trained artifacts and receipts
+      - name: Upload compact trained artifacts, receipts, and reconstructed script
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: pitch-count-markov-full-result
           path: |
+            scripts/train_pitch_markov_statcast.py
             pitch_markov_output/PITCH_COUNT_MARKOV_RESULT.json
             pitch_markov_output/PITCH_COUNT_MARKOV_TUNING.json
             pitch_markov_output/pitch_count_markov_eb.joblib
