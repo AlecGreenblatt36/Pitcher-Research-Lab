@@ -11,8 +11,6 @@ on:
 permissions:
   contents: read
 
-timeout-minutes: 360
-
 concurrency:
   group: pitch-count-markov-full-${{ github.ref }}
   cancel-in-progress: false
@@ -20,6 +18,7 @@ concurrency:
 jobs:
   train-and-score:
     runs-on: ubuntu-latest
+    timeout-minutes: 360
     steps:
       - name: Checkout
         uses: actions/checkout@v4
