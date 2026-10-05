@@ -43,8 +43,14 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p scripts benchmark_inputs
-          cat .markov_exec/script_*.b64 | base64 --decode > scripts/train_pitch_markov_statcast.py
-          cat .markov_exec/baseline_*.b64 | base64 --decode > benchmark_inputs/frozen_pa_2026_game_scores.csv.gz
+          : > scripts/train_pitch_markov_statcast.py
+          for part in .markov_exec/script_*.b64; do
+            base64 --decode "$part" >> scripts/train_pitch_markov_statcast.py
+          done
+          : > benchmark_inputs/frozen_pa_2026_game_scores.csv.gz
+          for part in .markov_exec/baseline_*.b64; do
+            base64 --decode "$part" >> benchmark_inputs/frozen_pa_2026_game_scores.csv.gz
+          done
           gunzip -c benchmark_inputs/frozen_pa_2026_game_scores.csv.gz > benchmark_inputs/frozen_pa_2026_game_scores.csv
 
           echo "cf4ca0862082fcf2124a1c43fb72305f3d186c7801c69dc762e9a265d19f1054  scripts/train_pitch_markov_statcast.py" | sha256sum --check
