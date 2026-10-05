@@ -1,5 +1,5 @@
 name: Pitch-count Markov full historical benchmark
-# execution revision: decode chunked payloads as continuous base64 streams
+# execution revision: use canonical non-overlapping script chunks
 
 on:
   workflow_dispatch:
@@ -45,12 +45,12 @@ jobs:
           set -euo pipefail
           mkdir -p scripts benchmark_inputs
 
-          # The repository stores long base64 payloads in fixed-size text chunks.
-          # A chunk may end in the middle of a base64 quantum, so decoding each
-          # chunk independently is invalid. Concatenate first, then decode once.
+          # script_mid was a temporary overlapping repair chunk for bytes
+          # 4200-8999 of an older partial first chunk. script_00 is now the
+          # restored canonical first chunk, so the repair chunk must not be
+          # concatenated with it.
           cat \
-            .markov_exec/newscript_00.b64 \
-            .markov_exec/script_mid.b64 \
+            .markov_exec/script_00.b64 \
             .markov_exec/script_01.b64 \
             .markov_exec/script_02.b64 \
             .markov_exec/script_03.b64 \
