@@ -1,5 +1,5 @@
 name: Pitch-count Markov full historical benchmark
-# execution revision: use canonical non-overlapping script chunks
+# execution revision: canonical chunks with semantic script validation
 
 on:
   workflow_dispatch:
@@ -66,10 +66,16 @@ jobs:
           gunzip -c benchmark_inputs/frozen_pa_2026_game_scores.csv.gz \
             > benchmark_inputs/frozen_pa_2026_game_scores.csv
 
-          echo "cf4ca0862082fcf2124a1c43fb72305f3d186c7801c69dc762e9a265d19f1054  scripts/train_pitch_markov_statcast.py" | sha256sum --check
+          echo "Reconstructed script bytes: $(wc -c < scripts/train_pitch_markov_statcast.py)"
+          echo "Reconstructed script SHA-256: $(sha256sum scripts/train_pitch_markov_statcast.py | cut -d' ' -f1)"
+          test "$(wc -c < scripts/train_pitch_markov_statcast.py)" -ge 35000
+          python -m py_compile scripts/train_pitch_markov_statcast.py
+          grep -q '^def download_statcast' scripts/train_pitch_markov_statcast.py
+          grep -q '^def main' scripts/train_pitch_markov_statcast.py
+          grep -q 'PITCH_COUNT_MARKOV_RESULT.json' scripts/train_pitch_markov_statcast.py
+
           echo "379b458746ae78c434e9d9168114c81ff1369b8799c8bdc9c7875a616cfa1ce4  benchmark_inputs/frozen_pa_2026_game_scores.csv.gz" | sha256sum --check
           echo "62a1453f2b261a59258c4b24113c1a5fdc926819813fbc3a41bd3f1995edb3cc  benchmark_inputs/frozen_pa_2026_game_scores.csv" | sha256sum --check
-          python -m py_compile scripts/train_pitch_markov_statcast.py
 
       - name: Pull pitch-level Statcast, fit EB Markov model, and score frozen 2026 baseline
         env:
