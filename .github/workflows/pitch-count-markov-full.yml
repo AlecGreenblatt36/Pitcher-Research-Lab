@@ -1,5 +1,5 @@
 name: Pitch-count Markov full historical benchmark
-# execution revision: use repaired script byte sequence
+# execution revision: decode chunked payloads as continuous base64 streams
 
 on:
   workflow_dispatch:
@@ -44,20 +44,27 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p scripts benchmark_inputs
-          : > scripts/train_pitch_markov_statcast.py
-          for part in \
+
+          # The repository stores long base64 payloads in fixed-size text chunks.
+          # A chunk may end in the middle of a base64 quantum, so decoding each
+          # chunk independently is invalid. Concatenate first, then decode once.
+          cat \
             .markov_exec/newscript_00.b64 \
             .markov_exec/script_mid.b64 \
             .markov_exec/script_01.b64 \
             .markov_exec/script_02.b64 \
-            .markov_exec/script_03.b64; do
-            base64 --decode "$part" >> scripts/train_pitch_markov_statcast.py
-          done
-          : > benchmark_inputs/frozen_pa_2026_game_scores.csv.gz
-          for part in .markov_exec/baseline_*.b64; do
-            base64 --decode "$part" >> benchmark_inputs/frozen_pa_2026_game_scores.csv.gz
-          done
-          gunzip -c benchmark_inputs/frozen_pa_2026_game_scores.csv.gz > benchmark_inputs/frozen_pa_2026_game_scores.csv
+            .markov_exec/script_03.b64 \
+            | tr -d '\r\n\t ' \
+            | base64 --decode \
+            > scripts/train_pitch_markov_statcast.py
+
+          cat .markov_exec/baseline_*.b64 \
+            | tr -d '\r\n\t ' \
+            | base64 --decode \
+            > benchmark_inputs/frozen_pa_2026_game_scores.csv.gz
+
+          gunzip -c benchmark_inputs/frozen_pa_2026_game_scores.csv.gz \
+            > benchmark_inputs/frozen_pa_2026_game_scores.csv
 
           echo "cf4ca0862082fcf2124a1c43fb72305f3d186c7801c69dc762e9a265d19f1054  scripts/train_pitch_markov_statcast.py" | sha256sum --check
           echo "379b458746ae78c434e9d9168114c81ff1369b8799c8bdc9c7875a616cfa1ce4  benchmark_inputs/frozen_pa_2026_game_scores.csv.gz" | sha256sum --check
