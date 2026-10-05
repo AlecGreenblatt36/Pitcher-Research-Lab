@@ -1,0 +1,188 @@
+name: 2026 frozen full-game replay smoke
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/dynamic-state-engine-v1
+    paths:
+      - ".github/workflows/2026-full-game-replay-smoke.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: 2026-full-game-replay-smoke-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PYTHONHASHSEED: "0"
+  OMP_NUM_THREADS: "1"
+  OPENBLAS_NUM_THREADS: "1"
+  MKL_NUM_THREADS: "1"
+  NUMEXPR_NUM_THREADS: "1"
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.14"
+          cache: pip
+          cache-dependency-path: requirements-replay-lock.txt
+      - run: python -m pip install --upgrade pip
+      - run: pip install -r requirements-replay-lock.txt
+      - name: Run protocol unit tests
+        run: pytest -q tests/test_2026_replay_protocol.py tests/test_game_sim.py
+      - name: Restore private locked PA package
+        env:
+          BRL_RCLONE_CONFIG_B64: ${{ secrets.BRL_RCLONE_CONFIG_B64 }}
+          BRL_PRIVATE_PA_REMOTE: ${{ secrets.BRL_PRIVATE_PA_REMOTE }}
+        run: bash scripts/restore_private_pa_package.sh
+      - name: Verify locked PA provider in pinned environment
+        run: >-
+          python scripts/verify_locked_pa_pinned_environment.py
+          --output prepared/LOCKED_PA_PINNED_REPRODUCTION.json
+      - name: Fit frozen 2023-2025 starter hazard
+        run: >-
+          python scripts/fit_starter_hazard_2026_lock.py
+          --history pa_model_reference/model_runs/pa_locked_2026/plate_appearances.csv.gz
+          --output-dir prepared
+          --train-seasons 2023 2024 2025
+          --test-season 2026
+          --C 1.0
+      - name: Upload prepared artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: replay-prep-2026-smoke
+          path: prepared
+          retention-days: 14
+          if-no-files-found: error
+
+  replay:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [candidate, flat, oracle]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.14"
+          cache: pip
+          cache-dependency-path: requirements-replay-lock.txt
+      - run: python -m pip install --upgrade pip
+      - run: pip install -r requirements-replay-lock.txt
+      - name: Restore private locked PA package
+        env:
+          BRL_RCLONE_CONFIG_B64: ${{ secrets.BRL_RCLONE_CONFIG_B64 }}
+          BRL_PRIVATE_PA_REMOTE: ${{ secrets.BRL_PRIVATE_PA_REMOTE }}
+        run: bash scripts/restore_private_pa_package.sh
+      - uses: actions/download-artifact@v4
+        with:
+          name: replay-prep-2026-smoke
+          path: prepared
+      - name: Replay first 12 reconstructable 2026 games
+        run: >-
+          python scripts/run_2026_variant_shard.py
+          --variant "${{ matrix.variant }}"
+          --season 2026
+          --sims 30
+          --shard-index 0
+          --num-shards 1
+          --max-games 12
+          --checkpoint-every 3
+          --hazard prepared/starter_hazard_2026_frozen.joblib
+          --output-dir smoke_output
+      - name: Upload variant smoke output
+        uses: actions/upload-artifact@v4
+        with:
+          name: 2026-smoke-${{ matrix.variant }}
+          path: smoke_output
+          retention-days: 14
+          if-no-files-found: error
+
+  finalize:
+    needs: replay
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.14"
+          cache: pip
+          cache-dependency-path: requirements-replay-lock.txt
+      - run: python -m pip install --upgrade pip
+      - run: pip install -r requirements-replay-lock.txt
+      - name: Restore private locked PA package
+        env:
+          BRL_RCLONE_CONFIG_B64: ${{ secrets.BRL_RCLONE_CONFIG_B64 }}
+          BRL_PRIVATE_PA_REMOTE: ${{ secrets.BRL_PRIVATE_PA_REMOTE }}
+        run: bash scripts/restore_private_pa_package.sh
+      - uses: actions/download-artifact@v4
+        with:
+          name: replay-prep-2026-smoke
+          path: prepared
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: 2026-smoke-*
+          path: replay_artifacts
+          merge-multiple: true
+      - name: Merge fail-closed smoke shards
+        run: >-
+          python scripts/merge_2026_variant_shards.py
+          --input-dir replay_artifacts
+          --output-dir merged
+          --expected-games 12
+          --season 2026
+      - name: Score smoke replay against deterministic baselines
+        run: >-
+          python scripts/finalize_2026_full_game_replay.py
+          --candidate merged/candidate_predictions.csv.gz
+          --flat merged/flat_predictions.csv.gz
+          --oracle merged/oracle_predictions.csv.gz
+          --history pa_model_reference/model_runs/pa_locked_2026/plate_appearances.csv.gz
+          --starter-hazard-receipt prepared/STARTER_HAZARD_2026_FROZEN_RECEIPT.json
+          --merge-receipt merged/SHARD_MERGE_RECEIPT.json
+          --output-dir final
+          --season 2026
+          --simulations 30
+          --bootstrap-replicates 250
+      - name: Render smoke report
+        run: >-
+          python scripts/render_2026_full_game_replay.py
+          --result final/2026_FROZEN_FULL_GAME_REPLAY_RESULT.json
+          --output final/2026_FROZEN_FULL_GAME_REPLAY_REPORT.md
+      - name: Validate smoke receipt
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result = json.loads(Path('final/2026_FROZEN_FULL_GAME_REPLAY_RESULT.json').read_text())
+          assert result['protocol']['season'] == 2026
+          assert result['protocol']['games'] == 12
+          assert result['protocol']['2026_previously_accessed'] is True
+          assert result['decision']['promotion_authorized'] is False
+          assert result['starter_hazard']['protocol']['fit_max_season'] == 2025
+          assert result['starter_hazard']['protocol']['test_outcomes_read'] is False
+          PY
+      - name: Upload complete smoke receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: 2026-frozen-full-game-replay-smoke-result
+          path: |
+            prepared/LOCKED_PA_PINNED_REPRODUCTION.json
+            prepared/STARTER_HAZARD_2026_FROZEN_RECEIPT.json
+            merged/SHARD_MERGE_RECEIPT.json
+            final/2026_FROZEN_FULL_GAME_REPLAY_RESULT.json
+            final/2026_FROZEN_FULL_GAME_REPLAY_PREDICTIONS.csv.gz
+            final/2026_FROZEN_FULL_GAME_REPLAY_REPORT.md
+          retention-days: 30
+          if-no-files-found: error

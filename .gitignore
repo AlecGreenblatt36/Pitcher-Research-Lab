@@ -26,6 +26,14 @@ model_runs/
 *.sqlite
 *.sqlite3
 
+# Pregame snapshots may contain bulk MLB rows, forecast timestamps, and private
+# reproducibility inputs. Keep the archive outside the public repository.
+private_data/
+pregame_snapshots/
+weather_forecasts/
+lineup_snapshots/
+roster_snapshots/
+
 # Externally downloaded MLB/Statcast reproducibility inputs.
 # Keep hashes/receipts and build code in Git; do not redistribute bulk source rows.
 pa_model_reference/

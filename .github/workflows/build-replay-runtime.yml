@@ -1,0 +1,81 @@
+name: Build exact replay runtime
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/dynamic-state-engine-v1
+    paths:
+      - ".github/workflows/build-replay-runtime.yml"
+      - "requirements-replay-lock.txt"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up exact Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.14"
+
+      - name: Install exact replay dependencies into portable prefix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install --no-cache-dir -r requirements-replay-lock.txt
+          python - <<'PY'
+          import json
+          import platform
+          import sys
+          from importlib import metadata
+          from pathlib import Path
+
+          packages = [
+              "Flask", "pandas", "numpy", "requests", "joblib",
+              "scikit-learn", "scipy", "pytest",
+          ]
+          receipt = {
+              "python": platform.python_version(),
+              "implementation": platform.python_implementation(),
+              "platform": platform.platform(),
+              "prefix": sys.prefix,
+              "packages": {name: metadata.version(name) for name in packages},
+          }
+          Path("REPLAY_RUNTIME_RECEIPT.json").write_text(
+              json.dumps(receipt, indent=2, sort_keys=True), encoding="utf-8"
+          )
+          print(json.dumps(receipt, indent=2, sort_keys=True))
+          PY
+          python -m pytest --version
+
+      - name: Pack relocatable Python prefix
+        shell: bash
+        run: |
+          set -euo pipefail
+          PREFIX="$(python -c 'import sys; print(sys.prefix)')"
+          echo "$PREFIX" > PYTHON_PREFIX_ORIGIN.txt
+          tar --zstd -C "$PREFIX" -cf replay-python-3.12.14-linux-x86_64.tar.zst .
+          sha256sum replay-python-3.12.14-linux-x86_64.tar.zst > replay-python-3.12.14-linux-x86_64.tar.zst.sha256
+          ls -lh replay-python-3.12.14-linux-x86_64.tar.zst
+
+      - name: Upload exact runtime
+        uses: actions/upload-artifact@v4
+        with:
+          name: replay-python-3.12.14-linux-x86_64
+          path: |
+            replay-python-3.12.14-linux-x86_64.tar.zst
+            replay-python-3.12.14-linux-x86_64.tar.zst.sha256
+            REPLAY_RUNTIME_RECEIPT.json
+            PYTHON_PREFIX_ORIGIN.txt
+            requirements-replay-lock.txt
+          retention-days: 30
+          compression-level: 0
+          if-no-files-found: error

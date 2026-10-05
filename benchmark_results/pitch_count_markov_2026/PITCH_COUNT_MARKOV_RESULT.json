@@ -1,0 +1,261 @@
+{
+  "artifacts": {
+    "baseline_scores_sha256": "62a1453f2b261a59258c4b24113c1a5fdc926819813fbc3a41bd3f1995edb3cc",
+    "game_scores_sha256": "18e684994a300692be29741b9c7f7eaad67306c2ed4e96777a040aa0ec8a2682",
+    "model_sha256": "633c3db1d7e54dbb5429afc19b75a38a3b30a3908f5aba324d7e78b1534caa98",
+    "predictions_sha256": "b30b6b26de2c4290757258eb27208fff4612fb11f29e9ce3e1e1d48add31c579"
+  },
+  "data": {
+    "date_max": "2026-09-27",
+    "date_min": "2023-03-30",
+    "files": 426,
+    "rows": 2861903,
+    "sha256": "f1451acbbc2bd9e6817b3bb54524570cf3da3e93cc1d6966666c434ebfb68a35"
+  },
+  "decision": {
+    "brier_improvement_ci_clear": false,
+    "brier_improvement_point_estimate": false,
+    "log_loss_improvement_point_estimate": false,
+    "promote_over_frozen_pa_baseline": false
+  },
+  "generated_at_utc": "2026-10-05T11:06:33.355695+00:00",
+  "metrics": {
+    "candidate_minus_frozen": {
+      "log_loss": {
+        "ci_95_high": 0.011653058250929119,
+        "ci_95_low": 0.01023019397353917,
+        "clusters": 2429,
+        "difference": 0.010933062553029428,
+        "replicates": 2000
+      },
+      "multiclass_brier": {
+        "ci_95_high": 0.00469474270936879,
+        "ci_95_low": 0.004065636523167863,
+        "clusters": 2429,
+        "difference": 0.004372191279453038,
+        "replicates": 2000
+      },
+      "relative_brier_change": 0.006224907279220598,
+      "relative_log_loss_change": 0.007488868811701068
+    },
+    "frozen_pa_baseline": {
+      "log_loss": 1.4599084091240877,
+      "multiclass_brier": 0.7023705066335406
+    },
+    "pitch_count_markov_eb": {
+      "log_loss": 1.4708414716771172,
+      "multiclass_brier": 0.7067426979129936
+    }
+  },
+  "schema": "baseball_research_lab.pitch_count_markov_result.v1",
+  "test_boundary": {
+    "date_max": "2026-09-27",
+    "date_min": "2026-03-25",
+    "games": 2429,
+    "pas": 183849,
+    "season": 2026,
+    "warning": "The 2026 period has been inspected in earlier project work; this is a frozen replay diagnostic, not a pristine final holdout."
+  },
+  "training": {
+    "bip_params": {
+      "batter_prior": 150.0,
+      "batter_weight": 0.75,
+      "pitcher_prior": 150.0,
+      "pitcher_weight": 0.25,
+      "temperature": 1.0000000000000002,
+      "validation_log_loss": 0.9681954346986755
+    },
+    "bip_tuning_top10": [
+      {
+        "batter_prior": 150.0,
+        "batter_weight": 0.75,
+        "log_loss": 0.9681954346986754,
+        "pitcher_prior": 150.0,
+        "pitcher_weight": 0.25,
+        "temperature": 1.0
+      },
+      {
+        "batter_prior": 150.0,
+        "batter_weight": 0.75,
+        "log_loss": 0.9681954346986755,
+        "pitcher_prior": 150.0,
+        "pitcher_weight": 0.25,
+        "temperature": 1.0000000000000002,
+        "temperature_only_refinement": true
+      },
+      {
+        "batter_prior": 150.0,
+        "batter_weight": 0.75,
+        "log_loss": 0.9682154971344993,
+        "pitcher_prior": 600.0,
+        "pitcher_weight": 0.5,
+        "temperature": 1.0
+      },
+      {
+        "batter_prior": 150.0,
+        "batter_weight": 0.75,
+        "log_loss": 0.9682160461459257,
+        "pitcher_prior": 600.0,
+        "pitcher_weight": 0.75,
+        "temperature": 1.0
+      },
+      {
+        "batter_prior": 600.0,
+        "batter_weight": 1.0,
+        "log_loss": 0.968277688965432,
+        "pitcher_prior": 150.0,
+        "pitcher_weight": 0.25,
+        "temperature": 1.0
+      },
+      {
+        "batter_prior": 150.0,
+        "batter_weight": 0.75,
+        "log_loss": 0.9682958428826384,
+        "pitcher_prior": 600.0,
+        "pitcher_weight": 0.25,
+        "temperature": 1.0
+      },
+      {
+        "batter_prior": 150.0,
+        "batter_weight": 0.75,
+        "log_loss": 0.9682975666952485,
+        "pitcher_prior": 600.0,
+        "pitcher_weight": 1.0,
+        "temperature": 1.0
+      },
+      {
+        "batter_prior": 600.0,
+        "batter_weight": 1.0,
+        "log_loss": 0.9682979010444164,
+        "pitcher_prior": 600.0,
+        "pitcher_weight": 0.75,
+        "temperature": 1.0
+      },
+      {
+        "batter_prior": 600.0,
+        "batter_weight": 1.0,
+        "log_loss": 0.9682992364753932,
+        "pitcher_prior": 600.0,
+        "pitcher_weight": 0.5,
+        "temperature": 1.0
+      },
+      {
+        "batter_prior": 150.0,
+        "batter_weight": 0.75,
+        "log_loss": 0.9683196591686973,
+        "pitcher_prior": 150.0,
+        "pitcher_weight": 0.5,
+        "temperature": 1.0
+      }
+    ],
+    "final_refit_seasons": [
+      2023,
+      2024,
+      2025
+    ],
+    "pitch_event_mapping": {
+      "mapped_pitch_rows": 2861812,
+      "raw_rows": 2861903,
+      "unknown_pitch_rows": 91
+    },
+    "test_season": 2026,
+    "train_seasons": [
+      2023,
+      2024
+    ],
+    "transition_params": {
+      "batter_prior": 150.0,
+      "batter_weight": 1.0,
+      "pitcher_prior": 150.0,
+      "pitcher_weight": 0.75,
+      "temperature": 1.0000000000000002,
+      "validation_log_loss": 1.4742459601823479
+    },
+    "transition_tuning_top10": [
+      {
+        "batter_prior": 150.0,
+        "batter_weight": 1.0,
+        "log_loss": 1.4742459601823479,
+        "pitcher_prior": 150.0,
+        "pitcher_weight": 0.75,
+        "temperature": 1.0
+      },
+      {
+        "batter_prior": 150.0,
+        "batter_weight": 1.0,
+        "log_loss": 1.4742459601823479,
+        "pitcher_prior": 150.0,
+        "pitcher_weight": 0.75,
+        "temperature": 1.0000000000000002,
+        "temperature_only_refinement": true
+      },
+      {
+        "batter_prior": 150.0,
+        "batter_weight": 1.0,
+        "log_loss": 1.4742923459966162,
+        "pitcher_prior": 150.0,
+        "pitcher_weight": 0.5,
+        "temperature": 1.0
+      },
+      {
+        "batter_prior": 150.0,
+        "batter_weight": 1.0,
+        "log_loss": 1.474445055384728,
+        "pitcher_prior": 600.0,
+        "pitcher_weight": 1.0,
+        "temperature": 1.0
+      },
+      {
+        "batter_prior": 150.0,
+        "batter_weight": 1.0,
+        "log_loss": 1.474481554338144,
+        "pitcher_prior": 30.0,
+        "pitcher_weight": 0.25,
+        "temperature": 1.0
+      },
+      {
+        "batter_prior": 150.0,
+        "batter_weight": 1.0,
+        "log_loss": 1.4745929833244693,
+        "pitcher_prior": 150.0,
+        "pitcher_weight": 0.75,
+        "temperature": 1.0500000000000003,
+        "temperature_only_refinement": true
+      },
+      {
+        "batter_prior": 150.0,
+        "batter_weight": 1.0,
+        "log_loss": 1.4746347385342904,
+        "pitcher_prior": 150.0,
+        "pitcher_weight": 0.75,
+        "temperature": 0.9500000000000002,
+        "temperature_only_refinement": true
+      },
+      {
+        "batter_prior": 150.0,
+        "batter_weight": 1.0,
+        "log_loss": 1.4746748719902405,
+        "pitcher_prior": 600.0,
+        "pitcher_weight": 0.75,
+        "temperature": 1.0
+      },
+      {
+        "batter_prior": 150.0,
+        "batter_weight": 0.75,
+        "log_loss": 1.47472626711481,
+        "pitcher_prior": 150.0,
+        "pitcher_weight": 0.75,
+        "temperature": 1.0
+      },
+      {
+        "batter_prior": 150.0,
+        "batter_weight": 1.0,
+        "log_loss": 1.4747581946733563,
+        "pitcher_prior": 150.0,
+        "pitcher_weight": 1.0,
+        "temperature": 1.0
+      }
+    ],
+    "tuning_season": 2025
+  }
+}

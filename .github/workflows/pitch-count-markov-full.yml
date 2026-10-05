@@ -1,0 +1,206 @@
+name: Pitch-count Markov full historical benchmark
+# execution revision: repair staged script and execute full benchmark
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/dynamic-state-engine-v1
+    paths:
+      - ".github/workflows/pitch-count-markov-full.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pitch-count-markov-full-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  train-and-score:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install pinned execution dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install \
+            numpy==2.1.3 \
+            pandas==2.2.3 \
+            requests==2.32.3 \
+            joblib==1.4.2
+
+      - name: Reconstruct and repair execution script and frozen baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p scripts benchmark_inputs
+
+          cat \
+            .markov_exec/script_00.b64 \
+            .markov_exec/script_01.b64 \
+            .markov_exec/script_02.b64 \
+            .markov_exec/script_03.b64 \
+            | tr -d '\r\n\t ' \
+            | base64 --decode \
+            > scripts/train_pitch_markov_statcast.py.raw
+
+          python - <<'PY'
+          from pathlib import Path
+
+          source = Path("scripts/train_pitch_markov_statcast.py.raw")
+          target = Path("scripts/train_pitch_markov_statcast.py")
+          text = source.read_bytes().decode("latin1")
+
+          # The staged payload contains one duplicated helper block where an
+          # earlier upload repair overlapped the canonical chunks. Keep the
+          # second complete helper block and remove the first/corrupted copy.
+          marker = "\ndef grouped_counts("
+          first = text.find(marker)
+          second = text.find(marker, first + len(marker))
+          if first < 0 or second < 0:
+              raise RuntimeError("expected duplicated grouped_counts block not found")
+          text = text[:first] + text[second:]
+
+          text = text.replace(
+              '.rename_columns={"pitch_event": "label"})',
+              '.rename(columns={"pitch_event": "label"})',
+          )
+          broken = 'target.append(grouped_counts(source, keys, "label", BIP_LABE1L\x8aI'
+          if broken not in text:
+              raise RuntimeError("expected corrupted BIP_LABELS line not found")
+          text = text.replace(
+              broken,
+              'target.append(grouped_counts(source, keys, "label", BIP_LABELS))',
+              1,
+          )
+
+          # Preserve called strikeouts as called strikes instead of collapsing
+          # every terminal strikeout pitch into the swinging-strike category.
+          old = '    result.loc[terminal.eq("K")] = "swinging_strike"\n'
+          new = (
+              '    strikeout = terminal.eq("K")\n'
+              '    called_k = strikeout & desc.isin({"called_strike", "automatic_strike"})\n'
+              '    result.loc[called_k] = "called_strike"\n'
+              '    result.loc[strikeout & ~called_k] = "swinging_strike"\n'
+          )
+          if old not in text:
+              raise RuntimeError("expected strikeout classification line not found")
+          text = text.replace(old, new, 1)
+
+          target.write_text(text, encoding="utf-8")
+          print(f"repaired script bytes={target.stat().st_size}")
+          PY
+
+          cat .markov_exec/baseline_*.b64 \
+            | tr -d '\r\n\t ' \
+            | base64 --decode \
+            > benchmark_inputs/frozen_pa_2026_game_scores.csv.gz
+
+          gunzip -c benchmark_inputs/frozen_pa_2026_game_scores.csv.gz \
+            > benchmark_inputs/frozen_pa_2026_game_scores.csv
+
+          echo "Executable script SHA-256: $(sha256sum scripts/train_pitch_markov_statcast.py | cut -d' ' -f1)"
+          test "$(wc -c < scripts/train_pitch_markov_statcast.py)" -ge 33000
+          python -m py_compile scripts/train_pitch_markov_statcast.py
+          grep -q '^def download_statcast' scripts/train_pitch_markov_statcast.py
+          grep -q '^def main' scripts/train_pitch_markov_statcast.py
+          grep -q 'PITCH_COUNT_MARKOV_RESULT.json' scripts/train_pitch_markov_statcast.py
+
+          echo "379b458746ae78c434e9d9168114c81ff1369b8799c8bdc9c7875a616cfa1ce4  benchmark_inputs/frozen_pa_2026_game_scores.csv.gz" | sha256sum --check
+          echo "62a1453f2b261a59258c4b24113c1a5fdc926819813fbc3a41bd3f1995edb3cc  benchmark_inputs/frozen_pa_2026_game_scores.csv" | sha256sum --check
+
+      - name: Pull pitch-level Statcast, fit EB Markov model, and score frozen 2026 baseline
+        env:
+          PYTHONUNBUFFERED: "1"
+        run: |
+          set -euo pipefail
+          python scripts/train_pitch_markov_statcast.py \
+            --start 2023-03-30 \
+            --end 2026-09-27 \
+            --cache-dir "$RUNNER_TEMP/statcast-pitch-cache" \
+            --output-dir pitch_markov_output \
+            --baseline-scores benchmark_inputs/frozen_pa_2026_game_scores.csv \
+            --chunk-days 3 \
+            --workers 6 \
+            --retries 5 \
+            --timeout 180 \
+            --delete-cache
+
+      - name: Validate result receipt and print decision
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path("pitch_markov_output/PITCH_COUNT_MARKOV_RESULT.json")
+          result = json.loads(path.read_text())
+          metrics = result["metrics"]
+          base = metrics["frozen_pa_baseline"]
+          cand = metrics["pitch_count_markov_eb"]
+          diff = metrics["candidate_minus_frozen"]
+          print(f"PAs: {result['test_boundary']['pas']:,}")
+          print(f"Games: {result['test_boundary']['games']:,}")
+          print(f"Frozen Brier: {base['multiclass_brier']:.9f}")
+          print(f"Markov Brier: {cand['multiclass_brier']:.9f}")
+          print(f"Brier difference: {diff['multiclass_brier']['difference']:+.9f}")
+          print(f"Brier 95% CI: [{diff['multiclass_brier']['ci_95_low']:+.9f}, {diff['multiclass_brier']['ci_95_high']:+.9f}]")
+          print(f"Frozen log loss: {base['log_loss']:.9f}")
+          print(f"Markov log loss: {cand['log_loss']:.9f}")
+          print(f"Promote: {result['decision']['promote_over_frozen_pa_baseline']}")
+          assert result["test_boundary"]["pas"] == 183849
+          assert result["test_boundary"]["games"] == 2429
+          PY
+
+      - name: Write GitHub summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f pitch_markov_output/PITCH_COUNT_MARKOV_RESULT.json ]]; then
+            python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+          r = json.loads(Path("pitch_markov_output/PITCH_COUNT_MARKOV_RESULT.json").read_text())
+          b = r["metrics"]["frozen_pa_baseline"]
+          c = r["metrics"]["pitch_count_markov_eb"]
+          d = r["metrics"]["candidate_minus_frozen"]
+          print("# Pitch-count Markov frozen replay")
+          print()
+          print(f"- PAs: **{r['test_boundary']['pas']:,}**")
+          print(f"- Games: **{r['test_boundary']['games']:,}**")
+          print(f"- Frozen Brier: `{b['multiclass_brier']:.9f}`")
+          print(f"- Candidate Brier: `{c['multiclass_brier']:.9f}`")
+          print(f"- Difference: `{d['multiclass_brier']['difference']:+.9f}`")
+          print(f"- 95% CI: `[{d['multiclass_brier']['ci_95_low']:+.9f}, {d['multiclass_brier']['ci_95_high']:+.9f}]`")
+          print(f"- Frozen log loss: `{b['log_loss']:.9f}`")
+          print(f"- Candidate log loss: `{c['log_loss']:.9f}`")
+          print(f"- Promote: **{r['decision']['promote_over_frozen_pa_baseline']}**")
+          PY
+          else
+            echo "# Pitch-count Markov run did not produce a result receipt" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload compact trained artifacts, receipts, and executable script
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pitch-count-markov-full-result
+          path: |
+            scripts/train_pitch_markov_statcast.py
+            pitch_markov_output/PITCH_COUNT_MARKOV_RESULT.json
+            pitch_markov_output/PITCH_COUNT_MARKOV_TUNING.json
+            pitch_markov_output/pitch_count_markov_eb.joblib
+            pitch_markov_output/pitch_markov_predictions_2026.csv.gz
+            pitch_markov_output/pitch_markov_game_scores_2026.csv.gz
+          if-no-files-found: warn
+          retention-days: 30

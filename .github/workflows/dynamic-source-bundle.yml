@@ -1,0 +1,43 @@
+name: Dynamic branch source bundle
+# bundle revision: frozen-2026-replay-v1
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/dynamic-state-engine-v1
+    paths:
+      - ".github/workflows/dynamic-source-bundle.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create exact tracked-source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rev-parse HEAD > SOURCE_COMMIT.txt
+          git ls-files > SOURCE_MANIFEST.txt
+          git archive --format=zip --output=Pitcher-Research-Lab-source.zip HEAD
+          zip -q Pitcher-Research-Lab-source.zip SOURCE_COMMIT.txt SOURCE_MANIFEST.txt
+          sha256sum Pitcher-Research-Lab-source.zip > Pitcher-Research-Lab-source.zip.sha256
+
+      - name: Upload source archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: dynamic-state-engine-source
+          path: |
+            Pitcher-Research-Lab-source.zip
+            Pitcher-Research-Lab-source.zip.sha256
+            SOURCE_COMMIT.txt
+            SOURCE_MANIFEST.txt
+          retention-days: 30
+          if-no-files-found: error
