@@ -1,5 +1,5 @@
 name: Pitch-count Markov full historical benchmark
-# execution revision: complete script chunk restored
+# execution revision: use repaired script byte sequence
 
 on:
   workflow_dispatch:
@@ -45,7 +45,12 @@ jobs:
           set -euo pipefail
           mkdir -p scripts benchmark_inputs
           : > scripts/train_pitch_markov_statcast.py
-          for part in .markov_exec/script_*.b64; do
+          for part in \
+            .markov_exec/newscript_00.b64 \
+            .markov_exec/script_mid.b64 \
+            .markov_exec/script_01.b64 \
+            .markov_exec/script_02.b64 \
+            .markov_exec/script_03.b64; do
             base64 --decode "$part" >> scripts/train_pitch_markov_statcast.py
           done
           : > benchmark_inputs/frozen_pa_2026_game_scores.csv.gz
