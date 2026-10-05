@@ -1,0 +1,76 @@
+name: Savant traits smoke
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/dynamic-state-engine-v1
+    paths:
+      - "research_lab/game_sim/savant_traits.py"
+      - "tests/test_savant_traits.py"
+      - ".github/workflows/savant-traits-smoke.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify-public-traits:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: python -m pip install pandas==2.2.3 numpy==2.1.3 requests==2.32.3
+      - name: Fetch compact trait snapshots and validate
+        env:
+          PYTHONPATH: .
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import numpy as np
+          from research_lab.game_sim.savant_traits import (
+              fetch_oaa,
+              fetch_sprint_speed,
+              receipt_dict,
+          )
+
+          speed, speed_receipt = fetch_sprint_speed(2025, minimum_opportunities=0)
+          oaa, oaa_receipt = fetch_oaa(2025, minimum_attempts=0)
+          speed_values = np.asarray([row.sprint_speed_ft_s for row in speed.values()])
+          oaa_values = np.asarray([row.outs_above_average for row in oaa])
+          assert len(speed) >= 200, len(speed)
+          assert 20.0 <= float(speed_values.min()) <= 29.0
+          assert 27.0 <= float(speed_values.max()) <= 35.0
+          assert len(oaa) >= 200, len(oaa)
+          assert np.isfinite(oaa_values).all()
+          result = {
+              "status": "PASS",
+              "sprint_speed": {
+                  **receipt_dict(speed_receipt),
+                  "minimum_ft_s": float(speed_values.min()),
+                  "median_ft_s": float(np.median(speed_values)),
+                  "maximum_ft_s": float(speed_values.max()),
+              },
+              "outs_above_average": {
+                  **receipt_dict(oaa_receipt),
+                  "minimum_oaa": float(oaa_values.min()),
+                  "median_oaa": float(np.median(oaa_values)),
+                  "maximum_oaa": float(oaa_values.max()),
+              },
+              "raw_tables_published": False,
+          }
+          Path("savant_traits_smoke_receipt.json").write_text(
+              json.dumps(result, indent=2, sort_keys=True), encoding="utf-8"
+          )
+          print(json.dumps(result, indent=2, sort_keys=True))
+          PY
+      - name: Upload compact receipt only
+        uses: actions/upload-artifact@v4
+        with:
+          name: savant-traits-smoke-receipt
+          path: savant_traits_smoke_receipt.json
+          retention-days: 14
