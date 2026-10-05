@@ -22,6 +22,7 @@ from .models import (
     TeamSide,
 )
 from .probability import PAProbabilityProvider, normalize_probabilities
+from .rules import automatic_runner_allowed
 from .transitions import apply_outcome
 
 
@@ -129,6 +130,7 @@ class GameSimulator:
                 batting.profile,
                 batting_side,
                 extra_runner_placed,
+                matchup.game_type,
             )
 
             lineup_index = (
@@ -416,10 +418,12 @@ class GameSimulator:
         batting_team: TeamProfile,
         batting_side: TeamSide,
         placed: set[tuple[int, HalfInning]],
+        game_type: str,
     ) -> None:
         key = (state.inning, state.half)
         if (
-            not self.config.automatic_runner_in_extras
+            not automatic_runner_allowed(game_type)
+            or not self.config.automatic_runner_in_extras
             or state.inning <= self.config.regulation_innings
             or key in placed
             or state.outs != 0
