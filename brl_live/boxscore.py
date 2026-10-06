@@ -1,0 +1,368 @@
+"""Observation-only box scoring of the locked simulator's exact game paths.
+
+No engine random stream, PA probability, runner transition or manager decision is
+changed. BB/HBP and pitch counts are *bookkeeping estimates* sampled from earlier
+terminal PAs on an independent keyed stream. Pitch sequences are not generated.
+"""
+from __future__ import annotations
+from collections import Counter, defaultdict
+from dataclasses import asdict
+from typing import Any
+import hashlib
+import math
+import numpy as np
+import pandas as pd
+from app.safety import Blocked
+from research_lab.game_sim.engine import GameSimulator
+
+BAT = ('PA','AB','H','2B','3B','HR','R','RBI','BB','HBP','K','SF')
+PIT = ('outs','PC','H','R','BB','HBP','K','HR','BF')
+SIDE = ('away','home')
+
+class BookkeepingFit:
+    """Empirical joint (BB/HBP flag, terminal pitch number) distribution.
+
+Fit on earlier dates, never on target-game pitches. First use the pitcher's
+outcome/hand group; back off to pitcher/outcome, then league/outcome/hand, then
+league/outcome when no observations exist. No tuneable mixture weights.
+    """
+    def __init__(self, history: pd.DataFrame, date: str):
+        self.cutoff=date
+        h=history.loc[history.date_key.astype(str).str[:10] < date].copy()
+        if h.empty: raise Blocked('No prior plate appearances for box bookkeeping')
+        if h.date_key.astype(str).str[:10].max() >= date: raise Blocked('Future bookkeeping input')
+        self.max_input_date=str(h.date_key.astype(str).str[:10].max())
+        h['label']=h.outcome.astype(str).str.lower()
+        mapping={'k':'strikeout','1b':'single','2b_3b':'double_triple','hr':'home_run','walk_hbp':'bb_hbp','out':'bip_out'}
+        h['label']=h.label.replace(mapping)
+        h['pitcher']=h.pitcher.astype(int).astype(str)
+        h['hbp']=(h.terminal_event=='hit_by_pitch').astype(int)
+        h['pitch_number']=pd.to_numeric(h.pitch_number,errors='coerce')
+        h=h.loc[h.pitch_number.notna() & (h.pitch_number>=0) & (h.pitch_number%1==0)]
+        # Only genuinely compatible observed counts enter the categorical pools.
+        valid=(h.label!='strikeout')|(h.pitch_number>=3)
+        valid &= (h.label!='bb_hbp')|(h.hbp==1)|(h.terminal_event=='intent_walk')|(h.pitch_number>=4)
+        h=h.loc[valid]
+        self.pools={}; self.fallback_counts=Counter()
+        for keys,tag in [(('pitcher','label','stand'),'poh'),(('pitcher','label'),'po'),
+                         (('label','stand'),'oh'),(('label',),'o')]:
+            for key,rows in h.groupby(list(keys),sort=False):
+                if not isinstance(key,tuple):key=(key,)
+                # Arrays reflect empirical sampling frequencies without smoothing.
+                self.pools[(tag,*key)]=rows[['hbp','pitch_number']].to_numpy(dtype=np.int32)
+    def draw(self,event,rng):
+        pid=str(event['pitcher_id']);label=event['outcome'];hand=event.get('batter_hand','R')
+        for key in [('poh',pid,label,hand),('po',pid,label),('oh',label,hand),('o',label)]:
+            if key in self.pools:
+                a=self.pools[key];self.fallback_counts[key[0]]+=1
+                return tuple(int(v) for v in a[int(rng.integers(len(a)))])
+        raise Blocked('No compatible earlier PA count pool for '+label)
+
+class ObservedSimulator(GameSimulator):
+    """Listen to already-selected scoring runners, without consuming randomness."""
+    def simulate(self,*args,**kwargs):
+        self.scoring_trace=[]
+        result=super().simulate(*args,**kwargs)
+        result.box_scoring_trace=self.scoring_trace
+        return result
+    def _charge_scored_runners(self,scored_runners,lines):
+        self.scoring_trace.append([(r.player_id,r.responsible_pitcher_id,r.automatic) for r in scored_runners])
+        return super()._charge_scored_runners(scored_runners,lines)
+
+def _zeros(fields):return {k:0 for k in fields}
+
+def build_game_box(result,matchup,fit:BookkeepingFit) -> dict[str,Any]:
+    if not result.events or len(result.events)!=len(result.box_scoring_trace):
+        raise Blocked('Complete observed events required for box scoring')
+    batting={s:{p.player_id:dict(player_id=p.player_id,name=p.name,spot=i+1,**_zeros(BAT))
+                for i,p in enumerate(getattr(matchup,s).lineup)} for s in SIDE}
+    pitching={s:{} for s in SIDE};hands={p.player_id:p.bats for s in SIDE for p in getattr(matchup,s).lineup}
+    throws={p.player_id:p.throws for s in SIDE for p in (getattr(matchup,s).starter,*getattr(matchup,s).bullpen)}
+    rng=np.random.default_rng(np.random.SeedSequence([int(result.seed),0x424F58]))
+    pa_counts=Counter();innings={s:{} for s in SIDE};plays=[]
+    for event,scored in zip(result.events,result.box_scoring_trace):
+        e=dict(event);s=e['batting_side'];fs='home' if s=='away' else 'away';pid=str(e['pitcher_id']);bid=str(e['batter_id'])
+        b=batting[s][bid];p=pitching[fs].setdefault(pid,dict(player_id=pid,name=e['pitcher_name'],**_zeros(PIT)))
+        b['PA']+=1;p['BF']+=1;pa_counts[s]+=1
+        o=e['outcome'];e['batter_hand']=('L' if throws[pid]=='R' else 'R') if hands[bid]=='S' else hands[bid];hbp,pc=fit.draw(e,rng);p['PC']+=pc
+        e['estimated_pitches']=pc
+        hit=o in ('single','double_triple','home_run');sf='sacrifice fly' in e['description']
+        b['AB']+=int(o!='bb_hbp' and not sf)
+        b['SF']+=int(sf)
+        if o=='bb_hbp':
+            k='HBP' if hbp else 'BB';b[k]+=1;p[k]+=1
+            e['box_outcome']='hit_by_pitch' if hbp else 'walk'
+        elif hit:
+            b['H']+=1;p['H']+=1
+            k='HR' if o=='home_run' else ('3B' if 'tripled.' in e['description'] else '2B')
+            if o!='single':b[k]+=1
+            if o=='home_run':p['HR']+=1
+            e['box_outcome']='triple' if k=='3B' else 'double' if o=='double_triple' else o
+        elif o=='strikeout': b['K']+=1;p['K']+=1;e['box_outcome']='strikeout'
+        else:e['box_outcome']=o
+        p['outs']+=e['outs_after']-e['outs_before']
+        # Report R for automatic runners against the active pitcher, without
+        # changing the legacy manager's own run totals or its subsequent choices.
+        for runner,responsible,automatic in scored:
+            batting[s][str(runner)]['R']+=1
+            charged=pid if responsible is None else str(responsible)
+            if charged not in pitching[fs]:raise Blocked('Missing responsible pitcher in box score')
+            pitching[fs][charged]['R']+=1
+        rbi=e['runs_scored'] if hit or o=='bb_hbp' or sf else 0
+        b['RBI']+=rbi;e['rbi']=rbi;e['scoring_players']=[str(x[0]) for x in scored]
+        inning=str(e['inning']);line=innings[s].setdefault(inning,{'R':0,'H':0})
+        line['R']+=e['runs_scored'];line['H']+=int(hit)
+        plays.append({k:e[k] for k in ('inning','half','batter_id','batter_name','pitcher_id','pitcher_name',
+            'box_outcome','description','outs_before','outs_after','runs_scored','away_score','home_score',
+            'bases_before','bases_after','scoring_players','rbi','estimated_pitches')})
+    for s in SIDE:
+        opp='home' if s=='away' else 'away';rows=list(batting[s].values());ps=list(pitching[opp].values())
+        score=getattr(result,s+'_score')
+        if sum(x['R'] for x in rows)!=score or sum(x['R'] for x in ps)!=score:raise Blocked('Player run accounting failed')
+        if sum(x['H'] for x in rows)!=sum(x['H'] for x in ps):raise Blocked('Hit accounting failed')
+        if sum(x['PA'] for x in rows)!=sum(x['BF'] for x in ps):raise Blocked('PA/BF accounting failed')
+        for k in ('BB','HBP','K','HR'):
+            if sum(x[k] for x in rows)!=sum(x[k] for x in ps):raise Blocked(k+' accounting failed')
+        for row in rows:
+            if row['AB']+row['BB']+row['HBP']+row['SF']!=row['PA']:raise Blocked('PA/AB accounting failed')
+        for row in ps:
+            legacy=result.pitcher_lines[row['player_id']]
+            for new,old in [('outs','outs_recorded'),('H','hits_allowed'),('K','strikeouts'),('HR','home_runs'),('BF','batters_faced')]:
+                if row[new]!=legacy[old]:raise Blocked('Legacy pitcher line mismatch: '+new)
+            if row['BB']+row['HBP']!=legacy['walks_hbp']:raise Blocked('Legacy BB/HBP mismatch')
+    return {'seed':int(result.seed),'score':{s:getattr(result,s+'_score') for s in SIDE},
+            'innings':innings,'batting':{s:list(batting[s].values()) for s in SIDE},
+            'pitching':{s:list(pitching[s].values()) for s in SIDE},'plays':plays}
+
+def _distribution(counter,n):
+    return {'n':n,'counts':[[int(k),int(v)] for k,v in sorted(counter.items())]}
+
+class BoxAccumulator:
+    def __init__(self,matchup):
+        self.matchup=matchup;self.n=0;self.hist={s:{'batting':{},'pitching':{}} for s in SIDE}
+        self.innings={s:defaultdict(lambda:Counter()) for s in SIDE};self.score_pairs=[];self.seeds=[]
+        for s in SIDE:
+            t=getattr(matchup,s)
+            for i,p in enumerate(t.lineup):self.hist[s]['batting'][p.player_id]={'name':p.name,'spot':i+1,'stats':{k:Counter() for k in BAT}}
+            for i,p in enumerate((t.starter,*t.bullpen)):self.hist[s]['pitching'][p.player_id]={'name':p.name,'role':p.role,'order':i,'appeared':0,'stats':{k:Counter() for k in PIT}}
+    def add(self,box):
+        self.n+=1;self.score_pairs.append((box['score']['away'],box['score']['home']));self.seeds.append(box['seed'])
+        for s in SIDE:
+            for kind,fields in [('batting',BAT),('pitching',PIT)]:
+                index={r['player_id']:r for r in box[kind][s]}
+                for pid,agg in self.hist[s][kind].items():
+                    row=index.get(pid,_zeros(fields))
+                    if kind=='pitching':agg['appeared']+=int(pid in index)
+                    for k in fields:agg['stats'][k][row[k]]+=1
+            for inning,values in box['innings'][s].items():self.innings[s][int(inning)].update(values)
+    def finish(self):
+        if self.n!=10000:raise Blocked('Box projections require 10,000 finished worlds')
+        result={'n_simulations':self.n,'teams':{},'line_score':{},'sample_selection':'modal joint score, then four fixed world indices','samples':[]}
+        for s in SIDE:
+            result['teams'][s]={}
+            for kind,fields in [('batting',BAT),('pitching',PIT)]:
+                result['teams'][s][kind]=[]
+                for pid,v in self.hist[s][kind].items():
+                    row={'player_id':pid,**{k:x for k,x in v.items() if k not in ('stats','appeared')},
+                         'means':{k:sum(value*count for value,count in v['stats'][k].items())/self.n for k in fields},
+                         'distributions':{k:_distribution(v['stats'][k],self.n) for k in fields}}
+                    if kind=='batting':
+                        row['hit_probability']=1-v['stats']['H'].get(0,0)/self.n
+                        row['hr_probability']=1-v['stats']['HR'].get(0,0)/self.n
+                    else:
+                        row['appearance_probability']=v['appeared']/self.n
+                        row['means']['IP']=row['means']['outs']/3
+                    result['teams'][s][kind].append(row)
+            result['line_score'][s]={str(i):{k:v.get(k,0)/self.n for k in ('R','H')} for i,v in sorted(self.innings[s].items())}
+        counts=Counter(self.score_pairs);mean=np.mean(self.score_pairs,axis=0)
+        modal=min(counts,key=lambda p:(-counts[p],float(np.sum((np.array(p)-mean)**2)),p))
+        typical=next(i for i,p in enumerate(self.score_pairs) if p==modal)
+        selected=[typical]
+        for i in (0,2500,5000,7500,9999):
+            if i not in selected:selected.append(i)
+            if len(selected)==5:break
+        result['sample_indices']=selected
+        result['typical_score_frequency']=counts[modal]/self.n
+        return result
+
+def run_box_worlds(engine,matchup,history,date,seeds):
+    fit=BookkeepingFit(history,date)
+    sim=ObservedSimulator(engine.provider,config=engine.config,manager_policy=engine.manager)
+    accumulator=BoxAccumulator(matchup);results=[]
+    for seed in seeds:
+        result=sim.simulate(matchup,int(seed),record_events=True)
+        if result.winner=='tie' or result.ended_by_plate_appearance_cap:raise Blocked('Unfinished box world')
+        accumulator.add(build_game_box(result,matchup,fit))
+        result.events=[];del result.box_scoring_trace
+        results.append(result)
+    payload=accumulator.finish()
+    for j,i in enumerate(payload['sample_indices']):
+        sample=build_game_box(sim.simulate(matchup,int(seeds[i]),record_events=True),matchup,fit)
+        if tuple(sample['score'][s] for s in SIDE)!=accumulator.score_pairs[i]:raise Blocked('Sample seed parity failed')
+        sample['world_index']=i;sample['typical']=j==0
+        payload['samples'].append(sample)
+    payload['bookkeeping']={'method':'earlier empirical joint BB/HBP and terminal pitch-number sampling',
+        'input_max_date':fit.max_input_date,'cutoff_exclusive':date,'sampling_stream':'independent of engine',
+        'pitch_counts_are_estimates':True,'pitch_sequences_generated':False,
+        'counts_do_not_influence_removal':True,'fallback_tiers_used':dict(fit.fallback_counts)}
+    return results,payload
+
+
+def fair_crps(distribution,observed):
+    n=distribution['n'];pairs=distribution['counts']
+    if n<2 or sum(c for _,c in pairs)!=n:raise Blocked('Incomplete count distribution')
+    ordered=sorted(pairs);absolute=sum(c*abs(x-observed) for x,c in ordered)/n
+    cumulative=0;weighted=0;pair_sum=0
+    for x,c in ordered:
+        pair_sum+=c*(x*cumulative-weighted);cumulative+=c;weighted+=x*c
+    # Unbiased finite-ensemble score: exclude a draw's distance from itself.
+    return absolute-pair_sum/(n*(n-1))
+
+def corrected_brier(distribution,observed):
+    n=distribution['n'];p=sum(c for x,c in distribution['counts'] if x>0)/n
+    return (p-int(observed>0))**2-p*(1-p)/(n-1)
+
+
+def parse_actual_box(feed,game_pk,fetched_at):
+    from app.results import parse_final
+    result=parse_final(feed,game_pk,fetched_at)
+    if result['first_pitch_observed_at'] is None:raise Blocked('First pitch unavailable for player scoring')
+    live=feed['liveData'];out={'game_pk':game_pk,'fetched_at':fetched_at,
+        'first_pitch_observed_at':result['first_pitch_observed_at'],'team_ids':result['team_ids'],
+        'score':{s:result[s] for s in SIDE},'batting':{},'pitching':{},'innings':{s:{} for s in SIDE}}
+    for item in live['linescore']['innings']:
+        for s in SIDE:
+            if 'runs' in item.get(s,{}):out['innings'][s][str(item['num'])]={k:int(item[s][v]) for k,v in [('R','runs'),('H','hits')]}
+    for s in SIDE:
+        team=live['boxscore']['teams'][s];bat=[];pit=[]
+        for pid in team['batters']:
+            p=team['players']['ID'+str(pid)];stats=p.get('stats',{}).get('batting',{})
+            if not stats:continue
+            mapping={'PA':'plateAppearances','AB':'atBats','H':'hits','2B':'doubles','3B':'triples','HR':'homeRuns','R':'runs','RBI':'rbi','BB':'baseOnBalls','HBP':'hitByPitch','K':'strikeOuts','SF':'sacFlies'}
+            # Missing fields are unavailable, never fabricated as zero.
+            row={'player_id':str(pid),'name':p['person']['fullName'],'spot':int(p.get('battingOrder','0'))//100,
+                 **{k:int(stats[v]) if v in stats else None for k,v in mapping.items()}}
+            bat.append(row)
+        for pid in team['pitchers']:
+            p=team['players']['ID'+str(pid)];stats=p.get('stats',{}).get('pitching',{})
+            if not stats:continue
+            mapping={'PC':'numberOfPitches','H':'hits','R':'runs','BB':'baseOnBalls','HBP':'hitBatsmen','K':'strikeOuts','HR':'homeRuns','BF':'battersFaced'}
+            ip=str(stats['inningsPitched']).split('.')
+            if len(ip)!=2 or ip[1] not in ('0','1','2'):raise Blocked('Invalid baseball innings notation')
+            row={'player_id':str(pid),'name':p['person']['fullName'],'outs':3*int(ip[0])+int(ip[1]),
+                 **{k:int(stats[v]) if v in stats else None for k,v in mapping.items()}}
+            pit.append(row)
+        out['batting'][s]=bat;out['pitching'][s]=pit
+        for k,official in [('R','runs'),('H','hits')]:
+            if any(row[k] is None for row in bat+pit):raise Blocked('Incomplete actual totals')
+            if sum(row[k] for row in bat)!=int(team['teamStats']['batting'][official]):raise Blocked('Actual batting sum mismatch')
+            if sum(v[k] for v in out['innings'][s].values())!=sum(row[k] for row in bat):raise Blocked('Actual inning sum mismatch')
+    for s in SIDE:
+        opp='home' if s=='away' else 'away'
+        for k in ('R','H','BB','K','HR'):
+            if all(r[k] is not None for r in out['pitching'][s]+out['batting'][opp]):
+                if sum(r[k] for r in out['pitching'][s])!=sum(r[k] for r in out['batting'][opp]):raise Blocked('Actual opposite-side totals mismatch')
+    return out
+
+def score_player_boxes(boxes,publications,actuals):
+    from app.common import timestamp,content_hash
+    import re
+    per_version=[];excluded={};latest={}
+    for ident,box in boxes.items():
+        actual=actuals.get(str(box['game_pk']))
+        if actual is None:continue
+        pub=publications.get(ident)
+        if (not pub or not re.fullmatch(r'[0-9a-f]{40}',str(pub.get('commit','')))
+                or pub.get('box_sha256')!=content_hash(box)
+                or not timestamp(box['saved_at'])<=timestamp(pub['published_at'])<timestamp(actual['first_pitch_observed_at'])):
+            excluded[ident]='Player distributions were not publicly saved before first pitch';continue
+        if box['team_ids']!=actual['team_ids']:
+            excluded[ident]='Player actual team mismatch';continue
+        rows=[]
+        for s in SIDE:
+            for kind,metrics in [('batting',('H','HR','K')),('pitching',('K','outs'))]:
+                actual_index={r['player_id']:r for r in actual[kind][s]}
+                for p in box['teams'][s][kind]:
+                    a=actual_index.get(p['player_id'])
+                    for metric in metrics:
+                        # In a FINAL, complete MLB participant listing, absent
+                        # projected participants have zero realized opportunity.
+                        obs=0 if a is None else a[metric]
+                        if obs is None:continue
+                        d=p['distributions'][metric]
+                        rows.append({'side':s,'kind':kind,'player_id':p['player_id'],'name':p['name'],
+                                     'metric':'IP' if metric=='outs' else metric,
+                                     'expected':p['means'][metric]/(3 if metric=='outs' else 1),
+                                     'actual':obs/(3 if metric=='outs' else 1),
+                                     'crps':fair_crps(d,obs)/(3 if metric=='outs' else 1),
+                                     'event_brier':corrected_brier(d,obs) if kind=='batting' and metric in ('H','HR') else None})
+        version={'forecast_id':ident,'game_pk':box['game_pk'],'saved_at':box['saved_at'],'rows':rows}
+        per_version.append(version)
+        if box['game_pk'] not in latest or latest[box['game_pk']]['saved_at']<box['saved_at']:latest[box['game_pk']]=version
+    groups=defaultdict(list)
+    for game in latest.values():
+        for row in game['rows']:groups[(row['kind'],row['metric'])].append(row)
+    aggregate=[{'kind':kind,'metric':metric,'n_player_games':len(rows),'n_games':len(latest),
+                'crps':sum(r['crps'] for r in rows)/len(rows),
+                'event_brier':sum(r['event_brier'] for r in rows)/len(rows) if rows[0]['event_brier'] is not None else None}
+               for (kind,metric),rows in groups.items()]
+    return {'n_games':len(latest),'aggregates':aggregate,'versions':per_version,'excluded':excluded,
+            'policy':'Latest publicly saved pregame box per game; unconditional zero for nonappearance',
+            'uncertainty':'Players in a game are dependent; no independent-player significance claim'}
+
+
+def bookkeeping_history_from_cache(cache,index,origin):
+    """Read actual pitch events, not the PA corpus's normalized pitch_number.
+
+The seed corpus sets pitch_number=1 for all terminal PAs and therefore cannot
+support pitch-count estimation. Official prior-date playEvents supply counts.
+    """
+    from brl_live.history_refresh import Source,previous_day
+    from research_lab.pa_model.outcomes import map_event
+    from app.common import timestamp
+    rows=[];seen=set()
+    for date,ref in sorted(index['days'].items()):
+        if date>previous_day(origin).isoformat():raise Blocked('Future bookkeeping date')
+        day=cache.load_day(ref['id'])
+        for value in day['sources']:
+            source=Source.from_dict(value);source.check(origin)
+            if '/feed/live' not in source.url or '?' in source.url:continue
+            import json
+            feed=json.loads(source.body)
+            if feed['gameData']['status']['abstractGameState']!='Final':continue
+            for play in feed['liveData']['plays']['allPlays']:
+                outcome=map_event(play.get('result',{}).get('eventType',''))
+                if outcome is None:continue
+                if not play['about']['isComplete'] or timestamp(play['about']['endTime'])>timestamp(source.finished_at):raise Blocked('Unresolved bookkeeping label')
+                key=(feed['gamePk'],play['about']['atBatIndex'])
+                if key in seen:continue
+                seen.add(key)
+                m=play['matchup'];count=sum(e.get('isPitch') is True for e in play.get('playEvents',[]))
+                rows.append({'date_key':feed['gameData']['datetime']['officialDate'],
+                    'outcome':outcome,'terminal_event':play['result']['eventType'],
+                    'pitcher':int(m['pitcher']['id']),'stand':m['batSide']['code'],
+                    'pitch_number':count,'available_at':source.finished_at})
+    if not rows:raise Blocked('No prior official pitch-count observations')
+    return pd.DataFrame(rows)
+
+
+def validate_box_payload(box):
+    from app.common import timestamp
+    import re
+    if box.get('schema')!='brl.box-forecast.v1' or box.get('n_simulations')!=10000:raise Blocked('Invalid box schema/count')
+    if len(box.get('samples',[]))!=5 or len({s['seed'] for s in box['samples']})!=5:raise Blocked('Five distinct sample worlds required')
+    if not timestamp(box['forecast_origin'])<=timestamp(box['saved_at']):raise Blocked('Box timing invalid')
+    if box['bookkeeping']['input_max_date']>=box['date']:raise Blocked('Future box bookkeeping input')
+    for side in SIDE:
+        if len(box['teams'][side]['batting'])!=9:raise Blocked('Nine projected lineup spots required')
+        for kind,fields in [('batting',BAT),('pitching',PIT)]:
+            rows=box['teams'][side][kind]
+            if len({r['player_id'] for r in rows})!=len(rows):raise Blocked('Duplicate box player')
+            for row in rows:
+                for metric in fields:
+                    dist=row['distributions'][metric];pairs=dist['counts']
+                    if dist['n']!=10000 or sum(c for _,c in pairs)!=10000:raise Blocked('Incomplete player distribution')
+                    if len(set(x for x,_ in pairs))!=len(pairs) or any(type(x)is not int or type(c)is not int or x<0 or c<=0 for x,c in pairs):raise Blocked('Invalid histogram bin')
+                    mean=sum(x*c for x,c in pairs)/10000
+                    if not math.isfinite(row['means'][metric]) or abs(mean-row['means'][metric])>1e-10:raise Blocked('Box means differ from saved distribution')
+    return box
