@@ -1,0 +1,51 @@
+{
+  "schema": "brl.experiment-ledger.v1",
+  "checkpoint": "BRL_PRIVATE_HISTORY_REFRESH_20261006",
+  "deployment_status": "NOT_DEPLOYED",
+  "live_model_parameters_changed": false,
+  "game_rules_changed": false,
+  "accuracy_upgrade_adopted": false,
+  "live_forecasts_created": 0,
+  "live_scored_games": 0,
+  "scores": {"model_brier": null, "fair_team_baseline_brier": null, "market_brier": null},
+  "score_direction": "candidate minus comparator; negative is better; null means not measured",
+  "evaluation_policy": {
+    "initial_2025_fit_and_tuning": "through 2024 only; independent PA and starter artifacts; do not replace the live model",
+    "2025_after_selection": "Once 2025 results are used to select additional changes, those results are development, not an untouched confirmation set.",
+    "confirmation": "Separate prospective forecasts actually published before first pitch.",
+    "adoption_gate": "Time-valid matched-game corrected Brier and log-loss differences, both with 95% intervals wholly below zero, with the evaluation role reported honestly."
+  },
+  "experiments": [
+    {
+      "id": "BRL-HISTORY-001",
+      "idea": "Official-reconciled daily history with encrypted persistence",
+      "type": "input infrastructure, not fitted model upgrade",
+      "decision": "TESTED_NOT_DEPLOYED",
+      "evidence": {"synthetic_tests_passed": 41, "dates_checked": 9, "appended_postseason_PA": 1228, "combined_PA": 734556, "historical_smoke_worlds": 10000, "unresolved_worlds": 0, "full_vs_cutoff_filtered_probability_max_difference": 0.0, "original_history_unchanged": true},
+      "delta_brier_2025": null,
+      "delta_log_loss_2025": null,
+      "corrected_source_package": "BRL_Private_History_Refresh_Checkpoint.zip in the conversation; the initial branch parser predates the corrected truncated_pa handling"
+    },
+    {
+      "id": "BRL-HISTORY-001A",
+      "idea": "Treat every non-null Statcast event as a completed batter outcome",
+      "type": "rejected parsing assumption",
+      "decision": "DROPPED",
+      "evidence": "A truncated_pa record corresponded to an official caught-stealing play, not a completed batter PA. The corrected parser excludes that non-PA and still requires exact completed PA identities, participants, outcomes and box-score counts.",
+      "delta_brier_2025": null,
+      "delta_log_loss_2025": null,
+      "score_reason": "Rejected at data-contract validation before model evaluation."
+    },
+    {
+      "id": "BRL-2025-PRELOCK-001",
+      "idea": "Through-2024 PA/starter copies and all 2430 2025 games",
+      "type": "benchmark prerequisite",
+      "decision": "NOT_STARTED",
+      "delta_brier_2025": null,
+      "delta_log_loss_2025": null
+    }
+  ],
+  "source_audit_runs": [37500900536, 37502101448, 37502496052],
+  "source_evidence_privacy": "Raw audit captures transported encrypted; no plaintext player data or key published.",
+  "remaining_blocker": "The encrypted runtime release still has no asset at the last repository read. First live cloud forecast, Pages display and final scoring remain unverified. The tested refresh source overlay is not connected to the public bootstrap yet."
+}
