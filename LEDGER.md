@@ -2,11 +2,15 @@
 
 Missing metrics mean **not measured**. Operational improvements are not model-accuracy gains. Preserve failures and all model-selection attempts. The through-2024-model/full-2025 replay has not been run; previous 2025 inspection and any repeated selection must be disclosed.
 
-## Current checkpoint — October 6, 2026, 5:40 p.m. Eastern
+## Current checkpoint — October 6, 2026, 6:59 p.m. Eastern
 
-Two live games, seven preserved forecast versions, two complete box projections, 10,000 completed worlds and five full examples per box. Zero final scored game/player forecasts. Model Brier: not yet. Fair baseline Brier: not yet. Market Brier: not yet. First schedule-triggered forecasting is now observed. Phone and desktop deployed box-page checks passed. No accuracy upgrade was adopted.
+The edge measurement track is deployed at `f5de97fd7ddf3494ed70d75046ceef24b61b0e7a` (PR #10). Five hypotheses are registered, none fitted or adopted. How close and Track record now compare seven target families against simple pregame-frozen baselines. Cloud run `37543284982` completed one new 10,000-world Brewers–Padres forecast with those baselines, saved 6:57:21 p.m. Eastern and published 6:57:27 before its 9:30 p.m. scheduled start. Eight forecast versions across two games and three box versions remain preserved. Already-started Dodgers–Braves was not given a retroactive baseline. Zero final scored game/player/skill forecasts at the observed checkpoint; all three headline Briers remain not yet.
 
-## Box-score sprint
+Normal deployed HTTPS checks passed at 390px and 1440px in run `37543886020`; 84 focused tests passed both locally and in isolated cloud run `37543029616` (overlapping counts, do not sum). Complete machine evidence: `research/edge_track/DEPLOYMENT_20261006.json`. A future score, first-pitch audit or accuracy improvement is not established by successful publication.
+
+## Box-score sprint — earlier checkpoint retained
+
+At 5:40 p.m. Eastern: two live games, seven preserved forecast versions, two complete box projections, 10,000 completed worlds and five full examples per box. Zero final scored game/player forecasts. First schedule-triggered forecasting was observed. Phone and desktop deployed box-page checks passed. No accuracy upgrade was adopted.
 
 | ID | Attempt | Disposition and evidence | Delta corrected Brier, 2025 | Delta corrected log loss, 2025 |
 |---|---|---|---|---|
@@ -18,7 +22,7 @@ Two live games, seven preserved forecast versions, two complete box projections,
 | BOX-06 | Cloud box forecasting and publication | Run `37532752518` succeeded. Dodgers–Braves box public at 5:25:25 p.m. Eastern before its 6 p.m. start; Brewers–Padres box public at 5:29:45 before 9:30 p.m. Each has 10,000 completed worlds. Seven total versions preserved. History through October 5. | Not run | Not run |
 | BOX-07 | Normal HTTPS phone/desktop verification | Workflow `37534342077`, corrected second attempt, job `112514427447`, artifact `11445552293`, passed. 390px/1440px screenshots, both actual font families loaded, text >=16px, tap heights >=44px, at most one status note, no sideways overflow or JS errors. All five sample games opened. | Not run | Not run |
 | BOX-08 | First isolated cloud regression execution | Initial failure: dashboard pytest config imported public app.py, causing ModuleNotFoundError for Flask. Fixed runtime isolation with `-c /dev/null --import-mode=importlib`; 47 focused tests passed, with no assertion weakened. | Not run | Not run |
-| BOX-09 | Font verification | Initial browser check failed `Requested fonts unavailable` because it checked an unused default Barlow weight. Explicitly loaded/verifed body400 and heading700 FontFace objects, retained strict font requirement and added every-view geometry tests. One corrected cloud rerun passed. | Not run | Not run |
+| BOX-09 | Font verification | Initial browser check failed Requested fonts unavailable because it checked an unused default Barlow weight. Explicitly loaded/verified body400 and heading700 FontFace objects, retained strict font requirement and added every-view geometry tests. One corrected cloud rerun passed. | Not run | Not run |
 | BOX-10 | Final public-output audit | Both box hashes/publication times verified; all player histograms count 10,000; sample seeds distinct; team/inning/batting/pitching totals agree. No embedded fonts, private inputs, runtime or keys in the three-file public artifact. | Not run | Not run |
 | OPS-20261006-CRON | Actual schedule-triggered execution | Run `37532008456` event=schedule generated two pregame win forecasts and published. This preceded the box rollout; it is not the box run. Future delivery is still subject to GitHub scheduling delays. | Not run | Not run |
 
@@ -41,7 +45,7 @@ Two live games, seven preserved forecast versions, two complete box projections,
 | EVAL-2025-FREEZE | Through-2024 PA/starter copies and full2025 replay | Planned. Live lock used2025 calibration; cannot be the pre2025 lock. | Not run | Not run |
 | MODEL-BACKLOG | Fitted engine/context ideas | Not yet tested on required frozen replay. Register each separately. | Not run | Not run |
 
-At the earlier 3:58 p.m. Eastern deployed check there were three versions/two games/zero scored games and no witnessed cron run. The current checkpoint above supersedes those counts, without altering the historical receipt. Prior-day finals without forecasts never enter the prediction scoreboard.
+At the earlier 3:58 p.m. Eastern deployed check there were three versions/two games/zero scored games and no witnessed cron run. Later checkpoints supersede those counts without altering historical receipts. Prior-day finals without forecasts never enter the prediction scoreboard.
 
 ## Historical diagnostic, not the main scoreboard
 
@@ -50,7 +54,6 @@ September 27, 2026: 14 matched games and140,000 completed paths. Previously reco
 ## Required entry for model experiments
 
 Record ID and timestamp before scoring, hypothesis, source vintage/coverage, training/tuning windows, current/candidate hashes, fixed game manifest, both paired deltas and95% intervals, numerical MCSE separately, disposition/reason and later reuse of evaluation results. A model is kept only after the declared gate; otherwise preserve the current model and mark the candidate dropped/deferred. Repeated selection on2025 makes it development despite through2024 fitting.
-
 
 ## Edge research track — registered October 6, 2026
 
@@ -64,6 +67,14 @@ No edge candidate has been fitted, evaluated on the frozen replay, or enabled in
 | EDGE-04 | Bullpen availability and BCI | Registered; not fitted | Not run | Not run | Not run | Not run | Not run | Not run | Not run | Not run / not run |
 | EDGE-05 | In-game updating | Deferred to separate live-state lane | Not run | Not run | Not run | Not run | Not run | Not run | Not run | Not run / not run |
 
-Measurement work: complete-world team/total distributions; pregame-frozen simple pitching/NB baselines; seven paired skill rows in How close and Track record; retained batting detail; per-metric date-block report utility. These are reporting/data-contract changes, not claimed accuracy gains. Source replay check used 31 earlier complete games (62 team boxes), produced 19 named pitcher comparator distributions, and changed no saved forecast. The initial live baseline's recent cache support is disclosed.
+Measurement work: complete-world team/total distributions; pregame-frozen simple pitching/NB baselines; seven paired skill rows in How close and Track record; retained batting detail; per-metric date-block report utility. These are reporting/data-contract changes, not claimed accuracy gains. The local source check used 31 earlier complete games (62 team boxes), produced 19 named pitcher comparator distributions, and changed no saved forecast. The initial live baseline's recent cache support is disclosed.
 
-Local scoped suite: 84 tests passed including existing box and public-check tests. This is one combined count, not an addition of overlapping reruns. Full local 10,000-world rerun was not executed in this sprint: streaming process launch was unsupported (`StreamingExecNotEnabledContainerError`); the follow-on process found its harness file absent because that first command never ran. No further repeat of that full-run harness was attempted. The fix is to write/check the harness before launching a nonstreaming process. No claim of new whole-vector parity is made here; the previous box sprint's evidence remains separate. Cloud installation, new prospective execution and deployed screenshots must be read from their new receipts before being claimed.
+| ID | Measurement work | Disposition and observed evidence | 2025 effects across all targets |
+|---|---|---|---|
+| EDGE-MEASURE-01 | Seven-target proper scoring and frozen simple baselines | Kept as measurement instrumentation, not a model upgrade. Model count distributions use fair finite-ensemble CRPS; fitted PMFs use exact-distribution scores. All eligible pregame relief candidates remain, including zero appearances. Game-balanced summaries and paired date-block report utility implemented. | Not run |
+| EDGE-MEASURE-02 | Cloud tests and source verification | 84 combined tests passed locally and in cloud run37543029616;12 final source digests matched; Python and JS compilation passed. CLI synthetic arithmetic oracle passed but supplies no baseball-accuracy evidence. Pytest cache warning under /dev was nonfatal. | Not run |
+| EDGE-MEASURE-03 | Live paired-target publication | Run37543284982 read/authenticated runtime, reused October5 history, assembled31 complete prior games for baselines, completed one new10000-world Brewers–Padres forecast. v4 public6:57:27p.m. Eastern before9:30p.m. Existing8forecast/3box versions retained. Publication32770ae6a5179f328019e026ea77d6d8cfd14f68. No post-start Dodgers–Braves backfill. | Not run |
+| EDGE-MEASURE-04 | Phone-facing How close and Track record | Kept and deployed. Run37543886020 passed normal HTTPS at390/1440, fonts/16px text/44px taps/no overflow/no JS errors, seven-target views and five sample-game openings. How tab explains score scales, sparse baseline support and separate in-game lane. No scored finals yet. | Not run |
+| EDGE-MEASURE-05 | Separate local full-repeat harness | Stopped after two setup failures: StreamingExecNotEnabledContainerError, then missing run_real_integration.py because the first command never ran. Fix: write and verify the file before a future nonstreaming launch. No new full-vector parity claim; the successful cloud forecast used a different input case. | Not run |
+
+No predictive candidate was kept or dropped on accuracy this sprint. All five remain registered/unfitted. Frozen through-2024 models, full2025 replay, first final paired skill scores and conditional pitch sequences remain pending. All exact cloud timestamps, identifiers and pending boundaries are in `research/edge_track/DEPLOYMENT_20261006.json`.
