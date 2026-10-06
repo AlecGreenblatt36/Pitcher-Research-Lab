@@ -1,6 +1,7 @@
 """Prediction-only rendering with explicit accepted history coverage."""
 from html import escape
 from pathlib import Path
+import json
 from cloud.page import render_page as original_render
 
 OLD = ('The locked public-data history in this runtime ends September 27, 2026. '
@@ -9,7 +10,19 @@ OLD = ('The locked public-data history in this runtime ends September 27, 2026. 
        'on each scheduled check. An automatic Statcast-history refresh is not implemented in this checkpoint.')
 
 def render_page(ledger, scores, destination, setup_message=None):
-    path = original_render(ledger, scores, destination, setup_message)
+    # Past results without a forecast belong in the record, not as unnamed
+    # "Waiting for forecast" cards on today's slate. This is display-only:
+    # preserve all ledger versions/results in the public JSON and scorebook.
+    view = dict(ledger)
+    if ledger.get('date'):
+        view['status'] = {pk: status for pk, status in ledger.get('status', {}).items()
+                          if status.get('date') == ledger['date']}
+    path = original_render(view, scores, destination, setup_message)
+    data_path = Path(destination) / 'predictions.json'
+    public_data = json.loads(data_path.read_text(encoding='utf-8'))
+    public_data['status'] = ledger.get('status', {})
+    from app.common import canonical
+    data_path.write_bytes(canonical(public_data))
     coverages = sorted({f['history_through'] for f in ledger.get('forecasts', {}).values()})
     used = ', '.join(escape(day) for day in coverages) or 'No forecast saved'
     replacement = ('History used in the saved forecasts runs through: ' + used + '. '

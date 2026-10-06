@@ -1,0 +1,41 @@
+name: BRL public phone check
+on:
+  workflow_run:
+    workflows: [BRL live slate]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: brl-public-phone-check
+  cancel-in-progress: false
+jobs:
+  check:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install public browser-check dependencies
+        run: python -m pip install --disable-pip-version-check playwright==1.57.0 pytest==9.0.2
+      - name: Test public-check logic without private runtime
+        run: python -m pytest brl_live_tests/test_public_check.py -q
+      - name: Install ordinary Chromium browser
+        run: python -m playwright install --with-deps chromium
+      - name: Check the deployed page on desktop and phone
+        run: python tools/check_brl_phone_page.py --output phone-check
+      - name: Save public-only verification receipt and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: brl-public-phone-check
+          path: phone-check/
+          retention-days: 7
+          if-no-files-found: error
