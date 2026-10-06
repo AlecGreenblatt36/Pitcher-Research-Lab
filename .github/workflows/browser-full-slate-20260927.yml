@@ -1,0 +1,57 @@
+name: BRL fixed daily slate source capture
+on:
+  push:
+    branches: [feature/browser-source-check-20261006]
+    paths: [.github/workflows/browser-full-slate-20260927.yml]
+permissions:
+  contents: read
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Capture complete fixed-date slate with unchanged cutoff
+        run: |
+          python - <<'PY'
+          import sys,json,datetime
+          sys.path.insert(0,'tools')
+          from probe_official_source import fetch,OUT,receipts
+          date='2026-09-27'
+          utc=datetime.timezone.utc
+          schedule=fetch('slate_schedule','https://statsapi.mlb.com/api/v1/schedule?sportId=1&season=2026&date='+date)
+          if schedule is None: raise SystemExit('No official slate')
+          games=[g for d in schedule['dates'] if d['date']==date for g in d['games'] if g['gameType']=='R']
+          if not 1<=len(games)<=31: raise SystemExit('Unexpected slate size')
+          if len({g['gamePk'] for g in games})!=len(games): raise SystemExit('Duplicate game ID')
+          index={'date':date,'selection':'Every regular-season game on official fixed-date slate; no score-based exclusions','cutoff_rule':'scheduled gameDate minus ten minutes; latest timestamp at or before cutoff; no alternate cutoff search','prospective':False,'games':[]}
+          for g in sorted(games,key=lambda x:x['gamePk']):
+              pk=g['gamePk'];url=f'https://statsapi.mlb.com/api/v1.1/game/{pk}/feed/live'
+              origin=datetime.datetime.fromisoformat(g['gameDate'].replace('Z','+00:00'))-datetime.timedelta(minutes=10)
+              row={'game_pk':pk,'date':date,'forecast_origin':origin.isoformat(),'scheduled_start':g['gameDate'],'away_id':g['teams']['away']['team']['id'],'home_id':g['teams']['home']['team']['id']}
+              try:
+                  stamps=fetch(f'{pk}_timestamps',url+'/timestamps')
+                  if not isinstance(stamps,list): raise ValueError('No timestamp array')
+                  before=[s for s in stamps if datetime.datetime.strptime(s,'%Y%m%d_%H%M%S').replace(tzinfo=utc)<=origin]
+                  if not before: raise ValueError('No timestamp at fixed cutoff')
+                  code=max(before);row['timecode']=code;name=f'{pk}_fixed_pregame_{code}';row['pregame_name']=name
+                  pre=fetch(name,url+'?timecode='+code)
+                  if pre is None: raise ValueError('Pregame request failed')
+                  if pre.get('gamePk')!=pk or pre.get('metaData',{}).get('timeStamp')!=code: raise ValueError('Pregame identity/timecode mismatch')
+                  row['source_status']='CAPTURED_PENDING_LOCAL_VALIDATION'
+              except Exception as e:
+                  row['source_status']='BLOCKED';row['reason']=type(e).__name__+': '+str(e)
+              final=fetch(f'{pk}_current',url)
+              row['result_source_status']='RETRIEVED' if final is not None else 'FAILED'
+              index['games'].append(row)
+              (OUT/'slate_index.json').write_text(json.dumps(index,indent=2))
+              (OUT/'receipt.json').write_text(json.dumps({'scope':'Public official slate inputs/results only; no model, simulation or accuracy claim','requests':receipts},indent=2))
+          print(json.dumps({'games':len(index['games']),'captured':sum(g['source_status']=='CAPTURED_PENDING_LOCAL_VALIDATION' for g in index['games'])}))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: official-full-slate-20260927
+          path: source_probe/
+          retention-days: 2
+          if-no-files-found: error
