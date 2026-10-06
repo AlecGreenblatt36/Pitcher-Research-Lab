@@ -1,0 +1,100 @@
+name: BRL box-score patch verification
+on:
+  push:
+    branches: [feature/box-score-sprint-20261006]
+    paths: [.github/workflows/brl-box-install.yml]
+permissions:
+  contents: write
+concurrency:
+  group: brl-box-score-install
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/box-score-sprint-20261006
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Reconstruct checksum-pinned public source only
+        run: |
+          python - <<'PY'
+          import base64,hashlib,json,lzma,pathlib
+          root=pathlib.Path('.').resolve()
+          raw=base64.b64decode(''.join((root/f'_box_sprint_public/source.part{i}').read_text().strip() for i in (1,2,3)),validate=True)
+          assert hashlib.sha256(raw).hexdigest()=='e3a15c570925366c88b0fdc2ad6a04f0d963db54db8f7e1b34b627dc126dcb3a','Public source bundle checksum mismatch'
+          files=json.loads(lzma.decompress(raw))
+          allowed={'brl_live/boxscore.py','brl_live/box_runner.py','brl_live/box_page.py','brl_live_tests/test_boxscore.py','tools/check_brl_phone_page.py'}
+          assert set(files)==allowed
+          for name,text in files.items():
+              p=root/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(text,encoding='utf-8')
+          p=root/'brl_live/entrypoint.py';text=p.read_text()
+          old='from brl_live.live_extension import main as run_iteration'
+          assert text.count(old)==1,'Unexpected launcher version'
+          text=text.replace(old,'from brl_live.box_runner import main as run_iteration')
+          text=text.replace("'refresh_extension':'prior-day-v1'","'refresh_extension':'box-score-v1'")
+          oldline="page.write_text(page.read_text().replace('<main>','<main><div class=\"notice\">Refresh blocked; showing the last saved forecasts. '+html.escape(reason)+'</div>',1))"
+          assert text.count(oldline)==1,'Unexpected fallback renderer'
+          text=text.replace(oldline,"page.write_text(page.read_text().replace('<body>', '<body data-refresh-blocked=\"true\">', 1))")
+          p.write_text(text)
+          print(json.dumps({'public_patch_files':sorted(allowed),'raw_data_in_patch':False,'runtime_or_key_modified':False}))
+          PY
+      - name: Restore existing encrypted runtime for tests
+        env:
+          BRL_PA_PACKAGE_KEY: ${{ secrets.BRL_PA_PACKAGE_KEY }}
+        run: |
+          python -m pip install --disable-pip-version-check --quiet cryptography==46.0.4
+          python - <<'PY'
+          import json,os,pathlib
+          from brl_live.bootstrap import fetch,restore,TAG,ASSET
+          repo=os.environ['GITHUB_REPOSITORY'];config=json.loads(pathlib.Path('brl_live/runtime.json').read_text())
+          restore(fetch(f'https://github.com/{repo}/releases/download/{TAG}/{ASSET}'),os.environ['BRL_PA_PACKAGE_KEY'],config,pathlib.Path(os.environ['RUNNER_TEMP'])/'brl-test-runtime')
+          print('Existing runtime authenticated; key value not printed.')
+          PY
+      - name: Install isolated runtime test dependencies
+        run: |
+          python -m pip install --disable-pip-version-check --quiet -r "$RUNNER_TEMP/brl-test-runtime/requirements-cloud.txt" pytest==9.0.2
+      - name: Execute box-accounting and public-check regressions
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+          OMP_NUM_THREADS: '1'
+        run: |
+          set -o pipefail
+          python -m compileall -q brl_live brl_live_tests tools/check_brl_phone_page.py
+          cd "$RUNNER_TEMP/brl-test-runtime"
+          PYTHONPATH="$RUNNER_TEMP/brl-test-runtime:$GITHUB_WORKSPACE" python -m pytest "$GITHUB_WORKSPACE/brl_live_tests/test_boxscore.py" "$GITHUB_WORKSPACE/brl_live_tests/test_public_check.py" -q | tee "$GITHUB_WORKSPACE/box_patch_tests.log"
+      - name: Record methods, ledger and cold-start handoff
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          entries={
+          'METHODS.md': '''\n\n## Box-score sprint (October 6, 2026)\n\nThe box layer observes the locked simulator without consuming its random stream or changing any plate-appearance probability, runner transition, or pitcher-removal choice. It records the actual simulated scoring runners and reconciles team runs/hits, batting PA/AB and opposing pitcher lines in every world. All projected player means and count distributions include all 10,000 worlds, including zero opportunity when a pitcher does not appear. Five complete examples are retained: one with the most frequent exact score pair, and four fixed world positions. This is a typical score, not a uniquely most probable sequence.\n\nThe inherited terminal-PA corpus normalizes pitch_number to 1 and cannot estimate pitch counts. The box layer instead uses actual earlier official playEvents and an independent empirical annotation stream conditional on pitcher, PA outcome and batter hand, backing off through pitcher/outcome and league cells. This supplies a joint BB/HBP split and estimated pitch count only. It does not generate pitches or feed those counts to the manager. The conditional pitch bridge is the next separate sprint. Counts can be based on small recent pools, which are disclosed; no accurate pitch-level forecasting is claimed.\n\nFinal actual boxes are parsed from the official MLB Stats API only in the outcome path, never in prediction input preparation. Player IDs join actual and projected lines; totals reconcile with the official line score and opposite pitching totals. A missing projected participant in a complete final listing has zero realized opportunity; a missing stat field is unavailable, not zero. Unprojected substitutes remain visible and unscored. Baseball innings x.2 are converted to 3*x+2 outs before scoring.\n\nPlayer hit/HR/K counts and pitcher K/innings use the fair finite-ensemble CRPS: mean absolute error to the observation minus the distinct-draw pair distance term. Pitcher innings scores are outs scores divided by three. Hit/HR occurrence also use corrected binary Brier. The latest eligible public box version per game is selected without inspecting results. Its own content hash and publication time must match and precede observed first pitch; an earlier win-only forecast cannot backdate player distributions. Player rows within a game are dependent; they are not independent confirmation samples.\n\nThe game page uses Barlow Condensed headings/numbers, Atkinson Hyperlegible body text, the prototype colors and Eastern times. Amber is reserved for actual results. At phone width, complete player statistics wrap into readable grids instead of shrinking a wide box table. Detailed limitations and metric definitions are confined to How to read this. Public output remains aggregate forecast distributions, selected simulated game paths, and final box summaries only; input rows, model files and keys remain private/encrypted.\n''',
+          'LEDGER.md': '''\n\n## Box-score sprint\n\n| ID | Attempt | Result | Delta corrected Brier (2025) | Delta log loss (2025) |\n|---|---|---|---|---|\n| BOX-01 | Observe every simulated PA and scoring runner to build full batting, pitching and inning boxes | Local 10,000-world frozen-case score vectors reproduced exactly; accounting tests passed. Product addition, not an accuracy change. | Not run | Not run |\n| BOX-02 | Estimate pitch counts from inherited PA pitch_number | Rejected: the source column was uniformly normalized to 1. No fabricated replacement counts. | Not run | Not run |\n| BOX-03 | Prior official-pitch-event empirical BB/HBP and pitch-count annotations on an independent stream | Implemented; does not affect outcomes or removal. Small-sample limitations remain. | Not run | Not run |\n| BOX-04 | Actual player-ID joins and proper player-distribution scores | Parser passed 17 real official final feeds; 10,000-world historical actual-comparison UI executed. New live boxes still need their own pregame publication and final scoring. | Not run | Not run |\n| BOX-05 | Phone-first slate, complete game boxes, five full samples and track record | Local 390px component checks passed; deployment checks required before claiming hosted completion. | Not run | Not run |\n\nNo fitted model or accuracy upgrade was retained in this sprint. Historical test results are accounting/reproduction evidence, not prospective accuracy. Conditional pitch sequences, fitted postseason policy and the full through-2024/2025 replay remain unexecuted.\n''',
+          'HANDOFF.md': '''\n\n## Priority update: box scores before postseason policy\n\nThe user's latest request puts the box-score sprint before all earlier sprint ordering. New modules: brl_live/boxscore.py (observational books, full-world distributions, official actual parser and proper scores), box_runner.py (same live engine plus box publication), box_page.py (prototype-styled phone UI). entrypoint now calls box_runner. The encrypted runtime/key/pins and PA/starter/game engine are unchanged.\n\nNew ledger members: box_scores keyed by forecast ID; box_publications with immutable box content hash, commit and publication time; actual_boxes keyed by game PK; player_scores with all eligible version rows and latest-version aggregates. Immutable model outputs live at box_forecasts/<hash>.json. Public predictions JSON adds these plus view_scope, while the Pages file allowlist stays exactly index.html, predictions.json and .nojekyll. Never publish raw sources or the decrypted runtime.\n\nAn unchanged old win-only snapshot receives a new box-bearing forecast version once; already box-bearing unchanged snapshots are skipped. Every game has 10,000 completed worlds and five full samples. Any unresolved world still blocks publication. Actual final lines are reconciled and player-ID joined; no player score is admitted without its own verified pre-first-pitch publication. The existing schedule remains installed.\n\nLocal evidence before upload: 42 box/accounting/scoring tests passed; 17 genuine official final boxes parsed; one 10,000-world forecast exactly reproduced every original away/home/seed vector; another 10,000-world historical postseason game generated a full matching actual comparison. Existing results and source hashes are preserved. Local browser components at 390px passed with prototype fonts used only privately for screenshots. Hosted HTTPS phone checks still need to run after merge; do not equate this with deployment.\n\nImportant: terminal PA pitch_number was all 1. Actual earlier official pitch events, not that column, now feed the independent empirical bookkeeping counts. These are estimates, not conditional pitch sequences, and do not affect removal. Pitch-by-pitch is the next separate sprint. Then resume fitted postseason policy, daily digest, full game product/track record, and through-2024 models with 2025 replay. Never tune on scored games.\n\nHistorical UI artifacts must use view_scope=historical_replay, actual generation times, no public forecast receipts and zero live scored games. They are not backdated forecasts. All user-facing times are Eastern. Before a sprint report, use the deployed public checker to screenshot slate, game, batting/pitching, samples/play-by-play, track and How at 390px, and inspect them.\n'''}
+          for name,text in entries.items():
+              p=Path(name);p.write_text(p.read_text()+text)
+          PY
+      - name: Commit verified transparent source, remove temporary transport fragments
+        run: |
+          rm -rf _box_sprint_public
+          rm .github/workflows/brl-box-install.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add brl_live/boxscore.py brl_live/box_runner.py brl_live/box_page.py brl_live/entrypoint.py brl_live_tests/test_boxscore.py tools/check_brl_phone_page.py METHODS.md LEDGER.md HANDOFF.md
+          git add -u _box_sprint_public .github/workflows/brl-box-install.yml
+          git commit -m 'Add tested complete box-score observations, player proper scores and phone-first game pages'
+          git push origin HEAD:feature/box-score-sprint-20261006
+      - name: Save public test receipt only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: brl-box-patch-tests
+          path: box_patch_tests.log
+          retention-days: 7
+          if-no-files-found: warn
+      - name: Remove decrypted test runtime
+        if: always()
+        run: rm -rf -- "$RUNNER_TEMP/brl-test-runtime"
