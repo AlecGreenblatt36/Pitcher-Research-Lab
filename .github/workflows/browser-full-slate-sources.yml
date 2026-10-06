@@ -1,0 +1,55 @@
+name: BRL fixed full-slate public source capture
+on:
+  push:
+    branches: [feature/browser-source-check-20261006]
+    paths: [.github/workflows/browser-full-slate-sources.yml]
+permissions:
+  contents: read
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Capture all games at the fixed pregame origin
+        run: |
+          python - <<'PY'
+          import sys,json,datetime,time
+          sys.path.insert(0,'tools')
+          from probe_official_source import fetch,OUT,receipts
+          day='2026-09-27'
+          slate=fetch('slate_'+day,'https://statsapi.mlb.com/api/v1/schedule?sportId=1&date='+day)
+          if slate is None: raise RuntimeError('Official date slate unavailable')
+          games=[g for b in slate.get('dates',[]) for g in b.get('games',[]) if b['date']==day]
+          if not 1<=len(games)<=20: raise RuntimeError('Unexpected slate size')
+          coverage=[]
+          for game in sorted(games,key=lambda g:g['gamePk']):
+              pk=game['gamePk'];url=f'https://statsapi.mlb.com/api/v1.1/game/{pk}/feed/live'
+              item={'game_pk':pk,'game_date':day,'scheduled':game['gameDate'],'status':'NOT_PROCESSED'}
+              try:
+                  origin=datetime.datetime.fromisoformat(game['gameDate'].replace('Z','+00:00'))-datetime.timedelta(minutes=10)
+                  item['forecast_origin']=origin.isoformat()
+                  timestamps=fetch(f'{pk}_timestamps',url+'/timestamps')
+                  if not isinstance(timestamps,list):raise ValueError('No timestamp array')
+                  eligible=[v for v in timestamps if datetime.datetime.strptime(v,'%Y%m%d_%H%M%S').replace(tzinfo=datetime.timezone.utc)<=origin]
+                  if not eligible:raise ValueError('No timestamp before fixed origin')
+                  code=max(eligible);item['timecode']=code
+                  pre=fetch(f'{pk}_fixed_pregame_{code}',url+'?timecode='+code)
+                  if pre is None:raise ValueError('Pregame source request failed')
+                  item['status']='CAPTURED_REQUIRES_LOCAL_PREGAME_CHECKS'
+              except Exception as exc:item.update(status='BLOCKED',error=type(exc).__name__+': '+str(exc))
+              # Actual feed is separately retained for reconciliation, never for input construction.
+              final=fetch(f'{pk}_current',url)
+              item['actual_source_captured']=final is not None
+              coverage.append(item);time.sleep(.15)
+          (OUT/'coverage.json').write_text(json.dumps({'declared_date':day,'selection':'Every official scheduled game, without selection by result','games':coverage},indent=2))
+          (OUT/'receipt.json').write_text(json.dumps({'scope':'Full fixed-date original public response bytes; no model artifacts, training or simulation','requests':receipts},indent=2))
+          print(json.dumps({'scheduled_games':len(games),'captured':sum(x['status'].startswith('CAPTURED') for x in coverage),'blocked':sum(x['status']=='BLOCKED' for x in coverage)}))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: official-full-slate-20260927
+          path: source_probe/
+          retention-days: 2
+          if-no-files-found: error
