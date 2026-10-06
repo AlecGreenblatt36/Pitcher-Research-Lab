@@ -1,0 +1,81 @@
+{
+  "scope": "Edge research registration and seven-target measurement sprint, not a fitted model experiment",
+  "observed_through_eastern": "2026-10-06T18:59:23.524758-04:00",
+  "source_commit": "f5de97fd7ddf3494ed70d75046ceef24b61b0e7a",
+  "pull_request": 10,
+  "tests": {
+    "focused_local_passed": 84,
+    "focused_cloud_passed": 84,
+    "counts_overlap_do_not_sum": true,
+    "cloud_run_id": 37543029616,
+    "source_digest_parity": true,
+    "python_compilation": "passed",
+    "javascript_syntax": "passed",
+    "paired_report_cli": "Synthetic arithmetic oracle passed; not baseball accuracy evidence",
+    "warning": "Pytest cache could not be written under /dev; all tests completed"
+  },
+  "cloud_execution": {
+    "run_id": 37543284982,
+    "event": "push",
+    "status": "iteration_completed",
+    "secret_present": true,
+    "runtime_authenticated_decryption": true,
+    "history_coverage_through": "2026-10-05",
+    "prior_complete_baseline_games": 31,
+    "new_forecasts": 1,
+    "preserved_forecast_versions": 8,
+    "box_forecast_versions": 3,
+    "new_game": "Milwaukee Brewers at San Diego Padres",
+    "game_pk": 849826,
+    "forecast_id": "9e84d6ea50f6804e17f1886803d2897687f6d7a721d368bc31f7c959550aeb0a",
+    "version": 4,
+    "n_simulations": 10000,
+    "saved_at_eastern": "2026-10-06T18:57:21.987813-04:00",
+    "box_publication_at_eastern": "2026-10-06T18:57:27.664604-04:00",
+    "scheduled_start_eastern": "2026-10-06T21:30:00-04:00",
+    "publication_commit": "32770ae6a5179f328019e026ea77d6d8cfd14f68",
+    "box_sha256": "4f70c7b7a83dab63e9b72f9a830f9c4e63ab7d19d5361545de8ab1014c13afb0",
+    "actual_first_pitch_eligibility": "Pending observed first pitch/final reconciliation",
+    "already_started_game": "Dodgers-Braves retained without retroactive skill-baseline comparison",
+    "raw_data_published": false,
+    "model_parameters_changed": false,
+    "engine_rules_changed": false
+  },
+  "deployed_browser": {
+    "run_id": 37543886020,
+    "artifact_id": 11448774261,
+    "site": "https://alecgreenblatt36.github.io/Pitcher-Research-Lab/",
+    "status": "passed",
+    "method": "Normal HTTPS Playwright navigation, not a physical-phone test",
+    "viewport_widths": [390, 1440],
+    "fonts_loaded": true,
+    "minimum_text_px": 16,
+    "minimum_tap_height_px": 44,
+    "horizontal_overflow": false,
+    "javascript_errors": 0,
+    "five_sample_games_opened": true,
+    "how_close_track_record_and_how_tab_checked": true
+  },
+  "accuracy": {
+    "live_scored_games": 0,
+    "paired_skill_scored_games": 0,
+    "model_brier": null,
+    "fair_team_baseline_brier": null,
+    "market_brier": null,
+    "edge_candidates_registered": 5,
+    "edge_candidates_fitted": 0,
+    "edge_candidates_adopted": 0,
+    "through_2024_model_copies_created": false,
+    "clean_2025_games_replayed": 0,
+    "all_candidate_target_effects": "Not run"
+  },
+  "retained_failures": [
+    {
+      "operation": "Separate local full-repeat harness setup",
+      "attempts": 2,
+      "errors": ["StreamingExecNotEnabledContainerError", "python: can't open file '/mnt/data/edge_track/run_real_integration.py': [Errno 2] No such file or directory"],
+      "action": "Stopped; create and verify the harness file before a future nonstreaming launch. No new full-vector parity claim. The later successful cloud forecast is a different input case, not a repeat-run test."
+    }
+  ],
+  "pending": ["First eligible final skill comparison", "All five edge candidate fits and paired evaluations", "Through-2024 locks and 2025 replay", "Conditional pitch bridge and its separate removal experiment"]
+}
