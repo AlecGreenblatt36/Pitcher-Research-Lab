@@ -1,0 +1,53 @@
+name: BRL bounded 14-game slate source capture
+on:
+  push:
+    branches: [feature/browser-source-check-20261006]
+    paths: [.github/workflows/browser-slate-capture-v1.yml]
+permissions:
+  contents: read
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Capture public pregame archives and separate actuals
+        run: |
+          python - <<'PY'
+          import sys,json,datetime as dt
+          sys.path.insert(0,'tools')
+          from probe_official_source import fetch,OUT,receipts
+          day='2026-09-27'
+          ids=[822679,822761,823084,823164,823246,823408,823650,823731,823814,824055,824217,824542,824705,824948]
+          schedule=fetch('schedule_'+day,'https://statsapi.mlb.com/api/v1/schedule?sportId=1&date='+day)
+          games={g['gamePk']:g for b in (schedule or {}).get('dates',[]) if b['date']==day for g in b['games']}
+          cases=[]
+          for pk in ids:
+              c={'game_pk':pk,'status':'BLOCKED'};cases.append(c)
+              try:
+                  g=games[pk]
+                  if g['gameType']!='R':raise ValueError('Regular season only')
+                  start=dt.datetime.fromisoformat(g['gameDate'].replace('Z','+00:00'))
+                  origin=start-dt.timedelta(minutes=10)
+                  c.update(forecast_origin=origin.isoformat(),scheduled_start=start.isoformat())
+                  url=f'https://statsapi.mlb.com/api/v1.1/game/{pk}/feed/live'
+                  codes=fetch(f'{pk}_timestamps',url+'/timestamps')
+                  valid=[x for x in codes if dt.datetime.strptime(x,'%Y%m%d_%H%M%S').replace(tzinfo=dt.timezone.utc)<=origin]
+                  if not valid:raise ValueError('No timecode before fixed origin')
+                  code=max(valid);name=f'{pk}_fixed_pregame_{code}'
+                  pre=fetch(name,url+'?timecode='+code)
+                  if pre is None or pre.get('gamePk')!=pk or pre.get('metaData',{}).get('timeStamp')!=code:raise ValueError('Exact archive unavailable')
+                  c.update(status='SOURCE_CAPTURED_NOT_YET_INPUT_CHECKED',timecode=code,pregame_name=name)
+              except Exception as e:c['error']=type(e).__name__+': '+str(e)
+              fetch(f'{pk}_current',f'https://statsapi.mlb.com/api/v1.1/game/{pk}/feed/live')
+          doc={'schema':'brl.slate-source-bundle.v1','created_at':dt.datetime.now(dt.timezone.utc).isoformat(),'date':day,'selection_game_ids':ids,'official_schedule_game_ids':sorted(games),'origin_policy':'provider scheduled start minus 10 minutes; latest timestamp <= origin','scope':'Provider archives retrieved later; retrospective development only','cases':cases,'requests':receipts}
+          (OUT/'receipt.json').write_text(json.dumps(doc,indent=2)+'\n')
+          print(json.dumps(cases))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: brl-20260927-slate-sources
+          path: source_probe/
+          retention-days: 2
+          if-no-files-found: error
