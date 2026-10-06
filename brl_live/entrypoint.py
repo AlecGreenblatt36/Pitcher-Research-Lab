@@ -1,6 +1,6 @@
 """Scheduled launcher for the encrypted runtime plus the reviewed refresh extension."""
 from __future__ import annotations
-import argparse,base64,html,json,os,subprocess,sys
+import argparse,base64,html,json,os,subprocess,sys,traceback
 from pathlib import Path
 from datetime import datetime,timezone
 from zoneinfo import ZoneInfo
@@ -16,26 +16,33 @@ def main():
     parser.add_argument('--config',default='brl_live/runtime.json')
     args=parser.parse_args()
     repo=os.environ['GITHUB_REPOSITORY'];token=os.environ['GH_TOKEN'];now=datetime.now(timezone.utc)
-    receipt={'created_at':now.isoformat(),'status':'starting','live_forecasts_created':0,'raw_data_published':False,'refresh_extension':'prior-day-v1'}
+    receipt={'created_at':now.isoformat(),'status':'starting','live_forecasts_created':0,'raw_data_published':False,'refresh_extension':'prior-day-v1','stage':'source_setup','secret_present':False,'runtime_authenticated_decryption':False}
     games=[]
     try:
         day=now.astimezone(ZoneInfo('America/New_York')).date().isoformat()
         schedule=api('https://statsapi.mlb.com/api/v1/schedule?sportId=1&date='+day,None)
         games=[{'game_pk':g['gamePk'],'scheduled_start':g['gameDate'],'away':g['teams']['away']['team']['name'],'home':g['teams']['home']['team']['name']} for d in schedule.get('dates',[]) for g in d.get('games',[])]
         receipt['scheduled_games']=games;receipt['setup']=setup_prerequisites(repo,token)
+        receipt['stage']='runtime_restore'
         key=os.environ.get('BRL_PA_PACKAGE_KEY','')
+        receipt['secret_present']=bool(key)
         if not key:raise ValueError('Activation needed: add BRL_PA_PACKAGE_KEY and upload the encrypted runtime asset.')
         config=json.loads(Path(args.config).read_text())
         runtime=restore(fetch(f'https://github.com/{repo}/releases/download/{TAG}/{ASSET}'),key,config,args.runtime)
+        receipt['runtime_authenticated_decryption']=True
+        receipt['stage']='runtime_dependencies'
         env={k:v for k,v in os.environ.items() if k not in ('BRL_PA_PACKAGE_KEY','GH_TOKEN','GITHUB_TOKEN')}
         subprocess.run([sys.executable,'-m','pip','install','--disable-pip-version-check','--quiet','-r',str(runtime/'requirements-cloud.txt')],env=env,check=True)
         sys.path.insert(0,str(runtime))
         from brl_live.live_extension import main as run_iteration
-        receipt.update(run_iteration(args.site));receipt['status']='iteration_completed'
+        receipt['stage']='history_and_forecast_iteration'
+        receipt.update(run_iteration(args.site));receipt['status']='iteration_completed';receipt['stage']='complete'
     except Exception as exc:
         # Do not print exception bodies from networking, source payloads or key operations.
         reason=str(exc) if isinstance(exc,ValueError) else type(exc).__name__+': runtime/source not ready; forecast not fabricated.'
-        receipt.update(status='blocked',reason=reason)
+        receipt.update(status='blocked',reason=reason,error_type=type(exc).__name__)
+        frames=traceback.extract_tb(exc.__traceback__)
+        if frames:receipt['error_location']={'file':Path(frames[-1].filename).name,'function':frames[-1].name,'line':frames[-1].lineno}
         preserved=False
         try:
             prior={}

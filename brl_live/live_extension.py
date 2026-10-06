@@ -29,6 +29,7 @@ from cloud.contracts import (live_inputs, config_for, draw_seeds, utcnow,
 from .refreshed_page import render_page
 from cloud.security import key_bytes
 from .history_refresh import HistoryCache, Fetcher, previous_day
+from .verified_store import VerifiedGitStore
 
 
 def make_history_engine(parameters: dict, history_path: Path):
@@ -143,7 +144,7 @@ class RefreshRunner(original.Runner):
 
 def main(public_dir: str) -> dict:
     key = key_bytes(os.environ.get('BRL_PA_PACKAGE_KEY', ''))
-    store = original.GitStore(os.environ['GITHUB_REPOSITORY'], os.environ['GH_TOKEN'], key)
+    store = VerifiedGitStore(os.environ['GITHUB_REPOSITORY'], os.environ['GH_TOKEN'], key)
     before = len(store.ledger['forecasts'])
     cache = HistoryCache(store, key)
     index = cache.refresh(Fetcher())
@@ -164,4 +165,5 @@ def main(public_dir: str) -> dict:
             'scored_games': scores['n_games'], 'raw_data_published': False,
             'history_coverage_through': info['coverage_through'],
             'history_last_game_date': str(simulator.history['date_key'].max()),
-            'history_added_PA': info['added_PA'], 'history_index_sha256': info['index_sha256']}
+            'history_added_PA': info['added_PA'], 'history_index_sha256': info['index_sha256'],
+            'storage_read_checks': store.read_audit}
