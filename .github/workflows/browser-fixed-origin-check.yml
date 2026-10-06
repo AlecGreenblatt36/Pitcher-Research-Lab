@@ -1,0 +1,43 @@
+name: BRL fixed-origin source capture
+on:
+  push:
+    branches: [feature/browser-source-check-20261006]
+    paths: [.github/workflows/browser-fixed-origin-check.yml]
+permissions:
+  contents: read
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Capture fixed-origin official archives
+        run: |
+          python - <<'PY'
+          import sys,datetime,json
+          sys.path.insert(0,'tools')
+          from probe_official_source import fetch,OUT,receipts
+          for pk in (822679,849830):
+              url=f'https://statsapi.mlb.com/api/v1.1/game/{pk}/feed/live'
+              current=fetch(f'{pk}_current',url)
+              stamps=fetch(f'{pk}_timestamps',url+'/timestamps')
+              if not current or not isinstance(stamps,list):continue
+              scheduled=datetime.datetime.fromisoformat(current['gameData']['datetime']['dateTime'].replace('Z','+00:00'))
+              origin=scheduled-datetime.timedelta(minutes=10)
+              parsed=[(datetime.datetime.strptime(t,'%Y%m%d_%H%M%S').replace(tzinfo=datetime.timezone.utc),t) for t in stamps]
+              eligible=[x for x in parsed if x[0]<=origin]
+              if not eligible:continue
+              code=max(eligible)[1]
+              pre=fetch(f'{pk}_fixed_pregame_'+code,url+'?timecode='+code)
+              if pre:
+                  print(json.dumps({'game_pk':pk,'cutoff_policy':'scheduled_start_minus_10_minutes','origin':origin.isoformat(),'snapshot_timecode':code,'metadata':pre.get('metaData'),'state':pre.get('gameData',{}).get('status')}))
+          fetch('team_results_before_20260927','https://statsapi.mlb.com/api/v1/schedule?sportId=1&startDate=2023-03-01&endDate=2026-09-26&gameType=R&fields=dates,date,games,gamePk,gameDate,gameType,status,abstractGameState,teams,away,home,team,id,name,score')
+          (OUT/'receipt.json').write_text(json.dumps({'scope':'Read-only source capture, no model fitting, no forecast claim','origin_rule':'Latest official snapshot no later than scheduled first pitch minus 10 minutes; no actual outcomes select cutoff','requests':receipts},indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: official-fixed-origin-archives
+          path: source_probe/
+          retention-days: 2
+          if-no-files-found: error
