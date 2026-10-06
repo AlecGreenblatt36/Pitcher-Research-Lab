@@ -1,0 +1,35 @@
+name: BRL prior team baseline source capture
+on:
+  push:
+    branches: [feature/browser-source-check-20261006]
+    paths: [.github/workflows/browser-team-baseline-sources.yml]
+permissions:
+  contents: read
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get official prior-season results with explicit season
+        run: |
+          python - <<'PY'
+          import sys,json
+          sys.path.insert(0,'tools')
+          from probe_official_source import fetch,OUT,receipts
+          for year in (2023,2024,2025,2026):
+              end=f'{year}-12-31' if year<2026 else '2026-09-26'
+              url=f'https://statsapi.mlb.com/api/v1/schedule?sportId=1&season={year}&startDate={year}-01-01&endDate={end}&gameType=R&fields=dates,date,games,gamePk,gameDate,gameType,status,abstractGameState,teams,away,home,team,id,name,score'
+              data=fetch(f'team_results_{year}',url)
+              if data:
+                  dates=[x['date'] for x in data.get('dates',[])]
+                  print(json.dumps({'year':year,'date_min':min(dates) if dates else None,'date_max':max(dates) if dates else None,'games':sum(len(x['games']) for x in data.get('dates',[]))}))
+          (OUT/'receipt.json').write_text(json.dumps({'scope':'Official prior-date result snapshots only; no fitted forecast or accuracy claim','requests':receipts},indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: explicit-season-team-results
+          path: source_probe/
+          retention-days: 2
+          if-no-files-found: error
