@@ -31,7 +31,7 @@ jobs:
           BRL_PA_PACKAGE_KEY: ${{ secrets.BRL_PA_PACKAGE_KEY }}
           OPENBLAS_NUM_THREADS: '1'
           OMP_NUM_THREADS: '1'
-        run: python brl_live/bootstrap.py --site "$RUNNER_TEMP/brl-site" --runtime "$RUNNER_TEMP/brl-private"
+        run: python brl_live/entrypoint.py --site "$RUNNER_TEMP/brl-site" --runtime "$RUNNER_TEMP/brl-private"
       - name: Upload prediction-only page
         uses: actions/upload-pages-artifact@v3
         with:
