@@ -73,3 +73,16 @@ Public implementation: brl_live/entrypoint.py, box_runner.py, boxscore.py, box_p
 Public Statcast field documentation: https://baseballsavant.mlb.com/csv-docs
 
 GitHub schedule behavior: https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule
+
+
+## Edge research and skill scorecards — October 6, 2026
+
+The five edge research families are registered in `research/edge_track/experiments.json` with detailed protocols in its README. Registration is not fitting, validation, or adoption. The old contact-only residual cannot change K or pooled BB/HBP; the proposed stuff/arsenal models need separately declared outcome groups and BB/HBP handling. Bat-swing features require explicit coverage/measurement-regime checks, and in-game updating has a separate clock and scorebook.
+
+`brl_live/edge_metrics.py` adds descriptive paired pregame diagnostics: pitcher K/BB/pitches/innings, reliever appearance, team runs and high/low combined runs. High is fixed at 9+ runs versus 8 or fewer; the complement is not scored again as another independent result. Pitcher count CRPS includes zero for nonappearance. Skill baselines are saved INSIDE the independently timestamped box before first pitch; no late backfill is admitted. Old boxes retain their original player scores but lack the new paired skill comparisons.
+
+The simple pitcher baseline resamples earlier complete team boxes by starter/relief role and maps relief lines uniformly to the same pregame pool, preserving nonappearance zeros. It uses no matchup/stuff/rest information. Its support and capture dates are serialized; the initial accepted cache is short, not a claimed full historical season. Team-run and high-total baselines use the existing team NB means and frozen dispersion. The team CDF-sum CRPS returns a bound on numerical tail truncation. Baseline distributions are fitted exact distributions, not simulated ensembles, so they receive no finite-simulation correction.
+
+The observer stores team and combined-run histograms from complete coherent worlds. It never reconstructs them by summing independently sampled player marginals. Within each skill metric, scores are averaged within game before averaging games. Unprojected actual pitchers and missing statistics are recorded as coverage gaps. Exact forecast-version pairing and immutable publication hashes remain required. Missing latest-baseline coverage does not revive an older favorable comparison. Pitch-count predictions remain the existing independent empirical bookkeeping annotations until the separate conditional pitch bridge sprint.
+
+`research/edge_track/report.py` computes per-metric current/candidate/simple-baseline effects and paired calendar-date-block intervals from exact matched score records. It refuses changed comparator values and unmatched identities. It does not authorize adoption or certify supplied provenance; simulation MCSE unavailable from aggregate score rows remains null. No fresh through-2024 lock or full 2025 replay exists yet. Selecting repeatedly on 2025 turns it into adaptive development, even if every fit stops in 2024. Prospective confirmation remains separate.

@@ -16,24 +16,32 @@ from .history_refresh import HistoryCache,Fetcher
 from .verified_store import VerifiedGitStore
 from .boxscore import run_box_worlds,parse_actual_box,score_player_boxes,bookkeeping_history_from_cache,validate_box_payload
 from .box_page import render_page
+from .edge_metrics import (freeze_skill_baselines, prior_boxes_from_cache, score_skill_boxes)
 
 
 class BoxSimulator(RefreshedSimulator):
-    def __init__(self,history_info,annotations):
+    def __init__(self,history_info,annotations,skill_history=None,skill_origin=None):
         super().__init__(history_info)
         self.annotations=annotations
         self.box_output=None
+        self.skill_history=skill_history
+        self.skill_origin=skill_origin
     def run(self,game,matchup):
         parameters={'date':game['date'],'park':game['home']['abbr'],'game':game,
                     'matchup':asdict(matchup),'config':config_for(game['game_type'])}
         engine,decoded=make_history_engine(parameters,self.path)
         results,box=run_box_worlds(engine,decoded,self.annotations,game['date'],draw_seeds(game['game_pk']))
+        baseline=predict(game,self.rows,self.fit)
+        metadata={**box,'game_pk':game['game_pk'],'date':game['date'],
+                  'starters':{s:{'player_id':getattr(decoded,s).starter.player_id} for s in ('away','home')}}
+        if self.skill_history is not None:
+            box['skill_baselines']=freeze_skill_baselines(metadata,self.skill_history,baseline,self.skill_origin)
         self.box_output=box
-        return results,predict(game,self.rows,self.fit)
+        return results,baseline
 
 
 def _ensure_fields(ledger):
-    for k in ('box_scores','box_publications','actual_boxes','player_scores'):ledger.setdefault(k,{})
+    for k in ('box_scores','box_publications','actual_boxes','player_scores','skill_scores'):ledger.setdefault(k,{})
 
 class BoxRunner(original.Runner):
     def process(self,pk,item):
@@ -56,7 +64,7 @@ class BoxRunner(original.Runner):
             self.store.persist();return
         game,matchup,notes,statuses,fingerprint=self.sim.prepare(feed,receipt)
         previous=original.fingerprint_from_forecasts(self.store,pk)
-        if any(f['snapshot_hash']==fingerprint and ident in self.store.ledger['box_scores'] for ident,f in previous):return
+        if any(f['snapshot_hash']==fingerprint and ident in self.store.ledger['box_scores'] and 'skill_baselines' in self.store.ledger['box_scores'][ident] for ident,f in previous):return
         self.store.private('inputs',content_hash({'receipt':receipt,'game':game}),
             {'source':feed,'receipt':receipt,'derived_game':game,'lineup_status':statuses,
              'history_sha256':self.sim.info['history_sha256'],'history_index_sha256':self.sim.info['index_sha256'],
@@ -73,6 +81,8 @@ class BoxRunner(original.Runner):
              'lineup_status':statuses,'history_through':notes['history_through_used']}
         # Publishing the distributions now, not backdating them to an earlier
         # win-only forecast. Old immutable summaries remain untouched.
+        if box.get('skill_baselines') and timestamp(box['skill_baselines']['as_of'])>timestamp(box['forecast_origin']):
+            raise Blocked('Baseline built after the forecast origin')
         validate_box_payload(box)
         ident=self.store.publish(forecast);box['forecast_id']=ident
         box_id=content_hash(box)
@@ -93,19 +103,23 @@ def main(public_dir):
     cache=HistoryCache(store,key);index=cache.refresh(Fetcher())
     info=cache.assemble(index,bridge.HISTORY,ROOT/'private_work/history.csv.gz',utcnow())
     annotations=bookkeeping_history_from_cache(cache,index,utcnow())
-    sim=BoxSimulator(info,annotations)
+    skill_origin=utcnow()
+    skill_history=prior_boxes_from_cache(cache,index,skill_origin)
+    sim=BoxSimulator(info,annotations,skill_history,skill_origin.isoformat())
     runner=BoxRunner(original.Network(),store,sim,run_id=os.environ.get('GITHUB_RUN_ID','local'))
     try:runner.iteration()
     finally:
         ledger=store.ledger
         scores=score_versions(ledger['forecasts'],ledger['publications'],ledger['actuals'])
         ledger['player_scores']=score_player_boxes(ledger['box_scores'],ledger['box_publications'],ledger['actual_boxes'])
+        ledger['skill_scores']=score_skill_boxes(ledger['box_scores'],ledger['box_publications'],ledger['actual_boxes'])
         store.persist();render_page(ledger,scores,public_dir)
     for name in ('index.html','predictions.json','.nojekyll'):store.put('public/'+name,(Path(public_dir)/name).read_bytes())
     return {'status':'iteration_finished','forecasts':len(ledger['forecasts']),
         'live_forecasts_created':len(ledger['forecasts'])-before,'box_forecasts_created':len(ledger['box_scores'])-old_boxes,
         'box_forecasts':len(ledger['box_scores']),'player_scored_games':ledger['player_scores']['n_games'],
-        'scored_games':scores['n_games'],'raw_data_published':False,
+        'scored_games':scores['n_games'],'skill_scored_games':ledger['skill_scores']['n_games'],
+        'skill_baseline_prior_games':len(skill_history),'raw_data_published':False,
         'history_coverage_through':info['coverage_through'],'history_added_PA':info['added_PA'],
         'pitch_bookkeeping_prior_PA':len(annotations),'engine_rules_changed':False,
         'model_parameters_changed':False,'storage_read_audit':store.read_audit}
