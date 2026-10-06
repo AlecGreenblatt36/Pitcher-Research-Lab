@@ -1,0 +1,31 @@
+name: BRL Sprint 1 postseason sources
+on:
+  push:
+    branches: [sprint/01-postseason-policy]
+    paths: [.github/workflows/brl-sprint1-capture.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check cryptography==46.0.4
+      - name: Capture historical sources with at most two requests per failed endpoint
+        env:
+          BRL_PA_PACKAGE_KEY: ${{ secrets.BRL_PA_PACKAGE_KEY }}
+        run: python sprint1/capture.py
+      - name: Save encrypted source objects and count-only receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: brl-sprint1-postseason-sources
+          path: sprint1_capture/
+          retention-days: 7
+          if-no-files-found: error
