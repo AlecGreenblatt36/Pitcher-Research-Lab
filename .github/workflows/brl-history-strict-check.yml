@@ -1,0 +1,63 @@
+name: BRL strict history integration
+on:
+  push:
+    branches: [feature/live-history-refresh-20261006]
+    paths: [.github/workflows/brl-history-strict-check.yml]
+permissions:
+  contents: read
+jobs:
+  strict-source-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - run: python -m pip install pandas==2.2.3 numpy==2.3.5 cryptography==46.0.4
+      - name: Reconcile actual daily data and encrypt all raw evidence
+        run: |
+          python - <<'PY'
+          import os,json,gzip,base64,hashlib,pathlib,datetime
+          from cryptography.hazmat.primitives import hashes,serialization
+          from cryptography.hazmat.primitives.asymmetric import padding
+          from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+          from brl_live.history_refresh import PublicSource,capture_day,yesterday,RefreshBlocked,canonical
+          public=b'''-----BEGIN PUBLIC KEY-----
+          MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAqLL8mzHLq9iLYWrjHnUy
+          YtHYtgJGvYOq6A8wVZbkZ/3wmLvdbyhSKKSwykvoosz8E78Lvprf+jCXFk2cotrl
+          QpLd1iKgU39l7P1+YRhJPfXwIRFpljuy+5+vywms7RjitCk/EJUlFUlYTe8/0DEY
+          t+X1xAjhQAFcJGwL8eWkdUQtZJ2EFz0oh9zdy+7X7OqdyJr4u1fYGBqtWR2HaX/J
+          h8ktlh9gxIjLU8atHgmTy2S7b1JZzH0omQKyyuYx6B8x4CfTBIZESp6iI5Uere0G
+          lxU9xta1cgApUEHJRKWHikoDfl1kRwUKRk+BuK2RsjMeOoe30UfwLCOjCEvDzuTd
+          3/Q9u0iHOQB+XGLiNNlFuLYOhUQg6yO0f0wgzP4DaWiHJzlWrXM5o45NTzMh8RYk
+          Fr9H12XAKhhBoIMxY/fhlfTL6wK8geF82XnlOyYoYppWbjm1FUZoZaYxBdZ03vWj
+          Bfj3w9QCcm65NoglEI/T28EqACOwb6XM+YaNtLjXLDQFAgMBAAE=
+          -----END PUBLIC KEY-----'''
+          recipient=serialization.load_pem_public_key(public)
+          now=datetime.datetime.now(datetime.timezone.utc);end=yesterday(now);day=datetime.date(2026,9,27)
+          assert 0 <= (end-day).days <= 14
+          source=PublicSource();out=pathlib.Path('strict_history');out.mkdir()
+          report={'scope':'Source/ingestion integration only, no live forecast','started_at':now.isoformat(),'raw_data_published':False,'parser_sha256':hashlib.sha256(pathlib.Path('brl_live/history_refresh.py').read_bytes()).hexdigest(),'days':[]}
+          while day<=end:
+              record={'date':day.isoformat()}
+              try:
+                  doc=capture_day(day.isoformat(),source,now)
+                  key=os.urandom(32);nonce=os.urandom(12)
+                  cipher=AESGCM(key).encrypt(nonce,gzip.compress(canonical(doc),mtime=0),b'BRL:audit-history')
+                  wrapped=recipient.encrypt(key,padding.OAEP(mgf=padding.MGF1(hashes.SHA256()),algorithm=hashes.SHA256(),label=b'BRL:audit-history'))
+                  bundle={'format':'RSA3072-OAEP-SHA256+AES256-GCM','wrapped_key':base64.b64encode(wrapped).decode(),'nonce':base64.b64encode(nonce).decode(),'ciphertext':base64.b64encode(cipher).decode()}
+                  encrypted=canonical(bundle);(out/(day.isoformat()+'.enc')).write_bytes(encrypted)
+                  record.update(status='RECONCILED',**doc['summary'],captured_at=doc['captured_at'],source_hash=doc['statcast']['receipt']['sha256'],encrypted_sha256=hashlib.sha256(encrypted).hexdigest())
+              except Exception as exc:
+                  record.update(status='BLOCKED',reason=str(exc) if isinstance(exc,RefreshBlocked) else type(exc).__name__)
+              report['days'].append(record);(out/'report.json').write_text(json.dumps(report,indent=2));print(json.dumps(record),flush=True)
+              day+=datetime.timedelta(days=1)
+          report['all_days_reconciled']=all(r['status']=='RECONCILED' for r in report['days']);report['finished_at']=datetime.datetime.now(datetime.timezone.utc).isoformat()
+          (out/'report.json').write_text(json.dumps(report,indent=2))
+          raise SystemExit(0 if report['all_days_reconciled'] else 2)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: brl-strict-history-evidence
+          path: strict_history/
+          retention-days: 7
+          if-no-files-found: error
