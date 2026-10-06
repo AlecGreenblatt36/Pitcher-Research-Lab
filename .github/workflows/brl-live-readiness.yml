@@ -1,0 +1,45 @@
+name: BRL live readiness
+on:
+  push:
+    branches: [feature/live-slate-20261006]
+    paths: [.github/workflows/brl-live-readiness.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check source and deployment prerequisites without disclosing secrets
+        env:
+          BRL_PA_PACKAGE_KEY: ${{ secrets.BRL_PA_PACKAGE_KEY }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          python - <<'PY'
+          import os,json,datetime,pathlib,urllib.request,urllib.error
+          now=datetime.datetime.now(datetime.timezone.utc)
+          out={'checked_at':now.isoformat(),'package_key_present':bool(os.getenv('BRL_PA_PACKAGE_KEY')),'forecasts_created':0}
+          def get(url,auth=False):
+              h={'User-Agent':'BRL-live-readiness/1.0'}
+              if auth:h['Authorization']='Bearer '+os.environ['GH_TOKEN']
+              try:
+                  with urllib.request.urlopen(urllib.request.Request(url,headers=h),timeout=20) as r:return r.status,json.load(r)
+              except urllib.error.HTTPError as e:return e.code,None
+              except Exception as e:return type(e).__name__,None
+          base='https://api.github.com/repos/'+os.environ['GH_REPO']
+          code,data=get(base+'/pages',True);out['pages_http_status']=code;out['pages_url']=data.get('html_url') if isinstance(data,dict) else None
+          code,data=get(base+'/releases?per_page=30',True)
+          out['encrypted_release_assets']=[{'tag':r['tag_name'],'name':a['name'],'bytes':a['size']} for r in (data or []) for a in r.get('assets',[]) if a['name'].endswith(('.enc','.gpg','.aes'))]
+          code,data=get('https://statsapi.mlb.com/api/v1/schedule?sportId=1&date='+now.date().isoformat())
+          out['schedule_http_status']=code
+          out['games']=[{'game_pk':g['gamePk'],'scheduled_start':g['gameDate'],'game_type':g['gameType'],'status':g['status']['detailedState'],'away':g['teams']['away']['team']['name'],'home':g['teams']['home']['team']['name']} for d in (data or {}).get('dates',[]) for g in d.get('games',[])]
+          pathlib.Path('readiness.json').write_text(json.dumps(out,indent=2));print(json.dumps(out,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: brl-live-readiness
+          path: readiness.json
+          retention-days: 2
