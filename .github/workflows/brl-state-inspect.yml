@@ -1,0 +1,82 @@
+name: BRL encrypted-state diagnosis
+on:
+  push:
+    branches: [fix/live-cloud-startup-20261006]
+    paths: [.github/workflows/brl-state-inspect.yml]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --quiet cryptography==46.0.4
+      - name: Read byte counts and authenticated-state checks only
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRL_PA_PACKAGE_KEY: ${{ secrets.BRL_PA_PACKAGE_KEY }}
+        run: |
+          python - <<'PY'
+          import os,sys,json,base64,hashlib,gzip
+          from pathlib import Path
+          from brl_live.bootstrap import fetch,api,restore,TAG,ASSET
+          from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+          repo=os.environ['GITHUB_REPOSITORY'];token=os.environ['GH_TOKEN'];key=os.environ['BRL_PA_PACKAGE_KEY']
+          result={'secret_present':bool(key),'simulation_retried':False,'checks':[]}
+          config=json.loads(Path('brl_live/runtime.json').read_text())
+          runtime=restore(fetch(f'https://github.com/{repo}/releases/download/{TAG}/{ASSET}'),key,config,Path(os.environ['RUNNER_TEMP'])/'brl-inspect')
+          result['runtime_authenticated_decryption']='PASS'
+          secret=bytes.fromhex(key.strip())
+          def read(path):
+              d=api(f'https://api.github.com/repos/{repo}/contents/{path}?ref=brl-live-data',token)
+              record={'path':path,'size':d.get('size'),'encoding':d.get('encoding'),'content_characters':len(d.get('content',''))}
+              if d.get('encoding')!='base64':
+                  b=api(f'https://api.github.com/repos/{repo}/git/blobs/'+d['sha'],token)
+                  record['blob_encoding']=b.get('encoding');record['blob_content_characters']=len(b.get('content',''));text=b.get('content','')
+              else:text=d.get('content','')
+              raw=base64.b64decode(text)
+              actual=hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest()
+              record.update(decoded_bytes=len(raw),magic_matches=raw[:8]==b'BRLAESG1',git_hash_matches=actual==d['sha'])
+              result['checks'].append(record)
+              return raw
+          def decrypt(raw,purpose):
+              if len(raw)<36 or raw[:8]!=b'BRLAESG1':raise ValueError('Unsupported encrypted package')
+              return AESGCM(secret).decrypt(raw[8:20],raw[20:],('BRL:'+purpose).encode())
+          try:
+              raw=read('private/history-index.enc')
+              # Same purpose as the installed history extension.
+              from pathlib import Path
+              import ast
+              source=Path('brl_live/history_refresh.py').read_text()
+              tree=ast.parse(source)
+              purpose=next(ast.literal_eval(n.value) for n in tree.body if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='INDEX_PURPOSE' for t in n.targets))
+              index=json.loads(decrypt(raw,purpose));result['history_index_decrypted']=True
+              result['history_coverage_through']=index.get('coverage_through')
+              for date,entry in sorted(index['days'].items()):
+                  raw=read('private/history-days/'+entry['id']+'.enc')
+                  try:
+                      payload=gzip.decompress(decrypt(raw,'private:history-day:'+entry['id']))
+                      result['checks'][-1]['authenticated_decryption']='PASS'
+                  except Exception as exc:result['checks'][-1]['error']=type(exc).__name__+': '+str(exc)[:80]
+          except Exception as exc:result['error']=type(exc).__name__+': '+str(exc)[:80]
+          from urllib.request import urlopen
+          try:
+              with urlopen('https://alecgreenblatt36.github.io/Pitcher-Research-Lab/',timeout=20) as response:
+                  page=response.read().decode();result['pages_http_status']=response.status
+                  result['pages_has_saved_cards']='Dodgers' in page and 'Brewers' in page
+                  result['pages_refresh_blocked']='Refresh blocked' in page
+          except Exception as exc:result['pages_error']=type(exc).__name__
+          Path('state-diagnosis.json').write_text(json.dumps(result,indent=2));print(json.dumps(result,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: brl-state-diagnosis
+          path: state-diagnosis.json
+          retention-days: 7
+      - name: Remove decrypted runtime
+        if: always()
+        run: rm -rf -- "$RUNNER_TEMP/brl-inspect"
