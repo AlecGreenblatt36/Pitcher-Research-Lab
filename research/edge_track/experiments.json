@@ -1,0 +1,781 @@
+{
+  "schema": "brl.edge-research.v1",
+  "registered_at": "2026-10-06T22:29:41.546509+00:00",
+  "status": "REGISTERED_NOT_FITTED",
+  "parent_model_policy": "Existing live lock unchanged",
+  "evaluation_contract": {
+    "train_through": "2023-12-31",
+    "tuning_window": [
+      "2024-01-01",
+      "2024-12-31"
+    ],
+    "replay_window": [
+      "2025-01-01",
+      "2025-12-31"
+    ],
+    "test_reuse": "Every evaluation-based selection recorded; adaptive 2025 reuse is development, not clean confirmation",
+    "bootstrap": "Paired calendar-date blocks; average player metrics within game first",
+    "n_bootstrap": 5000,
+    "seed": 20261006,
+    "gate": "Both game corrected-Brier and declared-log-loss deltas below zero with 95% upper endpoints below zero; targeted mechanism gains reported separately",
+    "mcse": "Numerical error separate; null when not estimated",
+    "high_scoring_total_runs_minimum": 9
+  },
+  "experiments": [
+    {
+      "id": "EDGE-01",
+      "name": "Stuff change signal",
+      "lane": "pregame",
+      "status": "REGISTERED_NOT_FITTED",
+      "primary_skill_targets": [
+        "pitcher_K",
+        "pitcher_BB"
+      ],
+      "model_hash": null,
+      "candidate_hash": null,
+      "preregistration_hash": null,
+      "game_manifest_hash": null,
+      "specification": "research/edge_track/README.md",
+      "effects": {
+        "win_brier": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "win_log_loss": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "pitcher_K": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "pitcher_BB": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "pitcher_PC": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "pitcher_IP": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "reliever_appears": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "team_runs": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "high_total": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "batter_H": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "batter_HR": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "batter_K": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        }
+      },
+      "retained": false,
+      "decision": "Not evaluated; no accuracy change enabled"
+    },
+    {
+      "id": "EDGE-02",
+      "name": "Swing path versus pitch path",
+      "lane": "pregame",
+      "status": "REGISTERED_NOT_FITTED",
+      "primary_skill_targets": [
+        "pitcher_K",
+        "team_runs"
+      ],
+      "model_hash": null,
+      "candidate_hash": null,
+      "preregistration_hash": null,
+      "game_manifest_hash": null,
+      "specification": "research/edge_track/README.md",
+      "effects": {
+        "win_brier": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "win_log_loss": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "pitcher_K": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "pitcher_BB": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "pitcher_PC": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "pitcher_IP": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "reliever_appears": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "team_runs": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "high_total": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "batter_H": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "batter_HR": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "batter_K": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        }
+      },
+      "retained": false,
+      "decision": "Not evaluated; no accuracy change enabled"
+    },
+    {
+      "id": "EDGE-03",
+      "name": "Arsenal versus weakness",
+      "lane": "pregame",
+      "status": "REGISTERED_NOT_FITTED",
+      "primary_skill_targets": [
+        "pitcher_K",
+        "pitcher_BB"
+      ],
+      "model_hash": null,
+      "candidate_hash": null,
+      "preregistration_hash": null,
+      "game_manifest_hash": null,
+      "specification": "research/edge_track/README.md",
+      "effects": {
+        "win_brier": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "win_log_loss": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "pitcher_K": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "pitcher_BB": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "pitcher_PC": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "pitcher_IP": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "reliever_appears": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "team_runs": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "high_total": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "batter_H": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "batter_HR": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "batter_K": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        }
+      },
+      "retained": false,
+      "decision": "Not evaluated; no accuracy change enabled"
+    },
+    {
+      "id": "EDGE-04",
+      "name": "Bullpen availability and capacity",
+      "lane": "pregame",
+      "status": "REGISTERED_NOT_FITTED",
+      "primary_skill_targets": [
+        "reliever_appears",
+        "pitcher_IP"
+      ],
+      "model_hash": null,
+      "candidate_hash": null,
+      "preregistration_hash": null,
+      "game_manifest_hash": null,
+      "specification": "research/edge_track/README.md",
+      "effects": {
+        "win_brier": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "win_log_loss": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "pitcher_K": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "pitcher_BB": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "pitcher_PC": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "pitcher_IP": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "reliever_appears": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "team_runs": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "high_total": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "batter_H": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "batter_HR": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "batter_K": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        }
+      },
+      "retained": false,
+      "decision": "Not evaluated; no accuracy change enabled"
+    },
+    {
+      "id": "EDGE-05",
+      "name": "In-game day-state updating",
+      "lane": "in_game",
+      "status": "REGISTERED_NOT_FITTED",
+      "primary_skill_targets": [
+        "win_brier",
+        "team_runs"
+      ],
+      "model_hash": null,
+      "candidate_hash": null,
+      "preregistration_hash": null,
+      "game_manifest_hash": null,
+      "specification": "research/edge_track/README.md",
+      "effects": {
+        "win_brier": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "win_log_loss": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "pitcher_K": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "pitcher_BB": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "pitcher_PC": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "pitcher_IP": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "reliever_appears": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "team_runs": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "high_total": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "batter_H": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "batter_HR": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        },
+        "batter_K": {
+          "candidate": null,
+          "current": null,
+          "simple_baseline": null,
+          "delta": null,
+          "ci95": null,
+          "n_games": 0,
+          "n_cases": 0,
+          "mcse": null,
+          "status": "NOT_RUN"
+        }
+      },
+      "retained": false,
+      "decision": "Not evaluated; no accuracy change enabled"
+    }
+  ]
+}

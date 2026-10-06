@@ -181,6 +181,11 @@ class BoxAccumulator:
         for i in (0,2500,5000,7500,9999):
             if i not in selected:selected.append(i)
             if len(selected)==5:break
+        # Preserve dependence across the entire world: marginal player run
+        # histograms cannot be added to reconstruct team or game distributions.
+        result['team_run_distributions']={side:_distribution(Counter(p[i] for p in self.score_pairs),self.n)
+                                         for i,side in enumerate(SIDE)}
+        result['total_run_distribution']=_distribution(Counter(a+h for a,h in self.score_pairs),self.n)
         result['sample_indices']=selected
         result['typical_score_frequency']=counts[modal]/self.n
         return result

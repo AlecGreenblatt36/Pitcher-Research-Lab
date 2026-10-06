@@ -12,7 +12,7 @@ def utc(text):
     if d.tzinfo is None:raise ValueError('Timezone required')
     return d.astimezone(timezone.utc)
 def inspect_data(data):
-    if set(data) not in (OLD_FIELDS,BOX_FIELDS):raise ValueError('Unexpected public fields')
+    if set(data) not in (OLD_FIELDS,BOX_FIELDS,BOX_FIELDS|{'skill_scores'}):raise ValueError('Unexpected public fields')
     for ident,f in data['forecasts'].items():
         if set(f)!=ALLOWED_FORECAST_FIELDS:raise ValueError('Unexpected forecast field')
         if f['n_simulations']!=10000:raise ValueError('Not a 10,000-world forecast')
@@ -91,9 +91,12 @@ def main():
                     assert page.locator('#game .sample-buttons button').count()==5,'Missing five full sample games'
                     assert page.locator('#game .player-row').count()>=20,'Missing full batting/pitching boxes'
                     assert 'Starter not saved' not in page.inner_text('#game')
+                    assert page.locator('#game .skill-card').count()==1,'Missing How close card'
                     design_check('game')
                     page.screenshot(path=str(out/f'game_{width}.png'),full_page=True)
                     page.screenshot(path=str(out/f'game_header_{width}.png'))
+                    page.locator('#game .skill-card').scroll_into_view_if_needed()
+                    page.screenshot(path=str(out/f'how_close_{width}.png'))
                     for section in ('projectedBatting','projectedPitching'):
                         page.locator('#'+section).evaluate("el=>el.scrollIntoView({block:'start',behavior:'instant'})");page.screenshot(path=str(out/f'{section}_{width}.png'))
                     for i in range(5):
@@ -108,8 +111,11 @@ def main():
                             page.locator('#sample .play-half').first.evaluate("el=>el.scrollIntoView({block:'start',behavior:'instant'})");page.screenshot(path=str(out/f'play_by_play_{width}.png'))
                         page.locator('#backGame').click()
                 page.locator('#trackTab').click();assert page.locator('#track').is_visible()
+                assert page.locator('#track .skill-item').count()==7,'Missing skill diagnostics'
+                assert 'Simple baseline' in page.inner_text('#track'),'Missing paired baseline'
                 design_check('track')
                 page.screenshot(path=str(out/f'track_{width}.png'),full_page=True)
+                page.screenshot(path=str(out/f'track_header_{width}.png'))
                 page.locator('#howTab').click();assert page.locator('#how').is_visible()
                 assert 'regular-season bullpen' in page.inner_text('#how')
                 assert 'pitch-by-pitch' in page.inner_text('#how')
