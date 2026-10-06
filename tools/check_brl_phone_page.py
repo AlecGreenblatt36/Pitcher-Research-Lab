@@ -40,8 +40,41 @@ def main():
                 page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
                 response=page.goto(a.url,wait_until='networkidle',timeout=45000)
                 assert response.status==200
-                page.evaluate('document.fonts.ready')
-                assert page.evaluate('document.fonts.check(\'16px "Atkinson Hyperlegible"\') && document.fonts.check(\'24px "Barlow Condensed"\')'),'Requested fonts unavailable'
+                # Explicitly load the weights used by the body and headings.
+                # fonts.ready waits for used faces; check(default 400) alone can
+                # fail for an unused declared weight and can pass for a missing face.
+                fonts=page.evaluate('''async () => {
+                    const requests = ['400 16px "Atkinson Hyperlegible"',
+                                      '700 24px "Barlow Condensed"'];
+                    const before = Array.from(document.fonts, f => ({family:f.family,weight:f.weight,status:f.status}));
+                    const loaded = await Promise.race([
+                        Promise.all(requests.map(async spec => ({spec,faces:(await document.fonts.load(spec, 'Baseball 0123456789')).map(f=>({family:f.family,weight:f.weight,status:f.status}))}))),
+                        new Promise((_,reject)=>setTimeout(()=>reject(new Error('Requested fonts did not load within 15 seconds')),15000))
+                    ]);
+                    return {before,loaded,body_family:getComputedStyle(document.body).fontFamily,
+                            heading_family:getComputedStyle(document.querySelector('h1')).fontFamily};
+                }''')
+                receipt.setdefault('font_checks',[]).append({'width':width,**fonts})
+                page.screenshot(path=str(out/f'font_evidence_{width}.png'))
+                assert all(item['faces'] and all(face['status']=='loaded' for face in item['faces']) for item in fonts['loaded']),'Requested font faces unavailable'
+                assert 'Atkinson Hyperlegible' in fonts['body_family'] and 'Barlow Condensed' in fonts['heading_family'],'Requested fonts not applied'
+                # Deterministic screenshot positioning; do not alter page content.
+                page.add_style_tag(content='html{scroll-behavior:auto!important}')
+                def design_check(name):
+                    result=page.evaluate('''() => {
+                        const shown=e=>!!(e.offsetWidth||e.offsetHeight||e.getClientRects().length)&&getComputedStyle(e).visibility!=='hidden';
+                        const text=Array.from(document.querySelectorAll('main *')).filter(e=>shown(e)&&Array.from(e.childNodes).some(n=>n.nodeType===3&&n.textContent.trim()));
+                        const taps=Array.from(document.querySelectorAll('a,button,summary')).filter(shown);
+                        return {minimum_text_px:Math.min(...text.map(e=>parseFloat(getComputedStyle(e).fontSize))),
+                                minimum_tap_height:Math.min(...taps.map(e=>e.getBoundingClientRect().height)),
+                                status_notes:Array.from(document.querySelectorAll('.status-note')).filter(shown).length,
+                                overflow:document.documentElement.scrollWidth>innerWidth};
+                    }''')
+                    receipt.setdefault('design_checks',[]).append({'width':width,'view':name,**result})
+                    assert result['minimum_text_px']>=16, name+' contains small text'
+                    assert result['minimum_tap_height']>=44, name+' has a small tap target'
+                    assert result['status_notes']<=1, name+' has multiple status notes'
+                    assert not result['overflow'], name+' overflows'
                 data=page.evaluate('window.BRL');latest,ids=inspect_data(data)
                 assert data.get('view_scope')=='live','Deployed page is not the live lane'
                 assert not page.evaluate('Boolean(document.body.dataset.refreshBlocked)'),'Refresh is blocked'
@@ -50,6 +83,7 @@ def main():
                 for ident,f in latest.values():
                     card=page.locator('.game-card').filter(has_text=f['home']['name'])
                     assert card.count()==1 and f'{round(f["home_win_probability"]*100)}%' in card.inner_text()
+                design_check('slate')
                 page.screenshot(path=str(out/f'slate_{width}.png'),full_page=True)
                 if latest:
                     pk=next(iter(latest));page.locator(f'[data-game="{pk}"]').click()
@@ -57,25 +91,29 @@ def main():
                     assert page.locator('#game .sample-buttons button').count()==5,'Missing five full sample games'
                     assert page.locator('#game .player-row').count()>=20,'Missing full batting/pitching boxes'
                     assert 'Starter not saved' not in page.inner_text('#game')
+                    design_check('game')
                     page.screenshot(path=str(out/f'game_{width}.png'),full_page=True)
                     page.screenshot(path=str(out/f'game_header_{width}.png'))
                     for section in ('projectedBatting','projectedPitching'):
-                        page.locator('#'+section).scroll_into_view_if_needed();page.screenshot(path=str(out/f'{section}_{width}.png'))
+                        page.locator('#'+section).evaluate("el=>el.scrollIntoView({block:'start',behavior:'instant'})");page.screenshot(path=str(out/f'{section}_{width}.png'))
                     for i in range(5):
                         page.locator(f'[data-sample="{i}"]').click()
                         assert page.locator('#sample .play-half').count()>=17
                         assert page.locator('#sample .player-row').count()>=20
                         assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
+                        design_check('sample_'+str(i))
                         if i==0:
                             page.screenshot(path=str(out/f'sample_{width}.png'),full_page=True)
                             page.screenshot(path=str(out/f'sample_header_{width}.png'))
-                            page.locator('#sample .play-half').first.scroll_into_view_if_needed();page.screenshot(path=str(out/f'play_by_play_{width}.png'))
+                            page.locator('#sample .play-half').first.evaluate("el=>el.scrollIntoView({block:'start',behavior:'instant'})");page.screenshot(path=str(out/f'play_by_play_{width}.png'))
                         page.locator('#backGame').click()
                 page.locator('#trackTab').click();assert page.locator('#track').is_visible()
+                design_check('track')
                 page.screenshot(path=str(out/f'track_{width}.png'),full_page=True)
                 page.locator('#howTab').click();assert page.locator('#how').is_visible()
                 assert 'regular-season bullpen' in page.inner_text('#how')
                 assert 'pitch-by-pitch' in page.inner_text('#how')
+                design_check('how')
                 page.screenshot(path=str(out/f'how_{width}.png'),full_page=True)
                 assert not errors
                 receipt['checks'].append({'width':width,'font_faces_loaded':True,'no_overflow':True,'five_samples_opened':True,'all_game_sections':True,'javascript_errors':errors})
