@@ -16,7 +16,7 @@ def main():
     parser.add_argument('--config',default='brl_live/runtime.json')
     args=parser.parse_args()
     repo=os.environ['GITHUB_REPOSITORY'];token=os.environ['GH_TOKEN'];now=datetime.now(timezone.utc)
-    receipt={'created_at':now.isoformat(),'status':'starting','live_forecasts_created':0,'raw_data_published':False,'refresh_extension':'prior-day-v1','stage':'source_setup','secret_present':False,'runtime_authenticated_decryption':False}
+    receipt={'created_at':now.isoformat(),'status':'starting','live_forecasts_created':0,'raw_data_published':False,'refresh_extension':'box-score-v1','stage':'source_setup','secret_present':False,'runtime_authenticated_decryption':False}
     games=[]
     try:
         day=now.astimezone(ZoneInfo('America/New_York')).date().isoformat()
@@ -34,7 +34,7 @@ def main():
         env={k:v for k,v in os.environ.items() if k not in ('BRL_PA_PACKAGE_KEY','GH_TOKEN','GITHUB_TOKEN')}
         subprocess.run([sys.executable,'-m','pip','install','--disable-pip-version-check','--quiet','-r',str(runtime/'requirements-cloud.txt')],env=env,check=True)
         sys.path.insert(0,str(runtime))
-        from brl_live.live_extension import main as run_iteration
+        from brl_live.box_runner import main as run_iteration
         receipt['stage']='history_and_forecast_iteration'
         receipt.update(run_iteration(args.site));receipt['status']='iteration_completed';receipt['stage']='complete'
     except Exception as exc:
@@ -53,7 +53,7 @@ def main():
             Path(args.site).mkdir(parents=True,exist_ok=True)
             for name,raw in prior.items():(Path(args.site)/name).write_bytes(raw)
             page=Path(args.site)/'index.html'
-            page.write_text(page.read_text().replace('<main>','<main><div class="notice">Refresh blocked; showing the last saved forecasts. '+html.escape(reason)+'</div>',1))
+            page.write_text(page.read_text().replace('<body>', '<body data-refresh-blocked="true">', 1))
             preserved=True
         except Exception:setup_page(args.site,reason,games)
         receipt['preserved_previous_forecasts']=preserved

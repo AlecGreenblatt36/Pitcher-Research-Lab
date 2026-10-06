@@ -48,3 +48,18 @@ Observe an actual schedule-triggered live run. Continue official-lineup revision
 Postseason still uses regular-season bullpen logic, without the automatic runner. Fitted advancement/speed/defense, steals/wild pitches, rest/workload availability, postseason policy and talent uncertainty are unfinished. Current Pages is not yet arbitrary-date simulation/playback. No 2025 replay or model accuracy upgrade was performed here.
 
 For winter, fit/tune PA, starter, preprocessing and calibration only through 2024; preserve the current live lock. Reconcile actual 2025 schedule coverage rather than inventing a 2,430-row total. Repeated 2025 candidate selection is development, not untouched confirmation; retain an independent/prospective confirmation lane. Keep both metrics' paired 95% intervals and MC numerical error separate in the ledger.
+
+
+## Latest priority: box scores before postseason policy
+
+New modules: brl_live/boxscore.py (observation-only accounting, distributions, actual parser and proper scores), box_runner.py (same live engine plus box publication), box_page.py (prototype-styled phone product). entrypoint now calls box_runner. Encrypted runtime/key/pins and PA/starter/game logic are unchanged.
+
+New ledger members: box_scores keyed by forecast ID; box_publications containing immutable box SHA256, commit and publication time; actual_boxes by game PK; player_scores with eligible version rows and latest-version aggregates. Immutable outputs: box_forecasts/<hash>.json. Public JSON adds these plus view_scope; the Pages file allowlist remains index.html, predictions.json and .nojekyll. No raw source, decrypted runtime or font file is published.
+
+An old win-only snapshot receives one new box-bearing version. An unchanged already-box-bearing snapshot is skipped. All 10,000 worlds must finish; five exact sample seeds are replayed for complete books. Publication of player distributions has its own deadline and cannot borrow an old win forecast's timestamp. Actual boxes are reconciled by player ID. Late or altered distributions do not score.
+
+Local evidence: 42 box tests passed; 17 genuine final feeds parsed; a 10,000-world frozen pregame case reproduced every original score/seed vector; a separate 10,000-world historical postseason game supplied real matching actual comparisons. Five changed views at 390px passed offline component checks. Hosted HTTPS checks must pass after merge before claiming deployment. The first cloud test encountered dashboard pytest.ini/app.py shadowing and was fixed with -c /dev/null --import-mode=importlib; don't install Flask just to conceal that wrong import.
+
+The inherited pitch_number field was unusable (all 1). Actual prior-date official pitch events now provide independent empirical bookkeeping counts and BB/HBP split; no pitch sequences or manager effects. Pitch-by-pitch is the NEXT sprint. Then resume fitted postseason policy and the master plan. Historical UI previews use actual generation times, view_scope=historical_replay, no publication receipts and zero live scores. Never backdate these.
+
+After deployment: verify cloud box_forecasts_created, each distribution count and all five examples, actual first-pitch audit and final player scoring, the phone page screenshots and existing forecast-version preservation. Keep failures and missing metrics in the ledger. No 2025 model fitting/replay or accuracy upgrade occurred here.

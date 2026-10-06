@@ -28,3 +28,16 @@ September 27, 2026: 14 matched games, 140,000 completed paths. Prior receipt: mo
 ## Required entry for future model experiments
 
 Record ID, timestamp before scoring, hypothesis, source vintage/coverage, training/tuning windows, current/candidate hashes, fixed game manifest, both paired deltas and 95% intervals, numerical MCSE separately, decision/reason, and later test-set reuse. A model is kept only after the declared gate; otherwise retain the current model and record the candidate as dropped or deferred. Repeatedly selecting on 2025 makes it development, even with through-2024 fitting.
+
+
+## Box-score sprint
+
+| ID | Attempt | Result | Delta Brier, 2025 | Delta log loss, 2025 |
+|---|---|---|---|---|
+| BOX-01 | Observe full player/inning books without changing the engine | 10,000 frozen-input score/seed vectors reproduced exactly; accounting tests passed | Not run | Not run |
+| BOX-02 | Use inherited PA pitch_number for counts | Rejected: column uniformly normalized to 1; no invented counts | Not run | Not run |
+| BOX-03 | Earlier official-pitch-event empirical annotations | Implemented on a separate stream; no removal/outcome effect | Not run | Not run |
+| BOX-04 | Actual ID joins and proper player scores | 17 genuine final feeds parsed; full 10,000-world historical comparison generated | Not run | Not run |
+| BOX-05 | Phone-first full boxes, five sample games and track record | Local 390px components passed; hosted check still required | Not run | Not run |
+
+First isolated cloud test failed because the dashboard pytest configuration imported public app.py instead of the private runtime app package. Corrected by an isolated pytest configuration/import mode; no model or test assertion was weakened. No accuracy upgrade adopted. Conditional pitch sequences and full 2025 evaluation are not part of this completed implementation evidence.

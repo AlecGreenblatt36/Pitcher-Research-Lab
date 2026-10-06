@@ -55,3 +55,16 @@ Implementation: `brl_live/entrypoint.py`, `history_refresh.py`, `live_extension.
 Public source documentation: https://baseballsavant.mlb.com/csv-docs
 
 GitHub schedule limits: https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule
+
+
+## Box-score sprint (October 6, 2026)
+
+The box layer observes the locked simulator without consuming its random stream or changing any PA probability, runner transition, or pitcher-removal choice. It records the selected scoring runners and reconciles team runs/hits, batting PA/AB and opposing pitcher lines in every world. All projected means and count distributions include all 10,000 worlds, including zero opportunity for nonappearing pitchers. Five complete examples are retained: one with the most frequent exact score pair and four fixed world positions. This is a typical score, not a uniquely most probable sequence. Every extra inning is shown separately in the line score.
+
+The inherited PA corpus normalizes pitch_number to 1 and cannot estimate pitch counts. Actual earlier official playEvents supply joint BB/HBP and pitch-count annotations on an independent stream conditional on pitcher, outcome and batter hand, with pitcher/outcome and league fallbacks. These are estimates from potentially small recent pools, not generated pitch sequences; they never feed the manager. The conditional pitch bridge is a separate next sprint.
+
+Final actual boxes are parsed from the MLB Stats API only in the outcome path. Player IDs join actual and projected lines; totals reconcile with official inning scores and opposing pitching totals. An absent projected participant in a complete final listing has zero realized opportunity; a missing stat field is unavailable, not zero. Unprojected substitutes remain visible and unscored. Baseball innings x.2 convert to 3*x+2 outs.
+
+Player hit/HR/K and pitcher K/innings distributions use fair finite-ensemble CRPS: mean absolute distance to the observation minus distinct-draw pair distance. Innings scores are outs scores divided by three. Hit/HR occurrence also use corrected Brier. The latest eligible public box version per game is selected without looking at outcomes. Its own content hash, commit and publication time must precede observed first pitch; a previous win-only forecast cannot backdate player distributions. Player rows within a game are dependent and are not independent confirmation samples.
+
+The phone UI uses the prototype fonts/colors and Eastern times, with amber only for actuals. Complete player lines wrap into readable grids rather than shrinking wide tables. Definitions and limitations are in How to read this. Only forecast output distributions, five selected simulated paths and final box summaries are public; raw inputs, model files and keys remain encrypted/private.
