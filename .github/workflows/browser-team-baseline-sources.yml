@@ -11,7 +11,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Get official prior-season results with explicit season
+      - name: Get official prior-season results with explicit season and completion state
         run: |
           python - <<'PY'
           import sys,json
@@ -19,7 +19,7 @@ jobs:
           from probe_official_source import fetch,OUT,receipts
           for year in (2023,2024,2025,2026):
               end=f'{year}-12-31' if year<2026 else '2026-09-26'
-              url=f'https://statsapi.mlb.com/api/v1/schedule?sportId=1&season={year}&startDate={year}-01-01&endDate={end}&gameType=R&fields=dates,date,games,gamePk,gameDate,gameType,status,abstractGameState,teams,away,home,team,id,name,score'
+              url=f'https://statsapi.mlb.com/api/v1/schedule?sportId=1&season={year}&startDate={year}-01-01&endDate={end}&gameType=R&fields=dates,date,games,gamePk,gameDate,gameType,status,abstractGameState,detailedState,codedGameState,statusCode,rescheduleDate,rescheduledFrom,resumeDate,resumedFrom,teams,away,home,team,id,name,score'
               data=fetch(f'team_results_{year}',url)
               if data:
                   dates=[x['date'] for x in data.get('dates',[])]
