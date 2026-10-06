@@ -1,0 +1,64 @@
+name: BRL history source audit
+on:
+  push:
+    branches: [feature/live-history-refresh-20261006]
+    paths: [.github/workflows/brl-history-source-probe.yml]
+permissions:
+  contents: read
+jobs:
+  source-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Install source parser
+        run: python -m pip install pandas==2.2.3
+      - name: Inspect public source coverage; retain no raw artifacts
+        run: |
+          python - <<'PY'
+          import csv,io,json,hashlib,datetime,urllib.request,urllib.parse,pathlib
+          import pandas as pd
+          from zoneinfo import ZoneInfo
+          now=datetime.datetime.now(datetime.timezone.utc)
+          end=now.astimezone(ZoneInfo('America/New_York')).date()-datetime.timedelta(days=1)
+          begin=datetime.date(2026,9,27)
+          assert (end-begin).days<=14
+          report={'scope':'SOURCE COVERAGE ONLY; no player history installed or forecasts','checked_at':now.isoformat(),'days':[],'raw_data_published':False}
+          def get(url):
+              with urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'BRL-source-audit/1.0'}),timeout=60) as r:
+                  raw=r.read(30000001)
+                  assert r.status==200 and len(raw)<=30000000
+                  return raw
+          for offset in range((end-begin).days+1):
+              day=(begin+datetime.timedelta(days=offset)).isoformat();item={'day':day}
+              try:
+                  sched=json.loads(get('https://statsapi.mlb.com/api/v1/schedule?sportId=1&date='+day))
+                  games=[g for d in sched.get('dates',[]) for g in d.get('games',[]) if g['gameType'] in ['R','F','D','L','W'] and g['status']['detailedState'] in ['Final','Completed Early']]
+                  params={'all':'true','type':'details','player_type':'pitcher','group_by':'name','hfGT':'R|F|D|L|W|','game_date_gt':day,'game_date_lt':day,'min_pitches':'0','min_results':'0','min_abs':'0'}
+                  raw=get('https://baseballsavant.mlb.com/statcast_search/csv?'+urllib.parse.urlencode(params))
+                  frame=pd.read_csv(io.BytesIO(raw),low_memory=False) if raw.strip() else pd.DataFrame()
+                  item.update(official_played_games=len(games),csv_bytes=len(raw),csv_sha256=hashlib.sha256(raw).hexdigest(),pitch_rows=len(frame))
+                  checks=[]
+                  for game in games:
+                      pk=game['gamePk'];feed=json.loads(get(f'https://statsapi.mlb.com/api/v1.1/game/{pk}/feed/live'))
+                      official={int(p['about']['atBatIndex'])+1:p['result']['eventType'] for p in feed['liveData']['plays']['allPlays'] if p.get('about',{}).get('isComplete') and p.get('result',{}).get('eventType') not in ['pickoff_1b','pickoff_2b','pickoff_3b','caught_stealing_2b','caught_stealing_3b','caught_stealing_home','stolen_base_2b','stolen_base_3b','stolen_base_home','wild_pitch','passed_ball','balk','game_advisory','no_play']}
+                      part=frame[(frame.game_pk==pk)&frame.events.notna()] if len(frame) else pd.DataFrame()
+                      actual={int(r.at_bat_number):str(r.events) for r in part.itertuples()}
+                      counts=sum(feed['liveData']['boxscore']['teams'][s]['teamStats']['batting'].get('plateAppearances',0) for s in ('away','home'))
+                      mismatches={}
+                      for k in set(official)&set(actual):
+                          if official[k]!=actual[k]:
+                              label=official[k]+' -> '+actual[k];mismatches[label]=mismatches.get(label,0)+1
+                      checks.append({'game_pk':pk,'official_PA':len(official),'boxscore_PA':counts,'statcast_terminal_rows':len(actual),'missing_PA_count':len(set(official)-set(actual)),'extra_terminal_count':len(set(actual)-set(official)),'event_difference_counts':mismatches})
+                  item['games']=checks;item['status']='RETRIEVED'
+              except Exception as exc:item.update(status='BLOCKED',error_type=type(exc).__name__)
+              report['days'].append(item)
+              pathlib.Path('history_source_audit.json').write_text(json.dumps(report,indent=2))
+              print(json.dumps(item),flush=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: brl-history-source-audit
+          path: history_source_audit.json
+          retention-days: 7
+          if-no-files-found: error
