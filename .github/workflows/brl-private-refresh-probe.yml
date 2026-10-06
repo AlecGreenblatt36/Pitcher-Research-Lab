@@ -1,0 +1,71 @@
+name: BRL private history source probe
+on:
+  push:
+    branches: [feature/private-history-refresh-20261006]
+    paths: [.github/workflows/brl-private-refresh-probe.yml]
+permissions:
+  contents: read
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check --quiet cryptography==46.0.4
+      - name: Capture bounded dates and encrypt in memory
+        run: |
+          python - <<'PY'
+          import base64,datetime,gzip,hashlib,json,os,pathlib,time,urllib.request,urllib.parse
+          from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey,X25519PublicKey
+          from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+          from cryptography.hazmat.primitives import hashes
+          from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+          from zoneinfo import ZoneInfo
+          out=pathlib.Path('encrypted_probe');out.mkdir()
+          recipient=bytes.fromhex('d35a6ef9dc32acc1abe16e5b468e1f78fe0370710878c8926c6a21c3fdedc255')
+          now=lambda:datetime.datetime.now(datetime.timezone.utc).isoformat()
+          start=datetime.date(2026,9,28)
+          last=min(datetime.date(2026,10,5),datetime.datetime.now(ZoneInfo('America/New_York')).date()-datetime.timedelta(days=1))
+          sources=[];summary={'started_at':now(),'first_day':str(start),'last_day':str(last),'requests':[],'raw_data_published':False,'forecasts_created':0}
+          def fetch(name,url):
+              entry={'name':name,'url':url,'requested_at':now()}
+              try:
+                  with urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'BRL-private-history-probe/1.0','Accept':'text/csv,application/json'}),timeout=55) as r:
+                      raw=r.read(25000001);entry['http_status']=r.status
+                      if len(raw)>25000000:raise ValueError('Response exceeds bounded capture size')
+                  entry.update(finished_at=now(),sha256=hashlib.sha256(raw).hexdigest(),n_bytes=len(raw))
+                  sources.append({**entry,'body_base64':base64.b64encode(raw).decode()})
+                  summary['requests'].append({'name':name,'status':'captured','http_status':entry['http_status'],'n_bytes':len(raw)})
+                  return raw
+              except Exception as e:
+                  summary['requests'].append({'name':name,'status':'failed','error_class':type(e).__name__});return None
+          for offset in range((last-start).days+1):
+              day=(start+datetime.timedelta(days=offset)).isoformat()
+              raw=fetch('schedule_'+day,'https://statsapi.mlb.com/api/v1/schedule?sportId=1&date='+day)
+              if raw is None:continue
+              schedule=json.loads(raw)
+              games=[g for d in schedule.get('dates',[]) for g in d.get('games',[]) if g.get('gameType') in ('R','F','D','L','W')]
+              finals=[g for g in games if g['status'].get('codedGameState')=='F']
+              for g in finals:
+                  fetch('final_'+str(g['gamePk']),'https://statsapi.mlb.com/api/v1.1/game/'+str(g['gamePk'])+'/feed/live')
+              if finals:
+                  params={'all':'true','type':'details','player_type':'pitcher','game_date_gt':day,'game_date_lt':day,'hfGT':'R|F|D|L|W|','group_by':'name','min_pitches':'0','min_results':'0','sort_col':'pitches','sort_order':'desc'}
+                  fetch('statcast_'+day,'https://baseballsavant.mlb.com/statcast_search/csv?'+urllib.parse.urlencode(params))
+              time.sleep(0.4)
+          payload=gzip.compress(json.dumps({'schema':'brl.encrypted-source-probe.v1','sources':sources},separators=(',',':')).encode(),mtime=0)
+          ephemeral=X25519PrivateKey.generate();epub=ephemeral.public_key().public_bytes_raw();salt=os.urandom(16);nonce=os.urandom(12)
+          key=HKDF(algorithm=hashes.SHA256(),length=32,salt=salt,info=b'BRL-private-history-source-v1').derive(ephemeral.exchange(X25519PublicKey.from_public_bytes(recipient)))
+          header=b'BRLX2551'+epub+salt+nonce
+          encrypted=header+AESGCM(key).encrypt(nonce,payload,header+recipient)
+          (out/'source_bundle.enc').write_bytes(encrypted)
+          summary.update(finished_at=now(),cipher_sha256=hashlib.sha256(encrypted).hexdigest(),cipher_bytes=len(encrypted),encryption='X25519/HKDF-SHA256/AES-256-GCM; only recipient public key is in source')
+          (out/'receipt.json').write_text(json.dumps(summary,indent=2));print(json.dumps(summary,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: brl-encrypted-history-probe
+          path: encrypted_probe/
+          retention-days: 2
+          if-no-files-found: error
