@@ -15,7 +15,12 @@ jobs:
         with:
           python-version: '3.12'
       - name: Read a past season's pregame lines (public odds only, no secrets)
+        if: hashFiles('tools/skip_espn_history') == ''
         env:
           GH_TOKEN: ${{ github.token }}
           BRL_MARKET_SEASON: '2026'
         run: python tools/brl_market_history.py
+      - name: Read 2021-2025 lines from a public dataset and match them to official games
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/brl_market_sbr.py
