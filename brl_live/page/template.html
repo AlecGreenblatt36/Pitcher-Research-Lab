@@ -204,11 +204,27 @@ button { font: inherit; color: inherit; }
 
 /* Track record */
 .ladder { list-style: none; padding: 0; margin: 0; }
-.ladder li { display: grid; grid-template-columns: 130px 1fr 58px; gap: 10px; align-items: center; padding: 8px 0; }
-.ladder .bar { height: 14px; background: var(--rule-soft); border-radius: 3px; overflow: hidden; }
-.ladder .bar i { display: block; height: 100%; background: #9AA8A0; }
-.ladder li.you .bar i { background: var(--board); }
+.ladder li { display: grid; grid-template-columns: 118px 1fr 64px; gap: 10px; align-items: center; padding: 8px 0; }
+.ladder li.you span:first-child { font-weight: 700; }
+.ladder .bar { position: relative; height: 16px; background: var(--rule-soft); border-radius: 3px; overflow: hidden; }
+.ladder .bar::before { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: #A9B6AD; }
+.ladder .bar i { position: absolute; top: 0; bottom: 0; background: #9AA8A0; }
+.ladder .bar i.pos { left: 50%; background: var(--board); }
+.ladder .bar i.neg { right: 50%; background: var(--home); }
 .ladder .v { font-family: var(--display); font-weight: 700; font-size: 19px; text-align: right; }
+.games-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.games-list li { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 12px 14px; }
+.games-list .g-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.games-list .g-top b { font-family: var(--display); font-size: 20px; font-weight: 700; }
+.games-list .g-top span { color: var(--muted); font-size: 15px; }
+.games-list .final { font-family: var(--display); font-size: 19px; font-weight: 600; margin: 2px 0 8px; }
+.games-list .calls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.games-list .call { border: 1px solid var(--rule-soft); border-radius: 8px; padding: 6px 8px; min-width: 0; }
+.games-list .call small { display: block; color: var(--muted); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.games-list .call b { font-family: var(--display); font-size: 19px; font-weight: 700; }
+.games-list .call.yes { border-color: var(--board); background: #EAF1EC; }
+.games-list .call.yes b { color: var(--board); }
+.games-list .call.no b { color: var(--home); }
 .empty-state { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 18px; }
 .empty-state h2 { margin-top: 0; }
 .prose { max-width: 66ch; }
@@ -822,17 +838,22 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var max = Math.max(1, Math.max.apply(null, rows.map(function (r) { return Math.abs(r.better_than_coin_pct); })));
     h += '<section class="sec"><h2>Better than a coin flip</h2><p class="lede">Win chance accuracy over ' + n + " scored " + (n === 1 ? "game" : "games") + '. Small samples swing a lot; judge after a few hundred.</p><ol class="ladder">';
     rows.forEach(function (r) {
-      var v = r.better_than_coin_pct;
-      h += "<li" + (r.key === "blend" ? ' class="you"' : "") + "><span>" + esc(r.name) + '</span><span class="bar"><i style="width:' + Math.max(0, v / max * 100).toFixed(1) + '%"></i></span><span class="v num">' + (v >= 0 ? "+" : "") + v.toFixed(1) + "%</span></li>";
+      var v = r.better_than_coin_pct, w = (Math.abs(v) / max * 50).toFixed(1);
+      h += "<li" + (r.key === "blend" ? ' class="you"' : "") + "><span>" + esc(r.name) + '</span><span class="bar"><i class="' + (v >= 0 ? "pos" : "neg") + '" style="width:' + w + '%"></i></span><span class="v num">' + (v >= 0 ? "+" : "") + v.toFixed(1) + "%</span></li>";
     });
-    h += '</ol><p class="note">Headline forecasts are the simulator and team model averaged. The simulator and the team model are scored on their own too.</p></section>';
-    h += '<section class="sec"><h2>Game by game</h2><div class="tbl-wrap"><table class="box"><thead><tr><th scope="col">Game</th><th>Final</th><th>Headline</th><th>Simulator</th><th>Team model</th></tr></thead><tbody>';
+    h += '</ol><p class="note">Right of the line is better than a coin flip. The headline forecasts average the simulator and the team model; both are scored on their own too.</p></section>';
+    h += '<section class="sec"><h2>Game by game</h2><ol class="games-list">';
+    var shortDate = function (ymd) { if (!ymd) return ""; var d = new Date(ymd + "T12:00:00Z"); return d.toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric" }); };
     (rec.games || []).slice().reverse().forEach(function (g) {
-      var winner = g.home_won ? g.home : g.away;
-      var show = function (p) { if (p == null) return ""; var fav = p >= .5 ? g.home : g.away; var hit = (p >= .5) === g.home_won; return '<span class="mark ' + (hit ? "yes" : "no") + '">' + esc(fav) + " " + pct(p >= .5 ? p : 1 - p) + "</span>"; };
-      h += "<tr><td>" + esc(g.away + " at " + g.home) + '<span class="sub">' + esc(g.date || "") + "</span></td><td>" + esc(winner) + " " + (g.home_won ? g.actual.home + "-" + g.actual.away : g.actual.away + "-" + g.actual.home) + "</td><td>" + show(g.p_blend) + "</td><td>" + show(g.p_sim) + "</td><td>" + show(g.p_team) + "</td></tr>";
+      var call = function (label, p) {
+        if (p == null) return "";
+        var fav = p >= .5 ? g.home : g.away, hit = (p >= .5) === g.home_won;
+        return '<div class="call ' + (hit ? "yes" : "no") + '"><small>' + label + "</small><b>" + esc(fav) + " " + pct(p >= .5 ? p : 1 - p) + "</b></div>";
+      };
+      h += '<li><div class="g-top"><b>' + esc(g.away + " at " + g.home) + "</b><span>" + esc(shortDate(g.date)) + '</span></div><div class="final num">Final: ' + esc(g.away) + " " + g.actual.away + ", " + esc(g.home) + " " + g.actual.home + '</div><div class="calls">' +
+        call("Headline", g.p_blend) + call("Simulator", g.p_sim) + call("Team model", g.p_team) + "</div></li>";
     });
-    h += "</tbody></table></div><p class=\"note\">Green means the favored team won.</p></section>";
+    h += '</ol><p class="note">Green means the favored team won.</p></section>';
     var aggs = (D.skill_scores && D.skill_scores.aggregates) || [];
     var live = aggs.filter(function (a) { return a.n_games && a.model_score != null && a.baseline_score != null; });
     if (live.length) {
