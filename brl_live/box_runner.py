@@ -96,7 +96,7 @@ class BoxRunner(original.Runner):
             snapshot['plays']=plays_from_feed(feed);snapshot['box']=box_from_feed(feed)
         except Exception as exc:
             snapshot['plays_error']=type(exc).__name__+': '+str(exc)[:200]
-        self.store.ledger['live'][str(pk)]=snapshot
+        self.store.ledger.setdefault('live',{})[str(pk)]=snapshot
     def process(self,pk,item):
         _ensure_fields(self.store.ledger)
         url=f'https://statsapi.mlb.com/api/v1.1/game/{pk}/feed/live'

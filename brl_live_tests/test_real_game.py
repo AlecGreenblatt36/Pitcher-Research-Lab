@@ -94,3 +94,24 @@ def test_win_table_counts_states_and_shrinks_sparse_ones():
     assert 0.3 < lookup(table, 7, 'top', 1, [None] * 3, 0) < 0.8
     assert lookup(table, 12, 'bottom', 2, [None, 'y', 'z'], -9) == lookup(table, 9, 'bottom', 2, [None, 'y', 'z'], -6)
     assert state_index(12, 'bottom', 5, ['a', 'b', 'c'], 9) == (8, 1, 2, 7, 12)
+
+
+def test_live_update_keeps_the_real_game_even_when_the_continuation_fails(tmp_path):
+    from cloud.runner import LocalStore
+    from cloud.security import key_bytes
+    from brl_live.box_runner import BoxRunner
+
+    class Sim:
+        def update_live(self, feed, date, now):
+            raise RuntimeError('no continuation today')
+
+    class Net:
+        def json(self, url):
+            raise AssertionError('not used')
+
+    store = LocalStore(tmp_path, key_bytes('ab' * 32))
+    runner = BoxRunner(Net(), store, Sim(), run_id='t')
+    runner.live_update(7, feed(), '2026-10-07')
+    snap = store.ledger['live']['7']
+    assert snap['error'].startswith('RuntimeError') and len(snap['plays']) == 5 and snap['box']['score'] == {'away': 2, 'home': 0}
+    assert snap['plays'][2]['box_outcome'] == 'home_run' and 'plays_error' not in snap
