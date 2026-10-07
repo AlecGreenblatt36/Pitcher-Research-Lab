@@ -1,0 +1,89 @@
+"""The real game from the official feed, in the page's own play and box shapes, and the win table from simulated games."""
+import numpy as np
+from brl_live.real_game import plays_from_feed, box_from_feed
+from brl_live.win_table import WinTable, lookup, state_index, SHAPE
+
+
+def play(inning, half, idx, batter, pitcher, event, desc, away, home, outs, pitches, runners=(), complete=True, hit=None):
+    events = []
+    for ptype, mph, code in pitches:
+        e = {'isPitch': True, 'details': {'code': code, 'type': {'code': ptype}}, 'pitchData': {'startSpeed': mph}}
+        events.append(e)
+    if hit and events:
+        events[-1]['hitData'] = hit
+    return {'about': {'atBatIndex': idx, 'inning': inning, 'halfInning': half, 'isComplete': complete},
+            'result': {'eventType': event, 'description': desc, 'awayScore': away, 'homeScore': home, 'rbi': 1 if event == 'home_run' else 0},
+            'matchup': {'batter': {'id': batter, 'fullName': 'Batter ' + str(batter)}, 'pitcher': {'id': pitcher, 'fullName': 'Pitcher ' + str(pitcher)}},
+            'count': {'balls': 0, 'strikes': 0, 'outs': outs}, 'playEvents': events,
+            'runners': [{'movement': {'start': (str(rid).split('@') + [None])[1], 'end': end}, 'details': {'runner': {'id': str(rid).split('@')[0]}}} for rid, end in runners]}
+
+
+def feed():
+    plays = [play(1, 'top', 0, 1, 50, 'strikeout', 'Batter 1 strikes out swinging.', 0, 0, 1, [('FF', 95.4, 'C'), ('SL', 86.1, 'S'), ('FF', 96.0, 'W')]),
+             play(1, 'top', 1, 2, 50, 'single', 'Batter 2 singles on a line drive to center fielder X.', 0, 0, 1, [('CH', 84.2, 'D')],
+                  runners=[(2, '1B')], hit={'launchSpeed': 101.3, 'launchAngle': 12.0, 'totalDistance': 250.0, 'trajectory': 'line_drive', 'location': '8'}),
+             play(1, 'top', 2, 3, 50, 'home_run', 'Batter 3 homers (1) on a fly ball to left field. Batter 2 scores.', 2, 0, 1, [('FF', 94.0, 'E')],
+                  runners=[('2@1B', 'score'), (3, 'score')], hit={'launchSpeed': 105.0, 'launchAngle': 28.0, 'totalDistance': 402.0, 'trajectory': 'fly_ball', 'location': '7'}),
+             play(1, 'top', 3, 4, 50, 'caught_stealing_2b', 'Batter 4 ... caught stealing 2nd base.', 2, 0, 3, [('FF', 93.0, 'B')]),
+             play(1, 'bottom', 4, 11, 60, 'field_out', 'Batter 11 grounds out to shortstop.', 2, 0, 1, [('SI', 92.0, '*B'), ('SI', 92.5, 'X')],
+                  hit={'launchSpeed': 88.0, 'launchAngle': -5.0, 'trajectory': 'ground_ball', 'location': '6'}),
+             play(1, 'bottom', 5, 12, 60, 'walk', 'Batter 12 walks.', 2, 0, 1, [('FF', 93.0, 'B')] * 4, complete=False)]
+    box = {'teams': {'away': {'batters': [1, 2], 'pitchers': [60], 'players': {
+                'ID1': {'person': {'fullName': 'Batter 1'}, 'battingOrder': '100', 'stats': {'batting': {'plateAppearances': 1, 'atBats': 1, 'strikeOuts': 1}}},
+                'ID2': {'person': {'fullName': 'Batter 2'}, 'battingOrder': '200', 'stats': {'batting': {'plateAppearances': 1, 'atBats': 1, 'hits': 1, 'runs': 1}}},
+                'ID60': {'person': {'fullName': 'Pitcher 60'}, 'stats': {'pitching': {'inningsPitched': '0.1', 'numberOfPitches': 6, 'battersFaced': 2}}}}},
+                     'home': {'batters': [], 'pitchers': [50], 'players': {'ID50': {'person': {'fullName': 'Pitcher 50'}, 'stats': {'pitching': {'inningsPitched': '1.0', 'outs': 3, 'hits': 2, 'runs': 2, 'homeRuns': 1, 'strikeOuts': 1, 'numberOfPitches': 6, 'battersFaced': 4}}}}}}}
+    linescore = {'teams': {'away': {'runs': 2}, 'home': {'runs': 0}}, 'innings': [{'num': 1, 'away': {'runs': 2, 'hits': 2}, 'home': {}}]}
+    return {'gamePk': 7, 'gameData': {'status': {'abstractGameState': 'Live'}}, 'liveData': {'plays': {'allPlays': plays}, 'boxscore': box, 'linescore': linescore}}
+
+
+def test_plays_follow_the_official_feed():
+    plays = plays_from_feed(feed())
+    assert [p['box_outcome'] for p in plays] == ['strikeout', 'single', 'home_run', 'runner', 'bip_out']   # the open plate appearance is not listed
+    k, single, hr, cs, out = plays
+    assert k['pitches'] == [['FF', 95, 'C'], ['SL', 86, 'S'], ['FF', 96, 'S']] and k['estimated_pitches'] == 3 and k['official'] is True
+    assert single['contact'] == {'t': 'L', 'loc': 8, 'dist': 250, 'ev': 101} and single['pitches'] == [['CH', 84, 'X']]
+    assert hr['runs_scored'] == 2 and hr['away_score'] == 2 and hr['scoring_players'] == ['2', '3'] and hr['rbi'] == 1
+    assert (k['outs_before'], k['outs_after'], single['outs_before'], cs['outs_before'], cs['outs_after']) == (0, 1, 1, 1, 3)
+    assert out['inning'] == 1 and out['half'] == 'bottom' and out['outs_before'] == 0 and out['pitches'][0][2] == 'B'
+    assert out['description'].startswith('Batter 11 grounds out') and out['contact']['loc'] == 6 and out['contact']['t'] == 'G'
+    # runners: the single put batter 2 on first, the homer cleared the bases, the caught stealing ended the inning
+    assert single['bases_before'] == [None, None, None] and single['bases_after'] == ['2', None, None]
+    assert hr['bases_before'] == ['2', None, None] and hr['bases_after'] == [None, None, None]
+    assert cs['bases_after'] == [None, None, None] and out['bases_before'] == [None, None, None]
+
+
+def test_box_lines_are_read_leniently_in_progress():
+    box = box_from_feed(feed())
+    assert box['score'] == {'away': 2, 'home': 0} and box['innings']['away'] == {'1': {'R': 2, 'H': 2}} and box['innings']['home'] == {}
+    assert [b['player_id'] for b in box['batting']['away']] == ['1', '2'] and box['batting']['away'][1]['H'] == 1 and box['batting']['away'][1]['HR'] == 0
+    assert box['pitching']['home'][0]['outs'] == 3 and box['pitching']['home'][0]['PC'] == 6
+    assert box['pitching']['away'][0]['outs'] == 1 and box['pitching']['away'][0]['spot' if False else 'BF'] == 2
+
+
+def simulated_box(home_won, lead_path):
+    """A simulated game whose plays walk through the given (inning, half, outs, bases, home lead) states."""
+    plays = []
+    for inning, half, outs, bases, lead in lead_path:
+        plays.append({'inning': inning, 'half': half, 'outs_before': outs, 'bases_before': bases, 'runs_scored': 0,
+                      'home_score': max(lead, 0), 'away_score': max(-lead, 0)})
+    return {'score': {'home': 1 if home_won else 0, 'away': 0 if home_won else 1}, 'plays': plays}
+
+
+def test_win_table_counts_states_and_shrinks_sparse_ones():
+    t = WinTable()
+    path = [(1, 'top', 0, [None] * 3, 0), (5, 'bottom', 1, ['x', None, None], 2), (9, 'top', 2, [None, 'y', 'z'], -1)]
+    for i in range(60):
+        t.add(simulated_box(home_won=i % 3 != 0, lead_path=path))                 # home wins two thirds
+    for i in range(40):
+        t.add(simulated_box(home_won=i % 2 == 0, lead_path=[(1, 'top', 0, [None] * 3, 0)]))   # a coin flip from the start
+    table = t.finish()
+    assert table['shape'] == list(SHAPE) and len(table['cells']) == int(np.prod(SHAPE)) and table['n_games'] == 100
+    assert table['states_reached'] == 3 and abs(table['pregame_home'] - 0.6) < 1e-9
+    # a well-visited state is near its own share (60 games at 2/3 shrunk slightly toward the pool)
+    assert 0.62 <= lookup(table, 5, 'bottom', 1, ['x', None, None], 2) <= 0.68
+    assert 0.55 <= lookup(table, 1, 'top', 0, [None] * 3, 0) <= 0.62
+    # an unvisited state falls back to its pooled neighbours, never to zero
+    assert 0.3 < lookup(table, 7, 'top', 1, [None] * 3, 0) < 0.8
+    assert lookup(table, 12, 'bottom', 2, [None, 'y', 'z'], -9) == lookup(table, 9, 'bottom', 2, [None, 'y', 'z'], -6)
+    assert state_index(12, 'bottom', 5, ['a', 'b', 'c'], 9) == (8, 1, 2, 7, 12)

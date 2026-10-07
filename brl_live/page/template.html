@@ -132,6 +132,17 @@ button { font: inherit; color: inherit; }
 .note { font-size: 14px; color: var(--muted); margin: 8px 0 0; }
 
 /* Key moments */
+.wp { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 10px 6px; }
+.wp svg { display: block; width: 100%; height: auto; }
+.wp .axis { font-family: var(--display); font-weight: 600; font-size: 22px; fill: var(--muted); }
+.wp .team { font-family: var(--display); font-weight: 700; font-size: 26px; }
+.wp-cap { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 2px 4px; font-size: 15px; color: var(--muted); }
+.wp-cap b { font-family: var(--display); font-size: 20px; font-weight: 700; }
+.swings { list-style: none; margin: 10px 0 0; padding: 0; }
+h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--rule); color: var(--muted); }
+.swings li { display: grid; grid-template-columns: 64px 1fr auto; gap: 10px; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--rule-soft); font-size: 16px; }
+.swings .inn { font-family: var(--display); font-weight: 600; color: var(--muted); }
+.swings .d { font-family: var(--display); font-weight: 700; font-size: 18px; white-space: nowrap; }
 .moments { list-style: none; margin: 0; padding: 0; }
 .moments li { display: grid; grid-template-columns: 64px 1fr; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--rule-soft); }
 .moments .inn { font-family: var(--display); font-weight: 600; font-size: 16px; color: var(--muted); }
@@ -287,7 +298,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   var DATA_URL = "predictions.json";
   var D = null;
   var app = document.getElementById("app");
-  var state = { variant: {}, boxSide: {} };
+  var state = { variant: {}, boxSide: {}, playSide: {} };
 
   /* ---------- small helpers ---------- */
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
@@ -534,10 +545,23 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     on = shape ? " on " + shape : "";
     return base + on + (spot ? " to " + spot : "");
   }
+  var RUNNER_TAG = [[/caught stealing|pickoff/i, "CS"], [/picks off|pickoff/i, "PK"], [/wild pitch/i, "WP"], [/passed ball/i, "PB"], [/balk/i, "BK"]];
   function playParts(p, names, short) {
     short = short || {};
     var who = short[String(p.batter_id)] || lastName(p.batter_name), desc = p.description || "", o = p.box_outcome, verb, tag, cls = "", c = p.contact || null;
     var outsMade = (p.outs_after || 0) - (p.outs_before || 0);
+    if (p.official) {
+      /* The real game: the official play description, tagged like a simulated play. */
+      var otag = { strikeout: ["K", "k"], walk: ["BB", "bb"], hit_by_pitch: ["HBP", "bb"], single: ["1B", "hit"], double: ["2B", "hit"], triple: ["3B", "hit"], home_run: ["HR", "hit"] }[o];
+      if (!otag) {
+        if (o === "other_reach") otag = [/fielder/i.test(desc) ? "FC" : "E", ""];
+        else if (o === "runner") { otag = ["Out", ""]; RUNNER_TAG.forEach(function (r) { if (!otag[2] && r[0].test(desc)) otag = [r[1], "", 1]; }); }
+        else if (outsMade >= 2 || /double play/i.test(desc)) otag = ["DP", ""];
+        else if (/sacrifice/i.test(desc)) otag = [/bunt/i.test(desc) ? "SAC" : "SF", ""];
+        else otag = ["Out", ""];
+      }
+      return { text: desc || (who + " " + (o === "runner" ? "runner play" : o.replace(/_/g, " ")) + "."), tag: otag[0], cls: otag[1] };
+    }
     switch (o) {
       case "strikeout": verb = "strikes out"; tag = "K"; cls = "k"; break;
       case "walk": verb = "walks"; tag = "BB"; cls = "bb"; break;
@@ -710,13 +734,13 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     });
     if (actual && actualBox && actualBox.innings) {
       html += lineScore(f, actualBox);
-      html += '<p class="hero-note">Line score is the real game. The tabs below show the projected game saved before first pitch.</p>';
+      html += '<p class="hero-note">' + (actualBox.plays && actualBox.plays.length ? "Final. The tabs show the real game and the projected game saved before first pitch." : "Line score is the real game. The tabs below show the projected game saved before first pitch.") + "</p>";
     } else if (lv) {
       html += lineScore(f, liveLine(lv));
       var onMound = lv.pitcher_names && lv.on_mound ? lv.pitcher_names[lv.on_mound[lv.state.batting_side === "away" ? "home" : "away"]] : "";
       html += '<p class="hero-note">Live. Likely final ' + esc(f.away.abbr) + " " + lv.projected_final.away + ", " + esc(f.home.abbr) + " " + lv.projected_final.home +
         (onMound ? ". " + esc(lastName(onMound)) + " pitching" : "") + (lv.due_up ? ", " + esc(lastName(lv.due_up[lv.state.batting_side])) + " up" : "") +
-        ". Updated " + esc(timeET(lv.updated_at)) + " ET from " + Number(lv.n_worlds).toLocaleString() + " continuations. Pregame win chance was " + esc(f[fav].abbr) + " " + pct(winProb(f, fav)) + "; the tabs show the pregame projected game.</p>";
+        ". Updated " + esc(timeET(lv.updated_at)) + " ET from " + Number(lv.n_worlds).toLocaleString() + " continuations. Pregame win chance was " + esc(f[fav].abbr) + " " + pct(winProb(f, fav)) + (lv.plays && lv.plays.length ? "." : "; the tabs show the pregame projected game.") + "</p>";
     } else if (s) html += lineScore(f, s);
     html += "</div></section>";
 
@@ -736,11 +760,17 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       return '<button class="tab" role="tab" data-tab="' + t[0] + '" aria-selected="' + (t[0] === tab) + '">' + t[1] + "</button>";
     }).join("") + "</div></nav>";
     html += '<div class="wrap"><div class="panel">';
+    var real = realGame(st, lv, actualBox);
     if (!s) html += '<p class="empty">The full simulated game is still being built for this forecast.</p>';
-    else if (tab === "box") html += boxTab(f, s, actualBox, pk);
-    else if (tab === "plays") html += playsTab(f, s);
+    else if (tab === "box") html += boxTab(f, s, real || actualBox, pk, real && real._live ? "Live" : "Actual");
+    else if (tab === "plays") {
+      var pside = state.playSide[pk] || (real ? "actual" : "proj");
+      if (real) html += '<div class="seg" role="group" aria-label="Which plays"><button data-playside="actual" aria-pressed="' + (pside === "actual") + '">' + (real._live ? "Live" : "Actual") + '</button><button data-playside="proj" aria-pressed="' + (pside !== "actual") + '">Projected</button></div>';
+      html += playsTab(f, pside === "actual" && real ? real : s);
+      if (pside === "actual" && real) html += '<p class="note">The real game from the official play-by-play' + (real._live ? ", through the last completed plate appearance at the last check" : "") + ".</p>";
+    }
     else if (tab === "odds") html += oddsTab(f, box);
-    else html += summaryTab(f, s, box, actual, actualBox, v);
+    else html += summaryTab(f, s, box, actual, actualBox, v, real, lv);
     html += "</div></div>";
     app.innerHTML = html;
     window.scrollTo(0, 0);
@@ -753,6 +783,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     });
     app.querySelectorAll("[data-boxside]").forEach(function (b) {
       b.addEventListener("click", function () { state.boxSide[pk] = b.getAttribute("data-boxside"); renderGame(pk, "box"); });
+    });
+    app.querySelectorAll("[data-playside]").forEach(function (b) {
+      b.addEventListener("click", function () { state.playSide[pk] = b.getAttribute("data-playside"); renderGame(pk, "plays"); });
     });
   }
 
@@ -775,8 +808,111 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     return h + "</tbody></table></div>";
   }
 
+  /* ---------- the real game (in-game and after the final) ---------- */
+  /* The official plays and lines in the shape of a simulated game, so the same tabs render both. */
+  function realGame(st, lv, actualBox) {
+    if (st === "final" && actualBox && actualBox.plays && actualBox.plays.length) return { batting: actualBox.batting, pitching: actualBox.pitching, plays: actualBox.plays, score: actualBox.score, innings: actualBox.innings, _real: true, _final: true };
+    if (st === "live" && lv && lv.plays && lv.plays.length) { var b = lv.box || { batting: { away: [], home: [] }, pitching: { away: [], home: [] } }; return { batting: b.batting, pitching: b.pitching, plays: lv.plays, score: { away: lv.state.away_score, home: lv.state.home_score }, innings: b.innings || {}, _real: true, _live: true }; }
+    return null;
+  }
+  function baseMask(bases) { var m = 0; (bases || []).forEach(function (r, k) { if (r) m += (1 << k); }); return m; }
+  /* Win chance of a state from the forecast's own table (brl_live/win_table.py). */
+  function winAt(t, inning, half, outs, bases, lead) {
+    var sh = t.shape, i = Math.min(Math.max(inning, 1), sh[0]) - 1, h = half === "top" ? 0 : 1, o = Math.min(Math.max(outs, 0), sh[2] - 1);
+    var b = Math.min(baseMask(bases), sh[3] - 1), d = Math.min(Math.max(lead, t.lead_min), -t.lead_min) - t.lead_min;
+    return t.cells[(((i * sh[1] + h) * sh[2] + o) * sh[3] + b) * sh[4] + d] / 100;
+  }
+  /* Home win chance before every real play, then the current (live) or final (1 or 0) number. */
+  function winSeries(f, box, real, lv) {
+    var t = box.win_table, pts = [{ p: f.home_win_probability, label: "Pregame" }];
+    real.plays.forEach(function (p) {
+      var runs = p.runs_scored || 0, leadAfter = p.home_score - p.away_score, lead = p.half === "top" ? leadAfter + runs : leadAfter - runs;
+      pts.push({ p: winAt(t, p.inning, p.half, p.outs_before || 0, p.bases_before, lead), play: p });
+    });
+    if (real._final) pts.push({ p: real.score.home > real.score.away ? 1 : 0, label: "Final" });
+    else if (lv) pts.push({ p: lv.home_win_probability, label: "Now" });
+    return pts;
+  }
+  function swingText(p, short) {
+    var who = short[String(p.batter_id)] || lastName(p.batter_name), o = p.box_outcome, runs = p.runs_scored || 0;
+    var what = { strikeout: "strikes out", walk: "walks", hit_by_pitch: "hit by a pitch", single: "singles", double: "doubles", triple: "triples", home_run: HOMER[runs] || "homers", other_reach: "reaches", bip_out: "out", runner: "runner play" }[o] || o;
+    if (o !== "home_run" && runs) what += ", " + runs + (runs === 1 ? " run scores" : " runs score");
+    return who + " " + what;
+  }
+  function winChart(f, box, real, lv) {
+    if (!box || !box.win_table || !real || !real.plays.length) return "";
+    var pts = winSeries(f, box, real, lv), n = pts.length, W = 640, H = 300, L = 50, R = 14, T = 16, B = 40, pw = W - L - R, ph = H - T - B;
+    var x = function (i) { return L + pw * (n === 1 ? 0 : i / (n - 1)); }, y = function (p) { return T + ph * (1 - p); };
+    var d = pts.map(function (q, i) { return (i ? "L" : "M") + x(i).toFixed(1) + " " + y(q.p).toFixed(1); }).join(" ");
+    var area = d + " L" + x(n - 1).toFixed(1) + " " + y(.5).toFixed(1) + " L" + x(0).toFixed(1) + " " + y(.5).toFixed(1) + " Z";
+    var h = '<div class="wp"><svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Home win chance through the game">';
+    h += '<defs><clipPath id="wp-up"><rect x="0" y="0" width="' + W + '" height="' + y(.5) + '"/></clipPath><clipPath id="wp-dn"><rect x="0" y="' + y(.5) + '" width="' + W + '" height="' + (H - y(.5)) + '"/></clipPath></defs>';
+    h += '<path d="' + area + '" fill="var(--home)" opacity=".18" clip-path="url(#wp-up)"/><path d="' + area + '" fill="var(--away)" opacity=".18" clip-path="url(#wp-dn)"/>';
+    [1, .75, .5, .25, 0].forEach(function (g) { h += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(g) + '" y2="' + y(g) + '" stroke="var(--rule)" stroke-width="' + (g === .5 ? 2 : 1) + '"' + (g === .5 ? "" : ' stroke-dasharray="3 5"') + '/>'; });
+    [[1, "100"], [.5, "50"], [0, "0"]].forEach(function (g) { h += '<text class="axis" x="' + (L - 8) + '" y="' + (y(g[0]) + 7) + '" text-anchor="end">' + g[1] + "</text>"; });
+    var seen = {};
+    pts.forEach(function (q, i) {
+      if (!q.play || q.play.half !== "top" || seen[q.play.inning]) return;
+      seen[q.play.inning] = 1;
+      h += '<line x1="' + x(i) + '" x2="' + x(i) + '" y1="' + T + '" y2="' + (H - B + 6) + '" stroke="var(--rule)" stroke-width="1"/><text class="axis" x="' + (x(i) + 5) + '" y="' + (H - 12) + '">' + q.play.inning + "</text>";
+    });
+    h += '<path d="' + d + '" fill="none" stroke="var(--ink)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>';
+    var last = pts[n - 1];
+    h += '<circle cx="' + x(n - 1) + '" cy="' + y(last.p) + '" r="6" fill="var(--ink)"/>';
+    h += '<text class="team" x="' + (L + 8) + '" y="' + (T + 24) + '" fill="var(--home)">' + esc(f.home.abbr) + '</text><text class="team" x="' + (L + 8) + '" y="' + (H - B - 10) + '" fill="var(--away)">' + esc(f.away.abbr) + "</text>";
+    h += "</svg>";
+    var side = last.p >= .5 ? "home" : "away", shown = pct(last.p >= .5 ? last.p : 1 - last.p), fav = f.home_win_probability >= .5 ? "home" : "away";
+    h += '<div class="wp-cap"><span>Pregame: ' + esc(f[fav].abbr) + " " + pct(fav === "home" ? f.home_win_probability : 1 - f.home_win_probability) + '</span><b class="' + side + '-c">' + esc(last.label === "Final" ? "Final: " + nickname(f[side].name) + " won" : last.label + ": " + f[side].abbr + " " + shown) + "</b></div></div>";
+    return h;
+  }
+  function biggestSwings(f, box, real, lv, short) {
+    if (!box || !box.win_table || !real || real.plays.length < 2) return "";
+    var pts = winSeries(f, box, real, lv), swings = [];
+    /* A play's swing is the chance after it (the next point) less the chance before it. */
+    for (var i = 1; i + 1 < pts.length; i++) if (pts[i].play) swings.push({ d: pts[i + 1].p - pts[i].p, play: pts[i].play });
+    swings.sort(function (a, b) { return Math.abs(b.d) - Math.abs(a.d); });
+    var top = swings.slice(0, 3).filter(function (sw) { return Math.abs(sw.d) >= .04; });
+    if (!top.length) return "";
+    var h = '<ul class="swings">';
+    top.forEach(function (sw) {
+      var p = sw.play, side = sw.d >= 0 ? "home" : "away";
+      h += '<li><span class="inn">' + (p.half === "top" ? "Top " : "Bot ") + ordinal(p.inning) + "</span><span>" + esc(swingText(p, short)) + '</span><span class="d ' + side + '-c">' + esc(f[side].abbr) + " +" + Math.round(Math.abs(sw.d) * 100) + "%</span></li>";
+    });
+    return h + "</ul>";
+  }
+
   /* Summary tab */
-  function summaryTab(f, s, box, actual, actualBox, v) {
+  function summaryTab(f, s, box, actual, actualBox, v, real, lv) {
+    var h0 = "";
+    if (real) {
+      var rn = nameMap(real), rs = shortMap(real);
+      var chart = winChart(f, box, real, lv);
+      if (chart) {
+        h0 += '<section class="sec"><h2>Win chance through the game</h2><p class="lede">' + (real._final ? "How the model's win chance moved with every play, from first pitch to the final." : "How the model's win chance has moved with every play so far.") + "</p>" + chart + biggestSwings(f, box, real, lv, rs) + "</section>";
+      }
+      var realScoring = real.plays.filter(function (p) { return p.runs_scored > 0; });
+      h0 += '<section class="sec"><h2>' + (real._final ? "Scoring plays" : "Scoring plays so far") + "</h2>";
+      if (!realScoring.length) h0 += '<p class="empty">No runs yet.</p>';
+      else {
+        h0 += '<ol class="moments">';
+        realScoring.forEach(function (p) {
+          var parts = playParts(p, rn, rs);
+          h0 += '<li><span class="inn">' + (p.half === "top" ? "Top " : "Bot ") + ordinal(p.inning) + '</span><span class="txt">' + esc(parts.text) + '<span class="sc num">' + esc(scoreText(f, p)) + "</span></span></li>";
+        });
+        h0 += "</ol>";
+      }
+      h0 += "</section>";
+      var perf = "";
+      ["away", "home"].forEach(function (side) {
+        var bat = (real.batting[side] || []).slice().sort(function (a, b) { return (b.H + 2 * b.HR + b.RBI + 0.5 * b.BB) - (a.H + 2 * a.HR + a.RBI + 0.5 * a.BB); })[0];
+        if (bat && bat.AB + bat.BB > 0) perf += "<div><small>" + esc(nickname(f[side].name)) + "</small><b>" + esc(bat.name) + '</b><span class="stat num">' + esc(batLine(bat)) + "</span></div>";
+      });
+      if (perf) h0 += '<section class="sec"><h2>' + (real._final ? "Top performers" : "Leading so far") + '</h2><div class="perf">' + perf + "</div></section>";
+      h0 += '<h2 class="divide">The projected game</h2>';
+    }
+    return h0 + projectedSummary(f, s, box, actual, actualBox, v);
+  }
+  function projectedSummary(f, s, box, actual, actualBox, v) {
     var names = nameMap(s), short = shortMap(s), h = "";
     if (actual && actualBox) h += howClose(f, box, actualBox, s);
     h += '<section class="sec"><h2>Scoring plays</h2>';
@@ -849,10 +985,10 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   }
 
   /* Box score tab */
-  function boxTab(f, s, actualBox, pk) {
-    var side = state.boxSide[pk] || "proj", src = side === "actual" && actualBox ? actualBox : s, h = "";
+  function boxTab(f, s, actualBox, pk, label) {
+    var side = state.boxSide[pk] || (actualBox ? "actual" : "proj"), src = side === "actual" && actualBox ? actualBox : s, h = "";
     if (actualBox) {
-      h += '<div class="seg" role="group" aria-label="Which box score"><button data-boxside="proj" aria-pressed="' + (side !== "actual") + '">Projected</button><button data-boxside="actual" aria-pressed="' + (side === "actual") + '">Actual</button></div>';
+      h += '<div class="seg" role="group" aria-label="Which box score"><button data-boxside="actual" aria-pressed="' + (side === "actual") + '">' + esc(label || "Actual") + '</button><button data-boxside="proj" aria-pressed="' + (side !== "actual") + '">Projected</button></div>';
     }
     ["away", "home"].forEach(function (t) {
       var bat = src.batting[t] || [], tot = { AB: 0, R: 0, H: 0, RBI: 0, BB: 0, K: 0 }, names = shortNames(bat);
@@ -1075,6 +1211,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       h += "</ul>";
     }
     h += "<h2>The projected game</h2><p>The projected game is one of the ten thousand simulated games: the one closest to the middle on team runs, team hits and each starter's innings and strikeouts, with the favorite winning in nine innings. It reads like a real box score, but it is one likely version of the night, not a promise. High-scoring, low-scoring and upset versions show the range.</p>";
+    h += "<h2>The real game</h2><p>In-game and after the final, the tabs show the real game from the official play-by-play, every plate appearance with its pitches and where the ball went, beside the projected one. The win chance chart reads each play's starting situation (inning, outs, runners, score) against the same ten thousand simulated games that made the forecast: the share of those games the home team went on to win from that situation, with these lineups, starters and bullpens. The in-game number in the header is exact, a fresh set of continuations from the current state at each check.</p>";
     h += "<h2>Checking the work</h2><p>Every forecast is saved and published before first pitch and never edited. After the final, the Record page scores the last pregame version against a coin flip and against always picking the home team. Nothing is backfilled.</p>";
     h += "<h2>Current limits</h2><ul><li>Postseason bullpens keep their regular-season roles; only the starter's expected length changes.</li><li>The pitch lines under each simulated plate appearance are bookkeeping, not a pitch-by-pitch simulation: real count paths from prior official games for the same outcome, with the pitcher's own pitch types and speeds. Where a ball went (ground ball to shortstop, fly ball to center field) is drawn the same way from the batter's own prior balls in play, or the league's for his hand. None of it changes an outcome or a pitching decision.</li><li>Runner speed and team defense are league average for everyone; stolen bases and wild pitches are not simulated.</li><li>Bullpen use follows regular-season habits: a fitted rest and quality model was tested on the 2026 replay and did not beat it.</li><li>Player history runs through " + esc(any.history_through || "the day before") + ".</li></ul>";
     var modelNames = []; Object.keys(fx).forEach(function (k) { var m = String(fx[k].model || ""); if (m && modelNames.indexOf(m) < 0) modelNames.push(m); });

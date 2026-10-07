@@ -111,10 +111,13 @@ def main():
                     page.screenshot(path=str(out/f'game_summary_{width}.png'),full_page=True)
                     page.screenshot(path=str(out/f'game_header_{width}.png'))
                     page.locator('button[data-tab="box"]').click();page.wait_for_timeout(150)
+                    # In-game and after the final the tabs open on the real game; the check reads the projected one.
+                    if page.locator('button[data-boxside="proj"]').count():page.locator('button[data-boxside="proj"]').click();page.wait_for_timeout(150)
                     assert page.locator('table.box').count()==4,'Missing batting and pitching tables'
                     assert page.locator('table.box tbody tr').count()>=24,'Missing full batting/pitching boxes'
                     design_check('game_box');page.screenshot(path=str(out/f'game_box_{width}.png'),full_page=True)
                     page.locator('button[data-tab="plays"]').click();page.wait_for_timeout(150)
+                    if page.locator('button[data-playside="proj"]').count():page.locator('button[data-playside="proj"]').click();page.wait_for_timeout(150)
                     assert page.locator('.half').count()>=17,'Missing half innings'
                     assert page.locator('.pa').count()>=50,'Missing plate appearances'
                     design_check('game_plays');page.screenshot(path=str(out/f'game_plays_{width}.png'),full_page=True)

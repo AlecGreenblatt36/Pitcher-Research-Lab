@@ -84,12 +84,19 @@ class BoxRunner(original.Runner):
         # Never lets an in-game problem block pregame forecasts: errors are recorded, not raised.
         now=self.clock().isoformat()
         try:
-            self.store.ledger['live'][str(pk)]=self.sim.update_live(feed,date,now)
+            snapshot=self.sim.update_live(feed,date,now)
         except Exception as exc:
             frames=traceback.extract_tb(exc.__traceback__)
             where={'file':Path(frames[-1].filename).name,'function':frames[-1].name,'line':frames[-1].lineno} if frames else {}
-            self.store.ledger['live'][str(pk)]={'schema':'brl.live-update.v1','game_pk':pk,'date':date,'updated_at':now,
+            snapshot={'schema':'brl.live-update.v1','game_pk':pk,'date':date,'updated_at':now,
                 'error':type(exc).__name__+': '+str(exc)[:200],'error_location':where}
+        try:
+            # The real game so far, for the page: the plays with their pitches, and the lines (display only).
+            from .real_game import plays_from_feed,box_from_feed
+            snapshot['plays']=plays_from_feed(feed);snapshot['box']=box_from_feed(feed)
+        except Exception as exc:
+            snapshot['plays_error']=type(exc).__name__+': '+str(exc)[:200]
+        self.store.ledger['live'][str(pk)]=snapshot
     def process(self,pk,item):
         _ensure_fields(self.store.ledger)
         url=f'https://statsapi.mlb.com/api/v1.1/game/{pk}/feed/live'

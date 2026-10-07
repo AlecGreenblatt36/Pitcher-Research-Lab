@@ -16,6 +16,7 @@ from app.safety import Blocked
 from research_lab.game_sim.engine import GameSimulator
 from .world_selection import world_features, select_worlds, SELECTION_NOTE
 from .pitch_bridge import PitchBridge, pitch_list, contact_of, MIN_BATTER_CONTACT
+from .win_table import WinTable
 
 BAT = ('PA','AB','H','2B','3B','HR','R','RBI','BB','HBP','K','SF')
 PIT = ('outs','PC','H','R','BB','HBP','K','HR','BF')
@@ -211,13 +212,14 @@ def _distribution(counter,n):
 class BoxAccumulator:
     def __init__(self,matchup):
         self.matchup=matchup;self.n=0;self.hist={s:{'batting':{},'pitching':{}} for s in SIDE}
-        self.innings={s:defaultdict(lambda:Counter()) for s in SIDE};self.score_pairs=[];self.seeds=[];self.features=[]
+        self.innings={s:defaultdict(lambda:Counter()) for s in SIDE};self.score_pairs=[];self.seeds=[];self.features=[];self.win=WinTable()
         for s in SIDE:
             t=getattr(matchup,s)
             for i,p in enumerate(t.lineup):self.hist[s]['batting'][p.player_id]={'name':p.name,'spot':i+1,'stats':{k:Counter() for k in BAT}}
             for i,p in enumerate((t.starter,*t.bullpen)):self.hist[s]['pitching'][p.player_id]={'name':p.name,'role':p.role,'order':i,'appeared':0,'stats':{k:Counter() for k in PIT}}
     def add(self,box):
         self.n+=1;self.score_pairs.append((box['score']['away'],box['score']['home']));self.seeds.append(box['seed']);self.features.append(world_features(box))
+        self.win.add(box)
         for s in SIDE:
             for kind,fields in [('batting',BAT),('pitching',PIT)]:
                 index={r['player_id']:r for r in box[kind][s]}
@@ -263,6 +265,7 @@ class BoxAccumulator:
         result['total_run_distribution']=_distribution(Counter(a+h for a,h in self.score_pairs),self.n)
         result['sample_indices']=selected
         result['typical_score_frequency']=counts[modal]/self.n
+        if self.win.games:result['win_table']=self.win.finish()
         return result
 
 # Simulation-time adjustments on the locked model (brl_live/provider_adjust.py), measured on the
@@ -379,6 +382,9 @@ def parse_actual_box(feed,game_pk,fetched_at):
         for k in ('R','H','BB','K','HR'):
             if all(r[k] is not None for r in out['pitching'][s]+out['batting'][opp]):
                 if sum(r[k] for r in out['pitching'][s])!=sum(r[k] for r in out['batting'][opp]):raise Blocked('Actual opposite-side totals mismatch')
+    # The real plays, for the page (every plate appearance, its pitches and where the ball went); display only.
+    from .real_game import plays_from_feed
+    out['plays']=plays_from_feed(feed)
     return out
 
 def score_player_boxes(boxes,publications,actuals):
