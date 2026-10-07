@@ -18,7 +18,9 @@ def play(event, codes, pitcher=1, stand='R', types=None, speeds=None):
 
 
 def mapper(ev):
-    return {'strikeout': 'K', 'walk': 'BB_HBP', 'hit_by_pitch': 'BB_HBP', 'single': '1B', 'field_out': 'BIP_OUT', 'home_run': 'HR', 'double': '2B_3B'}.get(ev)
+    return {'strikeout': 'K', 'walk': 'BB_HBP', 'hit_by_pitch': 'BB_HBP', 'single': '1B', 'field_out': 'BIP_OUT', 'home_run': 'HR', 'double': '2B_3B',
+            'triple': '2B_3B', 'grounded_into_double_play': 'BIP_OUT', 'double_play': 'BIP_OUT', 'sac_fly': 'BIP_OUT', 'force_out': 'BIP_OUT',
+            'field_error': 'OTHER_REACH', 'fielders_choice': 'OTHER_REACH'}.get(ev)
 
 
 def feed(plays):
@@ -84,3 +86,91 @@ def test_bookkeeping_uses_sequences_when_present():
     fit2 = BookkeepingFit(h2, '2026-10-06')
     with pytest.raises(Exception):
         fit2.draw({'pitcher_id': '1', 'outcome': 'double_triple', 'batter_hand': 'R'}, rng)   # no path and no count pool
+
+
+from brl_live.pitch_bridge import contact_of, MIN_BATTER_CONTACT
+
+
+def inplay(event, trajectory=None, location=None, description='', credits=None, batter=5, stand='R', dist=None, ev=None):
+    p = play(event, ['X'], stand=stand)
+    p['matchup']['batter'] = {'id': batter}
+    p['result']['description'] = description
+    hit = {}
+    if trajectory: hit['trajectory'] = trajectory
+    if location is not None: hit['location'] = str(location)
+    if dist: hit['totalDistance'] = dist
+    if ev: hit['launchSpeed'] = ev
+    if hit: p['playEvents'][-1]['hitData'] = hit
+    if credits: p['runners'] = [{'credits': [{'position': {'code': str(c)}} for c in credits]}]
+    return p
+
+
+def test_contact_reads_statcast_then_credits_then_text():
+    assert contact_of(inplay('field_out', 'ground_ball', 6, dist=12.5, ev=88.2)) == {'t': 'G', 'loc': 6, 'dist': 12, 'ev': 88}
+    assert contact_of(inplay('field_out', description='Mookie Betts flies out to center fielder Michael Harris II.', credits=[8])) == {'t': 'F', 'loc': 8}
+    assert contact_of(inplay('single', description='Ohtani singles on a line drive to left fielder Kyle Schwarber.')) == {'t': 'L', 'loc': 7}
+    assert contact_of(inplay('double', description='Freeman hits a ground-rule double on a fly ball to right fielder Nick Castellanos.')) == {'t': 'F', 'loc': 9}
+    assert contact_of(inplay('field_error', description='Smith reaches on a fielding error by shortstop Trea Turner.')) == {'t': None, 'loc': 6}
+    assert contact_of(inplay('sac_fly', description='Harper hits a sacrifice fly to center fielder Pham. Turner scores.')) == {'t': 'F', 'loc': 8}
+    assert contact_of(inplay('field_out', 'popup', None, description='Marsh pops out to second baseman Stott.')) == {'t': 'P', 'loc': 4}
+    assert contact_of(inplay('strikeout', description='Bohm strikes out swinging.')) is None
+    assert contact_of(inplay('field_out', location='X')) is None
+
+
+def test_contact_pools_by_kind_hand_and_batter():
+    plays = []
+    for _ in range(MIN_BATTER_CONTACT):
+        plays.append(inplay('single', 'ground_ball', 7, batter=11, stand='L'))            # batter 11 pulls grounders to left (odd on purpose)
+    for _ in range(10):
+        plays.append(inplay('single', 'line_drive', 9, batter=12, stand='L'))             # the league lefty single
+        plays.append(inplay('single', 'fly_ball', 8, batter=13, stand='R'))
+        plays.append(inplay('home_run', 'fly_ball', 7, batter=13, stand='R', dist=405, ev=104))
+        plays.append(inplay('grounded_into_double_play', 'ground_ball', 6, batter=13, stand='R'))
+        plays.append(inplay('double_play', 'line_drive', 4, batter=13, stand='R'))         # lineout double play: never used for engine DPs
+        plays.append(inplay('sac_fly', 'fly_ball', 8, batter=13, stand='R'))
+        plays.append(inplay('field_out', 'popup', 6, batter=13, stand='R'))
+        plays.append(inplay('force_out', 'ground_ball', 4, batter=13, stand='R'))          # runner out, batter safe: not an engine out
+    br = PitchBridge(sequences_from_feed(feed(plays), mapper))
+    assert br.n_contacts == MIN_BATTER_CONTACT + 60
+    rng = np.random.default_rng(3)
+    own = [br.draw_contact('11', 'L', 'single', rng) for _ in range(20)]
+    assert all(c == {'t': 'G', 'loc': 7} for c in own)
+    lefty = [br.draw_contact('999', 'L', 'single', rng) for _ in range(20)]
+    assert all(c['loc'] in (7, 9) for c in lefty) and any(c == {'t': 'L', 'loc': 9} for c in lefty)
+    assert all(br.draw_contact('999', 'R', 'dp', rng) == {'t': 'G', 'loc': 6} for _ in range(10))
+    assert all(br.draw_contact('999', 'L', 'sf', rng) == {'t': 'F', 'loc': 8} for _ in range(10))      # league fallback across hands
+    hr = br.draw_contact('999', 'R', 'home_run', rng)
+    assert hr['dist'] == 405 and hr['ev'] == 104
+    assert br.draw_contact('999', 'R', 'out', rng) == {'t': 'P', 'loc': 6}
+    assert br.draw_contact('999', 'R', 'triple', rng) is None
+    assert br.contact_fallbacks['b'] == 20 and br.contact_fallbacks['h'] > 0
+
+
+def test_bookkeeping_contact_kind_and_draw():
+    rows = []
+    for ev, traj, loc in [('single', 'ground_ball', 4), ('field_out', 'fly_ball', 8), ('home_run', 'fly_ball', 7),
+                          ('grounded_into_double_play', 'ground_ball', 6), ('sac_fly', 'fly_ball', 9), ('double', 'line_drive', 7),
+                          ('field_error', 'ground_ball', 5), ('fielders_choice', 'ground_ball', 6), ('triple', 'line_drive', 9)]:
+        for hand in ('R', 'L'):
+            for _ in range(3):
+                p = inplay(ev, traj, loc, stand=hand, batter=1)
+                rows.append({'date_key': '2026-10-01', 'outcome': mapper(ev), 'pitcher': 1, 'batter': 1, 'stand': hand,
+                             'terminal_event': ev, 'pitch_number': 1, 'pitches': pitch_list(p), 'contact': contact_of(p)})
+    for hand in ('R', 'L'):
+        w = play('walk', ['B', 'B', 'B', 'B'], stand=hand)
+        rows.append({'date_key': '2026-10-01', 'outcome': 'BB_HBP', 'pitcher': 1, 'batter': None, 'stand': hand, 'terminal_event': 'walk',
+                     'pitch_number': 4, 'pitches': pitch_list(w), 'contact': None})
+    fit = BookkeepingFit(pd.DataFrame(rows), '2026-10-06')
+    rng = np.random.default_rng(0)
+    K = BookkeepingFit.contact_kind
+    assert K({'outcome': 'bip_out', 'description': 'A grounded into a double play.'}) == 'dp'
+    assert K({'outcome': 'bip_out', 'description': 'A drove in a run on a sacrifice fly.'}) == 'sf'
+    assert K({'outcome': 'bip_out', 'description': 'A put the ball in play for an out.'}) == 'out'
+    assert K({'outcome': 'double_triple', 'description': 'A tripled.'}) == 'triple' and K({'outcome': 'double_triple', 'description': 'A doubled.'}) == 'double'
+    assert K({'outcome': 'other_reach', 'description': "A reached on a fielder's choice."}) == 'fc'
+    assert K({'outcome': 'other_reach', 'description': 'A reached on an error or other play.'}) == 'error'
+    assert K({'outcome': 'strikeout', 'description': 'A struck out.'}) is None and K({'outcome': 'bb_hbp', 'description': 'A walked.'}) is None
+    assert fit.contact({'outcome': 'bip_out', 'description': 'A grounded into a double play.', 'batter_id': '1', 'batter_hand': 'R'}, rng) == {'t': 'G', 'loc': 6}
+    assert fit.contact({'outcome': 'home_run', 'description': 'A homered.', 'batter_id': '2', 'batter_hand': 'L'}, rng) == {'t': 'F', 'loc': 7}
+    assert fit.contact({'outcome': 'strikeout', 'description': 'A struck out.', 'batter_id': '2', 'batter_hand': 'L'}, rng) is None
+    assert fit.contact({'outcome': 'other_reach', 'description': 'A reached on an error or other play.', 'batter_id': '2', 'batter_hand': 'L'}, rng) == {'t': 'G', 'loc': 5}

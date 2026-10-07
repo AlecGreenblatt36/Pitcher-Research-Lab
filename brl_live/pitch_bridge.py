@@ -14,12 +14,19 @@ from real sequences in prior official game feeds:
    the batter hand and count (league mix by hand and count when his sample is thin) and a
    speed from his distribution for that type (league by type when thin).
 
+3. Contact. A ball in play gets a batted-ball shape (ground ball, fly ball, line drive or
+   popup), the fielder it went to and, for home runs, a distance, drawn from the batter's
+   own prior balls in play with the same result when he has enough of them, otherwise the
+   league pool for his hand. Simulated double plays draw from real ground-ball double
+   plays, sacrifice flies from real sacrifice flies, so the wording always fits the play.
+
 Everything is sampled on the box-score bookkeeping stream, independent of the engine, and
-never feeds back into probabilities or pitching changes. Counts, types and speeds are
-estimates with real shapes, not predictions of the actual pitches.
+never feeds back into probabilities or pitching changes. Counts, types, speeds and contact
+are estimates with real shapes, not predictions of the actual pitches.
 """
 from __future__ import annotations
 
+import re
 from collections import Counter, defaultdict
 
 import numpy as np
@@ -34,6 +41,72 @@ STRIKE_ENDINGS = {'C', 'S', 'T'}
 MIN_PITCHER_SEQ = 12      # sequences before a pitcher's own count paths are used
 MIN_MIX = 25              # pitches before a pitcher's own type mix is used (per hand and count group)
 MIN_SPEED = 8             # pitches before a pitcher's own speed for a type is used
+MIN_BATTER_CONTACT = 6    # balls in play of one kind before a batter's own contact pool is used
+
+TRAJECTORY = {'ground_ball': 'G', 'bunt_grounder': 'G', 'fly_ball': 'F', 'line_drive': 'L', 'bunt_line_drive': 'L',
+              'popup': 'P', 'bunt_popup': 'P'}
+DESCRIBED_TRAJECTORY = [(re.compile(r'\bground(s|ed)?\b|ground ball|grounder'), 'G'), (re.compile(r'\blin(es|ed|e drive)\b'), 'L'),
+                        (re.compile(r'\bpop(s|ped|up| up| fly)\b'), 'P'), (re.compile(r'\bfl(ies|ied)\b|fly ball|\bflyball\b|sacrifice fly'), 'F')]
+FIELDER_WORDS = {'pitcher': 1, 'catcher': 2, 'first baseman': 3, 'second baseman': 4, 'third baseman': 5, 'shortstop': 6,
+                 'left fielder': 7, 'center fielder': 8, 'right fielder': 9}
+FIELDER_RE = re.compile('|'.join(sorted(FIELDER_WORDS, key=len, reverse=True)))
+# Official terminal events whose batted balls feed each simulated play kind.
+CONTACT_KIND = {'single': 'single', 'double': 'double', 'triple': 'triple', 'home_run': 'home_run', 'field_out': 'out',
+                'grounded_into_double_play': 'dp', 'double_play': 'dp', 'sac_fly': 'sf', 'sac_fly_double_play': 'sf',
+                'fielders_choice': 'fc', 'field_error': 'error'}
+
+
+def contact_of(play: dict) -> dict | None:
+    """Batted-ball record of one official play, or None when nothing about the contact was recorded.
+
+    t: G ground ball, F fly ball, L line drive, P popup (Statcast trajectory, else the play text);
+    loc: fielder position 1-9 the ball went to (Statcast location, else the first fielder credited,
+    else the first fielder named in the play text); dist: feet (Statcast); ev: exit velocity (Statcast).
+    """
+    last = None
+    for e in play.get('playEvents') or []:
+        if e.get('isPitch') is True:
+            last = e
+    hit = (last or {}).get('hitData') or {}
+    t = TRAJECTORY.get(str(hit.get('trajectory') or '').lower())
+    loc = _position(hit.get('location'))
+    text = str((play.get('result') or {}).get('description') or '').lower().replace('ground-rule', 'bounce-rule')
+    if t is None:
+        for pattern, code in DESCRIBED_TRAJECTORY:
+            if pattern.search(text):
+                t = code
+                break
+    if loc is None:
+        for runner in play.get('runners') or []:
+            for credit in runner.get('credits') or []:
+                loc = _position((credit.get('position') or {}).get('code'))
+                if loc is not None:
+                    break
+            if loc is not None:
+                break
+    if loc is None:
+        m = FIELDER_RE.search(text)
+        if m:
+            loc = FIELDER_WORDS[m.group(0)]
+    if t is None and loc is None:
+        return None
+    out = {'t': t, 'loc': loc}
+    for source, key in (('totalDistance', 'dist'), ('launchSpeed', 'ev')):
+        try:
+            value = float(hit.get(source))
+        except (TypeError, ValueError):
+            continue
+        if value > 0:
+            out[key] = int(round(value))
+    return out
+
+
+def _position(code) -> int | None:
+    try:
+        value = int(str(code).strip())
+    except (TypeError, ValueError):
+        return None
+    return value if 1 <= value <= 9 else None
 
 
 def count_group(balls: int, strikes: int) -> str:
@@ -78,9 +151,11 @@ def sequences_from_feed(feed: dict, map_event) -> list:
         if not pitches:
             continue
         m = play.get('matchup') or {}
-        out.append({'pitcher': int(m['pitcher']['id']), 'stand': str((m.get('batSide') or {}).get('code') or 'R'),
+        batter = (m.get('batter') or {}).get('id')
+        out.append({'pitcher': int(m['pitcher']['id']), 'batter': None if batter is None else int(batter),
+                    'stand': str((m.get('batSide') or {}).get('code') or 'R'),
                     'outcome': str(outcome).lower(), 'terminal_event': str((play.get('result') or {}).get('eventType') or ''),
-                    'pitches': pitches})
+                    'pitches': pitches, 'contact': contact_of(play)})
     return out
 
 
@@ -134,10 +209,36 @@ class PitchBridge:
                     self.speed[('l', p['t'])].append(p['v'])
         self.speed = {k: (float(np.mean(v)), float(np.std(v)) if len(v) > 1 else 1.0, len(v)) for k, v in self.speed.items()}
         self.fallbacks = Counter()
+        self.contact = defaultdict(list)     # ('b', batter, kind) / ('h', hand, kind) / ('k', kind) -> contact records
+        for r in self.records:
+            kind, c = CONTACT_KIND.get(r['terminal_event']), r.get('contact')
+            if not kind or not isinstance(c, dict):
+                continue
+            if kind == 'dp' and c.get('t') not in ('G', None):
+                continue                     # the engine's double plays are ground balls
+            if r.get('batter') is not None:
+                self.contact[('b', str(r['batter']), kind)].append(c)
+            self.contact[('h', r['stand'], kind)].append(c)
+            self.contact[('k', kind)].append(c)
+        self.contact = {k: v for k, v in self.contact.items() if k[0] != 'b' or len(v) >= MIN_BATTER_CONTACT}
+        self.contact_fallbacks = Counter()
 
     @property
     def n_sequences(self) -> int:
         return len(self.records)
+
+    @property
+    def n_contacts(self) -> int:
+        return sum(len(v) for k, v in self.contact.items() if k[0] == 'k')
+
+    def draw_contact(self, batter_id, hand: str, kind: str, rng) -> dict | None:
+        """Batted-ball record for one simulated ball in play, or None when no prior contact of that kind exists."""
+        for key in [('b', str(batter_id), kind), ('h', hand, kind), ('k', kind)]:
+            pool = self.contact.get(key)
+            if pool:
+                self.contact_fallbacks[key[0]] += 1
+                return dict(pool[int(rng.integers(len(pool)))])
+        return None
 
     def _path(self, pitcher_id: str, label: str, hand: str, rng) -> list | None:
         for key in [('po', pitcher_id, label), ('oh', label, hand), ('o', label)]:

@@ -15,7 +15,7 @@ import pandas as pd
 from app.safety import Blocked
 from research_lab.game_sim.engine import GameSimulator
 from .world_selection import world_features, select_worlds, SELECTION_NOTE
-from .pitch_bridge import PitchBridge, pitch_list
+from .pitch_bridge import PitchBridge, pitch_list, contact_of, MIN_BATTER_CONTACT
 
 BAT = ('PA','AB','H','2B','3B','HR','R','RBI','BB','HBP','K','SF')
 PIT = ('outs','PC','H','R','BB','HBP','K','HR','BF')
@@ -66,10 +66,15 @@ batter still can; no rate is ever zero.
         self._fit_hbp(h if full_history is None else self._prepare_full(full_history,date))
         records=[]
         if 'pitches' in h.columns:
+            has_batter='batter' in h.columns;has_contact='contact' in h.columns
             for r in h.loc[h.pitches.notna()].itertuples():
                 if isinstance(r.pitches,list) and r.pitches:
+                    batter=getattr(r,'batter',None) if has_batter else None
+                    contact=getattr(r,'contact',None) if has_contact else None
                     records.append({'pitcher':int(r.pitcher),'stand':str(r.stand),'outcome':str(r.outcome).lower(),
-                                    'terminal_event':str(r.terminal_event),'pitches':r.pitches})
+                                    'terminal_event':str(r.terminal_event),'pitches':r.pitches,
+                                    'batter':None if batter is None or (isinstance(batter,float) and np.isnan(batter)) else int(batter),
+                                    'contact':contact if isinstance(contact,dict) else None})
         self.bridge=PitchBridge(records)
     @staticmethod
     def _prepare_full(full: pd.DataFrame, date: str) -> pd.DataFrame:
@@ -108,6 +113,21 @@ batter still can; no rate is ever zero.
                 if label=='bb_hbp' and not hbp:pc=max(4,pc)
                 return hbp,pc,None
         raise Blocked('No compatible earlier PA count pool for '+label)
+    @staticmethod
+    def contact_kind(event) -> str|None:
+        """Which real batted balls describe this simulated play (None when no ball was put in play)."""
+        o=event['outcome'];d=event.get('description','')
+        if o=='single':return 'single'
+        if o=='double_triple':return 'triple' if 'tripled.' in d else 'double'
+        if o=='home_run':return 'home_run'
+        if o=='bip_out':return 'dp' if 'double play' in d else 'sf' if 'sacrifice fly' in d else 'out'
+        if o=='other_reach':return 'fc' if 'fielder' in d else 'error'
+        return None
+    def contact(self,event,rng):
+        """Batted-ball record (t, loc, dist, ev) for one simulated ball in play, or None."""
+        kind=self.contact_kind(event)
+        if kind is None or not self.bridge.n_contacts:return None
+        return self.bridge.draw_contact(event.get('batter_id'),event.get('batter_hand','R'),kind,rng)
 
 class ObservedSimulator(GameSimulator):
     """Listen to already-selected scoring runners, without consuming randomness."""
@@ -136,7 +156,7 @@ def build_game_box(result,matchup,fit:BookkeepingFit) -> dict[str,Any]:
         b=batting[s][bid];p=pitching[fs].setdefault(pid,dict(player_id=pid,name=e['pitcher_name'],**_zeros(PIT)))
         b['PA']+=1;p['BF']+=1;pa_counts[s]+=1
         o=e['outcome'];e['batter_hand']=('L' if throws[pid]=='R' else 'R') if hands[bid]=='S' else hands[bid];hbp,pc,pitches=fit.draw(e,rng);p['PC']+=pc
-        e['estimated_pitches']=pc;e['pitches']=pitches
+        e['estimated_pitches']=pc;e['pitches']=pitches;e['contact']=fit.contact(e,rng)
         hit=o in ('single','double_triple','home_run');sf='sacrifice fly' in e['description']
         b['AB']+=int(o!='bb_hbp' and not sf)
         b['SF']+=int(sf)
@@ -165,7 +185,7 @@ def build_game_box(result,matchup,fit:BookkeepingFit) -> dict[str,Any]:
         line['R']+=e['runs_scored'];line['H']+=int(hit)
         plays.append({k:e[k] for k in ('inning','half','batter_id','batter_name','pitcher_id','pitcher_name',
             'box_outcome','description','outs_before','outs_after','runs_scored','away_score','home_score',
-            'bases_before','bases_after','scoring_players','rbi','estimated_pitches','pitches')})
+            'bases_before','bases_after','scoring_players','rbi','estimated_pitches','pitches','contact')})
     for s in SIDE:
         opp='home' if s=='away' else 'away';rows=list(batting[s].values());ps=list(pitching[opp].values())
         score=getattr(result,s+'_score')
@@ -290,7 +310,9 @@ def run_box_worlds(engine,matchup,history,date,seeds,full_history=None,settings=
         'counts_do_not_influence_removal':True,'fallback_tiers_used':dict(fit.fallback_counts),
         'hbp_support_events':fit.hbp_support,'hbp_league_share':round(fit.hbp_league_all,4),
         'pitch_sequences':{'prior_sequences':fit.bridge.n_sequences,'path_tiers_used':dict(fit.bridge.fallbacks),
-                           'method':'real prior count paths by outcome (own pitcher with at least %d, else league by hand); pitch types from the pitcher\'s mix by hand and count, speeds from his distribution by type; league fallbacks'%12}}
+                           'method':'real prior count paths by outcome (own pitcher with at least %d, else league by hand); pitch types from the pitcher\'s mix by hand and count, speeds from his distribution by type; league fallbacks'%12},
+        'contact':{'prior_balls_in_play':fit.bridge.n_contacts,'tiers_used':dict(fit.bridge.contact_fallbacks),
+                   'method':'batted-ball shape, fielder and distance from real prior balls in play of the same kind (own batter with at least %d, else league by batter hand); double plays from ground-ball double plays, sacrifice flies from sacrifice flies'%MIN_BATTER_CONTACT}}
     return results,payload
 
 
@@ -424,10 +446,11 @@ support pitch-count estimation. Official prior-date playEvents supply counts.
                 if key in seen:continue
                 seen.add(key)
                 m=play['matchup'];count=sum(e.get('isPitch') is True for e in play.get('playEvents',[]))
+                batter=(m.get('batter') or {}).get('id')
                 rows.append({'date_key':feed['gameData']['datetime']['officialDate'],
                     'outcome':outcome,'terminal_event':play['result']['eventType'],
-                    'pitcher':int(m['pitcher']['id']),'stand':m['batSide']['code'],
-                    'pitch_number':count,'available_at':source.finished_at,'pitches':pitch_list(play)})
+                    'pitcher':int(m['pitcher']['id']),'batter':None if batter is None else int(batter),'stand':m['batSide']['code'],
+                    'pitch_number':count,'available_at':source.finished_at,'pitches':pitch_list(play),'contact':contact_of(play)})
     if not rows:raise Blocked('No prior official pitch-count observations')
     return pd.DataFrame(rows)
 

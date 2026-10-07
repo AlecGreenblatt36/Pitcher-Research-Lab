@@ -81,7 +81,7 @@ def render_html(public: dict) -> str:
 
 
 ARCHIVE_PLAY_KEYS = ('inning', 'half', 'batter_id', 'batter_name', 'pitcher_id', 'pitcher_name', 'box_outcome', 'description',
-                     'outs_before', 'outs_after', 'runs_scored', 'away_score', 'home_score', 'scoring_players', 'rbi', 'estimated_pitches')
+                     'outs_before', 'outs_after', 'runs_scored', 'away_score', 'home_score', 'scoring_players', 'rbi', 'estimated_pitches', 'contact')
 
 
 def lean_box(box: dict) -> dict:
