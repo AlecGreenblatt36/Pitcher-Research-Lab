@@ -1,10 +1,10 @@
 {
- "created_at": "2026-10-07T11:25:38.540166+00:00",
+ "created_at": "2026-10-07T11:39:25.999552+00:00",
  "status": "iteration_completed",
  "runtime": "brl_engine (public code, sealed data)",
  "ledger_branch": "brl-live-data",
  "shadow": false,
- "live_forecasts_created": 0,
+ "live_forecasts_created": 3,
  "raw_data_published": false,
  "stage": "complete",
  "secret_present": true,
@@ -36,12 +36,15 @@
  ],
  "data_source": "brl-data-202610070629",
  "pa_model_selected": {
-  "name": "locked-pa-2026-v1",
-  "source": "data package"
+  "name": "pa-2026-v2-physics",
+  "source": "private/models/pa-2026-v2-physics.enc",
+  "sha256": "4c8822abcb65eff2ec2fcf3a1d7c3b57f13dec0d21d26a9508e18f74944b3a54",
+  "fitted_at": "2026-10-07T09:43:32.959674+00:00",
+  "physics_features": 30
  },
- "forecasts": 14,
- "box_forecasts_created": 0,
- "box_forecasts": 9,
+ "forecasts": 17,
+ "box_forecasts_created": 3,
+ "box_forecasts": 12,
  "player_scored_games": 2,
  "scored_games": 2,
  "skill_scored_games": 1,
@@ -50,9 +53,24 @@
  "history_added_PA": 1228,
  "history_refresh_note": "Mid-PA player substitution requires explicit attribution; no silent merge",
  "pa_model": {
-  "name": "locked-pa-2026-v1",
-  "sha256": "3c87e4deedfb5253ac81252ad7fa2f117b16457f2c383c465670e2c3ee2fa095",
-  "physics": null
+  "name": "pa-2026-v2-physics",
+  "sha256": "4c8822abcb65eff2ec2fcf3a1d7c3b57f13dec0d21d26a9508e18f74944b3a54",
+  "physics": {
+   "seasons": {
+    "2025": {
+     "rows": 186562,
+     "through": "2025-11-01"
+    },
+    "2026": {
+     "rows": 185223,
+     "through": "2026-10-06"
+    }
+   },
+   "day_cache_days": 0,
+   "day_cache_rows": 0,
+   "rows": 371785,
+   "through": "2026-10-06"
+  }
  },
  "pitch_bookkeeping_prior_PA": 215850,
  "pitch_bookkeeping_season_games": 4925,
@@ -202,7 +220,7 @@
  },
  "storage_read_audit": {
   "contents_verified": 18,
-  "blob_fallbacks": 22,
-  "bytes_verified": 47989388
+  "blob_fallbacks": 27,
+  "bytes_verified": 69105998
  }
 }
