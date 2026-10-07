@@ -12,7 +12,7 @@ from cloud import runner as original
 from cloud.contracts import (config_for,draw_seeds,utcnow,summarize,score_versions,assert_finished_before_start)
 from cloud.security import key_bytes
 from .live_extension import RefreshedSimulator,make_history_engine
-from .history_refresh import HistoryCache,Fetcher
+from .history_refresh import HistoryCache,Fetcher,previous_day
 from .verified_store import VerifiedGitStore
 from .boxscore import run_box_worlds,parse_actual_box,score_player_boxes,bookkeeping_history_from_cache,validate_box_payload
 from .box_page import render_page
@@ -152,11 +152,13 @@ def main(public_dir):
     cache=HistoryCache(store,key);refresh_note=None
     try:index=cache.refresh(Fetcher())
     except Blocked as exc:
-        # Yesterday's last game is still being played (past midnight Eastern): carry on with
-        # the last accepted history instead of blocking live updates and the page.
-        if 'not final' not in str(exc):raise
+        # Yesterday cannot be accepted yet (its last game is still being played past midnight
+        # Eastern, or the source has not published the day): carry on with the last accepted
+        # history, which may run through the day before yesterday but never older.
+        from datetime import timedelta
         index=cache.index();refresh_note=str(exc)
-        if not index.get('coverage_through'):raise
+        previous=previous_day(utcnow());accepted=index.get('coverage_through')
+        if accepted not in (previous.isoformat(),(previous-timedelta(days=1)).isoformat()):raise
     info=cache.assemble(index,bridge.HISTORY,ROOT/'private_work/history.csv.gz',utcnow())
     info['yesterday_incomplete']=bool(refresh_note);info['refresh_note']=refresh_note
     annotations=bookkeeping_history_from_cache(cache,index,utcnow())
