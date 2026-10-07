@@ -60,6 +60,9 @@ button { font: inherit; color: inherit; }
 .state { font-weight: 700; font-size: 14px; }
 .state.live { color: var(--home); }
 .state.final { color: var(--ink); }
+.state .mini { display: inline-block; vertical-align: -3px; margin-right: 6px; width: 18px; height: 16px; }
+.state .mini rect { fill: none; stroke: currentColor; stroke-width: 1.4; }
+.state .mini rect.on { fill: currentColor; }
 .cols { display: grid; grid-template-columns: 1fr 56px 56px; align-items: end; font-size: 14px; color: var(--muted); }
 .cols span { text-align: right; }
 .team-row { display: grid; grid-template-columns: 44px 1fr 56px 56px; align-items: center; padding: 6px 0; }
@@ -508,6 +511,13 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var when = lv._client && lv.fetched_at ? "Live from MLB, " + timeET(lv.fetched_at) + " ET." : "Live." + (lv.updated_at ? " Updated " + timeET(lv.updated_at) + " ET." : "");
     return (when + " " + src + sim + " " + pre).replace(/\s+/g, " ");
   }
+  /* Runners as a small diamond for the slate cards (nothing between innings or after the final). */
+  function miniBases(lv) {
+    var st = lv.state || {}, b = st.bases || [];
+    if (lv._final || st.between_innings) return "";
+    var r = function (x, y, on) { return '<rect x="' + x + '" y="' + y + '" width="5.5" height="5.5" transform="rotate(45 ' + (x + 2.75) + " " + (y + 2.75) + ')"' + (on ? ' class="on"' : "") + "/>"; };
+    return '<svg class="mini" viewBox="0 0 18 16" aria-hidden="true">' + r(11.5, 6.5, b[0]) + r(6.25, 1.5, b[1]) + r(1, 6.5, b[2]) + "</svg>";
+  }
   function liveLine(lv) {
     var inn = { away: {}, home: {} };
     (lv.state.innings || []).forEach(function (i) { ["away", "home"].forEach(function (side) { if (i[side] && i[side].R != null) inn[side][String(i.num)] = { R: i[side].R, H: i[side].H || 0 }; }); });
@@ -771,7 +781,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (box && box.samples && box.samples.length) proj = box.samples[variantsFor(box, f)[0].i];
       var fav = favorite(f);
       var ctx = contextFor(f.game_pk), ctxLine = contextLine(f, ctx, true);
-      html += '<li><a class="card" data-game="' + f.game_pk + '" href="#/game/' + f.game_pk + '"><div class="card-top"><span>' + esc(timeET(f.scheduled_start)) + '</span><span class="state ' + st + '">' + (lv ? esc(liveWhere(lv)) : STATE_TEXT[st]) + "</span></div>";
+      html += '<li><a class="card" data-game="' + f.game_pk + '" href="#/game/' + f.game_pk + '"><div class="card-top"><span>' + esc(timeET(f.scheduled_start)) + '</span><span class="state ' + st + '">' + (lv ? miniBases(lv) + esc(liveWhere(lv)) : STATE_TEXT[st]) + "</span></div>";
       if (ctxLine) html += '<div class="card-ctx">' + esc(ctxLine) + "</div>";
       html += '<div class="cols"><span></span><span>' + (actual ? "Final" : lv ? "Score" : "Proj") + "</span><span>Win</span></div>";
       ["away", "home"].forEach(function (side) {
