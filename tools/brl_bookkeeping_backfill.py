@@ -25,22 +25,22 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / 'brl_engine' / 'runtime'))
 from brl_live.pitch_bridge import pitch_list, contact_of  # noqa: E402
 from brl_live.bookkeeping_season import SCHEMA, STUDY_SCHEMA, season_path, season_purpose, receipt_path, study_path, study_purpose, physics_path, physics_purpose  # noqa: E402
-from research_lab.pa_model.physics import table_from_study, RUN_VALUE  # noqa: E402
 from cloud.security import seal, unseal, key_bytes, sha  # noqa: E402
 
 
-def _outcomes_module():
-    # The event-to-outcome table lives in the engine's pa_model package, whose __init__ pulls in
-    # the fitting stack (joblib, scikit-learn); load the one file directly so this job needs
-    # none of it.
+def _engine_file(name: str):
+    # These files live in the engine's pa_model package, whose __init__ pulls in the fitting
+    # stack (joblib, scikit-learn); load the one file directly so this job needs none of it.
     import importlib.util
-    path = ROOT / 'brl_engine' / 'runtime' / 'research_lab' / 'pa_model' / 'outcomes.py'
-    spec = importlib.util.spec_from_file_location('brl_outcomes', path)
+    path = ROOT / 'brl_engine' / 'runtime' / 'research_lab' / 'pa_model' / (name + '.py')
+    spec = importlib.util.spec_from_file_location('brl_' + name, path)
     module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
     return module
 
 
-map_event = _outcomes_module().map_event
+map_event = _engine_file('outcomes').map_event
+_physics = _engine_file('physics')
+table_from_study, RUN_VALUE = _physics.table_from_study, _physics.RUN_VALUE
 
 API = 'https://statsapi.mlb.com/api/v1'
 GAME_TYPES = {'R', 'F', 'D', 'L', 'W'}        # regular season and the four postseason rounds
