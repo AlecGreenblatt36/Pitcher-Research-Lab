@@ -51,6 +51,33 @@ def main():
         info, _ = get(url)
         out['checks'][name] = info
     out['checks']['preflight'] = get(f'https://statsapi.mlb.com/api/v1/game/{pk}/linescore', method='OPTIONS')[0]
+    # What the fields filter keeps, on a finished game: structure counts only.
+    final_pk = int(os.environ.get('BRL_PROBE_FINAL_PK') or 849826)
+    fields = os.environ.get('BRL_PROBE_FIELDS', '')
+    for name, url in (('final_full', f'https://statsapi.mlb.com/api/v1.1/game/{final_pk}/feed/live'),
+                      ('final_fields', f'https://statsapi.mlb.com/api/v1.1/game/{final_pk}/feed/live?fields=' + fields)):
+        info, body = get(url)
+        try:
+            doc = json.loads(body)
+            plays = ((doc.get('liveData') or {}).get('plays') or {}).get('allPlays') or []
+            done = [x for x in plays if (x.get('about') or {}).get('isComplete')]
+            pitches = [e for x in done for e in (x.get('playEvents') or []) if e.get('isPitch')]
+            box = ((doc.get('liveData') or {}).get('boxscore') or {}).get('teams') or {}
+            players = (box.get('home') or {}).get('players') or {}
+            first_player = next(iter(players.values()), {}) if players else {}
+            info.update(plays=len(plays), complete=len(done), with_batter_id=sum(1 for x in done if ((x.get('matchup') or {}).get('batter') or {}).get('id')),
+                        runners=sum(len(x.get('runners') or []) for x in done), runner_play_index=sum(1 for x in done for r in (x.get('runners') or []) if (r.get('details') or {}).get('playIndex') is not None),
+                        pitches=len(pitches), pitch_xy=sum(1 for e in pitches if ((e.get('pitchData') or {}).get('coordinates') or {}).get('pX') is not None),
+                        pitch_type=sum(1 for e in pitches if ((e.get('details') or {}).get('type') or {}).get('code')),
+                        hit_xy=sum(1 for x in done for e in (x.get('playEvents') or []) if ((e.get('hitData') or {}).get('coordinates') or {}).get('coordX') is not None),
+                        box_players=len(players), box_player_keys=sorted(first_player.keys())[:12], box_batters=len((box.get('home') or {}).get('batters') or []),
+                        linescore_innings=len(((doc.get('liveData') or {}).get('linescore') or {}).get('innings') or []),
+                        status=((doc.get('gameData') or {}).get('status') or {}).get('abstractGameState'))
+        except Exception as exc:
+            info['parse_error'] = type(exc).__name__
+        out['checks'][name] = info
+    info, _ = get(f'https://statsapi.mlb.com/api/v1/game/{final_pk}/boxscore')
+    out['checks']['final_boxscore'] = info
     text = json.dumps(out, indent=1)
     print(text)
     repo, token = os.environ.get('GITHUB_REPOSITORY'), os.environ.get('GH_TOKEN')

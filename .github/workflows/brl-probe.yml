@@ -17,4 +17,5 @@ jobs:
       - name: Probe whether the page can read the official feeds directly (no secrets used)
         env:
           GH_TOKEN: ${{ github.token }}
+          BRL_PROBE_FIELDS: gamePk,gameData,status,abstractGameState,detailedState,liveData,linescore,currentInning,inningState,isTopInning,outs,balls,strikes,teams,away,home,runs,hits,errors,innings,num,offense,defense,first,second,third,batter,pitcher,id,fullName,battingOrder,boxscore,players,person,stats,batting,pitching,plays,allPlays,about,atBatIndex,halfInning,inning,isComplete,result,eventType,description,awayScore,homeScore,rbi,matchup,count,playEvents,isPitch,details,code,type,pitchData,startSpeed,coordinates,pX,pZ,strikeZoneTop,strikeZoneBottom,hitData,launchSpeed,totalDistance,trajectory,location,coordX,coordY,runners,movement,start,end,isOut,playIndex,credits,position
         run: python tools/brl_probe_cors.py
