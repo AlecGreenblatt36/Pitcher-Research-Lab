@@ -1,4 +1,4 @@
-name: ACC replay sealed-input export v29
+name: ACC replay sealed-runtime export v29
 on:
   push:
     branches: [diag/acc-replay-export-v29]
@@ -14,7 +14,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install --disable-pip-version-check cryptography==46.0.4
-      - name: Restore pinned data and re-encrypt for the private research checkpoint
+      - name: Restore pinned data and legacy replay code, then re-encrypt for the private research checkpoint
         env:
           BRL_PA_PACKAGE_KEY: ${{ secrets.BRL_PA_PACKAGE_KEY }}
           GITHUB_REPOSITORY: ${{ github.repository }}
@@ -51,7 +51,7 @@ jobs:
               fetch(f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/releases/download/{TAG}/{ASSET}"),
               key_hex, config, root / "container"
           )
-          allowed_dirs = {"pa_model_reference", "model_runs", "data"}
+          allowed_dirs = {"pa_model_reference", "model_runs", "data", "app", "cloud", "research_lab", "portable"}
           allowed_files = {"requirements-cloud.txt", "RUNTIME_MANIFEST.json"}
           listing = []
           buffer = io.BytesIO()
@@ -100,7 +100,7 @@ jobs:
       - name: Upload encrypted export only
         uses: actions/upload-artifact@v4
         with:
-          name: acc-replay-v29-sealed-inputs
+          name: acc-replay-v29-sealed-runtime
           path: ${{ runner.temp }}/acc-v29-export/artifact
           retention-days: 1
           if-no-files-found: error
