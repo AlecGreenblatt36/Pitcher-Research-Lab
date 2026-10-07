@@ -1,0 +1,76 @@
+{
+ "schema": "brl.model-fit-receipt.v1",
+ "name": "pa-2026-v2-physics",
+ "run_id": "37601223809",
+ "started_at": "2026-10-07T09:32:06.022890+00:00",
+ "stages": [
+  {
+   "stage": "restore data package",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load plate appearances",
+   "at_seconds": 2.2
+  },
+  {
+   "stage": "load physics tables",
+   "at_seconds": 4.0
+  },
+  {
+   "stage": "build physics features",
+   "at_seconds": 8.2
+  },
+  {
+   "stage": "run the locked benchmark with physics features",
+   "at_seconds": 85.5
+  },
+  {
+   "stage": "seal the model",
+   "at_seconds": 685.4
+  }
+ ],
+ "physics_params": {
+  "xvalue": true,
+  "recent_days": 30
+ },
+ "pa_rows": 733328,
+ "seasons": [
+  2023,
+  2024,
+  2025,
+  2026
+ ],
+ "history_sha256": "e503e223eb4d6a2222ed35abe0439a0e6eea7fe85bf9061bcac96d0065a8a197",
+ "physics_rows": 744690,
+ "physics_join": {
+  "pa_rows": 733328,
+  "physics_rows": 744690,
+  "joined": 733328,
+  "ids_match": 733027,
+  "params": {
+   "k_rate": 150.0,
+   "k_bip": 60.0,
+   "k_velo": 100.0,
+   "xvalue": true,
+   "recent_days": 30,
+   "k_recent_pitch": 100.0,
+   "k_recent_bip": 40.0,
+   "k_cell": 40.0
+  },
+  "league_fastball_velocity": 94.10527696108461,
+  "league_exit_velocity": 88.41879062041012,
+  "league_hard_hit_rate": 0.3956972599867757,
+  "league_whiff_per_swing": 0.23186054567102798,
+  "league_ground_ball_share": 0.4400732981760124
+ },
+ "manifest": "brl_engine/models/pa-2026-v2-physics.json",
+ "model_sha256": "4c8822abcb65eff2ec2fcf3a1d7c3b57f13dec0d21d26a9508e18f74944b3a54",
+ "test_2026": {
+  "talent_only": 1.4604864289103539,
+  "talent_plus_context": 1.4585827450940725,
+  "blended_candidate": 1.4583964758414056
+ },
+ "status": "completed",
+ "finished_at": "2026-10-07T09:43:34.422425+00:00",
+ "seconds": 688.4
+}
