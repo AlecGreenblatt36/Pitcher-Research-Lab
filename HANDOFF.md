@@ -10,7 +10,11 @@ Local work that is not in the repository (sandbox scratch, re-creatable from the
 
 Also live since Oct 7: in-game updates every cycle for games in progress (LIVE-01), a pregame betting-market reference on the record and Odds tab (MKT-01, first real capture expected on the first pregame cycle of Oct 7), and pitch-by-pitch lines under every simulated plate appearance (PITCH-01). The dashboard CI's browser regression no longer counts navigation-aborted requests as failures.
 
-Next: own public-source runtime (engine code public, only data and model encrypted under a new key) so engine changes no longer depend on the old encrypted runtime; a 2025 replay for a second season of evidence; the April replay weakness (roster-free bullpens vs model error); batted-ball types in play text; pitch-by-pitch bridge; in-game updating.
+Own runtime (brl_engine/, Oct 7): public engine and pipeline code; the inherited release asset is used only as the sealed container of the data files (seed history, locked model, starter hazard, names, team results), decrypted with the existing BRL_PA_PACKAGE_KEY; its private code is never imported. Shadow workflow `.github/workflows/brl-live-v2.yml` writes to the `brl-live-data-v2` branch (a copy of the live ledger) and never publishes the page; its receipt is at `diagnostics/v2_receipt.json` on that branch, readable through git. Switch-over = point `brl-live.yml` at `brl_engine/entrypoint.py` (without --shadow) once shadow forecasts agree with the live lane's for the same games. 165 tests pass under the own runtime (`cd /tmp && PYTHONPATH=<repo>/brl_engine/runtime:<repo> python -m pytest -c /dev/null --rootdir=<repo> --import-mode=importlib <repo>/brl_engine/tests <repo>/brl_live_tests`), and the public-check workflow runs them.
+
+Both lanes now carry on with the last accepted history when yesterday cannot be accepted yet (a West Coast game past midnight Eastern, or Baseball Savant publishing late), never older than the day before yesterday; forecasts record the coverage they used in history_through.
+
+Next: finish the shadow comparison and switch; a new PA model becomes possible only on the own runtime (the inherited one pins the model hash); the April replay weakness; batted-ball types in play text.
 
 ## Current checkpoint — October 6, 2026, 6:59 p.m. Eastern
 
