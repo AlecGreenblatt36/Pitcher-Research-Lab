@@ -14,12 +14,12 @@ from cloud.security import key_bytes
 from .live_extension import RefreshedSimulator,make_history_engine
 from .history_refresh import HistoryCache,Fetcher,previous_day
 from .verified_store import VerifiedGitStore
-from .boxscore import run_box_worlds,parse_actual_box,score_player_boxes,bookkeeping_history_from_cache,validate_box_payload
+from .boxscore import run_box_worlds,parse_actual_box,score_player_boxes,bookkeeping_history_from_cache,validate_box_payload,ADJUST
 from .box_page import render_page
 from .live_feed import live_matchup,appearances,matchup_parameters
 from .live_update import run_live_update
 from .market import capture as capture_market
-from .team_model import TeamModel
+from .team_model import TeamModel, StarterAdjust
 from zoneinfo import ZoneInfo
 from .edge_metrics import (freeze_skill_baselines, prior_boxes_from_cache, score_skill_boxes)
 
@@ -34,6 +34,9 @@ class BoxSimulator(RefreshedSimulator):
         self._appearances=None
         try:self.team_model=TeamModel(self.rows)
         except Exception:self.team_model=TeamModel([])
+        # Starting-pitcher adjustment of the team model (TEAM-02); without it the team model is the v1 recipe.
+        try:self.starter_adjust=StarterAdjust(self.history,self.rows);self.starter_adjust_error=None
+        except Exception as exc:self.starter_adjust=None;self.starter_adjust_error=type(exc).__name__+': '+str(exc)[:160]
     def appearances(self):
         if self._appearances is None:self._appearances=appearances(self.history)
         return self._appearances
@@ -51,7 +54,16 @@ class BoxSimulator(RefreshedSimulator):
         # The team half of the headline blend: our decayed negative-binomial team model, the one
         # measured on the 2026 replay next to the simulator. The runtime's own baseline is kept
         # in the forecast record unchanged.
-        try:box['team_model']=self.team_model.probability(game['date'],game['home']['team_id'],game['away']['team_id'])
+        starters=None;sp_error=self.starter_adjust_error
+        if self.starter_adjust is not None:
+            try:
+                scale=float((ADJUST.get('postseason_exp_scale') or {}).get(game['game_type'],1.0))
+                starters=self.starter_adjust.factors(game['date'],game['home']['team_id'],game['away']['team_id'],
+                                                     decoded.home.starter.player_id,decoded.away.starter.player_id,share_scale=scale)
+            except Exception as exc:sp_error=type(exc).__name__+': '+str(exc)[:160]
+        try:
+            box['team_model']=self.team_model.probability(game['date'],game['home']['team_id'],game['away']['team_id'],starters=starters)
+            if sp_error:box['team_model']['starter_adjust_error']=sp_error
         except Exception as exc:box['team_model']={'error':type(exc).__name__+': '+str(exc)[:160],'rows_seen':len(self.team_model.rows)}
         metadata={**box,'game_pk':game['game_pk'],'date':game['date'],
                   'starters':{s:{'player_id':getattr(decoded,s).starter.player_id} for s in ('away','home')}}
