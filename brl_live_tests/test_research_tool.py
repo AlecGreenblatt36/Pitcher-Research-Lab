@@ -17,7 +17,8 @@ def synthetic(seed=0, n_games=40, pa_per_side=12):
         plays = []
         for i in range(2 * pa_per_side):
             batter = 10 + (i % pa_per_side); pitcher = 500 + (i // pa_per_side)
-            outcome = rng.choice(['BIP_OUT', 'K', 'BB_HBP', '1B', '2B_3B', 'HR', 'OTHER_REACH'], p=[0.45, 0.23, 0.09, 0.14, 0.04, 0.03, 0.02])
+            probs = [0.45, 0.23, 0.09, 0.14, 0.04, 0.03, 0.02] if batter != 10 else [0.25, 0.23, 0.09, 0.14, 0.09, 0.18, 0.02]   # batter 10: loud contact, more extra bases
+            outcome = rng.choice(['BIP_OUT', 'K', 'BB_HBP', '1B', '2B_3B', 'HR', 'OTHER_REACH'], p=probs)
             rows.append({'date_key': date, 'season': 2026, 'game_pk': pk, 'at_bat_number': i + 1, 'batter': batter, 'pitcher': pitcher, 'outcome': outcome,
                          'stand': 'R', 'p_throws': 'L', 'park': 'NYY', 'platoon': 1, 'is_home_batter': i >= pa_per_side, 'inning': 1 + i // 6, 'outs_when_up': i % 3,
                          'runner_1b': 0, 'runner_2b': 0, 'runner_3b': 0, 'bat_score_diff': 0, 'n_thruorder_pitcher': 1, 'batter_days_since_prev_game': 1,
@@ -74,3 +75,19 @@ def test_fitting_path_accepts_extra_columns():
     fitted, tuning = fit_frozen_model(features, list(cols) + tool.EXTRA, config)
     p = fitted.predict_proba(features[features.season == 2026])
     assert p.shape[1] == 7 and np.allclose(p.sum(axis=1), 1.0)
+
+
+def test_variant_columns_and_time_validity_of_xvalue_and_recent():
+    pa, study = synthetic(n_games=40)
+    physics = tool.per_pa_physics(study)
+    extras, audit = tool.build_extras(pa, physics, {'xvalue': True, 'recent_days': 3})
+    assert list(extras.columns) == tool.EXTRA + tool.XVALUE_COLS + tool.RECENT_COLS
+    ordered = pa.sort_values(['date_key', 'game_pk', 'at_bat_number'], kind='mergesort').reset_index(drop=True)
+    first = ordered.date_key == '2026-05-01'
+    assert extras.loc[first, 'b_xv'].nunique() == 1 and (extras.loc[first, tool.RECENT_COLS] == 0).all().all()
+    later = ordered.date_key >= '2026-05-06'
+    # batter 10's 100-mph contact lands in a richer cell than the 85-mph contact of everyone else
+    assert extras.loc[later & (ordered.batter == 10), 'b_xv'].mean() > extras.loc[later & (ordered.batter == 11), 'b_xv'].mean()
+    assert np.isfinite(extras.to_numpy()).all()
+    assert tool.columns_for({}) == tool.EXTRA and tool.columns_for({'recent_days': 30}) == tool.EXTRA + tool.RECENT_COLS
+    assert set(tool.SETS['physics2']) >= {'base', 'k_low', 'k_high', 'xvalue', 'recent30', 'xvalue_recent30'}
