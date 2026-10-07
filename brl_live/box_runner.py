@@ -40,12 +40,12 @@ class BoxSimulator(RefreshedSimulator):
     def update_live(self,feed,date,updated_at):
         """Continue an in-progress game from its observed state; a snapshot, not a forecast version."""
         matchup,start,state,game=live_matchup(feed,self.history,date,self.appearances())
-        engine,_=make_history_engine(matchup_parameters(game,matchup,config_for(game['game_type'])),self.path)
+        engine,_=make_history_engine(matchup_parameters(game,matchup,config_for(game['game_type'])),self.path,getattr(self,'physics_table',None))
         return run_live_update(engine,matchup,start,state,game,self.history,updated_at=updated_at)
     def run(self,game,matchup):
         parameters={'date':game['date'],'park':game['home']['abbr'],'game':game,
                     'matchup':asdict(matchup),'config':config_for(game['game_type'])}
-        engine,decoded=make_history_engine(parameters,self.path)
+        engine,decoded=make_history_engine(parameters,self.path,getattr(self,'physics_table',None))
         results,box=run_box_worlds(engine,decoded,self.annotations,game['date'],draw_seeds(game['game_pk']),full_history=self.history)
         baseline=predict(game,self.rows,self.fit)
         # The team half of the headline blend: our decayed negative-binomial team model, the one
@@ -179,6 +179,11 @@ def main(public_dir):
     skill_origin=utcnow()
     skill_history=prior_boxes_from_cache(cache,index,skill_origin)
     sim=BoxSimulator(info,annotations,skill_history,skill_origin.isoformat())
+    physics_receipt=None
+    if bridge.MODEL_NAME!='locked-pa-2026-v1':
+        # A selected model with physics features needs the per-PA physics table through yesterday.
+        from .physics_inputs import assemble_physics_table
+        sim.physics_table,physics_receipt=assemble_physics_table(cache,index,utcnow())
     runner=BoxRunner(original.Network(),store,sim,run_id=os.environ.get('GITHUB_RUN_ID','local'))
     _market(runner,store.ledger)
     try:runner.iteration()
@@ -196,6 +201,7 @@ def main(public_dir):
         'scored_games':scores['n_games'],'skill_scored_games':ledger['skill_scores']['n_games'],
         'skill_baseline_prior_games':len(skill_history),'raw_data_published':False,
         'history_coverage_through':info['coverage_through'],'history_added_PA':info['added_PA'],'history_refresh_note':refresh_note,
+        'pa_model':{'name':bridge.MODEL_NAME,'sha256':bridge.MODEL_SHA256,'physics':physics_receipt},
         'pitch_bookkeeping_prior_PA':len(annotations),'pitch_bookkeeping_season_games':int(getattr(annotations,'attrs',{}).get('season_games',0)),'engine_rules_changed':False,
         'model_parameters_changed':False,'simulation_adjustments':'context offsets (brl_live/context_offsets.json)',
         'live_updates':len(ledger['live']),'live_update_errors':sum(1 for v in ledger['live'].values() if v.get('error')),

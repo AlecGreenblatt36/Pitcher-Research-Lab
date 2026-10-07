@@ -15,7 +15,10 @@ from research_lab.game_sim.models import GameMatchup, PlayerProfile, PitcherProf
 
 DATA_ROOT = Path(os.environ.get('BRL_DATA_ROOT') or (Path(os.environ.get('RUNNER_TEMP', '/tmp')) / 'brl-data'))
 HISTORY = DATA_ROOT / 'pa_model_reference/model_runs/pa_locked_2026/plate_appearances.csv.gz'
-MODEL = DATA_ROOT / 'pa_model_reference/model_runs/pa_locked_2026/artifacts/pa_model.joblib'
+MODEL = Path(os.environ['BRL_MODEL_PATH']) if os.environ.get('BRL_MODEL_PATH') else DATA_ROOT / 'pa_model_reference/model_runs/pa_locked_2026/artifacts/pa_model.joblib'
+# The locked 2026 model's hash unless the entrypoint selected another sealed model (brl_engine/model.json).
+MODEL_SHA256 = os.environ.get('BRL_MODEL_SHA256') or '3c87e4deedfb5253ac81252ad7fa2f117b16457f2c383c465670e2c3ee2fa095'
+MODEL_NAME = os.environ.get('BRL_MODEL_NAME') or 'locked-pa-2026-v1'
 HAZARD = DATA_ROOT / 'model_runs/starter_hazard_v1/starter_hazard.joblib'
 NAMES = DATA_ROOT / 'pa_model_reference/chadwick_mlbam_names.csv.gz'
 TEAM_RESULTS = DATA_ROOT / 'data/official_team_results'

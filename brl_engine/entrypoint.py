@@ -45,6 +45,44 @@ def restore_package(repo, token, key_hex, manifest, destination):
     return destination
 
 
+def select_model(repo, token, key_hex, data_root):
+    """brl_engine/model.json names the PA model: the locked 2026 model inside the data package (default)
+    or a sealed model from the fit job (private/models/<name>.enc, public manifest brl_engine/models/<name>.json),
+    which is verified, unsealed into the data root and announced to the runtime through the environment."""
+    selection_path = REPO_ROOT / 'brl_engine' / 'model.json'
+    selection = json.loads(selection_path.read_text()) if selection_path.exists() else {}
+    name = str(selection.get('model') or 'locked-pa-2026-v1')
+    for var in ('BRL_MODEL_PATH', 'BRL_MODEL_SHA256', 'BRL_MODEL_NAME'):
+        os.environ.pop(var, None)
+    if name == 'locked-pa-2026-v1':
+        return {'name': name, 'source': 'data package'}
+    import hashlib
+    sys.path.insert(0, str(REPO_ROOT / 'brl_engine' / 'runtime'))
+    from cloud.security import unseal, key_bytes
+    manifest = json.loads((REPO_ROOT / selection['manifest']).read_text())
+    if manifest.get('name') != name:
+        raise ValueError('Model manifest name mismatch')
+    branch, path = manifest['branch'], manifest['path']
+    meta = api(f'https://api.github.com/repos/{repo}/contents/{path}?ref={branch}', token)
+    if meta.get('encoding') == 'base64' and isinstance(meta.get('content'), str) and meta.get('content'):
+        cipher = base64.b64decode(''.join(meta['content'].split()))
+    else:
+        blob = api(f'https://api.github.com/repos/{repo}/git/blobs/{meta["sha"]}', token)
+        cipher = base64.b64decode(''.join(blob['content'].split()))
+    if hashlib.sha256(cipher).hexdigest() != manifest['cipher_sha256']:
+        raise ValueError('Model cipher hash mismatch')
+    raw = unseal(cipher, key_bytes(key_hex), manifest['purpose'])
+    if hashlib.sha256(raw).hexdigest() != manifest['model_sha256']:
+        raise ValueError('Model plaintext hash mismatch')
+    target = Path(data_root) / 'pa_model_reference' / 'model_runs' / name / 'artifacts' / 'pa_model.joblib'
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(raw)
+    os.environ['BRL_MODEL_PATH'] = str(target)
+    os.environ['BRL_MODEL_SHA256'] = manifest['model_sha256']
+    os.environ['BRL_MODEL_NAME'] = name
+    return {'name': name, 'source': path, 'sha256': manifest['model_sha256'], 'fitted_at': manifest.get('fitted_at'), 'physics_features': len(manifest.get('physics_features') or [])}
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--site', required=True); parser.add_argument('--runtime', required=True)
@@ -97,6 +135,7 @@ def main():
             receipt['data_source'] = 'inherited release asset ' + TAG
         os.environ['BRL_DATA_ROOT'] = str(data_root)
         os.environ['BRL_WORK_ROOT'] = str(Path(args.runtime) / 'work')
+        receipt['pa_model_selected'] = select_model(repo, token, key, data_root)
         receipt['stage'] = 'dependencies'
         env = {k: v for k, v in os.environ.items() if k not in ('BRL_PA_PACKAGE_KEY', 'GH_TOKEN', 'GITHUB_TOKEN')}
         req = data_root / 'requirements-cloud.txt'
