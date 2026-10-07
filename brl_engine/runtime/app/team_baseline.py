@@ -81,4 +81,9 @@ def predict(game: dict, rows, fit) -> dict:
         out = model.probability(game['date'], game['home']['team_id'], game['away']['team_id'])
     except Exception as exc:
         return {'probability': None, 'error': type(exc).__name__ + ': ' + str(exc)[:120], 'rows': len(model.rows)}
-    return {'probability': out['p_home'], **out}
+    prior_dates = [r['date'] for r in model.rows if r['date'] < str(game['date'])[:10]]
+    through = max(prior_dates) if prior_dates else None
+    # Field names the public edge-metrics baselines expect from the runtime baseline.
+    return {'probability': out['p_home'], **out, 'game_pk': int(game['game_pk']), 'prior_through': through,
+            'dispersion_fit': {'training_through': through, 'alpha': out['alpha'], 'window': 'last three seasons before the game date'},
+            'away_mean_runs': out['mu_away'], 'home_mean_runs': out['mu_home'], 'nb_alpha': out['alpha']}
