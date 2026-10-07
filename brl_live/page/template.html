@@ -351,6 +351,13 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (w.wind) parts.push("wind " + w.wind);
     return parts.join(", ");
   }
+  /* The starter's name under the team, with a note when no probable starter was announced and an opener was assumed. */
+  function starterText(f, box, side) {
+    var name = box && box.starters && box.starters[side] ? box.starters[side].name : (f[side] && f[side].starter ? f[side].starter.name : "");
+    if (!name) return "";
+    var st = f.lineup_status || {};
+    return st[side + "_starter"] === "assumed" ? name + " (assumed opener)" : name;
+  }
   function recordText(f, c, side) {
     var r = c && c.records ? c.records[side] : null;
     if (!r || isPostseason(f)) return "";
@@ -657,7 +664,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (ctxLine) html += '<div class="card-ctx">' + esc(ctxLine) + "</div>";
       html += '<div class="cols"><span></span><span>' + (actual ? "Final" : lv ? "Score" : "Proj") + "</span><span>Win</span></div>";
       ["away", "home"].forEach(function (side) {
-        var t = f[side], starter = box && box.starters && box.starters[side] ? box.starters[side].name : "", rec = recordText(f, ctx, side);
+        var t = f[side], starter = starterText(f, box, side), rec = recordText(f, ctx, side);
         var score = actual ? actual[side] : lv ? lv.state[side + "_score"] : (proj ? proj.score[side] : "");
         var win = lv ? (side === "home" ? lv.home_win_probability : 1 - lv.home_win_probability) : winProb(f, side);
         var isFav = lv ? (side === "home") === (lv.home_win_probability >= 0.5) : side === fav;
@@ -694,7 +701,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (gctx && (gctx.venue || gw)) html += '<p class="hero-meta hero-venue">' + esc([gctx.venue, gw].filter(Boolean).join(". ")) + "</p>";
     html += '<div class="hero-cols"><span></span><span>' + (actual ? "Final" : lv ? "Score" : (v && v.key !== "proj" ? v.label : "Projected")) + "</span><span>Win</span></div>";
     ["away", "home"].forEach(function (side) {
-      var t = f[side], starter = box && box.starters && box.starters[side] ? box.starters[side].name : "";
+      var t = f[side], starter = starterText(f, box, side);
       var score = actual ? actual[side] : lv ? lv.state[side + "_score"] : (s ? s.score[side] : "");
       var win = lv ? (side === "home" ? lv.home_win_probability : 1 - lv.home_win_probability) : winProb(f, side);
       var isFav = lv ? (side === "home") === (lv.home_win_probability >= 0.5) : side === fav;

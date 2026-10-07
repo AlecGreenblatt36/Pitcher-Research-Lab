@@ -54,9 +54,31 @@ def test_live_inputs_official_and_projected_lineups():
     assert fp2 != fp and [p.player_id for p in m2.away.lineup] == [str(i) for i in range(101, 110)]
 
 
+def test_live_inputs_assumes_an_opener_without_a_probable_starter():
+    receipt = {'finished_at': '2026-10-07T18:00:00+00:00'}
+    game, matchup, notes, statuses, fp = live_inputs(pregame_feed(probable=False), receipt, history())
+    # away: official bullpen 302-305; relievers 302 and 303 have history (8th and 9th inning); no starts -> longest outing
+    assert statuses['away_starter'] == 'assumed' and statuses['home_starter'] == 'assumed'
+    assert matchup.away.starter.player_id in {'302', '303'} and matchup.away.starter.role == 'starter'
+    assert 6 <= matchup.away.starter.expected_batters <= 12 and matchup.away.starter.player_id not in {p.player_id for p in matchup.away.bullpen}
+    assert matchup.home.starter.player_id == '401'                    # the rested regular starter is the likeliest opener
+    assert 'bullpen game assumed' in notes['starter_source']['away']
+    # when that starter pitched two days ago he is not available, so a reliever opens
+    h = history(); recent = h[(h.game_pk == 15) & (h.pitcher == 401)].copy(); recent['date_key'] = '2026-10-05'; recent['game_pk'] = 99
+    _, m_tired, _, _, _ = live_inputs(pregame_feed(probable=False), receipt, pd.concat([h, recent], ignore_index=True))
+    assert m_tired.home.starter.player_id in {'402', '403'}
+    _, m2, _, s2, fp2 = live_inputs(pregame_feed(), receipt, history())
+    assert fp2 != fp and 'away_starter' not in s2                       # the announcement changes the snapshot hash
+    bare = pregame_feed(probable=False); bare['liveData']['boxscore']['teams']['away']['bullpen'] = []
+    g3, m3, _, _, _ = live_inputs(bare, receipt, history())
+    assert m3.away.starter.player_id == '301'                            # from history when no official bullpen: the rested regular starter
+
+
 def test_live_inputs_refuses_started_games_and_missing_starters():
+    empty = history(); empty = empty[empty.pitcher.isin([301, 401]) | ~empty.pitcher.isin([302, 303, 402, 403])]
+    bare = pregame_feed(probable=False); bare['liveData']['boxscore']['teams']['away']['bullpen'] = []
     with pytest.raises(Blocked):
-        live_inputs(pregame_feed(probable=False), {'finished_at': '2026-10-07T18:00:00+00:00'}, history())
+        live_inputs(bare, {'finished_at': '2026-10-07T18:00:00+00:00'}, empty)
     with pytest.raises(Blocked):
         live_inputs(pregame_feed(), {'finished_at': '2026-10-07T23:00:00+00:00'}, history())
     f = pregame_feed(); f['gameData']['status']['abstractGameState'] = 'Live'

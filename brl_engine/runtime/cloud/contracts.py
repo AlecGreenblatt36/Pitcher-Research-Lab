@@ -13,7 +13,7 @@ import pandas as pd
 
 from app.common import content_hash, timestamp
 from app.safety import Blocked
-from research_lab.game_sim.models import GameMatchup, PlayerProfile, TeamProfile
+from research_lab.game_sim.models import GameMatchup, PlayerProfile, PitcherProfile, TeamProfile
 from brl_live.live_feed import appearances, reliever_profile, starter_profile
 
 N = 10000
@@ -84,6 +84,41 @@ def projected_order(feed: dict, side: str, history: pd.DataFrame) -> list:
     return order
 
 
+def likely_opener(app: pd.DataFrame, pool: list, date: str):
+    """The pitcher in the pool most likely to open a bullpen game: most starts in the prior 60 days, then the
+    longest typical outing; None when the pool is empty."""
+    if not pool:
+        return None
+    window = (pd.Timestamp(date) - pd.Timedelta(days=60)).strftime('%Y-%m-%d')
+    recent = app[(app['date'] < date) & (app['date'] >= window) & app['pitcher'].isin(pool)]
+    # Rested arms only: nobody who pitched in the last two days, nobody who started in the last four.
+    two = (pd.Timestamp(date) - pd.Timedelta(days=2)).strftime('%Y-%m-%d'); four = (pd.Timestamp(date) - pd.Timedelta(days=4)).strftime('%Y-%m-%d')
+    tired = set(recent[recent['date'] >= two]['pitcher']) | set(recent[(recent['date'] >= four) & recent['start']]['pitcher'])
+    rested = recent[~recent['pitcher'].isin(tired)]
+    if len(rested):
+        recent = rested
+    starts = recent[recent['start']].groupby('pitcher').size()
+    if len(starts):
+        return int(starts.sort_values(ascending=False).index[0])
+    length = recent.groupby('pitcher')['bf'].median()
+    if len(length):
+        return int(length.sort_values(ascending=False).index[0])
+    return int(pool[0])
+
+
+def opener_profile(app: pd.DataFrame, starter: PitcherProfile, date: str) -> PitcherProfile:
+    """An assumed opener keeps the starter role (so the fitted hazard runs) but expects an opener's length."""
+    year_start = (pd.Timestamp(date) - pd.Timedelta(days=365)).strftime('%Y-%m-%d')
+    mine = app[(app['pitcher'] == int(starter.player_id)) & (app['date'] < date) & (app['date'] >= year_start)]
+    starts = mine[mine['start']]['bf']
+    if len(starts) >= 3:
+        exp_bf = int(round(starts.median()))
+    else:
+        exp_bf = int(max(6, min(12, round(mine['bf'].median() * 1.5)))) if len(mine) else 8
+    return PitcherProfile(starter.player_id, starter.name, starter.throws, role='starter', stamina=0.5,
+                          expected_batters=exp_bf, max_batters=max(exp_bf + 3, 9))
+
+
 def live_inputs(feed: dict, receipt: dict, history: pd.DataFrame, names: dict | None = None, defense=None):
     """(game, matchup, notes, statuses, fingerprint) for a pregame feed.
 
@@ -103,8 +138,25 @@ def live_inputs(feed: dict, receipt: dict, history: pd.DataFrame, names: dict | 
     for side in ('away', 'home'):
         t = gd['teams'][side]
         sp = (probable.get(side) or {}).get('id')
+        assumed = None
         if sp is None:
-            raise Blocked(f'Probable starter not announced for the {side} team')
+            # No probable starter (a bullpen game, or not announced yet): open with the most likely opener and
+            # say so. The starter is part of the snapshot hash, so an announcement produces a new version.
+            pool = [int(x) for x in ((box.get(side) or {}).get('bullpen') or [])]
+            abbr0 = str(t.get('abbreviation') or '').upper()
+            if len(pool) < 4:
+                window = (pd.Timestamp(date) - pd.Timedelta(days=14)).strftime('%Y-%m-%d')
+                team_app = app[app['team'] == abbr0]
+                pool = [int(p) for p in team_app[team_app['date'] >= window]['pitcher'].drop_duplicates().tolist()]
+                if len(pool) < 4:
+                    last_games = team_app.sort_values('date')['game_pk'].drop_duplicates().tail(10)
+                    pool = [int(p) for p in team_app[team_app['game_pk'].isin(last_games)]['pitcher'].drop_duplicates().tolist()]
+            sp = likely_opener(app, pool, date)
+            if sp is None:
+                raise Blocked(f'Probable starter not announced for the {side} team and no bullpen to open with')
+            assumed = sp
+            statuses[side + '_starter'] = 'assumed'
+            notes.setdefault('starter_source', {})[side] = 'no probable starter announced; bullpen game assumed, opened by the most likely opener'
         sp = int(sp)
         order = [int(x) for x in ((box.get(side) or {}).get('battingOrder') or [])]
         if len(order) == 9 and len(set(order)) == 9:
@@ -114,6 +166,8 @@ def live_inputs(feed: dict, receipt: dict, history: pd.DataFrame, names: dict | 
             notes['lineup_source'][side] = "team's most recent lineup in the prior-date history"
         lineup = tuple(PlayerProfile(str(pid), _name(feed, pid, names), _bats(feed, pid, stands.get(pid))) for pid in order)
         starter = starter_profile(app, sp, _throws(feed, sp, throws_hist.get(sp, 'R')), _name(feed, sp, names), date)
+        if assumed is not None:
+            starter = opener_profile(app, starter, date)
         pen_ids = [int(x) for x in ((box.get(side) or {}).get('bullpen') or []) if int(x) != sp]
         if len(pen_ids) >= 4:
             notes['bullpen_source'][side] = 'official pregame bullpen'
