@@ -44,19 +44,24 @@ def assemble_physics_table(cache, index: dict, origin: datetime, years: tuple | 
             url = value.get('url', '')
             if '/feed/live' not in url or '?' in url:
                 continue
-            feed = json.loads(value['body'])
-            if feed['gameData']['status']['abstractGameState'] != 'Final':
-                continue
-            rows = table_from_feed(feed, map_event)
-            if len(rows):
-                outcomes = {}
-                for play in feed['liveData']['plays']['allPlays']:
-                    o = map_event((play.get('result') or {}).get('eventType', ''))
-                    if o is not None and (play.get('about') or {}).get('isComplete'):
-                        outcomes[int(play['about']['atBatIndex']) + 1] = o
-                rows['outcome'] = rows['at_bat_number'].map(outcomes)
-                rows['run_value'] = rows['outcome'].map(RUN_VALUE).fillna(0.0)
-                parts.append(rows); receipt['day_cache_rows'] += int(len(rows))
+            try:
+                feed = json.loads(value['body'])
+                if feed['gameData']['status']['abstractGameState'] != 'Final':
+                    continue
+                rows = table_from_feed(feed, map_event)
+                if len(rows):
+                    outcomes = {}
+                    for play in feed['liveData']['plays']['allPlays']:
+                        o = map_event((play.get('result') or {}).get('eventType', ''))
+                        if o is not None and (play.get('about') or {}).get('isComplete'):
+                            outcomes[int(play['about']['atBatIndex']) + 1] = o
+                    rows['outcome'] = rows['at_bat_number'].map(outcomes)
+                    rows['run_value'] = rows['outcome'].map(RUN_VALUE).fillna(0.0)
+                    parts.append(rows); receipt['day_cache_rows'] += int(len(rows))
+            except Exception as exc:
+                # One unreadable feed costs that game's pitch physics, never the day's forecasts.
+                receipt['day_cache_errors'] = receipt.get('day_cache_errors', 0) + 1
+                receipt.setdefault('day_cache_error', type(exc).__name__ + ': ' + str(exc)[:160])
         receipt['day_cache_days'] += 1
     table = pd.concat(parts, ignore_index=True)
     table = table.drop_duplicates(['game_pk', 'at_bat_number'], keep='first')

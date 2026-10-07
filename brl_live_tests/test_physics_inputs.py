@@ -58,6 +58,11 @@ def test_assembles_seasons_then_day_cache_until_yesterday():
     assert table[table.game_pk == 2].n.iloc[0] == 4.0                     # the sealed row wins over the day-cache copy of Oct 5
     with pytest.raises(Blocked):
         assemble_physics_table(Cache(Store(), {}), {'days': {}}, origin)
+    # an unreadable day feed costs that game's rows and is recorded; the rest of the table stands
+    broken = feed(5, '2026-10-06'); broken['liveData']['plays']['allPlays'][0]['about']['atBatIndex'] = 'x'
+    days['a']['sources'].append({'url': 'https://statsapi.mlb.com/api/v1.1/game/5/feed/live', 'body': json.dumps(broken)})
+    table, receipt = assemble_physics_table(Cache(store, days), index, origin)
+    assert receipt['day_cache_errors'] == 1 and receipt['day_cache_error'].startswith('ValueError') and len(table) == 4
 
 
 def test_model_selection_default_and_sealed(tmp_path, monkeypatch):
