@@ -9,7 +9,7 @@ on:
         required: false
         default: '0'
   push:
-    branches: [main, brl-trigger]
+    branches: [main]
     paths: [brl_live/**, brl_engine/**, .github/workflows/brl-live.yml, trigger/**]
 permissions:
   contents: write

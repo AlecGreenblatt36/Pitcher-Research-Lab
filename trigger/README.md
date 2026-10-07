@@ -1,1 +1,1 @@
-Empty commits to the brl-trigger branch start a live run; the workflow checks out main.
+Committing trigger/last.txt on main starts a live run with the page deploy (the Pages environment only deploys from main).
