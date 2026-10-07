@@ -1,0 +1,21 @@
+name: BRL market history
+on:
+  workflow_dispatch:
+  push:
+    branches: [diag/market]
+permissions:
+  contents: write
+jobs:
+  market:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Read a past season's pregame lines (public odds only, no secrets)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRL_MARKET_SEASON: '2026'
+        run: python tools/brl_market_history.py
