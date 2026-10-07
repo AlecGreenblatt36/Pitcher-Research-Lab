@@ -1,5 +1,5 @@
 {
- "created_at": "2026-10-07T04:04:37.967484+00:00",
+ "created_at": "2026-10-07T04:11:52.253257+00:00",
  "status": "blocked",
  "runtime": "brl_engine (public code, sealed data)",
  "ledger_branch": "brl-live-data-v2",
@@ -34,8 +34,8 @@
    "home": "San Diego Padres"
   }
  ],
- "reason": "InvalidTag: ",
- "error_type": "InvalidTag",
+ "reason": "Prior-day game is not final; coverage remains incomplete",
+ "error_type": "Blocked",
  "error_trace": [
   {
    "file": "entrypoint.py",
@@ -50,17 +50,17 @@
   {
    "file": "history_refresh.py",
    "function": "refresh",
-   "line": 391
+   "line": 403
   },
   {
    "file": "history_refresh.py",
-   "function": "index",
-   "line": 370
+   "function": "capture_day",
+   "line": 312
   },
   {
-   "file": "security.py",
-   "function": "unseal",
-   "line": 30
+   "file": "history_refresh.py",
+   "function": "schedule_cases",
+   "line": 135
   }
  ],
  "preserved_previous_forecasts": false
