@@ -1,5 +1,5 @@
 {
- "created_at": "2026-10-07T19:57:59.291486+00:00",
+ "created_at": "2026-10-07T20:17:11.696727+00:00",
  "status": "iteration_completed",
  "runtime": "brl_engine (public code, sealed data)",
  "ledger_branch": "brl-live-data",
@@ -42,9 +42,9 @@
   "fitted_at": "2026-10-07T09:43:32.959674+00:00",
   "physics_features": 30
  },
- "forecasts": 27,
+ "forecasts": 28,
  "box_forecasts_created": 1,
- "box_forecasts": 22,
+ "box_forecasts": 23,
  "player_scored_games": 2,
  "scored_games": 2,
  "skill_scored_games": 1,
@@ -83,13 +83,13 @@
  "engine_rules_changed": false,
  "model_parameters_changed": false,
  "simulation_adjustments": "context offsets (brl_live/context_offsets.json)",
- "live_updates": 0,
+ "live_updates": 1,
  "live_update_errors": 0,
  "market_receipt": {
   "date": "2026-10-07",
   "schedule_games": 4,
-  "lines_seen": 4,
-  "matched": 4,
+  "lines_seen": 3,
+  "matched": 3,
   "captured_pregame": 3,
   "events": 4,
   "competition_keys": [
@@ -101,115 +101,28 @@
    "date",
    "format",
    "geoBroadcasts",
-   "headlines",
    "highlights",
    "id",
+   "leaders",
    "neutralSite",
    "notes",
-   "odds",
+   "outsText",
    "playByPlayAvailable",
    "recent",
    "series",
+   "situation",
    "startDate",
    "status",
-   "tickets",
    "timeValid",
    "type",
    "uid",
    "venue",
    "wasSuspended"
   ],
-  "odds_keys": [
-   "awayTeamOdds",
-   "details",
-   "footer",
-   "header",
-   "homeTeamOdds",
-   "link",
-   "moneyline",
-   "overUnder",
-   "pointSpread",
-   "provider",
-   "spread",
-   "total"
-  ],
-  "odds_subkeys": {
-   "provider": [
-    "displayName",
-    "id",
-    "logos",
-    "name",
-    "priority"
-   ],
-   "awayTeamOdds": [
-    "favorite",
-    "favoriteAtOpen",
-    "team",
-    "underdog"
-   ],
-   "homeTeamOdds": [
-    "favorite",
-    "favoriteAtOpen",
-    "team",
-    "underdog"
-   ],
-   "moneyline": [
-    "away",
-    "displayName",
-    "home",
-    "shortDisplayName"
-   ],
-   "pointSpread": [
-    "away",
-    "displayName",
-    "home",
-    "shortDisplayName"
-   ],
-   "total": [
-    "displayName",
-    "over",
-    "shortDisplayName",
-    "under"
-   ],
-   "link": [
-    "href",
-    "isExternal",
-    "isPremium",
-    "language",
-    "rel",
-    "shortText",
-    "text",
-    "tracking"
-   ],
-   "header": [
-    "logo",
-    "text"
-   ],
-   "footer": [
-    "disclaimer"
-   ]
-  },
-  "moneyline_shape": {
-   "displayName": "str",
-   "shortDisplayName": "str",
-   "home": [
-    "close",
-    "open"
-   ],
-   "away": [
-    "close",
-    "open"
-   ]
-  },
-  "moneyline_home_shape": {
-   "close": [
-    "link",
-    "odds"
-   ],
-   "open": [
-    "odds"
-   ]
-  }
+  "odds_keys": [],
+  "odds_subkeys": {},
+  "moneyline_shape": null,
+  "moneyline_home_shape": null
  },
  "team_results_rows": 9718,
  "team_results_meta": {
@@ -227,8 +140,8 @@
  "storage_read_audit": {
   "contents_verified": 20,
   "blob_fallbacks": 26,
-  "bytes_verified": 84716971,
+  "bytes_verified": 86502948,
   "requests": 85,
-  "rate_limit_remaining": 4996
+  "rate_limit_remaining": 4923
  }
 }
