@@ -1,10 +1,10 @@
 {
- "created_at": "2026-10-07T15:35:35.816388+00:00",
+ "created_at": "2026-10-07T15:49:31.376232+00:00",
  "status": "iteration_completed",
  "runtime": "brl_engine (public code, sealed data)",
  "ledger_branch": "brl-live-data",
  "shadow": false,
- "live_forecasts_created": 0,
+ "live_forecasts_created": 4,
  "raw_data_published": false,
  "stage": "complete",
  "secret_present": true,
@@ -42,16 +42,22 @@
   "fitted_at": "2026-10-07T09:43:32.959674+00:00",
   "physics_features": 30
  },
- "forecasts": 18,
- "box_forecasts_created": 0,
- "box_forecasts": 13,
+ "forecasts": 22,
+ "box_forecasts_created": 4,
+ "box_forecasts": 17,
  "player_scored_games": 2,
  "scored_games": 2,
  "skill_scored_games": 1,
- "skill_baseline_prior_games": 31,
- "history_coverage_through": "2026-10-05",
- "history_added_PA": 1228,
- "history_refresh_note": "Unmapped Statcast event",
+ "skill_baseline_prior_games": 33,
+ "history_coverage_through": "2026-10-06",
+ "history_added_PA": 1374,
+ "history_refresh_note": null,
+ "history_day_notes": {
+  "2026-10-06": {
+   "mid_pa_substitutions": 2,
+   "excluded_non_PA_events": 1
+  }
+ },
  "pa_model": {
   "name": "pa-2026-v2-physics",
   "sha256": "4c8822abcb65eff2ec2fcf3a1d7c3b57f13dec0d21d26a9508e18f74944b3a54",
@@ -219,8 +225,10 @@
   "skipped": 0
  },
  "storage_read_audit": {
-  "contents_verified": 18,
-  "blob_fallbacks": 24,
-  "bytes_verified": 64724951
+  "contents_verified": 21,
+  "blob_fallbacks": 28,
+  "bytes_verified": 87293588,
+  "requests": 120,
+  "rate_limit_remaining": 4951
  }
 }
