@@ -27,7 +27,11 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 
-PITCH_SUMS = ['n', 'sw', 'wh', 'oz', 'ch', 'iz', 'izs', 'izc', 'cs', 'fb', 'velo', 'spin', 'ivb', 'hb']
+PITCH_SUMS = ['n', 'sw', 'wh', 'oz', 'ch', 'iz', 'izs', 'izc', 'cs', 'fb', 'velo', 'spin', 'ivb', 'hb',
+              'fb_sw', 'fb_wh', 'br_n', 'br_sw', 'br_wh', 'os_n', 'os_sw', 'os_wh']
+TABLE_VERSION = 2                      # per-pitch-type sums were added in version 2; older tables must be rebuilt
+BREAKING = {'SL', 'ST', 'SV', 'CU', 'KC', 'CS', 'KN', 'SC'}
+OFFSPEED = {'CH', 'FS', 'FO', 'EP'}
 PS = {name: i for i, name in enumerate(PITCH_SUMS)}
 BIP_SUMS = ['bip', 'ev', 'la', 'hard', 'barrel', 'gb']
 BS = {name: i for i, name in enumerate(BIP_SUMS)}
@@ -42,8 +46,9 @@ BASE_FEATURES = ['b_ev', 'b_la', 'b_hard', 'b_barrel', 'b_whiff', 'b_chase', 'b_
                  'p_velo', 'p_velo_delta', 'p_spin', 'p_ivb', 'p_hb', 'p_whiff', 'p_chase', 'p_zone', 'p_csw', 'p_ev', 'p_hard', 'p_gb', 'p_pitch_n']
 XVALUE_FEATURES = ['b_xv', 'p_xv']
 RECENT_FEATURES = ['p_velo_rec', 'p_whiff_rec', 'p_csw_rec', 'b_ev_rec', 'b_whiff_rec', 'b_hard_rec']
+TYPE_FEATURES = ['b_whiff_fb', 'b_whiff_br', 'b_whiff_os', 'p_whiff_fb', 'p_whiff_br', 'p_whiff_os', 'p_share_fb', 'p_share_br']
 DEFAULT_PARAMS = {'k_rate': 150.0, 'k_bip': 60.0, 'k_velo': 100.0, 'xvalue': False, 'recent_days': 0,
-                  'k_recent_pitch': 100.0, 'k_recent_bip': 40.0, 'k_cell': 40.0}
+                  'k_recent_pitch': 100.0, 'k_recent_bip': 40.0, 'k_cell': 40.0, 'pitch_types': False, 'k_type': 60.0}
 RUN_VALUE = {'BIP_OUT': 0.0, 'K': 0.0, 'BB_HBP': 0.69, '1B': 0.88, '2B_3B': 1.4, 'HR': 2.03, 'OTHER_REACH': 0.6}
 EV_BINS, LA_BINS = 16, 18
 
@@ -55,6 +60,8 @@ def feature_names(params: dict | None = None) -> list[str]:
         names += XVALUE_FEATURES
     if p.get('recent_days'):
         names += RECENT_FEATURES
+    if p.get('pitch_types'):
+        names += TYPE_FEATURES
     return names
 
 
@@ -64,6 +71,15 @@ def _num(value):
     except (TypeError, ValueError):
         return None
     return v if v == v else None
+
+
+def _type_sums(a: np.ndarray, ptype: str, swing: bool, whiff: bool) -> None:
+    if ptype in FASTBALL:
+        a[PS['fb_sw']] += swing; a[PS['fb_wh']] += whiff
+    elif ptype in BREAKING:
+        a[PS['br_n']] += 1; a[PS['br_sw']] += swing; a[PS['br_wh']] += whiff
+    elif ptype in OFFSPEED:
+        a[PS['os_n']] += 1; a[PS['os_sw']] += swing; a[PS['os_wh']] += whiff
 
 
 def play_physics(play: dict) -> tuple[np.ndarray, float, float]:
@@ -93,6 +109,7 @@ def play_physics(play: dict) -> tuple[np.ndarray, float, float]:
             a[PS['spin']] += _num(br.get('spinRate')) or 0.0
             a[PS['ivb']] += _num(co.get('pfxZ')) or 0.0
             a[PS['hb']] += abs(_num(co.get('pfxX')) or 0.0)
+        _type_sums(a, ptype, swing, whiff)
         hd = e.get('hitData')
         if hd:
             v, g = _num(hd.get('launchSpeed')), _num(hd.get('launchAngle'))
@@ -115,6 +132,7 @@ def study_physics(pitches: list, hit: list | None) -> tuple[np.ndarray, float, f
         if ptype in FASTBALL and start is not None:
             a[PS['fb']] += 1; a[PS['velo']] += start; a[PS['spin']] += spin_rate or 0.0
             a[PS['ivb']] += pfx_z or 0.0; a[PS['hb']] += abs(pfx_x or 0.0)
+        _type_sums(a, ptype, swing, whiff)
     ev = la = np.nan
     if hit and hit[0] is not None and hit[1] is not None:
         ev, la = float(hit[0]), float(hit[1])
@@ -238,6 +256,16 @@ class _Sums:
                 total = float(h.sum()) if h is not None else 0.0
                 value_sum = float((h * values).sum()) if h is not None else 0.0
                 out[X[name]] = (value_sum + k_bip * league) / (total + k_bip)
+        if P.get('pitch_types'):
+            k_t = float(P['k_type'])
+            out[X['b_whiff_fb']] = shrunk(sb, PS['fb_wh'], PS['fb_sw'], Lp, k_t)
+            out[X['b_whiff_br']] = shrunk(sb, PS['br_wh'], PS['br_sw'], Lp, k_t)
+            out[X['b_whiff_os']] = shrunk(sb, PS['os_wh'], PS['os_sw'], Lp, k_t)
+            out[X['p_whiff_fb']] = shrunk(sp, PS['fb_wh'], PS['fb_sw'], Lp, k_t)
+            out[X['p_whiff_br']] = shrunk(sp, PS['br_wh'], PS['br_sw'], Lp, k_t)
+            out[X['p_whiff_os']] = shrunk(sp, PS['os_wh'], PS['os_sw'], Lp, k_t)
+            out[X['p_share_fb']] = shrunk(sp, PS['fb'], PS['n'], Lp, k_rate)
+            out[X['p_share_br']] = shrunk(sp, PS['br_n'], PS['n'], Lp, k_rate)
         if P.get('recent_days'):
             k_rp, k_rb = float(P['k_recent_pitch']), float(P['k_recent_bip'])
             rp, rpb = self._recent(self.rec_p[pitcher], today) if pitcher in self.rec_p else (self.zero_p, self.zero_b)
@@ -289,7 +317,14 @@ class _Sums:
         self.last_velo.update(cur_velo)
 
 
+def check_table(table: pd.DataFrame) -> None:
+    missing = [c for c in PITCH_SUMS + ['ev', 'la', 'game_pk', 'at_bat_number', 'pitcher', 'batter'] if c not in table.columns]
+    if missing:
+        raise ValueError('physics table is from an older schema (missing ' + ', '.join(missing[:4]) + '); rebuild it with the backfill')
+
+
 def _aligned(pa: pd.DataFrame, table: pd.DataFrame):
+    check_table(table)
     ordered = pa.sort_values(['date_key', 'game_pk', 'at_bat_number'], kind='mergesort').reset_index(drop=True)
     ph = table.drop_duplicates(['game_pk', 'at_bat_number']).set_index(['game_pk', 'at_bat_number'])
     joined = ordered[['game_pk', 'at_bat_number', 'batter', 'pitcher']].join(ph.drop(columns=['date_key'], errors='ignore'), on=['game_pk', 'at_bat_number'], rsuffix='_ph')
@@ -343,6 +378,7 @@ class PhysicsState:
     @classmethod
     def build(cls, table: pd.DataFrame, cutoff_date: str, params: dict | None = None, outcomes: pd.Series | None = None) -> 'PhysicsState':
         S = _Sums(params or {})
+        check_table(table)
         frame = table.loc[table['date_key'].astype(str) < str(cutoff_date)[:10]]
         frame = frame.sort_values(['date_key', 'game_pk', 'at_bat_number'], kind='mergesort').reset_index(drop=True)
         if 'run_value' in frame.columns:

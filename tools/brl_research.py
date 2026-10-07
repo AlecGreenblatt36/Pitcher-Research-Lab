@@ -95,6 +95,9 @@ SETS = {
     'physics': {'physics': {}},
     'physics2': {'base': {}, 'k_low': {'k_rate': 60.0, 'k_bip': 30.0}, 'k_high': {'k_rate': 300.0, 'k_bip': 120.0},
                  'xvalue': {'xvalue': True}, 'recent30': {'recent_days': 30}, 'xvalue_recent30': {'xvalue': True, 'recent_days': 30}},
+    'physics3': {'v2': {'xvalue': True, 'recent_days': 30}, 'types': {'xvalue': True, 'recent_days': 30, 'pitch_types': True},
+                 'types_k30': {'xvalue': True, 'recent_days': 30, 'pitch_types': True, 'k_type': 30.0},
+                 'recent45': {'xvalue': True, 'recent_days': 45}, 'recent20': {'xvalue': True, 'recent_days': 20}},
 }
 
 

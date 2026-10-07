@@ -3,6 +3,7 @@ import importlib.util
 from pathlib import Path
 import numpy as np
 import pandas as pd
+import pytest
 from research_lab.pa_model import physics as phys
 
 spec = importlib.util.spec_from_file_location('brl_research_tool', Path(__file__).parents[1] / 'tools' / 'brl_research.py')
@@ -33,7 +34,7 @@ def test_state_at_a_date_matches_the_chronological_builder():
     pa_sorted = pa.sort_values(['date_key', 'game_pk', 'at_bat_number'], kind='mergesort').reset_index(drop=True)
     outcomes = pa_sorted.set_index(['game_pk', 'at_bat_number'])['outcome']
     table = table.join(outcomes, on=['game_pk', 'at_bat_number'])
-    params = {'xvalue': True, 'recent_days': 3, 'k_rate': 80.0}
+    params = {'xvalue': True, 'recent_days': 3, 'k_rate': 80.0, 'pitch_types': True}
     built, _ = phys.build_features(pa, table, params)
     for day in ('2026-05-01', '2026-05-04', '2026-05-10'):
         state = phys.PhysicsState.build(table, day, params)
@@ -43,7 +44,10 @@ def test_state_at_a_date_matches_the_chronological_builder():
             expected = built.iloc[r].to_numpy(float)
             got = state.features(int(pa_sorted.batter[r]), int(pa_sorted.pitcher[r]))
             assert np.allclose(got, expected, atol=1e-5), (day, r, got - expected)
-    assert state.names == phys.feature_names(params) == phys.BASE_FEATURES + phys.XVALUE_FEATURES + phys.RECENT_FEATURES
+    assert state.names == phys.feature_names(params) == phys.BASE_FEATURES + phys.XVALUE_FEATURES + phys.RECENT_FEATURES + phys.TYPE_FEATURES
+    old = table.drop(columns=['br_n'])
+    with pytest.raises(ValueError):
+        phys.PhysicsState.build(old, '2026-05-04', params)
 
 
 def test_feed_and_study_extraction_agree():
@@ -67,4 +71,5 @@ def test_feed_and_study_extraction_agree():
     for c in phys.TABLE_COLUMNS:
         assert a[c] == b[c] or (isinstance(a[c], float) and np.isclose(a[c], b[c])), (c, a[c], b[c])
     assert (a['n'], a['sw'], a['wh'], a['oz'], a['ch'], a['iz'], a['izs'], a['izc'], a['fb']) == (3, 2, 1, 2, 1, 1, 1, 1, 2)
+    assert (a['fb_sw'], a['fb_wh'], a['br_n'], a['br_sw'], a['br_wh'], a['os_n']) == (1, 0, 1, 1, 1, 0)
     assert np.isclose(a['velo'], 188.1) and np.isclose(a['hb'], 14.0) and np.isclose(a['ivb'], 14.0) and a['spin'] == 4400 and a['ev'] == 101.3
