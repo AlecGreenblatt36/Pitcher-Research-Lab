@@ -92,6 +92,14 @@ button { font: inherit; color: inherit; }
 .hero-row .pct { font-family: var(--display); font-weight: 600; font-size: 24px; text-align: right; color: var(--chalk-dim); }
 .hero-row.fav .pct { color: var(--chalk); }
 .hero-note { margin: 10px 0 0; font-size: 14px; color: var(--chalk-dim); }
+.situation { display: grid; grid-template-columns: 56px 1fr; gap: 12px; align-items: center; margin: 12px 0 0; padding: 10px 12px; background: rgba(255,255,255,.06); border: 1px solid var(--board-line); border-radius: 8px; }
+.situation svg { display: block; width: 56px; height: 56px; }
+.situation .where { font-family: var(--display); font-weight: 700; font-size: 20px; color: var(--chalk); }
+.situation .outs { display: inline-flex; gap: 4px; margin-left: 10px; vertical-align: middle; }
+.situation .outs i { width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--chalk); display: inline-block; }
+.situation .outs i.on { background: var(--lamp); border-color: var(--lamp); }
+.situation .who { font-size: 15px; color: var(--chalk-dim); margin-top: 2px; }
+.situation .who b { color: var(--chalk); font-weight: 700; }
 .line-wrap { overflow-x: auto; margin-top: 14px; }
 .line { border-collapse: separate; border-spacing: 3px; width: 100%; font-family: var(--display); }
 .line th { font-weight: 500; font-size: 14px; color: var(--chalk-dim); text-align: center; padding: 0; }
@@ -198,6 +206,12 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .pa .what { font-size: 16px; }
 .pa .meta { display: block; font-size: 14px; color: var(--muted); }
 .pa .pitches { display: block; color: var(--muted); font-size: 14px; line-height: 1.4; margin-top: 2px; }
+.pa .seq { display: flex; gap: 10px; align-items: flex-start; margin-top: 4px; }
+.pa .seq .pitches { margin-top: 0; flex: 1; }
+.zone { flex: none; width: 76px; height: 97px; display: block; }
+.zone .k { fill: none; stroke: var(--muted); stroke-width: 1.2; }
+.zone .p { stroke: var(--surface); stroke-width: 1; }
+.zone .n { font: 700 7.5px var(--body); fill: #fff; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
 .pa .runs { font-family: var(--display); font-weight: 700; font-size: 17px; white-space: nowrap; }
 .change { font-size: 14px; color: var(--muted); padding: 8px 0 2px; font-style: italic; }
 
@@ -437,6 +451,23 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (s.between_innings) return (s.half === "top" ? "End " : "Mid ") + ordinal(s.half === "top" ? s.inning - 1 : s.inning);
     return (s.half === "top" ? "Top " : "Bot ") + ordinal(s.inning) + ", " + outs;
   }
+  /* The situation right now: runners on a diamond, outs, count, who is up and who is pitching. */
+  function situation(f, lv) {
+    var st = lv.state, bases = st.bases || [], on = function (i) { return bases[i] ? ' class="on"' : ""; };
+    var d = '<svg viewBox="0 0 56 56" aria-hidden="true"><style>.b{fill:none;stroke:var(--chalk);stroke-width:2}.on{fill:var(--lamp);stroke:var(--lamp)}</style>';
+    d += '<rect class="b" x="36" y="22" width="12" height="12" transform="rotate(45 42 28)"' + (bases[0] ? ' style="fill:var(--lamp);stroke:var(--lamp)"' : "") + "/>";
+    d += '<rect class="b" x="22" y="8" width="12" height="12" transform="rotate(45 28 14)"' + (bases[1] ? ' style="fill:var(--lamp);stroke:var(--lamp)"' : "") + "/>";
+    d += '<rect class="b" x="8" y="22" width="12" height="12" transform="rotate(45 14 28)"' + (bases[2] ? ' style="fill:var(--lamp);stroke:var(--lamp)"' : "") + "/>";
+    d += '<path d="M22 44 L28 50 L34 44 L34 38 L22 38 Z" fill="none" stroke="var(--chalk-dim)" stroke-width="1.5"/></svg>';
+    var outs = "";
+    for (var i = 0; i < 3; i++) outs += "<i" + (i < (st.outs || 0) ? ' class="on"' : "") + "></i>";
+    var batting = st.batting_side, fielding = batting === "home" ? "away" : "home";
+    var up = lv.due_up ? lv.due_up[batting] : "", pitcher = lv.pitcher_names && lv.on_mound ? lv.pitcher_names[lv.on_mound[fielding]] : "";
+    var where = st.between_innings ? liveWhere(lv) : (st.half === "top" ? "Top " : "Bot ") + ordinal(st.inning);
+    var count = st.between_innings ? "" : " \u00b7 " + (st.balls || 0) + "-" + (st.strikes || 0);
+    var who = st.between_innings ? "Between innings" : (up ? "<b>" + esc(up) + "</b> up" : "") + (pitcher ? (up ? ", " : "") + esc(lastName(pitcher)) + " pitching" : "");
+    return '<div class="situation" aria-label="' + esc(where + ", " + (st.outs || 0) + " outs") + '">' + d + '<div><div class="where">' + esc(where) + '<span class="outs" aria-hidden="true">' + outs + "</span>" + esc(count) + '</div><div class="who">' + who + "</div></div></div>";
+  }
   function liveLine(lv) {
     var inn = { away: {}, home: {} };
     (lv.state.innings || []).forEach(function (i) { ["away", "home"].forEach(function (side) { if (i[side] && i[side].R != null) inn[side][String(i.num)] = { R: i[side].R, H: i[side].H || 0 }; }); });
@@ -590,13 +621,29 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   var RESULT = { B: "ball", C: "called strike", S: "swinging strike", F: "foul", T: "foul tip", X: "in play", H: "hit by pitch" };
   function pitchText(p) {
     var parts = [];
-    (p.pitches || []).forEach(function (x) {
+    (p.pitches || []).forEach(function (x, i) {
       var type = PITCH[x[0]] || (x[0] ? x[0].toLowerCase() : "pitch"), mph = x[1] ? x[1] + " " : "";
-      parts.push(mph + type + ", " + (RESULT[x[2]] || x[2]));
+      parts.push((p.official ? (i + 1) + ". " : "") + mph + type + ", " + (RESULT[x[2]] || x[2]));
     });
     return parts.join(" \u00b7 ");
   }
   function scoreText(f, p) { return f.away.abbr + " " + p.away_score + ", " + f.home.abbr + " " + p.home_score; }
+  /* Where each real pitch crossed the plate (catcher's view), numbered in order; colored by result. */
+  var PITCH_FILL = { B: "#5B8A5B", C: "#B42A30", S: "#B42A30", T: "#B42A30", F: "#D08A1F", X: "#2E5C9A", H: "#7A3C9A" };
+  function zoneGraphic(p) {
+    var pts = (p.pitches || []).filter(function (x) { return x.length >= 5 && x[3] != null && x[4] != null; });
+    if (!pts.length) return "";
+    var W = 66, H = 84, top = p.zone ? p.zone[0] : 3.4, bot = p.zone ? p.zone[1] : 1.6;
+    var X = function (px) { return W / 2 + px * 18; }, Y = function (pz) { return H - 6 - (pz - 0.5) * 17; };
+    var h = '<svg class="zone" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="' + pts.length + ' pitches, where they crossed the plate">';
+    h += '<rect class="k" x="' + X(-0.708).toFixed(1) + '" y="' + Y(top).toFixed(1) + '" width="' + (0.708 * 2 * 18).toFixed(1) + '" height="' + ((top - bot) * 17).toFixed(1) + '" rx="1"/>';
+    h += '<path d="M' + X(-0.708).toFixed(1) + " " + (H - 4) + " L" + X(0.708).toFixed(1) + " " + (H - 4) + '" stroke="var(--rule)" stroke-width="2"/>';
+    pts.forEach(function (x, i) {
+      var cx = Math.max(5, Math.min(W - 5, X(x[3]))), cy = Math.max(5, Math.min(H - 8, Y(x[4])));
+      h += '<circle class="p" cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="5.2" fill="' + (PITCH_FILL[x[2]] || "#777") + '"/><text class="n" x="' + cx.toFixed(1) + '" y="' + cy.toFixed(1) + '">' + (i + 1) + "</text>";
+    });
+    return h + "</svg>";
+  }
 
   /* ---------- routing ---------- */
   function route() {
@@ -737,9 +784,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       html += '<p class="hero-note">' + (actualBox.plays && actualBox.plays.length ? "Final. The tabs show the real game and the projected game saved before first pitch." : "Line score is the real game. The tabs below show the projected game saved before first pitch.") + "</p>";
     } else if (lv) {
       html += lineScore(f, liveLine(lv));
-      var onMound = lv.pitcher_names && lv.on_mound ? lv.pitcher_names[lv.on_mound[lv.state.batting_side === "away" ? "home" : "away"]] : "";
+      if (lv.state) html += situation(f, lv);
       html += '<p class="hero-note">Live. Likely final ' + esc(f.away.abbr) + " " + lv.projected_final.away + ", " + esc(f.home.abbr) + " " + lv.projected_final.home +
-        (onMound ? ". " + esc(lastName(onMound)) + " pitching" : "") + (lv.due_up ? ", " + esc(lastName(lv.due_up[lv.state.batting_side])) + " up" : "") +
         ". Updated " + esc(timeET(lv.updated_at)) + " ET from " + Number(lv.n_worlds).toLocaleString() + " continuations. Pregame win chance was " + esc(f[fav].abbr) + " " + pct(winProb(f, fav)) + (lv.plays && lv.plays.length ? "." : "; the tabs show the pregame projected game.") + "</p>";
     } else if (s) html += lineScore(f, s);
     html += "</div></section>";
@@ -1038,10 +1084,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         lastPitcher[field] = p.pitcher_name;
         var parts = playParts(p, names, short);
         var style = parts.cls === "hit" ? ' style="background:var(--' + bat + ')"' : "";
-        var seq = pitchText(p);
+        var seq = pitchText(p), zone = p.official ? zoneGraphic(p) : "";
+        var seqHtml = seq ? (zone ? '<span class="seq">' + zone + '<span class="pitches">' + esc(seq) + "</span></span>" : '<span class="pitches">' + esc(seq) + "</span>") : "";
         h += '<div class="pa"><span class="tag ' + parts.cls + '"' + style + ">" + parts.tag + '</span><span class="what">' + esc(parts.text) +
           '<span class="meta">vs ' + esc(short[String(p.pitcher_id)] || lastName(p.pitcher_name)) + (p.estimated_pitches ? ", " + p.estimated_pitches + (p.estimated_pitches === 1 ? " pitch" : " pitches") : "") + "</span>" +
-          (seq ? '<span class="pitches">' + esc(seq) + "</span>" : "") + "</span>" +
+          seqHtml + "</span>" +
           '<span class="runs ' + bat + '-c">' + (p.runs_scored ? esc(scoreText(f, p)) : "") + "</span></div>";
       });
       h += "</section>";
@@ -1211,7 +1258,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       h += "</ul>";
     }
     h += "<h2>The projected game</h2><p>The projected game is one of the ten thousand simulated games: the one closest to the middle on team runs, team hits and each starter's innings and strikeouts, with the favorite winning in nine innings. It reads like a real box score, but it is one likely version of the night, not a promise. High-scoring, low-scoring and upset versions show the range.</p>";
-    h += "<h2>The real game</h2><p>In-game and after the final, the tabs show the real game from the official play-by-play, every plate appearance with its pitches and where the ball went, beside the projected one. The win chance chart reads each play's starting situation (inning, outs, runners, score) against the same ten thousand simulated games that made the forecast: the share of those games the home team went on to win from that situation, with these lineups, starters and bullpens. The in-game number in the header is exact, a fresh set of continuations from the current state at each check.</p>";
+    h += "<h2>The real game</h2><p>In-game and after the final, the tabs show the real game from the official play-by-play, every plate appearance with its pitches (type, speed, result and where each one crossed the plate, from the catcher's view) and where the ball went, beside the projected one. The win chance chart reads each play's starting situation (inning, outs, runners, score) against the same ten thousand simulated games that made the forecast: the share of those games the home team went on to win from that situation, with these lineups, starters and bullpens. The in-game number in the header is exact, a fresh set of continuations from the current state at each check.</p>";
     h += "<h2>Checking the work</h2><p>Every forecast is saved and published before first pitch and never edited. After the final, the Record page scores the last pregame version against a coin flip and against always picking the home team. Nothing is backfilled.</p>";
     h += "<h2>Current limits</h2><ul><li>Postseason bullpens keep their regular-season roles; only the starter's expected length changes.</li><li>The pitch lines under each simulated plate appearance are bookkeeping, not a pitch-by-pitch simulation: real count paths from prior official games for the same outcome, with the pitcher's own pitch types and speeds. Where a ball went (ground ball to shortstop, fly ball to center field) is drawn the same way from the batter's own prior balls in play, or the league's for his hand. None of it changes an outcome or a pitching decision.</li><li>Runner speed and team defense are league average for everyone; stolen bases and wild pitches are not simulated.</li><li>Bullpen use follows regular-season habits: a fitted rest and quality model was tested on the 2026 replay and did not beat it.</li><li>Player history runs through " + esc(any.history_through || "the day before") + ".</li></ul>";
     var modelNames = []; Object.keys(fx).forEach(function (k) { var m = String(fx[k].model || ""); if (m && modelNames.indexOf(m) < 0) modelNames.push(m); });

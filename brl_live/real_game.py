@@ -34,21 +34,35 @@ def _int(value, default=0) -> int:
         return default
 
 
-def _pitches(play: dict) -> list:
-    out = []
+def _num(value, digits=2):
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return None
+    return round(v, digits) if v == v else None
+
+
+def _pitches(play: dict) -> tuple[list, list | None]:
+    """[type, mph, result, plate x, plate z] per pitch (feet, catcher's view; None when not measured) and the
+    batter's strike zone [top, bottom] in feet when the feed gives it."""
+    out, zone = [], None
     for e in play.get('playEvents') or []:
         if e.get('isPitch') is not True:
             continue
         d = e.get('details') or {}
         code = str(d.get('code') or '')
         ptype = str(((d.get('type') or {}).get('code')) or '') or None
-        speed = (e.get('pitchData') or {}).get('startSpeed')
-        try:
-            mph = int(round(float(speed))) if speed is not None else None
-        except (TypeError, ValueError):
-            mph = None
-        out.append([ptype, mph, PITCH_CODE.get(code, code)])
-    return out
+        pd_ = e.get('pitchData') or {}
+        co = pd_.get('coordinates') or {}
+        mph = _num(pd_.get('startSpeed'), 0)
+        px, pz = _num(co.get('pX')), _num(co.get('pZ'))
+        if zone is None and _num(pd_.get('strikeZoneTop')) and _num(pd_.get('strikeZoneBottom')):
+            zone = [_num(pd_.get('strikeZoneTop')), _num(pd_.get('strikeZoneBottom'))]
+        row = [ptype, int(mph) if mph is not None else None, PITCH_CODE.get(code, code)]
+        if px is not None and pz is not None:
+            row += [px, pz]
+        out.append(row)
+    return out, zone
 
 
 def plays_from_feed(feed: dict) -> list[dict]:
@@ -95,7 +109,7 @@ def plays_from_feed(feed: dict) -> list[dict]:
                 rid = ((r.get('details') or {}).get('runner') or {}).get('id')
                 if rid is not None and str(rid) not in scorers:
                     scorers.append(str(rid))
-        pitches = _pitches(play)
+        pitches, zone = _pitches(play)
         if outs_after >= 3:
             bases = {'1B': None, '2B': None, '3B': None}
         plays.append({'inning': inning, 'half': half, 'batter_id': str(batter.get('id') or ''), 'batter_name': str(batter.get('fullName') or ''),
@@ -104,7 +118,7 @@ def plays_from_feed(feed: dict) -> list[dict]:
                       'outs_before': outs, 'outs_after': min(outs_after, 3), 'runs_scored': runs,
                       'away_score': after['away'], 'home_score': after['home'],
                       'bases_before': bases_before, 'bases_after': [bases['1B'], bases['2B'], bases['3B']], 'scoring_players': scorers,
-                      'rbi': _int(result.get('rbi'), 0), 'estimated_pitches': len(pitches), 'pitches': pitches,
+                      'rbi': _int(result.get('rbi'), 0), 'estimated_pitches': len(pitches), 'pitches': pitches, 'zone': zone,
                       'contact': contact_of(play), 'official': True})
         score, outs = after, min(outs_after, 3)
     return plays

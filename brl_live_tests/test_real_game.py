@@ -6,8 +6,9 @@ from brl_live.win_table import WinTable, lookup, state_index, SHAPE
 
 def play(inning, half, idx, batter, pitcher, event, desc, away, home, outs, pitches, runners=(), complete=True, hit=None):
     events = []
-    for ptype, mph, code in pitches:
-        e = {'isPitch': True, 'details': {'code': code, 'type': {'code': ptype}}, 'pitchData': {'startSpeed': mph}}
+    for k, (ptype, mph, code) in enumerate(pitches):
+        e = {'isPitch': True, 'details': {'code': code, 'type': {'code': ptype}}, 'pitchData': {'startSpeed': mph, 'strikeZoneTop': 3.4, 'strikeZoneBottom': 1.6,
+             'coordinates': {'pX': -0.5 + 0.25 * k, 'pZ': 2.0 + 0.3 * k}}}
         events.append(e)
     if hit and events:
         events[-1]['hitData'] = hit
@@ -41,11 +42,16 @@ def test_plays_follow_the_official_feed():
     plays = plays_from_feed(feed())
     assert [p['box_outcome'] for p in plays] == ['strikeout', 'single', 'home_run', 'runner', 'bip_out']   # the open plate appearance is not listed
     k, single, hr, cs, out = plays
-    assert k['pitches'] == [['FF', 95, 'C'], ['SL', 86, 'S'], ['FF', 96, 'S']] and k['estimated_pitches'] == 3 and k['official'] is True
-    assert single['contact'] == {'t': 'L', 'loc': 8, 'dist': 250, 'ev': 101} and single['pitches'] == [['CH', 84, 'X']]
+    assert k['pitches'] == [['FF', 95, 'C', -0.5, 2.0], ['SL', 86, 'S', -0.25, 2.3], ['FF', 96, 'S', 0.0, 2.6]] and k['estimated_pitches'] == 3 and k['official'] is True
+    assert k['zone'] == [3.4, 1.6]
+    assert single['contact'] == {'t': 'L', 'loc': 8, 'dist': 250, 'ev': 101} and single['pitches'][0][:3] == ['CH', 84, 'X']
     assert hr['runs_scored'] == 2 and hr['away_score'] == 2 and hr['scoring_players'] == ['2', '3'] and hr['rbi'] == 1
     assert (k['outs_before'], k['outs_after'], single['outs_before'], cs['outs_before'], cs['outs_after']) == (0, 1, 1, 1, 3)
     assert out['inning'] == 1 and out['half'] == 'bottom' and out['outs_before'] == 0 and out['pitches'][0][2] == 'B'
+    # a pitch without measured coordinates keeps the three-field form
+    bare = plays_from_feed({'liveData': {'plays': {'allPlays': [{'about': {'inning': 1, 'halfInning': 'top', 'isComplete': True}, 'result': {'eventType': 'walk'},
+                                                                 'matchup': {}, 'playEvents': [{'isPitch': True, 'details': {'code': 'B'}}]}]}}})
+    assert bare[0]['pitches'] == [[None, None, 'B']] and bare[0]['zone'] is None
     assert out['description'].startswith('Batter 11 grounds out') and out['contact']['loc'] == 6 and out['contact']['t'] == 'G'
     # runners: the single put batter 2 on first, the homer cleared the bases, the caught stealing ended the inning
     assert single['bases_before'] == [None, None, None] and single['bases_after'] == ['2', None, None]
