@@ -146,6 +146,12 @@ button { font: inherit; color: inherit; }
 .wp .team { font-family: var(--display); font-weight: 700; font-size: 26px; }
 .wp-cap { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 2px 4px; font-size: 15px; color: var(--muted); }
 .wp-cap b { font-family: var(--display); font-size: 20px; font-weight: 700; }
+.spray { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 8px 8px 4px; }
+.spray svg { display: block; width: 100%; max-width: 420px; height: auto; margin: 0 auto; }
+.spray .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; justify-content: center; padding: 6px 0 4px; font-size: 14px; color: var(--muted); }
+.spray .legend i { display: inline-block; width: 11px; height: 11px; border-radius: 50%; vertical-align: -1px; margin-right: 5px; border: 2px solid currentColor; }
+.spray .legend i.f { background: currentColor; }
+.spray .legend i.hr { background: var(--lamp); border-color: var(--ink); }
 .swings { list-style: none; margin: 10px 0 0; padding: 0; }
 h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--rule); color: var(--muted); }
 .swings li { display: grid; grid-template-columns: 64px 1fr auto; gap: 10px; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--rule-soft); font-size: 16px; }
@@ -911,6 +917,30 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     h += '<div class="wp-cap"><span>Pregame: ' + esc(f[fav].abbr) + " " + pct(fav === "home" ? f.home_win_probability : 1 - f.home_win_probability) + '</span><b class="' + side + '-c">' + esc(last.label === "Final" ? "Final: " + nickname(f[side].name) + " won" : last.label + ": " + f[side].abbr + " " + shown) + "</b></div></div>";
     return h;
   }
+  /* Where every ball in play landed, from the official landing coordinates (home plate near 125, 198). */
+  function sprayChart(f, real) {
+    var balls = real.plays.filter(function (p) { return p.contact && p.contact.x != null && p.contact.y != null; });
+    if (!balls.length) return "";
+    var W = 320, H = 300, hx = 160, hy = 282, k = 1.36, s45 = Math.SQRT1_2;
+    var h = '<div class="spray"><svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="' + balls.length + ' balls in play and where they landed">';
+    var fence = 238, inf = 66;
+    h += '<path d="M' + (hx - fence * s45).toFixed(1) + " " + (hy - fence * s45).toFixed(1) + " A" + fence + " " + fence + " 0 0 1 " + (hx + fence * s45).toFixed(1) + " " + (hy - fence * s45).toFixed(1) + " L" + hx + " " + hy + ' Z" fill="#E6EEE4" stroke="none"/>';
+    h += '<path d="M' + (hx - inf * s45).toFixed(1) + " " + (hy - inf * s45).toFixed(1) + " A" + inf + " " + inf + " 0 0 1 " + (hx + inf * s45).toFixed(1) + " " + (hy - inf * s45).toFixed(1) + " L" + hx + " " + hy + ' Z" fill="#E9DFC7" stroke="none"/>';
+    h += '<path d="M' + hx + " " + hy + " L" + (hx - fence * s45).toFixed(1) + " " + (hy - fence * s45).toFixed(1) + " M" + hx + " " + hy + " L" + (hx + fence * s45).toFixed(1) + " " + (hy - fence * s45).toFixed(1) + '" stroke="#FFFFFF" stroke-width="2"/>';
+    h += '<path d="M' + (hx - fence * s45).toFixed(1) + " " + (hy - fence * s45).toFixed(1) + " A" + fence + " " + fence + " 0 0 1 " + (hx + fence * s45).toFixed(1) + " " + (hy - fence * s45).toFixed(1) + '" fill="none" stroke="var(--rule)" stroke-width="2"/>';
+    var d = 38;
+    h += '<path d="M' + hx + " " + hy + " L" + (hx + d) + " " + (hy - d) + " L" + hx + " " + (hy - 2 * d) + " L" + (hx - d) + " " + (hy - d) + ' Z" fill="none" stroke="#FFFFFF" stroke-width="2"/>';
+    balls.forEach(function (p) {
+      var c = p.contact, x = hx + (c.x - 125.42) * k, y = hy - (198.27 - c.y) * k, side = p.half === "top" ? "away" : "home", o = p.box_outcome;
+      x = Math.max(6, Math.min(W - 6, x)); y = Math.max(6, Math.min(H - 6, y));
+      var hit = /single|double|triple|home_run/.test(o);
+      if (o === "home_run") h += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="6.5" fill="var(--lamp)" stroke="var(--ink)" stroke-width="2"><title>' + esc(lastName(p.batter_name) + ", home run") + "</title></circle>";
+      else h += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="5.5" fill="' + (hit ? "var(--" + side + ")" : "#FFFFFF") + '" stroke="var(--' + side + ')" stroke-width="2"><title>' + esc(lastName(p.batter_name) + ", " + (hit ? o.replace(/_/g, " ") : "out")) + "</title></circle>";
+    });
+    h += "</svg>";
+    h += '<div class="legend"><span class="away-c"><i class="f"></i>' + esc(f.away.abbr) + ' hit</span><span class="away-c"><i></i>' + esc(f.away.abbr) + ' out</span><span class="home-c"><i class="f"></i>' + esc(f.home.abbr) + ' hit</span><span class="home-c"><i></i>' + esc(f.home.abbr) + ' out</span><span><i class="hr"></i>Home run</span></div></div>';
+    return h;
+  }
   function biggestSwings(f, box, real, lv, short) {
     if (!box || !box.win_table || !real || real.plays.length < 2) return "";
     var pts = winSeries(f, box, real, lv), swings = [];
@@ -954,6 +984,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         if (bat && bat.AB + bat.BB > 0) perf += "<div><small>" + esc(nickname(f[side].name)) + "</small><b>" + esc(bat.name) + '</b><span class="stat num">' + esc(batLine(bat)) + "</span></div>";
       });
       if (perf) h0 += '<section class="sec"><h2>' + (real._final ? "Top performers" : "Leading so far") + '</h2><div class="perf">' + perf + "</div></section>";
+      var spray = sprayChart(f, real);
+      if (spray) h0 += '<section class="sec"><h2>Where the ball went</h2><p class="lede">Every ball in play' + (real._final ? "" : " so far") + ", where it landed.</p>" + spray + "</section>";
       h0 += '<h2 class="divide">The projected game</h2>';
     }
     return h0 + projectedSummary(f, s, box, actual, actualBox, v);

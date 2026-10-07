@@ -112,6 +112,14 @@ def plays_from_feed(feed: dict) -> list[dict]:
         pitches, zone = _pitches(play)
         if outs_after >= 3:
             bases = {'1B': None, '2B': None, '3B': None}
+        contact = contact_of(play)
+        if contact is not None:
+            # Landing spot of the batted ball in the official field coordinates (home plate near 125, 198).
+            last = [e for e in play.get('playEvents') or [] if e.get('isPitch') is True]
+            co = ((last[-1].get('hitData') or {}).get('coordinates') or {}) if last else {}
+            x, y = _num(co.get('coordX'), 1), _num(co.get('coordY'), 1)
+            if x is not None and y is not None:
+                contact['x'], contact['y'] = x, y
         plays.append({'inning': inning, 'half': half, 'batter_id': str(batter.get('id') or ''), 'batter_name': str(batter.get('fullName') or ''),
                       'pitcher_id': str(pitcher.get('id') or ''), 'pitcher_name': str(pitcher.get('fullName') or ''),
                       'box_outcome': outcome, 'event': event, 'description': str(result.get('description') or '').strip(),
@@ -119,7 +127,7 @@ def plays_from_feed(feed: dict) -> list[dict]:
                       'away_score': after['away'], 'home_score': after['home'],
                       'bases_before': bases_before, 'bases_after': [bases['1B'], bases['2B'], bases['3B']], 'scoring_players': scorers,
                       'rbi': _int(result.get('rbi'), 0), 'estimated_pitches': len(pitches), 'pitches': pitches, 'zone': zone,
-                      'contact': contact_of(play), 'official': True})
+                      'contact': contact, 'official': True})
         score, outs = after, min(outs_after, 3)
     return plays
 

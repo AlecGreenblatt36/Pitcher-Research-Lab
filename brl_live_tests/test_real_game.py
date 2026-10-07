@@ -22,7 +22,7 @@ def play(inning, half, idx, batter, pitcher, event, desc, away, home, outs, pitc
 def feed():
     plays = [play(1, 'top', 0, 1, 50, 'strikeout', 'Batter 1 strikes out swinging.', 0, 0, 1, [('FF', 95.4, 'C'), ('SL', 86.1, 'S'), ('FF', 96.0, 'W')]),
              play(1, 'top', 1, 2, 50, 'single', 'Batter 2 singles on a line drive to center fielder X.', 0, 0, 1, [('CH', 84.2, 'D')],
-                  runners=[(2, '1B')], hit={'launchSpeed': 101.3, 'launchAngle': 12.0, 'totalDistance': 250.0, 'trajectory': 'line_drive', 'location': '8'}),
+                  runners=[(2, '1B')], hit={'launchSpeed': 101.3, 'launchAngle': 12.0, 'totalDistance': 250.0, 'trajectory': 'line_drive', 'location': '8', 'coordinates': {'coordX': 126.0, 'coordY': 95.5}}),
              play(1, 'top', 2, 3, 50, 'home_run', 'Batter 3 homers (1) on a fly ball to left field. Batter 2 scores.', 2, 0, 1, [('FF', 94.0, 'E')],
                   runners=[('2@1B', 'score'), (3, 'score')], hit={'launchSpeed': 105.0, 'launchAngle': 28.0, 'totalDistance': 402.0, 'trajectory': 'fly_ball', 'location': '7'}),
              play(1, 'top', 3, 4, 50, 'caught_stealing_2b', 'Batter 4 ... caught stealing 2nd base.', 2, 0, 3, [('FF', 93.0, 'B')]),
@@ -44,7 +44,8 @@ def test_plays_follow_the_official_feed():
     k, single, hr, cs, out = plays
     assert k['pitches'] == [['FF', 95, 'C', -0.5, 2.0], ['SL', 86, 'S', -0.25, 2.3], ['FF', 96, 'S', 0.0, 2.6]] and k['estimated_pitches'] == 3 and k['official'] is True
     assert k['zone'] == [3.4, 1.6]
-    assert single['contact'] == {'t': 'L', 'loc': 8, 'dist': 250, 'ev': 101} and single['pitches'][0][:3] == ['CH', 84, 'X']
+    assert single['contact'] == {'t': 'L', 'loc': 8, 'dist': 250, 'ev': 101, 'x': 126.0, 'y': 95.5} and single['pitches'][0][:3] == ['CH', 84, 'X']
+    assert 'x' not in hr['contact']     # no coordinates on that one
     assert hr['runs_scored'] == 2 and hr['away_score'] == 2 and hr['scoring_players'] == ['2', '3'] and hr['rbi'] == 1
     assert (k['outs_before'], k['outs_after'], single['outs_before'], cs['outs_before'], cs['outs_after']) == (0, 1, 1, 1, 3)
     assert out['inning'] == 1 and out['half'] == 'bottom' and out['outs_before'] == 0 and out['pitches'][0][2] == 'B'
