@@ -47,8 +47,11 @@ BASE_FEATURES = ['b_ev', 'b_la', 'b_hard', 'b_barrel', 'b_whiff', 'b_chase', 'b_
 XVALUE_FEATURES = ['b_xv', 'p_xv']
 RECENT_FEATURES = ['p_velo_rec', 'p_whiff_rec', 'p_csw_rec', 'b_ev_rec', 'b_whiff_rec', 'b_hard_rec']
 TYPE_FEATURES = ['b_whiff_fb', 'b_whiff_br', 'b_whiff_os', 'p_whiff_fb', 'p_whiff_br', 'p_whiff_os', 'p_share_fb', 'p_share_br']
+DEFENSE_FEATURES = ['f_def']            # the fielding team's out rate on fieldable balls in play above the league, prior window
 DEFAULT_PARAMS = {'k_rate': 150.0, 'k_bip': 60.0, 'k_velo': 100.0, 'xvalue': False, 'recent_days': 0,
-                  'k_recent_pitch': 100.0, 'k_recent_bip': 40.0, 'k_cell': 40.0, 'pitch_types': False, 'k_type': 60.0}
+                  'k_recent_pitch': 100.0, 'k_recent_bip': 40.0, 'k_cell': 40.0, 'pitch_types': False, 'k_type': 60.0,
+                  'defense': False, 'k_def': 400.0, 'defense_days': 365}
+FIELDABLE = {'BIP_OUT', '1B', '2B_3B', 'OTHER_REACH'}
 RUN_VALUE = {'BIP_OUT': 0.0, 'K': 0.0, 'BB_HBP': 0.69, '1B': 0.88, '2B_3B': 1.4, 'HR': 2.03, 'OTHER_REACH': 0.6}
 EV_BINS, LA_BINS = 16, 18
 
@@ -62,6 +65,8 @@ def feature_names(params: dict | None = None) -> list[str]:
         names += RECENT_FEATURES
     if p.get('pitch_types'):
         names += TYPE_FEATURES
+    if p.get('defense'):
+        names += DEFENSE_FEATURES
     return names
 
 
@@ -215,7 +220,7 @@ class _Sums:
                 sp_ += e[1]; sb_ += e[2]
         return sp_, sb_
 
-    def features(self, batter: int, pitcher: int, today: int) -> np.ndarray:
+    def features(self, batter: int, pitcher: int, today: int, team_defense=None) -> np.ndarray:
         P, X = self.p, self.X
         k_rate, k_bip, k_velo = float(P['k_rate']), float(P['k_bip']), float(P['k_velo'])
         Lp, Lb = self.Lp, self.Lb
@@ -277,6 +282,8 @@ class _Sums:
             out[X['b_ev_rec']] = dev(rbb[BS['ev']], rbb[BS['bip']], out[X['b_ev']], k_rb)
             out[X['b_whiff_rec']] = dev(rb[PS['wh']], rb[PS['sw']], out[X['b_whiff']], k_rp)
             out[X['b_hard_rec']] = dev(rbb[BS['hard']], rbb[BS['bip']], out[X['b_hard']], k_rb)
+        if P.get('defense'):
+            out[X['f_def']] = np.nan if team_defense is None else float(team_defense)
         return out
 
     def absorb_date(self, today: int, batters, pitchers, M: np.ndarray, ev: np.ndarray, la: np.ndarray, run_value: np.ndarray | None):
@@ -323,6 +330,69 @@ def check_table(table: pd.DataFrame) -> None:
         raise ValueError('physics table is from an older schema (missing ' + ', '.join(missing[:4]) + '); rebuild it with the backfill')
 
 
+class DefenseState:
+    """Each fielding team's out rate on fieldable balls in play over the prior window, above the league rate.
+
+    Built from plate-appearance rows (date_key, home_team, away_team, inning_topbot, outcome) dated strictly
+    before the cutoff; value(team) is the shrunk rate difference the model sees as f_def. The chronological
+    builder computes the same number for every PA from the same sums.
+    """
+
+    def __init__(self, params: dict | None = None):
+        self.p = dict(DEFAULT_PARAMS, **(params or {}))
+        self.k, self.days = float(self.p['k_def']), int(self.p['defense_days'])
+        self.entries: dict = defaultdict(list)      # team -> [[day ordinal, bip, outs], ...] per date
+        self.league = np.zeros(2)                   # bip, outs (all time)
+        self.cutoff_day = None
+
+    def absorb_date(self, today: int, teams, fieldable: np.ndarray, outs: np.ndarray):
+        day: dict = {}
+        for t, f, o in zip(teams, fieldable, outs):
+            if not f:
+                continue
+            e = day.get(t)
+            if e is None:
+                e = day[t] = [today, 0.0, 0.0]
+            e[1] += 1.0; e[2] += float(o)
+            self.league += (1.0, float(o))
+        for t, e in day.items():
+            self.entries[t].append(e)
+
+    def value(self, team, today: int | None = None) -> float:
+        today = self.cutoff_day if today is None else today
+        bip = outs = 0.0
+        for e in self.entries.get(str(team), ()):
+            if e[0] >= today - self.days:
+                bip += e[1]; outs += e[2]
+        league = self.league[1] / max(self.league[0], 1e-9)
+        return (outs + self.k * league) / (bip + self.k) - league
+
+    @staticmethod
+    def fielding_teams(frame: pd.DataFrame) -> np.ndarray:
+        top = frame['inning_topbot'].astype(str).str.lower().str.startswith('top').to_numpy()
+        return np.where(top, frame['home_team'].astype(str).to_numpy(), frame['away_team'].astype(str).to_numpy())
+
+    @classmethod
+    def build(cls, history: pd.DataFrame, cutoff_date: str, params: dict | None = None) -> 'DefenseState':
+        D = cls(params)
+        frame = history.loc[history['date_key'].astype(str) < str(cutoff_date)[:10], ['date_key', 'home_team', 'away_team', 'inning_topbot', 'outcome']]
+        frame = frame.sort_values('date_key', kind='mergesort').reset_index(drop=True)
+        teams = cls.fielding_teams(frame)
+        fieldable = frame['outcome'].isin(FIELDABLE).to_numpy()
+        outs = (frame['outcome'] == 'BIP_OUT').to_numpy()
+        dates = frame['date_key'].astype(str).to_numpy()
+        day_ord = pd.to_datetime(frame['date_key']).map(pd.Timestamp.toordinal).to_numpy()
+        i, n = 0, len(frame)
+        while i < n:
+            j = i
+            while j < n and dates[j] == dates[i]:
+                j += 1
+            D.absorb_date(int(day_ord[i]), teams[i:j], fieldable[i:j], outs[i:j])
+            i = j
+        D.cutoff_day = pd.Timestamp(cutoff_date).toordinal()
+        return D
+
+
 def _aligned(pa: pd.DataFrame, table: pd.DataFrame):
     check_table(table)
     ordered = pa.sort_values(['date_key', 'game_pk', 'at_bat_number'], kind='mergesort').reset_index(drop=True)
@@ -346,6 +416,12 @@ def build_features(pa: pd.DataFrame, table: pd.DataFrame, params: dict | None = 
     day_ord = pd.to_datetime(ordered['date_key']).map(pd.Timestamp.toordinal).to_numpy()
     rv = ordered['outcome'].map(RUN_VALUE).to_numpy(float) if 'outcome' in ordered.columns else None
     out = np.full((len(ordered), len(S.names)), np.nan, dtype=np.float32)
+    want_def = bool(S.p.get('defense'))
+    if want_def:
+        D = DefenseState(S.p)
+        teams = DefenseState.fielding_teams(ordered)
+        fieldable = ordered['outcome'].isin(FIELDABLE).to_numpy(); outs = (ordered['outcome'] == 'BIP_OUT').to_numpy()
+        def_col = S.X['f_def']
     i, n = 0, len(ordered)
     while i < n:
         j = i
@@ -353,8 +429,10 @@ def build_features(pa: pd.DataFrame, table: pd.DataFrame, params: dict | None = 
             j += 1
         today = int(day_ord[i])
         for r in range(i, j):
-            out[r] = S.features(int(batters[r]), int(pitchers[r]), today)
+            out[r] = S.features(int(batters[r]), int(pitchers[r]), today, team_defense=(D.value(teams[r], today) if want_def else None))
         S.absorb_date(today, batters[i:j], pitchers[i:j], M[i:j], ev[i:j], la[i:j], None if rv is None else rv[i:j])
+        if want_def:
+            D.absorb_date(today, teams[i:j], fieldable[i:j], outs[i:j])
         i = j
     audit['league_fastball_velocity'] = float(S.Lp[PS['velo']] / max(S.Lp[PS['fb']], 1)); audit['league_exit_velocity'] = float(S.Lb[BS['ev']] / max(S.Lb[BS['bip']], 1))
     audit['league_hard_hit_rate'] = float(S.Lb[BS['hard']] / max(S.Lb[BS['bip']], 1)); audit['league_whiff_per_swing'] = float(S.Lp[PS['wh']] / max(S.Lp[PS['sw']], 1))
@@ -401,5 +479,5 @@ class PhysicsState:
             i = j
         return cls(S, str(cutoff_date)[:10], n)
 
-    def features(self, batter: int, pitcher: int) -> np.ndarray:
-        return self.sums.features(int(batter), int(pitcher), self.today)
+    def features(self, batter: int, pitcher: int, team_defense=None) -> np.ndarray:
+        return self.sums.features(int(batter), int(pitcher), self.today, team_defense=team_defense)

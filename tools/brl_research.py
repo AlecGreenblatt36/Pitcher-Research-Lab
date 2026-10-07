@@ -98,6 +98,9 @@ SETS = {
     'physics3': {'v2': {'xvalue': True, 'recent_days': 30}, 'types': {'xvalue': True, 'recent_days': 30, 'pitch_types': True},
                  'types_k30': {'xvalue': True, 'recent_days': 30, 'pitch_types': True, 'k_type': 30.0},
                  'recent45': {'xvalue': True, 'recent_days': 45}, 'recent20': {'xvalue': True, 'recent_days': 20}},
+    'defense': {'v2': {'xvalue': True, 'recent_days': 30}, 'defense': {'xvalue': True, 'recent_days': 30, 'defense': True},
+                'defense_k200': {'xvalue': True, 'recent_days': 30, 'defense': True, 'k_def': 200.0},
+                'defense_730': {'xvalue': True, 'recent_days': 30, 'defense': True, 'defense_days': 730}},
 }
 
 

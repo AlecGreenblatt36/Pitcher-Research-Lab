@@ -132,11 +132,14 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
         td = time.time()
         base.state = HistoryState.build(hcols, date, base._config)
         base.cutoff_date = base.game_date = date
+        defense = None
         if base.physics is not None:
-            from research_lab.pa_model.physics import PhysicsState
+            from research_lab.pa_model.physics import PhysicsState, DefenseState
             params = dict(base.physics.sums.p)
             base.physics = PhysicsState.build(physics_table, date, params)
             base._physics_cache = {}
+            if 'f_def' in base.physics_features:
+                defense = DefenseState.build(h, date, params)
         pexp, texp = tendencies_at(h, date, float(hazard["league_mean_bf"]))
         hands = bats_lookup(h, date)
         first_stand = h[h["date_key"] == date].groupby("batter")["stand"].first().to_dict()
@@ -151,7 +154,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                 team = getattr(g, side)
                 starter = starter_profile(app, sid, getattr(g, f"{side}_starter_throws"), date)
                 pen = tuple(p for p in bullpen(app, team, date, sid) if p.player_id != str(sid))
-                teams[side] = TeamProfile(team, team, lineup, starter, pen)
+                teams[side] = TeamProfile(team, team, lineup, starter, pen, defense=(float(defense.value(team)) if defense is not None else 0.0))
             matchup = GameMatchup(away=teams["away"], home=teams["home"], venue=g.park, game_type="R")
             policy = FittedStarterPolicy(hazard, pexp, texp, {int(g.away_starter): g.away, int(g.home_starter): g.home})
             sim = GameSimulator(provider, manager_policy=policy)

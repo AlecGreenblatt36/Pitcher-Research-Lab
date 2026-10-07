@@ -114,7 +114,7 @@ class RefreshedSimulator:
             raise Blocked('History coverage is not through yesterday')
         if self.info['coverage_through'] != previous_day(origin).isoformat() and not self.info.get('yesterday_incomplete'):
             raise Blocked('History coverage is not through yesterday')
-        game, matchup, notes, statuses, fingerprint = live_inputs(feed, receipt, self.history)
+        game, matchup, notes, statuses, fingerprint = live_inputs(feed, receipt, self.history, defense=getattr(self, 'defense_state', None))
         notes['source_vintage'] = 'Frozen seed plus encrypted, captured-before-forecast daily updates'
         notes['coverage_through'] = self.info['coverage_through']
         return game, matchup, notes, statuses, content_hash({

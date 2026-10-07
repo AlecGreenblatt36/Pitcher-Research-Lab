@@ -374,6 +374,7 @@ class LockedPAModelProvider:
         bat_score_diff: int, times_through: int,
         batter_days: float | None = None, pitcher_days: float | None = None,
         age_bat: float | None = None, age_pit: float | None = None,
+        team_defense: float | None = None,
     ) -> tuple[np.ndarray, dict]:
         block, meta = self.talent_block(batter_id, pitcher_id, stand, throws)
         s = self.state
@@ -400,10 +401,11 @@ class LockedPAModelProvider:
         ])
         parts = [block, context]
         if self.physics is not None:
-            key = (batter_id, pitcher_id)
+            uses_defense = "f_def" in self.physics_features
+            key = (batter_id, pitcher_id, float(team_defense) if (uses_defense and team_defense is not None) else None)
             vector = self._physics_cache.get(key)
             if vector is None:
-                vector = self.physics.features(batter_id, pitcher_id)
+                vector = self.physics.features(batter_id, pitcher_id, team_defense=(key[2] if uses_defense else None))
                 self._physics_cache[key] = vector
             parts.append(vector)
         # Training stored features as float32; replicate exactly.
@@ -456,6 +458,7 @@ class LockedPAModelProvider:
             runners=tuple(int(b is not None) for b in context.bases),
             bat_score_diff=context.score_diff,
             times_through=context.times_through_order,
+            team_defense=float(getattr(context, "fielding_team_defense", 0.0) or 0.0),
         )
         ensemble = self.predict_row(row)["ensemble"]
         self.calls += 1

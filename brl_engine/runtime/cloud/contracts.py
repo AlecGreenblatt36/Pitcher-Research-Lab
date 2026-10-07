@@ -84,8 +84,11 @@ def projected_order(feed: dict, side: str, history: pd.DataFrame) -> list:
     return order
 
 
-def live_inputs(feed: dict, receipt: dict, history: pd.DataFrame, names: dict | None = None):
-    """(game, matchup, notes, statuses, fingerprint) for a pregame feed."""
+def live_inputs(feed: dict, receipt: dict, history: pd.DataFrame, names: dict | None = None, defense=None):
+    """(game, matchup, notes, statuses, fingerprint) for a pregame feed.
+
+    defense: a research_lab.pa_model.physics.DefenseState (built from the history through the day before)
+    when the selected PA model reads the fielding team's defense; each team's value goes into its profile."""
     assert_preview(feed, receipt['finished_at'])
     gd = feed['gameData']
     box = (feed.get('liveData') or {}).get('boxscore', {}).get('teams') or {}
@@ -126,7 +129,10 @@ def live_inputs(feed: dict, receipt: dict, history: pd.DataFrame, names: dict | 
         if not pen_ids:
             raise Blocked(f'No bullpen available for the {side} team')
         pen = tuple(reliever_profile(app, pid, _throws(feed, pid, throws_hist.get(pid, 'R')), _name(feed, pid, names), date) for pid in dict.fromkeys(pen_ids))
-        teams[side] = TeamProfile(str(t['id']), str(t.get('name') or t.get('abbreviation')), lineup, starter, pen)
+        team_defense = float(defense.value(str(t.get('abbreviation') or '').upper())) if defense is not None else 0.0
+        teams[side] = TeamProfile(str(t['id']), str(t.get('name') or t.get('abbreviation')), lineup, starter, pen, defense=team_defense)
+        if defense is not None:
+            notes.setdefault('team_defense', {})[side] = round(team_defense, 5)
         game_teams[side] = {'abbr': str(t.get('abbreviation') or ''), 'name': str(t.get('name') or ''), 'team_id': int(t['id']),
                             'starter': {'player_id': str(sp), 'name': starter.name}}
     game_type = str((gd.get('game') or {}).get('type') or 'R')

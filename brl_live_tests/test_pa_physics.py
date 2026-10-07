@@ -73,3 +73,30 @@ def test_feed_and_study_extraction_agree():
     assert (a['n'], a['sw'], a['wh'], a['oz'], a['ch'], a['iz'], a['izs'], a['izc'], a['fb']) == (3, 2, 1, 2, 1, 1, 1, 1, 2)
     assert (a['fb_sw'], a['fb_wh'], a['br_n'], a['br_sw'], a['br_wh'], a['os_n']) == (1, 0, 1, 1, 1, 0)
     assert np.isclose(a['velo'], 188.1) and np.isclose(a['hb'], 14.0) and np.isclose(a['ivb'], 14.0) and a['spin'] == 4400 and a['ev'] == 101.3
+
+
+def test_defense_feature_builder_matches_state_and_is_time_valid():
+    pa, study = helpers.synthetic(n_games=40)
+    # make the home team's defense better: convert some of its fielded balls in play to outs
+    rng = np.random.default_rng(3)
+    top = pa.inning_topbot == 'Top'            # the home team fields in the top half
+    hits = top & pa.outcome.isin(['1B', '2B_3B', 'OTHER_REACH'])
+    flip = hits & (rng.random(len(pa)) < 0.5)
+    pa.loc[flip, 'outcome'] = 'BIP_OUT'
+    table = study_table(study)
+    params = {'defense': True, 'k_def': 50.0, 'defense_days': 5}
+    built, _ = phys.build_features(pa, table, params)
+    assert list(built.columns) == phys.BASE_FEATURES + phys.DEFENSE_FEATURES
+    pa_sorted = pa.sort_values(['date_key', 'game_pk', 'at_bat_number'], kind='mergesort').reset_index(drop=True)
+    first = pa_sorted.date_key == '2026-05-01'
+    assert (built.loc[first, 'f_def'] == 0).all()                      # nothing known on the first date
+    later = pa_sorted.date_key == '2026-05-08'
+    home_fielding = later & (pa_sorted.inning_topbot == 'Top')
+    assert built.loc[home_fielding, 'f_def'].mean() > 0.01 > built.loc[later & ~(pa_sorted.inning_topbot == 'Top'), 'f_def'].mean()
+    D = phys.DefenseState.build(pa, '2026-05-08', params)
+    assert np.isclose(D.value('HOM'), built.loc[home_fielding, 'f_def'].iloc[0], atol=1e-6)
+    assert np.isclose(D.value('AWY'), built.loc[later & (pa_sorted.inning_topbot == 'Bot'), 'f_def'].iloc[0], atol=1e-6)
+    assert D.value('NOPE') == 0.0
+    state = phys.PhysicsState.build(table, '2026-05-08', params)
+    v = state.features(10, 500, team_defense=D.value('HOM'))
+    assert v[-1] == np.float64(D.value('HOM')) and len(v) == len(phys.BASE_FEATURES) + 1

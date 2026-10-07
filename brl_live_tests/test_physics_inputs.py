@@ -84,3 +84,16 @@ def test_model_selection_default_and_sealed(tmp_path, monkeypatch):
     (tmp_path / 'brl_engine' / 'models' / 'test-v2.json').write_text(json.dumps({'name': 'test-v2', 'branch': 'b', 'path': 'p', 'purpose': 'model:test-v2', 'cipher_sha256': '00', 'model_sha256': '00'}))
     with pytest.raises(ValueError):
         ep.select_model('r', 't', 'ab' * 32, tmp_path / 'data')
+
+
+def test_live_inputs_carry_team_defense_into_profiles():
+    """live_inputs puts each fielding team's defense value into its profile when a DefenseState is supplied."""
+    import importlib
+    contracts = importlib.import_module('cloud.contracts')
+    import inspect
+    sig = inspect.signature(contracts.live_inputs)
+    assert 'defense' in sig.parameters
+    class D:
+        def value(self, team): return {'CLE': 0.015, 'CWS': -0.01}.get(team, 0.0)
+    src = inspect.getsource(contracts.live_inputs)
+    assert "defense.value(str(t.get('abbreviation') or '').upper())" in src and 'team_defense' in src

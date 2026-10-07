@@ -74,3 +74,21 @@ def test_provider_appends_physics_features_and_fails_closed_without_them(tmp_pat
     plain = tmp_path / 'plain.joblib'; joblib.dump(bundle, plain)
     with pytest.raises(LockedModelError):
         LockedPAModelProvider(plain, history_path, date, date, 'NYY', expected_sha256=sha256_file(plain))
+
+
+def test_provider_reads_defense_from_the_context(tmp_path):
+    params = {'defense': True, 'k_def': 50.0, 'defense_days': 5}
+    model_path, history_path, table, pa_all, features, extras = make_bundle(tmp_path, params)
+    date = '2026-05-08'
+    provider = LockedPAModelProvider(model_path, history_path, date, date, 'NYY', expected_sha256=sha256_file(model_path), physics_table=table)
+    assert 'f_def' in provider.physics_features
+    row_a, _ = provider.feature_row(10, 500, 'R', 'L', is_home_batter=0, inning=1, outs=0, runners=(0, 0, 0), bat_score_diff=0, times_through=1, team_defense=0.02)
+    row_b, _ = provider.feature_row(10, 500, 'R', 'L', is_home_batter=0, inning=1, outs=0, runners=(0, 0, 0), bat_score_diff=0, times_through=1, team_defense=-0.02)
+    assert row_a[-1] == np.float32(0.02) and row_b[-1] == np.float32(-0.02) and not np.array_equal(row_a, row_b)
+    ctx = PAContext(batter=PlayerProfile('10', 'b', 'R'), pitcher=PitcherProfile('500', 'p', 'L', 'starter'), batting_side='away', inning=1, half='top',
+                    outs=0, bases=(None, None, None), batting_score=0, fielding_score=0, lineup_position=1, times_through_order=1, pitcher_batters_faced=0,
+                    pitcher_runs_allowed=0, pitcher_fatigue=0.0, park_factor=1.0, weather_run_factor=1.0, batting_team_baserunning=0.0, fielding_team_defense=0.02)
+    p1 = provider.probabilities(ctx)
+    ctx2 = PAContext(**{**ctx.__dict__, 'fielding_team_defense': -0.02})
+    p2 = provider.probabilities(ctx2)
+    assert p1 != p2

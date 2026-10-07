@@ -188,6 +188,16 @@ def main(public_dir):
         # A selected model with physics features needs the per-PA physics table through yesterday.
         from .physics_inputs import assemble_physics_table
         sim.physics_table,physics_receipt=assemble_physics_table(cache,index,utcnow())
+        manifest_path=ROOT/'brl_engine'/'models'/(bridge.MODEL_NAME+'.json')
+        manifest=json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
+        if 'f_def' in (manifest.get('physics_features') or []):
+            # The model reads each fielding team's defense: out rate on fieldable balls in play above the
+            # league over the prior window, from the same history the forecasts use, through yesterday.
+            from research_lab.pa_model.physics import DefenseState
+            from zoneinfo import ZoneInfo
+            today=utcnow().astimezone(ZoneInfo('America/New_York')).date().isoformat()
+            sim.defense_state=DefenseState.build(sim.history,today,manifest.get('physics_params') or {})
+            physics_receipt['team_defense']={t:round(sim.defense_state.value(t),4) for t in sorted(sim.defense_state.entries)}
     runner=BoxRunner(original.Network(),store,sim,run_id=os.environ.get('GITHUB_RUN_ID','local'))
     _market(runner,store.ledger)
     try:runner.iteration()
