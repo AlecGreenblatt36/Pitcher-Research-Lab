@@ -1,12 +1,12 @@
 {
- "created_at": "2026-10-07T07:23:54.074837+00:00",
- "status": "blocked",
+ "created_at": "2026-10-07T07:40:21.115481+00:00",
+ "status": "iteration_completed",
  "runtime": "brl_engine (public code, sealed data)",
  "ledger_branch": "brl-live-data",
  "shadow": false,
  "live_forecasts_created": 0,
  "raw_data_published": false,
- "stage": "history_and_forecast_iteration",
+ "stage": "complete",
  "secret_present": true,
  "scheduled_games": [
   {
@@ -35,39 +35,163 @@
   }
  ],
  "data_source": "brl-data-202610070629",
- "reason": "RemoteDisconnected: Remote end closed connection without response",
- "error_type": "RemoteDisconnected",
- "error_trace": [
-  {
-   "file": "request.py",
-   "function": "_call_chain",
-   "line": 492
+ "forecasts": 14,
+ "box_forecasts_created": 0,
+ "box_forecasts": 9,
+ "player_scored_games": 2,
+ "scored_games": 2,
+ "skill_scored_games": 1,
+ "skill_baseline_prior_games": 31,
+ "history_coverage_through": "2026-10-05",
+ "history_added_PA": 1228,
+ "history_refresh_note": "Statcast empty on a date with completed games",
+ "pitch_bookkeeping_prior_PA": 2253,
+ "engine_rules_changed": false,
+ "model_parameters_changed": false,
+ "simulation_adjustments": "context offsets (brl_live/context_offsets.json)",
+ "live_updates": 0,
+ "live_update_errors": 0,
+ "market_receipt": {
+  "date": "2026-10-07",
+  "schedule_games": 4,
+  "lines_seen": 4,
+  "matched": 4,
+  "captured_pregame": 4,
+  "events": 4,
+  "competition_keys": [
+   "attendance",
+   "broadcast",
+   "broadcasts",
+   "competitors",
+   "conferenceCompetition",
+   "date",
+   "format",
+   "geoBroadcasts",
+   "highlights",
+   "id",
+   "neutralSite",
+   "notes",
+   "odds",
+   "playByPlayAvailable",
+   "recent",
+   "series",
+   "startDate",
+   "status",
+   "tickets",
+   "timeValid",
+   "type",
+   "uid",
+   "venue",
+   "wasSuspended"
+  ],
+  "odds_keys": [
+   "awayTeamOdds",
+   "details",
+   "footer",
+   "header",
+   "homeTeamOdds",
+   "link",
+   "moneyline",
+   "overUnder",
+   "pointSpread",
+   "provider",
+   "spread",
+   "total"
+  ],
+  "odds_subkeys": {
+   "provider": [
+    "displayName",
+    "id",
+    "logos",
+    "name",
+    "priority"
+   ],
+   "awayTeamOdds": [
+    "favorite",
+    "favoriteAtOpen",
+    "team",
+    "underdog"
+   ],
+   "homeTeamOdds": [
+    "favorite",
+    "favoriteAtOpen",
+    "team",
+    "underdog"
+   ],
+   "moneyline": [
+    "away",
+    "displayName",
+    "home",
+    "shortDisplayName"
+   ],
+   "pointSpread": [
+    "away",
+    "displayName",
+    "home",
+    "shortDisplayName"
+   ],
+   "total": [
+    "displayName",
+    "over",
+    "shortDisplayName",
+    "under"
+   ],
+   "link": [
+    "href",
+    "isExternal",
+    "isPremium",
+    "language",
+    "rel",
+    "shortText",
+    "text",
+    "tracking"
+   ],
+   "header": [
+    "logo",
+    "text"
+   ],
+   "footer": [
+    "disclaimer"
+   ]
   },
-  {
-   "file": "request.py",
-   "function": "https_open",
-   "line": 1392
+  "moneyline_shape": {
+   "displayName": "str",
+   "shortDisplayName": "str",
+   "home": [
+    "close",
+    "open"
+   ],
+   "away": [
+    "close",
+    "open"
+   ]
   },
-  {
-   "file": "request.py",
-   "function": "do_open",
-   "line": 1348
-  },
-  {
-   "file": "client.py",
-   "function": "getresponse",
-   "line": 1478
-  },
-  {
-   "file": "client.py",
-   "function": "begin",
-   "line": 343
-  },
-  {
-   "file": "client.py",
-   "function": "_read_status",
-   "line": 312
+  "moneyline_home_shape": {
+   "close": [
+    "link",
+    "odds"
+   ],
+   "open": [
+    "odds"
+   ]
   }
- ],
- "preserved_previous_forecasts": false
+ },
+ "team_results_rows": 9718,
+ "team_results_meta": {
+  "files": [
+   "team_results_2023.json.gz",
+   "team_results_2024.json.gz",
+   "team_results_2025.json.gz",
+   "team_results_2026.json.gz"
+  ],
+  "row_keys": [
+   "schedule document"
+  ],
+  "skipped": 0
+ },
+ "storage_read_audit": {
+  "contents_verified": 15,
+  "blob_fallbacks": 20,
+  "bytes_verified": 36363426
+ }
 }
