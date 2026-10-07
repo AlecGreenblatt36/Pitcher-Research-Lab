@@ -5,6 +5,8 @@ on:
     types: [completed]
     branches: [main]
   workflow_dispatch:
+  push:
+    branches: [diag/check]
 permissions:
   contents: write
 concurrency:
@@ -12,7 +14,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   check:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
