@@ -283,10 +283,14 @@ def main():
 
         stage('fit locked')
         results['locked'] = fit_and_score('locked', list(locked_columns), [])
-        if experiment == 'gbm':
+        if experiment in ('gbm', 'gbm_slow'):
             extras, audit = build_extras(pa, physics, {'xvalue': True, 'recent_days': 30})
             results.setdefault('physics_join', {})['gbm'] = audit
-            results.update(gbm_experiment(features, list(locked_columns), extras, y, partitions, parts, config, probs['locked']))
+            configs = None
+            if experiment == 'gbm_slow':
+                configs = {'gbm_slow_d5': dict(max_depth=5, learning_rate=0.02, l2_regularization=2.0, min_samples_leaf=200, checkpoints=(300, 600, 900, 1200, 1600, 2000)),
+                           'gbm_slow_d3': dict(max_depth=3, learning_rate=0.03, l2_regularization=2.0, min_samples_leaf=200, checkpoints=(300, 600, 900, 1200, 1600, 2000))}
+            results.update(gbm_experiment(features, list(locked_columns), extras, y, partitions, parts, config, probs['locked'], configs=configs))
             receipt['results'] = results; receipt['status'] = 'completed'
             raise _Done()
         variants = SETS.get(experiment) or {experiment: {}}
