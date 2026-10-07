@@ -1,0 +1,202 @@
+{
+ "schema": "brl.research-receipt.v1",
+ "experiment": "gbm_slow",
+ "run_id": "37630993489",
+ "started_at": "2026-10-07T13:45:23.804958+00:00",
+ "stages": [
+  {
+   "stage": "restore data package",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load plate appearances",
+   "at_seconds": 3.3
+  },
+  {
+   "stage": "load pitch physics seasons",
+   "at_seconds": 4.5
+  },
+  {
+   "stage": "build locked features",
+   "at_seconds": 13.1
+  },
+  {
+   "stage": "fit locked",
+   "at_seconds": 77.7
+  }
+ ],
+ "pa_rows": 733328,
+ "seasons": [
+  2023,
+  2024,
+  2025,
+  2026
+ ],
+ "physics_seasons": [
+  2023,
+  2024,
+  2025,
+  2026
+ ],
+ "results": {
+  "locked": {
+   "feature_count": 122,
+   "best_regularization_c": 0.001,
+   "best_tune_log_loss": 1.4545528888702393,
+   "calibration": {
+    "temperature": 1.0427254638216268,
+    "pre_calibration_log_loss": 1.4557790656473235,
+    "post_calibration_log_loss": 1.4556214621803996
+   },
+   "validation_blend_2025": {
+    "log_loss": 1.460389894646438,
+    "multiclass_brier": 0.7031466291740186,
+    "top_accuracy": 0.45141464676960236,
+    "top_label_ece": 0.006516022846254078,
+    "classwise_ece": 0.002894427481773921
+   },
+   "validation_blend_2025_by_month": {
+    "8": 1.4659274126956336,
+    "9": 1.4567584565084846
+   },
+   "test_2026": {
+    "log_loss": 1.460129097420199,
+    "multiclass_brier": 0.7024246548512,
+    "top_accuracy": 0.4550745448710627,
+    "top_label_ece": 0.0022151665678988687,
+    "classwise_ece": 0.002277037554474206
+   },
+   "test_2026_by_month": {
+    "3": 1.4705234077368545,
+    "4": 1.4674451647298938,
+    "5": 1.4517109168959932,
+    "6": 1.467982386644564,
+    "7": 1.4605428815359998,
+    "8": 1.4517633718201008,
+    "9": 1.4602778003009502
+   }
+  },
+  "physics_join": {
+   "gbm": {
+    "pa_rows": 733328,
+    "physics_rows": 744690,
+    "joined": 733328,
+    "ids_match": 733027,
+    "params": {
+     "k_rate": 150.0,
+     "k_bip": 60.0,
+     "k_velo": 100.0,
+     "xvalue": true,
+     "recent_days": 30,
+     "k_recent_pitch": 100.0,
+     "k_recent_bip": 40.0,
+     "k_cell": 40.0,
+     "pitch_types": false,
+     "k_type": 60.0,
+     "defense": false,
+     "k_def": 400.0,
+     "defense_days": 365,
+     "environment": false,
+     "env_days": 30,
+     "k_env": 2000.0
+    },
+    "league_fastball_velocity": 94.10527696108461,
+    "league_exit_velocity": 88.41879062041012,
+    "league_hard_hit_rate": 0.3956972599867757,
+    "league_whiff_per_swing": 0.23186054567102798,
+    "league_ground_ball_share": 0.4400732981760124
+   }
+  },
+  "gbm_slow_d5": {
+   "feature_count": 152,
+   "iterations": 300,
+   "tune_log_loss": 1.454327241180588,
+   "settings": {
+    "max_depth": 5,
+    "learning_rate": 0.02,
+    "l2_regularization": 2.0,
+    "min_samples_leaf": 200
+   },
+   "calibration": {
+    "temperature": 1.00641556101795,
+    "pre": 1.4542074993147671,
+    "post": 1.453972668044983
+   },
+   "validation_blend_2025": {
+    "log_loss": 1.4595344650386013,
+    "multiclass_brier": 0.7029286990852361,
+    "top_accuracy": 0.45139308203226086,
+    "top_label_ece": 0.0073373949384923495,
+    "classwise_ece": 0.0032324459714446092
+   },
+   "validation_blend_2025_minus_locked": {
+    "difference_nats_per_pa": -0.0008554296078367656,
+    "ci_95_low": -0.0017679694294480328,
+    "ci_95_high": -6.116887425429428e-05,
+    "clusters": 617,
+    "replicates": 600
+   },
+   "test_2026": {
+    "log_loss": 1.4589156638573046,
+    "multiclass_brier": 0.701916985658871,
+    "top_accuracy": 0.45522684376852746,
+    "top_label_ece": 0.005621274687436434,
+    "classwise_ece": 0.004296509853830445
+   },
+   "test_2026_minus_locked": {
+    "difference_nats_per_pa": -0.0012134335628948424,
+    "ci_95_low": -0.0016385944377426344,
+    "ci_95_high": -0.0007900921404271096,
+    "clusters": 2429,
+    "replicates": 600
+   }
+  },
+  "gbm_slow_d3": {
+   "feature_count": 152,
+   "iterations": 300,
+   "tune_log_loss": 1.4539107054081741,
+   "settings": {
+    "max_depth": 3,
+    "learning_rate": 0.03,
+    "l2_regularization": 2.0,
+    "min_samples_leaf": 200
+   },
+   "calibration": {
+    "temperature": 0.9763755572850633,
+    "pre": 1.454099066209401,
+    "post": 1.453849092827569
+   },
+   "validation_blend_2025": {
+    "log_loss": 1.4590205499763718,
+    "multiclass_brier": 0.7027879030125348,
+    "top_accuracy": 0.45199689467782284,
+    "top_label_ece": 0.009466738488352304,
+    "classwise_ece": 0.003095819551662874
+   },
+   "validation_blend_2025_minus_locked": {
+    "difference_nats_per_pa": -0.0013693446700664225,
+    "ci_95_low": -0.002200175236130342,
+    "ci_95_high": -0.0005522734566691299,
+    "clusters": 617,
+    "replicates": 600
+   },
+   "test_2026": {
+    "log_loss": 1.4587359891960094,
+    "multiclass_brier": 0.7018901587770363,
+    "top_accuracy": 0.4551561335661331,
+    "top_label_ece": 0.004413628482329223,
+    "classwise_ece": 0.003876933731302802
+   },
+   "test_2026_minus_locked": {
+    "difference_nats_per_pa": -0.0013931082241896548,
+    "ci_95_low": -0.0017957931930603374,
+    "ci_95_high": -0.0009760371019944446,
+    "clusters": 2429,
+    "replicates": 600
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-07T14:07:09.206427+00:00",
+ "seconds": 1305.4
+}
