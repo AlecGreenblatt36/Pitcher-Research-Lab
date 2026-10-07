@@ -116,7 +116,12 @@ def run_benchmark(
     pa: pd.DataFrame,
     output_dir: str | Path,
     config: PAConfig | None = None,
+    extra_features: pd.DataFrame | None = None,
+    bundle_extra: dict | None = None,
 ) -> dict:
+    """The locked benchmark. ``extra_features`` (one row per PA in the builder's chronological
+    order, e.g. the pitch-physics features) are appended to every feature family; ``bundle_extra``
+    is merged into the saved model bundle (physics parameters and feature list, a model name)."""
     config = config or PAConfig()
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
@@ -124,6 +129,12 @@ def run_benchmark(
     label_to_index = {label: i for i, label in enumerate(labels)}
 
     features, all_feature_columns = build_time_valid_features(pa, config)
+    if extra_features is not None:
+        if len(extra_features) != len(features):
+            raise ValueError("extra_features must have one row per plate appearance")
+        for column in extra_features.columns:
+            features[column] = extra_features[column].to_numpy()
+        all_feature_columns = list(all_feature_columns) + [str(c) for c in extra_features.columns]
     partitions, partition_audit = validation_partitions(features, config)
     test_mask = features["season"].isin(config.test_years).to_numpy()
     if not test_mask.any():
@@ -288,6 +299,8 @@ def run_benchmark(
         "feature_columns": feature_families,
         "config": config.to_dict(),
     }
+    if bundle_extra:
+        model_bundle.update(bundle_extra)
     model_path = output / "pa_model.joblib"
     joblib.dump(model_bundle, model_path, compress=3)
 
