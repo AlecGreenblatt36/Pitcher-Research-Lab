@@ -32,7 +32,8 @@ class BoxSimulator(RefreshedSimulator):
         self.skill_history=skill_history
         self.skill_origin=skill_origin
         self._appearances=None
-        self.team_model=TeamModel(self.rows)
+        try:self.team_model=TeamModel(self.rows)
+        except Exception:self.team_model=TeamModel([])
     def appearances(self):
         if self._appearances is None:self._appearances=appearances(self.history)
         return self._appearances
@@ -50,7 +51,8 @@ class BoxSimulator(RefreshedSimulator):
         # The team half of the headline blend: our decayed negative-binomial team model, the one
         # measured on the 2026 replay next to the simulator. The runtime's own baseline is kept
         # in the forecast record unchanged.
-        box['team_model']=self.team_model.probability(game['date'],game['home']['team_id'],game['away']['team_id'])
+        try:box['team_model']=self.team_model.probability(game['date'],game['home']['team_id'],game['away']['team_id'])
+        except Exception as exc:box['team_model']={'error':type(exc).__name__+': '+str(exc)[:160],'rows_seen':len(self.team_model.rows)}
         metadata={**box,'game_pk':game['game_pk'],'date':game['date'],
                   'starters':{s:{'player_id':getattr(decoded,s).starter.player_id} for s in ('away','home')}}
         if self.skill_history is not None:
