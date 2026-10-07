@@ -25,8 +25,21 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / 'brl_engine' / 'runtime'))
 from brl_live.pitch_bridge import pitch_list, contact_of  # noqa: E402
 from brl_live.bookkeeping_season import SCHEMA, season_path, season_purpose, receipt_path  # noqa: E402
-from research_lab.pa_model.outcomes import map_event  # noqa: E402
 from cloud.security import seal, unseal, key_bytes, sha  # noqa: E402
+
+
+def _outcomes_module():
+    # The event-to-outcome table lives in the engine's pa_model package, whose __init__ pulls in
+    # the fitting stack (joblib, scikit-learn); load the one file directly so this job needs
+    # none of it.
+    import importlib.util
+    path = ROOT / 'brl_engine' / 'runtime' / 'research_lab' / 'pa_model' / 'outcomes.py'
+    spec = importlib.util.spec_from_file_location('brl_outcomes', path)
+    module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+    return module
+
+
+map_event = _outcomes_module().map_event
 
 API = 'https://statsapi.mlb.com/api/v1'
 GAME_TYPES = {'R', 'F', 'D', 'L', 'W'}        # regular season and the four postseason rounds
@@ -158,5 +171,24 @@ def _safe(fn, arg):
         return exc
 
 
+def run():
+    try:
+        main()
+    except Exception as exc:
+        # Logs are not always readable from outside; the receipt on the ledger branch says what happened.
+        import traceback
+        frames = traceback.extract_tb(exc.__traceback__)
+        receipt = {'schema': 'brl.bookkeeping-season-receipt.v1', 'status': 'failed', 'error': type(exc).__name__ + ': ' + str(exc)[:300],
+                   'where': [{'file': Path(f.filename).name, 'function': f.name, 'line': f.lineno} for f in frames[-5:]],
+                   'failed_at': datetime.now(timezone.utc).isoformat()}
+        try:
+            repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']
+            year = int(os.environ.get('BRL_SEASON') or datetime.now(ZoneInfo('America/New_York')).year)
+            put(repo, token, receipt_path(year), json.dumps(receipt, indent=1).encode(), os.environ.get('BRL_LEDGER_BRANCH', 'brl-live-data'), 'BRL: season bookkeeping failed')
+        except Exception:
+            pass
+        raise
+
+
 if __name__ == '__main__':
-    main()
+    run()
