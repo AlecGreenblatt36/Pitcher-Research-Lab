@@ -136,4 +136,17 @@ def test_runner_isolates_blocked_games(tmp_path):
                 raise Blocked('no starter')
     store = LocalStore(tmp_path, key_bytes('cd' * 32))
     Mine(Net(), store, None).iteration()
-    assert seen == [1, 2] and store.ledger['status']['1']['state'] == 'blocked' and store.ledger['iteration']['blocked'] == {'1': 'no starter'}
+    assert seen == [1, 2] and store.ledger['status']['1']['state'] == 'blocked' and store.ledger['iteration']['blocked']['1']['error'] == 'Blocked: no starter'
+
+
+def test_team_results_schedule_documents(tmp_path):
+    import gzip
+    from app.team_baseline import load_results
+    doc = {'dates': [{'date': '2026-04-01', 'games': [
+        {'gamePk': 1, 'gameType': 'R', 'officialDate': '2026-04-01', 'status': {'abstractGameState': 'Final'},
+         'teams': {'away': {'score': 3, 'team': {'id': 119}}, 'home': {'score': 5, 'team': {'id': 144}}}},
+        {'gamePk': 2, 'gameType': 'S', 'status': {'abstractGameState': 'Final'}, 'teams': {'away': {'score': 1, 'team': {'id': 1}}, 'home': {'score': 2, 'team': {'id': 2}}}},
+        {'gamePk': 3, 'gameType': 'R', 'status': {'abstractGameState': 'Postponed'}, 'teams': {'away': {'team': {'id': 1}}, 'home': {'team': {'id': 2}}}}]}]}
+    (tmp_path / 'team_results_2026.json.gz').write_bytes(gzip.compress(json.dumps(doc).encode()))
+    rows, meta = load_results(tmp_path)
+    assert rows == [{'game_pk': 1, 'date': '2026-04-01', 'away_id': 119, 'home_id': 144, 'away_runs': 3, 'home_runs': 5}]

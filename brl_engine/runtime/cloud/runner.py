@@ -206,10 +206,14 @@ class Runner:
         for item in self.schedule(day):
             try:
                 self.process(item['game_pk'], item)
-            except Blocked as exc:
-                errors[str(item['game_pk'])] = str(exc)[:200]
-                self.store.ledger.setdefault('status', {})[str(item['game_pk'])] = {'state': 'blocked', 'date': day, 'reason': str(exc)[:200],
-                                                                                   'checked_at': self.clock().isoformat()}
+            except Exception as exc:
+                # One game's problem never blocks the others: it is recorded with its location.
+                import traceback
+                frames = traceback.extract_tb(exc.__traceback__)
+                where = [{'file': Path(f.filename).name, 'function': f.name, 'line': f.lineno} for f in frames[-4:]]
+                errors[str(item['game_pk'])] = {'error': type(exc).__name__ + ': ' + str(exc)[:200], 'where': where}
+                self.store.ledger.setdefault('status', {})[str(item['game_pk'])] = {'state': 'blocked', 'date': day, 'reason': type(exc).__name__ + ': ' + str(exc)[:200],
+                                                                                   'where': where, 'checked_at': self.clock().isoformat()}
         self.store.ledger['iteration'] = {'run_id': self.run_id, 'finished_at': self.clock().isoformat(), 'blocked': errors}
         self.store.persist()
 

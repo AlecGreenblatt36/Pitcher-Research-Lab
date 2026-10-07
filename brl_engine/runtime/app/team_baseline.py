@@ -49,11 +49,34 @@ def _field(r: dict, name: str):
     raise KeyError(name)
 
 
+def _schedule_rows(doc) -> list:
+    """Rows from an official schedule document ({dates: [{date, games: [...]}]}): regular-season finals only."""
+    rows = []
+    for day in (doc.get('dates') or []) if isinstance(doc, dict) else []:
+        for g in day.get('games') or []:
+            try:
+                if g.get('gameType', 'R') != 'R' or ((g.get('status') or {}).get('abstractGameState') or 'Final') != 'Final':
+                    continue
+                t = g['teams']
+                if t['away'].get('score') is None or t['home'].get('score') is None:
+                    continue
+                rows.append({'game_pk': int(g['gamePk']), 'date': str(g.get('officialDate') or day.get('date'))[:10],
+                             'away_id': int(t['away']['team']['id']), 'home_id': int(t['home']['team']['id']),
+                             'away_runs': int(t['away']['score']), 'home_runs': int(t['home']['score'])})
+            except (KeyError, TypeError, ValueError):
+                continue
+    return rows
+
+
 def load_results(root=None):
     root = Path(root or TEAM_RESULTS)
     rows, meta = [], {'files': [], 'row_keys': None, 'skipped': 0}
     for path in sorted(root.glob('team_results_*.json.gz')):
         doc = json.loads(gzip.decompress(path.read_bytes()))
+        if isinstance(doc, dict) and isinstance(doc.get('dates'), list):
+            found = _schedule_rows(doc)
+            rows.extend(found); meta['files'].append(path.name); meta['row_keys'] = ['schedule document']
+            continue
         items = _rows_in(doc)
         if items and meta['row_keys'] is None and isinstance(items[0], dict):
             meta['row_keys'] = sorted(items[0].keys())[:30]
