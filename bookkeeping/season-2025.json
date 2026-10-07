@@ -6,12 +6,12 @@
  "plate_appearances": 186562,
  "with_pitch_list": 186085,
  "with_contact": 169073,
- "fetched_this_run": 2481,
+ "fetched_this_run": 0,
  "failures": [],
- "cipher_sha256": "fe60be38f81e692b86929f0cea27bb539df49bcaadb6acf49d7947f7ec7d310f",
- "cipher_bytes": 5664234,
- "plaintext_gzip_bytes": 5664198,
- "sealed_at": "2026-10-07T08:35:52.152232+00:00",
+ "cipher_sha256": "5191187ec3ac36f720d7c5e20999e97f517a537f366403aeaf79f52bd6e76dad",
+ "cipher_bytes": 5664239,
+ "plaintext_gzip_bytes": 5664203,
+ "sealed_at": "2026-10-07T09:16:54.206576+00:00",
  "path": "private/bookkeeping/season-2025.enc",
  "format": "AES-256-GCM; BRLAESG1 header; 12-byte nonce; AAD BRL:bookkeeping-season-2025; gzip JSON inside",
  "study": {
@@ -21,7 +21,7 @@
   "plate_appearances": 186562,
   "pitches": 723064,
   "with_hit_measurement": 127294,
-  "cipher_sha256": "17cf27ec2dfa0e589c0a978229df30e91c956ec1e3e3f8452cdabb6e67f74c22",
+  "cipher_sha256": "8734fc43ea5ebb6232e83c5a303624af2cb00160b066401d6d46b9d8fd879d64",
   "cipher_bytes": 21880308,
   "pitch_fields": [
    "type",
@@ -50,5 +50,37 @@
    "hardness",
    "location"
   ]
+ },
+ "physics_table": {
+  "path": "private/statcast/physics-2025.enc",
+  "purpose": "physics-table-season-2025",
+  "rows": 186562,
+  "columns": [
+   "date_key",
+   "game_pk",
+   "at_bat_number",
+   "pitcher",
+   "batter",
+   "n",
+   "sw",
+   "wh",
+   "oz",
+   "ch",
+   "iz",
+   "izs",
+   "izc",
+   "cs",
+   "fb",
+   "velo",
+   "spin",
+   "ivb",
+   "hb",
+   "ev",
+   "la",
+   "outcome",
+   "run_value"
+  ],
+  "cipher_sha256": "8666a92d9a4ed7f291defeadbf781fb65ee2631465888056089b8f2c06fc33d2",
+  "cipher_bytes": 4474533
  }
 }
