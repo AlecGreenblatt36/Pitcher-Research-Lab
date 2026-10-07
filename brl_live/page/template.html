@@ -22,6 +22,9 @@
   --away: #2E5C9A;
   --home: #B42A30;
   --lamp: #F0B23A;
+  --good: #1F6B47;
+  --bad: #B42A30;
+  --live: #C8312B;
   --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
   --body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
@@ -36,36 +39,56 @@ button { font: inherit; color: inherit; }
 .visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* Top bar */
-.top { background: var(--surface); border-bottom: 1px solid var(--rule); padding-top: env(safe-area-inset-top, 0px); }
+.top { background: var(--board); color: var(--chalk); padding-top: env(safe-area-inset-top, 0px); }
 .top .wrap { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; column-gap: 12px; min-height: 56px; }
-.brand { display: inline-flex; align-items: center; min-height: 44px; font-family: var(--display); font-weight: 700; font-size: 21px; color: var(--board); text-decoration: none; white-space: nowrap; }
+.brand { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font-family: var(--display); font-weight: 700; font-size: 22px; letter-spacing: .01em; color: var(--chalk); text-decoration: none; white-space: nowrap; }
+.brand i { width: 10px; height: 10px; border-radius: 50%; background: var(--lamp); box-shadow: 0 0 0 3px rgba(240,178,58,.18); }
 .nav { display: flex; gap: 2px; }
-.nav a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; text-decoration: none; font-weight: 700; font-size: 15px; color: var(--muted); border-radius: 6px; }
-.nav a[aria-current="page"] { color: var(--board); background: #E3ECE6; }
+.nav a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; text-decoration: none; font-weight: 700; font-size: 15px; color: var(--chalk-dim); border-radius: 8px; }
+.nav a:hover { color: var(--chalk); }
+.nav a[aria-current="page"] { color: var(--chalk); background: rgba(255,255,255,.09); box-shadow: inset 0 -3px 0 var(--lamp); }
 
 /* Slate */
 .page-head { padding: 22px 0 6px; }
 .page-head h1 { font-family: var(--display); font-weight: 700; font-size: 34px; line-height: 1.05; margin: 0; }
 .page-head p { margin: 4px 0 0; color: var(--muted); }
-.days { display: flex; gap: 8px; flex-wrap: wrap; padding: 10px 0 0; }
-.day { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border: 1px solid var(--rule); border-radius: 22px; background: var(--surface); text-decoration: none; font-weight: 700; font-size: 15px; color: var(--muted); }
-.day[aria-current="page"] { color: var(--chalk); background: var(--board); border-color: var(--board); }
-.day-pick select { min-height: 44px; padding: 0 12px; border: 1px solid var(--rule); border-radius: 22px; background: var(--surface); font: inherit; font-weight: 700; font-size: 15px; color: var(--muted); }
+.dstrip { display: grid; grid-template-columns: 36px minmax(0, 1fr) 36px 44px; align-items: center; gap: 4px; margin: 14px 0 2px; }
+.dstrip-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
+.dstrip-day { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 54px; border-radius: 12px; text-decoration: none; color: var(--muted); }
+.dstrip-day small { font-size: 14px; font-weight: 700; line-height: 1.15; }
+.dstrip-day.today b::after { content: ""; display: block; width: 6px; height: 6px; margin: 2px auto 0; border-radius: 50%; background: var(--lamp); }
+.dstrip-day.today { padding-top: 4px; }
+.dstrip-day b { font-family: var(--display); font-weight: 700; font-size: 23px; line-height: 1.05; color: var(--ink); }
+.dstrip-day:hover { background: #E7ECE8; }
+.dstrip-day[aria-current="date"] { background: var(--board); color: var(--chalk-dim); }
+.dstrip-day[aria-current="date"] b { color: var(--chalk); }
+.dstrip-step { display: inline-flex; align-items: center; justify-content: center; height: 44px; border-radius: 10px; color: var(--ink); }
+.dstrip-step svg { width: 16px; height: 16px; }
+.dstrip-step:hover { background: #E7ECE8; }
+.dstrip-step[aria-disabled="true"] { opacity: .28; pointer-events: none; }
+.dstrip-pick { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); color: var(--ink); cursor: pointer; }
+.dstrip-pick svg { width: 20px; height: 20px; }
+.dstrip-pick input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
+.replay-note { font-size: 14px; color: var(--muted); margin: 12px 0 0; padding: 9px 12px; border-left: 3px solid var(--lamp); background: var(--surface); border-radius: 0 8px 8px 0; }
 .cards { list-style: none; margin: 14px 0 32px; padding: 0; display: grid; gap: 12px; }
-.card { display: block; text-decoration: none; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 12px 16px 14px; }
+.card { display: block; position: relative; overflow: hidden; text-decoration: none; background: var(--surface); border: 1px solid var(--rule); border-radius: 14px; padding: 12px 16px 16px; }
 .card:hover { border-color: #A9B6AD; }
+.card-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; display: flex; }
+.card-bar i { display: block; height: 100%; }
 .card-top { display: flex; justify-content: space-between; align-items: center; font-size: 15px; color: var(--muted); margin-bottom: 6px; }
 .card-ctx { font-size: 14px; color: var(--muted); margin: -2px 0 8px; }
 .team-name .rec { font-size: 14px; color: var(--muted); font-weight: 500; }
 .state { font-weight: 700; font-size: 14px; }
-.state.live { color: var(--home); }
+.state.live { color: var(--live); }
 .state.final { color: var(--ink); }
 .state .mini { display: inline-block; vertical-align: -3px; margin-right: 6px; width: 18px; height: 16px; }
 .state .mini rect { fill: none; stroke: currentColor; stroke-width: 1.4; }
 .state .mini rect.on { fill: currentColor; }
 .cols { display: grid; grid-template-columns: 1fr 56px 56px; align-items: end; font-size: 14px; color: var(--muted); }
 .cols span { text-align: right; }
-.team-row { display: grid; grid-template-columns: 44px 1fr 56px 56px; align-items: center; padding: 6px 0; }
+.team-row { display: grid; grid-template-columns: 50px 1fr 56px 56px; align-items: center; padding: 7px 0; }
+.team-row.lost .team-name, .team-row.lost .big { color: var(--muted); }
+.team-row.lost .big { font-weight: 600; }
 .team-row + .team-row { border-top: 1px solid var(--rule-soft); }
 .abbr { font-family: var(--display); font-weight: 700; font-size: 22px; letter-spacing: .01em; }
 .team-name { font-weight: 700; font-size: 17px; line-height: 1.2; }
@@ -76,17 +99,21 @@ button { font: inherit; color: inherit; }
 .away-c { color: var(--away); }
 .home-c { color: var(--home); }
 .card-foot { margin-top: 8px; font-size: 14px; color: var(--muted); }
+.card-foot.hit::before, .card-foot.miss::before { display: inline-block; width: 16px; font-weight: 700; }
+.card-foot.hit::before { content: "\2713"; color: var(--good); }
+.card-foot.miss::before { content: "\2717"; color: var(--bad); }
 .lamp { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--lamp); margin-right: 6px; vertical-align: 1px; }
 
 /* Game hero */
-.hero { background: var(--board); color: var(--chalk); }
+.hero { background-color: var(--board); background-image: repeating-linear-gradient(180deg, rgba(255,255,255,.028) 0 1px, transparent 1px 38px); color: var(--chalk); }
+.chip { display: inline-block; width: 6px; height: 24px; border-radius: 2px; margin-right: 9px; vertical-align: -3px; box-shadow: 0 0 0 1px rgba(255,255,255,.25); }
 .hero .wrap { padding-top: 14px; padding-bottom: 18px; }
 .back { display: inline-flex; align-items: center; min-height: 44px; color: var(--chalk-dim); text-decoration: none; font-weight: 700; font-size: 15px; }
 .hero-meta { color: var(--chalk-dim); font-size: 15px; margin: 0 0 8px; }
 .hero-venue { margin-top: -4px; font-size: 14px; }
-.hero-cols { display: grid; grid-template-columns: 1fr 64px 64px; font-size: 14px; color: var(--chalk-dim); }
+.hero-cols { display: grid; grid-template-columns: 1fr 64px 64px; font-size: 14px; color: var(--chalk-dim); margin-top: 6px; }
 .hero-cols span { text-align: right; }
-.hero-row { display: grid; grid-template-columns: 52px 1fr 64px 64px; align-items: center; padding: 6px 0; }
+.hero-row { display: grid; grid-template-columns: 70px 1fr 64px 64px; align-items: center; padding: 6px 0; }
 .hero-row + .hero-row { border-top: 1px solid var(--board-line); }
 .hero-row .abbr { font-size: 28px; }
 .hero-row .team-name { color: var(--chalk); font-size: 18px; }
@@ -257,7 +284,7 @@ small { font-size: 14px; }
 .close-card li:last-child { border-bottom: 0; }
 .mark { font-weight: 700; }
 .mark.yes { color: var(--board); }
-.mark.no { color: var(--home); }
+.mark.no { color: var(--bad); }
 
 /* Track record */
 .ladder { list-style: none; padding: 0; margin: 0; }
@@ -267,7 +294,7 @@ small { font-size: 14px; }
 .ladder .bar::before { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: #A9B6AD; }
 .ladder .bar i { position: absolute; top: 0; bottom: 0; background: #9AA8A0; }
 .ladder .bar i.pos { left: 50%; background: var(--board); }
-.ladder .bar i.neg { right: 50%; background: var(--home); }
+.ladder .bar i.neg { right: 50%; background: var(--bad); }
 .ladder .v { font-family: var(--display); font-weight: 700; font-size: 19px; text-align: right; }
 .games-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
 .games-list li { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 12px 14px; }
@@ -282,7 +309,7 @@ small { font-size: 14px; }
 .games-list .call b { font-family: var(--display); font-size: 19px; font-weight: 700; }
 .games-list .call.yes { border-color: var(--board); background: #EAF1EC; }
 .games-list .call.yes b { color: var(--board); }
-.games-list .call.no b { color: var(--home); }
+.games-list .call.no b { color: var(--bad); }
 .empty-state { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 18px; }
 .empty-state h2 { margin-top: 0; }
 .prose { max-width: 66ch; }
@@ -311,7 +338,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
 <body>
 <header class="top">
   <div class="wrap">
-    <a class="brand" href="#/">Baseball Research Lab</a>
+    <a class="brand" href="#/"><i aria-hidden="true"></i>Baseball Research Lab</a>
     <nav class="nav" aria-label="Main">
       <a href="#/" data-nav="games">Games</a>
       <a href="#/record" data-nav="record">Record</a>
@@ -358,6 +385,22 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   function timeET(iso) {
     try { return new Date(iso).toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" }); }
     catch (e) { return ""; }
+  }
+  /* Club colors (primary, and a darker or contrasting second color when the two primaries look alike). */
+  var TEAM_COLORS = { AZ: ["#A71930", "#000000"], ARI: ["#A71930", "#000000"], ATL: ["#CE1141", "#13274F"], BAL: ["#DF4601", "#000000"], BOS: ["#BD3039", "#0C2340"],
+    CHC: ["#0E3386", "#CC3433"], CWS: ["#27251F", "#5A5A5A"], CHW: ["#27251F", "#5A5A5A"], CIN: ["#C6011F", "#000000"], CLE: ["#00385D", "#E50022"], COL: ["#333366", "#000000"],
+    DET: ["#0C2340", "#FA4616"], HOU: ["#002D62", "#EB6E1F"], KC: ["#004687", "#8C6A2F"], LAA: ["#BA0021", "#003263"], LAD: ["#005A9C", "#EF3E42"],
+    MIA: ["#00A3E0", "#EF3340"], MIL: ["#12284B", "#B8860B"], MIN: ["#002B5C", "#D31145"], NYM: ["#002D72", "#FF5910"], NYY: ["#0C2340", "#5B6770"],
+    ATH: ["#003831", "#A27E0F"], OAK: ["#003831", "#A27E0F"], PHI: ["#E81828", "#002D72"], PIT: ["#27251F", "#B88A00"], SD: ["#2F241D", "#B38B00"],
+    SF: ["#FD5A1E", "#27251F"], SEA: ["#0C2C56", "#005C5C"], STL: ["#C41E3A", "#0C2340"], TB: ["#092C5C", "#4A7FB0"], TEX: ["#003278", "#C0111F"],
+    TOR: ["#134A8E", "#E8291C"], WSH: ["#AB0003", "#14225A"], WSN: ["#AB0003", "#14225A"] };
+  function hexRgb(h) { var n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+  function colorGap(a, b) { var x = hexRgb(a), y = hexRgb(b); return Math.sqrt(Math.pow(x[0] - y[0], 2) + Math.pow(x[1] - y[1], 2) + Math.pow(x[2] - y[2], 2)); }
+  function teamColors(f) {
+    var a = TEAM_COLORS[(f.away && f.away.abbr) || ""] || ["#2E5C9A", "#2E5C9A"], h = TEAM_COLORS[(f.home && f.home.abbr) || ""] || ["#B42A30", "#B42A30"];
+    var ca = a[0], ch = h[0];
+    if (colorGap(ca, ch) < 120) { if (colorGap(a[1], ch) >= 120) ca = a[1]; else if (colorGap(ca, h[1]) >= 120) ch = h[1]; }
+    return { away: ca, home: ch };
   }
   function dateLabel(ymd) {
     var d = new Date(ymd + "T12:00:00Z");
@@ -546,11 +589,13 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     return { innings: inn, score: { away: lv.state.away_score, home: lv.state.home_score }, plays: [], _played: Math.max(9, lv.state.inning), _live: true };
   }
   function homeProb(f) {
+    if (f._past) return f._past.hl;
     var b = D.record && D.record.blend && f._id != null ? D.record.blend[f._id] : null;
     return b == null ? f.home_win_probability : b;
   }
   function favorite(f) { return homeProb(f) >= 0.5 ? "home" : "away"; }
   function oursProb(f) {
+    if (f._past) return f._past.o;
     var o = D.record && D.record.ours && f._id != null ? D.record.ours[f._id] : null;
     return o == null ? homeProb(f) : o;
   }
@@ -737,7 +782,15 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (h[0] === "game" && h[1]) { withGame(h[1], function () { renderGame(h[1], h[2] || "summary"); }); mark("games"); }
     else if (h[0] === "record") { renderRecord(); mark("record"); }
     else if (h[0] === "how") { renderHow(); mark("how"); }
-    else if (h[0] === "day" && /^\d{4}-\d{2}-\d{2}$/.test(h[1] || "")) { withDay(h[1], function () { renderSlate(h[1]); }); mark("games"); }
+    else if (h[0] === "past" && /^\d{4}-\d{2}-\d{2}$/.test(h[1] || "") && h[2]) {
+      withSeason(seasonYear(h[1]), function () { withWE(function () { renderPastGame(h[1], h[2], h[3] || "summary"); }); }); mark("games");
+    }
+    else if (h[0] === "day" && /^\d{4}-\d{2}-\d{2}$/.test(h[1] || "")) {
+      var dd = h[1];
+      if (isLiveDay(dd)) withDay(dd, function () { renderSlate(dd); });
+      else withSeason(seasonYear(dd), function () { withSchedule(dd, function () { renderPastSlate(dd); }); });
+      mark("games");
+    }
     else { renderSlate(D.date); mark("games"); }
     function mark(n) { var a = document.querySelector('[data-nav="' + n + '"]'); if (a) a.setAttribute("aria-current", "page"); }
   }
@@ -788,25 +841,12 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       .sort(function (a, b) { return a.scheduled_start < b.scheduled_start ? -1 : 1; });
     var series = games.length ? (SERIES[games[0].game_type] || "") : "";
     var stale = document.body.getAttribute("data-refresh-blocked") === "true";
-    var days = availableDays(), older = archiveDates().filter(function (d) { return days.indexOf(d) < 0; }).sort().reverse();
     var html = '<div class="wrap"><div class="page-head"><h1>' + esc(dateLabel(day)) + "</h1><p>" +
       esc(series ? series + ". " : "") + (D.view_scope === "historical_replay" ? "Historical replay. " : "") + (stale ? "Showing the last saved forecasts. " : "") + "All times Eastern." +
-      (D.generated_at ? " Updated " + esc(timeET(D.generated_at)) + " ET." : "") + "</p></div>";
-    if (days.length > 1 || older.length) {
-      html += '<nav class="days" aria-label="Choose a day">' + days.map(function (d) {
-        var label = d === D.date ? "Today" : (d === days[1] && days[0] === D.date ? "Yesterday" : dateLabel(d).replace(/^[A-Za-z]+, /, ""));
-        return '<a class="day" href="#/day/' + d + '"' + (d === day ? ' aria-current="page"' : "") + ">" + esc(label) + "</a>";
-      }).join("");
-      if (older.length) {
-        html += '<label class="day-pick"><span class="visually-hidden">Earlier days</span><select id="dayPick" aria-label="Earlier days"><option value="">' + (older.indexOf(day) >= 0 ? esc(dateLabel(day).replace(/^[A-Za-z]+, /, "")) : "Earlier days") + "</option>" +
-          older.map(function (d) { return '<option value="' + d + '"' + (d === day ? " selected" : "") + ">" + esc(dateLabel(d).replace(/^[A-Za-z]+, /, "")) + "</option>"; }).join("") + "</select></label>";
-      }
-      html += "</nav>";
-    }
+      (D.generated_at ? " Updated " + esc(timeET(D.generated_at)) + " ET." : "") + "</p></div>" + dayNav(day);
     if (!games.length) {
       html += '<p class="empty">No forecasts saved for this date yet. They appear a few hours before first pitch.</p></div>'; app.innerHTML = html;
-      var pick0 = document.getElementById("dayPick");
-      if (pick0) pick0.addEventListener("change", function () { if (pick0.value) location.hash = "#/day/" + pick0.value; });
+      wireDayNav();
       return;
     }
     html += '<ol class="cards">';
@@ -816,7 +856,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (box && box.samples && box.samples.length) proj = box.samples[variantsFor(box, f)[0].i];
       var fav = favorite(f);
       var ctx = contextFor(f.game_pk), ctxLine = contextLine(f, ctx, true);
-      html += '<li><a class="card" data-game="' + f.game_pk + '" href="#/game/' + f.game_pk + '"><div class="card-top"><span>' + esc(timeET(f.scheduled_start)) + '</span><span class="state ' + st + '">' + (lv ? miniBases(lv) + esc(liveWhere(lv)) : STATE_TEXT[st]) + "</span></div>";
+      var tcl = teamColors(f);
+      html += '<li><a class="card" style="--away:' + tcl.away + ";--home:" + tcl.home + '" data-game="' + f.game_pk + '" href="#/game/' + f.game_pk + '"><div class="card-top"><span>' + esc(timeET(f.scheduled_start)) + '</span><span class="state ' + st + '">' + (lv ? miniBases(lv) + esc(liveWhere(lv)) : STATE_TEXT[st]) + "</span></div>";
       if (ctxLine) html += '<div class="card-ctx">' + esc(ctxLine) + "</div>";
       html += '<div class="cols"><span></span><span>' + (actual ? "Final" : lv ? "Score" : "Proj") + "</span><span>Win</span></div>";
       ["away", "home"].forEach(function (side) {
@@ -824,10 +865,13 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         var score = actual ? actual[side] : lv ? lv.state[side + "_score"] : (proj ? proj.score[side] : "");
         var win = lv ? (side === "home" ? lv.home_win_probability : 1 - lv.home_win_probability) : winProb(f, side);
         var isFav = lv ? (side === "home") === (lv.home_win_probability >= 0.5) : side === fav;
-        html += '<div class="team-row' + (isFav ? " fav" : "") + '"><span class="abbr ' + side + '-c">' + esc(t.abbr) + '</span><span class="team-name">' + esc(nickname(t.name)) +
+        var lost = actual && actual[side] < actual[side === "home" ? "away" : "home"];
+        html += '<div class="team-row' + (isFav ? " fav" : "") + (lost ? " lost" : "") + '"><span class="abbr ' + side + '-c">' + esc(t.abbr) + '</span><span class="team-name">' + esc(nickname(t.name)) +
           (rec ? ' <span class="rec">' + esc(rec) + "</span>" : "") +
-          (starter ? "<small>" + esc(starter) + "</small>" : "") + '</span><span class="big num">' + (actual ? '<span class="lamp" aria-hidden="true"></span>' : "") + esc(score) + '</span><span class="pct num">' + pct(win) + "</span></div>";
+          (starter ? "<small>" + esc(starter) + "</small>" : "") + '</span><span class="big num">' + esc(score) + '</span><span class="pct num">' + pct(win) + "</span></div>";
       });
+      var hp = lv && lv.home_win_probability != null ? lv.home_win_probability : homeProb(f);
+      html += '<span class="card-bar" aria-hidden="true"><i style="width:' + ((1 - hp) * 100).toFixed(1) + '%;background:var(--away)"></i><i style="flex:1;background:var(--home)"></i></span>';
       var foot = actual && proj ? "Projected " + f.away.abbr + " " + proj.score.away + ", " + f.home.abbr + " " + proj.score.home
         : lv ? (lv._final ? "Final from the official feed" : lv.projected_final ? "Likely final " + f.away.abbr + " " + lv.projected_final.away + ", " + f.home.abbr + " " + lv.projected_final.home + ". " +
             (lv._client && lv.fetched_at ? "Live " + timeET(lv.fetched_at) : "Updated " + timeET(lv.updated_at)) + " ET" : "Live from MLB" + (lv.fetched_at ? ", " + timeET(lv.fetched_at) + " ET" : ""))
@@ -836,8 +880,207 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     });
     html += "</ol></div>";
     app.innerHTML = html;
-    var pick = document.getElementById("dayPick");
-    if (pick) pick.addEventListener("change", function () { if (pick.value) location.hash = "#/day/" + pick.value; });
+    wireDayNav();
+  }
+
+  /* ---------- the date strip: a week of days, earlier and later weeks, any date in the archive ---------- */
+  var FIRST_DAY = "2025-03-18";
+  function addDays(ymd, n) { var d = new Date(ymd + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+  function dayHref(d) { return d === D.date ? "#/" : "#/day/" + d; }
+  function isLiveDay(d) { return d === D.date || availableDays().indexOf(d) >= 0 || archiveDates().indexOf(d) >= 0; }
+  function dayNav(day) {
+    var start = addDays(day, -3);
+    if (addDays(start, 6) > D.date) start = addDays(D.date, -6);
+    if (start < FIRST_DAY) start = FIRST_DAY;
+    var cells = "";
+    for (var i = 0; i < 7; i++) {
+      var d = addDays(start, i), dt = new Date(d + "T12:00:00Z");
+      var wk = dt.toLocaleDateString("en-US", { timeZone: "UTC", weekday: "short" });
+      cells += '<a class="dstrip-day' + (d === D.date ? " today" : "") + '" href="' + dayHref(d) + '"' + (d === day ? ' aria-current="date"' : "") + ' aria-label="' + esc((d === D.date ? "Today, " : "") + dateLabel(d)) + '"><small>' + esc(wk) + "</small><b>" + dt.getUTCDate() + "</b></a>";
+    }
+    var prev = addDays(day, -7) < FIRST_DAY ? FIRST_DAY : addDays(day, -7), next = addDays(day, 7) > D.date ? D.date : addDays(day, 7);
+    var chev = function (dir) { return '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="' + (dir < 0 ? "M10 3 5 8l5 5" : "M6 3l5 5-5 5") + '" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'; };
+    return '<nav class="dstrip" aria-label="Choose a day"><a class="dstrip-step" href="' + dayHref(prev) + '" aria-label="A week earlier">' + chev(-1) + "</a>" +
+      '<div class="dstrip-days">' + cells + "</div>" +
+      '<a class="dstrip-step" href="' + dayHref(next) + '" aria-label="A week later"' + (day >= D.date ? ' aria-disabled="true"' : "") + ">" + chev(1) + "</a>" +
+      '<label class="dstrip-pick" title="Pick a date"><span class="visually-hidden">Pick a date</span><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="4.5" width="14" height="12.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 8.5h14M7 2.5v4M13 2.5v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>' +
+      '<input type="date" id="datePick" min="' + FIRST_DAY + '" max="' + D.date + '" value="' + day + '"></label></nav>';
+  }
+  function wireDayNav() {
+    var inp = document.getElementById("datePick");
+    if (!inp) return;
+    inp.addEventListener("change", function () { if (/^\d{4}-\d{2}-\d{2}$/.test(inp.value)) location.hash = dayHref(inp.value); });
+    var lab = inp.parentNode;
+    lab.addEventListener("click", function (e) { if (e.target !== inp && inp.showPicker) { try { inp.showPicker(); } catch (x) {} } });
+  }
+
+  /* ---------- past seasons: the model's replay numbers, the real game from MLB ----------
+     Days before the live record are filled from a frozen replay of the 2025 and 2026 regular seasons (every game
+     re-run with only information from before it) and MLB's public schedule and game feed, read by the browser. */
+  var SEASONS = {}, WE = null, PASTFEED = {}, SCHED = {};
+  function seasonYear(day) { var y = parseInt(String(day).slice(0, 4), 10); return y === 2025 || y === 2026 ? y : null; }
+  function withSeason(year, then) {
+    if (!year || SEASONS[year]) { then(); return; }
+    app.innerHTML = '<div class="wrap"><p class="empty">Loading the ' + year + " season\u2026</p></div>";
+    fetch("days/season-" + year + ".json").then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }).then(function (doc) {
+      var byDate = {}, byPk = {};
+      (doc.games || []).forEach(function (g) { (byDate[g.d] = byDate[g.d] || []).push(g); byPk[String(g.pk)] = g; });
+      SEASONS[year] = { doc: doc, byDate: byDate, byPk: byPk }; then();
+    }).catch(function () { SEASONS[year] = { doc: {}, byDate: {}, byPk: {}, failed: true }; then(); });
+  }
+  function withWE(then) {
+    if (WE !== null) { then(); return; }
+    fetch("days/win-expectancy.json").then(function (r) { return r.ok ? r.json() : null; }).then(function (t) { WE = t || false; then(); }, function () { WE = false; then(); });
+  }
+  function withSchedule(day, then) {
+    if (SCHED[day] !== undefined) { then(); return; }
+    lcFetch(LIVE_API + "v1/schedule?sportId=1&date=" + day + "&hydrate=probablePitcher,team,venue,linescore").then(function (doc) {
+      var out = [];
+      (doc.dates || []).forEach(function (d) { (d.games || []).forEach(function (g) { out.push(g); }); });
+      SCHED[day] = out; then();
+    }).catch(function () { SCHED[day] = null; then(); });
+  }
+  function pastForecast(g) {
+    return { game_pk: g.pk, date: g.d, scheduled_start: g.t, game_type: "R", n_simulations: 1000, home_win_probability: g.s, team_baseline_probability: g.tm,
+      away: { abbr: g.a, name: g.an || g.a, starter: g.as ? { name: g.as } : null }, home: { abbr: g.h, name: g.hn || g.h, starter: g.hs ? { name: g.hs } : null }, _past: g };
+  }
+  /* A game with no model numbers (before the replays started or outside them): teams and time from MLB's schedule or feed. */
+  function bareForecast(pk, day, teams, start, type) {
+    var t = teams || {}, side = function (s) { var x = (t[s] || {}).team || t[s] || {}; return { abbr: x.abbreviation || x.teamName || "", name: x.name || x.teamName || "" }; };
+    return { game_pk: Number(pk), date: day, scheduled_start: start, game_type: type || "R", away: side("away"), home: side("home"), _past: null, home_win_probability: null };
+  }
+  function histDist(arr) { return arr ? { counts: arr.map(function (n, k) { return [k, n]; }), n: 1000 } : null; }
+  function renderPastSlate(day) {
+    var year = seasonYear(day), SE = year ? SEASONS[year] : null, arch = (SE && SE.byDate[day]) || [], sched = SCHED[day];
+    var items = {}, order = [];
+    arch.forEach(function (g) { items[String(g.pk)] = { g: g, start: g.t || "" }; order.push(String(g.pk)); });
+    (sched || []).forEach(function (s) {
+      if ("RFDLW".indexOf(s.gameType) < 0) return;
+      var k = String(s.gamePk);
+      if (!items[k]) { items[k] = { start: s.gameDate || "" }; order.push(k); }
+      items[k].s = s;
+    });
+    order.sort(function (a, b) { return items[a].start < items[b].start ? -1 : items[a].start > items[b].start ? 1 : 0; });
+    var types = order.map(function (k) { return items[k].s ? items[k].s.gameType : "R"; });
+    var series = types.length ? SERIES[types[0]] || "" : "";
+    var html = '<div class="wrap"><div class="page-head"><h1>' + esc(dateLabel(day)) + "</h1><p>" + esc(series ? series + ". " : "") + "All times Eastern.</p></div>" + dayNav(day);
+    if (!order.length) {
+      html += '<p class="empty">' + (sched === null && !arch.length ? "MLB's schedule could not be reached for this day. Try again in a moment." : "No games on this day.") + "</p></div>";
+      app.innerHTML = html; wireDayNav(); return;
+    }
+    if (arch.length) html += '<p class="replay-note">Before the live record began, the win chances here are a model replay: each game re-run after the season with only what was known before it. The Record page counts live forecasts only.</p>';
+    html += '<ol class="cards">';
+    order.forEach(function (k) {
+      var it = items[k], g = it.g, s = it.s, f = g ? pastForecast(g) : bareForecast(k, day, s && s.teams, s && s.gameDate, s && s.gameType);
+      var fin = g ? { away: g.fa, home: g.fh } : (s && s.teams && s.teams.away && s.teams.away.score != null ? { away: s.teams.away.score, home: s.teams.home.score } : null);
+      var done = s ? /final/i.test(((s.status || {}).abstractGameState) || "") : true;
+      var tc = teamColors(f);
+      html += '<li><a class="card" style="--away:' + tc.away + ";--home:" + tc.home + '" data-game="' + k + '" href="#/past/' + day + "/" + k + '"><div class="card-top"><span>' + esc(f.scheduled_start ? timeET(f.scheduled_start) : "") + '</span><span class="state ' + (done ? "final" : "") + '">' + (done && fin ? "Final" : esc(((s || {}).status || {}).detailedState || "")) + "</span></div>";
+      var venue = (s && s.venue && s.venue.name) || (g && g.v) || "";
+      if (venue) html += '<div class="card-ctx">' + esc(venue) + "</div>";
+      html += '<div class="cols"><span></span><span>' + (fin ? "Final" : "") + "</span><span>" + (g ? "Win" : "") + "</span></div>";
+      var fav = g ? favorite(f) : null, winner = fin ? (fin.home > fin.away ? "home" : "away") : null;
+      ["away", "home"].forEach(function (side) {
+        var t = f[side], sp = (t.starter && t.starter.name) || (s && s.teams && s.teams[side] && s.teams[side].probablePitcher && s.teams[side].probablePitcher.fullName) || "";
+        html += '<div class="team-row' + (fav === side ? " fav" : "") + (winner && winner !== side ? " lost" : "") + '"><span class="abbr ' + side + '-c">' + esc(t.abbr) + '</span><span class="team-name">' + esc(nickname(t.name)) +
+          (sp ? "<small>" + esc(sp) + "</small>" : "") + '</span><span class="big num">' + (fin ? esc(fin[side]) : "") + '</span><span class="pct num">' + (g ? pct(winProb(f, side)) : "") + "</span></div>";
+      });
+      if (g) html += '<span class="card-bar" aria-hidden="true"><i style="width:' + ((1 - homeProb(f)) * 100).toFixed(1) + '%;background:var(--away)"></i><i style="flex:1;background:var(--home)"></i></span>';
+      var foot = "";
+      if (g && fin) {
+        foot = (fav === winner ? "Called it" : "Missed") + ". Model replay";
+        if (g.m != null) { var ms = g.m >= .5 ? "home" : "away"; foot += ". Our model " + f[oursProb(f) >= .5 ? "home" : "away"].abbr + " " + pct(oursProb(f) >= .5 ? oursProb(f) : 1 - oursProb(f)) + ", market " + f[ms].abbr + " " + pct(ms === "home" ? g.m : 1 - g.m); }
+      } else foot = "No model numbers for this game";
+      html += '<div class="card-foot' + (g && fin ? (fav === winner ? " hit" : " miss") : "") + '">' + esc(foot) + "</div></a></li>";
+    });
+    html += "</ol></div>";
+    app.innerHTML = html;
+    wireDayNav();
+  }
+  function renderPastGame(day, pk, tab, keep) {
+    var year = seasonYear(day), SE = year ? SEASONS[year] : null, g = SE ? SE.byPk[String(pk)] : null;
+    if (PASTFEED[pk] === undefined) {
+      app.innerHTML = '<div class="wrap"><p class="empty">Loading the game from MLB\u2026</p></div>';
+      lcFetch(LIVE_API + "v1.1/game/" + pk + "/feed/live").then(function (fd) { PASTFEED[pk] = fd; }, function () { PASTFEED[pk] = null; })
+        .then(function () { var h = location.hash.replace(/^#\/?/, "").split("/"); if (h[0] === "past" && h[2] === String(pk)) renderPastGame(day, pk, h[3] || tab); });
+      return;
+    }
+    var feed = PASTFEED[pk], gd = feed ? feed.gameData || {} : {};
+    var f = g ? pastForecast(g) : bareForecast(pk, day, gd.teams ? { away: { team: gd.teams.away }, home: { team: gd.teams.home } } : null, (gd.datetime || {}).dateTime, (gd.game || {}).type);
+    if (!f.away.abbr && !g) { app.innerHTML = '<div class="wrap"><p class="empty">That game could not be loaded from MLB. <a href="#/day/' + esc(day) + '">Back to ' + esc(dateLabel(day)) + "</a></p></div>"; return; }
+    var tc = teamColors(f), sit = feed ? lcSituation(feed) : null, real = null;
+    if (feed) {
+      var bx = lcBox((feed.liveData || {}).boxscore || {}), inn = { away: {}, home: {} };
+      (sit.state.innings || []).forEach(function (i) { ["away", "home"].forEach(function (s) { if (i[s] && i[s].R != null) inn[s][String(i.num)] = { R: i[s].R, H: i[s].H || 0 }; }); });
+      real = { batting: bx.batting, pitching: bx.pitching, plays: lcPlays(feed), score: { away: sit.state.away_score, home: sit.state.home_score }, innings: inn, _real: true, _final: !!sit.final };
+    }
+    var fin = real ? real.score : (g ? { away: g.fa, home: g.fh } : null), fav = g ? favorite(f) : null;
+    var html = '<div class="game" style="--away:' + tc.away + ";--home:" + tc.home + '"><section class="hero"><div class="wrap"><a class="back" href="#/day/' + day + '">Back to ' + esc(dateLabel(day).replace(/^[A-Za-z]+, /, "")) + "</a>";
+    html += '<p class="hero-meta">' + esc([SERIES[f.game_type] || "", f.scheduled_start ? timeET(f.scheduled_start) + " ET" : "", fin ? "Final" : ""].filter(Boolean).join(". ")) + "</p>";
+    var venue = (gd.venue && gd.venue.name) || (g && g.v) || "", w = gd.weather || {};
+    var wl = [w.temp ? w.temp + "\u00b0F" : "", w.condition || "", w.wind ? "wind " + w.wind : ""].filter(Boolean).join(", ");
+    if (venue || wl) html += '<p class="hero-meta hero-venue">' + esc([venue, wl].filter(Boolean).join(". ")) + "</p>";
+    html += '<div class="hero-cols"><span></span><span>' + (fin ? "Final" : "") + "</span><span>" + (g ? "Win" : "") + "</span></div>";
+    ["away", "home"].forEach(function (side) {
+      var t = f[side], sp = (t.starter && t.starter.name) || "";
+      html += '<div class="hero-row' + (fav === side ? " fav" : "") + '"><span class="abbr"><i class="chip" style="background:var(--' + side + ')"></i>' + esc(t.abbr) + '</span><span class="team-name">' + esc(nickname(t.name)) +
+        (sp ? "<small>" + esc(sp) + "</small>" : "") + '</span><span class="big num">' + (fin ? esc(fin[side]) : "") + '</span><span class="pct num">' + (g ? pct(winProb(f, side)) : "") + "</span></div>";
+    });
+    if (real && Object.keys(real.innings.away).length) html += lineScore(f, real);
+    html += '<p class="hero-note">' + (g ? "Model replay: the win chance is what the model gives this game when re-run with only information from before it. The line score, box score and plays are the real game from MLB." :
+      "No model numbers for this game. The line score, box score and plays are the real game from MLB.") + "</p></div></section>";
+    var tabs = [["summary", "Summary"], ["box", "Box score"], ["plays", "Plays"], ["odds", "Odds"]];
+    if (!g) tabs.pop();
+    html += '<nav class="tabs"><div class="wrap" role="tablist">' + tabs.map(function (t) { return '<button class="tab" role="tab" data-tab="' + t[0] + '" aria-selected="' + (t[0] === tab) + '">' + t[1] + "</button>"; }).join("") + "</div></nav>";
+    html += '<div class="wrap"><div class="panel">';
+    if (!real && tab !== "odds") html += '<p class="empty">MLB\'s game feed could not be reached, so the box score and plays are not available right now.</p>';
+    else if (tab === "box") html += boxTab(f, real, null, pk, "Actual", true);
+    else if (tab === "plays") html += playsTab(f, real) + '<p class="note">The real game from the official play-by-play.</p>';
+    else if (tab === "odds" && g) html += pastOddsTab(f, g);
+    else html += pastHowClose(f, g, real) + realSummary(f, g && WE ? { win_table: WE } : null, real, null);
+    html += "</div></div></div>";
+    app.innerHTML = html;
+    if (!keep) window.scrollTo(0, 0);
+    app.querySelectorAll("[data-tab]").forEach(function (b) {
+      b.addEventListener("click", function () { history.replaceState(null, "", "#/past/" + day + "/" + pk + "/" + b.getAttribute("data-tab")); renderPastGame(day, pk, b.getAttribute("data-tab")); });
+    });
+    app.querySelectorAll("[data-boxside]").forEach(function (b) { b.addEventListener("click", function () { state.boxSide[pk] = b.getAttribute("data-boxside"); renderPastGame(day, pk, "box"); }); });
+  }
+  function pastHowClose(f, g, real) {
+    if (!g || !real) return "";
+    var items = [], winner = real.score.home > real.score.away ? "home" : "away", fav = favorite(f);
+    items.push([winner === fav, (winner === fav ? "Called it. " : "Missed. ") + nickname(f[winner].name) + " won; the model had " + nickname(f[fav].name) + " at " + pct(winProb(f, fav)) + "."]);
+    if (g.m != null) { var mf = g.m >= .5 ? "home" : "away"; items.push([winner === mf, "The market had " + nickname(f[mf].name) + " at " + pct(mf === "home" ? g.m : 1 - g.m) + " at the close."]); }
+    var ma = mean(histDist(g.ra)), mh = mean(histDist(g.rh));
+    items.push([null, "Expected runs: " + f.away.abbr + " " + ma.toFixed(1) + ", " + f.home.abbr + " " + mh.toFixed(1) + ". Actual: " + real.score.away + " and " + real.score.home + "."]);
+    if (g.ou != null) { var tot = real.score.away + real.score.home; items.push([null, "Market total " + g.ou + "; the game had " + tot + (tot > g.ou ? " (over)." : tot < g.ou ? " (under)." : " (push).")]); }
+    var h = '<section class="sec"><h2>How the pregame numbers did</h2><div class="close-card"><ul>';
+    items.forEach(function (it) { h += '<li><span class="mark ' + (it[0] === true ? "yes" : it[0] === false ? "no" : "") + '">' + (it[0] === true ? "\u2713" : it[0] === false ? "\u2717" : "\u2022") + "</span><span>" + esc(it[1]) + "</span></li>"; });
+    return h + "</ul></div></section>";
+  }
+  function pastOddsTab(f, g) {
+    var h = "", pa = winProb(f, "away"), ph = winProb(f, "home");
+    h += '<section class="sec"><h2>Win chance</h2><p class="lede">Model replay numbers for this game, next to the betting market\'s closing line. The headline combines our model with the market line the same way the live page does.</p>';
+    h += '<div class="winbar" role="img" aria-label="' + esc(f.away.abbr + " " + pct(pa) + ", " + f.home.abbr + " " + pct(ph)) + '"><div class="a" style="width:' + (pa * 100).toFixed(1) + '%">' + esc(f.away.abbr) + " " + pct(pa) + '</div><div class="h" style="width:' + (ph * 100).toFixed(1) + '%">' + pct(ph) + " " + esc(f.home.abbr) + "</div></div>";
+    var fmt = function (p) { return p >= .5 ? esc(f.home.abbr) + " " + pct(p) : esc(f.away.abbr) + " " + pct(1 - p); };
+    h += '<ul class="compare"><li><span>Headline' + (g.m != null ? " (our model with the market line)" : "") + "</span><b>" + fmt(g.hl) + "</b></li>";
+    h += "<li><span>Our model (never sees the market)</span><b>" + fmt(g.o) + "</b></li>";
+    h += "<li><span>Simulator alone, 1,000 games</span><b>" + fmt(g.s) + "</b></li>";
+    if (g.tm != null) h += "<li><span>Team model alone</span><b>" + fmt(g.tm) + "</b></li>";
+    if (g.m != null) h += "<li><span>Betting market at the close</span><b>" + fmt(g.m) + "</b></li>";
+    if (g.mo != null) h += "<li><span>Betting market at the open</span><b>" + fmt(g.mo) + "</b></li>";
+    h += "</ul>";
+    if (g.m != null && g.mo != null && Math.abs(g.m - g.mo) >= .01) {
+      var toward = (g.m - g.mo) * (g.o - g.mo) > 0;
+      h += '<p class="note">The line moved ' + Math.round(Math.abs(g.m - g.mo) * 100) + (Math.round(Math.abs(g.m - g.mo) * 100) === 1 ? " point" : " points") + " from open to close, " + (toward ? "toward" : "away from") + " our model's number.</p>";
+    }
+    h += "</section>";
+    var ra = histDist(g.ra), rh = histDist(g.rh);
+    h += '<section class="sec"><h2>Runs each team scores</h2><p class="lede">Half of the replayed games land in these ranges: ' + esc(f.away.abbr) + " " + quant(ra, .25) + " to " + quant(ra, .75) + ", " + esc(f.home.abbr) + " " + quant(rh, .25) + " to " + quant(rh, .75) + ".</p>";
+    h += '<div class="legend"><span><i class="key" style="background:var(--away)"></i>' + esc(nickname(f.away.name)) + '</span><span><i class="key" style="background:var(--home)"></i>' + esc(nickname(f.home.name)) + "</span></div>";
+    h += '<div class="chart">' + runsChart(ra, rh) + "</div></section>";
+    if (g.ou != null) h += '<section class="sec"><h2>Total runs</h2><p class="lede">Expected ' + (mean(ra) + mean(rh)).toFixed(1) + " runs. Betting market total: " + g.ou + (g.po != null ? " (over " + pct(g.po) + ")" : "") + ". Final: " + (g.fa + g.fh) + ".</p></section>";
+    return h;
   }
 
   /* ---------- game ---------- */
@@ -851,8 +1094,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var s = v ? box.samples[v.i] : null;
     var fav = favorite(f);
 
-    var back = f.date && f.date !== D.date ? "#/day/" + f.date : "#/";
-    var html = '<section class="hero"><div class="wrap"><a class="back" href="' + back + '">Back to games</a>';
+    var back = f.date && f.date !== D.date ? "#/day/" + f.date : "#/", tcg = teamColors(f);
+    var html = '<div class="game" style="--away:' + tcg.away + ";--home:" + tcg.home + '"><section class="hero"><div class="wrap"><a class="back" href="' + back + '">Back to games</a>';
     var gctx = contextFor(f.game_pk), gline = contextLine(f, gctx, false) || SERIES[f.game_type], gw = weatherLine(gctx);
     html += '<p class="hero-meta">' + esc([gline, timeET(f.scheduled_start) + " ET", lv ? "Live, " + liveWhere(lv) : STATE_TEXT[st]].filter(Boolean).join(". ")) + "</p>";
     if (gctx && (gctx.venue || gw)) html += '<p class="hero-meta hero-venue">' + esc([gctx.venue, gw].filter(Boolean).join(". ")) + "</p>";
@@ -862,7 +1105,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var score = actual ? actual[side] : lv ? lv.state[side + "_score"] : (s ? s.score[side] : "");
       var win = lv ? (side === "home" ? lv.home_win_probability : 1 - lv.home_win_probability) : winProb(f, side);
       var isFav = lv ? (side === "home") === (lv.home_win_probability >= 0.5) : side === fav;
-      html += '<div class="hero-row' + (isFav ? " fav" : "") + '"><span class="abbr">' + esc(t.abbr) + '</span><span class="team-name">' + esc(nickname(t.name)) +
+      html += '<div class="hero-row' + (isFav ? " fav" : "") + '"><span class="abbr"><i class="chip" style="background:var(--' + side + ')"></i>' + esc(t.abbr) + '</span><span class="team-name">' + esc(nickname(t.name)) +
         (starter ? "<small>" + esc(starter) + "</small>" : "") + '</span><span class="big num">' + esc(score) + '</span><span class="pct num">' + pct(win) + "</span></div>";
     });
     if (actual && actualBox && actualBox.innings) {
@@ -903,7 +1146,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     }
     else if (tab === "odds") html += oddsTab(f, box);
     else html += summaryTab(f, s, box, actual, actualBox, v, real, lv);
-    html += "</div></div>";
+    html += "</div></div></div>";
     app.innerHTML = html;
     if (!keep) window.scrollTo(0, 0);
 
@@ -1299,7 +1542,13 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   /* Summary tab */
   function summaryTab(f, s, box, actual, actualBox, v, real, lv) {
     var h0 = "";
-    if (real) {
+    if (real) h0 += realSummary(f, box, real, lv) + '<h2 class="divide">The projected game</h2>';
+    return h0 + projectedSummary(f, s, box, actual, actualBox, v);
+  }
+  /* The real game's sections: win chance through the game, scoring plays, top performers, where the ball went. */
+  function realSummary(f, box, real, lv) {
+    var h0 = "";
+    {
       var rn = nameMap(real), rs = shortMap(real);
       var chart = winChart(f, box, real, lv);
       if (chart) {
@@ -1325,9 +1574,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (perf) h0 += '<section class="sec"><h2>' + (real._final ? "Top performers" : "Leading so far") + '</h2><div class="perf">' + perf + "</div></section>";
       var spray = sprayChart(f, real);
       if (spray) h0 += '<section class="sec"><h2>Where the ball went</h2><p class="lede">Every ball in play' + (real._final ? "" : " so far") + ", where it landed.</p>" + spray + "</section>";
-      h0 += '<h2 class="divide">The projected game</h2>';
     }
-    return h0 + projectedSummary(f, s, box, actual, actualBox, v);
+    return h0;
   }
   function projectedSummary(f, s, box, actual, actualBox, v) {
     var names = nameMap(s), short = shortMap(s), h = "";
@@ -1402,9 +1650,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   }
 
   /* Box score tab */
-  function boxTab(f, s, actualBox, pk, label) {
+  function boxTab(f, s, actualBox, pk, label, realOnly) {
     var side = state.boxSide[pk] || (actualBox ? "actual" : "proj"), src = side === "actual" && actualBox ? actualBox : s, h = "";
-    if (actualBox) {
+    if (actualBox && !realOnly) {
       h += '<div class="seg" role="group" aria-label="Which box score"><button data-boxside="actual" aria-pressed="' + (side === "actual") + '">' + esc(label || "Actual") + '</button><button data-boxside="proj" aria-pressed="' + (side !== "actual") + '">Projected</button></div>';
     }
     ["away", "home"].forEach(function (t) {
@@ -1431,7 +1679,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       });
       h += "</tbody></table></div></section>";
     });
-    if (src === s) h += '<p class="note">Pitch counts in simulated games are estimates.</p>';
+    if (src === s && !realOnly) h += '<p class="note">Pitch counts in simulated games are estimates.</p>';
     return h;
   }
 
@@ -1682,7 +1930,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     window.addEventListener("hashchange", function () { setTimeout(lcTick, 300); });
     document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") lcTick(); });
     fetch("days/index.json", { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (idx) {
-      if (idx && idx.dates) { ARCHIVE = idx; if (!location.hash || /^#\/?$/.test(location.hash)) renderSlate(D.date); }
+      if (idx && idx.dates) { ARCHIVE = idx; if (!location.hash || /^#\/?$/.test(location.hash) || /^#\/day\//.test(location.hash)) route(); }
     }).catch(function () {});
   }
   if (window.BRL) boot(window.BRL);

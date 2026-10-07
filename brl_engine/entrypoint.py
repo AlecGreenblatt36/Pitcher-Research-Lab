@@ -172,6 +172,11 @@ def main():
                             (Path(args.site) / 'days' / item['name']).write_bytes(base64.b64decode(value['content'], validate=False))
             except Exception:
                 pass
+            # The static season files come from the repository, not the ledger branch.
+            (Path(args.site) / 'days').mkdir(exist_ok=True)
+            for src in sorted((REPO_ROOT / 'brl_live' / 'archive').glob('*.json')):
+                if re.fullmatch(r'(season-\d{4}|win-expectancy)\.json', src.name):
+                    (Path(args.site) / 'days' / src.name).write_bytes(src.read_bytes())
             page = Path(args.site) / 'index.html'
             page.write_text(page.read_text().replace('<body>', '<body data-refresh-blocked="true">', 1))
             preserved = True
@@ -186,7 +191,7 @@ def main():
         raise RuntimeError('Public output file allowlist failed')
     if 'days' in dirs:
         for p in (public / 'days').iterdir():
-            if not p.is_file() or not re.fullmatch(r'(\d{4}-\d{2}-\d{2}|index)\.json', p.name):
+            if not p.is_file() or not re.fullmatch(r'(\d{4}-\d{2}-\d{2}|index|season-\d{4}|win-expectancy)\.json', p.name):
                 raise RuntimeError('Public day archive allowlist failed')
     Path('brl_v2_run_receipt.json').write_text(json.dumps(receipt, indent=2))
     # The receipt (no secrets, no data) also goes to the ledger branch so it can be read through git.

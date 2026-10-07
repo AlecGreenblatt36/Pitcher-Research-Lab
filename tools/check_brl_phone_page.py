@@ -152,6 +152,29 @@ def main():
                 assert 'regular-season habits' in page.inner_text('#app')
                 assert 'pitch-by-pitch' in page.inner_text('#app')
                 design_check('how');page.screenshot(path=str(out/f'how_{width}.png'),full_page=True)
+                # Past dates: the season replay's cards come from the page's own files; the game opens from MLB's feed.
+                go('#/day/2026-07-04');page.wait_for_timeout(2500)
+                assert page.locator('nav.dstrip').count()==1,'Missing date strip'
+                assert page.locator('a.card[href^="#/past/"]').count()>=10,'Missing past games'
+                design_check('past_slate');page.screenshot(path=str(out/f'past_slate_{width}.png'),full_page=True)
+                if width==390:
+                    try:
+                        href=page.locator('a.card[href^="#/past/"]').first.get_attribute('href')
+                        page.evaluate('h=>{location.hash=h}',href)
+                        loaded=False
+                        for _ in range(20):
+                            page.wait_for_timeout(1000)
+                            if page.locator('table.line').count():loaded=True;break
+                        info={'game':href,'line_score_from_mlb':loaded}
+                        if loaded:
+                            page.locator('button[data-tab="box"]').click();page.wait_for_timeout(300)
+                            info['box_rows']=page.locator('table.box tbody tr').count()
+                            page.locator('button[data-tab="odds"]').click();page.wait_for_timeout(300)
+                            info['odds']='Betting market at the close' in page.inner_text('#app')
+                        page.screenshot(path=str(out/'past_game_390.png'),full_page=True)
+                        receipt['past_games']=info
+                    except Exception as exc:
+                        receipt['past_games']={'error':type(exc).__name__+': '+str(exc)[:200]}
                 if width==390:
                     # Record (never fail on) whether the page followed a game in progress from MLB's feed in the browser.
                     try:

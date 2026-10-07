@@ -5,6 +5,8 @@ inlined as window.BRL and the two typefaces embedded, so it needs no network to 
 """
 from __future__ import annotations
 
+import re
+
 import base64
 import json
 from pathlib import Path
@@ -152,6 +154,10 @@ def day_archives(ledger: dict) -> dict:
     return days
 
 
+ARCHIVE_DIR = Path(__file__).resolve().parent / 'archive'
+ARCHIVE_NAME = re.compile(r'(season-\d{4}|win-expectancy)\.json')
+
+
 def render_page(ledger, scores, destination, setup_message=None, *, replay=False):
     if replay:
         if ledger.get('publications') or ledger.get('box_publications') or scores.get('n_games'):
@@ -172,4 +178,8 @@ def render_page(ledger, scores, destination, setup_message=None, *, replay=False
         (days / (date + '.json')).write_bytes(canonical(payload))
     public_index = {'schema': 'brl.days.v1', 'dates': sorted(archives)}
     (days / 'index.json').write_bytes(canonical(public_index))
+    # Static files for past dates: the season replays (model outputs only) and the league win expectancy table.
+    for src in sorted(ARCHIVE_DIR.glob('*.json')):
+        if ARCHIVE_NAME.fullmatch(src.name):
+            (days / src.name).write_bytes(src.read_bytes())
     return d / 'index.html'

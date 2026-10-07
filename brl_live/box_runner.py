@@ -1,6 +1,6 @@
 """Box-score publishing layer around the unchanged live PA/game forecast engine."""
 from __future__ import annotations
-import json,os,traceback
+import json,os,re,traceback
 from dataclasses import asdict
 from pathlib import Path
 from datetime import timedelta
@@ -240,7 +240,9 @@ def main(public_dir):
         ledger['skill_scores']=score_skill_boxes(ledger['box_scores'],ledger['box_publications'],ledger['actual_boxes'])
         store.persist();render_page(ledger,scores,public_dir)
     for name in ('index.html','predictions.json','.nojekyll'):store.put('public/'+name,(Path(public_dir)/name).read_bytes())
-    for p in sorted((Path(public_dir)/'days').glob('*.json')):store.put('public/days/'+p.name,p.read_bytes())
+    # Day archives go to the ledger branch; the static season files live in the repository (brl_live/archive).
+    for p in sorted((Path(public_dir)/'days').glob('*.json')):
+        if re.fullmatch(r'(\d{4}-\d{2}-\d{2}|index)\.json',p.name):store.put('public/days/'+p.name,p.read_bytes())
     return {'status':'iteration_finished','forecasts':len(ledger['forecasts']),
         'live_forecasts_created':len(ledger['forecasts'])-before,'box_forecasts_created':len(ledger['box_scores'])-old_boxes,
         'box_forecasts':len(ledger['box_scores']),'player_scored_games':ledger['player_scores']['n_games'],
