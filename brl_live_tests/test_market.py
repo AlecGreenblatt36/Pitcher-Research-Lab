@@ -76,3 +76,28 @@ def test_totals_from_scoreboard_odds():
     comp = {'odds': [{'total': {'over': {'close': {'line': 'o8.5', 'odds': '+100'}}, 'under': {'close': {'line': 'u8.5', 'odds': '-120'}}}}]}
     assert _totals(comp) == (8.5, 100, -120)
     assert _totals({'odds': [{'details': 'LAD -150'}]}) is None
+
+
+def test_capture_keeps_the_first_line_seen():
+    def fetch_at(home_ml, away_ml):
+        return lambda url: ((schedule() if 'statsapi' in url else board(home_ml=home_ml, away_ml=away_ml)), {})
+    ledger = {}
+    capture(fetch_at(-150, 130), '2026-10-07', ledger, '2026-10-07T15:00:00+00:00')
+    first = ledger['market']['1']['p_home']
+    capture(fetch_at(-180, 155), '2026-10-07', ledger, '2026-10-07T20:00:00+00:00')
+    m = ledger['market']['1']
+    assert m['first_p_home'] == first and m['first_captured_at'] == '2026-10-07T15:00:00+00:00' and m['p_home'] > first
+
+
+def test_record_counts_line_moves_toward_our_number():
+    f = {'game_pk': 1, 'version': 1, 'saved_at': '2026-10-07T18:00:00Z', 'date': '2026-10-07', 'home_win_probability': 0.66, 'team_baseline_probability': 0.62,
+         'away': {'abbr': 'LAD'}, 'home': {'abbr': 'ATL'}}
+    ledger = {'forecasts': {'a': f}, 'publications': {'a': {'commit': 'a' * 40, 'published_at': '2026-10-07T18:05:00Z'}},
+              'actuals': {'1': {'away': 2, 'home': 5, 'first_pitch_observed_at': '2026-10-07T22:10:00Z'}},
+              'market': {'1': {'p_home': 0.58, 'captured_at': '2026-10-07T21:50:00Z', 'first_p_home': 0.52, 'first_captured_at': '2026-10-07T15:00:00Z'}}}
+    rec = build_record(ledger)
+    assert rec['line_moves'] == {'threshold_logit': 0.1, 'n': 1, 'toward_ours': 1}           # ours about 0.64 from 0.52: the move to 0.58 is toward us
+    ledger['market']['1']['p_home'] = 0.48
+    assert build_record(ledger)['line_moves'] == {'threshold_logit': 0.1, 'n': 1, 'toward_ours': 0}
+    ledger['market']['1']['p_home'] = 0.52
+    assert build_record(ledger)['line_moves']['n'] == 0                                       # the line did not move

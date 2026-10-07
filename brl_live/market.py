@@ -182,9 +182,13 @@ def capture(fetch_json, date_ymd: str, ledger: dict, now_iso: str) -> dict:
         line = matched.get(g['game_pk'])
         if line is None or g['state'] != 'Preview' or line['state'] not in (None, 'pre'):
             continue
+        prev = market.get(pk) or {}
         market[pk] = {'game_pk': g['game_pk'], 'date': date_ymd, 'captured_at': now_iso, 'provider': line['provider'],
                       'home_ml': line['home_ml'], 'away_ml': line['away_ml'], 'p_home': line['p_home'], 'over_under': line['over_under'],
                       'over_odds': line.get('over_odds'), 'under_odds': line.get('under_odds'), 'p_over': line.get('p_over'),
+                      # the first line we saw for the game, kept so the record can tell which way the line moved
+                      'first_p_home': prev.get('first_p_home', prev.get('p_home', line['p_home'])),
+                      'first_captured_at': prev.get('first_captured_at', prev.get('captured_at', now_iso)),
                       'source': 'ESPN public scoreboard'}
         captured += 1
     # Structure-only diagnostics (key names, no values) so a changed feed shape can be read from the ledger.

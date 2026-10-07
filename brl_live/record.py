@@ -165,8 +165,22 @@ def build_record(ledger: dict) -> dict:
                 'ours_brier': round(sum(g['brier']['ours'] for g in split) / len(split), 5) if split else None,
                 'market_brier': round(sum(g['brier']['market'] for g in split) / len(split), 5) if split else None,
                 'our_side_won': sum(1 for g in split if (g['p_ours'] > g['p_market']) == g['home_won']) if split else 0}
+    # Line movement: for games where our final pregame view differed from the first line we saw, did the line
+    # move toward our number by first pitch? (CLV-02 measured it on past seasons; this is the live tally.)
+    moves = {'threshold_logit': 0.1, 'n': 0, 'toward_ours': 0}
+    for g in games:
+        mk = market.get(str(g['game_pk'])) or {}
+        first, last = mk.get('first_p_home'), g.get('p_market')
+        if first is None or last is None or not mk.get('first_captured_at') or abs(last - first) < 1e-4:
+            continue
+        gap = _logit(g['p_ours']) - _logit(first)
+        if abs(gap) <= 0.1:
+            continue
+        moves['n'] += 1
+        moves['toward_ours'] += int((last - first) * gap > 0)
     return {
         'schema': 'brl.record.v3',
+        'line_moves': moves,
         'market_note': ('Betting market rows use the last ESPN scoreboard moneyline captured while the game was pregame, vig removed. '
                         'Our model never uses it; the headline combines the two when a pregame line exists.'),
         'headline': 'blend',

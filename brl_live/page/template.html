@@ -1603,10 +1603,14 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       h += "<li" + (r.key === "blend" ? ' class="you"' : "") + "><span>" + esc(r.name) + '</span><span class="bar"><i class="' + (v >= 0 ? "pos" : "neg") + '" style="width:' + w + '%"></i></span><span class="v num">' + (v >= 0 ? "+" : "") + v.toFixed(1) + "%</span></li>";
     });
     h += '</ol><p class="note">Right of the line is better than a coin flip. From October 8 the headline combines our model with the market\'s pregame line; before that it averaged the simulator and the team model. Our model never sees the market, and every part is scored on its own.</p></section>';
-    var dg = rec.disagreements;
-    if (dg && dg.n) {
-      h += '<section class="sec"><h2>When we disagree with the market</h2><p class="lede">Games where our model and the market\'s pregame line were ' + Math.round(dg.threshold * 100) + " or more points apart: " + dg.n + (dg.n === 1 ? " game" : " games") +
-        ". Our side won " + dg.our_side_won + ". Closer to the result on average: " + (dg.ours_brier < dg.market_brier ? "our model" : dg.ours_brier > dg.market_brier ? "the market" : "neither") + ".</p></section>";
+    var dg = rec.disagreements, lm = rec.line_moves;
+    if ((dg && dg.n) || (lm && lm.n)) {
+      h += '<section class="sec"><h2>Our model and the market</h2>';
+      if (lm && lm.n) h += '<p class="lede">Line movement: in ' + lm.n + (lm.n === 1 ? " game" : " games") + " where our final pregame number differed from the first line we saw, the line moved toward our number " +
+        lm.toward_ours + (lm.toward_ours === 1 ? " time" : " times") + " by first pitch. On the 2025 and 2026 regular seasons it did so about 7 times in 10.</p>";
+      if (dg && dg.n) h += '<p class="lede">Games where our model and the market\'s pregame line were ' + Math.round(dg.threshold * 100) + " or more points apart: " + dg.n + (dg.n === 1 ? " game" : " games") +
+        ". Our side won " + dg.our_side_won + ". Closer to the result on average: " + (dg.ours_brier < dg.market_brier ? "our model" : dg.ours_brier > dg.market_brier ? "the market" : "neither") + ".</p>";
+      h += "</section>";
     }
     h += '<section class="sec"><h2>Game by game</h2><ol class="games-list">';
     var shortDate = function (ymd) { if (!ymd) return ""; var d = new Date(ymd + "T12:00:00Z"); return d.toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric" }); };
