@@ -463,7 +463,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var srv = D.live && D.live[pk], server = srv && !srv.error && srv.state ? srv : null, c = CLIENT[pk];
     if (!c || !c.started || !c.state) return server;
     var f = latestForecasts()[pk], box = boxFor(pk), t = box && box.win_table, st = c.state;
-    var out = { state: st, due_up: c.due_up, on_mound: c.on_mound, pitcher_names: Object.assign({}, (server || {}).pitcher_names || {}, c.pitcher_names || {}),
+    var out = { state: st, due_up: c.due_up, due_up_id: c.due_up_id, on_mound: c.on_mound, pitcher_names: Object.assign({}, (server || {}).pitcher_names || {}, c.pitcher_names || {}),
       plays: c.plays || (srv && srv.plays) || [], box: c.box || (srv && srv.box) || null, updated_at: server ? server.updated_at : null, n_worlds: server ? server.n_worlds : 0,
       projected_final: server ? server.projected_final : null, sim_home: server ? server.home_win_probability : null, fetched_at: c.fetched_at, _client: true, _final: !!c.final,
       current: c.current || null };
@@ -494,7 +494,23 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var up = lv.due_up ? lv.due_up[batting] : "", pitcher = lv.pitcher_names && lv.on_mound ? lv.pitcher_names[lv.on_mound[fielding]] : "";
     var where = st.between_innings ? liveWhere(lv) : (st.half === "top" ? "Top " : "Bot ") + ordinal(st.inning);
     var count = st.between_innings ? "" : " \u00b7 " + (st.balls || 0) + "-" + (st.strikes || 0);
-    var who = st.between_innings ? "Between innings" : (up ? "<b>" + esc(up) + "</b> up" : "") + (pitcher ? (up ? ", " : "") + esc(lastName(pitcher)) + " pitching" : "");
+    /* The batter's line today and the pitcher's pitch count, from the real plays so far. */
+    var upId = lv.due_up_id ? lv.due_up_id[batting] : null, pid = lv.on_mound ? lv.on_mound[fielding] : null, upLine = "", pc = 0;
+    if (lv.plays && lv.plays.length) {
+      var atBats = 0, hits = 0, extra = [];
+      lv.plays.forEach(function (x) {
+        if (pid && String(x.pitcher_id) === String(pid)) pc += (x.pitches || []).length;
+        if (!upId || String(x.batter_id) !== String(upId) || x.box_outcome === "runner") return;
+        if (/single|double|triple|home_run/.test(x.box_outcome)) hits++;
+        if (x.box_outcome === "home_run") extra.push("HR");
+        if (x.box_outcome === "walk" || x.box_outcome === "hit_by_pitch") extra.push(x.box_outcome === "walk" ? "BB" : "HBP");
+        else if (!/sac_fly|sac_bunt/.test(x.event || "")) atBats++;
+      });
+      if (upId && (atBats || extra.length)) upLine = hits + " for " + atBats + (extra.length ? ", " + extra.join(", ") : "");
+      if (pid) pc += lv.current && lv.current.pitches ? lv.current.pitches.length : 0;
+    }
+    var who = st.between_innings ? "Between innings" : (up ? "<b>" + esc(up) + "</b> up" + (upLine ? " (" + esc(upLine) + ")" : "") : "") +
+      (pitcher ? (up ? ", " : "") + esc(lastName(pitcher)) + " pitching" + (pc ? " (" + pc + (pc === 1 ? " pitch" : " pitches") + ")" : "") : "");
     var ab = "";
     if (lv.current && lv.current.pitches && lv.current.pitches.length) {
       var zone = zoneGraphic(lv.current), seq = pitchText(lv.current);
@@ -1030,8 +1046,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       ["away", "home"].forEach(function (s) { o[s] = { R: (i[s] || {}).runs, H: (i[s] || {}).hits }; });
       return o;
     });
-    var due = {}, mound = {}, names = {};
+    var due = {}, dueId = {}, mound = {}, names = {};
     due[batting] = (off.batter || {}).fullName || ""; due[fielding] = (dfn.batter || {}).fullName || "";
+    dueId[batting] = id(off.batter); dueId[fielding] = id(dfn.batter);
     if (dfn.pitcher && dfn.pitcher.id != null) { mound[fielding] = String(dfn.pitcher.id); names[String(dfn.pitcher.id)] = dfn.pitcher.fullName || ""; }
     if (off.pitcher && off.pitcher.id != null) { mound[batting] = String(off.pitcher.id); names[String(off.pitcher.id)] = off.pitcher.fullName || ""; }
     var cp = ((feed.liveData || {}).plays || {}).currentPlay, current = null;
@@ -1041,7 +1058,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     }
     var abstract = String(gs.abstractGameState || ""), state = { inning: Math.max(inning, 1), half: half, outs: outs, bases: bases, between_innings: between,
       away_score: sc.away, home_score: sc.home, batting_side: batting, balls: lcInt(ls.balls, 0), strikes: lcInt(ls.strikes, 0), detailed_state: gs.detailedState || "", innings: innings };
-    return { abstract: abstract, detailed: String(gs.detailedState || ""), started: started, final: /^final$/i.test(abstract), state: state, due_up: due, on_mound: mound, pitcher_names: names, current: current,
+    return { abstract: abstract, detailed: String(gs.detailedState || ""), started: started, final: /^final$/i.test(abstract), state: state, due_up: due, due_up_id: dueId, on_mound: mound, pitcher_names: names, current: current,
       signature: [state.inning, half, outs, sc.away, sc.home, String(bases), id(off.batter), abstract].join("|") };
   }
   /* Batting and pitching lines from the boxscore endpoint (lenient while in progress). */
@@ -1102,7 +1119,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         var pitchesNow = s.current ? s.current.pitches.length : 0, pitchesBefore = c.current ? c.current.pitches.length : 0;
         var paChanged = s.signature !== c.signature, countChanged = !c.state || s.state.balls !== c.state.balls || s.state.strikes !== c.state.strikes || pitchesNow !== pitchesBefore;
         if (paChanged || countChanged || !c.started) changed = true;
-        ["abstract", "detailed", "started", "final", "state", "due_up", "on_mound", "pitcher_names", "signature", "current"].forEach(function (k) { c[k] = s[k]; });
+        ["abstract", "detailed", "started", "final", "state", "due_up", "due_up_id", "on_mound", "pitcher_names", "signature", "current"].forEach(function (k) { c[k] = s[k]; });
         c.fetched_at = new Date().toISOString(); c.error = false;
         if (!t.full) return;
         var needPlays = !c.plays || paChanged || Date.now() - (c.playsAt || 0) > 120000;
