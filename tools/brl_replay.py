@@ -130,10 +130,13 @@ def main():
     n_sims = int(params.get('n_sims') or 200); date_from = str(params.get('date_from') or f'{season}-01-01'); step = int(params.get('step') or 1)
     reference = params.get('reference'); use_offsets = bool(params.get('offsets', True)); use_rest = bool(params.get('rest', False))
     tag = str(params.get('tag') or model)
+    n_shards = max(1, int(params.get('shards') or 1)); shard = int(os.environ.get('BRL_REPLAY_SHARD') or 0)
+    suffix = f'-s{shard}of{n_shards}' if n_shards > 1 else ''
     workers = int(params.get('workers') or max(1, (os.cpu_count() or 2)))
     work = Path(os.environ.get('RUNNER_TEMP', '/tmp')) / 'brl-replay'
     receipt = {'schema': 'brl.replay-receipt.v1', 'tag': tag, 'model': model, 'season': season, 'n_sims': n_sims, 'date_from': date_from, 'step': step,
-               'offsets': use_offsets, 'rest': use_rest, 'workers': workers, 'run_id': run_id, 'started_at': datetime.now(timezone.utc).isoformat(), 'stages': []}
+               'offsets': use_offsets, 'rest': use_rest, 'workers': workers, 'run_id': run_id, 'shard': [shard, n_shards],
+               'started_at': datetime.now(timezone.utc).isoformat(), 'stages': []}
     t0 = time.time()
     def stage(label):
         receipt['stages'].append({'stage': label, 'at_seconds': round(time.time() - t0, 1)}); print(label, round(time.time() - t0), 's', flush=True)
@@ -179,6 +182,10 @@ def main():
         games['date'] = games['date'].astype(str)
         games = games[(games['season'] == season) & (~games['ambiguous']) & games['valid_lineups'] & (games['date'] >= date_from)].sort_values(['date', 'game_pk'])
         games = games.iloc[::step].reset_index(drop=True)
+        if n_shards > 1:
+            # Parallel jobs split the season by date (every n-th date), so each date's state is built once.
+            keep = sorted(games['date'].unique())[shard::n_shards]
+            games = games[games['date'].isin(keep)].reset_index(drop=True)
         receipt['games'] = int(len(games))
         offsets = None
         if use_offsets:
@@ -229,7 +236,7 @@ def main():
                 ref['p_blend'] = sigmoid(0.5 * (logit(ref['p_sim']) + logit(ref['p_team'])))
                 receipt['paired_vs_reference'] = {'reference': reference, 'p_sim': paired(sim, ref, 'p_sim'), 'p_blend': paired(sim, ref, 'p_blend')}
         payload = gzip.compress('\n'.join(json.dumps(r) for r in records).encode() + b'\n', mtime=0)
-        out_path = f'research/replay-{tag}-{run_id}.jsonl.gz'
+        out_path = f'research/replay-{tag}-{run_id}{suffix}.jsonl.gz'
         put_bytes(repo, token, out_path, payload, branch, f'BRL: replay {tag}')
         receipt['per_game_file'] = out_path; receipt['per_game_sha256'] = hashlib.sha256(payload).hexdigest()
         receipt['status'] = 'completed'
@@ -241,7 +248,7 @@ def main():
     text = json.dumps(receipt, indent=1, default=float)
     for secret in (key_hex, token):
         text = text.replace(secret, '[redacted]')
-    put_bytes(repo, token, f'research/replay-{tag}-{run_id}.json', text.encode(), branch, 'BRL: replay receipt ' + tag)
+    put_bytes(repo, token, f'research/replay-{tag}-{run_id}{suffix}.json', text.encode(), branch, 'BRL: replay receipt ' + tag)
     print(json.dumps({k: receipt.get(k) for k in ('status', 'error', 'seconds', 'games')}))
     if receipt['status'] != 'completed':
         raise SystemExit(1)

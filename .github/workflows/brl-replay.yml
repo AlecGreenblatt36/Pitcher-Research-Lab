@@ -9,9 +9,23 @@ concurrency:
   group: brl-replay
   cancel-in-progress: false
 jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      shards: ${{ steps.plan.outputs.shards }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: plan
+        name: Shards from tools/replay_params.json (one job per shard, run in parallel)
+        run: python -c "import json; k=int(json.load(open('tools/replay_params.json')).get('shards') or 1); print('shards=' + json.dumps(list(range(k))))" >> "$GITHUB_OUTPUT"
   replay:
+    needs: plan
     runs-on: ubuntu-latest
     timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJson(needs.plan.outputs.shards) }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -22,6 +36,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           BRL_PA_PACKAGE_KEY: ${{ secrets.BRL_PA_PACKAGE_KEY }}
+          BRL_REPLAY_SHARD: ${{ matrix.shard }}
           OPENBLAS_NUM_THREADS: '1'
           OMP_NUM_THREADS: '1'
         run: python tools/brl_replay.py
