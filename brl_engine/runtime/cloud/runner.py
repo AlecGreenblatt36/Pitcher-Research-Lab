@@ -49,7 +49,7 @@ class GitStore:
 
     def __init__(self, repo: str, token: str, key: bytes):
         self.repo, self.token, self.key = repo, token, key
-        self.read_audit = {}
+        self.read_audit = getattr(self, 'read_audit', None) or {}
         self._ensure_branch()
         saved = self.read('ledger.json')
         self.ledger = json.loads(saved[0]) if saved else {'date': None, 'forecasts': {}, 'publications': {}, 'actuals': {}, 'status': {}}
