@@ -68,10 +68,11 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def expected_feature_columns() -> list[str]:
+def expected_feature_columns(physics_features=()) -> list[str]:
     columns = [f"p_{g}_{label}" for g in GROUPS for label in MODEL_LABELS]
     columns += [f"lr_{g}_{label}" for g in RATIO_GROUPS for label in MODEL_LABELS]
     columns += list(CONTEXT_COLUMNS)
+    columns += [str(c) for c in physics_features]
     return columns
 
 
@@ -224,9 +225,14 @@ class LockedPAModelProvider:
         "game-level outputs: NOT validated"
     )
     birthdates: Mapping[int, tuple[int, int, int]] | None = None
+    # Per-PA pitch physics table (research_lab.pa_model.physics.TABLE_COLUMNS plus run_value), required
+    # when the model bundle declares physics features; ignored by a bundle without them.
+    physics_table: pd.DataFrame | None = None
     model_sha256: str = field(init=False, default="")
     history_sha256: str = field(init=False, default="")
     calls: int = field(init=False, default=0)
+    physics: object = field(init=False, default=None)
+    physics_features: tuple = field(init=False, default=())
 
     def __post_init__(self) -> None:
         self.artifact_path = Path(self.artifact_path)
@@ -252,8 +258,22 @@ class LockedPAModelProvider:
             raise LockedModelError(f"model bundle missing required key: {exc}") from exc
         if tuple(bundle.get("labels", ())) != MODEL_LABELS:
             raise LockedModelError(f"label order mismatch: {bundle.get('labels')}")
-        if list(fitted.feature_columns) != expected_feature_columns():
+        self.physics_features = tuple(str(c) for c in (bundle.get("physics_features") or ()))
+        if list(fitted.feature_columns) != expected_feature_columns(self.physics_features):
             raise LockedModelError("feature schema mismatch between artifact and provider")
+        if bundle.get("name"):
+            self.name = str(bundle["name"])
+        if self.physics_features:
+            from research_lab.pa_model.physics import PhysicsState, feature_names
+            params = dict(bundle.get("physics_params") or {})
+            if list(feature_names(params)) != list(self.physics_features):
+                raise LockedModelError("physics feature list does not match its parameters")
+            if self.physics_table is None:
+                raise LockedModelError("model uses pitch physics features but no physics table was supplied")
+            self.physics = PhysicsState.build(self.physics_table, self.cutoff_date, params)
+            if list(self.physics.names) != list(self.physics_features):
+                raise LockedModelError("physics state schema mismatch")
+        self._physics_cache: dict = {}
         self._fitted = fitted
         self._linear = _LinearPath.from_fitted(fitted)
         self._eps = float(self._config.get("min_probability", 1e-7))
@@ -362,8 +382,16 @@ class LockedPAModelProvider:
             meta["batter_history_pa"], meta["pitcher_history_pa"],
             meta["batter_split_history_pa"], meta["pitcher_split_history_pa"],
         ])
+        parts = [block, context]
+        if self.physics is not None:
+            key = (batter_id, pitcher_id)
+            vector = self._physics_cache.get(key)
+            if vector is None:
+                vector = self.physics.features(batter_id, pitcher_id)
+                self._physics_cache[key] = vector
+            parts.append(vector)
         # Training stored features as float32; replicate exactly.
-        row = np.concatenate([block, context]).astype(np.float32).astype(float)
+        row = np.concatenate(parts).astype(np.float32).astype(float)
         return row, meta
 
     def _eb_probs(self, row: np.ndarray) -> np.ndarray:
@@ -450,4 +478,6 @@ class LockedPAModelProvider:
             "park": self.park,
             "blend": {"model": self._model_weight, "empirical_bayes": 1.0 - self._model_weight},
             "fallback_used": False,
+            "physics_features": list(self.physics_features),
+            "physics_rows_used": None if self.physics is None else int(self.physics.n_rows),
         }
