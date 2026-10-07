@@ -1,0 +1,20 @@
+name: BRL probe
+on:
+  workflow_dispatch:
+  push:
+    branches: [diag/probe]
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Probe whether the page can read the official feeds directly (no secrets used)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/brl_probe_cors.py
