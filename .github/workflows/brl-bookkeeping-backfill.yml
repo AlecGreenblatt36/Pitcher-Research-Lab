@@ -1,6 +1,8 @@
 name: BRL bookkeeping backfill
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '23 9 * * 1'      # weekly top-up of the current season (the day cache covers the days between)
   push:
     branches: [diag/bookkeeping-backfill]
 permissions:
