@@ -48,6 +48,12 @@ def test_page_reads_plays_and_lines_like_the_saved_runs(tmp_path):
     assert sit['started'] and not sit['final'] and sit['state']['half'] == 'bottom' and sit['state']['outs'] == 1
     assert sit['state']['bases'] == ['11', None, None] and sit['state']['away_score'] == 2 and sit['state']['balls'] == 2
     assert sit['due_up']['home'] == 'Batter 12' and sit['on_mound']['away'] == '60' and sit['pitcher_names']['60'] == 'Pitcher 60'
+    assert sit['current'] is None
+    # the at-bat in progress: its pitches so far, read like a completed play's
+    cur = json.loads(json.dumps(feed['liveData']['plays']['allPlays'][-1]))      # the open plate appearance (four balls so far)
+    feed['liveData']['plays']['currentPlay'] = cur
+    sit = run_page_reader(tmp_path, feed)['sit']
+    assert sit['current']['pitches'] == [['FF', 93, 'B', -0.5 + 0.25 * k, 2.0 + 0.3 * k] for k in range(4)] and sit['current']['zone'] == [3.4, 1.6]
 
 
 @pytest.mark.skipif(NODE is None, reason='node not installed')
