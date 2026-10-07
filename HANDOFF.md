@@ -1,5 +1,15 @@
 # Baseball Research Lab handoff
 
+## Current checkpoint — October 7, 2026 (Claude in charge; ChatGPT no longer updates this project)
+
+Site: https://alecgreenblatt36.github.io/Pitcher-Research-Lab/ — new page (brl_live/page/template.html, rendered by brl_live/box_page.py with window.BRL inlined). Headline win chance = equal-weight log-odds average of the simulator and the team model (brl_live/record.py); the simulator and the team model are shown on the Odds tab and scored separately on the Record page. Projected game = most central nine-inning world with the favorite winning, chosen over all 10,000 worlds (brl_live/world_selection.py); High / Low / Upset versions likewise. Full box scores stay on the page for the slate date and the day before (box_page.trim_boxes); everything stays in the private ledger.
+
+Accuracy work and its evidence are in LEDGER.md (ACC-01 to ACC-08). Adopted: the blend and the context offsets (brl_live/provider_adjust.py, frozen table brl_live/context_offsets.json). Rejected with evidence: bullpen v2, per-world talent noise. The private runtime is unchanged; the public layer wraps the engine's provider inside brl_live/boxscore.run_box_worlds (ADJUST settings at the top of that function's section).
+
+Local work that is not in the repository (sandbox scratch, re-creatable from the seed data): replay harness (games reconstruction, 2026 season replay, team baseline, evaluation, PA residuals, offsets estimation, paired adjustment replay). Re-create before extending; the methods are described in LEDGER.md.
+
+Next: own public-source runtime (engine code public, only data and model encrypted under a new key) so engine changes no longer depend on the old encrypted runtime; a 2025 replay for a second season of evidence; the April replay weakness (roster-free bullpens vs model error); batted-ball types in play text; pitch-by-pitch bridge; in-game updating.
+
 ## Current checkpoint — October 6, 2026, 6:59 p.m. Eastern
 
 Site: https://alecgreenblatt36.github.io/Pitcher-Research-Lab/

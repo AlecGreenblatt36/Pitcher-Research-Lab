@@ -233,18 +233,41 @@ class BoxAccumulator:
         result['typical_score_frequency']=counts[modal]/self.n
         return result
 
-def run_box_worlds(engine,matchup,history,date,seeds,full_history=None):
+# Simulation-time adjustments on the locked model (brl_live/provider_adjust.py), measured on the
+# 2026 out-of-sample replay before being switched on (LEDGER.md): context offsets are on; per-world
+# talent noise at c=1 scored worse than the offsets alone and stays off.
+ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0}
+
+def adjusted_provider(provider,full_history,date,settings=ADJUST):
+    """Wrap the engine's provider with the enabled adjustments. Returns (provider, world_hook, label)."""
+    from .provider_adjust import ContextAdjust,TalentNoise,history_talent_inputs
+    label=[];hook=None
+    if settings.get('context_offsets'):
+        provider=ContextAdjust(provider);label.append('context offsets through '+str(provider.offsets.get('estimated_through')))
+    c=float(settings.get('talent_noise_c') or 0.0)
+    if c>0:
+        if full_history is None:raise Blocked('Talent noise needs the assembled PA history')
+        counts_for,league=history_talent_inputs(full_history,date)
+        provider=TalentNoise(provider,c,float(settings.get('player_prior_pa',180.0)),league,counts_for)
+        hook=provider.new_world;label.append('per-world talent noise c=%g'%c)
+    return provider,hook,label
+
+def run_box_worlds(engine,matchup,history,date,seeds,full_history=None,settings=ADJUST):
     fit=BookkeepingFit(history,date,full_history=full_history)
-    sim=ObservedSimulator(engine.provider,config=engine.config,manager_policy=engine.manager)
+    provider,world_hook,adjust_label=adjusted_provider(engine.provider,full_history,date,settings)
+    sim=ObservedSimulator(provider,config=engine.config,manager_policy=engine.manager)
     accumulator=BoxAccumulator(matchup);results=[]
     for seed in seeds:
+        if world_hook:world_hook(int(seed))
         result=sim.simulate(matchup,int(seed),record_events=True)
         if result.winner=='tie' or result.ended_by_plate_appearance_cap:raise Blocked('Unfinished box world')
         accumulator.add(build_game_box(result,matchup,fit))
         result.events=[];del result.box_scoring_trace
         results.append(result)
     payload=accumulator.finish()
+    payload['adjustments']=adjust_label
     for j,i in enumerate(payload['sample_indices']):
+        if world_hook:world_hook(int(seeds[i]))
         sample=build_game_box(sim.simulate(matchup,int(seeds[i]),record_events=True),matchup,fit)
         if tuple(sample['score'][s] for s in SIDE)!=accumulator.score_pairs[i]:raise Blocked('Sample seed parity failed')
         sample['world_index']=i;sample['typical']=j==0

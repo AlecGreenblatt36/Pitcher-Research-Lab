@@ -1,5 +1,24 @@
 # BRL experiment and operations ledger
 
+## Checkpoint — October 7, 2026 (Claude takes over the project)
+
+Evidence base: a full out-of-sample replay of the 2026 regular season with the locked PA model and fitted starter hazard, every input prior-date (lineups and starters as they actually played, bullpens from the team's last 14 days, roles from the prior 365 days), 2,427 games, 200 worlds each, finite-path corrected. Scores are winner Brier (coin flip = 0.25000); "better than coin" = (0.25 - Brier) / 0.25. Fair team model: negative-binomial runs with decayed, shrunk offense/defense ratings and prior-data home field, tuned on 2025 only (tau = 180 days, k = 15).
+
+| ID | Attempt | Disposition and evidence | Delta corrected Brier, 2026 |
+|---|---|---|---|
+| ACC-01 | Simulator alone | 0.24691 raw, 0.24570 corrected (1.7% better than coin). Calibration slope 0.64 over the season (0.18 in April, 0.44 in June, 0.98 in September). | reference |
+| ACC-02 | Fair team model alone | 0.24576 (1.7%). | -0.00115 vs raw simulator |
+| ACC-03 | Equal-weight log-odds average of simulator and team model (no fitted weights) | 0.24497 (2.0%); difference vs team model -0.00079 [-0.00203, +0.00037], May-Sept -0.00143 [-0.00281, -0.00003]. **Adopted as the headline win chance** (brl_live/record.py). | -0.00079 vs team |
+| ACC-04 | Forward-fitted recalibration and home shift on the blend | 0.24461 (2.2%). Not adopted: weights fitted on the live season drift toward the simulator; headline stays unfitted. | -0.00036 vs blend |
+| ACC-05 | Bullpen v2: rest from the last two days, shrunk K-BB-HR quality, save-based closer and setup roles, leverage from quality | Paired on 1,959 May-Sept games: +0.00017 [-0.00155, +0.00182]. Run levels unchanged. **Rejected**; regular-season heuristic bullpen stays. | +0.00017 |
+| ACC-06 | PA-level residual diagnosis of the locked model (every 2025 and 2026 plate appearance, prior-date history state) | Visiting hitters in the top of the first: observed K 26.2% vs predicted 22.8%, run value 0.3085 vs 0.3298 per PA (2026); home hitters in the bottom of the first 0.3509 vs 0.3365. Same direction in 2025. Overall offense over-predicted by 0.17 (away) and 0.08 (home) runs per game. The model has no side x inning interaction. | diagnosis |
+| ACC-07 | Context offsets: log(observed/predicted) per outcome class in six buckets (side x 1st / 2nd-8th / 9th+), 2025 prior plus expanding prior-date 2026, 200 pseudo-PA shrinkage, applied at simulation time | Paired on 490 May-Sept games (every 4th): -0.00122 [-0.00412, +0.00146]; log loss -0.00240; simulated home rate 0.5209 vs actual 0.5204 (base 0.5163); away runs 4.490 vs actual 4.414 (base 4.603); run CRPS 1.7301 vs 1.7325. **Adopted** (brl_live/provider_adjust.py, brl_live/context_offsets.json frozen through 2026-09-27). | -0.00122 |
+| ACC-08 | Per-world talent noise c = 1 on top of the offsets (log-multipliers per player and class, sd c*sqrt((1-q)/(q(n+180))), Jensen-centred) | Same 490 games: +0.00126 [-0.00280, +0.00538] vs base, +0.0025 vs offsets alone; run CRPS no better. **Rejected**; code kept switched off (talent_noise_c = 0). | +0.00126 |
+| UI-01 | Live page v2 (brl_live/page/template.html): slate cards, hero line score, Projected / High / Low / Upset versions chosen over all 10,000 worlds (brl_live/world_selection.py), Summary / Box score / Plays / Odds tabs, Record page, day switcher | Deployed to main (709eff1, acd220c). Deployed phone checks passed at 390 and 1440 px (run 37557075254). First scored live game: LAD at ATL, Oct 6, all methods missed (LAD 49%). | product |
+| BOX-11 | Bookkeeping v2: shrunk hit-by-pitch rate by batter hand, pitcher and batter from 70,550 prior walk/HBP events; pitcher pitch-count pools used only with at least 25 PA | Replaces raw per-pitcher pools that skewed HBP. End-to-end 10,000-world build on a real 2026 game: 0.50-0.67 HBP per team game, starters 82-89 pitches. | product |
+
+Replay caveat: in the replay, early-season bullpens fall back to the previous season's last ten games because no roster is available; the live system takes the bullpen from the official pregame feed, so the replay's April number (0.25415) is pessimistic for live use and has not been separated from model error.
+
 Missing metrics mean **not measured**. Operational improvements are not model-accuracy gains. Preserve failures and all model-selection attempts. The through-2024-model/full-2025 replay has not been run; previous 2025 inspection and any repeated selection must be disclosed.
 
 ## Current checkpoint — October 6, 2026, 6:59 p.m. Eastern
