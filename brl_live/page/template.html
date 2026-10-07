@@ -211,6 +211,13 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .lineup .who small { display: block; color: var(--muted); font-size: 14px; white-space: normal; }
 .lineup .line { font-family: var(--display); font-weight: 700; font-size: 19px; white-space: nowrap; }
 .lineup li.sp { background: #F6F8F5; }
+.lineup li.lineup-h { grid-template-columns: 1fr 64px 64px; align-items: center; border-top: 0; border-radius: 8px 8px 0 0; padding: 8px 12px; border-bottom: 3px solid var(--tc); }
+.lineup li.lineup-h b { font-family: var(--display); font-size: 20px; color: var(--tc); }
+.lineup li.lineup-h span { font-size: 14px; font-weight: 700; color: var(--muted); text-align: right; }
+.lineup li.bat { grid-template-columns: 22px 1fr 64px 64px; align-items: center; }
+.meter { position: relative; display: block; height: 22px; border-radius: 4px; background: var(--rule-soft); overflow: hidden; margin-left: 6px; }
+.meter i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--tc); opacity: .22; }
+.meter em { position: relative; display: block; font-style: normal; font-family: var(--display); font-weight: 700; font-size: 16px; line-height: 22px; text-align: right; padding-right: 6px; }
 .perf { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .perf div { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px; }
 .perf b { display: block; font-size: 16px; }
@@ -1620,21 +1627,20 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   /* Whole-number projected lines: the average over all simulated games, rounded. */
   function projectedLines(f, box) {
     if (!box || !box.teams) return "";
-    var h = '<section class="sec"><h2>Projected lines</h2><p class="lede">What the model expects from each hitter and starter tonight, averaged over all ' + Number(box.n_simulations || 10000).toLocaleString() + " simulated games and rounded to whole numbers.</p><div class=\"lineups\">";
+    var h = '<section class="sec"><h2>Projected lines</h2><p class="lede">What the model expects from each hitter and starter tonight, averaged over all ' + Number(box.n_simulations || 10000).toLocaleString() + " simulated games and rounded to whole numbers. Hit and HR are each hitter's chance of at least one.</p><div class=\"lineups\">";
     ["away", "home"].forEach(function (side) {
       var bat = (box.teams[side].batting || []).slice().sort(function (a, b) { return (a.spot || 0) - (b.spot || 0); }), names = shortNames(bat);
       var sp = (box.teams[side].pitching || [])[0];
-      h += '<ol class="lineup" aria-label="' + esc(nickname(f[side].name)) + ' projected lines">';
+      h += '<ol class="lineup" style="--tc:var(--' + side + ')" aria-label="' + esc(nickname(f[side].name)) + ' projected lines"><li class="lineup-h"><b>' + esc(nickname(f[side].name)) + "</b><span>Hit</span><span>HR</span></li>";
       if (sp && sp.means) {
         var d = sp.distributions || {};
         h += '<li class="sp"><span class="spot">SP</span><span class="who">' + esc(sp.name) + "<small>" + (d.K ? "strikeouts " + quant(d.K, .25) + " to " + quant(d.K, .75) + ", " : "") + (d.outs ? "innings " + ip(quant(d.outs, .25)) + " to " + ip(quant(d.outs, .75)) : "") + '</small></span><span class="line num">' + ip(Math.round(sp.means.outs)) + " IP, " + Math.round(sp.means.K) + " K</span></li>";
       }
       bat.forEach(function (b) {
         var m = b.means || {}, ab = Math.max(1, Math.round(m.AB || 0)), hits = Math.round(m.H || 0);
-        var extras = [];
-        if (b.hr_probability != null) extras.push(pct(b.hr_probability) + " HR");
-        if (b.hit_probability != null) extras.push(pct(b.hit_probability) + " hit");
-        h += "<li><span class=\"spot\">" + (b.spot || "") + '</span><span class="who">' + esc(names[String(b.player_id)] || b.name) + "<small>" + esc(extras.join(", ")) + '</small></span><span class="line num">' + hits + " for " + ab + (Math.round(m.RBI || 0) ? ", " + Math.round(m.RBI) + " RBI" : "") + "</span></li>";
+        var meter = function (p, cap) { return p == null ? "<span></span>" : '<span class="meter num" aria-label="' + pct(p) + '"><i style="width:' + Math.min(100, p / cap * 100).toFixed(0) + '%"></i><em>' + pct(p) + "</em></span>"; };
+        h += '<li class="bat"><span class="spot">' + (b.spot || "") + '</span><span class="who">' + esc(names[String(b.player_id)] || b.name) + "<small>" + hits + " for " + ab + (Math.round(m.RBI || 0) ? ", " + Math.round(m.RBI) + " RBI" : "") + "</small></span>" +
+          meter(b.hit_probability, 1) + meter(b.hr_probability, 0.4) + "</li>";
       });
       h += "</ol>";
     });
