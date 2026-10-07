@@ -1,5 +1,5 @@
 {
- "created_at": "2026-10-07T04:11:52.253257+00:00",
+ "created_at": "2026-10-07T04:41:20.461410+00:00",
  "status": "blocked",
  "runtime": "brl_engine (public code, sealed data)",
  "ledger_branch": "brl-live-data-v2",
@@ -34,33 +34,38 @@
    "home": "San Diego Padres"
   }
  ],
- "reason": "Prior-day game is not final; coverage remains incomplete",
- "error_type": "Blocked",
+ "reason": "Too few prior games for team ratings",
+ "error_type": "ValueError",
  "error_trace": [
   {
-   "file": "entrypoint.py",
-   "function": "main",
-   "line": 69
+   "file": "runner.py",
+   "function": "iteration",
+   "line": 208
   },
   {
    "file": "box_runner.py",
-   "function": "main",
-   "line": 152
+   "function": "process",
+   "line": 107
   },
   {
-   "file": "history_refresh.py",
-   "function": "refresh",
-   "line": 403
+   "file": "box_runner.py",
+   "function": "run",
+   "line": 50
   },
   {
-   "file": "history_refresh.py",
-   "function": "capture_day",
-   "line": 312
+   "file": "team_baseline.py",
+   "function": "predict",
+   "line": 33
   },
   {
-   "file": "history_refresh.py",
-   "function": "schedule_cases",
-   "line": 135
+   "file": "team_model.py",
+   "function": "probability",
+   "line": 98
+  },
+  {
+   "file": "team_model.py",
+   "function": "ratings",
+   "line": 68
   }
  ],
  "preserved_previous_forecasts": false
