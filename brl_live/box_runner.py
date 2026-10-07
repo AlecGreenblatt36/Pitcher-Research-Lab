@@ -182,7 +182,7 @@ def main(public_dir):
         'scored_games':scores['n_games'],'skill_scored_games':ledger['skill_scores']['n_games'],
         'skill_baseline_prior_games':len(skill_history),'raw_data_published':False,
         'history_coverage_through':info['coverage_through'],'history_added_PA':info['added_PA'],'history_refresh_note':refresh_note,
-        'pitch_bookkeeping_prior_PA':len(annotations),'engine_rules_changed':False,
+        'pitch_bookkeeping_prior_PA':len(annotations),'pitch_bookkeeping_season_games':int(getattr(annotations,'attrs',{}).get('season_games',0)),'engine_rules_changed':False,
         'model_parameters_changed':False,'simulation_adjustments':'context offsets (brl_live/context_offsets.json)',
         'live_updates':len(ledger['live']),'live_update_errors':sum(1 for v in ledger['live'].values() if v.get('error')),
         'market_receipt':ledger.get('market_receipt'),'team_results_rows':len(getattr(sim,'rows',[]) or []),

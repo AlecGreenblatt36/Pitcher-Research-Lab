@@ -442,7 +442,7 @@ support pitch-count estimation. Official prior-date playEvents supply counts.
                 outcome=map_event(play.get('result',{}).get('eventType',''))
                 if outcome is None:continue
                 if not play['about']['isComplete'] or timestamp(play['about']['endTime'])>timestamp(source.finished_at):raise Blocked('Unresolved bookkeeping label')
-                key=(feed['gamePk'],play['about']['atBatIndex'])
+                key=(int(feed['gamePk']),int(play['about']['atBatIndex']))
                 if key in seen:continue
                 seen.add(key)
                 m=play['matchup'];count=sum(e.get('isPitch') is True for e in play.get('playEvents',[]))
@@ -451,8 +451,21 @@ support pitch-count estimation. Official prior-date playEvents supply counts.
                     'outcome':outcome,'terminal_event':play['result']['eventType'],
                     'pitcher':int(m['pitcher']['id']),'batter':None if batter is None else int(batter),'stand':m['batSide']['code'],
                     'pitch_number':count,'available_at':source.finished_at,'pitches':pitch_list(play),'contact':contact_of(play)})
+    # The sealed season backfill (when one exists) supplies every earlier game of the year;
+    # the day cache above wins on overlap, and nothing dated today or later is used.
+    season_games=0
+    if cache is not None and getattr(cache,'store',None) is not None and getattr(cache,'key',None) is not None:
+        from brl_live.bookkeeping_season import load_season,season_rows
+        from zoneinfo import ZoneInfo
+        today=origin.astimezone(ZoneInfo('America/New_York')).date()
+        for year in sorted({today.year-1,today.year}):
+            doc=load_season(cache.store,cache.key,year)
+            if doc is None:continue
+            season_games+=len(doc['games'])
+            rows.extend(season_rows(doc,today.isoformat(),seen))
     if not rows:raise Blocked('No prior official pitch-count observations')
-    return pd.DataFrame(rows)
+    frame=pd.DataFrame(rows);frame.attrs['season_games']=season_games
+    return frame
 
 
 def validate_box_payload(box):
