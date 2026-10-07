@@ -1,6 +1,6 @@
 {
  "schema": "brl.cors-probe.v1",
- "at": "2026-10-07T18:48:29.579408+00:00",
+ "at": "2026-10-07T18:51:09.786592+00:00",
  "origin": "https://alecgreenblatt36.github.io",
  "checks": {
   "schedule": {
@@ -10,7 +10,7 @@
    "cache_control": "max-age=20, public, stale-while-revalidate=30, stale-if-error=86400",
    "encoding": null,
    "bytes": 5462,
-   "seconds": 0.21
+   "seconds": 0.13
   },
   "feed_live": {
    "status": 200,
@@ -19,7 +19,7 @@
    "cache_control": "max-age=10, public, stale-while-revalidate=30, stale-if-error=86400",
    "encoding": null,
    "bytes": 223295,
-   "seconds": 0.14
+   "seconds": 0.02
   },
   "feed_live_fields": {
    "status": 200,
@@ -28,7 +28,7 @@
    "cache_control": "max-age=10, public, stale-while-revalidate=30, stale-if-error=86400",
    "encoding": null,
    "bytes": 1436,
-   "seconds": 0.14
+   "seconds": 0.07
   },
   "linescore": {
    "status": 200,
@@ -37,7 +37,7 @@
    "cache_control": "max-age=10, public, stale-while-revalidate=30, stale-if-error=86400",
    "encoding": null,
    "bytes": 2097,
-   "seconds": 0.1
+   "seconds": 0.02
   },
   "timestamps": {
    "status": 200,
@@ -46,12 +46,83 @@
    "cache_control": "max-age=10, public, stale-while-revalidate=30, stale-if-error=86400",
    "encoding": null,
    "bytes": 19,
-   "seconds": 0.11
+   "seconds": 0.02
   },
   "preflight": {
    "status": 403,
    "allow_origin": null,
    "seconds": 0.04
+  },
+  "final_full": {
+   "status": "Final",
+   "allow_origin": "*",
+   "allow_methods": "GET, POST, PUT, DELETE, OPTIONS",
+   "cache_control": "max-age=10, public, stale-while-revalidate=30, stale-if-error=86400",
+   "encoding": null,
+   "bytes": 810396,
+   "seconds": 0.03,
+   "plays": 74,
+   "complete": 74,
+   "with_batter_id": 74,
+   "runners": 100,
+   "runner_play_index": 100,
+   "pitches": 298,
+   "pitch_xy": 298,
+   "pitch_type": 298,
+   "hit_xy": 51,
+   "box_players": 26,
+   "box_player_keys": [
+    "gameStatus",
+    "jerseyNumber",
+    "parentTeamId",
+    "person",
+    "position",
+    "seasonStats",
+    "stats",
+    "status"
+   ],
+   "box_batters": 16,
+   "linescore_innings": 9
+  },
+  "final_fields": {
+   "status": "Final",
+   "allow_origin": "*",
+   "allow_methods": "GET, POST, PUT, DELETE, OPTIONS",
+   "cache_control": "max-age=10, public, stale-while-revalidate=30, stale-if-error=86400",
+   "encoding": null,
+   "bytes": 308278,
+   "seconds": 0.11,
+   "plays": 74,
+   "complete": 74,
+   "with_batter_id": 74,
+   "runners": 100,
+   "runner_play_index": 100,
+   "pitches": 298,
+   "pitch_xy": 298,
+   "pitch_type": 298,
+   "hit_xy": 51,
+   "box_players": 26,
+   "box_player_keys": [
+    "gameStatus",
+    "jerseyNumber",
+    "parentTeamId",
+    "person",
+    "position",
+    "seasonStats",
+    "stats",
+    "status"
+   ],
+   "box_batters": 16,
+   "linescore_innings": 9
+  },
+  "final_boxscore": {
+   "status": 200,
+   "allow_origin": "*",
+   "allow_methods": "GET, POST, PUT, DELETE, OPTIONS",
+   "cache_control": "max-age=10, public, stale-while-revalidate=30, stale-if-error=86400",
+   "encoding": null,
+   "bytes": 171012,
+   "seconds": 0.02
   }
  },
  "game_pk": 849833
