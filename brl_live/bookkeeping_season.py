@@ -41,6 +41,28 @@ def study_purpose(year: int) -> str:
     return f'pitch-physics-season-{int(year)}'
 
 
+def physics_path(year: int) -> str:
+    """Per-plate-appearance physics table (gzip CSV inside) derived from the study: what the live provider reads."""
+    return f'private/statcast/physics-{int(year)}.enc'
+
+
+def physics_purpose(year: int) -> str:
+    return f'physics-table-season-{int(year)}'
+
+
+def load_physics_table(store, key: bytes, year: int):
+    """The sealed per-PA physics table for a season as a DataFrame, or None when none is sealed."""
+    import io
+    import pandas as pd
+    saved = store.read(physics_path(year))
+    if saved is None:
+        return None
+    raw = gzip.decompress(unseal(saved[0], key, physics_purpose(year)))
+    frame = pd.read_csv(io.BytesIO(raw))
+    frame['date_key'] = frame['date_key'].astype(str).str[:10]
+    return frame
+
+
 def load_season(store, key: bytes, year: int) -> dict | None:
     """The sealed season document, or None when no backfill has been made for that year."""
     saved = store.read(season_path(year))

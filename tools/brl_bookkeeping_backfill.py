@@ -24,7 +24,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / 'brl_engine' / 'runtime'))
 from brl_live.pitch_bridge import pitch_list, contact_of  # noqa: E402
-from brl_live.bookkeeping_season import SCHEMA, STUDY_SCHEMA, season_path, season_purpose, receipt_path, study_path, study_purpose  # noqa: E402
+from brl_live.bookkeeping_season import SCHEMA, STUDY_SCHEMA, season_path, season_purpose, receipt_path, study_path, study_purpose, physics_path, physics_purpose  # noqa: E402
+from research_lab.pa_model.physics import table_from_study, RUN_VALUE  # noqa: E402
 from cloud.security import seal, unseal, key_bytes, sha  # noqa: E402
 
 
@@ -214,6 +215,14 @@ def main():
     study_plain = gzip.compress(json.dumps(study, separators=(',', ':'), sort_keys=True).encode(), mtime=0)
     study_cipher = seal(study_plain, key, study_purpose(year))
     put(repo, token, study_path(year), study_cipher, branch, f'BRL: season {year} pitch physics through {through}')
+    # The compact per-PA table the live provider reads (outcome run value included for the contact-value cells).
+    table = table_from_study(study)
+    outcome = {(int(pk), int(r['i']) + 1): r['o'] for pk, g in study['games'].items() for r in g['rows']}
+    table['outcome'] = [outcome.get((int(a), int(b))) for a, b in zip(table['game_pk'], table['at_bat_number'])]
+    table['run_value'] = table['outcome'].map(RUN_VALUE).fillna(0.0)
+    table_plain = gzip.compress(table.to_csv(index=False).encode(), mtime=0)
+    table_cipher = seal(table_plain, key, physics_purpose(year))
+    put(repo, token, physics_path(year), table_cipher, branch, f'BRL: season {year} physics table through {through}')
     n_rows = sum(len(g['rows']) for g in doc['games'].values())
     with_pitches = sum(1 for g in doc['games'].values() for r in g['rows'] if r['pt'])
     with_contact = sum(1 for g in doc['games'].values() for r in g['rows'] if r['c'])
@@ -224,7 +233,9 @@ def main():
                'study': {'path': study_path(year), 'purpose': study_purpose(year), 'games': len(study['games']), 'plate_appearances': sum(len(g['rows']) for g in study['games'].values()),
                          'pitches': sum(len(r['pitches']) for g in study['games'].values() for r in g['rows']),
                          'with_hit_measurement': sum(1 for g in study['games'].values() for r in g['rows'] if r['hit']),
-                         'cipher_sha256': sha(study_cipher), 'cipher_bytes': len(study_cipher), 'pitch_fields': list(PITCH_FIELDS), 'hit_fields': list(HIT_FIELDS)}}
+                         'cipher_sha256': sha(study_cipher), 'cipher_bytes': len(study_cipher), 'pitch_fields': list(PITCH_FIELDS), 'hit_fields': list(HIT_FIELDS)},
+               'physics_table': {'path': physics_path(year), 'purpose': physics_purpose(year), 'rows': int(len(table)), 'columns': list(table.columns),
+                                 'cipher_sha256': sha(table_cipher), 'cipher_bytes': len(table_cipher)}}
     put(repo, token, receipt_path(year), json.dumps(receipt, indent=1).encode(), branch, f'BRL: season {year} bookkeeping receipt')
     print(json.dumps({k: receipt[k] for k in ('games', 'plate_appearances', 'with_pitch_list', 'with_contact', 'fetched_this_run', 'cipher_bytes')} | {'failures': len(failures)}))
 

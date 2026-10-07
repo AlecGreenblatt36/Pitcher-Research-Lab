@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / 'brl_engine' / 'runtime'))
 from cloud.security import unseal, key_bytes  # noqa: E402
-from brl_live.bookkeeping_season import STUDY_SCHEMA, study_path, study_purpose  # noqa: E402
+from brl_live.bookkeeping_season import STUDY_SCHEMA, study_path, study_purpose, physics_path, physics_purpose  # noqa: E402
 
 LABELS = ('BIP_OUT', 'K', 'BB_HBP', '1B', '2B_3B', 'HR', 'OTHER_REACH')
 from research_lab.pa_model import physics as phys  # noqa: E402
@@ -124,6 +124,12 @@ def main():
         stage('load pitch physics seasons')
         physics = []; seasons_loaded = []
         for year in receipt['seasons']:
+            raw = read_blob(repo, token, physics_path(year), branch)
+            if raw is not None:
+                import io
+                table = pd.read_csv(io.BytesIO(gzip.decompress(unseal(raw, key, physics_purpose(year)))))
+                physics.append(table); seasons_loaded.append(year)
+                continue
             raw = read_blob(repo, token, study_path(year), branch)
             if raw is None:
                 continue

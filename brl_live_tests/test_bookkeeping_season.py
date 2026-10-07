@@ -79,3 +79,14 @@ def test_game_context_from_schedule_and_feed():
     out = game_context({'context': c}, gd, '2026-10-07T12:00:00+00:00')
     assert out['weather'] == {'condition': 'Clear', 'temp': '71', 'wind': '8 mph, Out To CF'} and out['date'] == '2026-10-07' and out['series_game_number'] == 3
     assert game_context(None, {}, 'now') == {'updated_at': 'now'}
+
+
+def test_physics_table_round_trip():
+    from brl_live.bookkeeping_season import load_physics_table, physics_path, physics_purpose
+    import pandas as pd
+    store = Store()
+    assert load_physics_table(store, KEY, 2026) is None
+    frame = pd.DataFrame({'date_key': ['2026-04-01'], 'game_pk': [1], 'at_bat_number': [1], 'pitcher': [2], 'batter': [3], 'n': [4.0], 'ev': [100.5], 'run_value': [0.88]})
+    store.files[physics_path(2026)] = seal(gzip.compress(frame.to_csv(index=False).encode()), KEY, physics_purpose(2026))
+    back = load_physics_table(store, KEY, 2026)
+    assert back.date_key.iloc[0] == '2026-04-01' and back.ev.iloc[0] == 100.5 and back.run_value.iloc[0] == 0.88
