@@ -95,6 +95,10 @@ def main():
                     lv=(data.get('live') or {}).get(str(f['game_pk']))
                     p=lv['home_win_probability'] if lv and not lv.get('error') and str(f['game_pk']) not in data['actuals'] else headline(data,ident,f)
                     fav=f['home'] if p>=.5 else f['away']
+                    if card.locator('span.state.live').count():
+                        # In progress: the page follows the game from MLB's feed, so its number moves between saved runs.
+                        assert card.count()==1 and re.search(r'\d+%',card.inner_text())
+                        continue
                     assert card.count()==1 and f'{round(max(p,1-p)*100)}%' in card.inner_text() and fav['abbr'] in card.inner_text()
                 design_check('slate')
                 page.screenshot(path=str(out/f'slate_{width}.png'),full_page=True)
@@ -148,6 +152,27 @@ def main():
                 assert 'regular-season habits' in page.inner_text('#app')
                 assert 'pitch-by-pitch' in page.inner_text('#app')
                 design_check('how');page.screenshot(path=str(out/f'how_{width}.png'),full_page=True)
+                if width==390:
+                    # Record (never fail on) whether the page followed a game in progress from MLB's feed in the browser.
+                    try:
+                        go('#/');page.wait_for_timeout(2500)
+                        cards=page.locator('a.card:has(span.state.live)')
+                        feed={'live_cards':cards.count()}
+                        if cards.count():
+                            pk=cards.first.get_attribute('data-game');feed['game']=pk
+                            page.evaluate("pk => { location.hash = '#/game/' + pk + '/summary'; }",pk)
+                            seen=False
+                            for _ in range(30):
+                                page.wait_for_timeout(1000)
+                                text=page.inner_text('#app')
+                                if 'Live from MLB' in text or 'Final from the official feed' in text:seen=True;break
+                            feed.update(browser_feed_seen=seen,win_chart='Win chance through the game' in text,
+                                        scoring_plays='Scoring plays so far' in text or 'Scoring plays' in text,
+                                        hero=re.sub(r'\s+',' ',text[:600]))
+                            page.screenshot(path=str(out/'live_game_390.png'),full_page=True)
+                        receipt['browser_feed']=feed
+                    except Exception as exc:
+                        receipt['browser_feed']={'error':type(exc).__name__+': '+str(exc)[:200]}
                 assert not errors,errors
                 receipt['checks'].append({'width':width,'font_faces_loaded':True,'no_overflow':True,'all_game_sections':True,'javascript_errors':errors})
                 if all(k in data.get('scores',{}) for k in ('model_brier','team_brier','market_brier')):

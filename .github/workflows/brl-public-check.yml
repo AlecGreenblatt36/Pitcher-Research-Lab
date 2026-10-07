@@ -40,6 +40,14 @@ jobs:
         run: python -m playwright install --with-deps chromium
       - name: Check the deployed page on desktop and phone
         run: python tools/check_brl_phone_page.py --output phone-check
+      - name: Record the latest page-check receipt on the ledger branch (read from outside)
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test -f phone-check/receipt.json || exit 0
+          python -c "import json; r=json.load(open('phone-check/receipt.json')); json.dump({k: r.get(k) for k in ('started_at', 'finished_at', 'status', 'error', 'browser_feed', 'checks', 'scored_games')}, open('phone-check/summary.json', 'w'), indent=1)"
+          python tools/brl_record_diagnostic.py "diagnostics/phone_check_latest.json" phone-check/summary.json || true
       - name: Record the page-check receipt on the ledger branch when the check fails
         if: failure()
         env:
