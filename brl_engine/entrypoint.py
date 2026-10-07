@@ -18,6 +18,33 @@ DATA_DIRS = ('pa_model_reference', 'model_runs', 'data')
 DATA_FILES = ('requirements-cloud.txt', 'RUNTIME_MANIFEST.json')
 
 
+def restore_package(repo, token, key_hex, manifest, destination):
+    """Fetch private/data-package.enc from the ledger branch, verify, unseal and unzip into destination."""
+    import hashlib, io, zipfile
+    sys.path.insert(0, str(REPO_ROOT / 'brl_engine' / 'runtime'))
+    from cloud.security import unseal, key_bytes
+    branch, path = manifest['branch'], manifest['path']
+    meta = api(f'https://api.github.com/repos/{repo}/contents/{path}?ref={branch}', token)
+    if meta.get('encoding') == 'base64' and isinstance(meta.get('content'), str) and meta.get('content'):
+        cipher = base64.b64decode(''.join(meta['content'].split()))
+    else:
+        blob = api(f'https://api.github.com/repos/{repo}/git/blobs/{meta["sha"]}', token)
+        cipher = base64.b64decode(''.join(blob['content'].split()))
+    if hashlib.sha256(cipher).hexdigest() != manifest['cipher_sha256']:
+        raise ValueError('Data package hash mismatch')
+    plain = unseal(cipher, key_bytes(key_hex), manifest['purpose'])
+    if hashlib.sha256(plain).hexdigest() != manifest['plaintext_sha256']:
+        raise ValueError('Data package plaintext hash mismatch')
+    destination = Path(destination).resolve()
+    with zipfile.ZipFile(io.BytesIO(plain)) as z:
+        for item in z.infolist():
+            target = (destination / item.filename).resolve()
+            if not target.is_relative_to(destination) or '\\' in item.filename:
+                raise ValueError('Unsafe package path')
+        z.extractall(destination)
+    return destination
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--site', required=True); parser.add_argument('--runtime', required=True)
@@ -42,20 +69,32 @@ def main():
         receipt['secret_present'] = bool(key)
         if not key:
             raise ValueError('Activation needed: BRL_PA_PACKAGE_KEY secret missing.')
-        config = json.loads(Path(args.config).read_text())
-        container = Path(args.runtime) / 'container'
-        restore(fetch(f'https://github.com/{repo}/releases/download/{TAG}/{ASSET}'), key, config, container)
         data_root = Path(args.runtime) / 'data'
         if data_root.exists():
             shutil.rmtree(data_root)
         data_root.mkdir(parents=True)
-        for name in DATA_DIRS:
-            if (container / name).exists():
-                shutil.copytree(container / name, data_root / name)
-        for name in DATA_FILES:
-            if (container / name).exists():
-                shutil.copy2(container / name, data_root / name)
-        shutil.rmtree(container)   # the inherited code is never imported
+        manifest_path = REPO_ROOT / 'brl_engine' / 'data_package.json'
+        receipt['data_source'] = None
+        if manifest_path.exists():
+            # The project's own sealed package on the ledger branch (made by the data-package workflow).
+            try:
+                manifest = json.loads(manifest_path.read_text())
+                restore_package(repo, token, key, manifest, data_root)
+                receipt['data_source'] = manifest['version']
+            except Exception as exc:
+                receipt['data_package_error'] = type(exc).__name__ + ': ' + str(exc)[:160]
+        if receipt['data_source'] is None:
+            config = json.loads(Path(args.config).read_text())
+            container = Path(args.runtime) / 'container'
+            restore(fetch(f'https://github.com/{repo}/releases/download/{TAG}/{ASSET}'), key, config, container)
+            for name in DATA_DIRS:
+                if (container / name).exists():
+                    shutil.copytree(container / name, data_root / name)
+            for name in DATA_FILES:
+                if (container / name).exists():
+                    shutil.copy2(container / name, data_root / name)
+            shutil.rmtree(container)   # the inherited code is never imported
+            receipt['data_source'] = 'inherited release asset ' + TAG
         os.environ['BRL_DATA_ROOT'] = str(data_root)
         os.environ['BRL_WORK_ROOT'] = str(Path(args.runtime) / 'work')
         receipt['stage'] = 'dependencies'

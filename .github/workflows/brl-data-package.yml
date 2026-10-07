@@ -1,0 +1,25 @@
+name: BRL data package
+on:
+  workflow_dispatch:
+  push:
+    branches: [diag/seal-data-package]
+permissions:
+  contents: write
+jobs:
+  seal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check cryptography==46.0.4
+      - name: Seal the data files into the project's own package (plaintext never leaves the runner)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRL_PA_PACKAGE_KEY: ${{ secrets.BRL_PA_PACKAGE_KEY }}
+        run: python tools/brl_seal_data_package.py
+      - name: Remove decrypted files
+        if: always()
+        run: rm -rf -- "$RUNNER_TEMP/brl-seal"
