@@ -1,0 +1,25 @@
+name: BRL runtime tree diagnostic
+on:
+  workflow_dispatch:
+  push:
+    branches: [diag/runtime-tree]
+permissions:
+  contents: write
+jobs:
+  tree:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check cryptography==46.0.4
+      - name: List runtime files (names, sizes, hashes, signatures only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRL_PA_PACKAGE_KEY: ${{ secrets.BRL_PA_PACKAGE_KEY }}
+        run: python tools/brl_runtime_tree.py
+      - name: Remove decrypted files
+        if: always()
+        run: rm -rf -- "$RUNNER_TEMP/brl-private-tree"
