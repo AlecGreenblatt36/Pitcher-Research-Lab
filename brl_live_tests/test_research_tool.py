@@ -93,3 +93,21 @@ def test_variant_columns_and_time_validity_of_xvalue_and_recent():
     assert np.isfinite(extras.to_numpy()).all()
     assert tool.columns_for({}) == tool.EXTRA and tool.columns_for({'recent_days': 30}) == tool.EXTRA + tool.RECENT_COLS
     assert set(tool.SETS['physics2']) >= {'base', 'k_low', 'k_high', 'xvalue', 'recent30', 'xvalue_recent30'}
+
+
+def test_postseason_usage_summary(monkeypatch):
+    import gzip, json
+    from cloud.security import seal
+    from brl_live.bookkeeping_season import study_purpose
+    key = bytes(range(32))
+    def game(gt, starter_bf, relievers):
+        rows = [{'i': i, 'half': 'top', 'p': 1 if i < starter_bf else 2 + (i - starter_bf) % relievers} for i in range(starter_bf + relievers)]
+        rows += [{'i': 100 + i, 'half': 'bottom', 'p': 50 + (0 if i < 20 else 1)} for i in range(24)]
+        return {'date': '2026-10-01', 'game_type': gt, 'rows': rows}
+    doc = {'schema': tool.STUDY_SCHEMA, 'year': 2026, 'games': {'1': game('R', 24, 3), '2': game('R', 22, 3), '3': game('D', 16, 4)}}
+    blob = seal(gzip.compress(json.dumps(doc).encode()), key, study_purpose(2026))
+    monkeypatch.setattr(tool, 'read_blob', lambda repo, token, path, branch: blob if path.endswith('2026.enc') else None)
+    out = tool.postseason_usage('r', 't', key, 'b', seasons=(2026,))
+    assert out['starters_by_game_type']['R']['starts'] == 4 and out['starters_by_game_type']['D']['mean_bf'] == 18.0
+    assert out['same_pitcher']['D']['starts'] == 2 and out['same_pitcher']['D']['ratio_mean'] == round((16 / 23 + 20 / 20) / 2, 3)
+    assert out['relievers_per_team_game']['D'] == 2.5

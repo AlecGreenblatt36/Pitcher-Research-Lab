@@ -101,10 +101,61 @@ SETS = {
 }
 
 
+def postseason_usage(repo, token, key, branch, seasons=(2023, 2024, 2025, 2026)) -> dict:
+    """How starters and bullpens are used in postseason games compared with the regular season (from the sealed study seasons)."""
+    import collections
+    starts, relievers = [], []
+    for year in seasons:
+        raw = read_blob(repo, token, study_path(year), branch)
+        if raw is None:
+            continue
+        doc = json.loads(gzip.decompress(unseal(raw, key, study_purpose(year))))
+        for pk, game in doc['games'].items():
+            gt = game.get('game_type', 'R'); rows = sorted(game['rows'], key=lambda r: r['i'])
+            by_half = {'top': [], 'bottom': []}
+            for r in rows:
+                by_half[r.get('half', 'top')].append(r)
+            for half, hr in by_half.items():
+                if not hr:
+                    continue
+                counts = collections.Counter(r['p'] for r in hr)
+                starter = hr[0]['p']
+                starts.append({'season': year, 'game_type': gt, 'pitcher': starter, 'bf': counts[starter], 'date': game.get('date')})
+                relievers.append({'season': year, 'game_type': gt, 'n': len(counts) - 1})
+        del doc
+    st = pd.DataFrame(starts); rl = pd.DataFrame(relievers)
+    out = {'starters_by_game_type': {}, 'relievers_per_team_game': {}, 'same_pitcher': {}}
+    for gt, g in st.groupby('game_type'):
+        out['starters_by_game_type'][gt] = {'starts': int(len(g)), 'mean_bf': round(float(g.bf.mean()), 2), 'median_bf': float(g.bf.median()),
+                                            'q25': float(g.bf.quantile(0.25)), 'q75': float(g.bf.quantile(0.75)), 'share_under_16_bf': round(float((g.bf < 16).mean()), 3)}
+    for gt, g in rl.groupby('game_type'):
+        out['relievers_per_team_game'][gt] = round(float(g.n.mean()), 2)
+    reg = st[st.game_type == 'R'].groupby(['pitcher', 'season']).bf.median().rename('reg_median')
+    post = st[st.game_type.isin(['F', 'D', 'L', 'W'])].join(reg, on=['pitcher', 'season']).dropna()
+    for gt, g in post.groupby('game_type'):
+        out['same_pitcher'][gt] = {'starts': int(len(g)), 'mean_bf': round(float(g.bf.mean()), 2), 'own_regular_median': round(float(g.reg_median.mean()), 2),
+                                   'ratio_mean': round(float((g.bf / g.reg_median).mean()), 3), 'ratio_median': round(float((g.bf / g.reg_median).median()), 3)}
+    allpost = post
+    out['same_pitcher']['all_postseason'] = {'starts': int(len(allpost)), 'ratio_mean': round(float((allpost.bf / allpost.reg_median).mean()), 3) if len(allpost) else None,
+                                            'mean_bf': round(float(allpost.bf.mean()), 2) if len(allpost) else None, 'own_regular_median': round(float(allpost.reg_median.mean()), 2) if len(allpost) else None}
+    return out
+
+
 def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']; key_hex = os.environ['BRL_PA_PACKAGE_KEY']; key = key_bytes(key_hex)
     branch = os.environ.get('BRL_LEDGER_BRANCH', 'brl-live-data')
     experiment = (os.environ.get('BRL_EXPERIMENT') or 'physics').strip()
+    if experiment == 'postseason_usage':
+        run_id = os.environ.get('GITHUB_RUN_ID', 'local')
+        receipt = {'schema': 'brl.research-receipt.v1', 'experiment': experiment, 'run_id': run_id, 'started_at': datetime.now(timezone.utc).isoformat()}
+        try:
+            receipt['results'] = postseason_usage(repo, token, key, branch); receipt['status'] = 'completed'
+        except Exception as exc:
+            receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:300]
+            receipt['where'] = [{'file': Path(f.filename).name, 'function': f.name, 'line': f.lineno} for f in traceback.extract_tb(exc.__traceback__)[-5:]]
+        put_text(repo, token, f'research/{experiment}-{run_id}.json', json.dumps(receipt, indent=1, default=float), branch, 'BRL: research ' + experiment)
+        print(json.dumps({k: receipt.get(k) for k in ('status', 'error')}))
+        return
     run_id = os.environ.get('GITHUB_RUN_ID', 'local')
     work = Path(os.environ.get('RUNNER_TEMP', '/tmp')) / 'brl-research'
     receipt = {'schema': 'brl.research-receipt.v1', 'experiment': experiment, 'run_id': run_id, 'started_at': datetime.now(timezone.utc).isoformat(), 'stages': []}
