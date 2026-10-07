@@ -1,0 +1,709 @@
+{
+ "runtime_tag": "brl-live-runtime-20261006",
+ "files": [
+  {
+   "path": "RUNTIME_MANIFEST.json",
+   "size": 6248,
+   "sha256": "ff70bbc57c0d055ebc328634c35da9a87c6a2c8c8e1adc6204b3ff2c4ff8d078"
+  },
+  {
+   "path": "app/__init__.py",
+   "size": 0,
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "signatures": []
+  },
+  {
+   "path": "app/archived_replay.py",
+   "size": 6659,
+   "sha256": "4cda13a79031556f9f0d5bb9df1ec4f7c6ca9688ae529dabd41e7c9b640d5cc9",
+   "signatures": [
+    "from __future__ import annotations",
+    "from dataclasses import asdict",
+    "from pathlib import Path",
+    "import gc,json",
+    "import pandas as pd",
+    "from .common import ROOT,load,save,iso,content_hash,digest",
+    "from .source_archive import SourceArchive",
+    "from .safety import Blocked",
+    "from .engine_bridge import HISTORY,MODEL,HAZARD,NAMES,run",
+    "from research_lab.game_sim.models import PlayerProfile,PitcherProfile,TeamProfile,GameMatchup",
+    "from research_lab.game_sim.fixtures import _appearances",
+    "class ReplayStore:",
+    "def __init__(self,root=None):self.root=Path(root or ROOT/'local/replays');self.root.mkdir(parents=True,exist_ok=True)",
+    "def add(self,archive,payload):",
+    "def get(self,ident):",
+    "def rows(self):",
+    "def matchup_from_archive(archive,history):",
+    "def execute(pk,progress=None):"
+   ]
+  },
+  {
+   "path": "app/baseline_store.py",
+   "size": 1516,
+   "sha256": "2dcdbe7d5a08bd40479f48663607e6337c47b22960ec98ad5420b23c9908e6a6",
+   "signatures": [
+    "from pathlib import Path",
+    "from .common import ROOT,load,save",
+    "from .safety import Blocked",
+    "def store_baseline(value,root=None):",
+    "def paired_baseline(payload,root=None):"
+   ]
+  },
+  {
+   "path": "app/catalog.py",
+   "size": 3099,
+   "sha256": "2e159cd504d0c51931a6b5d756725b43aaaac8ffc91094dda2f96d7032b969bf",
+   "signatures": [
+    "from __future__ import annotations",
+    "import json, urllib.request",
+    "from datetime import date",
+    "from .common import ROOT, load, save, iso",
+    "class MLBUnavailable(RuntimeError): pass",
+    "def fetch_json(url):",
+    "def schedule(day, online=False):",
+    "def game_info(game_pk):"
+   ]
+  },
+  {
+   "path": "app/closure_report.py",
+   "size": 7112,
+   "sha256": "a3e1df2576f2a720efa482d1fd54013a20a7a14e5878f08dfabed6227f615aee",
+   "signatures": [
+    "import numpy as np",
+    "import copy, threading",
+    "from .common import ROOT,load,digest,content_hash",
+    "from .numerical_completion import COMPLETED,PROTOCOL",
+    "from .archived_replay import ReplayStore",
+    "from .slate_report import report as original_report, aggregate",
+    "from .results import ResultStore",
+    "from .baseline_store import paired_baseline",
+    "from .replay_diagnostics import compare",
+    "from .safety import Blocked",
+    "def numerical_mcse(payloads, actuals):",
+    "def _build_report(day='2026-09-27'):",
+    "def _fingerprint(day):",
+    "def report(day='2026-09-27'):"
+   ]
+  },
+  {
+   "path": "app/common.py",
+   "size": 1122,
+   "sha256": "10ebd01ab9564a3ecc061b39e59fc1ad6204bf24366803f173de440c09e62ee4",
+   "signatures": [
+    "from __future__ import annotations",
+    "import hashlib, json",
+    "from datetime import datetime, timezone",
+    "from pathlib import Path",
+    "def now(): return datetime.now(timezone.utc)",
+    "def iso(): return now().isoformat()",
+    "def timestamp(value):",
+    "def digest(path):",
+    "def canonical(value): return json.dumps(value, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()",
+    "def content_hash(value): return hashlib.sha256(canonical(value)).hexdigest()",
+    "def load(path): return json.loads(Path(path).read_text())",
+    "def save(path, data, exclusive=False):"
+   ]
+  },
+  {
+   "path": "app/diagnostic_job.py",
+   "size": 918,
+   "sha256": "8fcea41d08fab211922df5a2cd485382bcc317674383cd47bc784d5485fc34b3",
+   "signatures": [
+    "from dataclasses import asdict",
+    "import gc",
+    "import pandas as pd",
+    "from .common import ROOT,load,save",
+    "from .engine_bridge import run,HISTORY,NAMES",
+    "from research_lab.game_sim.fixtures import build_matchup,load_names",
+    "def execute(progress=None):"
+   ]
+  },
+  {
+   "path": "app/engine_bridge.py",
+   "size": 8287,
+   "sha256": "4355cbbd6fb39d352ca35821da9086f8131d1621f6a3c63724ce30c268263d1c",
+   "signatures": [
+    "from __future__ import annotations",
+    "from collections import Counter",
+    "from concurrent.futures import ProcessPoolExecutor, as_completed",
+    "from dataclasses import asdict",
+    "import multiprocessing,time,os",
+    "import numpy as np,pandas as pd",
+    "from .common import ROOT,load,save,iso,digest",
+    "from .safety import validate_snapshot,Blocked",
+    "from research_lab.game_sim.engine import GameSimulator",
+    "from research_lab.game_sim.models import GameMatchup,PlayerProfile,PitcherProfile,TeamProfile,SimulationConfig",
+    "from research_lab.game_sim.locked_pa_provider import LockedPAModelProvider,EXPECTED_MODEL_SHA256",
+    "from research_lab.game_sim.starter_hazard import tendencies_at",
+    "from .portable import PortableLockedProvider,PortableStarterPolicy,pinned_document",
+    "from research_lab.game_sim.fixtures import load_names",
+    "from research_lab.game_sim.monte_carlo import simulate_many",
+    "def decode_matchup(data):",
+    "def team(t):",
+    "def make_engine(parameters):",
+    "def _initialize(parameters):",
+    "def _batch(seeds):",
+    "def run(parameters,n=10000,seed=20261005,workers=2,progress=None):",
+    "class Reuse:",
+    "def simulate(self,m,s,record_events=False):",
+    "def run_snapshot(snapshot,progress=None):"
+   ]
+  },
+  {
+   "path": "app/numerical_completion.py",
+   "size": 15993,
+   "sha256": "b9d73e4313865b50f8b69ef440d837932396f8802ff3d47d02e1168e211ff350",
+   "signatures": [
+    "from __future__ import annotations",
+    "import copy",
+    "import gc",
+    "import math",
+    "from collections import Counter",
+    "from dataclasses import asdict, replace",
+    "from pathlib import Path",
+    "import numpy as np",
+    "import pandas as pd",
+    "from .common import ROOT, load, save, iso, digest, content_hash, canonical",
+    "from .safety import Blocked",
+    "from .archived_replay import ReplayStore, matchup_from_archive",
+    "from .source_archive import SourceArchive",
+    "from .engine_bridge import HISTORY, make_engine",
+    "from research_lab.game_sim.engine import GameSimulator",
+    "from research_lab.game_sim.monte_carlo import _distribution_summary, _wilson_interval",
+    "def freeze_check():",
+    "def equivalent(a, b):",
+    "import json",
+    "def parameters_for(archive):",
+    "def check_prefix(old, new):",
+    "class CompletionSimulator:",
+    "def __init__(self, base, limits=((30, 440), (60, 880), (120, 1760))):",
+    "def simulate(self, matchup, seed, *, record_events=False):",
+    "def integer_total(value, n, description):",
+    "def updated_payload(parent, changes):",
+    "def v(which):",
+    "def complete_parent(parent_id):"
+   ]
+  },
+  {
+   "path": "app/portable.py",
+   "size": 4029,
+   "sha256": "4d4542efc6b3b98bf650ed619b155dff6acc6875010aae43add797e774638db3",
+   "signatures": [
+    "from pathlib import Path",
+    "import numpy as np,pandas as pd",
+    "from .common import ROOT,load,digest",
+    "from research_lab.game_sim.locked_pa_provider import (",
+    "from research_lab.game_sim.starter_hazard import FittedStarterPolicy",
+    "from research_lab.game_sim.manager import ManagerPolicy",
+    "def pinned_document(kind):",
+    "class PortableLockedProvider(LockedPAModelProvider):",
+    "def __post_init__(self):",
+    "class PortableStarterPolicy(FittedStarterPolicy):",
+    "def __init__(self,document,pitcher_exp,team_exp,team_of_pitcher,**kw):"
+   ]
+  },
+  {
+   "path": "app/portable_pins.json",
+   "size": 164,
+   "sha256": "e2545d851741a0a2757aa8733afefadf4f4aeb62f23c6dbf2e2937a720eb07ca"
+  },
+  {
+   "path": "app/replay_diagnostics.py",
+   "size": 3127,
+   "sha256": "15ca24d83a591e8228c88daccb96e2df26b47dcd25eea6b41f0798a4327c9713",
+   "signatures": [
+    "import math",
+    "import numpy as np",
+    "from .safety import Blocked",
+    "def compare(payload,baseline,result):",
+    "def brier(p):return (p-y)**2-p*(1-p)/(n-1)",
+    "def ll(p):"
+   ]
+  },
+  {
+   "path": "app/results.py",
+   "size": 5777,
+   "sha256": "fa1cd52e8ed9048a5ce63d2dcb2bd1e159239e27d94b24872fd5dc7ed6ddbda6",
+   "signatures": [
+    "from __future__ import annotations",
+    "import hashlib,json",
+    "from pathlib import Path",
+    "from datetime import timezone",
+    "from .common import ROOT,iso,timestamp,content_hash,save,load",
+    "from .catalog import fetch_json,MLBUnavailable",
+    "class ResultUnavailable(ValueError):pass",
+    "def _runs(value):",
+    "def parse_final(feed,game_pk,fetched_at):",
+    "class ResultStore:",
+    "def __init__(self,root=None):",
+    "def import_official(self,raw,transport_receipt):",
+    "def refresh(self,game_pk):",
+    "def get(self,game_pk):"
+   ]
+  },
+  {
+   "path": "app/safety.py",
+   "size": 4442,
+   "sha256": "881367b392a3a7d75596eaf3d70d8d4174e18d472f7f167b67eef2aaab05b4fd",
+   "signatures": [
+    "from __future__ import annotations",
+    "import math,re",
+    "from .common import timestamp, content_hash",
+    "class Blocked(ValueError): pass",
+    "def validate_snapshot(s, game_id=None):",
+    "def forecast_scope(snapshot, completed_at):",
+    "def gate_change(receipt):"
+   ]
+  },
+  {
+   "path": "app/scorebook.py",
+   "size": 3085,
+   "sha256": "7671f45170f88c369071464eafbcf0eb0bd918249bb1274e2e299f121f1f5768",
+   "signatures": [
+    "from __future__ import annotations",
+    "import json,sqlite3",
+    "from pathlib import Path",
+    "from .common import ROOT,iso,canonical,content_hash",
+    "from .safety import forecast_scope,validate_snapshot",
+    "from .results import ResultStore",
+    "from .scoring import aggregate",
+    "class Scorebook:",
+    "def __init__(self,path=None):",
+    "def connect(self):return sqlite3.connect(self.path,timeout=30)",
+    "def add(self,snapshot,payload,created_at=None):",
+    "def rows(self):",
+    "def original(self,ident):",
+    "def get(self,ident):",
+    "def metrics(self):"
+   ]
+  },
+  {
+   "path": "app/scoring.py",
+   "size": 5714,
+   "sha256": "9c6dd9a08a7e0a48e7d43b8ea00e2a68b242140886b1cdee7abe6d80705f3328",
+   "signatures": [
+    "import math",
+    "from collections import Counter",
+    "from .common import timestamp",
+    "def winner_draws(payload):",
+    "def baseline_probability(document,cutoff,game_pk,require_market=False):",
+    "def aggregate(entries,actual_for):"
+   ]
+  },
+  {
+   "path": "app/server.py",
+   "size": 15507,
+   "sha256": "9d2a235aeeedb8f5fab6fcbb8b9e63e8247439422445f082c2341e4ccd6c885b",
+   "signatures": [
+    "from __future__ import annotations",
+    "import html,json,re,threading,uuid",
+    "from pathlib import Path",
+    "from fastapi import FastAPI,HTTPException",
+    "from fastapi.responses import HTMLResponse,JSONResponse",
+    "from fastapi.staticfiles import StaticFiles",
+    "from .common import ROOT,load,save,canonical,iso",
+    "from .catalog import schedule,game_info",
+    "from .safety import validate_snapshot,Blocked",
+    "from .scorebook import Scorebook",
+    "from .results import ResultUnavailable",
+    "from .catalog import MLBUnavailable",
+    "from .source_archive import SourceArchive",
+    "from .archived_replay import ReplayStore",
+    "import copy",
+    "def page(template,**values):",
+    "def input_status(pk):",
+    "def health():",
+    "def games(date:str,online:bool=False):",
+    "def inputs(pk:int):return input_status(pk)",
+    "def actual(pk:int):",
+    "def refresh_actual(pk:int):",
+    "def records():return {'forecasts':book.rows(),'metrics':book.metrics()}",
+    "def metrics():return book.metrics()",
+    "def job(ident:str):",
+    "def simulate(pk:int):",
+    "def work():",
+    "from .engine_bridge import run_snapshot",
+    "def diagnostic_run():",
+    "def work():",
+    "from .diagnostic_job import execute",
+    "def home(date:str='2026-09-27'):",
+    "def game(pk:int):",
+    "def track():return page('track.html')",
+    "def render(payload):",
+    "from .baseline_store import paired_baseline",
+    "from .replay_diagnostics import compare",
+    "def diagnostic():",
+    "def reference():return render(load(ROOT/'data/reference_view.json'))",
+    "def forecast(ident:str):",
+    "def archived_inputs(pk:int):",
+    "def acquire_archive(pk:int):",
+    "def replay_start(pk:int):",
+    "def work():",
+    "from .archived_replay import execute",
+    "def archived_rows():return {'replays':ReplayStore().rows(),'scope':'Retrospective engineering; not prospective Scorebook'}",
+    "def replay_data(ident:str):",
+    "def replay_page(ident:str):",
+    "def slate_report_api(date:str='2026-09-27'):",
+    "from .slate_report import report",
+    "def slate_report_page(date:str='2026-09-27'):",
+    "from datetime import date as calendar_date",
+    "def completion_report(date:str='2026-09-27'):",
+    "from .closure_report import report",
+    "def completion_report_page():",
+    "def completed_replay_page(ident:str):",
+    "from .numerical_completion import COMPLETED",
+    "def completion_tail_page(pk:int,seed:int):",
+    "from .numerical_completion import COMPLETED",
+    "from .closure_report import report",
+    "def completion_verify_start(pk:int):",
+    "from .closure_report import report",
+    "def work():",
+    "from tools.verify_full_completion import verify"
+   ]
+  },
+  {
+   "path": "app/slate_report.py",
+   "size": 6722,
+   "sha256": "4ec8dd30b52b1b84dc8ef0ed12f0a4d7516ee1b171ad3bb6b18009306d76e514",
+   "signatures": [
+    "from datetime import date",
+    "import numpy as np",
+    "from .common import ROOT,load,digest",
+    "from .archived_replay import ReplayStore",
+    "from .source_archive import SourceArchive",
+    "from .baseline_store import paired_baseline",
+    "from .results import ResultStore",
+    "from .replay_diagnostics import compare",
+    "from .safety import Blocked",
+    "def aggregate(comparisons,seed=20261005):",
+    "def envelope(bounds,ref):",
+    "def report(day):"
+   ]
+  },
+  {
+   "path": "app/source_archive.py",
+   "size": 8600,
+   "sha256": "dd7e9d6a0bb823f20cd32da4281378d95b10d472e0c6a5fab6c388f53f3e876c",
+   "signatures": [
+    "from __future__ import annotations",
+    "import gzip,hashlib,json,re",
+    "from datetime import datetime,timedelta,timezone",
+    "from pathlib import Path",
+    "from .common import ROOT,load,save,content_hash,timestamp,iso",
+    "from .safety import Blocked",
+    "from .catalog import fetch_json",
+    "def stamp_time(code):",
+    "def parse_pregame(feed,game_pk,timecode,origin):",
+    "def person(pid):",
+    "class SourceArchive:",
+    "def __init__(self,root=None):",
+    "def add(self,raw,receipt,origin):",
+    "def get(self,pk):",
+    "def refresh(self,pk):"
+   ]
+  },
+  {
+   "path": "app/team_baseline.py",
+   "size": 6166,
+   "sha256": "10f1fcac4e9a5647aeabb06c52b6b2de9d7cd98bf1b52c04bfdd6d3691e6e558",
+   "signatures": [
+    "from __future__ import annotations",
+    "import gzip,hashlib,json",
+    "from collections import Counter",
+    "from pathlib import Path",
+    "import numpy as np",
+    "from scipy.optimize import minimize_scalar",
+    "from scipy.special import gammaln,expit,logit",
+    "from .common import ROOT,load,content_hash",
+    "from .safety import Blocked",
+    "def load_results(root=None):",
+    "def fit_dispersion(rows):",
+    "def objective(log_alpha):",
+    "def nb_pmf(mean,alpha,cap):",
+    "def predict(game,rows,fit):",
+    "def rates(tid):return (rf[tid]+20*league)/(games[tid]+20),(ra[tid]+20*league)/(games[tid]+20)"
+   ]
+  },
+  {
+   "path": "cloud/__init__.py",
+   "size": 0,
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "signatures": []
+  },
+  {
+   "path": "cloud/contracts.py",
+   "size": 11136,
+   "sha256": "d501e394bf824d6a0a1dd11575dde9c95e6870d5b5d7cd43f9a602b5f505fdec",
+   "signatures": [
+    "from __future__ import annotations",
+    "import copy, hashlib, json, math, re",
+    "from datetime import datetime, timezone",
+    "from dataclasses import replace",
+    "import numpy as np",
+    "import pandas as pd",
+    "from app.common import canonical, content_hash, timestamp",
+    "from app.safety import Blocked",
+    "from app.source_archive import parse_pregame",
+    "from app.archived_replay import matchup_from_archive",
+    "def utcnow():return datetime.now(timezone.utc)",
+    "def assert_preview(feed, capture_at):",
+    "def projected_order(feed, side, history):",
+    "def live_inputs(feed, receipt, history):",
+    "def config_for(game_type):",
+    "def draw_seeds(game_pk):",
+    "def verify_completed(results):",
+    "def assert_finished_before_start(game, guard_feed, finished_at):",
+    "def summarize(game,statuses,results,origin,finished,baseline,notes,snapshot_hash,version,run_id):",
+    "def check_public(f):",
+    "def score_versions(forecasts,publications,actuals):"
+   ]
+  },
+  {
+   "path": "cloud/page.py",
+   "size": 10483,
+   "sha256": "7e51e5d1bf634b3f416cdb4fbbd72b1ff8a518ad15966615b69d0e3b37eafb1c",
+   "signatures": [
+    "import html,json",
+    "from pathlib import Path",
+    "from datetime import datetime,timezone",
+    "from app.common import canonical",
+    "from .contracts import check_public",
+    "def esc(x):return html.escape(str(x),quote=True)",
+    "def render_page(ledger,scores,destination,setup_message=None):"
+   ]
+  },
+  {
+   "path": "cloud/runner.py",
+   "size": 12997,
+   "sha256": "a7e55e89c91af62d79a76c9696ee5fd280249e6b808a27d8974c3a478058dcfa",
+   "signatures": [
+    "from __future__ import annotations",
+    "import argparse, base64, copy, gzip, hashlib, json, os, sys, time",
+    "from datetime import datetime,timedelta,timezone",
+    "from pathlib import Path",
+    "from urllib.request import Request,urlopen",
+    "from urllib.error import HTTPError",
+    "from urllib.parse import quote",
+    "from dataclasses import asdict",
+    "import numpy as np,pandas as pd",
+    "from app.common import ROOT,canonical,content_hash,digest,timestamp",
+    "from app.safety import Blocked",
+    "from app.engine_bridge import HISTORY,make_engine",
+    "from app.results import parse_final",
+    "from app.team_baseline import load_results,fit_dispersion,predict",
+    "from .contracts import (N,SEED,utcnow,live_inputs,config_for,draw_seeds,assert_finished_before_start,summarize,score_versions,check_public)",
+    "from .security import seal,unseal,key_bytes",
+    "from .page import render_page",
+    "class Network:",
+    "def json(self,url):",
+    "class GitStore:",
+    "def __init__(self,repo,token,key):",
+    "def request(self,path,method='GET',data=None):",
+    "def _ensure_branch(self):",
+    "def read(self,path):",
+    "def put(self,path,raw,immutable=False):",
+    "def private(self,kind,ident,value):",
+    "def publish(self,forecast):",
+    "def persist(self):",
+    "class LocalStore:",
+    "def __init__(self,path,key,clock=utcnow):",
+    "def private(self,kind,ident,value):",
+    "def publish(self,f):",
+    "def persist(self):",
+    "class Simulator:",
+    "def __init__(self):",
+    "def prepare(self,feed,receipt):return live_inputs(feed,receipt,self.history)",
+    "def run(self,game,matchup):",
+    "def fingerprint_from_forecasts(store,pk):",
+    "class Runner:",
+    "def __init__(self,network,store,simulator,clock=utcnow,run_id='local'):",
+    "def iteration(self):",
+    "from zoneinfo import ZoneInfo",
+    "def process(self,pk,item):",
+    "def main():"
+   ]
+  },
+  {
+   "path": "cloud/security.py",
+   "size": 1842,
+   "sha256": "49c8026efe910d736583847c4ee82120f9c49608524e9e023f4476bcc535fbe2",
+   "signatures": [
+    "from __future__ import annotations",
+    "import hashlib, io, os, re, stat, zipfile",
+    "from pathlib import Path",
+    "from cryptography.hazmat.primitives.ciphers.aead import AESGCM",
+    "def sha(raw: bytes) -> str:",
+    "def key_bytes(value: str) -> bytes:",
+    "def seal(raw: bytes, key: bytes, purpose: str) -> bytes:",
+    "def unseal(raw: bytes, key: bytes, purpose: str) -> bytes:",
+    "def extract_verified(raw: bytes, expected_hash: str, destination: str | Path):"
+   ]
+  },
+  {
+   "path": "data/official_team_results/receipt.json",
+   "size": 4352,
+   "sha256": "8534502e509c4af6b3f139ea94cbe109db2f8d762563ee223c42eaa651631fb2"
+  },
+  {
+   "path": "data/official_team_results/team_results_2023.json.gz",
+   "size": 33358,
+   "sha256": "68852b1327423207ad8dbb3921fe66853019ed51c6b70eb162107551f83d332c"
+  },
+  {
+   "path": "data/official_team_results/team_results_2024.json.gz",
+   "size": 34034,
+   "sha256": "4ef8677b6867c865ea119af8df83a0eb82d7a53971c798a793a85533df1f34a6"
+  },
+  {
+   "path": "data/official_team_results/team_results_2025.json.gz",
+   "size": 32983,
+   "sha256": "b43d6710c35bd27c0a0d7af14c7ca01ae8b8735e6f3fce4f05484d43c06af570"
+  },
+  {
+   "path": "data/official_team_results/team_results_2026.json.gz",
+   "size": 33484,
+   "sha256": "444353c87600d01b0727b84a1732f5b0689f762116e9812d95d0ed80715c1e36"
+  },
+  {
+   "path": "model_runs/starter_hazard_v1/starter_hazard.joblib",
+   "size": 2727,
+   "sha256": "21514a863d9ed6c34077307929a6ae7e27d8f47b365dc2444be11bb549178723"
+  },
+  {
+   "path": "pa_model_reference/chadwick_mlbam_names.csv.gz",
+   "size": 1921786,
+   "sha256": "5475c10809c2075f06aa594d6d2629b43e0418b4f8bd4991dd5bca1a5d2b4304"
+  },
+  {
+   "path": "pa_model_reference/model_runs/pa_locked_2026/artifacts/pa_model.joblib",
+   "size": 14957,
+   "sha256": "3c87e4deedfb5253ac81252ad7fa2f117b16457f2c383c465670e2c3ee2fa095"
+  },
+  {
+   "path": "pa_model_reference/model_runs/pa_locked_2026/plate_appearances.csv.gz",
+   "size": 15098453,
+   "sha256": "e503e223eb4d6a2222ed35abe0439a0e6eea7fe85bf9061bcac96d0065a8a197"
+  },
+  {
+   "path": "portable/anchor.json",
+   "size": 43179,
+   "sha256": "cde8963f71357e1327278d9ac8bf2e90f43fad03fce03162098da4bc5a802077"
+  },
+  {
+   "path": "portable/manager.json",
+   "size": 1640,
+   "sha256": "40eb89e273f5f3704d1f8fdc6a4216c74abda74bd36198634794a948daab39f2"
+  },
+  {
+   "path": "requirements-cloud.txt",
+   "size": 113,
+   "sha256": "b1a48fca90bfd25cd82a8be1a05f5db26df50dcacf10aea9e938572af2ac3b48"
+  },
+  {
+   "path": "research_lab/__init__.py",
+   "size": 53,
+   "sha256": "a1f6a250eb15551f43b4d0aff4536a8d73a966f674812c5493b4589848a3b352"
+  },
+  {
+   "path": "research_lab/game_sim/__init__.py",
+   "size": 867,
+   "sha256": "bbcd6b7d6497c3c9eff9345e6ccc04db51ec8f6fcfec6179d239c4f462b71401"
+  },
+  {
+   "path": "research_lab/game_sim/engine.py",
+   "size": 16473,
+   "sha256": "acaf0f5b239f6b6047838f360de55e1e43cf29c34642cc6b89b10670c40bdaf9"
+  },
+  {
+   "path": "research_lab/game_sim/fixtures.py",
+   "size": 6287,
+   "sha256": "a052d01288952f3521c4c2fe455dbc76f471f28a0297d328400ab7cff196de41"
+  },
+  {
+   "path": "research_lab/game_sim/locked_pa_provider.py",
+   "size": 20609,
+   "sha256": "f59176dc56af69efc14ef996af141c265b74c60c095ff94fefad70264fde4ddd"
+  },
+  {
+   "path": "research_lab/game_sim/manager.py",
+   "size": 5328,
+   "sha256": "bcd17eb43bbf724a72db402686d2afeb725cb5202277af48a3119ae5f6afb27a"
+  },
+  {
+   "path": "research_lab/game_sim/models.py",
+   "size": 8375,
+   "sha256": "a101762ae178ffad6aa19a6eaf4749f7c3a1837b6e11f40603131629a385c95c"
+  },
+  {
+   "path": "research_lab/game_sim/monte_carlo.py",
+   "size": 8736,
+   "sha256": "f142bfa6114eac0bb3b7a24df59af5106ba21de467ece9a1996cb6ab63c30d33"
+  },
+  {
+   "path": "research_lab/game_sim/probability.py",
+   "size": 6251,
+   "sha256": "d481ad5a9e464d40b73c6fd89112614fcb473b3d93ea4656b10fc6b42871d4e7"
+  },
+  {
+   "path": "research_lab/game_sim/starter_hazard.py",
+   "size": 10720,
+   "sha256": "3a6c73a0d32c106f83bd1671d0d92c6daa9ebc06f8ac98968f9199ac01577e05"
+  },
+  {
+   "path": "research_lab/game_sim/transitions.py",
+   "size": 8692,
+   "sha256": "db84a44eb41218dcd9a7adea36f198c33bb113a3027b44e12686d49096b79d35"
+  },
+  {
+   "path": "research_lab/pa_model/__init__.py",
+   "size": 167,
+   "sha256": "4a0630896a3725579609f3435d2567179020e5f4eb52942fb5a8201af290b85c"
+  },
+  {
+   "path": "research_lab/pa_model/cli.py",
+   "size": 3679,
+   "sha256": "e2a2070402e4101b5f3946f7fd9a6a6bf496ba6cfd657adebc70d0d578a1ca8d"
+  },
+  {
+   "path": "research_lab/pa_model/config.py",
+   "size": 3884,
+   "sha256": "a91bccf0a674c90fc8ca772f50c9af5ece02c48196238d83e5ff05d3dcb89dea"
+  },
+  {
+   "path": "research_lab/pa_model/data.py",
+   "size": 12183,
+   "sha256": "65253033bcefb9950d0fc5b4ca68a211ef19f681d1115ae4072572286ab6873f"
+  },
+  {
+   "path": "research_lab/pa_model/evaluation.py",
+   "size": 3345,
+   "sha256": "431a764dae9d4a91df6cc68e0d017f3493f85b706ffab985e202eec454fdeddf"
+  },
+  {
+   "path": "research_lab/pa_model/features.py",
+   "size": 12477,
+   "sha256": "f16c052c21bc13b88ce14762957e21b69d0fe43523b301a995e58a7ad00d93c1"
+  },
+  {
+   "path": "research_lab/pa_model/model.py",
+   "size": 8679,
+   "sha256": "32abb5e0234210961a9cda61dfde5197aaf27871d3450054b899579225f02b98"
+  },
+  {
+   "path": "research_lab/pa_model/outcomes.py",
+   "size": 1877,
+   "sha256": "a8434cb35082c73d559df74d97f63c130b86275b8bf00932966d559bda30f450"
+  },
+  {
+   "path": "research_lab/pa_model/pipeline.py",
+   "size": 15014,
+   "sha256": "49b8033a4ea71f9e21fc091ae4fe651888d11ebe415c4f5b6af336452b399763"
+  },
+  {
+   "path": "research_lab/pa_model/synthetic.py",
+   "size": 2870,
+   "sha256": "c41da8e1070dc47dd83d0581f91706eacc1a987b95d7cf3a50e5d4679eb58bef"
+  }
+ ],
+ "error": null
+}
