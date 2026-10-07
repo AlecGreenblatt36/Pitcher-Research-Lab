@@ -33,6 +33,18 @@ from .history_refresh import HistoryCache, Fetcher, previous_day
 from .verified_store import VerifiedGitStore
 
 
+def postseason_scale(game_type: str):
+    """The expected-batters factor for a postseason game type, or None when none applies (regular season, or scale 1)."""
+    from .boxscore import ADJUST
+    table = ADJUST.get('postseason_exp_scale')
+    if not table or game_type == 'R':
+        return None
+    value = table.get(game_type) if isinstance(table, dict) else table
+    if value is None or abs(float(value) - 1.0) < 1e-9:
+        return None
+    return float(value)
+
+
 def make_history_engine(parameters: dict, history_path: Path, physics_table=None):
     """Same coefficients, preprocessing and policies; explicit history dependency.
 
@@ -52,19 +64,18 @@ def make_history_engine(parameters: dict, history_path: Path, physics_table=None
         raise Blocked('Original manager artifact changed')
     pexp, texp = tendencies_at(history, parameters['date'], float(manager_doc['league_mean_bf']))
     matchup = bridge.decode_matchup(parameters['matchup'])
-    from .boxscore import ADJUST
-    scale = ADJUST.get('postseason_exp_scale')
-    if scale and str(matchup.game_type) != 'R':
+    scale = postseason_scale(str(matchup.game_type))
+    if scale is not None:
         # Postseason managers pull starters earlier: the fitted hazard is driven through the starter's
-        # and team's expected batters faced, so both are scaled by the measured postseason ratio.
-        pexp = {k: float(v) * float(scale) for k, v in pexp.items()}
-        texp = {k: float(v) * float(scale) for k, v in texp.items()}
+        # and team's expected batters faced, so both are scaled by the measured postseason factor.
+        pexp = {k: float(v) * scale for k, v in pexp.items()}
+        texp = {k: float(v) * scale for k, v in texp.items()}
     manager = PortableStarterPolicy(manager_doc, pexp, texp,
         {int(matchup.away.starter.player_id): matchup.away.team_id,
          int(matchup.home.starter.player_id): matchup.home.team_id})
-    if scale and str(matchup.game_type) != 'R':
-        manager.league = float(manager.league) * float(scale)
-        manager.adjust_label = 'postseason starter usage (expected batters x%.2f)' % float(scale)
+    if scale is not None:
+        manager.league = float(manager.league) * scale
+        manager.adjust_label = 'postseason starter usage (expected batters x%.2f)' % scale
     return GameSimulator(provider, manager_policy=manager,
                          config=SimulationConfig(**parameters.get('config', {}))), matchup
 

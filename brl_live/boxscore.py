@@ -268,10 +268,15 @@ class BoxAccumulator:
 # Simulation-time adjustments on the locked model (brl_live/provider_adjust.py), measured on the
 # 2026 out-of-sample replay before being switched on (LEDGER.md): context offsets are on; per-world
 # talent noise at c=1 scored worse than the offsets alone and stays off.
-# postseason_exp_scale: starters' and teams' expected batters faced are multiplied by this in
-# postseason games (None = off); set from the measured postseason/regular ratio (research lane,
-# postseason_usage receipt) and recorded in each box's adjustments.
-ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,'postseason_exp_scale':None}
+# postseason_exp_scale: by game type, the factor on starters' and teams' expected batters faced that
+# drives the fitted starter hazard in postseason games. Measured on 294 postseason starts of 2023-2026
+# (research/postseason_usage-37606652416.json): starters face 0.866 of their own regular-season
+# median in the Wild Card, Division and League Championship rounds (0.99 in the World Series), and
+# 28% of those starts end before 16 batters against 8% in the regular season. A factor of 0.91
+# reproduces that ratio in the simulator (0.869; share under 16 batters 0.25). Recorded in each
+# box's adjustments; relievers keep their regular-season roles.
+ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
+        'postseason_exp_scale':{'F':0.91,'D':0.91,'L':0.91,'W':1.0}}
 
 def adjusted_provider(provider,full_history,date,settings=ADJUST):
     """Wrap the engine's provider with the enabled adjustments. Returns (provider, world_hook, label)."""

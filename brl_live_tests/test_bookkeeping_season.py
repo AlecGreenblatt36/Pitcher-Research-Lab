@@ -90,3 +90,11 @@ def test_physics_table_round_trip():
     store.files[physics_path(2026)] = seal(gzip.compress(frame.to_csv(index=False).encode()), KEY, physics_purpose(2026))
     back = load_physics_table(store, KEY, 2026)
     assert back.date_key.iloc[0] == '2026-04-01' and back.ev.iloc[0] == 100.5 and back.run_value.iloc[0] == 0.88
+
+
+def test_postseason_scale_by_game_type():
+    from brl_live.live_extension import postseason_scale
+    from brl_live.boxscore import ADJUST
+    assert postseason_scale('R') is None and postseason_scale('W') is None
+    assert postseason_scale('D') == 0.91 and postseason_scale('F') == 0.91 and postseason_scale('L') == 0.91
+    assert ADJUST['postseason_exp_scale']['W'] == 1.0
