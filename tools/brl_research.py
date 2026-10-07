@@ -84,6 +84,54 @@ def put_text(repo, token, path, text, branch, message):
             time.sleep(2 + 3 * attempt)
 
 
+class _Done(Exception):
+    """Raised to leave the experiment body early with the receipt already filled."""
+
+
+def gbm_experiment(features, locked_columns, extras, y, partitions, parts, config, probs_locked, configs=None) -> dict:
+    """Gradient-boosted classifiers on the v2 feature set: fitted on the training years, the number of
+    iterations chosen on the tuning dates, temperature-calibrated on the calibration dates, scored like
+    the linear models and paired against the locked model."""
+    from sklearn.ensemble import HistGradientBoostingClassifier
+    from research_lab.pa_model.model import fit_logit_calibration, apply_logit_calibration
+    from research_lab.pa_model.evaluation import probability_metrics, clustered_log_loss_difference_ci
+    cols = list(locked_columns) + list(extras.columns)
+    frame = features.copy()
+    for c in extras.columns:
+        frame[c] = extras[c].to_numpy()
+    train_mask = frame['season'].isin(config.train_years).to_numpy()
+    tune_mask, cal_mask = partitions['tune'], partitions['calibration']
+    X = frame[cols].to_numpy(np.float32)
+    configs = configs or {'gbm_d6': dict(max_depth=6, learning_rate=0.05, l2_regularization=1.0, checkpoints=(200, 400, 700, 1000, 1500)),
+                          'gbm_d4': dict(max_depth=4, learning_rate=0.08, l2_regularization=1.0, checkpoints=(200, 400, 700, 1000, 1500))}
+    out_all = {}
+    for name, kw in configs.items():
+        kw = dict(kw); checkpoints = kw.pop('checkpoints')
+        clf = HistGradientBoostingClassifier(early_stopping=False, random_state=36, warm_start=True, max_iter=checkpoints[0], **kw)
+        best, best_iter = None, checkpoints[0]
+        for n_iter in checkpoints:
+            clf.set_params(max_iter=n_iter)
+            clf.fit(X[train_mask], y[train_mask])
+            ll = probability_metrics(y[tune_mask], clf.predict_proba(X[tune_mask])).log_loss
+            if best is None or ll < best - 1e-5:
+                best, best_iter = ll, n_iter
+            else:
+                break
+        clf = HistGradientBoostingClassifier(early_stopping=False, random_state=36, max_iter=best_iter, **kw)
+        clf.fit(X[train_mask | tune_mask], y[train_mask | tune_mask])
+        raw_cal = clf.predict_proba(X[cal_mask])
+        temperature, biases, cal_audit = fit_logit_calibration(y[cal_mask], raw_cal, config.calibration_l2)
+        out = {'feature_count': len(cols), 'iterations': int(best_iter), 'tune_log_loss': float(best), 'settings': {k: v for k, v in kw.items()},
+               'calibration': {'temperature': float(temperature), 'pre': cal_audit['pre_calibration_log_loss'], 'post': cal_audit['post_calibration_log_loss']}}
+        for part, mask in parts:
+            p = apply_logit_calibration(clf.predict_proba(X[mask]), temperature, biases)
+            out[part] = probability_metrics(y[mask], p).to_dict()
+            games = frame.loc[mask, 'game_pk'].to_numpy()
+            out[part + '_minus_locked'] = clustered_log_loss_difference_ci(y[mask], p, probs_locked[part], games, replicates=600)
+        out_all[name] = out
+    return out_all
+
+
 def entrypoint_module():
     spec = importlib.util.spec_from_file_location('brl_entrypoint', ROOT / 'brl_engine' / 'entrypoint.py')
     module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
@@ -232,6 +280,12 @@ def main():
 
         stage('fit locked')
         results['locked'] = fit_and_score('locked', list(locked_columns), [])
+        if experiment == 'gbm':
+            extras, audit = build_extras(pa, physics, {'xvalue': True, 'recent_days': 30})
+            results.setdefault('physics_join', {})['gbm'] = audit
+            results.update(gbm_experiment(features, list(locked_columns), extras, y, partitions, parts, config, probs['locked']))
+            receipt['results'] = results; receipt['status'] = 'completed'
+            raise _Done()
         variants = SETS.get(experiment) or {experiment: {}}
         for vname, params in variants.items():
             stage('build physics features ' + vname)
@@ -249,6 +303,8 @@ def main():
             del extras
         receipt['results'] = results
         receipt['status'] = 'completed'
+    except _Done:
+        pass
     except Exception as exc:
         receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:300]
         frames = traceback.extract_tb(exc.__traceback__)

@@ -111,3 +111,27 @@ def test_postseason_usage_summary(monkeypatch):
     assert out['starters_by_game_type']['R']['starts'] == 4 and out['starters_by_game_type']['D']['mean_bf'] == 18.0
     assert out['same_pitcher']['D']['starts'] == 2 and out['same_pitcher']['D']['ratio_mean'] == round((16 / 23 + 20 / 20) / 2, 3)
     assert out['relievers_per_team_game']['D'] == 2.5
+
+
+def test_gbm_experiment_runs_on_synthetic_data():
+    from research_lab.pa_model.config import PAConfig
+    from research_lab.pa_model.features import build_time_valid_features
+    from research_lab.pa_model.model import fit_frozen_model, validation_partitions
+    pa, study = synthetic(n_games=60)
+    frames = []
+    for year in (2023, 2024, 2025, 2026):
+        f = pa.copy(); f['season'] = year; f['date_key'] = f['date_key'].str.replace('2026', str(year)); f['game_pk'] = f['game_pk'] + (year - 2023) * 10000
+        frames.append(f)
+    pa_all = pd.concat(frames, ignore_index=True)
+    physics = pd.concat([tool.per_pa_physics(study).assign(game_pk=lambda d, y=y: d.game_pk + (y - 2023) * 10000) for y in (2023, 2024, 2025, 2026)], ignore_index=True)
+    config = PAConfig(train_years=(2023, 2024), validation_years=(2025,), test_years=(2026,), evaluation_mode='locked_final', regularization_grid=(0.01,), max_iter=30)
+    features, cols = build_time_valid_features(pa_all, config)
+    y = features['outcome'].map({l: i for i, l in enumerate(tool.LABELS)}).to_numpy(int)
+    partitions, _ = validation_partitions(features, config)
+    parts = (('validation_blend_2025', partitions['blend']), ('test_2026', features['season'].isin((2026,)).to_numpy()))
+    fitted, _ = fit_frozen_model(features, list(cols), config)
+    probs_locked = {part: fitted.predict_proba(features.loc[mask]) for part, mask in parts}
+    extras, _ = tool.build_extras(pa_all, physics, {'xvalue': True, 'recent_days': 3})
+    out = tool.gbm_experiment(features, list(cols), extras, y, partitions, parts, config, probs_locked,
+                              configs={'tiny': dict(max_depth=3, learning_rate=0.1, l2_regularization=1.0, checkpoints=(5, 10))})
+    assert out['tiny']['iterations'] in (5, 10) and 'test_2026_minus_locked' in out['tiny'] and out['tiny']['test_2026']['log_loss'] > 0
