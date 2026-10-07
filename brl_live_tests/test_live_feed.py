@@ -107,3 +107,25 @@ def test_run_live_update_end_to_end():
     assert out['adjustments'] == ['context offsets through 2026-09-27']
     again = run_live_update(engine, m, start, state, game, None, n_worlds=300, updated_at='x')
     assert again['home_win_probability'] == out['home_win_probability']
+
+
+def test_reliever_rest_follows_the_last_three_days():
+    import pandas as pd
+    from brl_live.live_feed import reliever_rest, reliever_profile
+    rows = [('2026-10-04', 7, 3), ('2026-10-05', 7, 4), ('2026-10-06', 7, 9),      # three straight days, the last one long
+            ('2026-10-06', 8, 3),                                                    # yesterday only
+            ('2026-10-05', 9, 3), ('2026-10-04', 9, 3),                              # the two days before yesterday
+            ('2026-10-01', 10, 3),                                                   # long ago
+            ('2026-10-06', 11, 8), ('2026-10-03', 11, 3)]                            # a long outing yesterday
+    app = pd.DataFrame([{'date': d, 'pitcher': p, 'bf': bf, 'team': 'X', 'entry_inning': 8, 'throws': 'R', 'start': False, 'finished': True, 'game_pk': i} for i, (d, p, bf) in enumerate(rows)])
+    assert reliever_rest(app, 7, '2026-10-07') == 0.0
+    assert reliever_rest(app, 8, '2026-10-07') == 0.7
+    assert reliever_rest(app, 9, '2026-10-07') == 0.85
+    assert reliever_rest(app, 10, '2026-10-07') == 1.0 and reliever_rest(app, 12, '2026-10-07') == 1.0
+    assert reliever_rest(app, 11, '2026-10-07') == 0.5
+    # the cutoff day itself never counts (history is through the day before)
+    assert reliever_rest(app, 8, '2026-10-06') == 1.0
+    assert reliever_profile(app, 7, 'R', 'Seven', '2026-10-07', rest=True).rest == 0.0
+    assert reliever_profile(app, 7, 'R', 'Seven', '2026-10-07', rest=False).rest == 1.0
+    from brl_live import live_feed
+    assert reliever_profile(app, 7, 'R', 'Seven', '2026-10-07').rest == (0.0 if live_feed.RELIEVER_REST else 1.0)

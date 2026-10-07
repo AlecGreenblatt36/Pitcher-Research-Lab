@@ -69,8 +69,10 @@ def appearances(h: pd.DataFrame) -> pd.DataFrame:
     ).reset_index()
 
 
-def bullpen(app: pd.DataFrame, team: str, cutoff: str, starter: int) -> tuple[PitcherProfile, ...]:
-    """Relievers the team used in the last 14 days (its last 10 games early in a season); roles from the prior 365 days."""
+def bullpen(app: pd.DataFrame, team: str, cutoff: str, starter: int, rest: bool = False) -> tuple[PitcherProfile, ...]:
+    """Relievers the team used in the last 14 days (its last 10 games early in a season); roles from the prior 365 days;
+    availability from the three days before when rest is on (brl_live.live_feed.reliever_rest)."""
+    from brl_live.live_feed import reliever_rest
     prior = app[app["date"] < cutoff]
     team_games = prior[prior["team"] == team].sort_values("date")
     window_start = (pd.Timestamp(cutoff) - pd.Timedelta(days=14)).strftime("%Y-%m-%d")
@@ -88,7 +90,7 @@ def bullpen(app: pd.DataFrame, team: str, cutoff: str, starter: int) -> tuple[Pi
         exp_bf = int(max(3, round(sg["bf"].median()))) if len(sg) else 4
         role = "closer" if ninth >= 0.6 else "setup" if late >= 0.5 else "long" if exp_bf >= 7 else "reliever"
         out.append(PitcherProfile(str(pid), str(pid), str(g["throws"].iloc[-1]), role=role, leverage=min(1.0, 0.3 + late),
-                                  rest=1.0, expected_batters=exp_bf, max_batters=max(exp_bf + 3, 6)))
+                                  rest=reliever_rest(app, pid, cutoff) if rest else 1.0, expected_batters=exp_bf, max_batters=max(exp_bf + 3, 6)))
     closers = [p for p in out if p.role == "closer"]
     if len(closers) > 1:
         keep = max(closers, key=lambda p: p.leverage)
@@ -113,7 +115,7 @@ def bats_lookup(h: pd.DataFrame, cutoff: str) -> dict:
 
 
 def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates: list, *, model_path: Path, model_sha256: str,
-                 history_path: Path, hazard_path: Path, n_sims: int, physics_table=None, offsets=None, log=print) -> list[dict]:
+                 history_path: Path, hazard_path: Path, n_sims: int, physics_table=None, offsets=None, rest=False, log=print) -> list[dict]:
     """Simulate every game on the given dates; one record per game (win counts, run histograms, starter outs)."""
     from brl_live.provider_adjust import ContextAdjust
     hcols = h[HISTORY_COLUMNS]
@@ -153,7 +155,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                 sid = int(getattr(g, f"{side}_starter"))
                 team = getattr(g, side)
                 starter = starter_profile(app, sid, getattr(g, f"{side}_starter_throws"), date)
-                pen = tuple(p for p in bullpen(app, team, date, sid) if p.player_id != str(sid))
+                pen = tuple(p for p in bullpen(app, team, date, sid, rest=rest) if p.player_id != str(sid))
                 teams[side] = TeamProfile(team, team, lineup, starter, pen, defense=(float(defense.value(team)) if defense is not None else 0.0))
             matchup = GameMatchup(away=teams["away"], home=teams["home"], venue=g.park, game_type="R")
             policy = FittedStarterPolicy(hazard, pexp, texp, {int(g.away_starter): g.away, int(g.home_starter): g.home})

@@ -83,7 +83,8 @@ def _worker(dates: list) -> list:
     from brl_replay.harness import replay_dates
     s = _SHARED
     return replay_dates(s['h'], s['app'], s['games'], dates, model_path=s['model_path'], model_sha256=s['model_sha256'], history_path=s['history_path'],
-                        hazard_path=s['hazard_path'], n_sims=s['n_sims'], physics_table=s['physics_table'], offsets=s['offsets'], log=lambda m: print(m, flush=True))
+                        hazard_path=s['hazard_path'], n_sims=s['n_sims'], physics_table=s['physics_table'], offsets=s['offsets'], rest=s.get('rest', False),
+                        log=lambda m: print(m, flush=True))
 
 
 def logit(p):
@@ -127,12 +128,12 @@ def main():
         params = json.loads(settings.read_text())
     model = str(params.get('model') or 'locked-pa-2026-v1'); season = int(params.get('season') or 2026)
     n_sims = int(params.get('n_sims') or 200); date_from = str(params.get('date_from') or f'{season}-01-01'); step = int(params.get('step') or 1)
-    reference = params.get('reference'); use_offsets = bool(params.get('offsets', True))
+    reference = params.get('reference'); use_offsets = bool(params.get('offsets', True)); use_rest = bool(params.get('rest', False))
     tag = str(params.get('tag') or model)
     workers = int(params.get('workers') or max(1, (os.cpu_count() or 2)))
     work = Path(os.environ.get('RUNNER_TEMP', '/tmp')) / 'brl-replay'
     receipt = {'schema': 'brl.replay-receipt.v1', 'tag': tag, 'model': model, 'season': season, 'n_sims': n_sims, 'date_from': date_from, 'step': step,
-               'offsets': use_offsets, 'workers': workers, 'run_id': run_id, 'started_at': datetime.now(timezone.utc).isoformat(), 'stages': []}
+               'offsets': use_offsets, 'rest': use_rest, 'workers': workers, 'run_id': run_id, 'started_at': datetime.now(timezone.utc).isoformat(), 'stages': []}
     t0 = time.time()
     def stage(label):
         receipt['stages'].append({'stage': label, 'at_seconds': round(time.time() - t0, 1)}); print(label, round(time.time() - t0), 's', flush=True)
@@ -184,7 +185,7 @@ def main():
             from brl_live.provider_adjust import load_offsets
             offsets = load_offsets()
         _SHARED.update(h=h, app=app, games=games, model_path=model_path, model_sha256=model_sha256, history_path=history_path, hazard_path=hazard_path,
-                       n_sims=n_sims, physics_table=physics_table, offsets=offsets)
+                       n_sims=n_sims, physics_table=physics_table, offsets=offsets, rest=use_rest)
         stage(f'replay {len(games)} games with {workers} workers')
         dates = sorted(games['date'].unique())
         shards = [dates[w::workers] for w in range(workers)]

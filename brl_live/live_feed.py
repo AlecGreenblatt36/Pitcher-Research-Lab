@@ -52,14 +52,45 @@ def appearances(history: pd.DataFrame) -> pd.DataFrame:
         finished=('_finish', 'first')).reset_index()
 
 
-def reliever_profile(app: pd.DataFrame, pid: int, throws: str, name: str, cutoff: str) -> PitcherProfile:
+# Reliever availability from recent use (RELIEF-01). The manager scores candidates with 0.70 x rest and
+# treats rest at or below 0.05 as unavailable, so: a rested arm 1.0; one appearance yesterday 0.7 (0.5 when
+# it was a long one, seven batters or more); both of the two days before yesterday 0.85; yesterday and the
+# day before (a third straight day today) unavailable, as are three straight days. Off until the 2026
+# replay has measured it (tools/replay_params.json rest: true); off, every reliever is rested.
+RELIEVER_REST = False
+LONG_OUTING_BF = 7
+
+
+def reliever_rest(app: pd.DataFrame, pid: int, cutoff: str) -> float:
+    """How available a reliever is on the cutoff date, from his appearances on the three days before it."""
+    day = pd.Timestamp(cutoff)
+    window = (day - pd.Timedelta(days=3)).strftime('%Y-%m-%d')
+    recent = app[(app['pitcher'] == pid) & (app['date'] < cutoff) & (app['date'] >= window)]
+    if recent.empty:
+        return 1.0
+    ago = {}
+    for d, bf in zip(recent['date'], recent['bf']):
+        k = int((day - pd.Timestamp(str(d)[:10])).days)
+        ago[k] = max(int(bf), ago.get(k, 0))
+    if 1 in ago and 2 in ago:
+        return 0.0
+    if 1 in ago:
+        return 0.5 if ago[1] >= LONG_OUTING_BF else 0.7
+    if 2 in ago and 3 in ago:
+        return 0.85
+    return 1.0
+
+
+def reliever_profile(app: pd.DataFrame, pid: int, throws: str, name: str, cutoff: str, rest: bool | None = None) -> PitcherProfile:
     year_start = (pd.Timestamp(cutoff) - pd.Timedelta(days=365)).strftime('%Y-%m-%d')
     sg = app[(app['pitcher'] == pid) & (~app['start']) & (app['date'] < cutoff) & (app['date'] >= year_start)]
     late = float((sg['entry_inning'] >= 8).mean()) if len(sg) else 0.0
     ninth = float((sg['entry_inning'] >= 9).mean()) if len(sg) else 0.0
     exp_bf = int(max(3, round(sg['bf'].median()))) if len(sg) else 4
     role = 'closer' if ninth >= 0.6 else 'setup' if late >= 0.5 else 'long' if exp_bf >= 7 else 'reliever'
-    return PitcherProfile(str(pid), name, throws, role=role, leverage=min(1.0, 0.3 + late), rest=1.0,
+    use_rest = RELIEVER_REST if rest is None else rest
+    return PitcherProfile(str(pid), name, throws, role=role, leverage=min(1.0, 0.3 + late),
+                          rest=reliever_rest(app, pid, cutoff) if use_rest else 1.0,
                           expected_batters=exp_bf, max_batters=max(exp_bf + 3, 6))
 
 
