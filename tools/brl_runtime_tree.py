@@ -22,6 +22,21 @@ def main():
                 rel=str(p.relative_to(runtime))
                 h=hashlib.sha256(p.read_bytes()).hexdigest() if p.stat().st_size<200_000_000 else None
                 out['files'].append({'path':rel,'size':p.stat().st_size,'sha256':h})
+                if rel.startswith('data/official_team_results/') and rel.endswith('.json.gz'):
+                    import gzip
+                    try:
+                        doc=json.loads(gzip.decompress(p.read_bytes()))
+                        def shape(v,depth=0):
+                            if depth>3:return type(v).__name__
+                            if isinstance(v,dict):
+                                keys=list(v.keys())[:6]
+                                return {'type':'dict','n':len(v),'keys':keys,'first_value':shape(v[keys[0]],depth+1) if keys else None}
+                            if isinstance(v,list):
+                                return {'type':'list','n':len(v),'first':shape(v[0],depth+1) if v else None}
+                            return type(v).__name__
+                        out['files'][-1]['shape']=shape(doc)
+                    except Exception as exc:
+                        out['files'][-1]['shape']={'error':type(exc).__name__}
                 if rel.endswith('.py') and ('app/' in rel or 'cloud/' in rel):
                     # public API surface only: def/class lines, no bodies
                     lines=[l.strip() for l in p.read_text(errors='replace').splitlines() if l.lstrip().startswith(('def ','class ','from ','import '))]
