@@ -209,6 +209,22 @@ class _LinearPath:
         return out / out.sum(axis=1, keepdims=True)
 
 
+_PHYSICS_STATES: dict = {}
+
+
+def _cached_physics_state(table, cutoff_date: str, params: dict):
+    """One PhysicsState per (table object, cutoff, parameters): a live run builds several engines for the same date."""
+    from research_lab.pa_model.physics import PhysicsState
+    key = (id(table), len(table), str(cutoff_date)[:10], tuple(sorted((k, str(v)) for k, v in params.items())))
+    state = _PHYSICS_STATES.get(key)
+    if state is None:
+        if len(_PHYSICS_STATES) > 8:
+            _PHYSICS_STATES.clear()
+        state = PhysicsState.build(table, cutoff_date, params)
+        _PHYSICS_STATES[key] = state
+    return state
+
+
 @dataclass
 class LockedPAModelProvider:
     """Seven-outcome probabilities from the serialized locked PA model."""
@@ -270,7 +286,7 @@ class LockedPAModelProvider:
                 raise LockedModelError("physics feature list does not match its parameters")
             if self.physics_table is None:
                 raise LockedModelError("model uses pitch physics features but no physics table was supplied")
-            self.physics = PhysicsState.build(self.physics_table, self.cutoff_date, params)
+            self.physics = _cached_physics_state(self.physics_table, self.cutoff_date, params)
             if list(self.physics.names) != list(self.physics_features):
                 raise LockedModelError("physics state schema mismatch")
         self._physics_cache: dict = {}
