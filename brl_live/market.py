@@ -8,6 +8,7 @@ This is a reference line to judge the model against, not an input to any forecas
 """
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 
 ESPN_SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard?dates={date}&limit=50'
@@ -25,12 +26,54 @@ def vig_free_home(home_ml, away_ml) -> float:
     return h / (h + a)
 
 
+def _ml_value(v):
+    """A moneyline as an int from ESPN's several encodings: -150, "+130", "EVEN", {"odds": "-150"}, {"close": {"odds": ...}}."""
+    if v is None:
+        return None
+    if isinstance(v, dict):
+        for key in ('close', 'current', 'open'):
+            inner = v.get(key)
+            if inner is not None:
+                got = _ml_value(inner)
+                if got is not None:
+                    return got
+        for key in ('odds', 'value', 'moneyLine', 'american'):
+            if key in v:
+                return _ml_value(v[key])
+        return None
+    s = str(v).strip().upper().replace('+', '')
+    if s in ('EVEN', 'EV', 'PK'):
+        return 100
+    try:
+        return int(float(s))
+    except ValueError:
+        return None
+
+
 def _moneylines(competition: dict):
     for odds in competition.get('odds') or []:
-        h = (odds.get('homeTeamOdds') or {}).get('moneyLine')
-        a = (odds.get('awayTeamOdds') or {}).get('moneyLine')
+        provider = str((odds.get('provider') or {}).get('name') or 'ESPN')
+        ml = odds.get('moneyline') or {}
+        h = _ml_value(ml.get('home')) if isinstance(ml, dict) else None
+        a = _ml_value(ml.get('away')) if isinstance(ml, dict) else None
+        if h is None or a is None:
+            h = _ml_value((odds.get('homeTeamOdds') or {}).get('moneyLine'))
+            a = _ml_value((odds.get('awayTeamOdds') or {}).get('moneyLine'))
+        if h is None or a is None:
+            d = str(odds.get('details') or '')      # e.g. "LAD -150"
+            m = re.match(r'^([A-Z]{2,4})\s+([+-]?\d+)$', d)
+            if m:
+                fav_abbr, line = m.group(1), int(m.group(2))
+                teams = {c.get('homeAway'): str((c.get('team') or {}).get('abbreviation') or '').upper() for c in competition.get('competitors') or []}
+                if teams.get('home') == fav_abbr:
+                    h, a = line, None
+                elif teams.get('away') == fav_abbr:
+                    a, h = line, None
         if h is not None and a is not None:
-            return int(h), int(a), str((odds.get('provider') or {}).get('name') or 'ESPN'), odds.get('overUnder')
+            ou = odds.get('overUnder')
+            if ou is None and isinstance(odds.get('total'), dict):
+                ou = _ml_value((odds['total'].get('over') or {}).get('close') if isinstance(odds['total'].get('over'), dict) else None)
+            return int(h), int(a), provider, ou
     return None
 
 
@@ -113,4 +156,6 @@ def capture(fetch_json, date_ymd: str, ledger: dict, now_iso: str) -> dict:
     odds0 = (comp0.get('odds') or [{}])[0] if comp0 else {}
     return {'date': date_ymd, 'schedule_games': len(games), 'lines_seen': len(lines), 'matched': len(matched), 'captured_pregame': captured,
             'events': len(events), 'competition_keys': sorted(comp0.keys())[:40], 'odds_keys': sorted(odds0.keys())[:40],
-            'odds_subkeys': {k: sorted(v.keys())[:20] for k, v in odds0.items() if isinstance(v, dict)}}
+            'odds_subkeys': {k: sorted(v.keys())[:20] for k, v in odds0.items() if isinstance(v, dict)},
+            'moneyline_shape': {k: (sorted(v.keys())[:10] if isinstance(v, dict) else type(v).__name__) for k, v in (odds0.get('moneyline') or {}).items()} if isinstance(odds0.get('moneyline'), dict) else None,
+            'moneyline_home_shape': {k: (sorted(v.keys())[:10] if isinstance(v, dict) else type(v).__name__) for k, v in ((odds0.get('moneyline') or {}).get('home') or {}).items()} if isinstance((odds0.get('moneyline') or {}).get('home'), dict) else None}

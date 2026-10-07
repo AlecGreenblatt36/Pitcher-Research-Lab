@@ -55,3 +55,14 @@ def test_record_scores_market_only_when_captured_before_first_pitch():
     ledger['market']['1']['captured_at'] = '2026-10-07T22:30:00Z'
     rec = build_record(ledger)
     assert rec['games'][0]['p_market'] is None and {r['key']: r['n'] for r in rec['ladder']}['market'] == 0
+
+
+def test_new_espn_moneyline_shapes():
+    from brl_live.market import _moneylines
+    comp = {'competitors': [{'homeAway': 'home', 'team': {'abbreviation': 'ATL'}}, {'homeAway': 'away', 'team': {'abbreviation': 'LAD'}}],
+            'odds': [{'provider': {'name': 'ESPN BET'}, 'moneyline': {'home': {'close': {'odds': '+130'}, 'open': {'odds': '+125'}}, 'away': {'close': {'odds': '-150'}}}, 'overUnder': 7.5}]}
+    assert _moneylines(comp) == (130, -150, 'ESPN BET', 7.5)
+    comp2 = {'competitors': comp['competitors'], 'odds': [{'provider': {'name': 'X'}, 'details': 'LAD -150', 'moneyline': {}}]}
+    assert _moneylines(comp2) is None
+    comp3 = {'competitors': comp['competitors'], 'odds': [{'provider': {'name': 'X'}, 'moneyline': {'home': 'EVEN', 'away': {'odds': '-120'}}}]}
+    assert _moneylines(comp3) == (100, -120, 'X', None)
