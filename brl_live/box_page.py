@@ -82,10 +82,32 @@ def font_css() -> str:
     return '\n'.join(parts)
 
 
+def replay_summary() -> dict:
+    """Season replay scores for the Record page, from the static season files (games with a closing line)."""
+    out = {}
+    for src in sorted(ARCHIVE_DIR.glob('season-*.json')):
+        try:
+            doc = json.loads(src.read_text())
+        except (OSError, ValueError):
+            continue
+        games = [g for g in doc.get('games') or [] if g.get('m') is not None and g.get('fh') is not None and g.get('fa') is not None and g['fh'] != g['fa']]
+        if not games:
+            continue
+        def score(key):
+            vals = [(g[key], 1.0 if g['fh'] > g['fa'] else 0.0) for g in games if g.get(key) is not None]
+            b = sum((p - y) ** 2 for p, y in vals) / len(vals)
+            right = sum(1 for p, y in vals if (p >= 0.5) == (y == 1.0)) / len(vals)
+            return {'brier': round(b, 5), 'better_than_coin_pct': round((0.25 - b) / 0.25 * 100, 2), 'picks_right_pct': round(right * 100, 1)}
+        out[str(doc.get('season'))] = {'games': len(games), 'replay': doc.get('replay'), 'headline': score('hl'), 'ours': score('o'),
+                                       'simulator': score('s'), 'team': score('tm'), 'market': score('m'), 'market_open': score('mo')}
+    return out
+
+
 def public_payload(ledger, scores, *, replay=False) -> dict:
     public = {k: ledger.get(k, {}) for k in PUBLIC_KEYS}
     public['scores'] = scores
     public['record'] = build_record(ledger)
+    public['record']['replay'] = replay_summary()
     public['view_scope'] = 'historical_replay' if replay else 'live'
     from datetime import datetime, timezone
     public['generated_at'] = datetime.now(timezone.utc).isoformat()
