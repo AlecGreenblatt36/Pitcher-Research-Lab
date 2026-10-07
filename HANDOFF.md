@@ -28,7 +28,7 @@ Replay lane (brl_replay/, workflow brl-replay, push to diag/replay with tools/re
 
 Live lane scheduling: each run dispatches the next with the repository token (tools/brl_chain_next.py; workflow_dispatch is allowed from GITHUB_TOKEN); a run only chains when no other instance is queued or active, so pushes never double the chain. The BRL_DISPATCH_TOKEN secret is no longer needed.
 
-Game context (series, game number, series or season records, venue, weather) is captured per game in ledger context and shown on the slate cards and the game header.
+Game context (series, game number, series or season records, venue, weather) is captured per game in ledger context and shown on the slate cards and the game header. A game without a probable starter is forecast with an assumed opener (LIVE-02) instead of staying blocked.
 
 Switched 11:35 UTC Oct 7: brl_engine/model.json selects pa-2026-v2-physics (REPLAY-02: simulator 0.24563 vs 0.24759, blend 0.24442 vs 0.24514 on the paired 2026 replay; the game-level interval touches zero, the PA-level gate is clean). The first live run with it (run 37614148781) created new versions for every pending game (receipt pa_model: 371,785 physics rows through 2026-10-06). A run that creates a wave of versions takes about 8 minutes a game, so the live job timeout is 90 minutes. Postseason starter usage is on (POST-01, factor 0.91 for F/D/L). Physics tables are schema v2 (per-pitch-family sums); a weekly cron tops up the current season's backfill.
 
