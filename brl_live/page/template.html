@@ -773,7 +773,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var fmt = function (p) { return p >= .5 ? esc(f.home.abbr) + " " + pct(p) : esc(f.away.abbr) + " " + pct(1 - p); };
     h += "<li><span>Headline (simulator and team model averaged)</span><b>" + fmt(homeProb(f)) + "</b></li>";
     h += "<li><span>Simulator alone, " + Number(f.n_simulations).toLocaleString() + " games</span><b>" + fmt(f.home_win_probability) + "</b></li>";
-    if (f.team_baseline_probability != null) h += "<li><span>Team model alone</span><b>" + fmt(f.team_baseline_probability) + "</b></li>";
+    var tmp = box && box.team_model && box.team_model.p_home != null ? box.team_model.p_home : f.team_baseline_probability;
+    if (tmp != null) h += "<li><span>Team model alone</span><b>" + fmt(tmp) + "</b></li>";
     var mkt = D.market && D.market[f.game_pk];
     if (mkt && mkt.p_home != null) h += "<li><span>Betting market, " + esc(mkt.provider || "") + " (" + esc(timeET(mkt.captured_at)) + " ET)</span><b>" + fmt(mkt.p_home) + "</b></li>";
     else if (f.market_probability != null) { var mk = f.market_probability; h += "<li><span>Betting market</span><b>" + (mk >= .5 ? esc(f.home.abbr) + " " + pct(mk) : esc(f.away.abbr) + " " + pct(1 - mk)) + "</b></li>"; }

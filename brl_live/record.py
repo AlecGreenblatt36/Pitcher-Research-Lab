@@ -67,9 +67,17 @@ def build_record(ledger: dict) -> dict:
     publications = ledger.get('publications', {}) or {}
     actuals = ledger.get('actuals', {}) or {}
     market = ledger.get('market', {}) or {}
+    boxes = ledger.get('box_scores', {}) or {}
+
+    def team_probability(ident, f):
+        """Our team model saved with the box when present; otherwise the runtime's baseline."""
+        tm = (boxes.get(ident) or {}).get('team_model') or {}
+        if tm.get('p_home') is not None:
+            return float(tm['p_home'])
+        return f.get('team_baseline_probability')
     blend = {}
     for ident, f in forecasts.items():
-        blend[ident] = round(blend_probability(f.get('home_win_probability'), f.get('team_baseline_probability')), 6)
+        blend[ident] = round(blend_probability(f.get('home_win_probability'), team_probability(ident, f)), 6)
 
     games, unscored = [], []
     by_game: dict[str, list] = {}
@@ -93,8 +101,9 @@ def build_record(ledger: dict) -> dict:
         _, ident, f = max(eligible, key=lambda x: x[0])
         y = 1.0 if actual['home'] > actual['away'] else 0.0
         p_sim = float(f['home_win_probability'])
-        p_team = f.get('team_baseline_probability')
+        p_team = team_probability(ident, f)
         p_team = None if p_team is None else float(p_team)
+        p_runtime = f.get('team_baseline_probability')
         p_blend = blend[ident]
         mk = market.get(str(pk))
         p_market = None
@@ -106,6 +115,7 @@ def build_record(ledger: dict) -> dict:
             'actual': {'away': actual['away'], 'home': actual['home']},
             'p_sim': round(p_sim, 4), 'p_team': None if p_team is None else round(p_team, 4), 'p_blend': round(p_blend, 4),
             'p_market': None if p_market is None else round(p_market, 4),
+            'p_team_runtime': None if p_runtime is None else round(float(p_runtime), 4),
             'brier': {'sim': _brier(p_sim, y), 'team': None if p_team is None else _brier(p_team, y), 'blend': _brier(p_blend, y),
                       'market': None if p_market is None else _brier(p_market, y),
                       'coin': 0.25, 'home': _brier(HOME_RATE_PRIOR, y)},

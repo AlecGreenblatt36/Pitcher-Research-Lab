@@ -19,6 +19,7 @@ from .box_page import render_page
 from .live_feed import live_matchup,appearances,matchup_parameters
 from .live_update import run_live_update
 from .market import capture as capture_market
+from .team_model import TeamModel
 from zoneinfo import ZoneInfo
 from .edge_metrics import (freeze_skill_baselines, prior_boxes_from_cache, score_skill_boxes)
 
@@ -31,6 +32,7 @@ class BoxSimulator(RefreshedSimulator):
         self.skill_history=skill_history
         self.skill_origin=skill_origin
         self._appearances=None
+        self.team_model=TeamModel(self.rows)
     def appearances(self):
         if self._appearances is None:self._appearances=appearances(self.history)
         return self._appearances
@@ -45,6 +47,10 @@ class BoxSimulator(RefreshedSimulator):
         engine,decoded=make_history_engine(parameters,self.path)
         results,box=run_box_worlds(engine,decoded,self.annotations,game['date'],draw_seeds(game['game_pk']),full_history=self.history)
         baseline=predict(game,self.rows,self.fit)
+        # The team half of the headline blend: our decayed negative-binomial team model, the one
+        # measured on the 2026 replay next to the simulator. The runtime's own baseline is kept
+        # in the forecast record unchanged.
+        box['team_model']=self.team_model.probability(game['date'],game['home']['team_id'],game['away']['team_id'])
         metadata={**box,'game_pk':game['game_pk'],'date':game['date'],
                   'starters':{s:{'player_id':getattr(decoded,s).starter.player_id} for s in ('away','home')}}
         if self.skill_history is not None:
