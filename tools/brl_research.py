@@ -29,13 +29,19 @@ from cloud.security import unseal, key_bytes  # noqa: E402
 from brl_live.bookkeeping_season import STUDY_SCHEMA, study_path, study_purpose  # noqa: E402
 
 LABELS = ('BIP_OUT', 'K', 'BB_HBP', '1B', '2B_3B', 'HR', 'OTHER_REACH')
-SWING = {'S', 'W', 'M', 'Q', 'F', 'L', 'R', 'O', 'T', 'X', 'D', 'E', 'J', 'Z'}
-WHIFF = {'S', 'W', 'M', 'Q'}
-CALLED = {'C'}
-FASTBALL = {'FF', 'SI', 'FA', 'FT'}
-K_RATE, K_MEAN, K_BIP = 150.0, 150.0, 60.0           # pseudo-counts: pitches / pitches / balls in play
-EXTRA = ['b_ev', 'b_la', 'b_hard', 'b_barrel', 'b_whiff', 'b_chase', 'b_swing', 'b_zcontact', 'b_bip_n',
-         'p_velo', 'p_velo_delta', 'p_spin', 'p_ivb', 'p_hb', 'p_whiff', 'p_chase', 'p_zone', 'p_csw', 'p_ev', 'p_hard', 'p_gb', 'p_pitch_n']
+from research_lab.pa_model import physics as phys  # noqa: E402
+
+# The feature code is shared with the live provider (research_lab/pa_model/physics.py) so an
+# experiment measures exactly what production would compute.
+EXTRA = phys.BASE_FEATURES
+XVALUE_COLS = phys.XVALUE_FEATURES
+RECENT_COLS = phys.RECENT_FEATURES
+PITCH_SUMS, BIP_SUMS, PS, BS = phys.PITCH_SUMS, phys.BIP_SUMS, phys.PS, phys.BS
+SWING, WHIFF, CALLED, FASTBALL = phys.SWING, phys.WHIFF, phys.CALLED, phys.FASTBALL
+columns_for = phys.feature_names
+per_pa_physics = phys.table_from_study
+build_extras = phys.build_features
+DEFAULT_PARAMS = phys.DEFAULT_PARAMS
 
 
 def api(url, token, method='GET', payload=None):
@@ -76,191 +82,6 @@ def entrypoint_module():
     spec = importlib.util.spec_from_file_location('brl_entrypoint', ROOT / 'brl_engine' / 'entrypoint.py')
     module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
     return module
-
-
-# Per-pitch aggregates kept for every plate appearance (sums over its pitches).
-PITCH_SUMS = ['n', 'sw', 'wh', 'oz', 'ch', 'iz', 'izs', 'izc', 'cs', 'fb', 'velo', 'spin', 'ivb', 'hb']
-PS = {name: i for i, name in enumerate(PITCH_SUMS)}
-BIP_SUMS = ['bip', 'ev', 'la', 'hard', 'barrel', 'gb']
-BS = {name: i for i, name in enumerate(BIP_SUMS)}
-
-
-def per_pa_physics(doc: dict) -> pd.DataFrame:
-    """One row per plate appearance with the pitch and contact aggregates the features need."""
-    rows = []
-    for pk, game in doc['games'].items():
-        for r in game['rows']:
-            a = np.zeros(len(PITCH_SUMS))
-            for p in r['pitches']:
-                ptype, code, _, _, start, _, spin_rate, pfx_x, pfx_z, _, _, _, _, _, zone = p
-                swing = code in SWING; whiff = code in WHIFF
-                in_zone = isinstance(zone, int) and 1 <= zone <= 9
-                out_zone = isinstance(zone, int) and zone > 9
-                a[PS['n']] += 1; a[PS['sw']] += swing; a[PS['wh']] += whiff; a[PS['cs']] += code in CALLED
-                a[PS['oz']] += out_zone; a[PS['ch']] += out_zone and swing
-                a[PS['iz']] += in_zone; a[PS['izs']] += in_zone and swing; a[PS['izc']] += in_zone and swing and not whiff
-                if ptype in FASTBALL and start is not None:
-                    a[PS['fb']] += 1; a[PS['velo']] += start; a[PS['spin']] += spin_rate or 0.0
-                    a[PS['ivb']] += pfx_z or 0.0; a[PS['hb']] += abs(pfx_x or 0.0)
-            hit = r.get('hit')
-            ev = la = np.nan
-            if hit and hit[0] is not None and hit[1] is not None and r['o'] not in ('K', 'BB_HBP'):
-                ev, la = float(hit[0]), float(hit[1])
-            rows.append((int(pk), int(r['i']) + 1, int(r['p']), -1 if r.get('b') is None else int(r['b']), *a.tolist(), ev, la))
-    return pd.DataFrame(rows, columns=['game_pk', 'at_bat_number', 'pitcher', 'batter'] + PITCH_SUMS + ['ev', 'la'])
-
-
-def shrunk(s, num, den, league, k):
-    """(sum + k * league ratio) / (count + k): a rate or a mean pulled toward the league value."""
-    return (s[num] + k * (league[num] / max(league[den], 1e-9))) / (s[den] + k)
-
-
-RUN_VALUE = {'BIP_OUT': 0.0, 'K': 0.0, 'BB_HBP': 0.69, '1B': 0.88, '2B_3B': 1.4, 'HR': 2.03, 'OTHER_REACH': 0.6}
-XV_K = 40.0                  # pseudo balls in play per (exit velocity, launch angle) cell
-DEFAULT_PARAMS = {'k_rate': 150.0, 'k_bip': 60.0, 'k_velo': 100.0, 'xvalue': False, 'recent_days': 0, 'k_recent_pitch': 100.0, 'k_recent_bip': 40.0}
-XVALUE_COLS = ['b_xv', 'p_xv']
-RECENT_COLS = ['p_velo_rec', 'p_whiff_rec', 'p_csw_rec', 'b_ev_rec', 'b_whiff_rec', 'b_hard_rec']
-
-
-def columns_for(params: dict) -> list[str]:
-    cols = list(EXTRA)
-    if params.get('xvalue'):
-        cols += XVALUE_COLS
-    if params.get('recent_days'):
-        cols += RECENT_COLS
-    return cols
-
-
-def _cell(ev_value: float, la_value: float) -> tuple[int, int]:
-    return int(min(max((ev_value - 40.0) // 5, 0), 15)), int(min(max((la_value + 90.0) // 10, 0), 17))
-
-
-def build_extras(pa: pd.DataFrame, physics: pd.DataFrame, params: dict | None = None) -> tuple[pd.DataFrame, dict]:
-    """Time-valid batter and pitcher physics features aligned to the PA frame (sorted like the engine's builder)."""
-    P = dict(DEFAULT_PARAMS, **(params or {}))
-    k_rate, k_bip, k_velo = float(P['k_rate']), float(P['k_bip']), float(P['k_velo'])
-    want_xv, recent_days = bool(P['xvalue']), int(P['recent_days'] or 0)
-    k_rp, k_rb = float(P['k_recent_pitch']), float(P['k_recent_bip'])
-    cols = columns_for(P)
-    ordered = pa.sort_values(['date_key', 'game_pk', 'at_bat_number'], kind='mergesort').reset_index(drop=True)
-    ph = physics.drop_duplicates(['game_pk', 'at_bat_number']).set_index(['game_pk', 'at_bat_number'])
-    joined = ordered[['game_pk', 'at_bat_number', 'batter', 'pitcher']].join(ph, on=['game_pk', 'at_bat_number'], rsuffix='_ph')
-    has = joined['n'].notna().to_numpy()
-    id_match = has & (joined['batter'].to_numpy() == joined['batter_ph'].to_numpy()) & (joined['pitcher'].to_numpy() == joined['pitcher_ph'].to_numpy())
-    audit = {'pa_rows': int(len(ordered)), 'physics_rows': int(len(ph)), 'joined': int(has.sum()), 'ids_match': int(id_match.sum()), 'params': P}
-    M = joined[PITCH_SUMS].to_numpy(float, copy=True); M[~id_match] = np.nan
-    ev = joined['ev'].to_numpy(float, copy=True); la = joined['la'].to_numpy(float, copy=True); ev[~id_match] = np.nan; la[~id_match] = np.nan
-    batters = ordered['batter'].to_numpy(int); pitchers = ordered['pitcher'].to_numpy(int); dates = ordered['date_key'].astype(str).to_numpy()
-    rv = ordered['outcome'].map(RUN_VALUE).to_numpy(float)
-    day_ord = pd.to_datetime(ordered['date_key']).map(pd.Timestamp.toordinal).to_numpy()
-    out = np.full((len(ordered), len(cols)), np.nan, dtype=np.float32)
-    X = {name: i for i, name in enumerate(cols)}
-    zero_p, zero_b = np.zeros(len(PITCH_SUMS)), np.zeros(len(BIP_SUMS))
-    bp, pp, Lp = defaultdict(lambda: np.zeros(len(PITCH_SUMS))), defaultdict(lambda: np.zeros(len(PITCH_SUMS))), np.zeros(len(PITCH_SUMS))
-    bb, pb, Lb = defaultdict(lambda: np.zeros(len(BIP_SUMS))), defaultdict(lambda: np.zeros(len(BIP_SUMS))), np.zeros(len(BIP_SUMS))
-    last_velo, cur_velo = {}, {}      # pitcher -> (fastballs, velocity sum) of his most recent prior outing / of the date being scored
-    # expected run value by (exit velocity, launch angle) cell, learned online; per-player sums of the cell values of their batted balls
-    xv_sum, xv_n = np.zeros((16, 18)), np.zeros((16, 18)); xv_league = [0.0, 0.0]
-    bxv, pxv = defaultdict(lambda: np.zeros(2)), defaultdict(lambda: np.zeros(2))
-    # recent windows: per player, list of (day ordinal, pitch sums, bip sums) per date
-    rec_p, rec_b = defaultdict(list), defaultdict(list)
-    def recent(entries, today):
-        sp_, sb_ = zero_p.copy(), zero_b.copy()
-        keep = []
-        for e in entries:
-            if e[0] >= today - recent_days:
-                keep.append(e); sp_ += e[1]; sb_ += e[2]
-        entries[:] = keep
-        return sp_, sb_
-    def dev(recent_sum, recent_den, own_rate, k):
-        return (recent_sum + k * own_rate) / (recent_den + k) - own_rate
-    i, n = 0, len(ordered)
-    while i < n:
-        j = i
-        while j < n and dates[j] == dates[i]:
-            j += 1
-        today = day_ord[i]
-        for r in range(i, j):
-            b, p = batters[r], pitchers[r]
-            sb = bp.get(b, zero_p); sp = pp.get(p, zero_p); cb = bb.get(b, zero_b); cp = pb.get(p, zero_b)
-            out[r, X['b_ev']] = shrunk(cb, BS['ev'], BS['bip'], Lb, k_bip)
-            out[r, X['b_la']] = shrunk(cb, BS['la'], BS['bip'], Lb, k_bip)
-            out[r, X['b_hard']] = shrunk(cb, BS['hard'], BS['bip'], Lb, k_bip)
-            out[r, X['b_barrel']] = shrunk(cb, BS['barrel'], BS['bip'], Lb, k_bip)
-            out[r, X['b_whiff']] = shrunk(sb, PS['wh'], PS['sw'], Lp, k_rate)
-            out[r, X['b_chase']] = shrunk(sb, PS['ch'], PS['oz'], Lp, k_rate)
-            out[r, X['b_swing']] = shrunk(sb, PS['sw'], PS['n'], Lp, k_rate)
-            out[r, X['b_zcontact']] = shrunk(sb, PS['izc'], PS['izs'], Lp, k_rate)
-            out[r, X['b_bip_n']] = cb[BS['bip']]
-            own_velo = shrunk(sp, PS['velo'], PS['fb'], Lp, k_velo)
-            out[r, X['p_velo']] = own_velo
-            out[r, X['p_spin']] = shrunk(sp, PS['spin'], PS['fb'], Lp, k_velo)
-            out[r, X['p_ivb']] = shrunk(sp, PS['ivb'], PS['fb'], Lp, k_velo)
-            out[r, X['p_hb']] = shrunk(sp, PS['hb'], PS['fb'], Lp, k_velo)
-            lv = last_velo.get(p)
-            out[r, X['p_velo_delta']] = (lv[1] / lv[0] - own_velo) if (lv is not None and lv[0] >= 5 and sp[PS['fb']] >= 100) else 0.0
-            own_whiff = shrunk(sp, PS['wh'], PS['sw'], Lp, k_rate)
-            own_csw = (sp[PS['cs']] + sp[PS['wh']] + k_rate * ((Lp[PS['cs']] + Lp[PS['wh']]) / max(Lp[PS['n']], 1e-9))) / (sp[PS['n']] + k_rate)
-            out[r, X['p_whiff']] = own_whiff
-            out[r, X['p_chase']] = shrunk(sp, PS['ch'], PS['oz'], Lp, k_rate)
-            out[r, X['p_zone']] = shrunk(sp, PS['iz'], PS['n'], Lp, k_rate)
-            out[r, X['p_csw']] = own_csw
-            out[r, X['p_ev']] = shrunk(cp, BS['ev'], BS['bip'], Lb, k_bip)
-            out[r, X['p_hard']] = shrunk(cp, BS['hard'], BS['bip'], Lb, k_bip)
-            out[r, X['p_gb']] = shrunk(cp, BS['gb'], BS['bip'], Lb, k_bip)
-            out[r, X['p_pitch_n']] = sp[PS['n']]
-            if want_xv:
-                league_xv = xv_league[0] / max(xv_league[1], 1e-9)
-                bx = bxv.get(b); px = pxv.get(p)
-                out[r, X['b_xv']] = ((bx[0] if bx is not None else 0.0) + k_bip * league_xv) / ((bx[1] if bx is not None else 0.0) + k_bip)
-                out[r, X['p_xv']] = ((px[0] if px is not None else 0.0) + k_bip * league_xv) / ((px[1] if px is not None else 0.0) + k_bip)
-            if recent_days:
-                rp, rpb = recent(rec_p[p], today) if p in rec_p else (zero_p, zero_b)
-                rb, rbb = recent(rec_b[b], today) if b in rec_b else (zero_p, zero_b)
-                out[r, X['p_velo_rec']] = dev(rp[PS['velo']], rp[PS['fb']], own_velo, k_rp)
-                out[r, X['p_whiff_rec']] = dev(rp[PS['wh']], rp[PS['sw']], own_whiff, k_rp)
-                out[r, X['p_csw_rec']] = dev(rp[PS['cs']] + rp[PS['wh']], rp[PS['n']], own_csw, k_rp)
-                out[r, X['b_ev_rec']] = dev(rbb[BS['ev']], rbb[BS['bip']], out[r, X['b_ev']], k_rb)
-                out[r, X['b_whiff_rec']] = dev(rb[PS['wh']], rb[PS['sw']], out[r, X['b_whiff']], k_rp)
-                out[r, X['b_hard_rec']] = dev(rbb[BS['hard']], rbb[BS['bip']], out[r, X['b_hard']], k_rb)
-        day_p, day_b = {}, {}
-        for r in range(i, j):
-            if np.isnan(M[r, 0]):
-                continue
-            b, p = batters[r], pitchers[r]
-            bp[b] += M[r]; pp[p] += M[r]; Lp += M[r]
-            if M[r, PS['fb']] > 0:
-                cv = cur_velo.get(p, (0.0, 0.0)); cur_velo[p] = (cv[0] + M[r, PS['fb']], cv[1] + M[r, PS['velo']])
-            v = None
-            if not np.isnan(ev[r]):
-                v = np.array([1.0, ev[r], la[r], float(ev[r] >= 95.0), float(ev[r] >= 98.0 and 8.0 <= la[r] <= 40.0), float(la[r] < 10.0)])
-                bb[b] += v; pb[p] += v; Lb += v
-                if want_xv:
-                    ci, cj = _cell(ev[r], la[r])
-                    league_xv = xv_league[0] / max(xv_league[1], 1e-9)
-                    value = (xv_sum[ci, cj] + XV_K * league_xv) / (xv_n[ci, cj] + XV_K)
-                    bxv[b] += (value, 1.0); pxv[p] += (value, 1.0)
-                    xv_sum[ci, cj] += rv[r]; xv_n[ci, cj] += 1.0; xv_league[0] += rv[r]; xv_league[1] += 1.0
-            if recent_days:
-                for table, key in ((day_p, p), (day_b, b)):
-                    e = table.get(key)
-                    if e is None:
-                        e = table[key] = [today, zero_p.copy(), zero_b.copy()]
-                    e[1] += M[r]
-                    if v is not None:
-                        e[2] += v
-        if recent_days:
-            for key, e in day_p.items():
-                rec_p[key].append(e)
-            for key, e in day_b.items():
-                rec_b[key].append(e)
-        last_velo.update(cur_velo); cur_velo = {}
-        i = j
-    extras = pd.DataFrame(out, columns=cols)
-    audit['league_fastball_velocity'] = float(Lp[PS['velo']] / max(Lp[PS['fb']], 1)); audit['league_exit_velocity'] = float(Lb[BS['ev']] / max(Lb[BS['bip']], 1))
-    audit['league_hard_hit_rate'] = float(Lb[BS['hard']] / max(Lb[BS['bip']], 1)); audit['league_whiff_per_swing'] = float(Lp[PS['wh']] / max(Lp[PS['sw']], 1))
-    audit['league_ground_ball_share'] = float(Lb[BS['gb']] / max(Lb[BS['bip']], 1))
-    return extras, audit
 
 
 # Experiment sets: each variant is a parameter dict for build_extras; the locked model is the shared reference.
