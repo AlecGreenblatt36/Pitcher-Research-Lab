@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / 'brl_engine' / 'runtime'))
 from brl_live.pitch_bridge import pitch_list, contact_of  # noqa: E402
-from brl_live.bookkeeping_season import SCHEMA, season_path, season_purpose, receipt_path  # noqa: E402
+from brl_live.bookkeeping_season import SCHEMA, STUDY_SCHEMA, season_path, season_purpose, receipt_path, study_path, study_purpose  # noqa: E402
 from cloud.security import seal, unseal, key_bytes, sha  # noqa: E402
 
 
@@ -102,7 +102,46 @@ def completed_games(year: int, through: str) -> list[dict]:
     return games
 
 
-def extract(doc: dict) -> list[dict]:
+def _num(value, digits=2):
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return None
+    return round(v, digits) if v == v else None
+
+
+PITCH_FIELDS = ('type', 'code', 'balls', 'strikes', 'start_speed', 'end_speed', 'spin_rate', 'pfx_x', 'pfx_z', 'plate_x', 'plate_z',
+                'release_x', 'release_z', 'extension', 'zone')
+HIT_FIELDS = ('launch_speed', 'launch_angle', 'distance', 'coord_x', 'coord_y', 'trajectory', 'hardness', 'location')
+
+
+def physics(play: dict) -> dict:
+    """Pitch-by-pitch physics and the batted-ball measurement of one play (the research dataset)."""
+    pitches = []
+    balls = strikes = 0
+    hit = None
+    for e in play.get('playEvents') or []:
+        if e.get('isPitch') is not True:
+            continue
+        d = e.get('details') or {}
+        pd_ = e.get('pitchData') or {}
+        co = pd_.get('coordinates') or {}
+        br = pd_.get('breaks') or {}
+        pitches.append([str(((d.get('type') or {}).get('code')) or '').upper() or None, str(d.get('code') or ''), balls, strikes,
+                        _num(pd_.get('startSpeed'), 1), _num(pd_.get('endSpeed'), 1), _num(br.get('spinRate'), 0),
+                        _num(co.get('pfxX')), _num(co.get('pfxZ')), _num(co.get('pX')), _num(co.get('pZ')),
+                        _num(co.get('x0')), _num(co.get('z0')), _num(pd_.get('extension')), pd_.get('zone')])
+        c = e.get('count') or {}
+        balls, strikes = int(c.get('balls', balls)), int(c.get('strikes', strikes))
+        hd = e.get('hitData')
+        if hd:
+            hc = hd.get('coordinates') or {}
+            hit = [_num(hd.get('launchSpeed'), 1), _num(hd.get('launchAngle'), 1), _num(hd.get('totalDistance'), 0),
+                   _num(hc.get('coordX'), 1), _num(hc.get('coordY'), 1), hd.get('trajectory'), hd.get('hardness'), hd.get('location')]
+    return {'pitches': pitches, 'hit': hit}
+
+
+def extract(doc: dict, research: list | None = None) -> list[dict]:
     rows = []
     for play in (doc or {}).get('allPlays') or []:
         result = play.get('result') or {}
@@ -110,18 +149,28 @@ def extract(doc: dict) -> list[dict]:
         if outcome is None or not (play.get('about') or {}).get('isComplete'):
             continue
         m = play.get('matchup') or {}
+        about = play.get('about') or {}
         batter = (m.get('batter') or {}).get('id')
-        rows.append({'i': int(play['about']['atBatIndex']), 'o': outcome, 'e': str(result.get('eventType') or ''),
+        rows.append({'i': int(about['atBatIndex']), 'o': outcome, 'e': str(result.get('eventType') or ''),
                      'p': int(m['pitcher']['id']), 'b': None if batter is None else int(batter), 's': str((m.get('batSide') or {}).get('code') or 'R'),
                      'n': sum(e.get('isPitch') is True for e in play.get('playEvents') or []),
                      'pt': pitch_list(play), 'c': contact_of(play)})
+        if research is not None:
+            ph = physics(play)
+            research.append({'i': int(about['atBatIndex']), 'inning': about.get('inning'), 'half': 'top' if about.get('isTopInning') else 'bottom',
+                             'o': outcome, 'e': str(result.get('eventType') or ''), 'p': int(m['pitcher']['id']),
+                             'b': None if batter is None else int(batter), 's': str((m.get('batSide') or {}).get('code') or 'R'),
+                             't': str((m.get('pitchHand') or {}).get('code') or ''), 'pitches': ph['pitches'], 'hit': ph['hit']})
     return rows
 
 
-def fetch_game(game: dict) -> tuple[int, dict]:
+def fetch_game(game: dict) -> tuple[int, dict, dict]:
     doc = get_json(f'{API}/game/{game["game_pk"]}/playByPlay')
     fetched = datetime.now(timezone.utc).isoformat()
-    return game['game_pk'], {'date': game['date'], 'game_type': game['game_type'], 'fetched_at': fetched, 'rows': extract(doc)}
+    research = []
+    rows = extract(doc, research)
+    return game['game_pk'], {'date': game['date'], 'game_type': game['game_type'], 'fetched_at': fetched, 'rows': rows}, \
+        {'date': game['date'], 'game_type': game['game_type'], 'fetched_at': fetched, 'rows': research}
 
 
 def main():
@@ -136,8 +185,14 @@ def main():
         doc = json.loads(gzip.decompress(unseal(existing, key, season_purpose(year))))
         if doc.get('schema') != SCHEMA or int(doc.get('year')) != year:
             raise ValueError('Season bookkeeping identity mismatch')
+    study = {'schema': STUDY_SCHEMA, 'year': year, 'games': {}}
+    existing_study = read_blob(repo, token, study_path(year), branch)
+    if existing_study is not None:
+        study = json.loads(gzip.decompress(unseal(existing_study, key, study_purpose(year))))
+        if study.get('schema') != STUDY_SCHEMA or int(study.get('year')) != year:
+            raise ValueError('Season study identity mismatch')
     games = completed_games(year, through)
-    todo = [g for g in games if str(g['game_pk']) not in doc['games']]
+    todo = [g for g in games if str(g['game_pk']) not in doc['games'] or str(g['game_pk']) not in study['games']]
     print(json.dumps({'year': year, 'through': through, 'completed_games': len(games), 'already_sealed': len(doc['games']), 'to_fetch': len(todo)}))
     failures = []
     with ThreadPoolExecutor(max_workers=WORKERS) as pool:
@@ -145,21 +200,31 @@ def main():
             if isinstance(outcome, Exception):
                 failures.append({'game_pk': game['game_pk'], 'error': type(outcome).__name__ + ': ' + str(outcome)[:120]})
                 continue
-            pk, value = outcome
+            pk, value, research = outcome
             if value['rows']:
                 doc['games'][str(pk)] = value
+                study['games'][str(pk)] = research
     doc['through'] = through
     doc['sealed_at'] = datetime.now(timezone.utc).isoformat()
     plain = gzip.compress(json.dumps(doc, separators=(',', ':'), sort_keys=True).encode(), mtime=0)
     cipher = seal(plain, key, season_purpose(year))
     put(repo, token, season_path(year), cipher, branch, f'BRL: season {year} bookkeeping through {through}')
+    study['through'] = through
+    study['sealed_at'] = doc['sealed_at']
+    study_plain = gzip.compress(json.dumps(study, separators=(',', ':'), sort_keys=True).encode(), mtime=0)
+    study_cipher = seal(study_plain, key, study_purpose(year))
+    put(repo, token, study_path(year), study_cipher, branch, f'BRL: season {year} pitch physics through {through}')
     n_rows = sum(len(g['rows']) for g in doc['games'].values())
     with_pitches = sum(1 for g in doc['games'].values() for r in g['rows'] if r['pt'])
     with_contact = sum(1 for g in doc['games'].values() for r in g['rows'] if r['c'])
     receipt = {'schema': 'brl.bookkeeping-season-receipt.v1', 'year': year, 'through': through, 'games': len(doc['games']), 'plate_appearances': n_rows,
                'with_pitch_list': with_pitches, 'with_contact': with_contact, 'fetched_this_run': len(todo) - len(failures), 'failures': failures[:50],
                'cipher_sha256': sha(cipher), 'cipher_bytes': len(cipher), 'plaintext_gzip_bytes': len(plain), 'sealed_at': doc['sealed_at'],
-               'path': season_path(year), 'format': 'AES-256-GCM; BRLAESG1 header; 12-byte nonce; AAD BRL:' + season_purpose(year) + '; gzip JSON inside'}
+               'path': season_path(year), 'format': 'AES-256-GCM; BRLAESG1 header; 12-byte nonce; AAD BRL:' + season_purpose(year) + '; gzip JSON inside',
+               'study': {'path': study_path(year), 'purpose': study_purpose(year), 'games': len(study['games']), 'plate_appearances': sum(len(g['rows']) for g in study['games'].values()),
+                         'pitches': sum(len(r['pitches']) for g in study['games'].values() for r in g['rows']),
+                         'with_hit_measurement': sum(1 for g in study['games'].values() for r in g['rows'] if r['hit']),
+                         'cipher_sha256': sha(study_cipher), 'cipher_bytes': len(study_cipher), 'pitch_fields': list(PITCH_FIELDS), 'hit_fields': list(HIT_FIELDS)}}
     put(repo, token, receipt_path(year), json.dumps(receipt, indent=1).encode(), branch, f'BRL: season {year} bookkeeping receipt')
     print(json.dumps({k: receipt[k] for k in ('games', 'plate_appearances', 'with_pitch_list', 'with_contact', 'fetched_this_run', 'cipher_bytes')} | {'failures': len(failures)}))
 

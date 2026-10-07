@@ -17,6 +17,8 @@ from app.safety import Blocked
 from cloud.security import unseal
 
 SCHEMA = 'brl.bookkeeping-season.v1'
+STUDY_SCHEMA = 'brl.pitch-physics-season.v1'     # the research dataset sealed next to it (never read by the live runtime)
+MAX_AGE_DAYS = 400                                # season rows older than this are left to the day cache / ignored
 
 
 def season_path(year: int) -> str:
@@ -31,6 +33,14 @@ def receipt_path(year: int) -> str:
     return f'bookkeeping/season-{int(year)}.json'
 
 
+def study_path(year: int) -> str:
+    return f'private/statcast/season-{int(year)}.enc'
+
+
+def study_purpose(year: int) -> str:
+    return f'pitch-physics-season-{int(year)}'
+
+
 def load_season(store, key: bytes, year: int) -> dict | None:
     """The sealed season document, or None when no backfill has been made for that year."""
     saved = store.read(season_path(year))
@@ -42,12 +52,14 @@ def load_season(store, key: bytes, year: int) -> dict | None:
     return doc
 
 
-def season_rows(doc: dict, before: str, seen: set) -> list[dict]:
-    """Bookkeeping rows for games dated before `before`, skipping (game_pk, at-bat) keys already seen."""
+def season_rows(doc: dict, before: str, seen: set, max_age_days: int = MAX_AGE_DAYS) -> list[dict]:
+    """Bookkeeping rows for games dated before `before` and at most `max_age_days` old, skipping (game_pk, at-bat) keys already seen."""
+    from datetime import date, timedelta
     rows = []
+    oldest = (date.fromisoformat(before[:10]) - timedelta(days=max_age_days)).isoformat()
     for pk, game in doc['games'].items():
         day = str(game.get('date') or '')[:10]
-        if not day or day >= before:
+        if not day or day >= before or day < oldest:
             continue
         for r in game.get('rows') or []:
             key = (int(pk), int(r['i']))

@@ -19,4 +19,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           BRL_PA_PACKAGE_KEY: ${{ secrets.BRL_PA_PACKAGE_KEY }}
-        run: python tools/brl_bookkeeping_backfill.py
+        run: |
+          if [ -f tools/backfill_season.txt ]; then export BRL_SEASON="$(tr -d '[:space:]' < tools/backfill_season.txt)"; fi
+          python tools/brl_bookkeeping_backfill.py
