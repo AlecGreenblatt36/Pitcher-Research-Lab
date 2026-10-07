@@ -9,6 +9,8 @@ Settings come from tools/replay_params.json on the trigger branch:
   step         keep every step-th game (default 1)
   reference    path on the ledger branch of an earlier replay's per-game file to pair against (optional)
   offsets      apply the production context offsets (default true)
+  environment  path in the repository of a run-environment table (brl_live/environment.py) to apply per game
+  conditions   path on the ledger branch of the game conditions file (tools/brl_game_conditions.py), needed with environment
 Outputs on the ledger branch: research/replay-<tag>-<run>.jsonl.gz (one record per game: win counts,
 run histograms, starter outs, final score) and research/replay-<tag>-<run>.json (scores, paired
 comparison, timing). Per-game model outputs and final scores are not private data; the plate
@@ -84,7 +86,7 @@ def _worker(dates: list) -> list:
     s = _SHARED
     return replay_dates(s['h'], s['app'], s['games'], dates, model_path=s['model_path'], model_sha256=s['model_sha256'], history_path=s['history_path'],
                         hazard_path=s['hazard_path'], n_sims=s['n_sims'], physics_table=s['physics_table'], offsets=s['offsets'], rest=s.get('rest', False),
-                        log=lambda m: print(m, flush=True))
+                        environment=s.get('environment'), log=lambda m: print(m, flush=True))
 
 
 def logit(p):
@@ -191,8 +193,26 @@ def main():
         if use_offsets:
             from brl_live.provider_adjust import load_offsets
             offsets = load_offsets()
+        environment = None
+        if params.get('environment'):
+            from brl_live.environment import load_table, conditions, log_multipliers
+            table = load_table(ROOT / str(params['environment']))
+            raw = read_blob(repo, token, str(params['conditions']), branch)
+            if raw is None:
+                raise ValueError('conditions file missing on the ledger branch')
+            rows = [json.loads(l) for l in gzip.decompress(raw).decode().splitlines() if l.strip()]
+            by_pk = {int(r['game_pk']): r for r in rows}
+            environment = {}
+            for g in games.itertuples():
+                r = by_pk.get(int(g.game_pk))
+                if r is None:
+                    continue
+                c = conditions(venue=r.get('venue'), temp=r.get('temp_f'), condition=r.get('condition'), day_night=r.get('day_night'),
+                               date=r.get('date'), wind_mph=r.get('wind_mph'), wind_dir=r.get('wind_dir'))
+                environment[int(g.game_pk)] = log_multipliers(c, table)
+            receipt['environment'] = {'table': table.get('name'), 'conditions': params['conditions'], 'games_with_conditions': len(environment)}
         _SHARED.update(h=h, app=app, games=games, model_path=model_path, model_sha256=model_sha256, history_path=history_path, hazard_path=hazard_path,
-                       n_sims=n_sims, physics_table=physics_table, offsets=offsets, rest=use_rest)
+                       n_sims=n_sims, physics_table=physics_table, offsets=offsets, rest=use_rest, environment=environment)
         stage(f'replay {len(games)} games with {workers} workers')
         dates = sorted(games['date'].unique())
         shards = [dates[w::workers] for w in range(workers)]

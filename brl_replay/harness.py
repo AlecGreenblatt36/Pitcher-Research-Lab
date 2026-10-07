@@ -115,15 +115,21 @@ def bats_lookup(h: pd.DataFrame, cutoff: str) -> dict:
 
 
 def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates: list, *, model_path: Path, model_sha256: str,
-                 history_path: Path, hazard_path: Path, n_sims: int, physics_table=None, offsets=None, rest=False, log=print) -> list[dict]:
-    """Simulate every game on the given dates; one record per game (win counts, run histograms, starter outs)."""
-    from brl_live.provider_adjust import ContextAdjust
+                 history_path: Path, hazard_path: Path, n_sims: int, physics_table=None, offsets=None, rest=False, environment=None,
+                 log=print) -> list[dict]:
+    """Simulate every game on the given dates; one record per game (win counts, run histograms, starter outs).
+
+    environment: optional {game_pk: seven log-multipliers} (brl_live/environment.py); games without an entry are unadjusted."""
+    from brl_live.provider_adjust import ContextAdjust, EnvironmentAdjust
     hcols = h[HISTORY_COLUMNS]
     first = dates[0]
     base = LockedPAModelProvider(model_path, history_path, cutoff_date=first, game_date=first, park="NYY",
                                  expected_sha256=model_sha256, physics_table=physics_table)
     cached = CachedProvider(base)
     provider = ContextAdjust(cached, offsets) if offsets else cached
+    env = None
+    if environment is not None:
+        env = provider = EnvironmentAdjust(provider)
     hazard = joblib.load(hazard_path)
     records = []
     t0 = time.time()
@@ -149,6 +155,8 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
             base.park = g.park
             base._talent_cache = {}
             cached.reset()
+            if env is not None:
+                env.set_environment(environment.get(int(g.game_pk)))
             teams = {}
             for side in ("away", "home"):
                 lineup = tuple(PlayerProfile(str(b), str(b), hands.get(b, first_stand.get(b, "R"))) for b in getattr(g, f"{side}_lineup"))

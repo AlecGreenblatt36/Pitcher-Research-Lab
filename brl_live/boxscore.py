@@ -279,14 +279,21 @@ class BoxAccumulator:
 # reproduces that ratio in the simulator (0.869; share under 16 batters 0.25). Recorded in each
 # box's adjustments; relievers keep their regular-season roles.
 ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
-        'postseason_exp_scale':{'F':0.91,'D':0.91,'L':0.91,'W':1.0}}
+        'postseason_exp_scale':{'F':0.91,'D':0.91,'L':0.91,'W':1.0},
+        'environment':False}
 
-def adjusted_provider(provider,full_history,date,settings=ADJUST):
-    """Wrap the engine's provider with the enabled adjustments. Returns (provider, world_hook, label)."""
-    from .provider_adjust import ContextAdjust,TalentNoise,history_talent_inputs
+def adjusted_provider(provider,full_history,date,settings=ADJUST,environment=None):
+    """Wrap the engine's provider with the enabled adjustments. Returns (provider, world_hook, label).
+
+    environment: the game's conditions (brl_live/environment.conditions) when the run environment is on."""
+    from .provider_adjust import ContextAdjust,TalentNoise,EnvironmentAdjust,history_talent_inputs
     label=[];hook=None
     if settings.get('context_offsets'):
         provider=ContextAdjust(provider);label.append('context offsets through '+str(provider.offsets.get('estimated_through')))
+    if settings.get('environment') and environment is not None:
+        from .environment import load_table,log_multipliers,describe
+        table=load_table()
+        provider=EnvironmentAdjust(provider,log_multipliers(environment,table));label.append(describe(environment,table))
     c=float(settings.get('talent_noise_c') or 0.0)
     if c>0:
         if full_history is None:raise Blocked('Talent noise needs the assembled PA history')
@@ -295,9 +302,9 @@ def adjusted_provider(provider,full_history,date,settings=ADJUST):
         hook=provider.new_world;label.append('per-world talent noise c=%g'%c)
     return provider,hook,label
 
-def run_box_worlds(engine,matchup,history,date,seeds,full_history=None,settings=ADJUST):
+def run_box_worlds(engine,matchup,history,date,seeds,full_history=None,settings=ADJUST,environment=None):
     fit=BookkeepingFit(history,date,full_history=full_history)
-    provider,world_hook,adjust_label=adjusted_provider(engine.provider,full_history,date,settings)
+    provider,world_hook,adjust_label=adjusted_provider(engine.provider,full_history,date,settings,environment)
     if getattr(engine.manager,'adjust_label',None):adjust_label=list(adjust_label)+[engine.manager.adjust_label]
     sim=ObservedSimulator(provider,config=engine.config,manager_policy=engine.manager)
     accumulator=BoxAccumulator(matchup);results=[]

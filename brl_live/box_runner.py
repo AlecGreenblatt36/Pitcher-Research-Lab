@@ -49,7 +49,8 @@ class BoxSimulator(RefreshedSimulator):
         parameters={'date':game['date'],'park':game['home']['abbr'],'game':game,
                     'matchup':asdict(matchup),'config':config_for(game['game_type'])}
         engine,decoded=make_history_engine(parameters,self.path,getattr(self,'physics_table',None))
-        results,box=run_box_worlds(engine,decoded,self.annotations,game['date'],draw_seeds(game['game_pk']),full_history=self.history)
+        results,box=run_box_worlds(engine,decoded,self.annotations,game['date'],draw_seeds(game['game_pk']),full_history=self.history,
+                                   environment=getattr(self,'environment',None))
         baseline=predict(game,self.rows,self.fit)
         # The team half of the headline blend: our decayed negative-binomial team model, the one
         # measured on the 2026 replay next to the simulator. The runtime's own baseline is kept
@@ -131,6 +132,13 @@ class BoxRunner(original.Runner):
                 self.live_update(pk,feed,gd['datetime']['officialDate'])
             self.store.persist();return
         game,matchup,notes,statuses,fingerprint=self.sim.prepare(feed,receipt)
+        # The game's run environment as the official feed shows it now (ENV-02); not part of the fingerprint,
+        # so a weather update alone never makes a new version. The box records what was used.
+        try:
+            from .environment import conditions_from_feed
+            self.sim.environment=conditions_from_feed(gd)
+        except Exception:
+            self.sim.environment=None
         if bridge.MODEL_NAME!='locked-pa-2026-v1':
             # A different PA model is a different forecast: the snapshot hash carries it, so a model
             # switch produces a new saved version for every pending game and earlier versions stand.

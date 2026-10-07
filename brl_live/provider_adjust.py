@@ -1,4 +1,4 @@
-"""Two adjustments layered on the locked plate-appearance model at simulation time.
+"""Adjustments layered on the locked plate-appearance model at simulation time.
 
 Both are applied inside the public layer, on top of the unchanged locked provider, and both
 were measured on the 2026 out-of-sample replay before being switched on (see LEDGER.md).
@@ -67,6 +67,30 @@ class ContextAdjust:
         base = self.inner.probabilities(ctx)
         m = self.table[('1' if ctx.batting_side == 'home' else '0') + '_' + inning_bucket(int(ctx.inning))]
         p = np.array([base[k] for k in SIM_LABELS], dtype=float) * m
+        p /= p.sum()
+        return dict(zip(SIM_LABELS, map(float, p)))
+
+    def __getattr__(self, item):
+        return getattr(self.inner, item)
+
+
+class EnvironmentAdjust:
+    """Multiplies every plate appearance's probabilities by the game's run environment (brl_live/environment.py).
+
+    The log-multipliers are in the model's label order; set_environment() changes them between games.
+    """
+    def __init__(self, inner, log_mult=None):
+        self.inner = inner
+        self.m = np.ones(7) if log_mult is None else np.exp(np.asarray(log_mult, float))
+        self.name = getattr(inner, 'name', 'provider')
+        self.validation_status = getattr(inner, 'validation_status', '')
+
+    def set_environment(self, log_mult):
+        self.m = np.ones(7) if log_mult is None else np.exp(np.asarray(log_mult, float))
+
+    def probabilities(self, ctx):
+        base = self.inner.probabilities(ctx)
+        p = np.array([base[k] for k in SIM_LABELS], dtype=float) * self.m
         p /= p.sum()
         return dict(zip(SIM_LABELS, map(float, p)))
 

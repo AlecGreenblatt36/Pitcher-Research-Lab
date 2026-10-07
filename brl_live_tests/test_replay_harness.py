@@ -44,3 +44,13 @@ def test_reconstruct_and_replay(tmp_path):
     assert len(out_plain) == len(out_phys) == len(g)
     for r in out_phys:
         assert r['n'] == 4 and r['home_wins'] + r['ties'] <= 4 and sum(r['home_hist']) == 4 and 'home_runs' in r
+    # a run environment that makes home runs ten times likelier in every game moves the run histograms up; same seeds otherwise
+    import numpy as np
+    z = np.zeros(7); z[5] = np.log(10.0)
+    out_env = replay_dates(h, app, g, dates, model_path=plain, model_sha256=sha256_file(plain), history_path=history_path, hazard_path=hazard, n_sims=4,
+                           environment={int(pk): z for pk in g['game_pk']}, log=lambda m: None)
+    runs = lambda rows: sum(sum(k * c for k, c in enumerate(r['home_hist'])) + sum(k * c for k, c in enumerate(r['away_hist'])) for r in rows)
+    assert len(out_env) == len(out_plain) and runs(out_env) > runs(out_plain)
+    same = replay_dates(h, app, g, dates, model_path=plain, model_sha256=sha256_file(plain), history_path=history_path, hazard_path=hazard, n_sims=4,
+                        environment={}, log=lambda m: None)
+    assert [r['home_hist'] for r in same] == [r['home_hist'] for r in out_plain]
