@@ -1,0 +1,55 @@
+{
+ "created_at": "2026-10-07T03:57:18.088054+00:00",
+ "status": "blocked",
+ "runtime": "brl_engine (public code, sealed data)",
+ "ledger_branch": "brl-live-data-v2",
+ "shadow": true,
+ "live_forecasts_created": 0,
+ "raw_data_published": false,
+ "stage": "history_and_forecast_iteration",
+ "secret_present": true,
+ "scheduled_games": [
+  {
+   "game_pk": 849819,
+   "scheduled_start": "2026-10-06T22:00:00Z",
+   "away": "Los Angeles Dodgers",
+   "home": "Atlanta Braves"
+  },
+  {
+   "game_pk": 849826,
+   "scheduled_start": "2026-10-07T01:30:00Z",
+   "away": "Milwaukee Brewers",
+   "home": "San Diego Padres"
+  }
+ ],
+ "reason": "KeyError: 'blob_fallbacks'",
+ "error_type": "KeyError",
+ "error_trace": [
+  {
+   "file": "entrypoint.py",
+   "function": "main",
+   "line": 69
+  },
+  {
+   "file": "box_runner.py",
+   "function": "main",
+   "line": 150
+  },
+  {
+   "file": "verified_store.py",
+   "function": "__init__",
+   "line": 45
+  },
+  {
+   "file": "runner.py",
+   "function": "__init__",
+   "line": 54
+  },
+  {
+   "file": "verified_store.py",
+   "function": "read",
+   "line": 62
+  }
+ ],
+ "preserved_previous_forecasts": false
+}
