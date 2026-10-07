@@ -65,3 +65,17 @@ def test_lean_box_keeps_the_projected_game_only():
     assert lean['archived'] and len(lean['samples'])==1 and lean['samples'][0]['seed']==7 and 'pitches' not in lean['samples'][0]['plays'][0]
     assert 'distributions' not in lean['teams']['away']['batting'][0] and lean['teams']['away']['batting'][0]['hit_probability']==0.5
     assert lean['sample_roles']=={'projected':7} and lean['sample_indices']==[7]
+
+
+def test_only_the_latest_version_box_of_each_game_stays_on_the_page():
+    l=ledger()
+    f1=l['forecasts']['a']; f2=dict(f1,version=2,saved_at='2026-10-06T20:00:00Z')
+    l['forecasts']={'a':f1,'b':f2}; l['publications']['b']=l['publications']['a']
+    l['box_scores']['a']['skill_baselines']={'as_of':'x'}
+    l['box_scores']['b']={'game_pk':1,'date':'2026-10-06','skill_baselines':{'as_of':'y'},'teams':{}}
+    l['box_publications']['b']={}
+    public=public_payload(l,{'n_games':0})
+    assert set(public['box_scores'])=={'b','yday'}
+    assert 'skill_baselines' not in public['box_scores']['b'] and 'teams' in public['box_scores']['b']
+    assert 'skill_baselines' in l['box_scores']['b']      # the ledger copy is untouched
+    assert set(public['box_publications'])=={'b','yday'}

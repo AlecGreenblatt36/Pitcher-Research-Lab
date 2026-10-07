@@ -36,15 +36,33 @@ def _recent_dates(date: str, days: int) -> set:
     return {(d - timedelta(days=i)).isoformat() for i in range(days)}
 
 
+PAGE_BOX_DROP = ('skill_baselines',)   # scoring inputs the page never reads (kept in the ledger)
+
+
 def trim_boxes(public: dict) -> dict:
-    """Keep full box scores (five complete simulated games each) only for recent dates.
+    """Keep full box scores (five complete simulated games each) only for recent dates, and of
+    those only the box of each game's latest forecast version, which is the one the page opens.
 
     Every box stays in the private ledger and is still scored on the record page; the page
-    itself carries only the games a reader can open, so it does not grow with the season.
+    itself carries only the games a reader can open, so it does not grow with the season or
+    with the lineup changes that make new versions.
     """
     keep = _recent_dates(public.get('date'), BOX_DAYS)
     boxes = public.get('box_scores') or {}
-    recent = {k: v for k, v in boxes.items() if str(v.get('date')) in keep}
+    latest = {}
+    for ident, f in (public.get('forecasts') or {}).items():
+        pk = str(f.get('game_pk'))
+        rank = (int(f.get('version') or 0), str(f.get('saved_at') or ''))
+        if pk not in latest or rank > latest[pk][1]:
+            latest[pk] = (ident, rank)
+    recent = {}
+    for k, v in boxes.items():
+        if str(v.get('date')) not in keep:
+            continue
+        pk = str(v.get('game_pk'))
+        if pk in latest and latest[pk][0] != k:
+            continue
+        recent[k] = {name: value for name, value in v.items() if name not in PAGE_BOX_DROP}
     public['box_scores'] = recent
     public['live'] = {k: v for k, v in (public.get('live') or {}).items() if str(v.get('date')) in keep}
     public['box_publications'] = {k: v for k, v in (public.get('box_publications') or {}).items() if k in recent}
