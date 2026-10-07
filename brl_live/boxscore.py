@@ -268,7 +268,10 @@ class BoxAccumulator:
 # Simulation-time adjustments on the locked model (brl_live/provider_adjust.py), measured on the
 # 2026 out-of-sample replay before being switched on (LEDGER.md): context offsets are on; per-world
 # talent noise at c=1 scored worse than the offsets alone and stays off.
-ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0}
+# postseason_exp_scale: starters' and teams' expected batters faced are multiplied by this in
+# postseason games (None = off); set from the measured postseason/regular ratio (research lane,
+# postseason_usage receipt) and recorded in each box's adjustments.
+ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,'postseason_exp_scale':None}
 
 def adjusted_provider(provider,full_history,date,settings=ADJUST):
     """Wrap the engine's provider with the enabled adjustments. Returns (provider, world_hook, label)."""
@@ -287,6 +290,7 @@ def adjusted_provider(provider,full_history,date,settings=ADJUST):
 def run_box_worlds(engine,matchup,history,date,seeds,full_history=None,settings=ADJUST):
     fit=BookkeepingFit(history,date,full_history=full_history)
     provider,world_hook,adjust_label=adjusted_provider(engine.provider,full_history,date,settings)
+    if getattr(engine.manager,'adjust_label',None):adjust_label=list(adjust_label)+[engine.manager.adjust_label]
     sim=ObservedSimulator(provider,config=engine.config,manager_policy=engine.manager)
     accumulator=BoxAccumulator(matchup);results=[]
     for seed in seeds:

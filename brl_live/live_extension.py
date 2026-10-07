@@ -52,9 +52,19 @@ def make_history_engine(parameters: dict, history_path: Path, physics_table=None
         raise Blocked('Original manager artifact changed')
     pexp, texp = tendencies_at(history, parameters['date'], float(manager_doc['league_mean_bf']))
     matchup = bridge.decode_matchup(parameters['matchup'])
+    from .boxscore import ADJUST
+    scale = ADJUST.get('postseason_exp_scale')
+    if scale and str(matchup.game_type) != 'R':
+        # Postseason managers pull starters earlier: the fitted hazard is driven through the starter's
+        # and team's expected batters faced, so both are scaled by the measured postseason ratio.
+        pexp = {k: float(v) * float(scale) for k, v in pexp.items()}
+        texp = {k: float(v) * float(scale) for k, v in texp.items()}
     manager = PortableStarterPolicy(manager_doc, pexp, texp,
         {int(matchup.away.starter.player_id): matchup.away.team_id,
          int(matchup.home.starter.player_id): matchup.home.team_id})
+    if scale and str(matchup.game_type) != 'R':
+        manager.league = float(manager.league) * float(scale)
+        manager.adjust_label = 'postseason starter usage (expected batters x%.2f)' % float(scale)
     return GameSimulator(provider, manager_policy=manager,
                          config=SimulationConfig(**parameters.get('config', {}))), matchup
 
