@@ -1,23 +1,21 @@
-"""Public-layer win chance blend and an independent live track record.
+"""Public-layer headline win chance and an independent live track record.
 
-Blend
------
-The headline win chance is the equal-weight average, on the log-odds scale, of the
-simulator's win share and the team-strength model's win chance. On the full
-out-of-sample 2026 regular-season replay (2,427 games, every input prior-date) the
-average scored better than either parent on Brier and log loss:
-
-    team model 0.24576, simulator 0.24691, equal-weight blend 0.24497
-
-Weights are fixed at one half each; nothing here is fitted on live games. When a
-forecast has no team-model probability the blend is the simulator alone.
+Headline
+--------
+The headline recipe is versioned in brl_live/headline_params.json (brl_live/headline.py).
+Through October 7, 2026 it was the equal-weight log-odds average of the simulator and the
+team model. From October 8 it is our independent model (the simulator, the team model, the
+starters and the team ratings, weighted to match the market's closing lines on the 2025 and
+2026 regular seasons) combined with the market's pregame line when one was captured before
+first pitch: 70% market and 30% our model on the log-odds scale. A game is scored with the
+recipe in force at its first pitch, so a change never rewrites a started game.
 
 Track record
 ------------
 For every final game, the last forecast version published before the observed first
-pitch is scored (Brier and log loss) for the simulator, the team model and the blend,
-next to a coin flip and always-pick-home at the prior-season home rate. Games without a
-pregame publication are listed as unscored, never backfilled.
+pitch is scored (Brier and log loss) for the simulator, the team model, our model, the
+headline and the market, next to a coin flip and always-pick-home at the prior-season home
+rate. Games without a pregame publication are listed as unscored, never backfilled.
 """
 from __future__ import annotations
 
@@ -69,15 +67,41 @@ def build_record(ledger: dict) -> dict:
     market = ledger.get('market', {}) or {}
     boxes = ledger.get('box_scores', {}) or {}
 
+    from .headline import version_at, ours as ours_probability, headline as headline_probability
+
     def team_probability(ident, f):
         """Our team model saved with the box when present; otherwise the runtime's baseline."""
         tm = (boxes.get(ident) or {}).get('team_model') or {}
         if tm.get('p_home') is not None:
             return float(tm['p_home'])
         return f.get('team_baseline_probability')
-    blend = {}
+
+    def team_model_of(ident, f):
+        tm = (boxes.get(ident) or {}).get('team_model') or {}
+        if tm.get('p_home') is not None:
+            return tm
+        p = f.get('team_baseline_probability')
+        return {'p_home': p} if p is not None else None
+
+    def pregame_market(pk, before=None):
+        """The last market line captured while the game was pregame (and before first pitch when known)."""
+        mk = market.get(str(pk))
+        if not mk or mk.get('p_home') is None or not mk.get('captured_at'):
+            return None
+        if before is not None and not _ts(mk['captured_at']) < _ts(before):
+            return None
+        return float(mk['p_home'])
+
+    # The version in force: at first pitch for games that have started, now for the rest.
+    first_pitch_of = {str(pk): a.get('first_pitch_observed_at') for pk, a in actuals.items()}
+    blend, ours, recipe = {}, {}, {}
     for ident, f in forecasts.items():
-        blend[ident] = round(blend_probability(f.get('home_win_probability'), team_probability(ident, f)), 6)
+        pk = str(f['game_pk'])
+        fp = first_pitch_of.get(pk)
+        version = version_at(fp) if fp else version_at()
+        p_o, how = ours_probability(f.get('home_win_probability'), team_model_of(ident, f), version)
+        p_h, how_h = headline_probability(p_o, pregame_market(pk, fp), version)
+        ours[ident] = round(p_o, 6); blend[ident] = round(p_h, 6); recipe[ident] = {'version': version['name'], 'ours': how, 'headline': how_h}
 
     games, unscored = [], []
     by_game: dict[str, list] = {}
@@ -105,22 +129,20 @@ def build_record(ledger: dict) -> dict:
         p_team = None if p_team is None else float(p_team)
         p_runtime = f.get('team_baseline_probability')
         p_blend = blend[ident]
-        mk = market.get(str(pk))
-        p_market = None
-        if mk and mk.get('p_home') is not None and first_pitch and _ts(mk['captured_at']) < _ts(first_pitch):
-            p_market = float(mk['p_home'])
+        p_ours = ours[ident]
+        p_market = pregame_market(pk, first_pitch)
         games.append({
             'game_pk': int(pk), 'date': f.get('date'), 'away': f['away'].get('abbr'), 'home': f['home'].get('abbr'),
             'version': f.get('version'), 'forecast_id': ident, 'home_won': bool(y),
             'actual': {'away': actual['away'], 'home': actual['home']},
-            'p_sim': round(p_sim, 4), 'p_team': None if p_team is None else round(p_team, 4), 'p_blend': round(p_blend, 4),
-            'p_market': None if p_market is None else round(p_market, 4),
+            'p_sim': round(p_sim, 4), 'p_team': None if p_team is None else round(p_team, 4), 'p_blend': round(p_blend, 4), 'p_ours': round(p_ours, 4),
+            'p_market': None if p_market is None else round(p_market, 4), 'headline_version': recipe[ident]['version'],
             'p_team_runtime': None if p_runtime is None else round(float(p_runtime), 4),
             'brier': {'sim': _brier(p_sim, y), 'team': None if p_team is None else _brier(p_team, y), 'blend': _brier(p_blend, y),
-                      'market': None if p_market is None else _brier(p_market, y),
+                      'ours': _brier(p_ours, y), 'market': None if p_market is None else _brier(p_market, y),
                       'coin': 0.25, 'home': _brier(HOME_RATE_PRIOR, y)},
             'log_loss': {'sim': _logloss(p_sim, y), 'team': None if p_team is None else _logloss(p_team, y), 'blend': _logloss(p_blend, y),
-                         'market': None if p_market is None else _logloss(p_market, y),
+                         'ours': _logloss(p_ours, y), 'market': None if p_market is None else _logloss(p_market, y),
                          'coin': math.log(2), 'home': _logloss(HOME_RATE_PRIOR, y)},
         })
 
@@ -129,7 +151,7 @@ def build_record(ledger: dict) -> dict:
         return (sum(vals) / len(vals)) if vals else None
 
     rows = [('coin', 'Coin flip'), ('home', 'Always pick the home team'), ('market', 'Betting market'), ('team', 'Team model'),
-            ('sim', 'Simulator'), ('blend', 'Simulator + team model')]
+            ('sim', 'Simulator'), ('ours', 'Our model (independent)'), ('blend', 'Headline')]
     ladder = []
     for key, name in rows:
         b = mean(key, 'brier')
@@ -137,16 +159,27 @@ def build_record(ledger: dict) -> dict:
                        'brier': None if b is None else round(b, 5),
                        'log_loss': None if mean(key, 'log_loss') is None else round(mean(key, 'log_loss'), 5),
                        'better_than_coin_pct': None if b is None else round((0.25 - b) / 0.25 * 100, 2)})
+    # Where our independent model and the market disagreed by five points or more: who was closer.
+    split = [g for g in games if g.get('p_market') is not None and abs(g['p_ours'] - g['p_market']) >= 0.05]
+    disagree = {'threshold': 0.05, 'n': len(split),
+                'ours_brier': round(sum(g['brier']['ours'] for g in split) / len(split), 5) if split else None,
+                'market_brier': round(sum(g['brier']['market'] for g in split) / len(split), 5) if split else None,
+                'our_side_won': sum(1 for g in split if (g['p_ours'] > g['p_market']) == g['home_won']) if split else 0}
     return {
-        'schema': 'brl.record.v2',
-        'market_note': 'Betting market rows use the last ESPN scoreboard moneyline captured while the game was pregame, vig removed; a reference, never an input.',
+        'schema': 'brl.record.v3',
+        'market_note': ('Betting market rows use the last ESPN scoreboard moneyline captured while the game was pregame, vig removed. '
+                        'Our model never uses it; the headline combines the two when a pregame line exists.'),
         'headline': 'blend',
-        'method': ('Headline win chance is the equal-weight log-odds average of the simulator and the team model. '
+        'method': ('Headline win chance: our independent model combined with the pregame market line when one was captured, '
+                   'with the recipe in force at first pitch (equal-weight simulator and team model before October 8, 2026). '
                    'Each final game scores the last forecast version published before the observed first pitch.'),
+        'disagreements': disagree,
+        'ours': ours,
         'home_rate_prior': HOME_RATE_PRIOR,
         'n_scored': len(games),
         'ladder': ladder,
         'games': sorted(games, key=lambda g: (g['date'] or '', g['game_pk'])),
         'unscored': unscored,
         'blend': blend,
+        'recipe': recipe,
     }

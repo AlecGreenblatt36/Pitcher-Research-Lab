@@ -145,7 +145,7 @@ def main():
                     break
                 go('#/record');assert 'Track record' in page.inner_text('#app')
                 rec=data.get('record') or {}
-                if rec.get('n_scored'):assert page.locator('.ladder li').count()==5,'Missing record ladder'
+                if rec.get('n_scored'):assert page.locator('.ladder li').count()>=5,'Missing record ladder'
                 else:assert page.locator('.empty-state').count()==1
                 design_check('record');page.screenshot(path=str(out/f'record_{width}.png'),full_page=True)
                 go('#/how');assert 'How it works' in page.inner_text('#app')
