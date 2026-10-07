@@ -113,6 +113,7 @@ def main():
     if os.environ.get('GITHUB_OUTPUT'):
         with open(os.environ['GITHUB_OUTPUT'], 'a') as stream:
             stream.write('completed=' + str(receipt.get('status') == 'iteration_completed').lower() + '\n')
+            stream.write('pages_ready=' + ('false' if args.shadow else 'true') + '\n')
     print(json.dumps({k: v for k, v in receipt.items() if k != 'scheduled_games'}, indent=2))
     return receipt
 

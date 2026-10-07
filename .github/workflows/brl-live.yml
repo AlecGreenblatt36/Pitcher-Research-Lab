@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: [brl_live/**, .github/workflows/brl-live.yml]
+    paths: [brl_live/**, brl_engine/**, .github/workflows/brl-live.yml]
 permissions:
   contents: write
   pages: write
@@ -24,14 +24,14 @@ jobs:
           python-version: '3.12'
       - name: Install the authenticated-encryption dependency
         run: python -m pip install --disable-pip-version-check cryptography==46.0.4
-      - name: Capture, forecast, preserve versions, score finals
+      - name: Capture, forecast, preserve versions, score finals (own runtime)
         id: live
         env:
           GH_TOKEN: ${{ github.token }}
           BRL_PA_PACKAGE_KEY: ${{ secrets.BRL_PA_PACKAGE_KEY }}
           OPENBLAS_NUM_THREADS: '1'
           OMP_NUM_THREADS: '1'
-        run: python brl_live/entrypoint.py --site "$RUNNER_TEMP/brl-site" --runtime "$RUNNER_TEMP/brl-private"
+        run: python brl_engine/entrypoint.py --site "$RUNNER_TEMP/brl-site" --runtime "$RUNNER_TEMP/brl-private"
       - name: Upload prediction-only page
         uses: actions/upload-pages-artifact@v3
         with:
@@ -41,7 +41,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: brl-live-receipt
-          path: brl_live_run_receipt.json
+          path: brl_v2_run_receipt.json
           retention-days: 14
           if-no-files-found: error
       - name: Remove decrypted working files
