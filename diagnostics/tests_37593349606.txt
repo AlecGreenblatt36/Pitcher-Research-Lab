@@ -1,0 +1,52 @@
+............F........................................................... [ 40%]
+........................................................................ [ 81%]
+................................                                         [100%]
+=================================== FAILURES ===================================
+________ test_history_from_cache_merges_the_season_behind_the_day_cache ________
+
+    def test_history_from_cache_merges_the_season_behind_the_day_cache():
+        from brl_live.boxscore import bookkeeping_history_from_cache
+    
+        class Cache:
+            def __init__(self, store): self.store, self.key = store, KEY
+            def load_day(self, ident): raise AssertionError('no day blobs in this test')
+        store = Store()
+        doc = {'schema': SCHEMA, 'year': 2026, 'games': {'5': {'date': '2026-08-15', 'fetched_at': '2026-10-01T00:00:00+00:00', 'rows': [row(0), row(1, 'K', 'strikeout', pt=[{'b': 0, 's': 0, 'r': 'C', 't': 'SL', 'v': 85.0}] * 3, c=None)]}}}
+        store.files[season_path(2026)] = sealed(doc)
+>       frame = bookkeeping_history_from_cache(Cache(store), {'days': {}}, datetime(2026, 10, 7, 12, tzinfo=timezone.utc))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/home/runner/work/Pitcher-Research-Lab/Pitcher-Research-Lab/brl_live_tests/test_bookkeeping_season.py:62: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/runner/work/Pitcher-Research-Lab/Pitcher-Research-Lab/brl_live/boxscore.py:428: in bookkeeping_history_from_cache
+    from brl_live.history_refresh import Source,previous_day
+/home/runner/work/Pitcher-Research-Lab/Pitcher-Research-Lab/brl_live/history_refresh.py:34: in <module>
+    from research_lab.pa_model.outcomes import map_event, EXCLUDED_EVENTS
+/home/runner/work/Pitcher-Research-Lab/Pitcher-Research-Lab/brl_engine/runtime/research_lab/pa_model/__init__.py:4: in <module>
+    from .pipeline import run_benchmark
+/home/runner/work/Pitcher-Research-Lab/Pitcher-Research-Lab/brl_engine/runtime/research_lab/pa_model/pipeline.py:14: in <module>
+    from .data import dataframe_sha256
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    from __future__ import annotations
+    
+    import concurrent.futures
+    import hashlib
+    import io
+    import json
+    import logging
+    import time
+    from datetime import UTC, date, datetime, timedelta
+    from pathlib import Path
+    from typing import Iterable
+    from urllib.parse import urlencode
+    
+    import numpy as np
+    import pandas as pd
+>   import requests
+E   ModuleNotFoundError: No module named 'requests'
+
+/home/runner/work/Pitcher-Research-Lab/Pitcher-Research-Lab/brl_engine/runtime/research_lab/pa_model/data.py:16: ModuleNotFoundError
+=========================== short test summary info ============================
+FAILED ../home/runner/work/Pitcher-Research-Lab/Pitcher-Research-Lab/brl_live_tests/test_bookkeeping_season.py::test_history_from_cache_merges_the_season_behind_the_day_cache - ModuleNotFoundError: No module named 'requests'
+1 failed, 175 passed in 3.13s
