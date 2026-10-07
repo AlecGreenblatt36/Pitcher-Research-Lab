@@ -15,3 +15,5 @@ Public engine and pipeline code; only the data stays encrypted.
 
 Shadow lane: `.github/workflows/brl-live-v2.yml` writes to the `brl-live-data-v2` branch and never
 publishes the page. The live site switches to this runtime once the shadow lane agrees with it.
+
+Receipts of shadow runs: `diagnostics/v2_receipt.json` on the `brl-live-data-v2` branch.
