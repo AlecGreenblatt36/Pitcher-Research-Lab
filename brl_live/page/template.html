@@ -93,13 +93,18 @@ button { font: inherit; color: inherit; }
 .hero-row.fav .pct { color: var(--chalk); }
 .hero-note { margin: 10px 0 0; font-size: 14px; color: var(--chalk-dim); }
 .situation { display: grid; grid-template-columns: 56px 1fr; gap: 12px; align-items: center; margin: 12px 0 0; padding: 10px 12px; background: rgba(255,255,255,.06); border: 1px solid var(--board-line); border-radius: 8px; }
-.situation svg { display: block; width: 56px; height: 56px; }
+.situation > svg { display: block; width: 56px; height: 56px; }
+.situation .zone { width: 76px; height: 97px; }
 .situation .where { font-family: var(--display); font-weight: 700; font-size: 20px; color: var(--chalk); }
 .situation .outs { display: inline-flex; gap: 4px; margin-left: 10px; vertical-align: middle; }
 .situation .outs i { width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--chalk); display: inline-block; }
 .situation .outs i.on { background: var(--lamp); border-color: var(--lamp); }
 .situation .who { font-size: 15px; color: var(--chalk-dim); margin-top: 2px; }
 .situation .who b { color: var(--chalk); font-weight: 700; }
+.situation .at-bat { grid-column: 1 / -1; display: flex; gap: 12px; align-items: flex-start; padding-top: 8px; border-top: 1px solid var(--board-line); }
+.situation .at-bat .pitches { color: var(--chalk-dim); font-size: 14px; line-height: 1.45; }
+.situation .zone .k { stroke: var(--chalk-dim); }
+.situation .zone .p { stroke: var(--board); }
 .line-wrap { overflow-x: auto; margin-top: 14px; }
 .line { border-collapse: separate; border-spacing: 3px; width: 100%; font-family: var(--display); }
 .line th { font-weight: 500; font-size: 14px; color: var(--chalk-dim); text-align: center; padding: 0; }
@@ -457,7 +462,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var f = latestForecasts()[pk], box = boxFor(pk), t = box && box.win_table, st = c.state;
     var out = { state: st, due_up: c.due_up, on_mound: c.on_mound, pitcher_names: Object.assign({}, (server || {}).pitcher_names || {}, c.pitcher_names || {}),
       plays: c.plays || (srv && srv.plays) || [], box: c.box || (srv && srv.box) || null, updated_at: server ? server.updated_at : null, n_worlds: server ? server.n_worlds : 0,
-      projected_final: server ? server.projected_final : null, sim_home: server ? server.home_win_probability : null, fetched_at: c.fetched_at, _client: true, _final: !!c.final };
+      projected_final: server ? server.projected_final : null, sim_home: server ? server.home_win_probability : null, fetched_at: c.fetched_at, _client: true, _final: !!c.final,
+      current: c.current || null };
     if (out._final) { out.home_win_probability = st.home_score > st.away_score ? 1 : 0; out.win_source = "final"; }
     else if (server && sameState(server.state, st)) { out.home_win_probability = server.home_win_probability; out.win_source = "sim"; }
     else if (t) { out.home_win_probability = winAt(t, st.inning, st.half, st.outs || 0, st.bases, st.home_score - st.away_score); out.win_source = "table"; }
@@ -486,7 +492,12 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var where = st.between_innings ? liveWhere(lv) : (st.half === "top" ? "Top " : "Bot ") + ordinal(st.inning);
     var count = st.between_innings ? "" : " \u00b7 " + (st.balls || 0) + "-" + (st.strikes || 0);
     var who = st.between_innings ? "Between innings" : (up ? "<b>" + esc(up) + "</b> up" : "") + (pitcher ? (up ? ", " : "") + esc(lastName(pitcher)) + " pitching" : "");
-    return '<div class="situation" aria-label="' + esc(where + ", " + (st.outs || 0) + " outs") + '">' + d + '<div><div class="where">' + esc(where) + '<span class="outs" aria-hidden="true">' + outs + "</span>" + esc(count) + '</div><div class="who">' + who + "</div></div></div>";
+    var ab = "";
+    if (lv.current && lv.current.pitches && lv.current.pitches.length) {
+      var zone = zoneGraphic(lv.current), seq = pitchText(lv.current);
+      ab = '<div class="at-bat">' + zone + '<span class="pitches">' + esc(seq) + "</span></div>";
+    }
+    return '<div class="situation" aria-label="' + esc(where + ", " + (st.outs || 0) + " outs") + '">' + d + '<div><div class="where">' + esc(where) + '<span class="outs" aria-hidden="true">' + outs + "</span>" + esc(count) + '</div><div class="who">' + who + "</div></div>" + ab + "</div>";
   }
   function liveNote(f, lv, fav) {
     var pre = "Pregame win chance was " + f[fav].abbr + " " + pct(winProb(f, fav)) + ".";
@@ -898,7 +909,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     } catch (e) {}
     return "https://statsapi.mlb.com/api/";
   })();
-  var SIT_FIELDS = "gamePk,gameData,status,abstractGameState,detailedState,liveData,linescore,currentInning,inningState,isTopInning,outs,balls,strikes,teams,away,home,runs,hits,errors,innings,num,offense,defense,first,second,third,batter,pitcher,id,fullName";
+  var SIT_FIELDS = "gamePk,gameData,status,abstractGameState,detailedState,liveData,linescore,currentInning,inningState,isTopInning,outs,balls,strikes,teams,away,home,runs,hits,errors,innings,num,offense,defense,first,second,third,batter,pitcher,id,fullName," +
+    "plays,currentPlay,about,isComplete,atBatIndex,matchup,playEvents,isPitch,details,code,type,pitchData,startSpeed,coordinates,pX,pZ,strikeZoneTop,strikeZoneBottom";
   var PLAY_FIELDS = "gamePk,gameData,status,abstractGameState,detailedState,liveData,plays,allPlays,about,atBatIndex,halfInning,inning,isComplete,result,eventType,description,awayScore,homeScore,rbi,matchup,batter,pitcher,id,fullName,count,outs,playEvents,isPitch,details,code,type,pitchData,startSpeed,coordinates,pX,pZ,strikeZoneTop,strikeZoneBottom,hitData,launchSpeed,totalDistance,trajectory,location,coordX,coordY,runners,movement,start,end,isOut,playIndex,runner,credits,position";
   var LC_OUTCOME = { strikeout: "strikeout", strikeout_double_play: "strikeout", strikeout_triple_play: "strikeout", walk: "walk", intent_walk: "walk", hit_by_pitch: "hit_by_pitch",
     single: "single", double: "double", triple: "triple", home_run: "home_run", field_error: "other_reach", fielders_choice: "other_reach", catcher_interf: "other_reach" };
@@ -1012,9 +1024,14 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     due[batting] = (off.batter || {}).fullName || ""; due[fielding] = (dfn.batter || {}).fullName || "";
     if (dfn.pitcher && dfn.pitcher.id != null) { mound[fielding] = String(dfn.pitcher.id); names[String(dfn.pitcher.id)] = dfn.pitcher.fullName || ""; }
     if (off.pitcher && off.pitcher.id != null) { mound[batting] = String(off.pitcher.id); names[String(off.pitcher.id)] = off.pitcher.fullName || ""; }
+    var cp = ((feed.liveData || {}).plays || {}).currentPlay, current = null;
+    if (cp && !(cp.about || {}).isComplete && !between) {
+      var cpz = lcPitches(cp);
+      current = { pitches: cpz[0], zone: cpz[1], official: true, at_bat: lcInt((cp.about || {}).atBatIndex, -1) };
+    }
     var abstract = String(gs.abstractGameState || ""), state = { inning: Math.max(inning, 1), half: half, outs: outs, bases: bases, between_innings: between,
       away_score: sc.away, home_score: sc.home, batting_side: batting, balls: lcInt(ls.balls, 0), strikes: lcInt(ls.strikes, 0), detailed_state: gs.detailedState || "", innings: innings };
-    return { abstract: abstract, detailed: String(gs.detailedState || ""), started: started, final: /^final$/i.test(abstract), state: state, due_up: due, on_mound: mound, pitcher_names: names,
+    return { abstract: abstract, detailed: String(gs.detailedState || ""), started: started, final: /^final$/i.test(abstract), state: state, due_up: due, on_mound: mound, pitcher_names: names, current: current,
       signature: [state.inning, half, outs, sc.away, sc.home, String(bases), id(off.batter), abstract].join("|") };
   }
   /* Batting and pitching lines from the boxscore endpoint (lenient while in progress). */
@@ -1072,9 +1089,10 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       return lcFetch(LIVE_API + "v1.1/game/" + t.pk + "/feed/live?fields=" + SIT_FIELDS).then(function (feed) {
         var s = lcSituation(feed);
         if (!s.started && !s.final) { c.started = false; return; }
-        var paChanged = s.signature !== c.signature, countChanged = !c.state || s.state.balls !== c.state.balls || s.state.strikes !== c.state.strikes;
+        var pitchesNow = s.current ? s.current.pitches.length : 0, pitchesBefore = c.current ? c.current.pitches.length : 0;
+        var paChanged = s.signature !== c.signature, countChanged = !c.state || s.state.balls !== c.state.balls || s.state.strikes !== c.state.strikes || pitchesNow !== pitchesBefore;
         if (paChanged || countChanged || !c.started) changed = true;
-        ["abstract", "detailed", "started", "final", "state", "due_up", "on_mound", "pitcher_names", "signature"].forEach(function (k) { c[k] = s[k]; });
+        ["abstract", "detailed", "started", "final", "state", "due_up", "on_mound", "pitcher_names", "signature", "current"].forEach(function (k) { c[k] = s[k]; });
         c.fetched_at = new Date().toISOString(); c.error = false;
         if (!t.full) return;
         var needPlays = !c.plays || paChanged || Date.now() - (c.playsAt || 0) > 120000;
