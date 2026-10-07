@@ -40,11 +40,19 @@ def main():
         others += [r['id'] for r in runs if str(r['id']) != str(me)]
     if others:
         print('another run is already pending or active; not chaining:', sorted(set(others))); return
-    try:
-        api(f'https://api.github.com/repos/{repo}/actions/workflows/{WORKFLOW}/dispatches', token, 'POST', {'ref': 'main', 'inputs': {'wait_minutes': str(wait)}})
-        print('chained the next run with a', wait, 'minute wait')
-    except HTTPError as exc:
-        print('dispatch refused:', exc.code, exc.read()[:200]); sys.exit(0)
+    import time
+    for attempt in range(4):
+        try:
+            api(f'https://api.github.com/repos/{repo}/actions/workflows/{WORKFLOW}/dispatches', token, 'POST', {'ref': 'main', 'inputs': {'wait_minutes': str(wait)}})
+            print('chained the next run with a', wait, 'minute wait'); return
+        except HTTPError as exc:
+            body = exc.read()[:200]
+            print('dispatch refused:', exc.code, body)
+            if exc.code in (401, 403, 404, 422):
+                return
+        except Exception as exc:       # network hiccup: try again, the chain must not break on one failed call
+            print('dispatch error:', type(exc).__name__, str(exc)[:120])
+        time.sleep(15 * (attempt + 1))
 
 
 if __name__ == '__main__':
