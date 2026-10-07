@@ -66,3 +66,18 @@ def test_play_wording_uses_drawn_contact():
     import json
     checks=''.join("assert.equal(playParts(Object.assign({batter_id:'1',batter_name:'Mookie Betts'},%s),{'7':'Will Smith'},{}).text,%s);"%(json.dumps(p),json.dumps(t)) for p,t in cases)
     subprocess.run(['node','-e',prefix+code+checks],check=True)
+
+def test_series_and_record_context_lines():
+    code=page_vars('SERIES','SERIES_SHORT')+page_functions('contextFor','isPostseason','contextLine','weatherLine','recordText')
+    prefix="const assert=require('assert');const D={context:{'1':{venue:'Progressive Field',series_description:'Division Series',series_game_number:3,games_in_series:5,records:{away:{wins:2,losses:0},home:{wins:0,losses:2}},weather:{temp:'71',condition:'Clear',wind:'8 mph, Out To CF'}},'2':{venue:'Yankee Stadium',records:{away:{wins:88,losses:70},home:{wins:95,losses:63}}}}};"
+    checks=("const f={game_pk:1,game_type:'D',away:{abbr:'CLE'},home:{abbr:'CWS'}};"
+            "assert.equal(contextLine(f,contextFor(1),true),'Division Series Game 3 \\u00b7 CLE leads 2-0 \\u00b7 Progressive Field');"
+            "assert.equal(contextLine(f,contextFor(1),false),'Division Series Game 3 \\u00b7 CLE leads 2-0');"
+            "assert.equal(weatherLine(contextFor(1)),'71\\u00b0F, Clear, wind 8 mph, Out To CF');"
+            "assert.equal(recordText(f,contextFor(1),'away'),'');"
+            "const g={game_pk:2,game_type:'R',away:{abbr:'TB'},home:{abbr:'NYY'}};"
+            "assert.equal(contextLine(g,contextFor(2),true),'Yankee Stadium');assert.equal(recordText(g,contextFor(2),'home'),'95-63');"
+            "assert.equal(contextLine(g,null,true),'');assert.equal(weatherLine(null),'');"
+            "const t={game_pk:1,game_type:'L',away:{abbr:'A'},home:{abbr:'H'}};D.context['1'].records={away:{wins:1,losses:1},home:{wins:1,losses:1}};D.context['1'].games_in_series=7;"
+            "assert.equal(contextLine(t,contextFor(1),false),'LCS Game 3 \\u00b7 Series tied 1-1');")
+    subprocess.run(['node','-e',prefix+code+checks],check=True)

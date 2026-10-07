@@ -55,6 +55,8 @@ button { font: inherit; color: inherit; }
 .card { display: block; text-decoration: none; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 12px 16px 14px; }
 .card:hover { border-color: #A9B6AD; }
 .card-top { display: flex; justify-content: space-between; align-items: center; font-size: 15px; color: var(--muted); margin-bottom: 6px; }
+.card-ctx { font-size: 14px; color: var(--muted); margin: -2px 0 8px; }
+.team-name .rec { font-size: 14px; color: var(--muted); font-weight: 500; }
 .state { font-weight: 700; font-size: 14px; }
 .state.live { color: var(--home); }
 .state.final { color: var(--ink); }
@@ -78,6 +80,7 @@ button { font: inherit; color: inherit; }
 .hero .wrap { padding-top: 14px; padding-bottom: 18px; }
 .back { display: inline-flex; align-items: center; min-height: 44px; color: var(--chalk-dim); text-decoration: none; font-weight: 700; font-size: 15px; }
 .hero-meta { color: var(--chalk-dim); font-size: 15px; margin: 0 0 8px; }
+.hero-venue { margin-top: -4px; font-size: 14px; }
 .hero-cols { display: grid; grid-template-columns: 1fr 64px 64px; font-size: 14px; color: var(--chalk-dim); }
 .hero-cols span { text-align: right; }
 .hero-row { display: grid; grid-template-columns: 52px 1fr 64px 64px; align-items: center; padding: 6px 0; }
@@ -322,6 +325,37 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   }
   function ip(outs) { outs = Math.round(outs); return Math.floor(outs / 3) + "." + (outs % 3); }
   var SERIES = { R: "Regular season", F: "Wild Card", D: "Division Series", L: "League Championship Series", W: "World Series", P: "Postseason", S: "Spring training", E: "Exhibition" };
+  var SERIES_SHORT = { F: "Wild Card", D: "Division Series", L: "LCS", W: "World Series" };
+  function contextFor(pk) { return (D.context && D.context[String(pk)]) || null; }
+  function isPostseason(f) { return !!f.game_type && "FDLWP".indexOf(f.game_type) >= 0; }
+  /* "Division Series Game 3 · CLE leads 2-0 · Progressive Field" from the saved schedule context. */
+  function contextLine(f, c, withVenue) {
+    if (!c) return "";
+    var parts = [], r = c.records || {}, post = isPostseason(f);
+    var name = SERIES_SHORT[f.game_type] || c.series_description || "";
+    if (post && name) parts.push(name + (c.series_game_number ? " Game " + c.series_game_number : ""));
+    if (post && r.away && r.home) {
+      var a = r.away.wins, h = r.home.wins, best = c.games_in_series || 7;
+      if (a + r.away.losses <= best && h + r.home.losses <= best && a + h > 0) {
+        parts.push(a === h ? "Series tied " + a + "-" + h : (h > a ? f.home.abbr + " leads " + h + "-" + a : f.away.abbr + " leads " + a + "-" + h));
+      }
+    }
+    if (withVenue && c.venue) parts.push(c.venue);
+    return parts.join(" \u00b7 ");
+  }
+  function weatherLine(c) {
+    if (!c || !c.weather) return "";
+    var w = c.weather, parts = [];
+    if (w.temp) parts.push(w.temp + "\u00b0F");
+    if (w.condition) parts.push(w.condition);
+    if (w.wind) parts.push("wind " + w.wind);
+    return parts.join(", ");
+  }
+  function recordText(f, c, side) {
+    var r = c && c.records ? c.records[side] : null;
+    if (!r || isPostseason(f)) return "";
+    return r.wins + "-" + r.losses;
+  }
 
   /* distribution helpers: counts = [[value, n], ...] */
   function dist(c) { return c && c.counts ? c : null; }
@@ -618,14 +652,17 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var proj = null;
       if (box && box.samples && box.samples.length) proj = box.samples[variantsFor(box, f)[0].i];
       var fav = favorite(f);
+      var ctx = contextFor(f.game_pk), ctxLine = contextLine(f, ctx, true);
       html += '<li><a class="card" data-game="' + f.game_pk + '" href="#/game/' + f.game_pk + '"><div class="card-top"><span>' + esc(timeET(f.scheduled_start)) + '</span><span class="state ' + st + '">' + (lv ? esc(liveWhere(lv)) : STATE_TEXT[st]) + "</span></div>";
+      if (ctxLine) html += '<div class="card-ctx">' + esc(ctxLine) + "</div>";
       html += '<div class="cols"><span></span><span>' + (actual ? "Final" : lv ? "Score" : "Proj") + "</span><span>Win</span></div>";
       ["away", "home"].forEach(function (side) {
-        var t = f[side], starter = box && box.starters && box.starters[side] ? box.starters[side].name : "";
+        var t = f[side], starter = box && box.starters && box.starters[side] ? box.starters[side].name : "", rec = recordText(f, ctx, side);
         var score = actual ? actual[side] : lv ? lv.state[side + "_score"] : (proj ? proj.score[side] : "");
         var win = lv ? (side === "home" ? lv.home_win_probability : 1 - lv.home_win_probability) : winProb(f, side);
         var isFav = lv ? (side === "home") === (lv.home_win_probability >= 0.5) : side === fav;
         html += '<div class="team-row' + (isFav ? " fav" : "") + '"><span class="abbr ' + side + '-c">' + esc(t.abbr) + '</span><span class="team-name">' + esc(nickname(t.name)) +
+          (rec ? ' <span class="rec">' + esc(rec) + "</span>" : "") +
           (starter ? "<small>" + esc(starter) + "</small>" : "") + '</span><span class="big num">' + (actual ? '<span class="lamp" aria-hidden="true"></span>' : "") + esc(score) + '</span><span class="pct num">' + pct(win) + "</span></div>";
       });
       var foot = actual && proj ? "Projected " + f.away.abbr + " " + proj.score.away + ", " + f.home.abbr + " " + proj.score.home
@@ -652,7 +689,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
 
     var back = f.date && f.date !== D.date ? "#/day/" + f.date : "#/";
     var html = '<section class="hero"><div class="wrap"><a class="back" href="' + back + '">Back to games</a>';
-    html += '<p class="hero-meta">' + esc([SERIES[f.game_type], timeET(f.scheduled_start) + " ET", lv ? "Live, " + liveWhere(lv) : STATE_TEXT[st]].filter(Boolean).join(". ")) + "</p>";
+    var gctx = contextFor(f.game_pk), gline = contextLine(f, gctx, false) || SERIES[f.game_type], gw = weatherLine(gctx);
+    html += '<p class="hero-meta">' + esc([gline, timeET(f.scheduled_start) + " ET", lv ? "Live, " + liveWhere(lv) : STATE_TEXT[st]].filter(Boolean).join(". ")) + "</p>";
+    if (gctx && (gctx.venue || gw)) html += '<p class="hero-meta hero-venue">' + esc([gctx.venue, gw].filter(Boolean).join(". ")) + "</p>";
     html += '<div class="hero-cols"><span></span><span>' + (actual ? "Final" : lv ? "Score" : (v && v.key !== "proj" ? v.label : "Projected")) + "</span><span>Win</span></div>";
     ["away", "home"].forEach(function (side) {
       var t = f[side], starter = box && box.starters && box.starters[side] ? box.starters[side].name : "";

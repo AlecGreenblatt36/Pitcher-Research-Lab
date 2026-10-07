@@ -23,7 +23,7 @@ FONTS = (
     ('Atkinson Hyperlegible', 700, 'atkinson-hyperlegible-latin-700-normal.woff2'),
 )
 PUBLIC_KEYS = ('date', 'forecasts', 'publications', 'actuals', 'status', 'box_scores',
-               'box_publications', 'actual_boxes', 'player_scores', 'skill_scores', 'live', 'market')
+               'box_publications', 'actual_boxes', 'player_scores', 'skill_scores', 'live', 'market', 'context')
 BOX_DAYS = 2  # full simulated games stay on the page for the slate date and the day before
 
 
@@ -114,7 +114,7 @@ def day_archives(ledger: dict) -> dict:
     days = {}
     for ident, box in (ledger.get('box_scores') or {}).items():
         days.setdefault(str(box.get('date')), {'date': str(box.get('date')), 'forecasts': {}, 'publications': {}, 'actuals': {}, 'status': {},
-                                              'box_scores': {}, 'box_publications': {}, 'actual_boxes': {}, 'live': {}, 'market': {}})
+                                              'box_scores': {}, 'box_publications': {}, 'actual_boxes': {}, 'live': {}, 'market': {}, 'context': {}})
     forecasts = ledger.get('forecasts') or {}
     for d, day in days.items():
         pks = set()
@@ -128,7 +128,7 @@ def day_archives(ledger: dict) -> dict:
                     if ident in (ledger.get('box_publications') or {}):
                         day['box_publications'][ident] = ledger['box_publications'][ident]
         for pk in pks:
-            for key in ('actuals', 'status', 'actual_boxes', 'market'):
+            for key in ('actuals', 'status', 'actual_boxes', 'market', 'context'):
                 if pk in (ledger.get(key) or {}):
                     day[key][pk] = ledger[key][pk]
     return days

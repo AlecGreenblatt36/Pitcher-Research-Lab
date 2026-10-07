@@ -62,7 +62,20 @@ class BoxSimulator(RefreshedSimulator):
 
 
 def _ensure_fields(ledger):
-    for k in ('box_scores','box_publications','actual_boxes','player_scores','skill_scores','live'):ledger.setdefault(k,{})
+    for k in ('box_scores','box_publications','actual_boxes','player_scores','skill_scores','live','context'):ledger.setdefault(k,{})
+
+def game_context(item,gd,now):
+    """Public game context for the page: schedule facts plus the official feed's venue and weather (no player data)."""
+    out=dict((item or {}).get('context') or {})
+    venue=(gd.get('venue') or {}).get('name')
+    if venue:out['venue']=venue
+    w=gd.get('weather') or {}
+    weather={k:w.get(k) for k in ('condition','temp','wind') if w.get(k) not in (None,'')}
+    if weather:out['weather']=weather
+    dt=gd.get('datetime') or {}
+    if dt.get('officialDate'):out['date']=dt['officialDate']
+    out['updated_at']=now
+    return out
 
 LIVE_STATES=('In Progress','Manager challenge','Umpire review','Delayed')
 
@@ -82,6 +95,7 @@ class BoxRunner(original.Runner):
         url=f'https://statsapi.mlb.com/api/v1.1/game/{pk}/feed/live'
         feed,receipt=self.net.json(url);gd=feed['gameData']
         if feed.get('gamePk')!=pk:raise Blocked('Wrong official game identity')
+        self.store.ledger['context'][str(pk)]=game_context(item,gd,self.clock().isoformat())
         if gd['status']['abstractGameState']=='Final':
             result=original.parse_final(feed,pk,receipt['finished_at'])
             self.store.private('results',content_hash(result),{'result':result,'source':feed,'receipt':receipt})

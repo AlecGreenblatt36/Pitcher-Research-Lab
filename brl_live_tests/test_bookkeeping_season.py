@@ -64,3 +64,18 @@ def test_history_from_cache_merges_the_season_behind_the_day_cache():
     assert frame.contact.iloc[1] is None and frame.pitches.iloc[1][0]['t'] == 'SL'
     with pytest.raises(Blocked):
         bookkeeping_history_from_cache(Cache(Store()), {'days': {}}, datetime(2026, 10, 7, 12, tzinfo=timezone.utc))
+
+
+def test_game_context_from_schedule_and_feed():
+    from cloud.runner import schedule_context
+    from brl_live.box_runner import game_context
+    g = {'gamePk': 1, 'venue': {'name': 'Progressive Field'}, 'seriesDescription': 'Division Series', 'seriesGameNumber': 3, 'gamesInSeries': 5, 'doubleHeader': 'N',
+         'gameNumber': 1, 'dayNight': 'day', 'description': '', 'teams': {'away': {'leagueRecord': {'wins': 2, 'losses': 0, 'pct': '1.000'}}, 'home': {'leagueRecord': {'wins': 0, 'losses': 2}}}}
+    c = schedule_context(g)
+    assert c == {'venue': 'Progressive Field', 'series_description': 'Division Series', 'series_game_number': 3, 'games_in_series': 5, 'double_header': 'N',
+                 'game_number': 1, 'day_night': 'day', 'records': {'away': {'wins': 2, 'losses': 0}, 'home': {'wins': 0, 'losses': 2}}}
+    assert schedule_context({'teams': {}}) == {'records': {'away': None, 'home': None}}
+    gd = {'venue': {'name': 'Progressive Field'}, 'weather': {'condition': 'Clear', 'temp': '71', 'wind': '8 mph, Out To CF', 'other': 'x'}, 'datetime': {'officialDate': '2026-10-07'}}
+    out = game_context({'context': c}, gd, '2026-10-07T12:00:00+00:00')
+    assert out['weather'] == {'condition': 'Clear', 'temp': '71', 'wind': '8 mph, Out To CF'} and out['date'] == '2026-10-07' and out['series_game_number'] == 3
+    assert game_context(None, {}, 'now') == {'updated_at': 'now'}

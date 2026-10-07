@@ -180,6 +180,21 @@ def read(store, path):
     return store.read(path)
 
 
+def schedule_context(g: dict) -> dict:
+    """What the schedule says about a game beyond who plays: venue, series, game number, records."""
+    teams = g.get('teams') or {}
+    def record(side):
+        r = (teams.get(side) or {}).get('leagueRecord') or {}
+        try:
+            return {'wins': int(r.get('wins')), 'losses': int(r.get('losses'))}
+        except (TypeError, ValueError):
+            return None
+    out = {'venue': ((g.get('venue') or {}).get('name')), 'series_description': g.get('seriesDescription'), 'description': g.get('description'),
+           'series_game_number': g.get('seriesGameNumber'), 'games_in_series': g.get('gamesInSeries'), 'double_header': g.get('doubleHeader'),
+           'game_number': g.get('gameNumber'), 'day_night': g.get('dayNight'), 'records': {'away': record('away'), 'home': record('home')}}
+    return {k: v for k, v in out.items() if v not in (None, '', {})}
+
+
 class Runner:
     """One pass over the day's schedule (Eastern date); each game goes through process()."""
 
@@ -196,8 +211,10 @@ class Runner:
             for g in d.get('games') or []:
                 games.append({'game_pk': int(g['gamePk']), 'scheduled_start': g.get('gameDate'), 'state': (g.get('status') or {}).get('abstractGameState'),
                               'away': ((g.get('teams') or {}).get('away') or {}).get('team', {}).get('name'),
-                              'home': ((g.get('teams') or {}).get('home') or {}).get('team', {}).get('name'), 'game_type': g.get('gameType')})
+                              'home': ((g.get('teams') or {}).get('home') or {}).get('team', {}).get('name'), 'game_type': g.get('gameType'),
+                              'context': schedule_context(g)})
         return games
+
 
     def iteration(self):
         day = self.today()
