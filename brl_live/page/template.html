@@ -194,6 +194,8 @@ button { font: inherit; color: inherit; }
 .compare { list-style: none; padding: 0; margin: 10px 0 0; }
 .compare li { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--rule-soft); font-size: 16px; }
 .compare b { font-family: var(--display); font-size: 19px; }
+.compare small { font-size: 14px; color: var(--muted); }
+small { font-size: 14px; }
 .chart svg { width: 100%; height: auto; display: block; }
 .chart text { font-family: var(--body); fill: var(--ink); }
 .legend { display: flex; gap: 16px; font-size: 14px; color: var(--muted); margin: 0 0 6px; flex-wrap: wrap; }
@@ -935,7 +937,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var live = aggs.filter(function (a) { return a.n_games && a.model_score != null && a.baseline_score != null; });
     if (live.length) {
       h += '<section class="sec"><h2>Box score accuracy</h2><p class="lede">How much closer the model lands than a simple guess. Positive is better.</p><ul class="compare">';
-      live.forEach(function (a) { var g = (a.baseline_score - a.model_score) / a.baseline_score; h += "<li><span>" + esc(a.label) + " <small>(" + a.n_games + " games)</small></span><b>" + (g >= 0 ? "+" : "") + Math.round(g * 100) + "%</b></li>"; });
+      live.forEach(function (a) { var g = (a.baseline_score - a.model_score) / a.baseline_score; h += "<li><span>" + esc(a.label) + " <small>(" + a.n_games + (a.n_games === 1 ? " game" : " games") + ")</small></span><b>" + (g >= 0 ? "+" : "") + Math.round(g * 100) + "%</b></li>"; });
       h += "</ul></section>";
     }
     app.innerHTML = h + "</div>";
