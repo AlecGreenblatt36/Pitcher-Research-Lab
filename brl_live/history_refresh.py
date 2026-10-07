@@ -258,9 +258,16 @@ def collapse_statcast(source: Source, day: str, expected: dict[int, dict],
         if (truth['outcome'] != map_event(last['events']) or
                 truth['batter'] != int(last['batter']) or truth['pitcher'] != int(last['pitcher'])):
             raise Blocked('Statcast/official PA result or player mismatch')
-        if int(first['batter']) != int(last['batter']) or int(first['pitcher']) != int(last['pitcher']):
-            raise Blocked('Mid-PA player substitution requires explicit attribution; no silent merge')
         row = {name: first.get(name) for name in SOURCE_FIELDS}
+        if int(first['batter']) != int(last['batter']) or int(first['pitcher']) != int(last['pitcher']):
+            # A pinch-hitter or a relief pitcher came in during the plate appearance. The official feed
+            # attributes the result to the players who finished it (checked above against truth), so the
+            # pre-PA context stays as it was and the player fields follow the official attribution.
+            for name in ('batter', 'pitcher', 'stand', 'p_throws', 'age_bat', 'age_pit', 'batter_days_since_prev_game',
+                         'pitcher_days_since_prev_game', 'n_thruorder_pitcher', 'fielder_2'):
+                if name in row:
+                    row[name] = last.get(name)
+            diagnostics['mid_pa_substitutions'] = diagnostics.get('mid_pa_substitutions', 0) + 1
         for name in list(row):
             if isinstance(row[name], (float, np.floating)) and pd.isna(row[name]):
                 row[name] = None
