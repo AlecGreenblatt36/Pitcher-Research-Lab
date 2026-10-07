@@ -8,6 +8,8 @@ Accuracy work and its evidence are in LEDGER.md (ACC-01 to ACC-08). Adopted: the
 
 Local work that is not in the repository (sandbox scratch, re-creatable from the seed data): replay harness (games reconstruction, 2026 season replay, team baseline, evaluation, PA residuals, offsets estimation, paired adjustment replay). Re-create before extending; the methods are described in LEDGER.md.
 
+Also live since Oct 7: in-game updates every cycle for games in progress (LIVE-01), a pregame betting-market reference on the record and Odds tab (MKT-01, first real capture expected on the first pregame cycle of Oct 7), and pitch-by-pitch lines under every simulated plate appearance (PITCH-01). The dashboard CI's browser regression no longer counts navigation-aborted requests as failures.
+
 Next: own public-source runtime (engine code public, only data and model encrypted under a new key) so engine changes no longer depend on the old encrypted runtime; a 2025 replay for a second season of evidence; the April replay weakness (roster-free bullpens vs model error); batted-ball types in play text; pitch-by-pitch bridge; in-game updating.
 
 ## Current checkpoint — October 6, 2026, 6:59 p.m. Eastern
