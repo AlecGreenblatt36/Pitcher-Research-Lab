@@ -112,6 +112,10 @@ class BoxRunner(original.Runner):
                 self.live_update(pk,feed,gd['datetime']['officialDate'])
             self.store.persist();return
         game,matchup,notes,statuses,fingerprint=self.sim.prepare(feed,receipt)
+        if bridge.MODEL_NAME!='locked-pa-2026-v1':
+            # A different PA model is a different forecast: the snapshot hash carries it, so a model
+            # switch produces a new saved version for every pending game and earlier versions stand.
+            fingerprint=content_hash({'inputs':fingerprint,'pa_model':bridge.MODEL_NAME,'model_sha256':bridge.MODEL_SHA256})
         previous=original.fingerprint_from_forecasts(self.store,pk)
         if any(f['snapshot_hash']==fingerprint and ident in self.store.ledger['box_scores'] and 'skill_baselines' in self.store.ledger['box_scores'][ident] for ident,f in previous):return
         self.store.private('inputs',content_hash({'receipt':receipt,'game':game}),

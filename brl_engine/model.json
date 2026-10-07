@@ -1,5 +1,12 @@
 {
  "schema": "brl.model-selection.v1",
- "model": "locked-pa-2026-v1",
- "note": "The plate-appearance model the live runtime uses. 'locked-pa-2026-v1' is the locked model inside the data package; any other name must have a manifest at brl_engine/models/<name>.json written by the fit job (workflow brl-fit-model) and its sealed bundle on the ledger branch."
+ "model": "pa-2026-v2-physics",
+ "manifest": "brl_engine/models/pa-2026-v2-physics.json",
+ "note": "The plate-appearance model the live runtime uses. 'locked-pa-2026-v1' is the locked model inside the data package; any other name must have a manifest at brl_engine/models/<name>.json written by the fit job (workflow brl-fit-model) and its sealed bundle on the ledger branch.",
+ "switched_at": "2026-10-07T11:35:00+00:00",
+ "evidence": [
+  "research/physics2-37597386690.json",
+  "research/fit-pa-2026-v2-physics-37601223809.json",
+  "research/replay-v2-physics-37603238324.json"
+ ]
 }
