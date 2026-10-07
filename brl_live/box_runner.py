@@ -149,8 +149,16 @@ def main(public_dir):
     key=key_bytes(os.environ.get('BRL_PA_PACKAGE_KEY',''))
     store=VerifiedGitStore(os.environ['GITHUB_REPOSITORY'],os.environ['GH_TOKEN'],key)
     _ensure_fields(store.ledger);_prune_live(store.ledger);before=len(store.ledger['forecasts']);old_boxes=len(store.ledger['box_scores'])
-    cache=HistoryCache(store,key);index=cache.refresh(Fetcher())
+    cache=HistoryCache(store,key);refresh_note=None
+    try:index=cache.refresh(Fetcher())
+    except Blocked as exc:
+        # Yesterday's last game is still being played (past midnight Eastern): carry on with
+        # the last accepted history instead of blocking live updates and the page.
+        if 'not final' not in str(exc):raise
+        index=cache.index();refresh_note=str(exc)
+        if not index.get('coverage_through'):raise
     info=cache.assemble(index,bridge.HISTORY,ROOT/'private_work/history.csv.gz',utcnow())
+    info['yesterday_incomplete']=bool(refresh_note);info['refresh_note']=refresh_note
     annotations=bookkeeping_history_from_cache(cache,index,utcnow())
     skill_origin=utcnow()
     skill_history=prior_boxes_from_cache(cache,index,skill_origin)
@@ -170,7 +178,7 @@ def main(public_dir):
         'box_forecasts':len(ledger['box_scores']),'player_scored_games':ledger['player_scores']['n_games'],
         'scored_games':scores['n_games'],'skill_scored_games':ledger['skill_scores']['n_games'],
         'skill_baseline_prior_games':len(skill_history),'raw_data_published':False,
-        'history_coverage_through':info['coverage_through'],'history_added_PA':info['added_PA'],
+        'history_coverage_through':info['coverage_through'],'history_added_PA':info['added_PA'],'history_refresh_note':refresh_note,
         'pitch_bookkeeping_prior_PA':len(annotations),'engine_rules_changed':False,
         'model_parameters_changed':False,'simulation_adjustments':'context offsets (brl_live/context_offsets.json)',
         'live_updates':len(ledger['live']),'live_update_errors':sum(1 for v in ledger['live'].values() if v.get('error')),

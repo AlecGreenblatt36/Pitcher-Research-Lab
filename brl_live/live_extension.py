@@ -8,6 +8,7 @@ from __future__ import annotations
 import copy
 import json
 import os
+from datetime import timedelta
 from dataclasses import asdict
 from pathlib import Path
 
@@ -80,7 +81,13 @@ class RefreshedSimulator:
         origin = timestamp(receipt['finished_at'])
         if timestamp(self.info['captured_before']) > origin:
             raise Blocked('History was assembled after input capture')
-        if self.info['coverage_through'] != previous_day(origin).isoformat():
+        # Yesterday, or the day before when yesterday's last game is still being played
+        # (a West Coast game running past midnight Eastern). The forecast records the
+        # coverage actually used in history_through.
+        allowed = {previous_day(origin).isoformat(), (previous_day(origin) - timedelta(days=1)).isoformat()}
+        if self.info['coverage_through'] not in allowed:
+            raise Blocked('History coverage is not through yesterday')
+        if self.info['coverage_through'] != previous_day(origin).isoformat() and not self.info.get('yesterday_incomplete'):
             raise Blocked('History coverage is not through yesterday')
         game, matchup, notes, statuses, fingerprint = live_inputs(feed, receipt, self.history)
         notes['source_vintage'] = 'Frozen seed plus encrypted, captured-before-forecast daily updates'

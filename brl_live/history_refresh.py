@@ -431,7 +431,13 @@ class HistoryCache:
     def assemble(self, index: dict, base: Path, output: Path, forecast_origin: datetime) -> dict:
         if hashlib.sha256(base.read_bytes()).hexdigest() != BASE_SHA256:
             raise Blocked('Original locked history bytes changed')
-        self.require_complete(index, previous_day(forecast_origin).isoformat())
+        # Complete through yesterday, or through the day before when yesterday's last game
+        # is still being played; never older than that.
+        yesterday = previous_day(forecast_origin)
+        target = str(index.get('coverage_through') or yesterday.isoformat())
+        if target not in (yesterday.isoformat(), (yesterday - timedelta(days=1)).isoformat()):
+            raise Blocked('Accepted history is too old for this forecast')
+        self.require_complete(index, target)
         if timestamp(index['committed_at']) > forecast_origin:
             raise Blocked('History revision was not available at forecast origin')
         with gzip.open(base, 'rt', newline='') as source:
