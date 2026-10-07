@@ -34,7 +34,7 @@ def test_state_at_a_date_matches_the_chronological_builder():
     pa_sorted = pa.sort_values(['date_key', 'game_pk', 'at_bat_number'], kind='mergesort').reset_index(drop=True)
     outcomes = pa_sorted.set_index(['game_pk', 'at_bat_number'])['outcome']
     table = table.join(outcomes, on=['game_pk', 'at_bat_number'])
-    params = {'xvalue': True, 'recent_days': 3, 'k_rate': 80.0, 'pitch_types': True}
+    params = {'xvalue': True, 'recent_days': 3, 'k_rate': 80.0, 'pitch_types': True, 'environment': True, 'env_days': 4, 'k_env': 20.0}
     built, _ = phys.build_features(pa, table, params)
     for day in ('2026-05-01', '2026-05-04', '2026-05-10'):
         state = phys.PhysicsState.build(table, day, params)
@@ -44,7 +44,8 @@ def test_state_at_a_date_matches_the_chronological_builder():
             expected = built.iloc[r].to_numpy(float)
             got = state.features(int(pa_sorted.batter[r]), int(pa_sorted.pitcher[r]))
             assert np.allclose(got, expected, atol=1e-5), (day, r, got - expected)
-    assert state.names == phys.feature_names(params) == phys.BASE_FEATURES + phys.XVALUE_FEATURES + phys.RECENT_FEATURES + phys.TYPE_FEATURES
+    assert state.names == phys.feature_names(params) == phys.BASE_FEATURES + phys.XVALUE_FEATURES + phys.RECENT_FEATURES + phys.TYPE_FEATURES + phys.ENV_FEATURES
+    assert built['season_day'].min() >= 47 and (built.loc[pa_sorted.date_key == '2026-05-01', ['env_hr', 'env_k', 'env_bb', 'env_out']] == 0).all().all()
     old = table.drop(columns=['br_n'])
     with pytest.raises(ValueError):
         phys.PhysicsState.build(old, '2026-05-04', params)

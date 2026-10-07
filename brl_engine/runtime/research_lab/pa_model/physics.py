@@ -48,10 +48,21 @@ XVALUE_FEATURES = ['b_xv', 'p_xv']
 RECENT_FEATURES = ['p_velo_rec', 'p_whiff_rec', 'p_csw_rec', 'b_ev_rec', 'b_whiff_rec', 'b_hard_rec']
 TYPE_FEATURES = ['b_whiff_fb', 'b_whiff_br', 'b_whiff_os', 'p_whiff_fb', 'p_whiff_br', 'p_whiff_os', 'p_share_fb', 'p_share_br']
 DEFENSE_FEATURES = ['f_def']            # the fielding team's out rate on fieldable balls in play above the league, prior window
+ENV_FEATURES = ['env_hr', 'env_k', 'env_bb', 'env_out', 'season_day']   # league run environment of the last 30 days vs the whole history
+ENV_CLASSES = {'env_hr': ('HR',), 'env_k': ('K',), 'env_bb': ('BB_HBP',), 'env_out': ('BIP_OUT',)}
 DEFAULT_PARAMS = {'k_rate': 150.0, 'k_bip': 60.0, 'k_velo': 100.0, 'xvalue': False, 'recent_days': 0,
                   'k_recent_pitch': 100.0, 'k_recent_bip': 40.0, 'k_cell': 40.0, 'pitch_types': False, 'k_type': 60.0,
-                  'defense': False, 'k_def': 400.0, 'defense_days': 365}
+                  'defense': False, 'k_def': 400.0, 'defense_days': 365, 'environment': False, 'env_days': 30, 'k_env': 2000.0}
 FIELDABLE = {'BIP_OUT', '1B', '2B_3B', 'OTHER_REACH'}
+ENV_LABELS = ['BIP_OUT', 'K', 'BB_HBP', '1B', '2B_3B', 'HR', 'OTHER_REACH']
+ENV_INDEX = {l: i for i, l in enumerate(ENV_LABELS)}
+
+
+def _season_start(day: int) -> int:
+    """Ordinal of March 15 of that day's year: a fixed origin for the day-of-season feature."""
+    import datetime
+    year = datetime.date.fromordinal(day).year
+    return datetime.date(year, 3, 15).toordinal()
 RUN_VALUE = {'BIP_OUT': 0.0, 'K': 0.0, 'BB_HBP': 0.69, '1B': 0.88, '2B_3B': 1.4, 'HR': 2.03, 'OTHER_REACH': 0.6}
 EV_BINS, LA_BINS = 16, 18
 
@@ -67,6 +78,8 @@ def feature_names(params: dict | None = None) -> list[str]:
         names += TYPE_FEATURES
     if p.get('defense'):
         names += DEFENSE_FEATURES
+    if p.get('environment'):
+        names += ENV_FEATURES
     return names
 
 
@@ -204,6 +217,8 @@ class _Sums:
         self.cell_value_total = [0.0, 0.0]
         self.bcells, self.pcells = defaultdict(lambda: np.zeros((EV_BINS, LA_BINS))), defaultdict(lambda: np.zeros((EV_BINS, LA_BINS)))
         self.rec_p, self.rec_b = defaultdict(list), defaultdict(list)     # player -> [[day ordinal, pitch sums, bip sums], ...] per date
+        self.env_days: list = []                                            # [day ordinal, counts by class (7)] per date, league wide
+        self.env_total = np.zeros(7)
         self.names = feature_names(self.p)
         self.X = {name: i for i, name in enumerate(self.names)}
 
@@ -284,10 +299,31 @@ class _Sums:
             out[X['b_hard_rec']] = dev(rbb[BS['hard']], rbb[BS['bip']], out[X['b_hard']], k_rb)
         if P.get('defense'):
             out[X['f_def']] = np.nan if team_defense is None else float(team_defense)
+        if P.get('environment'):
+            days, k = int(P['env_days']), float(P['k_env'])
+            recent = np.zeros(7)
+            for e in self.env_days:
+                if e[0] >= today - days:
+                    recent += e[1]
+            total = self.env_total
+            n_recent, n_total = recent.sum(), max(total.sum(), 1e-9)
+            for name, classes in ENV_CLASSES.items():
+                idx = [ENV_LABELS.index(c) for c in classes]
+                base = total[idx].sum() / n_total
+                rate = (recent[idx].sum() + k * base) / (n_recent + k)
+                out[X[name]] = float(np.log(max(rate, 1e-6) / max(base, 1e-6)))
+            out[X['season_day']] = float(today - _season_start(today))
         return out
 
-    def absorb_date(self, today: int, batters, pitchers, M: np.ndarray, ev: np.ndarray, la: np.ndarray, run_value: np.ndarray | None):
+    def absorb_date(self, today: int, batters, pitchers, M: np.ndarray, ev: np.ndarray, la: np.ndarray, run_value: np.ndarray | None, outcomes=None):
         """Add one whole date's rows (arrays of equal length) after that date has been scored."""
+        if self.p.get('environment') and outcomes is not None:
+            counts = np.zeros(7)
+            for o in outcomes:
+                i = ENV_INDEX.get(o)
+                if i is not None:
+                    counts[i] += 1.0
+            self.env_days.append([today, counts]); self.env_total += counts
         cur_velo: dict = {}
         day_p: dict = {}; day_b: dict = {}
         want_xv, recent = bool(self.p.get('xvalue')), int(self.p.get('recent_days') or 0)
@@ -430,7 +466,8 @@ def build_features(pa: pd.DataFrame, table: pd.DataFrame, params: dict | None = 
         today = int(day_ord[i])
         for r in range(i, j):
             out[r] = S.features(int(batters[r]), int(pitchers[r]), today, team_defense=(D.value(teams[r], today) if want_def else None))
-        S.absorb_date(today, batters[i:j], pitchers[i:j], M[i:j], ev[i:j], la[i:j], None if rv is None else rv[i:j])
+        S.absorb_date(today, batters[i:j], pitchers[i:j], M[i:j], ev[i:j], la[i:j], None if rv is None else rv[i:j],
+                      outcomes=(ordered['outcome'].to_numpy()[i:j] if S.p.get('environment') else None))
         if want_def:
             D.absorb_date(today, teams[i:j], fieldable[i:j], outs[i:j])
         i = j
@@ -470,12 +507,16 @@ class PhysicsState:
         batters = frame['batter'].to_numpy(int); pitchers = frame['pitcher'].to_numpy(int)
         dates = frame['date_key'].astype(str).to_numpy()
         day_ord = pd.to_datetime(frame['date_key']).map(pd.Timestamp.toordinal).to_numpy()
+        outcomes = frame['outcome'].astype(str).to_numpy() if ('outcome' in frame.columns and S.p.get('environment')) else None
+        if S.p.get('environment') and outcomes is None:
+            raise ValueError('environment features need the outcome column in the physics table')
         i, n = 0, len(frame)
         while i < n:
             j = i
             while j < n and dates[j] == dates[i]:
                 j += 1
-            S.absorb_date(int(day_ord[i]), batters[i:j], pitchers[i:j], M[i:j], ev[i:j], la[i:j], None if rv is None else rv[i:j])
+            S.absorb_date(int(day_ord[i]), batters[i:j], pitchers[i:j], M[i:j], ev[i:j], la[i:j], None if rv is None else rv[i:j],
+                          outcomes=None if outcomes is None else outcomes[i:j])
             i = j
         return cls(S, str(cutoff_date)[:10], n)
 
