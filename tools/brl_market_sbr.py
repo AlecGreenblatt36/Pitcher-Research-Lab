@@ -4,7 +4,7 @@ Source: the dataset release of github.com/ArnavSaraogi/mlb-odds-scraper (lines c
 SportsBookReview: opening and current moneylines per sportsbook, 2021-03-20 to 2025-08-16).
 Each game is matched to its MLB game_pk by date, teams and start time (official schedule), and
 the lines are turned into vig-free home win probabilities: DraftKings opening and closing, and
-the average over the books present. Output on the ledger branch: research/market-sbr-<run>.jsonl.gz
+the average over the books present. Totals and run lines are kept as given (line and both prices). Output on the ledger branch: research/market-sbr-<run>.jsonl.gz
 and a receipt. Public odds only; used to judge and to teach the model, never as a forecast input.
 """
 from __future__ import annotations
@@ -121,15 +121,36 @@ def main():
                     continue
             if not lines:
                 continue
+            totals, runline = {}, {}
+            for b in (item.get('odds') or {}).get('totals') or []:
+                book = str(b.get('sportsbook') or '').lower()
+                for kind, ln in (('open', b.get('openingLine') or {}), ('close', b.get('currentLine') or {})):
+                    try:
+                        if ln.get('total') is not None and ln.get('overOdds') is not None and ln.get('underOdds') is not None:
+                            totals.setdefault(book, {})[kind] = [float(ln['total']), int(ln['overOdds']), int(ln['underOdds'])]
+                    except (TypeError, ValueError):
+                        pass
+            for b in (item.get('odds') or {}).get('pointspread') or []:
+                book = str(b.get('sportsbook') or '').lower()
+                for kind, ln in (('open', b.get('openingLine') or {}), ('close', b.get('currentLine') or {})):
+                    try:
+                        if ln.get('homeSpread') is not None and ln.get('homeOdds') is not None and ln.get('awayOdds') is not None:
+                            runline.setdefault(book, {})[kind] = [float(ln['homeSpread']), int(ln['homeOdds']), int(ln['awayOdds'])]
+                    except (TypeError, ValueError):
+                        pass
             def p(kind, book=None):
                 vals = [vig_free_home(*v[kind]) for k, v in lines.items() if v.get(kind) and (book is None or k == book) and abs(v[kind][0]) >= 100 and abs(v[kind][1]) >= 100]
                 return round(sum(vals) / len(vals), 5) if vals else None
             rows.append({'game_pk': best['game_pk'], 'date': day, 'season': int(day[:4]), 'game_type': best['type'], 'home': home, 'away': away,
                          'home_score': best['home_score'], 'away_score': best['away_score'], 'books': sorted(lines),
                          'p_close_dk': p('close', 'draftkings'), 'p_open_dk': p('open', 'draftkings'), 'p_close_avg': p('close'), 'p_open_avg': p('open'),
-                         'dk_close': (lines.get('draftkings') or {}).get('close'), 'dk_open': (lines.get('draftkings') or {}).get('open')})
+                         'dk_close': (lines.get('draftkings') or {}).get('close'), 'dk_open': (lines.get('draftkings') or {}).get('open'),
+                         'dk_total_close': (totals.get('draftkings') or {}).get('close'), 'dk_total_open': (totals.get('draftkings') or {}).get('open'),
+                         'dk_runline_close': (runline.get('draftkings') or {}).get('close'), 'dk_runline_open': (runline.get('draftkings') or {}).get('open'),
+                         'totals_close': {k: v['close'] for k, v in totals.items() if v.get('close')}})
     receipt.update(rows=len(rows), unmatched=unmatched, books=dict(books_seen), by_season={str(s): sum(1 for r in rows if r['season'] == s) for s in range(2021, 2026)},
-                   with_dk_close=sum(1 for r in rows if r['p_close_dk'] is not None), seconds=round(time.time() - t0, 1))
+                   with_dk_close=sum(1 for r in rows if r['p_close_dk'] is not None), with_dk_total=sum(1 for r in rows if r['dk_total_close']),
+                   with_dk_runline=sum(1 for r in rows if r['dk_runline_close']), seconds=round(time.time() - t0, 1))
     raw = gzip.compress('\n'.join(json.dumps(r) for r in rows).encode() + b'\n', mtime=0)
     path = f'research/market-sbr-{run_id}.jsonl.gz'; receipt['file'] = path
     if repo and token:

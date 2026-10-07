@@ -3,7 +3,7 @@
 ESPN's scoreboard drops the odds once a game is over, but each game's summary keeps its pick
 center (DraftKings for 2026; nothing for 2025 and earlier). For every regular-season game of the
 season (official MLB schedule) this reads the ESPN event of the same teams and start, then the
-summary's moneylines (and the open line when given), and converts them to a vig-free home win
+summary's moneylines (and the open line when given), totals and run lines, and converts them to a vig-free home win
 probability. Output on the ledger branch: research/market-<season>-<run>.jsonl.gz (one line per
 game: game_pk, date, teams, moneylines, p_home, provider) and a receipt. Public odds only.
 """
@@ -67,8 +67,19 @@ def lines_from_summary(doc):
             h, a = close_h, close_a
         if h is None or a is None:
             continue
-        return {'home_ml': int(h), 'away_ml': int(a), 'open_home_ml': open_h, 'open_away_ml': open_a, 'close_home_ml': close_h, 'close_away_ml': close_a,
-                'provider': str((pc.get('provider') or {}).get('name') or ''), 'over_under': pc.get('overUnder')}
+        out = {'home_ml': int(h), 'away_ml': int(a), 'open_home_ml': open_h, 'open_away_ml': open_a, 'close_home_ml': close_h, 'close_away_ml': close_a,
+               'provider': str((pc.get('provider') or {}).get('name') or ''), 'over_under': pc.get('overUnder')}
+        # Totals and run line at the same moment as the moneyline (the line and both prices), plus ESPN's
+        # open/close blocks as given, for later parsing.
+        over, under = _ml_value(pc.get('overOdds')), _ml_value(pc.get('underOdds'))
+        out.update(over_odds=over, under_odds=under, spread=pc.get('spread'),
+                   home_spread_odds=_ml_value((pc.get('homeTeamOdds') or {}).get('spreadOdds')),
+                   away_spread_odds=_ml_value((pc.get('awayTeamOdds') or {}).get('spreadOdds')))
+        if isinstance(pc.get('total'), dict):
+            out['total_raw'] = pc['total']
+        if isinstance(pc.get('pointSpread'), dict):
+            out['point_spread_raw'] = pc['pointSpread']
+        return out
     return None
 
 
@@ -128,13 +139,20 @@ def main():
                'p_home': round(vig_free_home(line['home_ml'], line['away_ml']), 5)}
         if line.get('open_home_ml') is not None and line.get('open_away_ml') is not None:
             out['p_home_open'] = round(vig_free_home(line['open_home_ml'], line['open_away_ml']), 5)
+        if line.get('over_odds') is not None and line.get('under_odds') is not None:
+            out['p_over'] = round(vig_free_home(line['over_odds'], line['under_odds']), 5)
+        if line.get('home_spread_odds') is not None and line.get('away_spread_odds') is not None:
+            out['p_home_cover'] = round(vig_free_home(line['home_spread_odds'], line['away_spread_odds']), 5)
         return out
 
     with ThreadPoolExecutor(6) as pool:
         rows = list(pool.map(summary, matched))
     good = [r for r in rows if 'p_home' in r]
     receipt.update(lines=len(good), missing=sum(1 for r in rows if r.get('missing')), errors=sum(1 for r in rows if r.get('error')),
-                   providers=sorted({r['provider'] for r in good}), with_open=sum(1 for r in good if 'p_home_open' in r))
+                   providers=sorted({r['provider'] for r in good}), with_open=sum(1 for r in good if 'p_home_open' in r),
+                   with_total=sum(1 for r in good if r.get('over_under') is not None), with_total_prices=sum(1 for r in good if 'p_over' in r),
+                   with_run_line=sum(1 for r in good if 'p_home_cover' in r),
+                   total_raw_shape=next(({k: (sorted(v.keys()) if isinstance(v, dict) else type(v).__name__) for k, v in r['total_raw'].items()} for r in good if r.get('total_raw')), None))
     raw = gzip.compress('\n'.join(json.dumps(r) for r in good).encode() + b'\n', mtime=0)
     repo, token = os.environ.get('GITHUB_REPOSITORY'), os.environ.get('GH_TOKEN')
     path = f'research/market-{season}-{run_id}.jsonl.gz'
