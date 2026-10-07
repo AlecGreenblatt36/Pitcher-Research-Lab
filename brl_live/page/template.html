@@ -360,6 +360,21 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     return "pregame";
   }
   var STATE_TEXT = { pregame: "Pregame", live: "Live", final: "Final" };
+  /* In-game snapshot for a game in progress (replaced every cycle, never scored). */
+  function liveFor(pk) {
+    var lv = D.live && D.live[pk];
+    return lv && !lv.error && lv.state ? lv : null;
+  }
+  function liveWhere(lv) {
+    var s = lv.state, outs = s.outs === 1 ? "1 out" : s.outs + " outs";
+    if (s.between_innings) return (s.half === "top" ? "End " : "Mid ") + ordinal(s.half === "top" ? s.inning - 1 : s.inning);
+    return (s.half === "top" ? "Top " : "Bot ") + ordinal(s.inning) + ", " + outs;
+  }
+  function liveLine(lv) {
+    var inn = { away: {}, home: {} };
+    (lv.state.innings || []).forEach(function (i) { ["away", "home"].forEach(function (side) { if (i[side] && i[side].R != null) inn[side][String(i.num)] = { R: i[side].R, H: i[side].H || 0 }; }); });
+    return { innings: inn, score: { away: lv.state.away_score, home: lv.state.home_score }, plays: [], _played: Math.max(9, lv.state.inning), _live: true };
+  }
   function homeProb(f) {
     var b = D.record && D.record.blend && f._id != null ? D.record.blend[f._id] : null;
     return b == null ? f.home_win_probability : b;
@@ -511,19 +526,22 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (!games.length) { html += '<p class="empty">No forecasts saved for this date yet. They appear a few hours before first pitch.</p></div>'; app.innerHTML = html; return; }
     html += '<ol class="cards">';
     games.forEach(function (f) {
-      var st = gameState(f.game_pk), box = boxFor(f.game_pk), actual = D.actuals && D.actuals[f.game_pk];
+      var st = gameState(f.game_pk), box = boxFor(f.game_pk), actual = D.actuals && D.actuals[f.game_pk], lv = st === "live" ? liveFor(f.game_pk) : null;
       var proj = null;
       if (box && box.samples && box.samples.length) proj = box.samples[variantsFor(box, f)[0].i];
       var fav = favorite(f);
-      html += '<li><a class="card" data-game="' + f.game_pk + '" href="#/game/' + f.game_pk + '"><div class="card-top"><span>' + esc(timeET(f.scheduled_start)) + '</span><span class="state ' + st + '">' + STATE_TEXT[st] + "</span></div>";
-      html += '<div class="cols"><span></span><span>' + (actual ? "Final" : "Proj") + "</span><span>Win</span></div>";
+      html += '<li><a class="card" data-game="' + f.game_pk + '" href="#/game/' + f.game_pk + '"><div class="card-top"><span>' + esc(timeET(f.scheduled_start)) + '</span><span class="state ' + st + '">' + (lv ? esc(liveWhere(lv)) : STATE_TEXT[st]) + "</span></div>";
+      html += '<div class="cols"><span></span><span>' + (actual ? "Final" : lv ? "Score" : "Proj") + "</span><span>Win</span></div>";
       ["away", "home"].forEach(function (side) {
         var t = f[side], starter = box && box.starters && box.starters[side] ? box.starters[side].name : "";
-        var score = actual ? actual[side] : (proj ? proj.score[side] : "");
-        html += '<div class="team-row' + (side === fav ? " fav" : "") + '"><span class="abbr ' + side + '-c">' + esc(t.abbr) + '</span><span class="team-name">' + esc(nickname(t.name)) +
-          (starter ? "<small>" + esc(starter) + "</small>" : "") + '</span><span class="big num">' + (actual ? '<span class="lamp" aria-hidden="true"></span>' : "") + esc(score) + '</span><span class="pct num">' + pct(winProb(f, side)) + "</span></div>";
+        var score = actual ? actual[side] : lv ? lv.state[side + "_score"] : (proj ? proj.score[side] : "");
+        var win = lv ? (side === "home" ? lv.home_win_probability : 1 - lv.home_win_probability) : winProb(f, side);
+        var isFav = lv ? (side === "home") === (lv.home_win_probability >= 0.5) : side === fav;
+        html += '<div class="team-row' + (isFav ? " fav" : "") + '"><span class="abbr ' + side + '-c">' + esc(t.abbr) + '</span><span class="team-name">' + esc(nickname(t.name)) +
+          (starter ? "<small>" + esc(starter) + "</small>" : "") + '</span><span class="big num">' + (actual ? '<span class="lamp" aria-hidden="true"></span>' : "") + esc(score) + '</span><span class="pct num">' + pct(win) + "</span></div>";
       });
       var foot = actual && proj ? "Projected " + f.away.abbr + " " + proj.score.away + ", " + f.home.abbr + " " + proj.score.home
+        : lv ? "Likely final " + f.away.abbr + " " + lv.projected_final.away + ", " + f.home.abbr + " " + lv.projected_final.home + ". Updated " + timeET(lv.updated_at) + " ET"
         : (f.lineup_status && f.lineup_status.away === "official" && f.lineup_status.home === "official" ? "Official lineups" : "Projected lineups");
       html += '<div class="card-foot">' + esc(foot) + "</div></a></li>";
     });
@@ -535,7 +553,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   function renderGame(pk, tab) {
     var f = latestForecasts()[pk];
     if (!f) { app.innerHTML = '<div class="wrap"><p class="empty">That game is not among the saved forecasts. <a href="#/">Back to games</a></p></div>'; return; }
-    var box = boxFor(pk), st = gameState(pk), actual = D.actuals && D.actuals[pk], actualBox = D.actual_boxes && D.actual_boxes[pk];
+    var box = boxFor(pk), st = gameState(pk), actual = D.actuals && D.actuals[pk], actualBox = D.actual_boxes && D.actual_boxes[pk], lv = st === "live" ? liveFor(pk) : null;
     var variants = box && box.samples && box.samples.length ? variantsFor(box, f) : [];
     var vkey = state.variant[pk] || "proj";
     var v = variants.filter(function (x) { return x.key === vkey; })[0] || variants[0];
@@ -544,17 +562,25 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
 
     var back = f.date && f.date !== D.date ? "#/day/" + f.date : "#/";
     var html = '<section class="hero"><div class="wrap"><a class="back" href="' + back + '">Back to games</a>';
-    html += '<p class="hero-meta">' + esc([SERIES[f.game_type], timeET(f.scheduled_start) + " ET", STATE_TEXT[st]].filter(Boolean).join(". ")) + "</p>";
-    html += '<div class="hero-cols"><span></span><span>' + (actual ? "Final" : (v && v.key !== "proj" ? v.label : "Projected")) + "</span><span>Win</span></div>";
+    html += '<p class="hero-meta">' + esc([SERIES[f.game_type], timeET(f.scheduled_start) + " ET", lv ? "Live, " + liveWhere(lv) : STATE_TEXT[st]].filter(Boolean).join(". ")) + "</p>";
+    html += '<div class="hero-cols"><span></span><span>' + (actual ? "Final" : lv ? "Score" : (v && v.key !== "proj" ? v.label : "Projected")) + "</span><span>Win</span></div>";
     ["away", "home"].forEach(function (side) {
       var t = f[side], starter = box && box.starters && box.starters[side] ? box.starters[side].name : "";
-      var score = actual ? actual[side] : (s ? s.score[side] : "");
-      html += '<div class="hero-row' + (side === fav ? " fav" : "") + '"><span class="abbr">' + esc(t.abbr) + '</span><span class="team-name">' + esc(nickname(t.name)) +
-        (starter ? "<small>" + esc(starter) + "</small>" : "") + '</span><span class="big num">' + esc(score) + '</span><span class="pct num">' + pct(winProb(f, side)) + "</span></div>";
+      var score = actual ? actual[side] : lv ? lv.state[side + "_score"] : (s ? s.score[side] : "");
+      var win = lv ? (side === "home" ? lv.home_win_probability : 1 - lv.home_win_probability) : winProb(f, side);
+      var isFav = lv ? (side === "home") === (lv.home_win_probability >= 0.5) : side === fav;
+      html += '<div class="hero-row' + (isFav ? " fav" : "") + '"><span class="abbr">' + esc(t.abbr) + '</span><span class="team-name">' + esc(nickname(t.name)) +
+        (starter ? "<small>" + esc(starter) + "</small>" : "") + '</span><span class="big num">' + esc(score) + '</span><span class="pct num">' + pct(win) + "</span></div>";
     });
     if (actual && actualBox && actualBox.innings) {
       html += lineScore(f, actualBox);
       html += '<p class="hero-note">Line score is the real game. The tabs below show the projected game saved before first pitch.</p>';
+    } else if (lv) {
+      html += lineScore(f, liveLine(lv));
+      var onMound = lv.pitcher_names && lv.on_mound ? lv.pitcher_names[lv.on_mound[lv.state.batting_side === "away" ? "home" : "away"]] : "";
+      html += '<p class="hero-note">Live. Likely final ' + esc(f.away.abbr) + " " + lv.projected_final.away + ", " + esc(f.home.abbr) + " " + lv.projected_final.home +
+        (onMound ? ". " + esc(lastName(onMound)) + " pitching" : "") + (lv.due_up ? ", " + esc(lastName(lv.due_up[lv.state.batting_side])) + " up" : "") +
+        ". Updated " + esc(timeET(lv.updated_at)) + " ET from " + Number(lv.n_worlds).toLocaleString() + " continuations. Pregame win chance was " + esc(f[fav].abbr) + " " + pct(winProb(f, fav)) + "; the tabs show the pregame projected game.</p>";
     } else if (s) html += lineScore(f, s);
     html += "</div></section>";
 
@@ -595,7 +621,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
 
   function lineScore(f, s) {
     var keys = Object.keys(s.innings.away || {}).concat(Object.keys(s.innings.home || {})).map(Number);
-    var played = Math.max(9, s.plays && s.plays.length ? samplePlayed(s) : Math.max.apply(null, keys.length ? keys : [9]));
+    var played = s._played || Math.max(9, s.plays && s.plays.length ? samplePlayed(s) : Math.max.apply(null, keys.length ? keys : [9]));
     var h = '<div class="line-wrap"><table class="line num" aria-label="Line score of the game shown"><thead><tr><th class="team"><span class="visually-hidden">Team</span></th>';
     for (var i = 1; i <= played; i++) h += "<th>" + i + "</th>";
     h += '<th class="gap"></th><th class="rh r">R</th><th class="rh h">H</th></tr></thead><tbody>';
@@ -605,7 +631,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       for (var i = 1; i <= played; i++) {
         var c = inn[String(i)];
         if (c) { R += c.R; H += c.H; h += "<td" + (c.R ? ' class="scored"' : "") + ">" + c.R + "</td>"; }
-        else h += "<td>" + (side === "home" && i === played && s.score.home > s.score.away ? "X" : "") + "</td>";
+        else h += "<td>" + (side === "home" && i === played && s.score.home > s.score.away && !s._live ? "X" : "") + "</td>";
       }
       h += '<td class="gap"></td><td class="rh r">' + s.score[side] + '</td><td class="rh h">' + H + "</td></tr>";
     });

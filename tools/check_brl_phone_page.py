@@ -7,7 +7,7 @@ SITE='https://alecgreenblatt36.github.io/Pitcher-Research-Lab/'
 ALLOWED_FORECAST_FIELDS=set('schema scope game_pk date game_type scheduled_start forecast_origin saved_at version lineup_status home away n_simulations seed home_win_probability probability_mcse projected_away_runs projected_home_runs team_baseline_probability market_probability model history_through postseason_regular_bullpen_logic automatic_runner github_run_id snapshot_hash'.split())
 OLD_FIELDS=set('actuals date forecasts publications scores status'.split())
 BOX_FIELDS=OLD_FIELDS|set('box_scores box_publications actual_boxes player_scores view_scope'.split())
-OPTIONAL_FIELDS={'skill_scores','record'}
+OPTIONAL_FIELDS={'skill_scores','record','live'}
 def utc(text):
     d=datetime.fromisoformat(text.replace('Z','+00:00'))
     if d.tzinfo is None:raise ValueError('Timezone required')
@@ -92,7 +92,9 @@ def main():
                 assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'),'Horizontal page overflow'
                 for ident,f in latest.values():
                     card=page.locator(f'[data-game="{f["game_pk"]}"]')
-                    p=headline(data,ident,f);fav=f['home'] if p>=.5 else f['away']
+                    lv=(data.get('live') or {}).get(str(f['game_pk']))
+                    p=lv['home_win_probability'] if lv and not lv.get('error') and str(f['game_pk']) not in data['actuals'] else headline(data,ident,f)
+                    fav=f['home'] if p>=.5 else f['away']
                     assert card.count()==1 and f'{round(max(p,1-p)*100)}%' in card.inner_text() and fav['abbr'] in card.inner_text()
                 design_check('slate')
                 page.screenshot(path=str(out/f'slate_{width}.png'),full_page=True)

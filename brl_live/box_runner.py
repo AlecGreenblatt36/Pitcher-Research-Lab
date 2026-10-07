@@ -1,6 +1,6 @@
 """Box-score publishing layer around the unchanged live PA/game forecast engine."""
 from __future__ import annotations
-import json,os
+import json,os,traceback
 from dataclasses import asdict
 from pathlib import Path
 from datetime import timedelta
@@ -16,6 +16,8 @@ from .history_refresh import HistoryCache,Fetcher
 from .verified_store import VerifiedGitStore
 from .boxscore import run_box_worlds,parse_actual_box,score_player_boxes,bookkeeping_history_from_cache,validate_box_payload
 from .box_page import render_page
+from .live_feed import live_matchup,appearances,matchup_parameters
+from .live_update import run_live_update
 from .edge_metrics import (freeze_skill_baselines, prior_boxes_from_cache, score_skill_boxes)
 
 
@@ -26,6 +28,15 @@ class BoxSimulator(RefreshedSimulator):
         self.box_output=None
         self.skill_history=skill_history
         self.skill_origin=skill_origin
+        self._appearances=None
+    def appearances(self):
+        if self._appearances is None:self._appearances=appearances(self.history)
+        return self._appearances
+    def update_live(self,feed,date,updated_at):
+        """Continue an in-progress game from its observed state; a snapshot, not a forecast version."""
+        matchup,start,state,game=live_matchup(feed,self.history,date,self.appearances())
+        engine,_=make_history_engine(matchup_parameters(game,matchup,config_for(game['game_type'])),self.path)
+        return run_live_update(engine,matchup,start,state,game,self.history,updated_at=updated_at)
     def run(self,game,matchup):
         parameters={'date':game['date'],'park':game['home']['abbr'],'game':game,
                     'matchup':asdict(matchup),'config':config_for(game['game_type'])}
@@ -41,9 +52,21 @@ class BoxSimulator(RefreshedSimulator):
 
 
 def _ensure_fields(ledger):
-    for k in ('box_scores','box_publications','actual_boxes','player_scores','skill_scores'):ledger.setdefault(k,{})
+    for k in ('box_scores','box_publications','actual_boxes','player_scores','skill_scores','live'):ledger.setdefault(k,{})
+
+LIVE_STATES=('In Progress','Manager challenge','Umpire review','Delayed')
 
 class BoxRunner(original.Runner):
+    def live_update(self,pk,feed,date):
+        # Never lets an in-game problem block pregame forecasts: errors are recorded, not raised.
+        now=self.clock().isoformat()
+        try:
+            self.store.ledger['live'][str(pk)]=self.sim.update_live(feed,date,now)
+        except Exception as exc:
+            frames=traceback.extract_tb(exc.__traceback__)
+            where={'file':Path(frames[-1].filename).name,'function':frames[-1].name,'line':frames[-1].lineno} if frames else {}
+            self.store.ledger['live'][str(pk)]={'schema':'brl.live-update.v1','game_pk':pk,'date':date,'updated_at':now,
+                'error':type(exc).__name__+': '+str(exc)[:200],'error_location':where}
     def process(self,pk,item):
         _ensure_fields(self.store.ledger)
         url=f'https://statsapi.mlb.com/api/v1.1/game/{pk}/feed/live'
@@ -61,6 +84,8 @@ class BoxRunner(original.Runner):
             self.store.persist();return
         if gd['status']['abstractGameState']!='Preview':
             self.store.ledger['status'][str(pk)]={'state':gd['status']['detailedState'],'date':gd['datetime']['officialDate'],'checked_at':self.clock().isoformat()}
+            if gd['status']['abstractGameState']=='Live' and str(gd['status'].get('detailedState','')).startswith(LIVE_STATES):
+                self.live_update(pk,feed,gd['datetime']['officialDate'])
             self.store.persist();return
         game,matchup,notes,statuses,fingerprint=self.sim.prepare(feed,receipt)
         previous=original.fingerprint_from_forecasts(self.store,pk)
@@ -96,10 +121,15 @@ class BoxRunner(original.Runner):
         self.store.persist()
 
 
+def _prune_live(ledger):
+    """Drop live snapshots of games that are final; the record scores forecasts, not snapshots."""
+    for pk in list(ledger.get('live',{})):
+        if pk in ledger.get('actuals',{}):ledger['live'].pop(pk,None)
+
 def main(public_dir):
     key=key_bytes(os.environ.get('BRL_PA_PACKAGE_KEY',''))
     store=VerifiedGitStore(os.environ['GITHUB_REPOSITORY'],os.environ['GH_TOKEN'],key)
-    _ensure_fields(store.ledger);before=len(store.ledger['forecasts']);old_boxes=len(store.ledger['box_scores'])
+    _ensure_fields(store.ledger);_prune_live(store.ledger);before=len(store.ledger['forecasts']);old_boxes=len(store.ledger['box_scores'])
     cache=HistoryCache(store,key);index=cache.refresh(Fetcher())
     info=cache.assemble(index,bridge.HISTORY,ROOT/'private_work/history.csv.gz',utcnow())
     annotations=bookkeeping_history_from_cache(cache,index,utcnow())
@@ -109,7 +139,7 @@ def main(public_dir):
     runner=BoxRunner(original.Network(),store,sim,run_id=os.environ.get('GITHUB_RUN_ID','local'))
     try:runner.iteration()
     finally:
-        ledger=store.ledger
+        ledger=store.ledger;_prune_live(ledger)
         scores=score_versions(ledger['forecasts'],ledger['publications'],ledger['actuals'])
         ledger['player_scores']=score_player_boxes(ledger['box_scores'],ledger['box_publications'],ledger['actual_boxes'])
         ledger['skill_scores']=score_skill_boxes(ledger['box_scores'],ledger['box_publications'],ledger['actual_boxes'])
@@ -122,4 +152,6 @@ def main(public_dir):
         'skill_baseline_prior_games':len(skill_history),'raw_data_published':False,
         'history_coverage_through':info['coverage_through'],'history_added_PA':info['added_PA'],
         'pitch_bookkeeping_prior_PA':len(annotations),'engine_rules_changed':False,
-        'model_parameters_changed':False,'storage_read_audit':store.read_audit}
+        'model_parameters_changed':False,'simulation_adjustments':'context offsets (brl_live/context_offsets.json)',
+        'live_updates':len(ledger['live']),'live_update_errors':sum(1 for v in ledger['live'].values() if v.get('error')),
+        'storage_read_audit':store.read_audit}

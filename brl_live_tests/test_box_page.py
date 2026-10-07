@@ -41,3 +41,9 @@ def test_data_is_escaped_against_script_breakout(tmp_path):
     l=ledger();l['forecasts']['a']['away']['name']='</script><script>alert(1)</script>'
     html=render_page(l,{'n_games':0},tmp_path).read_text(encoding='utf-8')
     assert '</script><script>alert' not in html
+
+
+def test_live_snapshots_follow_the_box_window():
+    l = ledger(); l['live'] = {'1': {'game_pk': 1, 'date': '2026-10-06', 'home_win_probability': 0.7}, '9': {'game_pk': 9, 'date': '2026-09-01'}}
+    public = public_payload(l, {'n_games': 0})
+    assert set(public['live']) == {'1'}
