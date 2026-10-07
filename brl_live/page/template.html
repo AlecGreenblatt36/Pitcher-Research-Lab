@@ -554,6 +554,13 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var o = D.record && D.record.ours && f._id != null ? D.record.ours[f._id] : null;
     return o == null ? homeProb(f) : o;
   }
+  /* Pregame card footnote: our independent model next to the market's line, once both exist. */
+  function marketFoot(f) {
+    var mk = D.market && D.market[f.game_pk];
+    if (!taughtRecipe(f) || !mk || mk.p_home == null) return "";
+    var po = oursProb(f), side = po >= .5 ? "home" : "away", mside = mk.p_home >= .5 ? "home" : "away";
+    return ". Our model " + f[side].abbr + " " + pct(side === "home" ? po : 1 - po) + ", market " + f[mside].abbr + " " + pct(mside === "home" ? mk.p_home : 1 - mk.p_home);
+  }
   function recipeOf(f) { return D.record && D.record.recipe && f._id != null ? D.record.recipe[f._id] || null : null; }
   function taughtRecipe(f) { var r = recipeOf(f); return !!(r && r.version && r.version !== "equal-v1"); }
   function winProb(f, side) { return side === "home" ? homeProb(f) : 1 - homeProb(f); }
@@ -824,7 +831,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var foot = actual && proj ? "Projected " + f.away.abbr + " " + proj.score.away + ", " + f.home.abbr + " " + proj.score.home
         : lv ? (lv._final ? "Final from the official feed" : lv.projected_final ? "Likely final " + f.away.abbr + " " + lv.projected_final.away + ", " + f.home.abbr + " " + lv.projected_final.home + ". " +
             (lv._client && lv.fetched_at ? "Live " + timeET(lv.fetched_at) : "Updated " + timeET(lv.updated_at)) + " ET" : "Live from MLB" + (lv.fetched_at ? ", " + timeET(lv.fetched_at) + " ET" : ""))
-        : (f.lineup_status && f.lineup_status.away === "official" && f.lineup_status.home === "official" ? "Official lineups" : "Projected lineups");
+        : (f.lineup_status && f.lineup_status.away === "official" && f.lineup_status.home === "official" ? "Official lineups" : "Projected lineups") + marketFoot(f);
       html += '<div class="card-foot">' + esc(foot) + "</div></a></li>";
     });
     html += "</ol></div>";
@@ -1494,7 +1501,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       h += runsChart(ra, rh) + "</section>";
     }
     var tr = box.total_run_distribution ? dist(box.total_run_distribution) : null;
-    if (tr) h += '<section class="sec"><h2>Total runs</h2><p class="lede">Most likely ' + mode(tr) + ". Half of games land between " + quant(tr, .25) + " and " + quant(tr, .75) + ". " + pct(probAtLeast(tr, 10)) + " reach 10 or more.</p></section>";
+    if (tr) {
+      var mkt2 = D.market && D.market[f.game_pk], mline = "";
+      if (mkt2 && mkt2.over_under != null) mline = " Betting market total: " + mkt2.over_under + (mkt2.p_over != null ? " (over " + pct(mkt2.p_over) + ")" : "") + ".";
+      h += '<section class="sec"><h2>Total runs</h2><p class="lede">Most likely ' + mode(tr) + ". Half of games land between " + quant(tr, .25) + " and " + quant(tr, .75) + ". " + pct(probAtLeast(tr, 10)) + " reach 10 or more." + esc(mline) + "</p></section>";
+    }
 
     h += '<section class="sec"><h2>Starting pitchers</h2><ul class="range-list">';
     ["away", "home"].forEach(function (side) {
