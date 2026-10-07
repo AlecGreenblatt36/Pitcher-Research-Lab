@@ -382,9 +382,11 @@ def parse_actual_box(feed,game_pk,fetched_at):
         for k in ('R','H','BB','K','HR'):
             if all(r[k] is not None for r in out['pitching'][s]+out['batting'][opp]):
                 if sum(r[k] for r in out['pitching'][s])!=sum(r[k] for r in out['batting'][opp]):raise Blocked('Actual opposite-side totals mismatch')
-    # The real plays, for the page (every plate appearance, its pitches and where the ball went); display only.
+    # The real plays, for the page (every plate appearance, its pitches and where the ball went); display only,
+    # so a reading problem is recorded rather than allowed to stop the final from being scored.
     from .real_game import plays_from_feed
-    out['plays']=plays_from_feed(feed)
+    try:out['plays']=plays_from_feed(feed)
+    except Exception as exc:out['plays']=[];out['plays_error']=type(exc).__name__+': '+str(exc)[:200]
     return out
 
 def score_player_boxes(boxes,publications,actuals):
