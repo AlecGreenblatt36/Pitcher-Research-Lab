@@ -136,6 +136,16 @@ button { font: inherit; color: inherit; }
 .empty { color: var(--muted); padding: 8px 0; }
 
 /* Performer cards */
+.lineups { display: grid; gap: 14px; }
+@media (min-width: 640px) { .lineups { grid-template-columns: 1fr 1fr; } }
+.lineup { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; }
+.lineup li { display: grid; grid-template-columns: 22px 1fr auto; gap: 8px; align-items: baseline; padding: 7px 12px; border-top: 1px solid var(--rule-soft); }
+.lineup li:first-child { border-top: 0; }
+.lineup .spot { color: var(--muted); font-size: 14px; }
+.lineup .who { min-width: 0; }
+.lineup .who small { display: block; color: var(--muted); font-size: 14px; white-space: normal; }
+.lineup .line { font-family: var(--display); font-weight: 700; font-size: 19px; white-space: nowrap; }
+.lineup li.sp { background: #F6F8F5; }
 .perf { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .perf div { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px; }
 .perf b { display: block; font-size: 16px; }
@@ -677,7 +687,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     });
     h += "</div></section>";
 
-    h += '<section class="sec"><h2>Starting pitchers</h2><div class="perf">';
+    h += projectedLines(f, box);
+    h += '<section class="sec"><h2>Starting pitchers in this version</h2><div class="perf">';
     ["away", "home"].forEach(function (side) {
       var p = starterOf(s, side);
       if (p) h += "<div><small>" + esc(nickname(f[side].name)) + "</small><b>" + esc(p.name) + '</b><span class="stat num">' + ip(p.outs) + " IP, " + p.K + " K</span><small>" +
@@ -689,6 +700,29 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     h += '<p class="note">' + (v && v.key === "proj" ? "One full simulated game, picked for sitting closest to the middle of all " + Number(f.n_simulations).toLocaleString() + ". " : "Another full simulated game from the same " + Number(f.n_simulations).toLocaleString() + ". ") +
       (official ? "Official lineups." : "Projected lineups.") + " Saved " + esc(timeET(f.saved_at)) + " ET.</p>";
     return h;
+  }
+  /* Whole-number projected lines: the average over all simulated games, rounded. */
+  function projectedLines(f, box) {
+    if (!box || !box.teams) return "";
+    var h = '<section class="sec"><h2>Projected lines</h2><p class="lede">What the model expects from each hitter and starter tonight, averaged over all ' + Number(box.n_simulations || 10000).toLocaleString() + " simulated games and rounded to whole numbers.</p><div class=\"lineups\">";
+    ["away", "home"].forEach(function (side) {
+      var bat = (box.teams[side].batting || []).slice().sort(function (a, b) { return (a.spot || 0) - (b.spot || 0); }), names = shortNames(bat);
+      var sp = (box.teams[side].pitching || [])[0];
+      h += '<ol class="lineup" aria-label="' + esc(nickname(f[side].name)) + ' projected lines">';
+      if (sp && sp.means) {
+        var d = sp.distributions || {};
+        h += '<li class="sp"><span class="spot">SP</span><span class="who">' + esc(sp.name) + "<small>" + (d.K ? "strikeouts " + quant(d.K, .25) + " to " + quant(d.K, .75) + ", " : "") + (d.outs ? "innings " + ip(quant(d.outs, .25)) + " to " + ip(quant(d.outs, .75)) : "") + '</small></span><span class="line num">' + ip(Math.round(sp.means.outs)) + " IP, " + Math.round(sp.means.K) + " K</span></li>";
+      }
+      bat.forEach(function (b) {
+        var m = b.means || {}, ab = Math.max(1, Math.round(m.AB || 0)), hits = Math.round(m.H || 0);
+        var extras = [];
+        if (b.hr_probability != null) extras.push(pct(b.hr_probability) + " HR");
+        if (b.hit_probability != null) extras.push(pct(b.hit_probability) + " hit");
+        h += "<li><span class=\"spot\">" + (b.spot || "") + '</span><span class="who">' + esc(names[String(b.player_id)] || b.name) + "<small>" + esc(extras.join(", ")) + '</small></span><span class="line num">' + hits + " for " + ab + (Math.round(m.RBI || 0) ? ", " + Math.round(m.RBI) + " RBI" : "") + "</span></li>";
+      });
+      h += "</ol>";
+    });
+    return h + "</div></section>";
   }
   function batLine(b) {
     var parts = [b.H + " for " + b.AB];
