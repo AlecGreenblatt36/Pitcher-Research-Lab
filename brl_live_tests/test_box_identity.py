@@ -15,7 +15,7 @@ def page_functions(*names):
 
 def test_exact_box_version_and_live_status():
     functions=page_functions('withId','latestForecasts','versionsFor','boxFor','gameState')
-    prefix="const assert=require('assert');const D={forecasts:{a:{game_pk:1,saved_at:'2026-10-06T18:00:00Z'},b:{game_pk:1,saved_at:'2026-10-06T19:00:00Z'}},box_scores:{a:{game_pk:1}},actuals:{},status:{1:{state:'In Progress'}}};"
+    prefix="const assert=require('assert');const CLIENT={};const D={forecasts:{a:{game_pk:1,saved_at:'2026-10-06T18:00:00Z'},b:{game_pk:1,saved_at:'2026-10-06T19:00:00Z'}},box_scores:{a:{game_pk:1}},actuals:{},status:{1:{state:'In Progress'}}};"
     suffix=("assert.equal(boxFor(1),undefined);D.box_scores.b={game_pk:1};assert.equal(boxFor(1).game_pk,1);assert.equal(boxFor(2),undefined);"
             "assert.equal(gameState(1),'live');D.status[1].state='Preview';assert.equal(gameState(1),'pregame');D.actuals[1]={};assert.equal(gameState(1),'final');"
             "assert.equal(versionsFor(1).length,2);")

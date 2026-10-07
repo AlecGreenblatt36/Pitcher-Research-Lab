@@ -8,6 +8,8 @@ wording. Nothing here feeds a forecast; it is display and record keeping only.
 """
 from __future__ import annotations
 
+import math
+
 from .pitch_bridge import contact_of
 
 SIDES = ('away', 'home')
@@ -54,7 +56,8 @@ def _pitches(play: dict) -> tuple[list, list | None]:
         ptype = str(((d.get('type') or {}).get('code')) or '') or None
         pd_ = e.get('pitchData') or {}
         co = pd_.get('coordinates') or {}
-        mph = _num(pd_.get('startSpeed'), 0)
+        speed = _num(pd_.get('startSpeed'), 3)
+        mph = math.floor(speed + 0.5) if speed is not None else None       # half up, as the page rounds
         px, pz = _num(co.get('pX')), _num(co.get('pZ'))
         if zone is None and _num(pd_.get('strikeZoneTop')) and _num(pd_.get('strikeZoneBottom')):
             zone = [_num(pd_.get('strikeZoneTop')), _num(pd_.get('strikeZoneBottom'))]
