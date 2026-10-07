@@ -3,9 +3,14 @@ on:
   schedule:
     - cron: '7,22,37,52 * * * *'
   workflow_dispatch:
+    inputs:
+      wait_minutes:
+        description: 'Minutes to wait before running (used by the self-chaining dispatch)'
+        required: false
+        default: '0'
   push:
-    branches: [main]
-    paths: [brl_live/**, brl_engine/**, .github/workflows/brl-live.yml]
+    branches: [main, brl-trigger]
+    paths: [brl_live/**, brl_engine/**, .github/workflows/brl-live.yml, trigger/**]
 permissions:
   contents: write
   pages: write
@@ -18,7 +23,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 50
     steps:
+      - name: Wait (self-chained runs pace themselves; GitHub's cron is unreliable at this cadence)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.wait_minutes != '0' && github.event.inputs.wait_minutes != ''
+        run: sleep $(( ${{ github.event.inputs.wait_minutes }} * 60 ))
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -47,6 +57,15 @@ jobs:
       - name: Remove decrypted working files
         if: always()
         run: rm -rf -- "$RUNNER_TEMP/brl-private"
+      - name: Chain the next run (only with the dispatch token; GITHUB_TOKEN cannot start workflows)
+        if: always() && env.BRL_DISPATCH_TOKEN != ''
+        env:
+          BRL_DISPATCH_TOKEN: ${{ secrets.BRL_DISPATCH_TOKEN }}
+        run: |
+          curl -sS -o /dev/null -w 'dispatch %{http_code}\n' -X POST \
+            -H "Authorization: Bearer $BRL_DISPATCH_TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/brl-live.yml/dispatches" \
+            -d '{"ref":"main","inputs":{"wait_minutes":"12"}}'
     outputs:
       pages_ready: ${{ steps.live.outputs.pages_ready }}
   publish:
