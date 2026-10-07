@@ -75,8 +75,9 @@ def test_store_request_retries_then_returns(monkeypatch):
     store = runner.GitStore.__new__(runner.GitStore)
     store.repo, store.token, store.read_audit = 'o/r', 't', {}
     assert store.request('/contents/x') == {'ok': True}
-    assert len(calls) == 3 and sleeps == [5.0, 3.0]
+    assert len(calls) == 3 and sleeps == [2.0, 3.0]
     assert store.read_audit['requests'] == 3 and store.read_audit['retries'] == 2 and store.read_audit['rate_limit_remaining'] == 812
+    assert store.read_audit['failures'] == {'503': 1, '429': 1}
 
 
 def test_store_request_passes_answers_through(monkeypatch):

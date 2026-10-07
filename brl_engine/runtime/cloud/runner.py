@@ -53,11 +53,11 @@ def api_pause(exc, attempt: int, waited: float):
             else:
                 return None            # a real permission error
         elif exc.code >= 500:
-            pause = 5.0 + 10.0 * attempt
+            pause = 2.0 + 6.0 * attempt       # a server error on one request is usually gone on the next
         else:
             return None
     elif isinstance(exc, (URLError, TimeoutError, ConnectionError, OSError)):
-        pause = 3.0 + 7.0 * attempt
+        pause = 2.0 + 5.0 * attempt
     else:
         return None
     if waited + pause > MAX_API_WAIT:
@@ -111,6 +111,10 @@ class GitStore:
                 pause = api_pause(exc, attempt, waited)
                 if pause is None:
                     raise
+                # The receipt shows what failed (status code or exception) and how long the run waited for it.
+                label = str(exc.code) if isinstance(exc, HTTPError) else type(exc).__name__
+                failures = audit.setdefault('failures', {})
+                failures[label] = failures.get(label, 0) + 1
                 audit['retries'] = audit.get('retries', 0) + 1
                 audit['waited_seconds'] = round(audit.get('waited_seconds', 0.0) + pause, 1)
                 time.sleep(pause); waited += pause
