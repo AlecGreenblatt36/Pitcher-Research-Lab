@@ -29,8 +29,8 @@ def _distribution(counter: Counter, n: int) -> dict:
 
 
 def run_live_update(engine, matchup, start, state: dict, game: dict, full_history, *, n_worlds: int = LIVE_WORLDS,
-                    settings=ADJUST, updated_at: str = '') -> dict:
-    provider, hook, labels = adjusted_provider(engine.provider, full_history, game['date'], settings)
+                    settings=ADJUST, updated_at: str = '', environment=None) -> dict:
+    provider, hook, labels = adjusted_provider(engine.provider, full_history, game['date'], settings, environment)
     sim = LiveSimulator(provider, config=engine.config, manager_policy=engine.manager)
     seeds = np.random.default_rng(_state_key(game['game_pk'], state)).integers(0, np.iinfo(np.int32).max, size=n_worlds, dtype=np.int64)
     home = ties = 0

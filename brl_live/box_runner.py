@@ -44,7 +44,12 @@ class BoxSimulator(RefreshedSimulator):
         """Continue an in-progress game from its observed state; a snapshot, not a forecast version."""
         matchup,start,state,game=live_matchup(feed,self.history,date,self.appearances())
         engine,_=make_history_engine(matchup_parameters(game,matchup,config_for(game['game_type'])),self.path,getattr(self,'physics_table',None))
-        return run_live_update(engine,matchup,start,state,game,self.history,updated_at=updated_at)
+        try:
+            from .environment import conditions_from_feed
+            environment=conditions_from_feed(feed.get('gameData') or {})
+        except Exception:
+            environment=None
+        return run_live_update(engine,matchup,start,state,game,self.history,updated_at=updated_at,environment=environment)
     def run(self,game,matchup):
         parameters={'date':game['date'],'park':game['home']['abbr'],'game':game,
                     'matchup':asdict(matchup),'config':config_for(game['game_type'])}
