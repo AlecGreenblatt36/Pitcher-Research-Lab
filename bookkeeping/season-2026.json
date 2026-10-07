@@ -8,10 +8,47 @@
  "with_contact": 166853,
  "fetched_this_run": 2449,
  "failures": [],
- "cipher_sha256": "043b30771dc76b4d08efdd410e209516c3fc3474a925ec8f7e99754ee851a224",
- "cipher_bytes": 5489916,
- "plaintext_gzip_bytes": 5489880,
- "sealed_at": "2026-10-07T08:12:10.683302+00:00",
+ "cipher_sha256": "20932a1ed68146c493ee6f9b5fed948945ef24aed5fb5ba87ad637831120ea8e",
+ "cipher_bytes": 5490337,
+ "plaintext_gzip_bytes": 5490301,
+ "sealed_at": "2026-10-07T08:29:33.346972+00:00",
  "path": "private/bookkeeping/season-2026.enc",
- "format": "AES-256-GCM; BRLAESG1 header; 12-byte nonce; AAD BRL:bookkeeping-season-2026; gzip JSON inside"
+ "format": "AES-256-GCM; BRLAESG1 header; 12-byte nonce; AAD BRL:bookkeeping-season-2026; gzip JSON inside",
+ "study": {
+  "path": "private/statcast/season-2026.enc",
+  "purpose": "pitch-physics-season-2026",
+  "games": 2448,
+  "plate_appearances": 185223,
+  "pitches": 718851,
+  "with_hit_measurement": 125522,
+  "cipher_sha256": "725c1d2479d8c20fbcd998f7b151b72af954cf8e9026076986faa976beef841a",
+  "cipher_bytes": 21617954,
+  "pitch_fields": [
+   "type",
+   "code",
+   "balls",
+   "strikes",
+   "start_speed",
+   "end_speed",
+   "spin_rate",
+   "pfx_x",
+   "pfx_z",
+   "plate_x",
+   "plate_z",
+   "release_x",
+   "release_z",
+   "extension",
+   "zone"
+  ],
+  "hit_fields": [
+   "launch_speed",
+   "launch_angle",
+   "distance",
+   "coord_x",
+   "coord_y",
+   "trajectory",
+   "hardness",
+   "location"
+  ]
+ }
 }
