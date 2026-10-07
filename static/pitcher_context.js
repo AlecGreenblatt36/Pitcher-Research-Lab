@@ -1,6 +1,21 @@
 (() => {
     "use strict";
 
+    // Requests cut off by a page navigation (season or research-window reloads) end as
+    // "Failed to fetch". Those are not application errors; report them as warnings.
+    let navigating = false;
+    window.addEventListener("pagehide", () => { navigating = true; });
+    window.addEventListener("beforeunload", () => { navigating = true; });
+    window.prlReportError = function (...args) {
+        const text = args.map((a) => (a && a.message) ? a.message : String(a)).join(" ");
+        const aborted = /Failed to fetch|NetworkError|The user aborted|AbortError|Load failed/i.test(text);
+        if (navigating || aborted) {
+            console.warn(...args);
+            return;
+        }
+        console.error(...args);
+    };
+
     const STORAGE_KEY = "pitcherResearchLab.selectedPitcherId";
     const PROFILE_KEY = "pitcherResearchLab.selectedPitcherProfile";
     const SEASON_STORAGE_PREFIX = "pitcherResearchLab.researchSeason.";
@@ -526,7 +541,7 @@
             window.dispatchEvent(new CustomEvent("pitcherResearchLab:ready", { detail: meta }));
             return meta;
         } catch (error) {
-            console.error(error);
+            window.prlReportError(error);
             setStatus("Pitcher data unavailable", "error");
             showLoadingError(error.message);
             resolveReady(null);

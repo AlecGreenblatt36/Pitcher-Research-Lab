@@ -1119,7 +1119,7 @@ async function initializeExecutiveOverview() {
 
     catch (error) {
 
-        console.error(
+        window.prlReportError(
             "Executive Overview error:",
             error
         );

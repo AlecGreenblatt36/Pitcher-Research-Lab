@@ -1400,7 +1400,7 @@
             error
         ) {
 
-            console.error(
+            window.prlReportError(
                 "Research Command Center error:",
                 error
             );

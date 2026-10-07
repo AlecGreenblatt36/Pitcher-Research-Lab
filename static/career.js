@@ -2873,7 +2873,7 @@
             error
         ) {
 
-            console.error(
+            window.prlReportError(
                 "Career Timeline error:",
                 error
             );

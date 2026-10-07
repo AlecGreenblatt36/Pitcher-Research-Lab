@@ -2279,7 +2279,7 @@
 
     catch(err){
 
-      console.error(
+      window.prlReportError(
         "Performance & Outcomes error:",
         err
       );

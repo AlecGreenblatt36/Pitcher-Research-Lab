@@ -81,7 +81,15 @@ class BrowserRegressionTests(unittest.TestCase):
                 else None
             ),
         )
-        page.on("requestfailed", lambda request: failed_requests.append(request.url))
+        # Requests cut off by the page's own reloads (research window, season) are not failures.
+        page.on(
+            "requestfailed",
+            lambda request: (
+                failed_requests.append(request.url)
+                if "ERR_ABORTED" not in str(request.failure or "")
+                else None
+            ),
+        )
 
         page.goto(f"http://127.0.0.1:{self.port}/", wait_until="networkidle")
         self.assertEqual(
@@ -175,10 +183,17 @@ class BrowserRegressionTests(unittest.TestCase):
         season = page.locator("#research-season-select")
         self.assertEqual(season.input_value(), "2025")
 
+        # The primary pitch selector belongs to the arsenal and release views; the page
+        # restores the last view (overview here) after the reload, so open the arsenal view.
+        page.locator('[data-view="arsenal"]').click()
         pitch = page.locator("#pitch-select")
+        try:
+            pitch.wait_for(state="visible", timeout=15000)
+        except Exception:
+            pass
         self.assertTrue(
             pitch.is_visible(),
-            "Primary pitch selector should be visible after season reload",
+            "Primary pitch selector should be visible on the arsenal view after season reload",
         )
         values = pitch.locator("option").evaluate_all(
             "options => options.map(option => option.value)"

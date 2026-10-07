@@ -1054,7 +1054,7 @@ async function loadLocationData() {
     ) {
 
         if (requestVersion !== locationRequestVersion) return;
-        console.error(
+        window.prlReportError(
 
             "Location API error:",
 
@@ -2295,7 +2295,7 @@ async function initializeLocationLab() {
         error
     ) {
 
-        console.error(
+        window.prlReportError(
 
             "Location Lab initialization error:",
 

@@ -470,7 +470,7 @@
             error
         ) {
 
-            console.error(
+            window.prlReportError(
                 "Error loading pitch data:",
                 error
             );
@@ -2914,7 +2914,7 @@
             error
         ) {
 
-            console.error(
+            window.prlReportError(
                 "Dashboard initialization error:",
                 error
             );
