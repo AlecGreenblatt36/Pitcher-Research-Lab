@@ -19,10 +19,12 @@ def synthetic(seed=0, n_games=40, pa_per_side=12):
             batter = 10 + (i % pa_per_side); pitcher = 500 + (i // pa_per_side)
             probs = [0.45, 0.23, 0.09, 0.14, 0.04, 0.03, 0.02] if batter != 10 else [0.25, 0.23, 0.09, 0.14, 0.09, 0.18, 0.02]   # batter 10: loud contact, more extra bases
             outcome = rng.choice(['BIP_OUT', 'K', 'BB_HBP', '1B', '2B_3B', 'HR', 'OTHER_REACH'], p=probs)
+            top = i < pa_per_side
             rows.append({'date_key': date, 'season': 2026, 'game_pk': pk, 'at_bat_number': i + 1, 'batter': batter, 'pitcher': pitcher, 'outcome': outcome,
-                         'stand': 'R', 'p_throws': 'L', 'park': 'NYY', 'platoon': 1, 'is_home_batter': i >= pa_per_side, 'inning': 1 + i // 6, 'outs_when_up': i % 3,
+                         'stand': 'R', 'p_throws': 'L', 'park': 'NYY', 'platoon': 1, 'is_home_batter': int(not top), 'inning': 1 + (i % pa_per_side) // 3, 'outs_when_up': i % 3,
                          'runner_1b': 0, 'runner_2b': 0, 'runner_3b': 0, 'bat_score_diff': 0, 'n_thruorder_pitcher': 1, 'batter_days_since_prev_game': 1,
-                         'pitcher_days_since_prev_game': 5, 'age_bat': 28, 'age_pit': 29})
+                         'pitcher_days_since_prev_game': 5, 'age_bat': 28, 'age_pit': 29, 'inning_topbot': 'Top' if top else 'Bot',
+                         'home_team': 'HOM', 'away_team': 'AWY', 'home_score': 0, 'away_score': 0, 'bat_score': 0, 'fld_score': 0})
             velo = 92.0 + (pitcher - 500) * 3.0 + rng.normal(0, 0.5)
             pitches = [['FF', 'C', 0, 0, round(velo, 1), 85.0, 2200, -5.0, 9.0, 0.1, 2.5, -1.0, 6.0, 6.3, 5],
                        ['SL', 'S' if batter % 2 else 'F', 0, 1, 84.0, 78.0, 2500, 4.0, 1.0, 0.9, 1.5, -1.0, 6.0, 6.3, 14],

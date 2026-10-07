@@ -1,0 +1,250 @@
+"""Frozen season replay inside Actions: simulate every game of a season with a chosen PA model,
+score the simulator, the team model and the production blend, and compare with a reference replay.
+
+Settings come from tools/replay_params.json on the trigger branch:
+  model        'locked-pa-2026-v1' (data package) or a fitted model name with a manifest in brl_engine/models/
+  season       2026 (default)
+  n_sims       worlds per game (default 200)
+  date_from    first date to replay (default the season start)
+  step         keep every step-th game (default 1)
+  reference    path on the ledger branch of an earlier replay's per-game file to pair against (optional)
+  offsets      apply the production context offsets (default true)
+Outputs on the ledger branch: research/replay-<tag>-<run>.jsonl.gz (one record per game: win counts,
+run histograms, starter outs, final score) and research/replay-<tag>-<run>.json (scores, paired
+comparison, timing). Per-game model outputs and final scores are not private data; the plate
+appearances never leave the runner.
+"""
+from __future__ import annotations
+import base64, gzip, hashlib, importlib.util, io, json, os, sys, time, traceback
+from concurrent.futures import ProcessPoolExecutor
+from datetime import datetime, timezone
+from pathlib import Path
+from urllib.error import HTTPError
+from urllib.request import Request, urlopen
+
+import numpy as np
+import pandas as pd
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / 'brl_engine' / 'runtime'))
+
+
+def api(url, token, method='GET', payload=None):
+    headers = {'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'User-Agent': 'BRL-replay/1.0'}
+    body = None
+    if payload is not None:
+        body = json.dumps(payload).encode(); headers['Content-Type'] = 'application/json'
+    with urlopen(Request(url, headers=headers, data=body, method=method), timeout=60) as r:
+        raw = r.read()
+    return json.loads(raw) if raw else {}
+
+
+def read_blob(repo, token, path, branch):
+    try:
+        value = api(f'https://api.github.com/repos/{repo}/contents/{path}?ref={branch}', token)
+    except HTTPError as exc:
+        if exc.code == 404:
+            return None
+        raise
+    if value.get('encoding') == 'base64' and value.get('content'):
+        return base64.b64decode(''.join(value['content'].split()))
+    blob = api(f'https://api.github.com/repos/{repo}/git/blobs/{value["sha"]}', token)
+    return base64.b64decode(''.join(blob['content'].split()))
+
+
+def put_bytes(repo, token, path, raw, branch, message):
+    url = f'https://api.github.com/repos/{repo}/contents/{path}'
+    for attempt in range(6):
+        payload = {'message': message, 'content': base64.b64encode(raw).decode(), 'branch': branch}
+        try:
+            payload['sha'] = api(url + '?ref=' + branch, token)['sha']
+        except HTTPError as exc:
+            if exc.code != 404:
+                raise
+        try:
+            return api(url, token, 'PUT', payload)
+        except HTTPError as exc:
+            if exc.code != 409 or attempt == 5:
+                raise
+            time.sleep(2 + 3 * attempt)
+
+
+def entrypoint_module():
+    spec = importlib.util.spec_from_file_location('brl_entrypoint', ROOT / 'brl_engine' / 'entrypoint.py')
+    module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+    return module
+
+
+_SHARED: dict = {}
+
+
+def _worker(dates: list) -> list:
+    from brl_replay.harness import replay_dates
+    s = _SHARED
+    return replay_dates(s['h'], s['app'], s['games'], dates, model_path=s['model_path'], model_sha256=s['model_sha256'], history_path=s['history_path'],
+                        hazard_path=s['hazard_path'], n_sims=s['n_sims'], physics_table=s['physics_table'], offsets=s['offsets'], log=lambda m: print(m, flush=True))
+
+
+def logit(p):
+    p = np.clip(np.asarray(p, float), 1e-4, 1 - 1e-4); return np.log(p / (1 - p))
+
+
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
+
+def score(frame: pd.DataFrame) -> dict:
+    y = frame['y'].to_numpy(float)
+    out = {}
+    for name in ('p_sim', 'p_team', 'p_blend', 'p_coin'):
+        p = frame[name].to_numpy(float)
+        out[name] = {'brier': float(np.mean((p - y) ** 2)), 'log_loss': float(-np.mean(y * np.log(np.clip(p, 1e-6, 1)) + (1 - y) * np.log(np.clip(1 - p, 1e-6, 1)))),
+                     'better_than_coin_pct': float(100 * (0.25 - np.mean((p - y) ** 2)) / 0.25)}
+    out['n_games'] = int(len(frame))
+    return out
+
+
+def paired(a: pd.DataFrame, b: pd.DataFrame, column: str, replicates: int = 4000, seed: int = 1) -> dict:
+    """Brier(a) - Brier(b) on the common games with a paired bootstrap over dates."""
+    m = a.merge(b[['game_pk', column]], on='game_pk', suffixes=('', '_ref'))
+    da = (m[column] - m['y']) ** 2; db = (m[column + '_ref'] - m['y']) ** 2
+    diff = (da - db).to_numpy(); dates = m['date'].to_numpy()
+    uniq = np.unique(dates); idx = {u: np.where(dates == u)[0] for u in uniq}
+    rng = np.random.default_rng(seed); draws = np.empty(replicates)
+    for i in range(replicates):
+        pick = rng.choice(uniq, len(uniq), replace=True); ii = np.concatenate([idx[u] for u in pick]); draws[i] = diff[ii].mean()
+    return {'n_common_games': int(len(m)), 'brier_difference': float(diff.mean()), 'ci_95_low': float(np.percentile(draws, 2.5)), 'ci_95_high': float(np.percentile(draws, 97.5)),
+            'brier_candidate': float(da.mean()), 'brier_reference': float(db.mean())}
+
+
+def main():
+    repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']; key_hex = os.environ['BRL_PA_PACKAGE_KEY']
+    branch = os.environ.get('BRL_LEDGER_BRANCH', 'brl-live-data'); run_id = os.environ.get('GITHUB_RUN_ID', 'local')
+    params = {}
+    settings = ROOT / 'tools' / 'replay_params.json'
+    if settings.exists():
+        params = json.loads(settings.read_text())
+    model = str(params.get('model') or 'locked-pa-2026-v1'); season = int(params.get('season') or 2026)
+    n_sims = int(params.get('n_sims') or 200); date_from = str(params.get('date_from') or f'{season}-01-01'); step = int(params.get('step') or 1)
+    reference = params.get('reference'); use_offsets = bool(params.get('offsets', True))
+    tag = str(params.get('tag') or model)
+    workers = int(params.get('workers') or max(1, (os.cpu_count() or 2)))
+    work = Path(os.environ.get('RUNNER_TEMP', '/tmp')) / 'brl-replay'
+    receipt = {'schema': 'brl.replay-receipt.v1', 'tag': tag, 'model': model, 'season': season, 'n_sims': n_sims, 'date_from': date_from, 'step': step,
+               'offsets': use_offsets, 'workers': workers, 'run_id': run_id, 'started_at': datetime.now(timezone.utc).isoformat(), 'stages': []}
+    t0 = time.time()
+    def stage(label):
+        receipt['stages'].append({'stage': label, 'at_seconds': round(time.time() - t0, 1)}); print(label, round(time.time() - t0), 's', flush=True)
+    try:
+        stage('restore data package')
+        ep = entrypoint_module()
+        manifest = json.loads((ROOT / 'brl_engine' / 'data_package.json').read_text())
+        data_root = work / 'data'
+        if data_root.exists():
+            import shutil; shutil.rmtree(data_root)
+        data_root.mkdir(parents=True)
+        ep.restore_package(repo, token, key_hex, manifest, data_root)
+        history_path = next(data_root.rglob('plate_appearances.csv.gz'))
+        hazard_path = next(data_root.rglob('starter_hazard.joblib'))
+        if model == 'locked-pa-2026-v1':
+            model_path = next(data_root.rglob('pa_model.joblib'))
+            from research_lab.game_sim.locked_pa_provider import EXPECTED_MODEL_SHA256 as model_sha256
+            physics_table = None
+        else:
+            os.environ['BRL_DATA_ROOT'] = str(data_root)
+            (ROOT / 'brl_engine' / 'model.json').write_text(json.dumps({'model': model, 'manifest': f'brl_engine/models/{model}.json'}))
+            selected = ep.select_model(repo, token, key_hex, data_root)
+            model_path = Path(os.environ['BRL_MODEL_PATH']); model_sha256 = os.environ['BRL_MODEL_SHA256']
+            receipt['model_selected'] = selected
+            stage('load physics tables')
+            from brl_live.bookkeeping_season import physics_path, physics_purpose
+            from cloud.security import unseal, key_bytes
+            tables = []
+            for year in (season - 1, season):
+                raw = read_blob(repo, token, physics_path(year), branch)
+                if raw is None:
+                    raise ValueError(f'physics table for {year} is not sealed')
+                tables.append(pd.read_csv(io.BytesIO(gzip.decompress(unseal(raw, key_bytes(key_hex), physics_purpose(year))))))
+            physics_table = pd.concat(tables, ignore_index=True)
+            physics_table['date_key'] = physics_table['date_key'].astype(str).str[:10]
+            receipt['physics_rows'] = int(len(physics_table))
+        stage('load history and reconstruct games')
+        from brl_replay.games import load_history, reconstruct
+        from brl_replay.harness import appearances
+        h = load_history(history_path)
+        app = appearances(h)
+        games = reconstruct(h)
+        games['date'] = games['date'].astype(str)
+        games = games[(games['season'] == season) & (~games['ambiguous']) & games['valid_lineups'] & (games['date'] >= date_from)].sort_values(['date', 'game_pk'])
+        games = games.iloc[::step].reset_index(drop=True)
+        receipt['games'] = int(len(games))
+        offsets = None
+        if use_offsets:
+            from brl_live.provider_adjust import load_offsets
+            offsets = load_offsets()
+        _SHARED.update(h=h, app=app, games=games, model_path=model_path, model_sha256=model_sha256, history_path=history_path, hazard_path=hazard_path,
+                       n_sims=n_sims, physics_table=physics_table, offsets=offsets)
+        stage(f'replay {len(games)} games with {workers} workers')
+        dates = sorted(games['date'].unique())
+        shards = [dates[w::workers] for w in range(workers)]
+        records = []
+        if workers > 1:
+            with ProcessPoolExecutor(max_workers=workers) as pool:
+                for part in pool.map(_worker, shards):
+                    records.extend(part)
+        else:
+            records = _worker(dates)
+        stage('score')
+        sim = pd.DataFrame(records)
+        sim['p_sim'] = (sim['home_wins'] + 0.5 * sim['ties'] + 0.5) / (sim['n'] + 1.0)
+        sim['y'] = (sim['home_runs'] > sim['away_runs']).astype(float)
+        from brl_live.team_model import TeamModel
+        corpus_games = reconstruct(h)       # the team model uses every unambiguous prior game of the corpus
+        corpus_games['date'] = corpus_games['date'].astype(str)
+        corpus_games = corpus_games[~corpus_games['ambiguous']]
+        tm = TeamModel([{'date': r.date, 'home_id': r.home, 'away_id': r.away, 'home_runs': r.home_runs, 'away_runs': r.away_runs} for r in corpus_games.itertuples()])
+        p_team = []
+        for r in sim.itertuples():
+            try:
+                p_team.append(tm.probability(r.date, r.home, r.away)['p_home'])
+            except Exception:
+                p_team.append(0.5)
+        sim['p_team'] = p_team
+        sim['p_blend'] = sigmoid(0.5 * (logit(sim['p_sim']) + logit(sim['p_team'])))
+        sim['p_coin'] = 0.5
+        receipt['scores'] = score(sim)
+        sim['month'] = sim['date'].str[5:7]
+        receipt['scores_by_month'] = {m: score(g) for m, g in sim.groupby('month')}
+        if reference:
+            raw = read_blob(repo, token, reference, branch)
+            if raw is None:
+                receipt['reference_missing'] = reference
+            else:
+                ref = pd.DataFrame([json.loads(l) for l in gzip.decompress(raw).decode().splitlines() if l.strip()])
+                ref['p_sim'] = (ref['home_wins'] + 0.5 * ref['ties'] + 0.5) / (ref['n'] + 1.0)
+                ref['y'] = (ref['home_runs'] > ref['away_runs']).astype(float)
+                ref = ref.merge(sim[['game_pk', 'p_team']], on='game_pk')
+                ref['p_blend'] = sigmoid(0.5 * (logit(ref['p_sim']) + logit(ref['p_team'])))
+                receipt['paired_vs_reference'] = {'reference': reference, 'p_sim': paired(sim, ref, 'p_sim'), 'p_blend': paired(sim, ref, 'p_blend')}
+        payload = gzip.compress('\n'.join(json.dumps(r) for r in records).encode() + b'\n', mtime=0)
+        out_path = f'research/replay-{tag}-{run_id}.jsonl.gz'
+        put_bytes(repo, token, out_path, payload, branch, f'BRL: replay {tag}')
+        receipt['per_game_file'] = out_path; receipt['per_game_sha256'] = hashlib.sha256(payload).hexdigest()
+        receipt['status'] = 'completed'
+    except Exception as exc:
+        receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:300]
+        frames = traceback.extract_tb(exc.__traceback__)
+        receipt['where'] = [{'file': Path(f.filename).name, 'function': f.name, 'line': f.lineno} for f in frames[-6:]]
+    receipt['finished_at'] = datetime.now(timezone.utc).isoformat(); receipt['seconds'] = round(time.time() - t0, 1)
+    text = json.dumps(receipt, indent=1, default=float)
+    for secret in (key_hex, token):
+        text = text.replace(secret, '[redacted]')
+    put_bytes(repo, token, f'research/replay-{tag}-{run_id}.json', text.encode(), branch, 'BRL: replay receipt ' + tag)
+    print(json.dumps({k: receipt.get(k) for k in ('status', 'error', 'seconds', 'games')}))
+    if receipt['status'] != 'completed':
+        raise SystemExit(1)
+
+
+if __name__ == '__main__':
+    main()
