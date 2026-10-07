@@ -107,4 +107,10 @@ def capture(fetch_json, date_ymd: str, ledger: dict, now_iso: str) -> dict:
                       'home_ml': line['home_ml'], 'away_ml': line['away_ml'], 'p_home': line['p_home'], 'over_under': line['over_under'],
                       'source': 'ESPN public scoreboard'}
         captured += 1
-    return {'date': date_ymd, 'schedule_games': len(games), 'lines_seen': len(lines), 'matched': len(matched), 'captured_pregame': captured}
+    # Structure-only diagnostics (key names, no values) so a changed feed shape can be read from the ledger.
+    events = board.get('events') or []
+    comp0 = ((events[0].get('competitions') or [{}])[0]) if events else {}
+    odds0 = (comp0.get('odds') or [{}])[0] if comp0 else {}
+    return {'date': date_ymd, 'schedule_games': len(games), 'lines_seen': len(lines), 'matched': len(matched), 'captured_pregame': captured,
+            'events': len(events), 'competition_keys': sorted(comp0.keys())[:40], 'odds_keys': sorted(odds0.keys())[:40],
+            'odds_subkeys': {k: sorted(v.keys())[:20] for k, v in odds0.items() if isinstance(v, dict)}}
