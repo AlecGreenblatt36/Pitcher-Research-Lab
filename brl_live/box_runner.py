@@ -182,5 +182,6 @@ def main(public_dir):
         'pitch_bookkeeping_prior_PA':len(annotations),'engine_rules_changed':False,
         'model_parameters_changed':False,'simulation_adjustments':'context offsets (brl_live/context_offsets.json)',
         'live_updates':len(ledger['live']),'live_update_errors':sum(1 for v in ledger['live'].values() if v.get('error')),
-        'market_receipt':ledger.get('market_receipt'),
+        'market_receipt':ledger.get('market_receipt'),'team_results_rows':len(getattr(sim,'rows',[]) or []),
+        'team_results_meta':getattr(sim,'results_meta',None),
         'storage_read_audit':store.read_audit}

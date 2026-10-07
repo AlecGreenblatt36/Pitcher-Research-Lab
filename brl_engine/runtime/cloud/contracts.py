@@ -171,7 +171,7 @@ def summarize(game, statuses, results, origin, finished, baseline, notes, snapsh
             'n_simulations': n, 'seed': SEED, 'home_win_probability': round(p, 4), 'probability_mcse': math.sqrt(p * (1 - p) / n),
             'projected_away_runs': round(float(np.mean([r.away_score for r in results])), 4),
             'projected_home_runs': round(float(np.mean([r.home_score for r in results])), 4),
-            'team_baseline_probability': None if baseline is None else float(baseline['probability']), 'market_probability': None,
+            'team_baseline_probability': None if baseline is None or baseline.get('probability') is None else float(baseline['probability']), 'market_probability': None,
             'model': getattr(results[0], 'provider_name', 'locked-pa-2026-v1'), 'history_through': notes.get('history_through_used'),
             'postseason_regular_bullpen_logic': game['game_type'] != 'R', 'automatic_runner': bool(cfg['automatic_runner_in_extras']),
             'github_run_id': str(run_id), 'snapshot_hash': snapshot_hash}

@@ -63,7 +63,7 @@ class RefreshedSimulator:
             raise Blocked('Assembled history hash mismatch')
         self.history = pd.read_csv(self.path, low_memory=False)
         self.history['date_key'] = self.history['date_key'].astype(str).str[:10]
-        rows, _ = load_results()
+        rows, self.results_meta = load_results()
         by_game = {row['game_pk']: row for row in rows}
         for row in history_info['new_team_results']:
             # Preserve the inherited regular-season-only baseline recipe.
