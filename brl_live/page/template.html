@@ -813,7 +813,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       return '<button class="tab" role="tab" data-tab="' + t[0] + '" aria-selected="' + (t[0] === tab) + '">' + t[1] + "</button>";
     }).join("") + "</div></nav>";
     html += '<div class="wrap"><div class="panel">';
-    var real = realGame(st, lv, actualBox);
+    /* The real plays show even when this cycle's continuation failed (the snapshot then has no win chance). */
+    var real = realGame(st, lv || (D.live && D.live[pk]), actualBox);
     if (!s) html += '<p class="empty">The full simulated game is still being built for this forecast.</p>';
     else if (tab === "box") html += boxTab(f, s, real || actualBox, pk, real && real._live ? "Live" : "Actual");
     else if (tab === "plays") {
@@ -865,7 +866,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   /* The official plays and lines in the shape of a simulated game, so the same tabs render both. */
   function realGame(st, lv, actualBox) {
     if (st === "final" && actualBox && actualBox.plays && actualBox.plays.length) return { batting: actualBox.batting, pitching: actualBox.pitching, plays: actualBox.plays, score: actualBox.score, innings: actualBox.innings, _real: true, _final: true };
-    if (st === "live" && lv && lv.plays && lv.plays.length) { var b = lv.box || { batting: { away: [], home: [] }, pitching: { away: [], home: [] } }; return { batting: b.batting, pitching: b.pitching, plays: lv.plays, score: { away: lv.state.away_score, home: lv.state.home_score }, innings: b.innings || {}, _real: true, _live: true }; }
+    if (st === "live" && lv && lv.plays && lv.plays.length) {
+      var b = lv.box || { batting: { away: [], home: [] }, pitching: { away: [], home: [] } };
+      var sc = lv.state ? { away: lv.state.away_score, home: lv.state.home_score } : (b.score || { away: 0, home: 0 });
+      return { batting: b.batting, pitching: b.pitching, plays: lv.plays, score: sc, innings: b.innings || {}, _real: true, _live: true };
+    }
     return null;
   }
   function baseMask(bases) { var m = 0; (bases || []).forEach(function (r, k) { if (r) m += (1 << k); }); return m; }
@@ -883,7 +888,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       pts.push({ p: winAt(t, p.inning, p.half, p.outs_before || 0, p.bases_before, lead), play: p });
     });
     if (real._final) pts.push({ p: real.score.home > real.score.away ? 1 : 0, label: "Final" });
-    else if (lv) {
+    else if (lv && lv.state && lv.home_win_probability != null) {
       /* The last completed play's swing is read from the table at the current state, so the step from the
          table to the exact continuation (the "Now" point) is never credited to a play. */
       var st = lv.state;

@@ -115,3 +115,33 @@ def test_live_update_keeps_the_real_game_even_when_the_continuation_fails(tmp_pa
     snap = store.ledger['live']['7']
     assert snap['error'].startswith('RuntimeError') and len(snap['plays']) == 5 and snap['box']['score'] == {'away': 2, 'home': 0}
     assert snap['plays'][2]['box_outcome'] == 'home_run' and 'plays_error' not in snap
+
+
+def test_runners_who_move_together_leave_their_bases_before_anyone_is_placed():
+    from brl_live.real_game import _advance
+    bases = {'1B': '5', '2B': None, '3B': None}
+    # the feed lists the batter first: single, runner from first to third, same event
+    _advance(bases, [{'movement': {'start': None, 'end': '1B'}, 'details': {'runner': {'id': 9}, 'playIndex': 3}},
+                     {'movement': {'start': '1B', 'end': '3B'}, 'details': {'runner': {'id': 5}, 'playIndex': 3}}])
+    assert bases == {'1B': '9', '2B': None, '3B': '5'}
+    # a steal earlier in the plate appearance, then a double that scores him and puts the batter on second
+    bases = {'1B': '5', '2B': None, '3B': None}
+    _advance(bases, [{'movement': {'start': None, 'end': '2B'}, 'details': {'runner': {'id': 9}, 'playIndex': 4}},
+                     {'movement': {'start': '2B', 'end': 'score'}, 'details': {'runner': {'id': 5}, 'playIndex': 4}},
+                     {'movement': {'start': '1B', 'end': '2B'}, 'details': {'runner': {'id': 5}, 'playIndex': 1}}])
+    assert bases == {'1B': None, '2B': '9', '3B': None}
+    # a force at second: the runner from first is out, the batter reaches first
+    bases = {'1B': '5', '2B': None, '3B': None}
+    _advance(bases, [{'movement': {'start': None, 'end': '1B'}, 'details': {'runner': {'id': 9}, 'playIndex': 2}},
+                     {'movement': {'start': '1B', 'end': None, 'isOut': True}, 'details': {'runner': {'id': 5}, 'playIndex': 2}}])
+    assert bases == {'1B': '9', '2B': None, '3B': None}
+
+
+def test_live_box_shows_lineup_spots_not_up_yet():
+    f = feed()
+    f['liveData']['boxscore']['teams']['away']['batters'].append(3)
+    f['liveData']['boxscore']['teams']['away']['players']['ID3'] = {'person': {'fullName': 'Batter 3'}, 'battingOrder': '300', 'stats': {'batting': {}}}
+    f['liveData']['boxscore']['teams']['away']['batters'].append(44)
+    f['liveData']['boxscore']['teams']['away']['players']['ID44'] = {'person': {'fullName': 'Bench'}, 'stats': {'batting': {}}}
+    rows = box_from_feed(f)['batting']['away']
+    assert [r['player_id'] for r in rows] == ['1', '2', '3'] and rows[2]['AB'] == 0 and rows[2]['spot'] == 3

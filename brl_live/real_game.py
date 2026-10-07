@@ -65,6 +65,29 @@ def _pitches(play: dict) -> tuple[list, list | None]:
     return out, zone
 
 
+def _advance(bases: dict, runners: list) -> None:
+    """Apply one play's runner movements to the bases. Movements that share an event (playIndex) happen
+    together, so every runner leaves his starting base before anyone is placed: the feed lists the batter
+    first on a single that moves the runner from first to third, and a one-by-one pass would wipe the
+    batter off first base."""
+    groups: dict = {}
+    for order, r in enumerate(runners):
+        index = (r.get('details') or {}).get('playIndex')
+        groups.setdefault(index if isinstance(index, int) else 10_000 + order, []).append(r)
+    for index in sorted(groups):
+        moves = []
+        for r in groups[index]:
+            mv = r.get('movement') or {}
+            rid = ((r.get('details') or {}).get('runner') or {}).get('id')
+            moves.append((mv.get('start'), mv.get('end'), str(rid) if rid is not None else None))
+        for start, _, _ in moves:
+            if start in bases:
+                bases[start] = None
+        for _, end, rid in moves:
+            if end in bases and rid is not None:
+                bases[end] = rid
+
+
 def plays_from_feed(feed: dict) -> list[dict]:
     """Every completed play as a page play record: inning, half, batter, pitcher, outs before and after,
     runs, score after, scorers, rbi, the real pitches (type, mph, result) and where the ball went."""
@@ -86,16 +109,7 @@ def plays_from_feed(feed: dict) -> list[dict]:
             key, outs = (inning, half), 0
             bases = {'1B': None, '2B': None, '3B': None}
         bases_before = [bases['1B'], bases['2B'], bases['3B']]
-        for r in play.get('runners') or []:
-            # Runner movements in order (the batter starts from no base); an out or a run clears the runner.
-            mv = r.get('movement') or {}
-            rid = ((r.get('details') or {}).get('runner') or {}).get('id')
-            rid = str(rid) if rid is not None else None
-            start, end = mv.get('start'), mv.get('end')
-            if start in bases:
-                bases[start] = None
-            if end in bases and rid is not None:
-                bases[end] = rid
+        _advance(bases, play.get('runners') or [])
         event = str(result.get('eventType') or '')
         outcome = BOX_OUTCOME.get(event) or ('bip_out' if event in BATTER_OUTS else 'runner')
         after = {'away': _int(result.get('awayScore'), score['away']), 'home': _int(result.get('homeScore'), score['home'])}
@@ -152,8 +166,8 @@ def box_from_feed(feed: dict) -> dict:
         for pid in team.get('batters') or []:
             p = players.get('ID' + str(pid)) or {}
             stats = (p.get('stats') or {}).get('batting') or {}
-            if not stats:
-                continue
+            if not stats and not p.get('battingOrder'):
+                continue          # listed but never in the lineup; a lineup spot not yet up shows zeros
             bat.append({'player_id': str(pid), 'name': str((p.get('person') or {}).get('fullName') or ''), 'spot': _int(p.get('battingOrder'), 0) // 100,
                         **{k: _int(stats.get(v), 0) for k, v in BAT_FIELDS.items()}})
         for pid in team.get('pitchers') or []:
