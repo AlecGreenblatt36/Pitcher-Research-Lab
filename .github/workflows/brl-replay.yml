@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   plan:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       shards: ${{ steps.plan.outputs.shards }}
     steps:
@@ -20,7 +20,7 @@ jobs:
         run: python -c "import json; k=int(json.load(open('tools/replay_params.json')).get('shards') or 1); print('shards=' + json.dumps(list(range(k))))" >> "$GITHUB_OUTPUT"
   replay:
     needs: plan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 300
     strategy:
       fail-fast: false
