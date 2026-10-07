@@ -80,6 +80,60 @@ def render_html(public: dict) -> str:
     return template.replace('/*FONTS*/', font_css(), 1).replace('/*DATA*/', 'window.BRL=' + data + ';', 1)
 
 
+ARCHIVE_PLAY_KEYS = ('inning', 'half', 'batter_id', 'batter_name', 'pitcher_id', 'pitcher_name', 'box_outcome', 'description',
+                     'outs_before', 'outs_after', 'runs_scored', 'away_score', 'home_score', 'scoring_players', 'rbi', 'estimated_pitches')
+
+
+def lean_box(box: dict) -> dict:
+    """A box for the day archive: projected sample only, player means and chances, no distributions or pitch lists."""
+    out = {k: box[k] for k in ('schema', 'game_pk', 'date', 'saved_at', 'forecast_origin', 'team_ids', 'starters', 'lineup_status',
+                               'history_through', 'forecast_id', 'n_simulations', 'sample_roles', 'sample_indices', 'adjustments',
+                               'team_model', 'team_run_distributions', 'total_run_distribution', 'line_score') if k in box}
+    out['teams'] = {}
+    for side in ('away', 'home'):
+        out['teams'][side] = {}
+        for kind in ('batting', 'pitching'):
+            rows = []
+            for r in (box.get('teams', {}).get(side, {}).get(kind) or []):
+                rows.append({k: v for k, v in r.items() if k != 'distributions'})
+            out['teams'][side][kind] = rows
+    samples = box.get('samples') or []
+    proj = samples[0] if samples else None
+    if proj is not None:
+        lean = {k: proj[k] for k in ('seed', 'score', 'innings', 'batting', 'pitching', 'world_index', 'typical') if k in proj}
+        lean['plays'] = [{k: pl.get(k) for k in ARCHIVE_PLAY_KEYS} for pl in proj.get('plays') or []]
+        out['samples'] = [lean]
+        out['sample_roles'] = {'projected': out.get('sample_roles', {}).get('projected')}
+        out['sample_indices'] = out.get('sample_indices', [None])[:1]
+    out['archived'] = True
+    return out
+
+
+def day_archives(ledger: dict) -> dict:
+    """date -> compact public payload for that day (forecasts, actuals, market, lean boxes)."""
+    days = {}
+    for ident, box in (ledger.get('box_scores') or {}).items():
+        days.setdefault(str(box.get('date')), {'date': str(box.get('date')), 'forecasts': {}, 'publications': {}, 'actuals': {}, 'status': {},
+                                              'box_scores': {}, 'box_publications': {}, 'actual_boxes': {}, 'live': {}, 'market': {}})
+    forecasts = ledger.get('forecasts') or {}
+    for d, day in days.items():
+        pks = set()
+        for ident, f in forecasts.items():
+            if str(f.get('date')) == d:
+                day['forecasts'][ident] = f; pks.add(str(f['game_pk']))
+                if ident in (ledger.get('publications') or {}):
+                    day['publications'][ident] = ledger['publications'][ident]
+                if ident in (ledger.get('box_scores') or {}):
+                    day['box_scores'][ident] = lean_box(ledger['box_scores'][ident])
+                    if ident in (ledger.get('box_publications') or {}):
+                        day['box_publications'][ident] = ledger['box_publications'][ident]
+        for pk in pks:
+            for key in ('actuals', 'status', 'actual_boxes', 'market'):
+                if pk in (ledger.get(key) or {}):
+                    day[key][pk] = ledger[key][pk]
+    return days
+
+
 def render_page(ledger, scores, destination, setup_message=None, *, replay=False):
     if replay:
         if ledger.get('publications') or ledger.get('box_publications') or scores.get('n_games'):
@@ -93,4 +147,11 @@ def render_page(ledger, scores, destination, setup_message=None, *, replay=False
     (d / 'index.html').write_text(render_html(public), encoding='utf-8')
     (d / 'predictions.json').write_bytes(canonical(public))
     (d / '.nojekyll').write_text('')
+    days = d / 'days'
+    days.mkdir(exist_ok=True)
+    archives = day_archives(ledger)
+    for date, payload in archives.items():
+        (days / (date + '.json')).write_bytes(canonical(payload))
+    public_index = {'schema': 'brl.days.v1', 'dates': sorted(archives)}
+    (days / 'index.json').write_bytes(canonical(public_index))
     return d / 'index.html'

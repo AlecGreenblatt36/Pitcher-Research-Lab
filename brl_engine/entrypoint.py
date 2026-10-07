@@ -5,7 +5,7 @@ history, locked model, starter hazard, names, team results). Its private code is
 imported. Everything else runs from this repository.
 """
 from __future__ import annotations
-import argparse, base64, json, os, shutil, subprocess, sys, traceback
+import argparse, base64, json, os, re, shutil, subprocess, sys, traceback
 from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -123,6 +123,16 @@ def main():
             Path(args.site).mkdir(parents=True, exist_ok=True)
             for name, raw in prior.items():
                 (Path(args.site) / name).write_bytes(raw)
+            try:
+                listing = api(f'https://api.github.com/repos/{repo}/contents/public/days?ref={branch}', token)
+                (Path(args.site) / 'days').mkdir(exist_ok=True)
+                for item in listing if isinstance(listing, list) else []:
+                    if item.get('type') == 'file' and item['name'].endswith('.json'):
+                        value = api(item['url'], token)
+                        if value.get('encoding') == 'base64':
+                            (Path(args.site) / 'days' / item['name']).write_bytes(base64.b64decode(value['content'], validate=False))
+            except Exception:
+                pass
             page = Path(args.site) / 'index.html'
             page.write_text(page.read_text().replace('<body>', '<body data-refresh-blocked="true">', 1))
             preserved = True
@@ -131,8 +141,14 @@ def main():
         receipt['preserved_previous_forecasts'] = preserved
         print('::warning::BRL v2 worker blocked; see receipt.')
     public = Path(args.site)
-    if {p.name for p in public.iterdir() if p.is_file()} != {'index.html', 'predictions.json', '.nojekyll'} or any(p.is_dir() for p in public.iterdir()):
+    files = {p.name for p in public.iterdir() if p.is_file()}
+    dirs = {p.name for p in public.iterdir() if p.is_dir()}
+    if files != {'index.html', 'predictions.json', '.nojekyll'} or not dirs <= {'days'}:
         raise RuntimeError('Public output file allowlist failed')
+    if 'days' in dirs:
+        for p in (public / 'days').iterdir():
+            if not p.is_file() or not re.fullmatch(r'(\d{4}-\d{2}-\d{2}|index)\.json', p.name):
+                raise RuntimeError('Public day archive allowlist failed')
     Path('brl_v2_run_receipt.json').write_text(json.dumps(receipt, indent=2))
     # The receipt (no secrets, no data) also goes to the ledger branch so it can be read through git.
     try:
