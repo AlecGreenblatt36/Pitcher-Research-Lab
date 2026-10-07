@@ -19,15 +19,28 @@ def key_bytes(value: str) -> bytes:
     return bytes.fromhex(value)
 
 
+def _aads(purpose: str):
+    # The inherited runtime binds the release asset with AAD b'BRL:runtime'; sealed ledger
+    # blobs are expected to follow the same 'BRL:' + purpose convention. The bare purpose is
+    # accepted on read so either convention of earlier blobs stays readable.
+    return [('BRL:' + purpose).encode(), purpose.encode()]
+
+
 def seal(raw: bytes, key: bytes, purpose: str) -> bytes:
     nonce = os.urandom(12)
-    return HEADER + nonce + AESGCM(key).encrypt(nonce, raw, purpose.encode())
+    return HEADER + nonce + AESGCM(key).encrypt(nonce, raw, _aads(purpose)[0])
 
 
 def unseal(raw: bytes, key: bytes, purpose: str) -> bytes:
     if raw[:8] != HEADER:
         raise ValueError('Sealed payload format mismatch')
-    return AESGCM(key).decrypt(raw[8:20], raw[20:], purpose.encode())
+    last = None
+    for aad in _aads(purpose):
+        try:
+            return AESGCM(key).decrypt(raw[8:20], raw[20:], aad)
+        except Exception as exc:   # InvalidTag
+            last = exc
+    raise last
 
 
 def extract_verified(raw: bytes, expected_hash: str, destination):
