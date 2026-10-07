@@ -1,0 +1,70 @@
+{
+ "schema": "brl.data-package.v1",
+ "version": "brl-data-202610070629",
+ "branch": "brl-live-data",
+ "path": "private/data-package.enc",
+ "purpose": "data-package",
+ "format": "AES-256-GCM; BRLAESG1 header; 12-byte nonce; AAD BRL:data-package",
+ "cipher_sha256": "bad7a7cf7476e442fc17b363d81261d2da09e15b944e849086e803a840c881a2",
+ "plaintext_sha256": "bd405692201176086889507211268302c2179d79e506e4d824c1d967e084f61c",
+ "cipher_bytes": 17169838,
+ "plaintext_bytes": 17169802,
+ "files": [
+  {
+   "path": "RUNTIME_MANIFEST.json",
+   "size": 6248,
+   "sha256": "ff70bbc57c0d055ebc328634c35da9a87c6a2c8c8e1adc6204b3ff2c4ff8d078"
+  },
+  {
+   "path": "data/official_team_results/receipt.json",
+   "size": 4352,
+   "sha256": "8534502e509c4af6b3f139ea94cbe109db2f8d762563ee223c42eaa651631fb2"
+  },
+  {
+   "path": "data/official_team_results/team_results_2023.json.gz",
+   "size": 33358,
+   "sha256": "68852b1327423207ad8dbb3921fe66853019ed51c6b70eb162107551f83d332c"
+  },
+  {
+   "path": "data/official_team_results/team_results_2024.json.gz",
+   "size": 34034,
+   "sha256": "4ef8677b6867c865ea119af8df83a0eb82d7a53971c798a793a85533df1f34a6"
+  },
+  {
+   "path": "data/official_team_results/team_results_2025.json.gz",
+   "size": 32983,
+   "sha256": "b43d6710c35bd27c0a0d7af14c7ca01ae8b8735e6f3fce4f05484d43c06af570"
+  },
+  {
+   "path": "data/official_team_results/team_results_2026.json.gz",
+   "size": 33484,
+   "sha256": "444353c87600d01b0727b84a1732f5b0689f762116e9812d95d0ed80715c1e36"
+  },
+  {
+   "path": "model_runs/starter_hazard_v1/starter_hazard.joblib",
+   "size": 2727,
+   "sha256": "21514a863d9ed6c34077307929a6ae7e27d8f47b365dc2444be11bb549178723"
+  },
+  {
+   "path": "pa_model_reference/chadwick_mlbam_names.csv.gz",
+   "size": 1921786,
+   "sha256": "5475c10809c2075f06aa594d6d2629b43e0418b4f8bd4991dd5bca1a5d2b4304"
+  },
+  {
+   "path": "pa_model_reference/model_runs/pa_locked_2026/artifacts/pa_model.joblib",
+   "size": 14957,
+   "sha256": "3c87e4deedfb5253ac81252ad7fa2f117b16457f2c383c465670e2c3ee2fa095"
+  },
+  {
+   "path": "pa_model_reference/model_runs/pa_locked_2026/plate_appearances.csv.gz",
+   "size": 15098453,
+   "sha256": "e503e223eb4d6a2222ed35abe0439a0e6eea7fe85bf9061bcac96d0065a8a197"
+  },
+  {
+   "path": "requirements-cloud.txt",
+   "size": 113,
+   "sha256": "b1a48fca90bfd25cd82a8be1a05f5db26df50dcacf10aea9e938572af2ac3b48"
+  }
+ ],
+ "sealed_at": "2026-10-07T06:29:12.073438+00:00"
+}
