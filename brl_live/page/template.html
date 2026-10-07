@@ -119,6 +119,7 @@ button { font: inherit; color: inherit; }
 
 /* Versions (other ways it could go) */
 .versions { display: flex; gap: 8px; overflow-x: auto; padding: 12px 0 2px; }
+.versions-cap { margin: 12px 0 -8px; font-size: 14px; color: var(--muted); }
 .ver { flex: 0 0 auto; border: 1px solid var(--rule); background: var(--surface); border-radius: 8px; padding: 6px 12px; min-height: 48px; text-align: left; cursor: pointer; }
 .ver b { display: block; font-size: 14px; }
 .ver span { font-family: var(--display); font-size: 17px; font-weight: 600; color: var(--muted); }
@@ -798,7 +799,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
 
     if (box && box.archived) html += '<div class="wrap"><p class="note">Archived day: the projected game is kept; the other simulated versions and player ranges are not.</p></div>';
     if (variants.length > 1) {
-      html += '<div class="wrap"><div class="versions" role="group" aria-label="Simulated versions of this game">';
+      html += '<div class="wrap">' + (st === "live" || st === "final" ? '<p class="versions-cap">Simulated versions of the game, for the projected side of the tabs</p>' : "") + '<div class="versions" role="group" aria-label="Simulated versions of this game">';
       variants.forEach(function (x) {
         var sx = box.samples[x.i];
         html += '<button class="ver" data-variant="' + x.key + '" aria-pressed="' + (x.key === v.key) + '"><b>' + esc(x.label) + "</b><span>" +

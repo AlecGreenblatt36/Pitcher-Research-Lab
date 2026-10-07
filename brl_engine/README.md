@@ -38,3 +38,15 @@ the locked features plus pitch-physics features (`runtime/research_lab/pa_model/
 Workflow logs cannot be read from the sandbox that develops this project, so every lane writes a
 receipt (and failures write where they failed) to the ledger branch; `tools/brl_record_diagnostic.py`
 does the same for test output.
+
+## The real game on the page
+
+`brl_live/real_game.py` reads the official feed into the same play and box records a simulated game uses
+(every completed plate appearance with its pitches, their plate crossings and the batter's strike zone,
+where the ball went and where it landed, runners before and after), for finals (`actual_boxes[pk].plays`)
+and in-game snapshots (`live[pk].plays`, `live[pk].box`). Display only; nothing feeds a forecast.
+
+`brl_live/win_table.py` builds, from the same ten thousand simulated games as each box forecast, the
+home win share of every state a plate appearance can start in (inning, half, outs, runners, home lead),
+shrunk toward pooled states; `box.win_table` (22 KB). The page charts the model's win chance through the
+real game with it; in-game header numbers remain exact continuations.
