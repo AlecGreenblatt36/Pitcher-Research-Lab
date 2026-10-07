@@ -8,7 +8,7 @@ is already queued, waiting or in progress (other than this one), nothing is disp
 extra push never doubles the chain.
 """
 from __future__ import annotations
-import json, os, sys
+import json, os, sys, time
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
@@ -25,6 +25,49 @@ def api(url, token, method='GET', payload=None):
     return json.loads(raw) if raw else {}
 
 
+MAX_WAIT = 30 * 60   # the chain outlasts a rate-limit window or a short outage, never a broken token
+
+
+def pause_for(exc, attempt, waited):
+    """Seconds before retrying, or None when the refusal is final (a permission or validation answer)."""
+    if isinstance(exc, HTTPError):
+        headers = exc.headers or {}
+        if exc.code in (403, 429):
+            after = str(headers.get('Retry-After') or '').strip(); reset = str(headers.get('X-RateLimit-Reset') or '').strip()
+            if after.isdigit():
+                pause = float(after) + 2
+            elif headers.get('X-RateLimit-Remaining') == '0' and reset.isdigit():
+                pause = max(5.0, float(reset) - time.time() + 3)
+            elif exc.code == 429:
+                pause = 60.0 * (attempt + 1)
+            else:
+                return None
+        elif exc.code >= 500:
+            pause = 10.0 + 20.0 * attempt
+        else:
+            return None
+    elif isinstance(exc, OSError):
+        pause = 5.0 + 10.0 * attempt
+    else:
+        return None
+    return None if waited + pause > MAX_WAIT else pause
+
+
+def call(url, token, method='GET', payload=None, label=''):
+    waited = 0.0
+    for attempt in range(12):
+        try:
+            return api(url, token, method, payload)
+        except (HTTPError, OSError) as exc:
+            code = getattr(exc, 'code', None)
+            pause = pause_for(exc, attempt, waited)
+            print(label, 'failed:', type(exc).__name__, code or str(exc)[:80], '' if pause is None else f'(retry in {pause:.0f}s)')
+            if pause is None:
+                raise
+            time.sleep(pause); waited += pause
+    raise RuntimeError(label + ' unavailable')
+
+
 def main():
     repo = os.environ['GITHUB_REPOSITORY']
     token = os.environ.get('BRL_DISPATCH_TOKEN') or os.environ['GH_TOKEN']
@@ -34,25 +77,20 @@ def main():
     others = []
     for status in ('queued', 'waiting', 'in_progress', 'requested', 'pending'):
         try:
-            runs = api(f'{base}?status={status}&per_page=20', token).get('workflow_runs') or []
-        except HTTPError as exc:
-            print('could not list', status, exc.code); runs = []
+            runs = call(f'{base}?status={status}&per_page=20', token, label='list ' + status).get('workflow_runs') or []
+        except Exception as exc:
+            print('could not list', status, type(exc).__name__); runs = []
         others += [r['id'] for r in runs if str(r['id']) != str(me)]
     if others:
         print('another run is already pending or active; not chaining:', sorted(set(others))); return
-    import time
-    for attempt in range(4):
-        try:
-            api(f'https://api.github.com/repos/{repo}/actions/workflows/{WORKFLOW}/dispatches', token, 'POST', {'ref': 'main', 'inputs': {'wait_minutes': str(wait)}})
-            print('chained the next run with a', wait, 'minute wait'); return
-        except HTTPError as exc:
-            body = exc.read()[:200]
-            print('dispatch refused:', exc.code, body)
-            if exc.code in (401, 403, 404, 422):
-                return
-        except Exception as exc:       # network hiccup: try again, the chain must not break on one failed call
-            print('dispatch error:', type(exc).__name__, str(exc)[:120])
-        time.sleep(15 * (attempt + 1))
+    try:
+        call(f'https://api.github.com/repos/{repo}/actions/workflows/{WORKFLOW}/dispatches', token, 'POST',
+             {'ref': 'main', 'inputs': {'wait_minutes': str(wait)}}, label='dispatch')
+        print('chained the next run with a', wait, 'minute wait')
+    except Exception as exc:
+        # Printed, not failed: this step runs after the page artifact is made, and a failed job would
+        # keep the page from publishing. The workflow's own cron entries restart a broken chain.
+        print('::warning::the next run was not chained:', type(exc).__name__, getattr(exc, 'code', ''), str(exc)[:120])
 
 
 if __name__ == '__main__':

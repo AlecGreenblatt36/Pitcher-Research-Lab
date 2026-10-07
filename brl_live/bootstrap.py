@@ -4,7 +4,7 @@ No credentials or raw player data are contained in this public source file.
 The key is a repository Actions secret, never a command argument or log value.
 """
 from __future__ import annotations
-import argparse,hashlib,html,io,json,os,re,subprocess,sys,zipfile,stat,base64
+import argparse,hashlib,html,io,json,os,re,subprocess,sys,time,zipfile,stat,base64
 from datetime import datetime,timezone
 from pathlib import Path
 from urllib.request import Request,urlopen
@@ -14,15 +14,43 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 TAG='brl-live-runtime-20261006'
 ASSET='brl-live-runtime-20261006.zip.enc'
 
+MAX_WAIT=25*60
+
+def pause_for(exc,attempt,waited):
+    """Seconds before retrying, or None when the failure is final: rate limiting waits for the reset
+    the response names, server errors and dropped connections back off, 4xx answers come straight back."""
+    if isinstance(exc,HTTPError):
+        if exc.code in(404,409,422)or exc.code<400:return None
+        h=exc.headers or{}
+        if exc.code in(403,429):
+            after=str(h.get('Retry-After')or'').strip();reset=str(h.get('X-RateLimit-Reset')or'').strip()
+            if after.isdigit():pause=float(after)+2
+            elif h.get('X-RateLimit-Remaining')=='0'and reset.isdigit():pause=max(5.0,float(reset)-time.time()+3)
+            elif exc.code==429:pause=60.0*(attempt+1)
+            else:return None
+        elif exc.code>=500:pause=5.0+10.0*attempt
+        else:return None
+    elif isinstance(exc,OSError):pause=3.0+7.0*attempt
+    else:return None
+    return None if waited+pause>MAX_WAIT else pause
+
 def fetch(url,token=None,method='GET',value=None):
     headers={'User-Agent':'BRL-encrypted-runtime/1.0','Accept':'application/vnd.github+json'}
     if token:headers['Authorization']='Bearer '+token
     data=None if value is None else json.dumps(value).encode()
     if data is not None:headers['Content-Type']='application/json'
-    with urlopen(Request(url,headers=headers,data=data,method=method),timeout=35) as response:
-        raw=response.read(100_000_001)
-        if len(raw)>100_000_000:raise ValueError('Response too large')
-        return raw
+    waited=0.0
+    for attempt in range(12):
+        try:
+            with urlopen(Request(url,headers=headers,data=data,method=method),timeout=35) as response:
+                raw=response.read(100_000_001)
+                if len(raw)>100_000_000:raise ValueError('Response too large')
+                return raw
+        except OSError as exc:
+            pause=pause_for(exc,attempt,waited)
+            if pause is None:raise
+            time.sleep(pause);waited+=pause
+    raise ValueError('Network unavailable: '+url.split('/')[2])
 
 def api(url,token,method='GET',value=None):return json.loads(fetch(url,token,method,value))
 

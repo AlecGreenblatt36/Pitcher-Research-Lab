@@ -12,7 +12,7 @@ from __future__ import annotations
 import base64, hashlib, json, os, time
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
@@ -26,6 +26,43 @@ from .security import seal, unseal
 BRANCH = os.environ.get('BRL_LEDGER_BRANCH', 'brl-live-data')
 API = 'https://api.github.com'
 SCHEDULE = 'https://statsapi.mlb.com/api/v1/schedule?sportId=1&date={date}'
+MAX_API_WAIT = 25 * 60   # the longest a run waits out GitHub rate limiting or an outage, in seconds
+
+
+def api_pause(exc, attempt: int, waited: float):
+    """Seconds to wait before retrying a failed GitHub API call, or None when the failure is final.
+
+    Rate limiting (429, or 403 with the rate-limit headers) waits for the reset the response
+    names; server errors and dropped connections back off and retry. 404, 409 and 422 are
+    answers, not failures, and go straight back to the caller.
+    """
+    if isinstance(exc, HTTPError):
+        if exc.code in (404, 409, 422) or exc.code < 400:
+            return None
+        headers = exc.headers or {}
+        if exc.code in (403, 429):
+            retry_after = headers.get('Retry-After')
+            remaining = headers.get('X-RateLimit-Remaining')
+            reset = headers.get('X-RateLimit-Reset')
+            if retry_after and str(retry_after).strip().isdigit():
+                pause = float(retry_after) + 2
+            elif remaining == '0' and reset and str(reset).strip().isdigit():
+                pause = max(5.0, float(reset) - time.time() + 3)
+            elif exc.code == 429:
+                pause = 60.0 * (attempt + 1)
+            else:
+                return None            # a real permission error
+        elif exc.code >= 500:
+            pause = 5.0 + 10.0 * attempt
+        else:
+            return None
+    elif isinstance(exc, (URLError, TimeoutError, ConnectionError, OSError)):
+        pause = 3.0 + 7.0 * attempt
+    else:
+        return None
+    if waited + pause > MAX_API_WAIT:
+        return None
+    return pause
 
 
 class Network:
@@ -59,15 +96,25 @@ class GitStore:
         body = None
         if data is not None:
             body = json.dumps(data).encode(); headers['Content-Type'] = 'application/json'
-        for attempt in range(3):
+        audit = self.read_audit if isinstance(getattr(self, 'read_audit', None), dict) else {}
+        waited = 0.0
+        for attempt in range(12):
+            audit['requests'] = audit.get('requests', 0) + 1
             try:
                 with urlopen(Request(API + '/repos/' + self.repo + path, headers=headers, data=body, method=method), timeout=40) as response:
                     raw = response.read()
+                    remaining = response.headers.get('X-RateLimit-Remaining')
+                if remaining is not None and str(remaining).isdigit():
+                    audit['rate_limit_remaining'] = int(remaining)
                 return json.loads(raw) if raw else {}
-            except HTTPError as exc:
-                if exc.code in (404, 409, 422) or attempt == 2:
+            except (HTTPError, URLError, TimeoutError, ConnectionError, OSError) as exc:
+                pause = api_pause(exc, attempt, waited)
+                if pause is None:
                     raise
-                time.sleep(2 + 2 * attempt)
+                audit['retries'] = audit.get('retries', 0) + 1
+                audit['waited_seconds'] = round(audit.get('waited_seconds', 0.0) + pause, 1)
+                time.sleep(pause); waited += pause
+        raise Blocked('GitHub API unavailable')
 
     def _ensure_branch(self):
         try:

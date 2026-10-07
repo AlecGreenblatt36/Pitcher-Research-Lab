@@ -215,6 +215,7 @@ def main(public_dir):
         'scored_games':scores['n_games'],'skill_scored_games':ledger['skill_scores']['n_games'],
         'skill_baseline_prior_games':len(skill_history),'raw_data_published':False,
         'history_coverage_through':info['coverage_through'],'history_added_PA':info['added_PA'],'history_refresh_note':refresh_note,
+        'history_day_notes':{day:entry.get('notes') for day,entry in sorted(index.get('days',{}).items())[-3:] if entry.get('notes')},
         'pa_model':{'name':bridge.MODEL_NAME,'sha256':bridge.MODEL_SHA256,'physics':physics_receipt},
         'pitch_bookkeeping_prior_PA':len(annotations),'pitch_bookkeeping_season_games':int(getattr(annotations,'attrs',{}).get('season_games',0)),'engine_rules_changed':False,
         'model_parameters_changed':False,'simulation_adjustments':'context offsets (brl_live/context_offsets.json)',

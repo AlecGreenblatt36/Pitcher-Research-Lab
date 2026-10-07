@@ -31,6 +31,9 @@ _EVENT_TO_OUTCOME = {
     "sac_fly": "BIP_OUT",
     "sac_bunt": "BIP_OUT",
     "sac_fly_double_play": "BIP_OUT",
+    "sac_bunt_double_play": "BIP_OUT",
+    "batter_interference": "BIP_OUT",
+    "strikeout_triple_play": "K",
     "field_error": "OTHER_REACH",
     "fielders_choice": "OTHER_REACH",
     "catcher_interf": "OTHER_REACH",
@@ -51,6 +54,23 @@ EXCLUDED_EVENTS = {
     "balk",
     "game_advisory",
     "no_play",
+    # Runner and administrative events that end or interrupt a plate appearance without a result
+    # for the batter; Statcast marks the cut-short plate appearance itself as truncated_pa.
+    "pickoff_caught_stealing_2b",
+    "pickoff_caught_stealing_3b",
+    "pickoff_caught_stealing_home",
+    "pickoff_error_1b",
+    "pickoff_error_2b",
+    "pickoff_error_3b",
+    "cs_double_play",
+    "runner_double_play",
+    "defensive_indiff",
+    "other_advance",
+    "forced_balk",
+    "error",
+    "ejection",
+    "runner_placed",
+    "truncated_pa",
 }
 
 

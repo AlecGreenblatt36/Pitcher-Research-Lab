@@ -5,7 +5,7 @@ history, locked model, starter hazard, names, team results). Its private code is
 imported. Everything else runs from this repository.
 """
 from __future__ import annotations
-import argparse, base64, json, os, re, shutil, subprocess, sys, traceback
+import argparse, base64, json, os, re, shutil, subprocess, sys, time, traceback
 from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -190,24 +190,31 @@ def main():
                 raise RuntimeError('Public day archive allowlist failed')
     Path('brl_v2_run_receipt.json').write_text(json.dumps(receipt, indent=2))
     # The receipt (no secrets, no data) also goes to the ledger branch so it can be read through git.
-    try:
-        branch = os.environ.get('BRL_LEDGER_BRANCH', 'brl-live-data')
-        url = f'https://api.github.com/repos/{repo}/contents/diagnostics/v2_receipt.json'
-        sha = None
+    branch = os.environ.get('BRL_LEDGER_BRANCH', 'brl-live-data')
+    url = f'https://api.github.com/repos/{repo}/contents/diagnostics/v2_receipt.json'
+    for attempt in range(6):
+        # Other jobs write the ledger branch too; a 409 means it moved between the sha read and the write.
         try:
-            sha = api(url + '?ref=' + branch, token).get('sha')
-        except Exception:
             sha = None
-        payload = {'message': 'BRL v2: run receipt', 'content': base64.b64encode(json.dumps(receipt, indent=1).encode()).decode(), 'branch': branch}
-        if sha:
-            payload['sha'] = sha
-        api(url, token, 'PUT', payload)
-    except Exception:
-        pass
+            try:
+                sha = api(url + '?ref=' + branch, token).get('sha')
+            except Exception:
+                sha = None
+            payload = {'message': 'BRL v2: run receipt', 'content': base64.b64encode(json.dumps(receipt, indent=1).encode()).decode(), 'branch': branch}
+            if sha:
+                payload['sha'] = sha
+            api(url, token, 'PUT', payload)
+            break
+        except Exception as exc:
+            print('::warning::receipt not saved to the ledger branch (attempt ' + str(attempt + 1) + '): ' + type(exc).__name__)
+            time.sleep(3 + 4 * attempt)
     if os.environ.get('GITHUB_OUTPUT'):
+        # A blocked run republishes the previous page; when even that could not be restored, the
+        # last deployed page stays up rather than being replaced by the setup notice.
+        pages_ready = (not args.shadow) and (receipt.get('status') == 'iteration_completed' or bool(receipt.get('preserved_previous_forecasts')))
         with open(os.environ['GITHUB_OUTPUT'], 'a') as stream:
             stream.write('completed=' + str(receipt.get('status') == 'iteration_completed').lower() + '\n')
-            stream.write('pages_ready=' + ('false' if args.shadow else 'true') + '\n')
+            stream.write('pages_ready=' + str(pages_ready).lower() + '\n')
     print(json.dumps({k: v for k, v in receipt.items() if k != 'scheduled_games'}, indent=2))
     return receipt
 

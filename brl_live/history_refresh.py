@@ -242,17 +242,25 @@ def collapse_statcast(source: Source, day: str, expected: dict[int, dict],
             # not silently stand in for a completed official PA.
             continue
         mapped = terminal.loc[terminal.events.map(map_event).notna()]
-        unknown = set(terminal.events.astype(str)) - set(NON_PA_EVENTS) - {
-            str(event) for event in terminal.events if map_event(event) is not None}
+        unknown = sorted(set(terminal.events.astype(str)) - set(NON_PA_EVENTS) - set(mapped.events.astype(str)))
+        truth = expected[int(pk)].get(int(ab))
         if unknown:
-            raise Blocked('Unmapped Statcast event')
+            # Statcast's event vocabulary is wider than the official feed's (truncated_pa for a plate
+            # appearance cut short by a runner event or the end of the game, for one). The official
+            # feed decides which plate appearances completed: an unlisted event on a plate appearance
+            # the official feed does not count is a non-PA event and is excluded like the listed ones;
+            # on a plate appearance it does count, with no mapped Statcast result, it is a disagreement.
+            if truth is not None and mapped.empty:
+                raise Blocked('Statcast event outside the outcome map on a completed official PA: ' + ', '.join(unknown)[:120])
+            counts = diagnostics.setdefault('unlisted_events', {})
+            for name in unknown:
+                counts[name] = counts.get(name, 0) + 1
         if mapped.empty:
             diagnostics['excluded_non_PA_events'] += len(terminal)
             continue
         if len(mapped) != 1:
             raise Blocked('Multiple completed PA terminals for one identity')
         first, last = part.iloc[0].to_dict(), mapped.iloc[0].to_dict()
-        truth = expected[int(pk)].get(int(ab))
         if truth is None:
             raise Blocked('Statcast PA missing in official feed')
         if (truth['outcome'] != map_event(last['events']) or
@@ -417,8 +425,11 @@ class HistoryCache:
                 self.store.put(path, cipher, immutable=True)
             elif gzip.decompress(unseal(existing[0], self.key, 'private:history-day:' + ident)) != canonical(captured):
                 raise Blocked('Immutable history-day conflict')
+            diagnostics = captured.get('diagnostics') or {}
             staged['days'][day] = {'id': ident, 'captured_at': captured['captured_at'],
-                                   'n_games': captured['n_games'], 'n_PA': captured['n_PA']}
+                                   'n_games': captured['n_games'], 'n_PA': captured['n_PA'],
+                                   'notes': {name: diagnostics[name] for name in ('unlisted_events', 'mid_pa_substitutions', 'excluded_non_PA_events')
+                                             if diagnostics.get(name)}}
         self.require_complete(staged, target)
         staged.update(coverage_through=target,
                       checked_calendar_day=origin.astimezone(ZoneInfo('America/New_York')).date().isoformat(),
