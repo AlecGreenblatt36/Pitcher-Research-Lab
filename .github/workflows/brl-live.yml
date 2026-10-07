@@ -22,7 +22,7 @@ concurrency:
 jobs:
   forecast:
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 90
     steps:
       - name: Wait (self-chained runs pace themselves; GitHub's cron is unreliable at this cadence)
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.wait_minutes != '0' && github.event.inputs.wait_minutes != ''
