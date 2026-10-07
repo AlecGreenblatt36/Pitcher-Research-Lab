@@ -96,16 +96,24 @@ class GitStore:
         return raw, value['sha']
 
     def put(self, path: str, raw: bytes, immutable: bool = False):
-        existing = self.read(path)
-        if existing is not None:
-            if existing[0] == raw:
-                return None
-            if immutable:
-                raise Blocked('Immutable object conflict: ' + path)
-        payload = {'message': 'BRL: save ' + path.split('/')[0], 'content': base64.b64encode(raw).decode(), 'branch': BRANCH}
-        if existing is not None:
-            payload['sha'] = existing[1]
-        return self.request('/contents/' + quote(path, safe='/'), 'PUT', payload)
+        # Several jobs write to the ledger branch (live runs, backfills, research); a 409 means the
+        # branch moved between reading the file's sha and writing, so re-read and try again.
+        for attempt in range(6):
+            existing = self.read(path)
+            if existing is not None:
+                if existing[0] == raw:
+                    return None
+                if immutable:
+                    raise Blocked('Immutable object conflict: ' + path)
+            payload = {'message': 'BRL: save ' + path.split('/')[0], 'content': base64.b64encode(raw).decode(), 'branch': BRANCH}
+            if existing is not None:
+                payload['sha'] = existing[1]
+            try:
+                return self.request('/contents/' + quote(path, safe='/'), 'PUT', payload)
+            except HTTPError as exc:
+                if exc.code != 409 or attempt == 5:
+                    raise
+                time.sleep(2 + 3 * attempt)
 
     def private(self, kind: str, ident: str, value: dict):
         purpose = 'private:' + kind + ':' + ident

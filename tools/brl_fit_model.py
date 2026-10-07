@@ -53,13 +53,19 @@ def read_blob(repo, token, path, branch):
 
 def put_bytes(repo, token, path, raw, branch, message):
     url = f'https://api.github.com/repos/{repo}/contents/{path}'
-    payload = {'message': message, 'content': base64.b64encode(raw).decode(), 'branch': branch}
-    try:
-        payload['sha'] = api(url + '?ref=' + branch, token)['sha']
-    except HTTPError as exc:
-        if exc.code != 404:
-            raise
-    return api(url, token, 'PUT', payload)
+    for attempt in range(6):
+        payload = {'message': message, 'content': base64.b64encode(raw).decode(), 'branch': branch}
+        try:
+            payload['sha'] = api(url + '?ref=' + branch, token)['sha']
+        except HTTPError as exc:
+            if exc.code != 404:
+                raise
+        try:
+            return api(url, token, 'PUT', payload)
+        except HTTPError as exc:
+            if exc.code != 409 or attempt == 5:
+                raise
+            time.sleep(2 + 3 * attempt)
 
 
 def entrypoint_module():

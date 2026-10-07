@@ -72,11 +72,17 @@ def get_json(url: str, token: str | None = None, method: str = 'GET', payload=No
 
 def put(repo: str, token: str, path: str, raw: bytes, branch: str, message: str):
     url = f'https://api.github.com/repos/{repo}/contents/{path}'
-    existing = get_json(url + '?ref=' + branch, token)
-    payload = {'message': message, 'content': base64.b64encode(raw).decode(), 'branch': branch}
-    if existing and existing.get('sha'):
-        payload['sha'] = existing['sha']
-    return get_json(url, token, 'PUT', payload)
+    for attempt in range(6):
+        existing = get_json(url + '?ref=' + branch, token)
+        payload = {'message': message, 'content': base64.b64encode(raw).decode(), 'branch': branch}
+        if existing and existing.get('sha'):
+            payload['sha'] = existing['sha']
+        try:
+            return get_json(url, token, 'PUT', payload)
+        except HTTPError as exc:
+            if exc.code != 409 or attempt == 5:     # the branch moved under us (another job wrote); re-read and retry
+                raise
+            time.sleep(2 + 3 * attempt)
 
 
 def read_blob(repo: str, token: str, path: str, branch: str) -> bytes | None:

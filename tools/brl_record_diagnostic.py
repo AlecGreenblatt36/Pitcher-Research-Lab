@@ -4,6 +4,7 @@ Usage: python tools/brl_record_diagnostic.py <path on ledger branch> <local file
 Never used for private data: only test and job output that contains no player rows or secrets.
 """
 from __future__ import annotations
+import time
 import base64, json, os, sys
 from pathlib import Path
 from urllib.error import HTTPError
@@ -30,13 +31,20 @@ def main():
         if secret:
             text = text.replace(secret, '[redacted]')
     url = f'https://api.github.com/repos/{repo}/contents/{target}'
-    payload = {'message': 'BRL: diagnostic ' + target, 'content': base64.b64encode(text.encode()).decode(), 'branch': branch}
-    try:
-        payload['sha'] = api(url + '?ref=' + branch, token)['sha']
-    except HTTPError as exc:
-        if exc.code != 404:
-            raise
-    api(url, token, 'PUT', payload)
+    import time
+    for attempt in range(6):
+        payload = {'message': 'BRL: diagnostic ' + target, 'content': base64.b64encode(text.encode()).decode(), 'branch': branch}
+        try:
+            payload['sha'] = api(url + '?ref=' + branch, token)['sha']
+        except HTTPError as exc:
+            if exc.code != 404:
+                raise
+        try:
+            api(url, token, 'PUT', payload); break
+        except HTTPError as exc:
+            if exc.code != 409 or attempt == 5:
+                raise
+            time.sleep(2 + 3 * attempt)
     print('recorded', target, len(lines), 'lines')
 
 
