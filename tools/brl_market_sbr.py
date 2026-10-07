@@ -19,7 +19,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from brl_live.market import vig_free_home, _minutes_apart  # noqa: E402
 
 REPO_SRC = 'ArnavSaraogi/mlb-odds-scraper'
-ALIASES = {'Cleveland Indians': 'Cleveland Guardians', 'Oakland Athletics': 'Athletics', 'Athletics': 'Athletics'}
+ALIASES = {'Cleveland Indians': 'Cleveland Guardians', 'Oakland Athletics': 'Athletics', 'Athletics': 'Athletics',
+           'Sacramento Athletics': 'Athletics', "Oakland A's": 'Athletics', "A's": 'Athletics', 'Las Vegas Athletics': 'Athletics'}
 
 
 def http(url, token=None, accept='application/json', raw=False, tries=5):
@@ -96,6 +97,7 @@ def main():
                                                        'away': norm((t.get('away') or {}).get('team', {}).get('name')),
                                                        'home_score': (t.get('home') or {}).get('score'), 'away_score': (t.get('away') or {}).get('score')})
     rows, unmatched, books_seen = [], 0, defaultdict(int)
+    unmatched_names = defaultdict(int)
     used = set()
     for day, games in sorted(data.items()):
         for item in games or []:
@@ -104,7 +106,10 @@ def main():
             start = gv.get('startDate')
             cands = [g for g in sched.get(day, []) if g['home'] == home and g['away'] == away and g['game_pk'] not in used]
             if not cands:
-                unmatched += 1; continue
+                unmatched += 1
+                if gv.get('gameType') in (None, 'R'):
+                    unmatched_names[home] += 1; unmatched_names[away] += 1
+                continue
             best = min(cands, key=lambda g: _minutes_apart(g['start'], start))
             if len(cands) > 1 and _minutes_apart(best['start'], start) > 240:
                 unmatched += 1; continue
@@ -150,7 +155,8 @@ def main():
                          'totals_close': {k: v['close'] for k, v in totals.items() if v.get('close')}})
     receipt.update(rows=len(rows), unmatched=unmatched, books=dict(books_seen), by_season={str(s): sum(1 for r in rows if r['season'] == s) for s in range(2021, 2026)},
                    with_dk_close=sum(1 for r in rows if r['p_close_dk'] is not None), with_dk_total=sum(1 for r in rows if r['dk_total_close']),
-                   with_dk_runline=sum(1 for r in rows if r['dk_runline_close']), seconds=round(time.time() - t0, 1))
+                   with_dk_runline=sum(1 for r in rows if r['dk_runline_close']), seconds=round(time.time() - t0, 1),
+                   unmatched_regular_season_names=dict(sorted(unmatched_names.items(), key=lambda x: -x[1])[:12]))
     raw = gzip.compress('\n'.join(json.dumps(r) for r in rows).encode() + b'\n', mtime=0)
     path = f'research/market-sbr-{run_id}.jsonl.gz'; receipt['file'] = path
     if repo and token:
