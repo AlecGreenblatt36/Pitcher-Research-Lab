@@ -66,6 +66,7 @@ def build_record(ledger: dict) -> dict:
     forecasts = ledger.get('forecasts', {}) or {}
     publications = ledger.get('publications', {}) or {}
     actuals = ledger.get('actuals', {}) or {}
+    market = ledger.get('market', {}) or {}
     blend = {}
     for ident, f in forecasts.items():
         blend[ident] = round(blend_probability(f.get('home_win_probability'), f.get('team_baseline_probability')), 6)
@@ -95,14 +96,21 @@ def build_record(ledger: dict) -> dict:
         p_team = f.get('team_baseline_probability')
         p_team = None if p_team is None else float(p_team)
         p_blend = blend[ident]
+        mk = market.get(str(pk))
+        p_market = None
+        if mk and mk.get('p_home') is not None and first_pitch and _ts(mk['captured_at']) < _ts(first_pitch):
+            p_market = float(mk['p_home'])
         games.append({
             'game_pk': int(pk), 'date': f.get('date'), 'away': f['away'].get('abbr'), 'home': f['home'].get('abbr'),
             'version': f.get('version'), 'forecast_id': ident, 'home_won': bool(y),
             'actual': {'away': actual['away'], 'home': actual['home']},
             'p_sim': round(p_sim, 4), 'p_team': None if p_team is None else round(p_team, 4), 'p_blend': round(p_blend, 4),
+            'p_market': None if p_market is None else round(p_market, 4),
             'brier': {'sim': _brier(p_sim, y), 'team': None if p_team is None else _brier(p_team, y), 'blend': _brier(p_blend, y),
+                      'market': None if p_market is None else _brier(p_market, y),
                       'coin': 0.25, 'home': _brier(HOME_RATE_PRIOR, y)},
             'log_loss': {'sim': _logloss(p_sim, y), 'team': None if p_team is None else _logloss(p_team, y), 'blend': _logloss(p_blend, y),
+                         'market': None if p_market is None else _logloss(p_market, y),
                          'coin': math.log(2), 'home': _logloss(HOME_RATE_PRIOR, y)},
         })
 
@@ -110,7 +118,7 @@ def build_record(ledger: dict) -> dict:
         vals = [g[metric][key] for g in games if g[metric].get(key) is not None]
         return (sum(vals) / len(vals)) if vals else None
 
-    rows = [('coin', 'Coin flip'), ('home', 'Always pick the home team'), ('team', 'Team model'),
+    rows = [('coin', 'Coin flip'), ('home', 'Always pick the home team'), ('market', 'Betting market'), ('team', 'Team model'),
             ('sim', 'Simulator'), ('blend', 'Simulator + team model')]
     ladder = []
     for key, name in rows:
@@ -120,7 +128,8 @@ def build_record(ledger: dict) -> dict:
                        'log_loss': None if mean(key, 'log_loss') is None else round(mean(key, 'log_loss'), 5),
                        'better_than_coin_pct': None if b is None else round((0.25 - b) / 0.25 * 100, 2)})
     return {
-        'schema': 'brl.record.v1',
+        'schema': 'brl.record.v2',
+        'market_note': 'Betting market rows use the last ESPN scoreboard moneyline captured while the game was pregame, vig removed; a reference, never an input.',
         'headline': 'blend',
         'method': ('Headline win chance is the equal-weight log-odds average of the simulator and the team model. '
                    'Each final game scores the last forecast version published before the observed first pitch.'),

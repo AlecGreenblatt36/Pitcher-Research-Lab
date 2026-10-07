@@ -23,7 +23,7 @@ FONTS = (
     ('Atkinson Hyperlegible', 700, 'atkinson-hyperlegible-latin-700-normal.woff2'),
 )
 PUBLIC_KEYS = ('date', 'forecasts', 'publications', 'actuals', 'status', 'box_scores',
-               'box_publications', 'actual_boxes', 'player_scores', 'skill_scores', 'live')
+               'box_publications', 'actual_boxes', 'player_scores', 'skill_scores', 'live', 'market')
 BOX_DAYS = 2  # full simulated games stay on the page for the slate date and the day before
 
 

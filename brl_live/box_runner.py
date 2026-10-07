@@ -18,6 +18,8 @@ from .boxscore import run_box_worlds,parse_actual_box,score_player_boxes,bookkee
 from .box_page import render_page
 from .live_feed import live_matchup,appearances,matchup_parameters
 from .live_update import run_live_update
+from .market import capture as capture_market
+from zoneinfo import ZoneInfo
 from .edge_metrics import (freeze_skill_baselines, prior_boxes_from_cache, score_skill_boxes)
 
 
@@ -121,6 +123,15 @@ class BoxRunner(original.Runner):
         self.store.persist()
 
 
+def _market(runner,ledger):
+    # Reference line only; failures are recorded, never raised.
+    now=runner.clock()
+    try:
+        day=now.astimezone(ZoneInfo('America/New_York')).date().isoformat()
+        ledger['market_receipt']=capture_market(runner.net.json,day,ledger,now.isoformat())
+    except Exception as exc:
+        ledger['market_receipt']={'error':type(exc).__name__+': '+str(exc)[:200],'at':now.isoformat()}
+
 def _prune_live(ledger):
     """Drop live snapshots of games that are final; the record scores forecasts, not snapshots."""
     for pk in list(ledger.get('live',{})):
@@ -137,6 +148,7 @@ def main(public_dir):
     skill_history=prior_boxes_from_cache(cache,index,skill_origin)
     sim=BoxSimulator(info,annotations,skill_history,skill_origin.isoformat())
     runner=BoxRunner(original.Network(),store,sim,run_id=os.environ.get('GITHUB_RUN_ID','local'))
+    _market(runner,store.ledger)
     try:runner.iteration()
     finally:
         ledger=store.ledger;_prune_live(ledger)
@@ -154,4 +166,5 @@ def main(public_dir):
         'pitch_bookkeeping_prior_PA':len(annotations),'engine_rules_changed':False,
         'model_parameters_changed':False,'simulation_adjustments':'context offsets (brl_live/context_offsets.json)',
         'live_updates':len(ledger['live']),'live_update_errors':sum(1 for v in ledger['live'].values() if v.get('error')),
+        'market_receipt':ledger.get('market_receipt'),
         'storage_read_audit':store.read_audit}

@@ -18,7 +18,7 @@ def test_page_inlines_public_data_fonts_and_record(tmp_path):
     assert html.count('@font-face')==5 and 'data:font/woff2;base64,' in html
     assert '<script>' in html and '</script>' in html
     public=json.loads((tmp_path/'predictions.json').read_text())
-    assert public['view_scope']=='live' and public['record']['schema']=='brl.record.v1'
+    assert public['view_scope']=='live' and public['record']['schema']=='brl.record.v2'
     assert public['record']['blend']['a']>0.55 and public['record']['blend']['a']<0.6
     assert (tmp_path/'.nojekyll').exists()
     assert {p.name for p in tmp_path.iterdir()}=={'index.html','predictions.json','.nojekyll'}

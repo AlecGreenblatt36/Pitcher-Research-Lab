@@ -218,7 +218,8 @@ button { font: inherit; color: inherit; }
 .games-list .g-top b { font-family: var(--display); font-size: 20px; font-weight: 700; }
 .games-list .g-top span { color: var(--muted); font-size: 15px; }
 .games-list .final { font-family: var(--display); font-size: 19px; font-weight: 600; margin: 2px 0 8px; }
-.games-list .calls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.games-list .calls { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+@media (min-width: 560px) { .games-list .calls { grid-template-columns: repeat(4, 1fr); } }
 .games-list .call { border: 1px solid var(--rule-soft); border-radius: 8px; padding: 6px 8px; min-width: 0; }
 .games-list .call small { display: block; color: var(--muted); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .games-list .call b { font-family: var(--display); font-size: 19px; font-weight: 700; }
@@ -760,7 +761,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     h += "<li><span>Headline (simulator and team model averaged)</span><b>" + fmt(homeProb(f)) + "</b></li>";
     h += "<li><span>Simulator alone, " + Number(f.n_simulations).toLocaleString() + " games</span><b>" + fmt(f.home_win_probability) + "</b></li>";
     if (f.team_baseline_probability != null) h += "<li><span>Team model alone</span><b>" + fmt(f.team_baseline_probability) + "</b></li>";
-    if (f.market_probability != null) { var mk = f.market_probability; h += "<li><span>Betting market</span><b>" + (mk >= .5 ? esc(f.home.abbr) + " " + pct(mk) : esc(f.away.abbr) + " " + pct(1 - mk)) + "</b></li>"; }
+    var mkt = D.market && D.market[f.game_pk];
+    if (mkt && mkt.p_home != null) h += "<li><span>Betting market, " + esc(mkt.provider || "") + " (" + esc(timeET(mkt.captured_at)) + " ET)</span><b>" + fmt(mkt.p_home) + "</b></li>";
+    else if (f.market_probability != null) { var mk = f.market_probability; h += "<li><span>Betting market</span><b>" + (mk >= .5 ? esc(f.home.abbr) + " " + pct(mk) : esc(f.away.abbr) + " " + pct(1 - mk)) + "</b></li>"; }
     h += "</ul></section>";
 
     var trd = box.team_run_distributions || {}, ra = dist(trd.away), rh = dist(trd.home);
@@ -877,7 +880,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         return '<div class="call ' + (hit ? "yes" : "no") + '"><small>' + label + "</small><b>" + esc(fav) + " " + pct(p >= .5 ? p : 1 - p) + "</b></div>";
       };
       h += '<li><div class="g-top"><b>' + esc(g.away + " at " + g.home) + "</b><span>" + esc(shortDate(g.date)) + '</span></div><div class="final num">Final: ' + esc(g.away) + " " + g.actual.away + ", " + esc(g.home) + " " + g.actual.home + '</div><div class="calls">' +
-        call("Headline", g.p_blend) + call("Simulator", g.p_sim) + call("Team model", g.p_team) + "</div></li>";
+        call("Headline", g.p_blend) + call("Simulator", g.p_sim) + call("Team model", g.p_team) + call("Market", g.p_market) + "</div></li>";
     });
     h += '</ol><p class="note">Green means the favored team won.</p></section>';
     var aggs = (D.skill_scores && D.skill_scores.aggregates) || [];
