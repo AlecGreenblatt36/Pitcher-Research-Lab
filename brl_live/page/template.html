@@ -172,6 +172,7 @@ button { font: inherit; color: inherit; }
 .tag.bb { border-color: var(--ink); color: var(--ink); }
 .pa .what { font-size: 16px; }
 .pa .meta { display: block; font-size: 14px; color: var(--muted); }
+.pa .pitches { display: block; color: var(--muted); font-size: 14px; line-height: 1.4; margin-top: 2px; }
 .pa .runs { font-family: var(--display); font-weight: 700; font-size: 17px; white-space: nowrap; }
 .change { font-size: 14px; color: var(--muted); padding: 8px 0 2px; font-style: italic; }
 
@@ -485,6 +486,16 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     return { text: text + ".", tag: tag, cls: cls };
   }
   function halfName(h, inn) { return (h === "top" ? "Top " : "Bottom ") + ordinal(inn); }
+  var PITCH = { FF: "four-seam", FA: "fastball", SI: "sinker", FT: "two-seam", FC: "cutter", SL: "slider", ST: "sweeper", SV: "slurve", CU: "curve", KC: "knuckle-curve", CS: "slow curve", CH: "changeup", FS: "splitter", FO: "forkball", SC: "screwball", KN: "knuckleball", EP: "eephus", PO: "pitchout" };
+  var RESULT = { B: "ball", C: "called strike", S: "swinging strike", F: "foul", T: "foul tip", X: "in play", H: "hit by pitch" };
+  function pitchText(p) {
+    var parts = [];
+    (p.pitches || []).forEach(function (x) {
+      var type = PITCH[x[0]] || (x[0] ? x[0].toLowerCase() : "pitch"), mph = x[1] ? x[1] + " " : "";
+      parts.push(mph + type + ", " + (RESULT[x[2]] || x[2]));
+    });
+    return parts.join(" \u00b7 ");
+  }
   function scoreText(f, p) { return f.away.abbr + " " + p.away_score + ", " + f.home.abbr + " " + p.home_score; }
 
   /* ---------- routing ---------- */
@@ -742,8 +753,10 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         lastPitcher[field] = p.pitcher_name;
         var parts = playParts(p, names, short);
         var style = parts.cls === "hit" ? ' style="background:var(--' + bat + ')"' : "";
+        var seq = pitchText(p);
         h += '<div class="pa"><span class="tag ' + parts.cls + '"' + style + ">" + parts.tag + '</span><span class="what">' + esc(parts.text) +
-          '<span class="meta">vs ' + esc(short[String(p.pitcher_id)] || lastName(p.pitcher_name)) + (p.estimated_pitches ? ", " + p.estimated_pitches + (p.estimated_pitches === 1 ? " pitch" : " pitches") : "") + "</span></span>" +
+          '<span class="meta">vs ' + esc(short[String(p.pitcher_id)] || lastName(p.pitcher_name)) + (p.estimated_pitches ? ", " + p.estimated_pitches + (p.estimated_pitches === 1 ? " pitch" : " pitches") : "") + "</span>" +
+          (seq ? '<span class="pitches">' + esc(seq) + "</span>" : "") + "</span>" +
           '<span class="runs ' + bat + '-c">' + (p.runs_scored ? esc(scoreText(f, p)) : "") + "</span></div>";
       });
       h += "</section>";
@@ -908,7 +921,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     }
     h += "<h2>The projected game</h2><p>The projected game is one of the ten thousand simulated games: the one closest to the middle on team runs, team hits and each starter's innings and strikeouts, with the favorite winning in nine innings. It reads like a real box score, but it is one likely version of the night, not a promise. High-scoring, low-scoring and upset versions show the range.</p>";
     h += "<h2>Checking the work</h2><p>Every forecast is saved and published before first pitch and never edited. After the final, the Record page scores the last pregame version against a coin flip and against always picking the home team. Nothing is backfilled.</p>";
-    h += "<h2>Current limits</h2><ul><li>Postseason games still use regular-season bullpen habits.</li><li>Pitch counts in simulated games are estimates drawn from each pitcher's recent plate appearances, not pitch-by-pitch simulation.</li><li>Runner speed and team defense are league average for everyone; stolen bases and wild pitches are not simulated.</li><li>Bullpen use follows regular-season habits: a fitted rest and quality model was tested on the 2026 replay and did not beat it.</li><li>Player history runs through " + esc(any.history_through || "the day before") + ".</li></ul>";
+    h += "<h2>Current limits</h2><ul><li>Postseason games still use regular-season bullpen habits.</li><li>The pitch lines under each simulated plate appearance are bookkeeping, not a pitch-by-pitch simulation: real count paths from prior official games for the same outcome, with the pitcher's own pitch types and speeds. They never change an outcome or a pitching decision.</li><li>Runner speed and team defense are league average for everyone; stolen bases and wild pitches are not simulated.</li><li>Bullpen use follows regular-season habits: a fitted rest and quality model was tested on the 2026 replay and did not beat it.</li><li>Player history runs through " + esc(any.history_through || "the day before") + ".</li></ul>";
     h += "<h2>Technical details</h2><p>Plate appearance model " + esc(any.model || "") + ". " + Number(any.n_simulations || 0).toLocaleString() + " simulations per forecast. Earlier forecast versions are kept when lineups change. Source code is public; player data and model files stay private.</p>";
     var vs = Object.keys(fx).map(function (k) { return fx[k]; }).filter(function (f) { return f.date === D.date; });
     vs.forEach(function (f) {

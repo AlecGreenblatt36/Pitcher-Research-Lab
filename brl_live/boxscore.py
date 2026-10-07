@@ -15,6 +15,7 @@ import pandas as pd
 from app.safety import Blocked
 from research_lab.game_sim.engine import GameSimulator
 from .world_selection import world_features, select_worlds, SELECTION_NOTE
+from .pitch_bridge import PitchBridge, pitch_list
 
 BAT = ('PA','AB','H','2B','3B','HR','R','RBI','BB','HBP','K','SF')
 PIT = ('outs','PC','H','R','BB','HBP','K','HR','BF')
@@ -63,6 +64,13 @@ batter still can; no rate is ever zero.
                 if tag in ('poh','po') and len(rows)<self.MIN_POOL:continue
                 self.pools[(tag,*key)]=rows['pitch_number'].to_numpy(dtype=np.int32)
         self._fit_hbp(h if full_history is None else self._prepare_full(full_history,date))
+        records=[]
+        if 'pitches' in h.columns:
+            for r in h.loc[h.pitches.notna()].itertuples():
+                if isinstance(r.pitches,list) and r.pitches:
+                    records.append({'pitcher':int(r.pitcher),'stand':str(r.stand),'outcome':str(r.outcome).lower(),
+                                    'terminal_event':str(r.terminal_event),'pitches':r.pitches})
+        self.bridge=PitchBridge(records)
     @staticmethod
     def _prepare_full(full: pd.DataFrame, date: str) -> pd.DataFrame:
         f=full.loc[full.date_key.astype(str).str[:10] < date, ['outcome','terminal_event','pitcher','stand']+(['batter'] if 'batter' in full.columns else [])].copy()
@@ -87,14 +95,18 @@ batter still can; no rate is ever zero.
         p=base*self.hbp_pitcher.get(str(pitcher_id),1.0)*self.hbp_batter.get(str(batter_id),1.0)
         return float(min(0.5,max(0.005,p)))
     def draw(self,event,rng):
+        """(hbp, pitch count, pitch list or None) for one simulated plate appearance."""
         pid=str(event['pitcher_id']);label=event['outcome'];hand=event.get('batter_hand','R')
         hbp=int(label=='bb_hbp' and rng.random()<self.hbp_probability(pid,event.get('batter_id'),hand))
+        pitches=self.bridge.draw(pid,label,hand,bool(hbp),rng) if self.bridge.n_sequences else None
+        if pitches:
+            return hbp,len(pitches),pitches
         for key in [('poh',pid,label,hand),('po',pid,label),('oh',label,hand),('o',label)]:
             if key in self.pools:
                 a=self.pools[key];self.fallback_counts[key[0]]+=1
                 pc=int(a[int(rng.integers(len(a)))])
                 if label=='bb_hbp' and not hbp:pc=max(4,pc)
-                return hbp,pc
+                return hbp,pc,None
         raise Blocked('No compatible earlier PA count pool for '+label)
 
 class ObservedSimulator(GameSimulator):
@@ -123,8 +135,8 @@ def build_game_box(result,matchup,fit:BookkeepingFit) -> dict[str,Any]:
         e=dict(event);s=e['batting_side'];fs='home' if s=='away' else 'away';pid=str(e['pitcher_id']);bid=str(e['batter_id'])
         b=batting[s][bid];p=pitching[fs].setdefault(pid,dict(player_id=pid,name=e['pitcher_name'],**_zeros(PIT)))
         b['PA']+=1;p['BF']+=1;pa_counts[s]+=1
-        o=e['outcome'];e['batter_hand']=('L' if throws[pid]=='R' else 'R') if hands[bid]=='S' else hands[bid];hbp,pc=fit.draw(e,rng);p['PC']+=pc
-        e['estimated_pitches']=pc
+        o=e['outcome'];e['batter_hand']=('L' if throws[pid]=='R' else 'R') if hands[bid]=='S' else hands[bid];hbp,pc,pitches=fit.draw(e,rng);p['PC']+=pc
+        e['estimated_pitches']=pc;e['pitches']=pitches
         hit=o in ('single','double_triple','home_run');sf='sacrifice fly' in e['description']
         b['AB']+=int(o!='bb_hbp' and not sf)
         b['SF']+=int(sf)
@@ -153,7 +165,7 @@ def build_game_box(result,matchup,fit:BookkeepingFit) -> dict[str,Any]:
         line['R']+=e['runs_scored'];line['H']+=int(hit)
         plays.append({k:e[k] for k in ('inning','half','batter_id','batter_name','pitcher_id','pitcher_name',
             'box_outcome','description','outs_before','outs_after','runs_scored','away_score','home_score',
-            'bases_before','bases_after','scoring_players','rbi','estimated_pitches')})
+            'bases_before','bases_after','scoring_players','rbi','estimated_pitches','pitches')})
     for s in SIDE:
         opp='home' if s=='away' else 'away';rows=list(batting[s].values());ps=list(pitching[opp].values())
         score=getattr(result,s+'_score')
@@ -274,9 +286,11 @@ def run_box_worlds(engine,matchup,history,date,seeds,full_history=None,settings=
         payload['samples'].append(sample)
     payload['bookkeeping']={'method':'prior-date pitch-count pools (pitcher pools only when at least %d PA) plus a shrunk hit-by-pitch rate by batter hand, pitcher and batter'%BookkeepingFit.MIN_POOL,
         'input_max_date':fit.max_input_date,'cutoff_exclusive':date,'sampling_stream':'independent of engine',
-        'pitch_counts_are_estimates':True,'pitch_sequences_generated':False,
+        'pitch_counts_are_estimates':True,'pitch_sequences_generated':bool(fit.bridge.n_sequences),
         'counts_do_not_influence_removal':True,'fallback_tiers_used':dict(fit.fallback_counts),
-        'hbp_support_events':fit.hbp_support,'hbp_league_share':round(fit.hbp_league_all,4)}
+        'hbp_support_events':fit.hbp_support,'hbp_league_share':round(fit.hbp_league_all,4),
+        'pitch_sequences':{'prior_sequences':fit.bridge.n_sequences,'path_tiers_used':dict(fit.bridge.fallbacks),
+                           'method':'real prior count paths by outcome (own pitcher with at least %d, else league by hand); pitch types from the pitcher\'s mix by hand and count, speeds from his distribution by type; league fallbacks'%12}}
     return results,payload
 
 
@@ -413,7 +427,7 @@ support pitch-count estimation. Official prior-date playEvents supply counts.
                 rows.append({'date_key':feed['gameData']['datetime']['officialDate'],
                     'outcome':outcome,'terminal_event':play['result']['eventType'],
                     'pitcher':int(m['pitcher']['id']),'stand':m['batSide']['code'],
-                    'pitch_number':count,'available_at':source.finished_at})
+                    'pitch_number':count,'available_at':source.finished_at,'pitches':pitch_list(play)})
     if not rows:raise Blocked('No prior official pitch-count observations')
     return pd.DataFrame(rows)
 
