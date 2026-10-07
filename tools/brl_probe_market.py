@@ -45,6 +45,20 @@ def main():
             states = sorted({((c.get('status') or {}).get('type') or {}).get('state') for e in events for c in (e.get('competitions') or [])})
             out['dates'][d] = {'events': len(events), 'with_odds': len(with_odds), 'readable_moneylines': len(lines), 'providers': providers, 'states': states,
                                'moneyline_shape': sample, 'p_home_examples': [l['p_home'] for l in lines[:3]]}
+            # the per-event summary keeps a pick center with the lines for finished games
+            summaries = []
+            for e in events[:3]:
+                try:
+                    sm = get('https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/summary?event=' + str(e.get('id')))
+                    pc = sm.get('pickcenter') or []
+                    first = pc[0] if pc else {}
+                    summaries.append({'pickcenter': len(pc), 'odds_key': 'odds' in sm, 'providers': [str((x.get('provider') or {}).get('name')) for x in pc][:4],
+                                      'keys': sorted(first.keys())[:20], 'home_ml': (first.get('homeTeamOdds') or {}).get('moneyLine'),
+                                      'away_ml': (first.get('awayTeamOdds') or {}).get('moneyLine'), 'details': first.get('details'),
+                                      'home_odds_keys': sorted((first.get('homeTeamOdds') or {}).keys())[:20]})
+                except Exception as exc:
+                    summaries.append({'error': type(exc).__name__ + ': ' + str(exc)[:100]})
+            out['dates'][d]['summaries'] = summaries
         except Exception as exc:
             out['dates'][d] = {'error': type(exc).__name__ + ': ' + str(exc)[:150]}
     text = json.dumps(out, indent=1)
