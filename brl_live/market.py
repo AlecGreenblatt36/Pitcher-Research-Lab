@@ -77,6 +77,37 @@ def _moneylines(competition: dict):
     return None
 
 
+def _total_line(v):
+    """A total from ESPN's encodings: 7.5, "7.5", "o7.5", "u8"."""
+    if v is None:
+        return None
+    s = str(v).strip().lower().lstrip('ou')
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+
+def _totals(competition: dict):
+    """(total, over price, under price) from the first odds entry that has them, else None."""
+    for odds in competition.get('odds') or []:
+        line = _total_line(odds.get('overUnder'))
+        over, under = _ml_value(odds.get('overOdds')), _ml_value(odds.get('underOdds'))
+        tot = odds.get('total') if isinstance(odds.get('total'), dict) else {}
+        o = tot.get('over') if isinstance(tot.get('over'), dict) else {}
+        u = tot.get('under') if isinstance(tot.get('under'), dict) else {}
+        for key in ('close', 'current'):
+            if line is None and isinstance(o.get(key), dict):
+                line = _total_line(o[key].get('line'))
+            if over is None and isinstance(o.get(key), dict):
+                over = _ml_value(o[key].get('odds'))
+            if under is None and isinstance(u.get(key), dict):
+                under = _ml_value(u[key].get('odds'))
+        if line is not None:
+            return line, over, under
+    return None
+
+
 def parse_scoreboard(doc: dict) -> list:
     out = []
     for event in doc.get('events') or []:
@@ -92,8 +123,13 @@ def parse_scoreboard(doc: dict) -> list:
             if len(teams) != 2 or ml is None:
                 continue
             state = ((comp.get('status') or {}).get('type') or {}).get('state')
-            out.append({'start': event.get('date') or comp.get('date'), 'state': state, 'away': teams['away'], 'home': teams['home'],
-                        'home_ml': ml[0], 'away_ml': ml[1], 'provider': ml[2], 'over_under': ml[3], 'p_home': round(vig_free_home(ml[0], ml[1]), 4)})
+            tot = _totals(comp)
+            line = {'start': event.get('date') or comp.get('date'), 'state': state, 'away': teams['away'], 'home': teams['home'],
+                    'home_ml': ml[0], 'away_ml': ml[1], 'provider': ml[2], 'over_under': ml[3] if ml[3] is not None else (tot[0] if tot else None),
+                    'p_home': round(vig_free_home(ml[0], ml[1]), 4)}
+            if tot and tot[1] is not None and tot[2] is not None:
+                line.update(over_odds=int(tot[1]), under_odds=int(tot[2]), p_over=round(vig_free_home(tot[1], tot[2]), 4))
+            out.append(line)
     return out
 
 
@@ -148,6 +184,7 @@ def capture(fetch_json, date_ymd: str, ledger: dict, now_iso: str) -> dict:
             continue
         market[pk] = {'game_pk': g['game_pk'], 'date': date_ymd, 'captured_at': now_iso, 'provider': line['provider'],
                       'home_ml': line['home_ml'], 'away_ml': line['away_ml'], 'p_home': line['p_home'], 'over_under': line['over_under'],
+                      'over_odds': line.get('over_odds'), 'under_odds': line.get('under_odds'), 'p_over': line.get('p_over'),
                       'source': 'ESPN public scoreboard'}
         captured += 1
     # Structure-only diagnostics (key names, no values) so a changed feed shape can be read from the ledger.

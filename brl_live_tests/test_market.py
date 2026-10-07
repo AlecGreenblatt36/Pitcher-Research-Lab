@@ -66,3 +66,13 @@ def test_new_espn_moneyline_shapes():
     assert _moneylines(comp2) is None
     comp3 = {'competitors': comp['competitors'], 'odds': [{'provider': {'name': 'X'}, 'moneyline': {'home': 'EVEN', 'away': {'odds': '-120'}}}]}
     assert _moneylines(comp3) == (100, -120, 'X', None)
+
+
+def test_totals_from_scoreboard_odds():
+    from brl_live.market import _totals, _total_line
+    assert _total_line('o7.5') == 7.5 and _total_line('u8') == 8.0 and _total_line(9) == 9.0 and _total_line('x') is None
+    comp = {'odds': [{'overUnder': 7.5, 'overOdds': -108, 'underOdds': -112}]}
+    assert _totals(comp) == (7.5, -108, -112)
+    comp = {'odds': [{'total': {'over': {'close': {'line': 'o8.5', 'odds': '+100'}}, 'under': {'close': {'line': 'u8.5', 'odds': '-120'}}}}]}
+    assert _totals(comp) == (8.5, 100, -120)
+    assert _totals({'odds': [{'details': 'LAD -150'}]}) is None
