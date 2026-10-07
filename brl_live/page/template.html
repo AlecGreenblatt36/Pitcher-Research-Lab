@@ -883,7 +883,13 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       pts.push({ p: winAt(t, p.inning, p.half, p.outs_before || 0, p.bases_before, lead), play: p });
     });
     if (real._final) pts.push({ p: real.score.home > real.score.away ? 1 : 0, label: "Final" });
-    else if (lv) pts.push({ p: lv.home_win_probability, label: "Now" });
+    else if (lv) {
+      /* The last completed play's swing is read from the table at the current state, so the step from the
+         table to the exact continuation (the "Now" point) is never credited to a play. */
+      var st = lv.state;
+      if (st && pts.length > 1) pts[pts.length - 1].after = winAt(t, st.inning, st.half, st.outs || 0, st.bases, (st.home_score || 0) - (st.away_score || 0));
+      pts.push({ p: lv.home_win_probability, label: "Now" });
+    }
     return pts;
   }
   function swingText(p, short) {
@@ -946,7 +952,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (!box || !box.win_table || !real || real.plays.length < 2) return "";
     var pts = winSeries(f, box, real, lv), swings = [];
     /* A play's swing is the chance after it (the next point) less the chance before it. */
-    for (var i = 1; i + 1 < pts.length; i++) if (pts[i].play) swings.push({ d: pts[i + 1].p - pts[i].p, play: pts[i].play });
+    for (var i = 1; i + 1 < pts.length; i++) if (pts[i].play) swings.push({ d: (pts[i].after != null ? pts[i].after : pts[i + 1].p) - pts[i].p, play: pts[i].play });
     swings.sort(function (a, b) { return Math.abs(b.d) - Math.abs(a.d); });
     var top = swings.slice(0, 3).filter(function (sw) { return Math.abs(sw.d) >= .04; });
     if (!top.length) return "";
