@@ -142,7 +142,7 @@ def main():
                 else:assert page.locator('.empty-state').count()==1
                 design_check('record');page.screenshot(path=str(out/f'record_{width}.png'),full_page=True)
                 go('#/how');assert 'How it works' in page.inner_text('#app')
-                assert 'regular-season bullpen' in page.inner_text('#app')
+                assert 'regular-season habits' in page.inner_text('#app')
                 assert 'pitch-by-pitch' in page.inner_text('#app')
                 design_check('how');page.screenshot(path=str(out/f'how_{width}.png'),full_page=True)
                 assert not errors,errors
