@@ -540,7 +540,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var stale = document.body.getAttribute("data-refresh-blocked") === "true";
     var days = availableDays();
     var html = '<div class="wrap"><div class="page-head"><h1>' + esc(dateLabel(day)) + "</h1><p>" +
-      esc(series ? series + ". " : "") + (D.view_scope === "historical_replay" ? "Historical replay. " : "") + (stale ? "Showing the last saved forecasts. " : "") + "All times Eastern.</p></div>";
+      esc(series ? series + ". " : "") + (D.view_scope === "historical_replay" ? "Historical replay. " : "") + (stale ? "Showing the last saved forecasts. " : "") + "All times Eastern." +
+      (D.generated_at ? " Updated " + esc(timeET(D.generated_at)) + " ET." : "") + "</p></div>";
     if (days.length > 1) {
       html += '<nav class="days" aria-label="Choose a day">' + days.map(function (d) {
         var label = d === D.date ? "Today" : (d === days[1] && days[0] === D.date ? "Yesterday" : dateLabel(d).replace(/^[A-Za-z]+, /, ""));

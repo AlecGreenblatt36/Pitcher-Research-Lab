@@ -67,6 +67,8 @@ def public_payload(ledger, scores, *, replay=False) -> dict:
     public['scores'] = scores
     public['record'] = build_record(ledger)
     public['view_scope'] = 'historical_replay' if replay else 'live'
+    from datetime import datetime, timezone
+    public['generated_at'] = datetime.now(timezone.utc).isoformat()
     return trim_boxes(public)
 
 
