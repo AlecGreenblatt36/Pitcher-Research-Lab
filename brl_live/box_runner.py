@@ -30,7 +30,7 @@ class BoxSimulator(RefreshedSimulator):
         parameters={'date':game['date'],'park':game['home']['abbr'],'game':game,
                     'matchup':asdict(matchup),'config':config_for(game['game_type'])}
         engine,decoded=make_history_engine(parameters,self.path)
-        results,box=run_box_worlds(engine,decoded,self.annotations,game['date'],draw_seeds(game['game_pk']))
+        results,box=run_box_worlds(engine,decoded,self.annotations,game['date'],draw_seeds(game['game_pk']),full_history=self.history)
         baseline=predict(game,self.rows,self.fit)
         metadata={**box,'game_pk':game['game_pk'],'date':game['date'],
                   'starters':{s:{'player_id':getattr(decoded,s).starter.player_id} for s in ('away','home')}}

@@ -24,9 +24,9 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install public browser-check dependencies
-        run: python -m pip install --disable-pip-version-check playwright==1.57.0 pytest==9.0.2
-      - name: Test public-check logic without private runtime
-        run: python -m pytest brl_live_tests/test_public_check.py -q
+        run: python -m pip install --disable-pip-version-check playwright==1.57.0 pytest==9.0.2 "numpy>=2,<3"
+      - name: Test public-layer logic without private runtime
+        run: python -m pytest brl_live_tests/test_public_check.py brl_live_tests/test_record.py brl_live_tests/test_world_selection.py brl_live_tests/test_box_identity.py -q
       - name: Install ordinary Chromium browser
         run: python -m playwright install --with-deps chromium
       - name: Check the deployed page on desktop and phone

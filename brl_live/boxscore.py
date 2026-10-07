@@ -5,7 +5,7 @@ changed. BB/HBP and pitch counts are *bookkeeping estimates* sampled from earlie
 terminal PAs on an independent keyed stream. Pitch sequences are not generated.
 """
 from __future__ import annotations
-from collections import Counter, defaultdict
+from collections import Counter,defaultdict
 from dataclasses import asdict
 from typing import Any
 import hashlib
@@ -14,19 +14,31 @@ import numpy as np
 import pandas as pd
 from app.safety import Blocked
 from research_lab.game_sim.engine import GameSimulator
+from .world_selection import world_features, select_worlds, SELECTION_NOTE
 
 BAT = ('PA','AB','H','2B','3B','HR','R','RBI','BB','HBP','K','SF')
 PIT = ('outs','PC','H','R','BB','HBP','K','HR','BF')
 SIDE = ('away','home')
 
 class BookkeepingFit:
-    """Empirical joint (BB/HBP flag, terminal pitch number) distribution.
+    """Pitch counts and the walk/hit-by-pitch split for box scores.
 
-Fit on earlier dates, never on target-game pitches. First use the pitcher's
-outcome/hand group; back off to pitcher/outcome, then league/outcome/hand, then
-league/outcome when no observations exist. No tuneable mixture weights.
+Pitch counts: empirical pools of terminal pitch numbers from official prior-date
+playEvents (the seed corpus has no real pitch numbers). A pitcher's own pool is
+used only when it holds at least MIN_POOL compatible plate appearances; smaller
+pools fall back to the league pool for the outcome and batter hand, then outcome.
+
+Hit by pitch: drawn separately from a shrunk rate, never from raw pools. The
+share of walk-plus-HBP events that are HBP is the league share for the batter
+hand, times the pitcher's shrunk ratio, times the batter's shrunk ratio, each
+pulled toward one with K_HBP pseudo-events. The rates come from `full_history`
+(the assembled PA history, whose terminal_event column is reliable), or from the
+annotation rows when no full history is given. A pitcher who has never hit a
+batter still can; no rate is ever zero.
     """
-    def __init__(self, history: pd.DataFrame, date: str):
+    MIN_POOL=25
+    K_HBP=150.0
+    def __init__(self, history: pd.DataFrame, date: str, full_history: pd.DataFrame|None=None):
         self.cutoff=date
         h=history.loc[history.date_key.astype(str).str[:10] < date].copy()
         if h.empty: raise Blocked('No prior plate appearances for box bookkeeping')
@@ -42,20 +54,47 @@ league/outcome when no observations exist. No tuneable mixture weights.
         # Only genuinely compatible observed counts enter the categorical pools.
         valid=(h.label!='strikeout')|(h.pitch_number>=3)
         valid &= (h.label!='bb_hbp')|(h.hbp==1)|(h.terminal_event=='intent_walk')|(h.pitch_number>=4)
-        h=h.loc[valid]
+        pools_source=h.loc[valid]
         self.pools={}; self.fallback_counts=Counter()
         for keys,tag in [(('pitcher','label','stand'),'poh'),(('pitcher','label'),'po'),
                          (('label','stand'),'oh'),(('label',),'o')]:
-            for key,rows in h.groupby(list(keys),sort=False):
+            for key,rows in pools_source.groupby(list(keys),sort=False):
                 if not isinstance(key,tuple):key=(key,)
-                # Arrays reflect empirical sampling frequencies without smoothing.
-                self.pools[(tag,*key)]=rows[['hbp','pitch_number']].to_numpy(dtype=np.int32)
+                if tag in ('poh','po') and len(rows)<self.MIN_POOL:continue
+                self.pools[(tag,*key)]=rows['pitch_number'].to_numpy(dtype=np.int32)
+        self._fit_hbp(h if full_history is None else self._prepare_full(full_history,date))
+    @staticmethod
+    def _prepare_full(full: pd.DataFrame, date: str) -> pd.DataFrame:
+        f=full.loc[full.date_key.astype(str).str[:10] < date, ['outcome','terminal_event','pitcher','stand']+(['batter'] if 'batter' in full.columns else [])].copy()
+        f['label']=f.outcome.astype(str).str.lower().replace({'bb_hbp':'bb_hbp','walk_hbp':'bb_hbp'})
+        f['pitcher']=f.pitcher.astype(int).astype(str)
+        f['hbp']=(f.terminal_event=='hit_by_pitch').astype(int)
+        return f
+    def _fit_hbp(self, frame: pd.DataFrame) -> None:
+        w=frame.loc[frame.label=='bb_hbp']
+        if w.empty: raise Blocked('No prior walk or hit-by-pitch events for box bookkeeping')
+        self.hbp_league_all=float(w.hbp.mean())
+        self.hbp_league={str(k):float(v) for k,v in w.groupby('stand').hbp.mean().items()}
+        self.hbp_pitcher=self._ratios(w,'pitcher')
+        self.hbp_batter=self._ratios(w,'batter') if 'batter' in w.columns else {}
+        self.hbp_support=int(len(w))
+    def _ratios(self, w: pd.DataFrame, who: str) -> dict:
+        grp=w.groupby(w[who].astype(str)).hbp.agg(['sum','count'])
+        shrunk=(grp['sum']+self.K_HBP*self.hbp_league_all)/(grp['count']+self.K_HBP)
+        return (shrunk/max(self.hbp_league_all,1e-6)).to_dict()
+    def hbp_probability(self, pitcher_id, batter_id, hand) -> float:
+        base=self.hbp_league.get(str(hand),self.hbp_league_all)
+        p=base*self.hbp_pitcher.get(str(pitcher_id),1.0)*self.hbp_batter.get(str(batter_id),1.0)
+        return float(min(0.5,max(0.005,p)))
     def draw(self,event,rng):
         pid=str(event['pitcher_id']);label=event['outcome'];hand=event.get('batter_hand','R')
+        hbp=int(label=='bb_hbp' and rng.random()<self.hbp_probability(pid,event.get('batter_id'),hand))
         for key in [('poh',pid,label,hand),('po',pid,label),('oh',label,hand),('o',label)]:
             if key in self.pools:
                 a=self.pools[key];self.fallback_counts[key[0]]+=1
-                return tuple(int(v) for v in a[int(rng.integers(len(a)))])
+                pc=int(a[int(rng.integers(len(a)))])
+                if label=='bb_hbp' and not hbp:pc=max(4,pc)
+                return hbp,pc
         raise Blocked('No compatible earlier PA count pool for '+label)
 
 class ObservedSimulator(GameSimulator):
@@ -140,13 +179,13 @@ def _distribution(counter,n):
 class BoxAccumulator:
     def __init__(self,matchup):
         self.matchup=matchup;self.n=0;self.hist={s:{'batting':{},'pitching':{}} for s in SIDE}
-        self.innings={s:defaultdict(lambda:Counter()) for s in SIDE};self.score_pairs=[];self.seeds=[]
+        self.innings={s:defaultdict(lambda:Counter()) for s in SIDE};self.score_pairs=[];self.seeds=[];self.features=[]
         for s in SIDE:
             t=getattr(matchup,s)
             for i,p in enumerate(t.lineup):self.hist[s]['batting'][p.player_id]={'name':p.name,'spot':i+1,'stats':{k:Counter() for k in BAT}}
             for i,p in enumerate((t.starter,*t.bullpen)):self.hist[s]['pitching'][p.player_id]={'name':p.name,'role':p.role,'order':i,'appeared':0,'stats':{k:Counter() for k in PIT}}
     def add(self,box):
-        self.n+=1;self.score_pairs.append((box['score']['away'],box['score']['home']));self.seeds.append(box['seed'])
+        self.n+=1;self.score_pairs.append((box['score']['away'],box['score']['home']));self.seeds.append(box['seed']);self.features.append(world_features(box))
         for s in SIDE:
             for kind,fields in [('batting',BAT),('pitching',PIT)]:
                 index={r['player_id']:r for r in box[kind][s]}
@@ -157,7 +196,7 @@ class BoxAccumulator:
             for inning,values in box['innings'][s].items():self.innings[s][int(inning)].update(values)
     def finish(self):
         if self.n!=10000:raise Blocked('Box projections require 10,000 finished worlds')
-        result={'n_simulations':self.n,'teams':{},'line_score':{},'sample_selection':'modal joint score, then four fixed world indices','samples':[]}
+        result={'n_simulations':self.n,'teams':{},'line_score':{},'sample_selection':SELECTION_NOTE,'samples':[]}
         for s in SIDE:
             result['teams'][s]={}
             for kind,fields in [('batting',BAT),('pitching',PIT)]:
@@ -174,13 +213,17 @@ class BoxAccumulator:
                         row['means']['IP']=row['means']['outs']/3
                     result['teams'][s][kind].append(row)
             result['line_score'][s]={str(i):{k:v.get(k,0)/self.n for k in ('R','H')} for i,v in sorted(self.innings[s].items())}
-        counts=Counter(self.score_pairs);mean=np.mean(self.score_pairs,axis=0)
-        modal=min(counts,key=lambda p:(-counts[p],float(np.sum((np.array(p)-mean)**2)),p))
-        typical=next(i for i,p in enumerate(self.score_pairs) if p==modal)
-        selected=[typical]
-        for i in (0,2500,5000,7500,9999):
+        counts=Counter(self.score_pairs)
+        features=self.features if len(self.features)==self.n else [
+            {'innings':9,'away':a,'home':h,**{k:0 for k in ('away_hits','home_hits','away_outs','home_outs','away_K','home_K','away_PC','home_PC')}}
+            for a,h in self.score_pairs]
+        picks=select_worlds(features)
+        selected=[picks[k] for k in ('projected','high','low','upset') if picks.get(k) is not None]
+        for i in picks.get('runners_up',[]):
             if i not in selected:selected.append(i)
             if len(selected)==5:break
+        result['sample_roles']={k:picks[k] for k in ('projected','high','low','upset') if picks.get(k) is not None}
+        modal=self.score_pairs[selected[0]]
         # Preserve dependence across the entire world: marginal player run
         # histograms cannot be added to reconstruct team or game distributions.
         result['team_run_distributions']={side:_distribution(Counter(p[i] for p in self.score_pairs),self.n)
@@ -190,8 +233,8 @@ class BoxAccumulator:
         result['typical_score_frequency']=counts[modal]/self.n
         return result
 
-def run_box_worlds(engine,matchup,history,date,seeds):
-    fit=BookkeepingFit(history,date)
+def run_box_worlds(engine,matchup,history,date,seeds,full_history=None):
+    fit=BookkeepingFit(history,date,full_history=full_history)
     sim=ObservedSimulator(engine.provider,config=engine.config,manager_policy=engine.manager)
     accumulator=BoxAccumulator(matchup);results=[]
     for seed in seeds:
@@ -206,10 +249,11 @@ def run_box_worlds(engine,matchup,history,date,seeds):
         if tuple(sample['score'][s] for s in SIDE)!=accumulator.score_pairs[i]:raise Blocked('Sample seed parity failed')
         sample['world_index']=i;sample['typical']=j==0
         payload['samples'].append(sample)
-    payload['bookkeeping']={'method':'earlier empirical joint BB/HBP and terminal pitch-number sampling',
+    payload['bookkeeping']={'method':'prior-date pitch-count pools (pitcher pools only when at least %d PA) plus a shrunk hit-by-pitch rate by batter hand, pitcher and batter'%BookkeepingFit.MIN_POOL,
         'input_max_date':fit.max_input_date,'cutoff_exclusive':date,'sampling_stream':'independent of engine',
         'pitch_counts_are_estimates':True,'pitch_sequences_generated':False,
-        'counts_do_not_influence_removal':True,'fallback_tiers_used':dict(fit.fallback_counts)}
+        'counts_do_not_influence_removal':True,'fallback_tiers_used':dict(fit.fallback_counts),
+        'hbp_support_events':fit.hbp_support,'hbp_league_share':round(fit.hbp_league_all,4)}
     return results,payload
 
 
