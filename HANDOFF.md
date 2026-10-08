@@ -1,6 +1,68 @@
 # Baseball Research Lab handoff
 
-## Current checkpoint — October 7, 2026 (Claude in charge; ChatGPT no longer updates this project)
+## Current checkpoint, October 8, 2026, 5 p.m. Eastern (Claude in charge)
+
+Read this section first, then LEDGER.md (every experiment with its registered prediction, result and decision). The
+October 7 checkpoint below still describes the machinery (lanes, privacy, scheduling); this section says what changed.
+
+### What the site runs now
+
+- Player model: pa-2026-v2-physics (brl_engine/model.json). Refits that were better per plate appearance did not help
+  at the game level and stay sealed, not served: RETRAIN-02 (aging), RETRAIN-03 (548-day physics window).
+- Simulator settings (ADJUST in brl_live/boxscore.py): context offsets re-estimated on the simulator's own stack
+  (CTX-02, brl_live/context_offsets.json, 2025 and 2026 through 2026-09-27); run environment env-v2 (ENV-03); team
+  offsets centered on the league (TEAM-05, CENTER-01); steals and runner speed (RUN-01, RUN-02); postseason starter usage
+  x0.91; base running after each outcome from every 2023-2026 play (TRANS-01, brl_live/transitions.json);
+  running plays between plate appearances built but off (TRANS-02, replays running, see below).
+- Headline win chance: taught-v4 from October 8, 14:00 UTC (HEADLINE-04): 60% market line, 40% our model, our model =
+  0.039 + 0.543 x simulator log-odds + 0.545 x team-model log-odds. Versions live in brl_live/headline_params.json with
+  effective times; never edit a version already in force.
+- In-game win chance: the game's simulated table averaged with the league table on the log-odds scale (LIVE-04).
+- Hitter chances on the page keep each lineup slot's hits with the starter's share of that slot's plate appearances
+  (PLAYER-02, STARTER_SHARE in boxscore.py).
+- Live runs chain every 12 to 15 minutes; the phone check passed at 19:23 UTC October 8 (390 and 1440 px, no errors).
+
+### Evidence (full-season replays, 1,000 worlds per game, each season with tables from other seasons)
+
+| Season | Simulator win Brier | Mean total vs actual | Notes |
+|---|---|---|---|
+| 2026, 2,454 games | 0.24378 before TRANS-01; kernel -0.00061, CTX-02 -0.00023 more | 8.98 vs 8.95 | headline 0.24317 vs closing line 0.24326 |
+| 2025, 2,423 games | kernel -0.00010, CTX-02 +0.00045 (walk level carried from 2026) | 8.92 vs 8.90 | headline 0.24150 vs closing line 0.24235 |
+
+Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeout level, worse totals), ROLE-01
+(superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
+https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
+
+### In flight
+
+TRANS-02 (LEDGER.md, registered 21:01 UTC, commit 324d8193): wild pitches, passed balls, balks, pickoffs and defensive
+indifference (0.48 plays per team-game, brl_live/running_events.json from transitions lane run 37842492748). Four
+replays started 21:01 to 21:03 UTC: runs 37843813177 (2026, cross-season tables), 37843877011 (2025), 37843922662 (2026,
+production context table, no plays) and 37843965520 (2026, production table, with plays). Decision rule in the ledger
+row. Evaluate with the scratch scripts env_eval.py (pairs two replay tags) and trans/team_rates.py, trans/staff_split.py.
+
+### Known gaps, measured
+
+- Run conversion: with real outcomes replayed through the kernel and steals, the simulator scores 0.04 to 0.07 runs per
+  team per nine innings fewer than real half-innings; the running plays close it (+0.01 and +0.04).
+- Bullpens: on real plate appearances the model is about 1.5% short of relievers' strikeouts (2026, starters right); in
+  the simulated games the bullpens are another 1.5% short and allow about 0.7% more hits, because the simulator's
+  manager picks relievers without regard to how much each one actually pitches (brl_replay/harness.bullpen takes every
+  reliever used in the last 14 days; manager.select_reliever has no usage or quality term).
+- Steals: the steal step was calibrated to all attempts (0.90 per team-game), but the kernel already holds the attempts
+  on the last pitch of a plate appearance (0.07 per team-game in 2026); the step should target the attempts before
+  contact plus the inning-ending ones (about 0.80).
+- Starters face 0.2 more batters than real; extra innings are the in-game table's weakest spot.
+
+### Working notes
+
+Tests: `cd /tmp && PYTHONPATH="<repo>/brl_engine/runtime:<repo>" python3 -m pytest -c /dev/null --rootdir=<repo>
+--import-mode=importlib <repo>/brl_engine/tests <repo>/brl_live_tests -q -p no:cacheprovider` (284 passed, 1 skipped).
+Lanes start on a push to their diag branch with a params file: diag/replay (tools/replay_params.json), diag/research,
+diag/fit-model, diag/discovery, diag/transitions, diag/challenges. Receipts land under research/ on brl-live-data.
+Scratch analysis scripts live in the sandbox only (re-create from the ledger rows if lost).
+
+## Checkpoint — October 7, 2026 (Claude in charge; ChatGPT no longer updates this project)
 
 Site: https://alecgreenblatt36.github.io/Pitcher-Research-Lab/ — new page (brl_live/page/template.html, rendered by brl_live/box_page.py with window.BRL inlined). Headline win chance = our market-taught model combined with the market's pregame line from October 8 (brl_live/headline.py; the equal-weight average of the simulator and the team model before that); the simulator and the team model are shown on the Odds tab and scored separately on the Record page. Projected game = most central nine-inning world with the favorite winning, chosen over all 10,000 worlds (brl_live/world_selection.py); High / Low / Upset versions likewise. Full box scores stay on the page for the slate date and the day before (box_page.trim_boxes); everything stays in the private ledger.
 
