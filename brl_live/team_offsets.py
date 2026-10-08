@@ -29,6 +29,10 @@ from pathlib import Path
 import numpy as np
 
 LABELS = ('BIP_OUT', 'K', 'BB_HBP', '1B', '2B_3B', 'HR', 'OTHER_REACH')
+# League shares the counts start from (2025-2026 regular seasons, rounded), worth 2,000 plate appearances, so the
+# first days of a season never meet a class with no events yet.
+PRIOR_SHARE = np.array([0.453, 0.221, 0.100, 0.142, 0.044, 0.031, 0.009])
+PRIOR_PA = 2000.0
 TABLE_PATH = Path(__file__).resolve().parent / 'team_offsets.json'
 
 
@@ -77,10 +81,13 @@ class OffsetState:
                     self.O[s][team] *= f; self.E[s][team] *= f
         self.last_day = day if self.last_day is None else max(self.last_day, day)
 
+    def share(self) -> np.ndarray:
+        return (self.league + PRIOR_PA * PRIOR_SHARE / PRIOR_SHARE.sum()) / (self.league.sum() + PRIOR_PA)
+
     def offsets(self, team: str, side: str, day: int | None = None) -> np.ndarray:
-        if side not in self.sides or self.league.sum() <= 0:
+        if side not in self.sides:
             return np.zeros(7)
-        q = self.league / self.league.sum()
+        q = self.share()
         f = 1.0
         if self.half_life and self.last_day is not None and day is not None and day > self.last_day:
             f = 0.5 ** ((day - self.last_day) / self.half_life)
@@ -147,7 +154,7 @@ def current_table(rows: list[dict], through: str | None = None, k: float = 4000.
     counts = {t: {s: {'observed': [round(float(v), 4) for v in st.O[s][t]], 'expected': [round(float(v), 4) for v in st.E[s][t]]}
                   for s in ('bat', 'fld') if t in st.O[s]} for t in sorted(set(st.O['bat']) | set(st.O['fld']))}
     return {'schema': 'brl.team-offsets.v1', 'labels': list(LABELS), 'estimated_through': through, 'k': k, 'half_life': half_life,
-            'sides': list(sides), 'last_day': st.last_day, 'league_share': [round(float(v), 6) for v in st.league / max(st.league.sum(), 1e-9)],
+            'sides': list(sides), 'last_day': st.last_day, 'league_share': [round(float(v), 6) for v in st.share()],
             'source': source, 'teams': st.table(), 'counts': counts}
 
 
