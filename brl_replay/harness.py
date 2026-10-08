@@ -169,7 +169,12 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
     act_lines, per_k = {}, {}
     if starter_lines:
         want_g = set(int(x) for x in games[games["date"].isin(dates)]["game_pk"])
-        sub = h.loc[h["game_pk"].isin(want_g), ["game_pk", "pitcher", "outcome"]]
+        sub = h.loc[h["game_pk"].isin(want_g), ["game_pk", "pitcher", "outcome", "inning_topbot"]]
+        sub_side = np.where(sub["inning_topbot"].astype(str).str.lower().str.startswith("top"), "home", "away")
+        for (gpk_, side_), oc in sub.groupby([sub["game_pk"].to_numpy(), sub_side])["outcome"]:
+            vc = oc.value_counts()
+            act_lines[(int(gpk_), str(side_))] = {"bf": int(len(oc)), "k": int(vc.get("K", 0)), "bb": int(vc.get("BB_HBP", 0)),
+                                                  "h": int(vc.get("1B", 0) + vc.get("2B_3B", 0) + vc.get("HR", 0)), "hr": int(vc.get("HR", 0))}
         for (gpk_, pid_), oc in sub.groupby(["game_pk", "pitcher"])["outcome"]:
             vc = oc.value_counts()
             act_lines[(int(gpk_), int(pid_))] = {"bf": int(len(oc)), "k": int(vc.get("K", 0)), "bb": int(vc.get("BB_HBP", 0)),
@@ -251,6 +256,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
             ha = np.zeros(MAX_RUNS + 1, int); aa = np.zeros(MAX_RUNS + 1, int)
             s_outs = {"away": [], "home": []}
             sl = {side: {m_: np.zeros(n_, int) for m_, n_ in (("k", 21), ("bf", 46), ("h", 21), ("bb", 16), ("outs", 28))} for side in ("away", "home")} if starter_lines else None
+            tot = {side: np.zeros(4) for side in ("away", "home")} if starter_lines else None   # team pitching: K, BF, BB+HBP, hits
             wt = WinTable() if win_states else None
             halves = (WinTable(), WinTable()) if win_states == "split" else None
             for si, s in enumerate(seeds):
@@ -273,6 +279,11 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                     if sl is not None and line:
                         for m_, f_ in (("k", "strikeouts"), ("bf", "batters_faced"), ("h", "hits_allowed"), ("bb", "walks_hbp"), ("outs", "outs_recorded")):
                             arr = sl[side][m_]; arr[min(int(line[f_]), len(arr) - 1)] += 1
+                if tot is not None:
+                    for ln in r.pitcher_lines.values():
+                        sd_ = ln.get("team_side")
+                        if sd_ in tot:
+                            tot[sd_] += (ln["strikeouts"], ln["batters_faced"], ln["walks_hbp"], ln["hits_allowed"])
             records.append({"game_pk": int(g.game_pk), "date": date, "home": g.home, "away": g.away, "n": n_sims,
                             "home_wins": hw, "ties": ties, "home_hist": ha.tolist(), "away_hist": aa.tolist(),
                             "home_starter_outs": float(np.mean(s_outs["home"])), "away_starter_outs": float(np.mean(s_outs["away"])),
@@ -283,7 +294,8 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                     sid_ = int(getattr(g, f"{side}_starter"))
                     rate_, prior_bf = prior_k_rate(sid_, date)
                     st_out[side] = {"pitcher": sid_, **{m_: v_.tolist() for m_, v_ in sl[side].items()}, "actual": act_lines.get((int(g.game_pk), sid_)),
-                                    "prior_k_rate": round(float(rate_), 4), "prior_bf_365": prior_bf, "expected_bf": round(float(pexp.get(sid_, hazard["league_mean_bf"])), 2)}
+                                    "prior_k_rate": round(float(rate_), 4), "prior_bf_365": prior_bf, "expected_bf": round(float(pexp.get(sid_, hazard["league_mean_bf"])), 2),
+                                    "team_sim_mean": [round(float(v_ / n_sims), 3) for v_ in tot[side]], "team_actual": act_lines.get((int(g.game_pk), side))}
                 records[-1]["starters"] = st_out
             if wt is not None:
                 tb = wt.table()
