@@ -33,22 +33,27 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
-### In flight (updated 6:45 p.m. Eastern)
+### In flight (updated 7:30 p.m. Eastern)
 
-- TRANS-02 (running plays): read and recorded. The plays add 0.14 runs a game in every comparison; the simulator already
-  runs at the actual level without them, so they stay off until RUNS-01 finds where the simulated outcomes carry the
-  extra runs. Win chances lean better with the plays (+0.00014, -0.00082, -0.00038).
-- BULLPEN-01 (fitted reliever choice, commit f937f79b, off in ADJUST): replays 37851994243 (2026) and 37852034410 (2025)
-  against the CTX-02 replays v2-prod-trans-ctx-1000-YYYY. Evaluate with env_eval.py, trans/staff_split.py,
-  trans/team_rates.py and harness/starter_eval.py; decision rule in the ledger row.
-- LEASH-01 (starter leash, commit 5705abb2, off in ADJUST): replays 37854594794 (2026) and 37854634286 (2025), tags
-  v2-prod-trans-ctx-leash-1000-YYYY. Read with trans/starter_leash.py (groups) and harness/starter_eval.py (CRPS).
-- RUNS-01 (where the run excess comes from, commit b372a7db): check-only runs 37852951760 (2026) and 37852989061 (2025);
-  read with trans/rpa_bases.py.
-- DISC-08 (challenge scarcity, addendum 14, commit cce58fb2): discovery run 37852742097.
-- RUN-03 (steal step double count): measured, no change needed. With the empirical kernel the step gives 0.84 attempts
-  per team-game at per_pa 0.85 (it gave 0.90 with the hand-set kernel), against 0.83 (2025) and 0.81 (2026) real
-  attempts outside the last pitch (transitions lane run 37842492748).
+- BULLPEN-02 (fitted reliever choice + fitted reliever exits, registered in commit ff98b25f): replays 37857987864 (2026)
+  and 37858023424 (2025), tags v2-prod-trans-ctx-pen-1000-YYYY, against v2-prod-trans-ctx-1000-YYYY. Decision on both
+  seasons pooled (scratch trans/pooled_eval.py) plus trans/staff_split.py; the rows now carry team_pitchers_sim_mean
+  (pitchers used per team, simulated) and team_actual.pitchers.
+- LEASH-01 (starter leash, commit 5705abb2): replays 37854594794 (2026) and 37854634286 (2025), tags
+  v2-prod-trans-ctx-leash-1000-YYYY. Read with trans/starter_leash.py and harness/starter_eval.py.
+- RUNS-02 (shape by bases and outs, commit 010617ec): replays 37856958529 (2026) and 37856998314 (2025), tags
+  v2-prod-trans-ctx-bs-1000-YYYY.
+- Read and recorded today: TRANS-02 (plays real, off until the run level is understood), BULLPEN-01 (better win Brier in
+  both seasons, -0.0004 each, pooled interval upper end +0.0002, but the registered per-season bound was not met; retested
+  in BULLPEN-02), RUNS-01 (no calibration miss by base state for hits; the shape by bases and outs is consistent across
+  seasons), RUN-03 (no change needed), DISC-08 (challenge scarcity; private page version 10).
+
+### What the bullpen work found (RELIEF-02)
+
+The hand-set reliever exit rule pulled relievers mid-inning at about 57% of the decision points where a change is
+allowed; real managers do it at about 9%. The engine used 4.6 relievers a team-game at 3.5 batters each (real 3.3 and
+4.9). The fitted exits (brl_live/relief_exit.json, off) give 3.4 and 4.8. This is the largest structural miss found so
+far and part of why simulated bullpens struck out fewer batters and allowed more hits than real ones.
 
 ### Known gaps, measured
 
@@ -65,7 +70,7 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 ### Working notes
 
 Tests: `cd /tmp && PYTHONPATH="<repo>/brl_engine/runtime:<repo>" python3 -m pytest -c /dev/null --rootdir=<repo>
---import-mode=importlib <repo>/brl_engine/tests <repo>/brl_live_tests -q -p no:cacheprovider` (292 passed, 1 skipped).
+--import-mode=importlib <repo>/brl_engine/tests <repo>/brl_live_tests -q -p no:cacheprovider` (303 passed, 1 skipped).
 Lanes start on a push to their diag branch with a params file: diag/replay (tools/replay_params.json), diag/research,
 diag/fit-model, diag/discovery, diag/transitions, diag/challenges. Receipts land under research/ on brl-live-data.
 Scratch analysis scripts live in the sandbox only (re-create from the ledger rows if lost).
