@@ -11,7 +11,7 @@
  ],
  "pseudo_pa": 200.0,
  "estimated_through": "2026-09-27",
- "source": "log(observed/predicted) per class from the production model's own predictions (pa-2026-v2-physics, physics features from every fitted season) on every 2026 regular-season plate appearance (replays v2-rpo-ll-recent-2025 and v2-rpo-ll-recent-2026); buckets are batting side (0 away, 1 home) x inning (1st, 2nd-8th as mid, 9th and later as late); 200 pseudo plate appearances per bucket at the bucket's predicted shares pull offsets toward zero",
+ "source": "log(observed/predicted) per class from the production model's own predictions (pa-2026-v2-physics, physics features from the previous and the current season, as the live runtime loads them) on every 2026 regular-season plate appearance (check-only replays v2-rpo-ll-recent-2025 run 37806837909 and v2-rpo-ll-recent-2026 run 37806718894); buckets are batting side (0 away, 1 home) x inning (1st, 2nd-8th as mid, 9th and later as late); 200 pseudo plate appearances per bucket at the bucket's predicted shares pull offsets toward zero",
  "offsets": {
   "0_1st": {
    "BIP_OUT": -0.0637,
