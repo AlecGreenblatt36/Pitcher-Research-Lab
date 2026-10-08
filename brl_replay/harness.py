@@ -119,7 +119,7 @@ def bats_lookup(h: pd.DataFrame, cutoff: str) -> dict:
 
 def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates: list, *, model_path: Path, model_sha256: str,
                  history_path: Path, hazard_path: Path, n_sims: int, physics_table=None, offsets=None, rest=False, environment=None,
-                 team_offsets=None, age_layer=None, steals=None, win_states=False, starter_lines=False, role_offsets=None, real_pa_check=False, transitions=None, hitter_lines=False, running_events=None, reliever_choice=None, leash=None, log=print) -> list[dict]:
+                 team_offsets=None, age_layer=None, steals=None, win_states=False, starter_lines=False, role_offsets=None, real_pa_check=False, transitions=None, hitter_lines=False, running_events=None, reliever_choice=None, leash=None, base_state=None, log=print) -> list[dict]:
     """Simulate every game on the given dates; one record per game (win counts, run histograms, starter outs).
 
     environment: optional {game_pk: seven log-multipliers} (brl_live/environment.py); games without an entry are unadjusted.
@@ -143,6 +143,8 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
     transitions: optional base-running kernel after each outcome (research_lab.game_sim.transitions.EmpiricalKernel).
     running_events: optional running plays between plate appearances other than steals (research_lab.game_sim.running_events).
     reliever_choice: optional fitted choice of the entering reliever (research_lab.game_sim.reliever_choice.RelieverChoice).
+    base_state: optional base-state offsets (brl_live.provider_adjust.load_base_state): the stack shaped by bases and outs,
+        applied after the team offsets.
     leash: optional (research_lab.game_sim.starter_leash.Leash, AppearanceIndex of regular-season appearances): each
         starter's expected batters faced moved for short rest, a relief outing before, a return from a layoff and the month.
     hitter_lines: also record each lineup hitter's simulated chances (at least one hit, a home run, a strikeout, a walk), mean
@@ -162,6 +164,9 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
     tadj = None
     if team_offsets is not None:
         tadj = provider = TeamAdjust(provider); chain.append(('team', tadj))
+    if base_state is not None:
+        from brl_live.provider_adjust import BaseStateAdjust
+        provider = BaseStateAdjust(provider, base_state); chain.append(('base_state', provider))
     radj = None
     if role_offsets is not None:
         radj = provider = RoleAdjust(provider); chain.append(('role', radj))

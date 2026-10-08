@@ -1,0 +1,109 @@
+{
+ "schema": "brl.base-state-offsets.v1",
+ "labels": [
+  "BIP_OUT",
+  "K",
+  "BB_HBP",
+  "1B",
+  "2B_3B",
+  "HR",
+  "OTHER_REACH"
+ ],
+ "pseudo_pa": 2000.0,
+ "name": "bases and outs shape from 2026 plate appearances",
+ "source": "log(cell ratio / season ratio) of observed over predicted per class, the full probability stack on every real plate appearance (check-only replays v2-prod-ctx-rpa-bases-2026); cells are bases (0 empty, 1 first only, 2 a runner in scoring position) by outs; shrunk toward the bases group by 2000 pseudo plate appearances at the cell's predicted shares (RUNS-02).",
+ "plate_appearances": {
+  "0|0": 44593,
+  "0|1": 32359,
+  "0|2": 25640,
+  "1|0": 10777,
+  "1|1": 13359,
+  "1|2": 13292,
+  "2|0": 8151,
+  "2|1": 15526,
+  "2|2": 19988
+ },
+ "offsets": {
+  "0|0": {
+   "BIP_OUT": 0.00997,
+   "K": -0.00032,
+   "BB_HBP": -0.00872,
+   "1B": -0.02342,
+   "2B_3B": 0.01292,
+   "HR": 0.03244,
+   "OTHER_REACH": -0.21174
+  },
+  "0|1": {
+   "BIP_OUT": 0.00439,
+   "K": 0.02219,
+   "BB_HBP": -0.04637,
+   "1B": -0.01689,
+   "2B_3B": -0.005,
+   "HR": 0.01252,
+   "OTHER_REACH": -0.06156
+  },
+  "0|2": {
+   "BIP_OUT": -0.00165,
+   "K": 0.01483,
+   "BB_HBP": -0.0414,
+   "1B": 0.01498,
+   "2B_3B": -0.01034,
+   "HR": -0.01924,
+   "OTHER_REACH": 0.00418
+  },
+  "1|0": {
+   "BIP_OUT": 0.00605,
+   "K": -0.03362,
+   "BB_HBP": 0.08563,
+   "1B": 0.02654,
+   "2B_3B": -0.11769,
+   "HR": -0.1167,
+   "OTHER_REACH": 0.15943
+  },
+  "1|1": {
+   "BIP_OUT": -0.03032,
+   "K": -0.00962,
+   "BB_HBP": 0.06303,
+   "1B": 0.0527,
+   "2B_3B": 0.00297,
+   "HR": -0.00328,
+   "OTHER_REACH": 0.21606
+  },
+  "1|2": {
+   "BIP_OUT": -0.0001,
+   "K": -0.03947,
+   "BB_HBP": 0.04751,
+   "1B": 0.00417,
+   "2B_3B": 0.06077,
+   "HR": 0.03552,
+   "OTHER_REACH": -0.05581
+  },
+  "2|0": {
+   "BIP_OUT": 0.02564,
+   "K": -0.06597,
+   "BB_HBP": -0.02814,
+   "1B": 0.0368,
+   "2B_3B": -0.0422,
+   "HR": -0.04916,
+   "OTHER_REACH": 0.13959
+  },
+  "2|1": {
+   "BIP_OUT": -0.0254,
+   "K": 0.0023,
+   "BB_HBP": 0.00728,
+   "1B": 0.04753,
+   "2B_3B": 0.03139,
+   "HR": -0.08785,
+   "OTHER_REACH": 0.29662
+  },
+  "2|2": {
+   "BIP_OUT": -0.00339,
+   "K": 0.0173,
+   "BB_HBP": 0.03177,
+   "1B": -0.05562,
+   "2B_3B": 0.00741,
+   "HR": 0.05992,
+   "OTHER_REACH": -0.15945
+  }
+ }
+}

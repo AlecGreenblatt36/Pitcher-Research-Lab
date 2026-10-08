@@ -98,6 +98,49 @@ class EnvironmentAdjust:
         return getattr(self.inner, item)
 
 
+BASE_STATE_PATH = Path(__file__).resolve().parent / 'base_state_offsets.json'
+
+
+def base_cell(ctx) -> str:
+    """'bases|outs' for a plate appearance: bases 0 empty, 1 first only, 2 a runner in scoring position; outs 0 to 2."""
+    on = [b is not None and b is not False for b in (tuple(ctx.bases) + (None, None, None))[:3]]
+    cat = 0 if not any(on) else 1 if not (on[1] or on[2]) else 2
+    return f'{cat}|{min(max(int(ctx.outs), 0), 2)}'
+
+
+def load_base_state(path: Path = BASE_STATE_PATH) -> dict:
+    doc = json.loads(Path(path).read_text())
+    if tuple(doc['labels']) != MODEL_LABELS:
+        raise ValueError('base-state offsets label order mismatch')
+    table = {cell: np.exp(np.array([float(values[l]) for l in MODEL_LABELS])) for cell, values in doc['offsets'].items()}
+    for b in range(3):
+        for o in range(3):
+            if f'{b}|{o}' not in table:
+                raise ValueError(f'base-state offsets missing cell {b}|{o}')
+    return {'table': table, 'name': doc.get('name'), 'source': doc.get('source')}
+
+
+class BaseStateAdjust:
+    """Multiplies each plate appearance's probabilities by the offsets of its bases (empty, first only, a runner in
+    scoring position) and outs, and renormalizes (RUNS-02). The offsets are the stack's miss in each cell relative to its
+    miss over the whole season, so they carry the shape by situation and leave the level to the context offsets."""
+    def __init__(self, inner, offsets: dict | None = None):
+        self.inner = inner
+        self.offsets = offsets or load_base_state()
+        self.table = self.offsets['table']
+        self.name = getattr(inner, 'name', 'provider')
+        self.validation_status = getattr(inner, 'validation_status', '')
+
+    def probabilities(self, ctx):
+        base = self.inner.probabilities(ctx)
+        p = np.array([base[k] for k in SIM_LABELS], dtype=float) * self.table[base_cell(ctx)]
+        p /= p.sum()
+        return dict(zip(SIM_LABELS, map(float, p)))
+
+    def __getattr__(self, item):
+        return getattr(self.inner, item)
+
+
 class TeamAdjust:
     """Multiplies each plate appearance's probabilities by the batting team's and the fielding team's offsets
     (brl_live/team_offsets.py). set_teams() takes {'away': log-multipliers while the away team bats, 'home': ...}."""

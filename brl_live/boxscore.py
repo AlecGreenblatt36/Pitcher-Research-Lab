@@ -342,13 +342,15 @@ class BoxAccumulator:
 # relief entry (BULLPEN-01; research_lab.game_sim.reliever_choice.RelieverChoice, table brl_live/reliever_choice.json from
 # tools/brl_reliever_choice.py): recent use, rest, role over the year and the last three weeks, strikeout record, the
 # next three hitters' hands and the game situation. Off until its replays are read; off, the hand-set scoring chooses.
+# base_state: the stack's probabilities shaped by bases and outs (RUNS-02; brl_live.provider_adjust.BaseStateAdjust,
+# table brl_live/base_state_offsets.json from tools/brl_base_state.py). Off until its replays are read.
 # leash: in regular-season games each starter's expected batters faced is moved for short rest (openers), a relief
 # outing before the start, the first two starts back from a layoff of 20 days or more, March and September (LEASH-01;
 # research_lab.game_sim.starter_leash, table brl_live/leash.json from tools/brl_leash.py). Off until its replays are read.
 ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         'postseason_exp_scale':{'F':0.91,'D':0.91,'L':0.91,'W':1.0},
         'environment':True,'team_offsets':True,'steals':True,'transitions':True,'running_events':False,
-        'reliever_choice':False,'leash':False}
+        'reliever_choice':False,'leash':False,'base_state':False}
 
 TRANSITIONS_PATH=Path(__file__).resolve().parent/'transitions.json'
 RUNNING_EVENTS_PATH=Path(__file__).resolve().parent/'running_events.json'
@@ -441,6 +443,9 @@ def adjusted_provider(provider,full_history,date,settings=ADJUST,environment=Non
         tt=load_team_table()
         provider=TeamAdjust(provider,game_log_multipliers(tt,teams[0],teams[1],date))
         label.append('team offsets through '+str(tt.get('estimated_through'))+(' (centered on the league)' if tt.get('center') else ''))
+    if settings.get('base_state'):
+        from .provider_adjust import BaseStateAdjust
+        provider=BaseStateAdjust(provider);label.append('bases and outs shape ('+str(provider.offsets.get('name'))+')')
     if settings.get('role_offsets'):
         from .role_offsets import load_table as load_role_table,log_multipliers as role_multipliers
         from .provider_adjust import RoleAdjust
