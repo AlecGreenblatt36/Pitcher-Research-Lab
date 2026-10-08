@@ -14,7 +14,7 @@ from cloud.security import key_bytes
 from .live_extension import RefreshedSimulator,make_history_engine
 from .history_refresh import HistoryCache,Fetcher,previous_day
 from .verified_store import VerifiedGitStore
-from .boxscore import run_box_worlds,parse_actual_box,score_player_boxes,bookkeeping_history_from_cache,validate_box_payload,ADJUST
+from .boxscore import run_box_worlds,parse_actual_box,score_player_boxes,bookkeeping_history_from_cache,validate_box_payload,ADJUST,adjusted_provider
 from .box_page import render_page
 from .live_feed import live_matchup,appearances,matchup_parameters
 from .live_update import run_live_update
@@ -55,8 +55,16 @@ class BoxSimulator(RefreshedSimulator):
         parameters={'date':game['date'],'park':game['home']['abbr'],'game':game,
                     'matchup':asdict(matchup),'config':config_for(game['game_type'])}
         engine,decoded=make_history_engine(parameters,self.path,getattr(self,'physics_table',None))
+        teams=(game['away'].get('abbr'),game['home'].get('abbr'))
         results,box=run_box_worlds(engine,decoded,self.annotations,game['date'],draw_seeds(game['game_pk']),full_history=self.history,
-                                   environment=getattr(self,'environment',None),teams=(game['away'].get('abbr'),game['home'].get('abbr')))
+                                   environment=getattr(self,'environment',None),teams=teams)
+        # Hitter-against-pitcher grid from the same adjusted model (brl_live/matchups.py); never blocks the forecast.
+        try:
+            from .matchups import matchup_grid
+            grid_provider,_,_=adjusted_provider(engine.provider,self.history,game['date'],ADJUST,getattr(self,'environment',None),teams)
+            box['matchups']=matchup_grid(grid_provider,decoded,box)
+        except Exception as exc:
+            box['matchups']={'error':type(exc).__name__+': '+str(exc)[:160]}
         baseline=predict(game,self.rows,self.fit)
         # The team half of the headline blend: our decayed negative-binomial team model, the one
         # measured on the 2026 replay next to the simulator. The runtime's own baseline is kept

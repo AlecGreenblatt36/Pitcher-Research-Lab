@@ -308,6 +308,18 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .pa .runs { font-family: var(--display); font-weight: 700; font-size: 17px; white-space: nowrap; }
 .change { font-size: 14px; color: var(--muted); padding: 8px 0 2px; font-style: italic; }
 
+/* Matchups grid */
+.mu-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; }
+.mu { border-collapse: collapse; width: 100%; font-family: var(--display); }
+.mu th, .mu td { padding: 8px 6px; text-align: center; border-bottom: 1px solid var(--rule-soft); white-space: nowrap; }
+.mu thead th { font-family: var(--body); font-size: 14px; font-weight: 700; vertical-align: bottom; border-bottom: 2px solid var(--ink); }
+.mu thead th span { display: block; }
+.mu thead th small { display: block; font-weight: 400; color: var(--muted); }
+.mu td { font-size: 18px; font-weight: 600; min-width: 52px; }
+.mu .mu-who { position: sticky; left: 0; z-index: 1; background: var(--surface); text-align: left; font-family: var(--body); font-size: 15px; font-weight: 700; padding-left: 12px; }
+.mu .mu-who .spot { display: inline-block; width: 18px; color: var(--muted); font-weight: 400; }
+.mu .mu-who small { color: var(--muted); font-weight: 400; }
+
 /* Odds */
 .winbar { display: flex; height: 48px; border-radius: 6px; overflow: hidden; }
 .winbar div { display: flex; align-items: center; padding: 0 12px; color: #fff; font-family: var(--display); font-weight: 700; font-size: 22px; white-space: nowrap; }
@@ -391,6 +403,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
 @media (max-width: 380px) {
   .line td { font-size: 17px; min-width: 21px; }
 }
+@media (max-width: 430px) {
+  .tab { padding: 12px 7px 10px; font-size: 15px; }
+}
 /* Desktop: wider pages; the game header splits in two; summary, odds and record read in two columns. */
 @media (min-width: 1000px) {
   .hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr); gap: 0 48px; align-items: start; }
@@ -443,7 +458,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   var DATA_URL = "predictions.json";
   var D = null;
   var app = document.getElementById("app");
-  var state = { variant: {}, boxSide: {}, playSide: {} };
+  var state = { variant: {}, boxSide: {}, playSide: {}, muMetric: "obp" };
 
   /* ---------- small helpers ---------- */
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
@@ -1255,6 +1270,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     }
 
     var tabs = [["summary", "Summary"], ["box", "Box score"], ["plays", "Plays"], ["odds", "Odds"]];
+    if (box && box.matchups && box.matchups.away && !box.matchups.error) tabs.push(["matchups", "Matchups"]);
     html += '<nav class="tabs"><div class="wrap" role="tablist">' + tabs.map(function (t) {
       return '<button class="tab" role="tab" data-tab="' + t[0] + '" aria-selected="' + (t[0] === tab) + '">' + t[1] + "</button>";
     }).join("") + "</div></nav>";
@@ -1270,6 +1286,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (pside === "actual" && real) html += '<p class="note">The real game from the official play-by-play' + (real._live ? ", through the last completed plate appearance at the last check" : "") + ".</p>";
     }
     else if (tab === "odds") html += oddsTab(f, box);
+    else if (tab === "matchups") html += matchupsTab(f, box);
     else html += summaryTab(f, s, box, actual, actualBox, v, real, lv);
     html += "</div></div></div>";
     app.innerHTML = html;
@@ -1286,6 +1303,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     });
     app.querySelectorAll("[data-playside]").forEach(function (b) {
       b.addEventListener("click", function () { state.playSide[pk] = b.getAttribute("data-playside"); renderGame(pk, "plays"); });
+    });
+    app.querySelectorAll("[data-mumetric]").forEach(function (b) {
+      b.addEventListener("click", function () { state.muMetric = b.getAttribute("data-mumetric"); renderGame(pk, "matchups", true); });
     });
   }
 
@@ -1852,6 +1872,47 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   }
 
   /* Odds tab */
+
+  /* ---------- hitter against pitcher: one plate appearance, fixed situation, from the game's own model ---------- */
+  var MU_METRICS = {
+    obp: { label: "On base", hitter: 1, league: 0.317, f: function (p) { return p[2] + p[3] + p[4] + p[5]; } },
+    k: { label: "Strikeout", hitter: -1, league: 0.221, f: function (p) { return p[1]; } },
+    hit: { label: "Hit", hitter: 1, league: 0.217, f: function (p) { return p[3] + p[4] + p[5]; } },
+    hr: { label: "Home run", hitter: 1, league: 0.031, f: function (p) { return p[5]; } }
+  };
+  function muCell(v, m) {
+    var edge = m.hitter * (v - m.league) / m.league, a = Math.min(0.55, Math.abs(edge) * 0.9);
+    var bg = edge >= 0 ? "rgba(240,178,58," + a.toFixed(3) + ")" : "rgba(46,125,154," + a.toFixed(3) + ")";
+    var txt = m.league < 0.05 ? (v * 100).toFixed(1) + "%" : Math.round(v * 100) + "%";
+    return '<td style="background:' + bg + '">' + txt + "</td>";
+  }
+  function matchupsTab(f, box) {
+    var mu = box && box.matchups;
+    if (!mu || mu.error || !mu.away) return '<p class="empty">The hitter-against-pitcher grid is not part of this forecast.</p>';
+    var key = MU_METRICS[state.muMetric] ? state.muMetric : "obp", m = MU_METRICS[key];
+    var h = '<section class="sec wide"><h2>Hitter against pitcher</h2><p class="lede">The model\'s chance for one plate appearance of each hitter against the starter and the relievers most likely to pitch, with the bases empty, nobody out and the score tied. ' +
+      "Gold favors the hitter, blue the pitcher, against the league rate of " + (m.league < 0.05 ? (m.league * 100).toFixed(1) : Math.round(m.league * 100)) + "%.</p>";
+    h += '<div class="seg" role="group" aria-label="Which chance">' + Object.keys(MU_METRICS).map(function (k2) {
+      return '<button data-mumetric="' + k2 + '" aria-pressed="' + (k2 === key) + '">' + MU_METRICS[k2].label + "</button>";
+    }).join("") + "</div></section>";
+    ["away", "home"].forEach(function (side) {
+      var g = mu[side], other = side === "away" ? "home" : "away";
+      if (!g) return;
+      h += '<section class="sec wide"><h3 class="team-h ' + side + '-c">' + esc(nickname(f[side].name)) + " hitters against the " + esc(nickname(f[other].name)) + " staff</h3>";
+      h += '<div class="mu-wrap"><table class="mu num"><thead><tr><th scope="col" class="mu-who">Hitter</th>';
+      g.pitchers.forEach(function (pt) {
+        h += '<th scope="col"><span>' + esc(lastName(pt.name)) + "</span><small>" + (pt.role === "starter" ? "Starter" : pt.appear != null ? pct(pt.appear) + " to pitch" : "Reliever") + "</small></th>";
+      });
+      h += "</tr></thead><tbody>";
+      g.batters.forEach(function (b, i) {
+        h += '<tr><th scope="row" class="mu-who"><span class="spot">' + b.spot + "</span>" + esc(lastName(b.name)) + (b.bats ? " <small>" + esc(b.bats) + "</small>" : "") + "</th>";
+        (g.p[i] || []).forEach(function (pr) { h += muCell(m.f(pr), m); });
+        h += "</tr>";
+      });
+      h += "</tbody></table></div></section>";
+    });
+    return h;
+  }
   function oddsTab(f, box) {
     var h = "", pa = winProb(f, "away"), ph = winProb(f, "home");
     var taught = taughtRecipe(f), rc = recipeOf(f), withLine = !!(rc && /market/.test(rc.headline || ""));

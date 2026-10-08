@@ -130,7 +130,7 @@ def lean_box(box: dict) -> dict:
     """A box for the day archive: projected sample only, player means and chances, no distributions or pitch lists."""
     out = {k: box[k] for k in ('schema', 'game_pk', 'date', 'saved_at', 'forecast_origin', 'team_ids', 'starters', 'lineup_status',
                                'history_through', 'forecast_id', 'n_simulations', 'sample_roles', 'sample_indices', 'adjustments',
-                               'team_model', 'team_run_distributions', 'total_run_distribution', 'line_score', 'win_table') if k in box}
+                               'team_model', 'team_run_distributions', 'total_run_distribution', 'line_score', 'win_table', 'matchups') if k in box}
     out['teams'] = {}
     for side in ('away', 'home'):
         out['teams'][side] = {}
