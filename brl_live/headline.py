@@ -1,8 +1,8 @@
 """The headline win chance and our independent model (brl_live/headline_params.json).
 
 Our model is independent of the betting market at forecast time: a fixed combination of what our
-forecast knows before first pitch (the simulator's and the team model's log-odds, the starters'
-adjustments and the team ratings). Its weights were taught by the market: fitted to the market's
+forecast knows before first pitch (the simulator's and the team model's log-odds; taught-v2 and v3 also
+used the starters' adjustments and the team ratings). Its weights were taught by the market: fitted to the market's
 closing log-odds on past regular seasons, a far more precise target than one game's result, and then
 checked against real results on games the fit never saw (DISTILL in LEDGER.md).
 
