@@ -1413,7 +1413,8 @@ def horizon11(T: dict, params: dict, stage) -> dict:
     res = {}
     F = rebuild(T)
     ok = F['ok'] & (T['group'] >= 0) & (T['balls'] >= 0) & (T['strikes'] >= 0) & (T['strikes'] <= 2)
-    seasons = (int(params.get('from_season', 2025)), int(params.get('to_season', 2026)))
+    pairs_list = [tuple(int(v) for v in pr) for pr in params.get('pairs', [[int(params.get('from_season', 2025)), int(params.get('to_season', 2026))]])]
+    seasons = tuple(sorted({s for pr in pairs_list for s in pr}))
     swing = (T['call'] == 1) | (T['call'] == 2); whiff = T['call'] == 2
     u = np.where(T['stand_r'] == 1, T['px'], -T['px'])
     inzone = (np.abs(u) <= ZONE_HALF) & (T['pz'] <= ZONE_TOP) & (T['pz'] >= ZONE_BOT)
@@ -1457,15 +1458,16 @@ def horizon11(T: dict, params: dict, stage) -> dict:
         return float(np.hypot(a['px'] - b['px'], a['pz'] - b['pz']) * 12)
     rows = []
     min_n = int(params.get('min_n', 150))
-    for (k, s), r in unit.items():
-        if s != seasons[0] or (k, seasons[1]) not in unit:
+    for (k, s), r in list(unit.items()):
+      for (s_from, s_to) in pairs_list:
+        if s != s_from or (k, s_to) not in unit:
             continue
-        r2 = unit[(k, seasons[1])]
+        r2 = unit[(k, s_to)]
         if r['n'] < min_n or r2['n'] < min_n:
             continue
         feats = {}
         okk = True
-        for tag, rr, ss in (('a', r, seasons[0]), ('b', r2, seasons[1])):
+        for tag, rr, ss in (('a', r, s_from), ('b', r2, s_to)):
             tr = {p_: c for p_, c in rr['trans'].items() if (p_, ss) in unit and unit[(p_, ss)]['n'] >= 60}
             w = sum(tr.values())
             if w < 40:
@@ -1475,7 +1477,7 @@ def horizon11(T: dict, params: dict, stage) -> dict:
                           'plate': sum(c * plate(rr, unit[(p_, ss)]) for p_, c in tr.items()) / w}
         if not okk:
             continue
-        rows.append({'pitcher': k // 100, 'type': SUBTYPES[k % 100] if k % 100 < len(SUBTYPES) else 'OT', 'n': min(r['n'], r2['n']),
+        rows.append({'pitcher': k // 100, 'type': SUBTYPES[k % 100] if k % 100 < len(SUBTYPES) else 'OT', 'n': min(r['n'], r2['n']), 'from': s_from,
                      'd_chase': r2['chase'] - r['chase'], 'd_whiff': r2['whiff'] - r['whiff'], 'd_s260': feats['b']['s260'] - feats['a']['s260'],
                      'd_s175': feats['b']['s175'] - feats['a']['s175'], 'd_plate': feats['b']['plate'] - feats['a']['plate'],
                      'd_v0': r2['v0'] - r['v0'], 'd_asx': abs(r2['asx']) - abs(r['asx']), 'd_asz': r2['asz'] - r['asz'], 'd_zone': r2['zone'] - r['zone'],

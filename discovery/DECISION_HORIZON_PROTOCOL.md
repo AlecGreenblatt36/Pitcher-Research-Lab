@@ -209,3 +209,10 @@ movement, zone rate and height as controls, weighted by pitches, intervals by re
 now: more separation at the decision moment means fewer chases (negative coefficient), and the 260 ms change predicts
 better than the 175 ms change. Power is the main risk: most pitchers change little, so an interval spanning zero is
 the likely outcome if the effect is small, and would be reported as not established rather than as no effect.
+
+## Addendum 9, pooling all season pairs (same test, more power)
+
+The 2025 to 2026 change test (run 37741959956, 927 pitch types) supported the direction (more separation at 260 ms,
+fewer chases: -0.040 per degree, interval -0.069 to -0.008) but could not separate 260 from 175 ms (both negative
+alone; in one model neither interval excludes zero). The same frozen specification is now run on 2023-2024,
+2024-2025 and 2025-2026 changes pooled, with intervals resampling pitchers. Same predictions as addendum 8.
