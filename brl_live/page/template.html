@@ -322,6 +322,31 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 @media (min-width: 720px) { .edge-list a { grid-template-columns: 1.1fr 1fr 1.4fr 1.2fr; align-items: end; } .edge-list .eg-game, .edge-list .eg-gap { grid-column: auto; } }
 @media (min-width: 1100px) { .edges { max-width: 1120px; } }
 
+/* Postseason series */
+.sr-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.sr { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 10px 14px 12px; }
+.sr-head { display: flex; justify-content: space-between; gap: 8px; font-size: 15px; color: var(--muted); margin-bottom: 4px; }
+.sr-head span:last-child { color: var(--ink); font-weight: 700; }
+.sr-team { display: grid; grid-template-columns: 52px 1fr 40px 56px; align-items: baseline; gap: 6px; padding: 2px 0; }
+.sr-team .abbr { font-family: var(--display); font-weight: 700; font-size: 20px; }
+.sr-team .team-name { font-size: 16px; }
+.sr-team .big { font-family: var(--display); font-size: 22px; font-weight: 700; text-align: right; }
+.sr-team .pct { font-family: var(--display); font-size: 20px; font-weight: 600; text-align: right; color: var(--muted); }
+.sr-team.fav .pct { color: var(--ink); font-weight: 700; }
+.sr-team.out { opacity: .55; }
+.sr-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin: 8px 0 6px; }
+.sr-bar i { display: block; height: 100%; }
+.sr-games { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.sr-games li { font-size: 14px; border: 1px solid var(--rule); border-radius: 8px; padding: 4px 8px; background: var(--paper); }
+.sr-games li b { display: block; font-size: 14px; font-weight: 700; color: var(--muted); }
+.sr-games li.live { border-color: var(--lamp); }
+.sr-games li.done { color: var(--muted); }
+.sr-foot { margin: 8px 0 0; font-size: 15px; }
+.hero-series { margin: 10px 0 0; font-size: 15px; }
+.hero-series b { font-family: var(--display); font-size: 17px; }
+@media (min-width: 720px) { .sr-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1100px) { .series { max-width: 1120px; } }
+
 /* Matchups grid */
 .mu-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; }
 .mu { border-collapse: collapse; width: 100%; font-family: var(--display); }
@@ -1031,9 +1056,100 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         : (f.lineup_status && f.lineup_status.away === "official" && f.lineup_status.home === "official" ? "Official lineups" : "Projected lineups") + marketFoot(f);
       html += '<div class="card-foot">' + esc(foot) + "</div></a></li>";
     });
-    html += "</ol>" + edgesBoard(games) + "</div>";
+    html += "</ol>" + seriesBoard(day) + edgesBoard(games) + "</div>";
     app.innerHTML = html;
     wireDayNav();
+  }
+  /* ---------- postseason series (brl_live/series.py) ----------
+     Each remaining game at our number: the live win chance for a game in progress, the headline for one not yet
+     started, and the series estimate for games not yet forecast; then the series is run out from the current score. */
+  function seriesList() { return (D.series && D.series.series) || []; }
+  function seriesOf(pk) {
+    var hit = null;
+    seriesList().forEach(function (s) { s.games.forEach(function (g) { if (String(g.game_pk) === String(pk)) hit = s; }); });
+    return hit;
+  }
+  function seriesNow(s) {
+    var wins = {}, p = {}, cur = null, need = Math.floor(s.best_of / 2) + 1;
+    wins[s.high] = s.wins[s.high]; wins[s.low] = s.wins[s.low];
+    s.games.forEach(function (g) {
+      var ph = g.p_home;
+      if (g.game_pk != null) {
+        var st = gameState(g.game_pk), lv = st === "live" ? liveFor(g.game_pk) : null, f = latestForecasts()[g.game_pk], won = g.winner || null;
+        if (f && st === "pregame") ph = homeProb(f);
+        if (lv && lv.home_win_probability != null) ph = lv.home_win_probability;
+        if (!won && g.state !== "final") {
+          var a = D.actuals && D.actuals[g.game_pk];
+          if (a) won = a.home > a.away ? g.home : g.away;
+          else if (lv && lv._final && lv.state) won = lv.state.home_score > lv.state.away_score ? g.home : g.away;
+          if (won) wins[won] += 1;
+        }
+        cur = { g: g, st: won ? "final" : st, lv: lv, won: won, p: g.home === s.high ? ph : 1 - ph };
+      }
+      p[g.n] = g.home === s.high ? ph : 1 - ph;
+    });
+    var done = wins[s.high] >= need || wins[s.low] >= need, finals = {};
+    function run(x, y, pr) {
+      if (pr <= 0) return;
+      if (x >= need || y >= need) { var k = x + "-" + y; finals[k] = (finals[k] || 0) + pr; return; }
+      var q = p[x + y + 1]; if (q == null) q = 0.5;
+      run(x + 1, y, pr * q); run(x, y + 1, pr * (1 - q));
+    }
+    run(wins[s.high], wins[s.low], 1);
+    var adv = 0;
+    Object.keys(finals).forEach(function (k) { if (+k.split("-")[0] >= need) adv += finals[k]; });
+    return { wins: wins, p: p, cur: cur, done: done, adv: adv, finals: finals, need: need };
+  }
+  function seriesScore(s, now) {
+    var a = now.wins[s.high], b = now.wins[s.low];
+    if (now.done) return (a > b ? s.high : s.low) + " wins " + Math.max(a, b) + "-" + Math.min(a, b);
+    if (a === b) return "Series tied " + a + "-" + b;
+    return (a > b ? s.high : s.low) + " leads " + Math.max(a, b) + "-" + Math.min(a, b);
+  }
+  function seriesColors(s) { var c = teamColors({ away: { abbr: s.low }, home: { abbr: s.high } }); var o = {}; o[s.high] = c.home; o[s.low] = c.away; return o; }
+  function seriesBoard(day) {
+    var list = seriesList().filter(function (s) { return s.date === day; }).map(function (s) { return { s: s, now: seriesNow(s) }; });
+    if (!list.length) return "";
+    list.sort(function (a, b) { return (a.now.done ? 1 : 0) - (b.now.done ? 1 : 0); });
+    list = list.map(function (x) { return x.s; });
+    var h = '<section class="sec series"><h2>The series</h2><p class="lede">Chance to advance from the current score, with the game in progress at its live win chance.</p><ul class="sr-list">';
+    list.forEach(function (s) {
+      var now = seriesNow(s), col = seriesColors(s), adv = {};
+      adv[s.high] = now.adv; adv[s.low] = 1 - now.adv;
+      var lead = adv[s.high] >= .5 ? s.high : s.low;
+      h += '<li class="sr" style="--hi:' + col[s.high] + ";--lo:" + col[s.low] + '"><div class="sr-head"><span>' + esc(s.round || "") + "</span><span>" + esc(seriesScore(s, now)) + "</span></div>";
+      [s.high, s.low].forEach(function (t) {
+        var nm = (s.names && s.names[t]) || t, out = now.done && now.wins[t] < now.need;
+        h += '<div class="sr-team' + (t === lead && !now.done ? " fav" : "") + (out ? " out" : "") + '"><span class="abbr" style="color:' + (t === s.high ? "var(--hi)" : "var(--lo)") + '">' + esc(t) + '</span><span class="team-name">' + esc(nickname(nm)) +
+          '</span><span class="big num">' + now.wins[t] + '</span><span class="pct num">' + (now.done ? (out ? "Out" : "Won") : pct(adv[t])) + "</span></div>";
+      });
+      if (!now.done) h += '<div class="sr-bar" aria-hidden="true"><i style="width:' + (adv[s.high] * 100).toFixed(1) + '%;background:var(--hi)"></i><i style="flex:1;background:var(--lo)"></i></div>';
+      var chips = [], played = now.wins[s.high] + now.wins[s.low], sure = played + now.need - Math.max(now.wins[s.high], now.wins[s.low]);
+      s.games.forEach(function (g) {
+        var ph = now.p[g.n], fav = ph >= .5 ? s.high : s.low, fp = ph >= .5 ? ph : 1 - ph;
+        if (g.game_pk != null && now.cur && now.cur.won) chips.push('<li class="done"><b>Game ' + g.n + "</b>" + esc(now.cur.won) + " won</li>");
+        else if (g.game_pk != null && now.cur && now.cur.st === "live") chips.push('<li class="live"><b>Game ' + g.n + "</b>Live, " + esc(fav) + " " + pct(fp) + "</li>");
+        else if (!now.done) chips.push("<li><b>Game " + g.n + "</b>" + (g.game_pk != null || g.n <= sure ? "" : "If needed, ") + "at " + esc(g.home) + ", " + esc(fav) + " " + pct(fp) + "</li>");
+      });
+      if (chips.length) h += '<ol class="sr-games">' + chips.join("") + "</ol>";
+      if (!now.done) {
+        var best = Object.keys(now.finals).sort(function (x, y) { return now.finals[y] - now.finals[x]; })[0];
+        if (best) {
+          var xy = best.split("-"), w = +xy[0] >= now.need ? s.high : s.low, games = +xy[0] + +xy[1];
+          h += '<p class="sr-foot">Most likely: ' + esc(w) + " in " + games + " (" + pct(now.finals[best]) + ").</p>";
+        }
+      }
+      h += "</li>";
+    });
+    return h + '</ul><p class="note">Games not yet forecast use the average of our numbers in this series with the home edge taken out, plus or minus the league home edge for where the game is played.</p></section>';
+  }
+  /* One line for the game page: the series score and each team's chance to advance. */
+  function seriesLine(f) {
+    var s = seriesOf(f.game_pk);
+    if (!s) return "";
+    var now = seriesNow(s), t = now.adv >= .5 ? s.high : s.low, o = t === s.high ? s.low : s.high, pt = t === s.high ? now.adv : 1 - now.adv;
+    if (now.done) return '<p class="hero-series">' + esc(seriesScore(s, now).replace(" wins ", " wins the series ")) + ".</p>";
+    return '<p class="hero-series">Chance to advance: <b>' + esc(t) + " " + pct(pt) + "</b>, " + esc(o) + " " + pct(1 - pt) + ".</p>";
   }
   /* Where our model and the betting market disagree, and which way the line has moved since we first read it.
      Our model never sees the market (the headline does); when it differs from the opening line by 2.5 points or more
@@ -1292,7 +1408,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       html += '<div class="hero-row' + (isFav ? " fav" : "") + '"><span class="abbr"><i class="chip" style="background:var(--' + side + ')"></i>' + esc(t.abbr) + '</span><span class="team-name">' + esc(nickname(t.name)) +
         (starter ? "<small>" + esc(starter) + "</small>" : "") + '</span><span class="big num">' + esc(score) + '</span><span class="pct num">' + pct(win) + "</span></div>";
     });
-    html += heroBar(f, lv && lv.home_win_probability != null ? lv.home_win_probability : homeProb(f)) + '</div><div class="hero-side">';
+    html += heroBar(f, lv && lv.home_win_probability != null ? lv.home_win_probability : homeProb(f)) + seriesLine(f) + '</div><div class="hero-side">';
     if (actual && actualBox && actualBox.innings) {
       html += lineScore(f, actualBox);
       html += '<p class="hero-note">' + (actualBox.plays && actualBox.plays.length ? "Final. The tabs show the real game and the projected game saved before first pitch." : "Line score is the real game. The tabs below show the projected game saved before first pitch.") + "</p>";
