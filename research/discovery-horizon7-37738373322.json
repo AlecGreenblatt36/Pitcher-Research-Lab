@@ -1,0 +1,126 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "horizon7",
+ "run_id": "37738373322",
+ "params": {
+  "experiment": "horizon7",
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "seed": 11
+ },
+ "started_at": "2026-10-08T06:35:04.473303+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 7.5
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 14.4
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 22.2
+  },
+  {
+   "stage": "launch angle",
+   "at_seconds": 34.0
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 713382
+ },
+ "results": {
+  "balls_in_play": 489641,
+  "launch_angle": {
+   "all": {
+    "n": 489641,
+    "slope_deg_per_in_s2": 0.248,
+    "se": 0.003,
+    "tau_c_for_k": {
+     "12": 0.1438,
+     "16": 0.1245,
+     "20": 0.1114,
+     "25": 0.0996
+    }
+   },
+   "fastballs": {
+    "n": 280052,
+    "slope_deg_per_in_s2": 0.275,
+    "se": 0.004,
+    "tau_c_for_k": {
+     "12": 0.1513,
+     "16": 0.131,
+     "20": 0.1172,
+     "25": 0.1048
+    }
+   },
+   "breaking": {
+    "n": 136875,
+    "slope_deg_per_in_s2": 0.23,
+    "se": 0.006,
+    "tau_c_for_k": {
+     "12": 0.1385,
+     "16": 0.12,
+     "20": 0.1073,
+     "25": 0.096
+    }
+   },
+   "offspeed": {
+    "n": 72151,
+    "slope_deg_per_in_s2": 0.223,
+    "se": 0.007,
+    "tau_c_for_k": {
+     "12": 0.1364,
+     "16": 0.1182,
+     "20": 0.1057,
+     "25": 0.0945
+    }
+   },
+   "2025-2026": {
+    "n": 244725,
+    "slope_deg_per_in_s2": 0.25,
+    "se": 0.004,
+    "tau_c_for_k": {
+     "12": 0.1444,
+     "16": 0.1251,
+     "20": 0.1119,
+     "25": 0.1001
+    }
+   },
+   "2023-2024": {
+    "n": 244916,
+    "slope_deg_per_in_s2": 0.246,
+    "se": 0.004,
+    "tau_c_for_k": {
+     "12": 0.1432,
+     "16": 0.124,
+     "20": 0.1109,
+     "25": 0.0992
+    }
+   }
+  },
+  "placebo_horizontal_slope": 0.033,
+  "vertical_slope_same_fit": 0.25,
+  "reference_slope_if_tau_c_equals_decision_horizon": {
+   "12": 0.811,
+   "16": 1.082,
+   "20": 1.352,
+   "25": 1.69
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-08T06:35:39.218447+00:00",
+ "seconds": 34.7
+}
