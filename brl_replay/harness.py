@@ -116,7 +116,7 @@ def bats_lookup(h: pd.DataFrame, cutoff: str) -> dict:
 
 def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates: list, *, model_path: Path, model_sha256: str,
                  history_path: Path, hazard_path: Path, n_sims: int, physics_table=None, offsets=None, rest=False, environment=None,
-                 team_offsets=None, age_layer=None, steals=None, win_states=False, starter_lines=False, role_offsets=None, real_pa_check=False, transitions=None, log=print) -> list[dict]:
+                 team_offsets=None, age_layer=None, steals=None, win_states=False, starter_lines=False, role_offsets=None, real_pa_check=False, transitions=None, hitter_lines=False, log=print) -> list[dict]:
     """Simulate every game on the given dates; one record per game (win counts, run histograms, starter outs).
 
     environment: optional {game_pk: seven log-multipliers} (brl_live/environment.py); games without an entry are unadjusted.
@@ -136,7 +136,10 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
     every real plate appearance of the game (its batter, pitcher, inning, outs, runners, score and times through the
     order) and record the predicted and observed counts per outcome class for starters and relievers, so the
     simulator's own totals can be told apart from the probabilities it draws from.
-    transitions: optional base-running kernel after each outcome (research_lab.game_sim.transitions.EmpiricalKernel)."""
+    transitions: optional base-running kernel after each outcome (research_lab.game_sim.transitions.EmpiricalKernel).
+    hitter_lines: also record each lineup hitter's simulated chances (at least one hit, a home run, a strikeout, a walk), mean
+    plate appearances, hits and home runs, the hits histogram, his actual line in that game (box-score facts) and a baseline
+    from earlier dates only (his hit and home-run rates per plate appearance over the prior 365 days, shrunk toward the league)."""
     from brl_live.provider_adjust import ContextAdjust, EnvironmentAdjust, TeamAdjust, RoleAdjust
     hcols = h[HISTORY_COLUMNS]
     first = dates[0]
@@ -193,6 +196,33 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
         daily["ord"] = [pd.Timestamp(x).toordinal() for x in daily["date_key"]]
         for pid_, gq in daily.groupby("pitcher"):
             per_k[int(pid_)] = (gq["ord"].to_numpy(), np.cumsum(gq["bf"].to_numpy()), np.cumsum(gq["k"].to_numpy()))
+
+    act_bat, per_h = {}, {}
+    if hitter_lines:
+        want_h = set(int(x) for x in games[games["date"].isin(dates)]["game_pk"])
+        sub_b = h.loc[h["game_pk"].isin(want_h), ["game_pk", "batter", "outcome"]]
+        for (gpk_, bid_), oc in sub_b.groupby(["game_pk", "batter"])["outcome"]:
+            vc = oc.value_counts()
+            act_bat[(int(gpk_), int(bid_))] = {"pa": int(len(oc)), "h": int(vc.get("1B", 0) + vc.get("2B_3B", 0) + vc.get("HR", 0)), "hr": int(vc.get("HR", 0)),
+                                               "k": int(vc.get("K", 0)), "bb": int(vc.get("BB_HBP", 0))}
+        hb = pd.DataFrame({"batter": h["batter"].to_numpy(), "date_key": h["date_key"].astype(str).str[:10].to_numpy(),
+                           "h": h["outcome"].isin(["1B", "2B_3B", "HR"]).to_numpy().astype(int), "hr": (h["outcome"] == "HR").to_numpy().astype(int)})
+        daily_b = hb.groupby(["batter", "date_key"]).agg(pa=("h", "size"), h=("h", "sum"), hr=("hr", "sum")).reset_index()
+        daily_b["ord"] = [pd.Timestamp(x).toordinal() for x in daily_b["date_key"]]
+        for bid_, gq in daily_b.groupby("batter"):
+            per_h[int(bid_)] = (gq["ord"].to_numpy(), np.cumsum(gq["pa"].to_numpy()), np.cumsum(gq["h"].to_numpy()), np.cumsum(gq["hr"].to_numpy()))
+
+    def prior_hit_rates(bid_, date_, lg_h=0.218, lg_hr=0.031, k_=150.0):
+        v = per_h.get(int(bid_))
+        if v is None:
+            return lg_h, lg_hr, 0
+        ords, cpa, ch, chr_ = v; d_ = pd.Timestamp(date_).toordinal()
+        lo, hi = np.searchsorted(ords, d_ - 365, "left"), np.searchsorted(ords, d_, "left")
+        if hi <= lo:
+            return lg_h, lg_hr, 0
+        sub_ = lambda c: int(c[hi - 1] - (c[lo - 1] if lo > 0 else 0))
+        pa_, h_, hr_ = sub_(cpa), sub_(ch), sub_(chr_)
+        return (h_ + k_ * lg_h) / (pa_ + k_), (hr_ + k_ * lg_hr) / (pa_ + k_), pa_
 
     def prior_k_rate(pid_, date_):
         v = per_k.get(int(pid_))
@@ -279,8 +309,13 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
             tot = {side: np.zeros(4) for side in ("away", "home")} if starter_lines else None   # team pitching: K, BF, BB+HBP, hits
             wt = WinTable() if win_states else None
             halves = (WinTable(), WinTable()) if win_states == "split" else None
+            hl = None
+            if hitter_lines:
+                # per lineup hitter: worlds with >=1 hit, >=1 home run, >=1 strikeout, >=1 walk; sums of PA, hits, home runs; hits histogram
+                hl = {(side, str(b.player_id)): {"any": np.zeros(4), "sum": np.zeros(3), "h_hist": np.zeros(6, int)}
+                      for side in ("away", "home") for b in teams[side].lineup}
             for si, s in enumerate(seeds):
-                r = sim.simulate(matchup, int(s), record_events=bool(win_states))
+                r = sim.simulate(matchup, int(s), record_events=bool(win_states) or bool(hitter_lines))
                 if wt is not None:
                     box = {"score": {"home": r.home_score, "away": r.away_score},
                            "plays": [e for e in r.events if e.get("outcome") not in ("stolen_base", "caught_stealing")]}
@@ -304,10 +339,42 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                         sd_ = ln.get("team_side")
                         if sd_ in tot:
                             tot[sd_] += (ln["strikeouts"], ln["batters_faced"], ln["walks_hbp"], ln["hits_allowed"])
+                if hl is not None:
+                    cnt = {}
+                    for e in r.events:
+                        o_ = e.get("outcome"); bid_ = (str(e.get("batting_side")), str(e.get("batter_id")))
+                        if o_ in ("stolen_base", "caught_stealing") or bid_ not in hl:
+                            continue
+                        c_ = cnt.setdefault(bid_, [0, 0, 0, 0, 0])            # PA, hits, home runs, strikeouts, walks
+                        c_[0] += 1
+                        c_[1] += o_ in ("single", "double_triple", "home_run"); c_[2] += o_ == "home_run"
+                        c_[3] += o_ == "strikeout"; c_[4] += o_ == "bb_hbp"
+                    for bid_, c_ in cnt.items():
+                        a_ = hl[bid_]
+                        a_["any"] += (c_[1] > 0, c_[2] > 0, c_[3] > 0, c_[4] > 0)
+                        a_["sum"] += (c_[0], c_[1], c_[2])
+                        a_["h_hist"][min(c_[1], 5)] += 1
+                    for bid_ in hl:
+                        if bid_ not in cnt:
+                            hl[bid_]["h_hist"][0] += 1
             records.append({"game_pk": int(g.game_pk), "date": date, "home": g.home, "away": g.away, "n": n_sims,
                             "home_wins": hw, "ties": ties, "home_hist": ha.tolist(), "away_hist": aa.tolist(),
                             "home_starter_outs": float(np.mean(s_outs["home"])) if s_outs["home"] else 0.0, "away_starter_outs": float(np.mean(s_outs["away"])) if s_outs["away"] else 0.0,
                             "home_runs": int(g.home_runs), "away_runs": int(g.away_runs)})
+            if hl is not None:
+                out_h = []
+                for side in ("away", "home"):
+                    for spot_, b in enumerate(teams[side].lineup, start=1):
+                        a_ = hl[(side, str(b.player_id))]
+                        ph_, phr_, prior_pa_ = prior_hit_rates(int(b.player_id), date)
+                        out_h.append({"batter": int(b.player_id), "side": side, "spot": spot_,
+                                      "p_hit": round(float(a_["any"][0] / n_sims), 4), "p_hr": round(float(a_["any"][1] / n_sims), 4),
+                                      "p_k": round(float(a_["any"][2] / n_sims), 4), "p_bb": round(float(a_["any"][3] / n_sims), 4),
+                                      "mean_pa": round(float(a_["sum"][0] / n_sims), 3), "mean_h": round(float(a_["sum"][1] / n_sims), 4),
+                                      "mean_hr": round(float(a_["sum"][2] / n_sims), 4), "h_hist": a_["h_hist"].tolist(),
+                                      "prior_h_rate": round(float(ph_), 4), "prior_hr_rate": round(float(phr_), 4), "prior_pa_365": prior_pa_,
+                                      "actual": act_bat.get((int(g.game_pk), int(b.player_id)))})
+                records[-1]["hitters"] = out_h
             if real_pa_check:
                 from types import SimpleNamespace
                 from research_lab.game_sim.locked_pa_provider import SIM_FROM_MODEL
