@@ -142,3 +142,14 @@ this exact type the batter has already seen from him today. Written before the r
 both measures fall with exposure (later commit, less reliance on the projected path); if the times-through-the-order
 penalty is the pitcher tiring, they stay flat. Selection (only better starters reach a third time through) is a
 known weakness of the times-faced split; the pitch-type exposure split within a first plate appearance is cleaner.
+
+## Addendum 4, before the pitcher-side run (horizon6)
+
+The hitter-level horizon failed its incremental test (horizon3: no gain over 2023-2024 plate-discipline numbers for
+any 2025-2026 outcome). Pitcher side: since hitters cannot use a pitch's movement surprise after the horizon, a
+pitcher whose pitches vary more around their own average shape may win more swing decisions. Measure per pitcher on
+2023-2024: usage-weighted spread of within-type spin acceleration, as inches of surprise at 0.26 s. Test against
+2025-2026 strikeout, walk, chase, whiff and zone rates with his 2023-2024 rates, fastball velocity, fastball ride and
+overall movement as controls. Written before the run: a useful pitcher number needs a bootstrap interval for its
+effect that excludes zero on chase or whiff and a lower leave-one-out error. A positive effect on walks with no gain
+on chase or whiff would mean the spread is wildness, not deception.

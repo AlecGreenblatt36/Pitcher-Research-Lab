@@ -1055,6 +1055,78 @@ def horizon5(T: dict, params: dict, stage) -> dict:
     return res
 
 
+def horizon6(T: dict, params: dict, stage) -> dict:
+    """Pitcher side: hitters cannot use a pitch's movement surprise after the horizon, so a pitcher whose pitches
+    vary more around their own average shape might win more decisions. Per pitcher, the usage-weighted spread of
+    within-type spin acceleration (as inches of surprise at the 260 ms horizon), measured on 2023-2024, tested
+    against his 2025-2026 strikeout, walk, chase and whiff rates with his 2023-2024 rates, velocity and movement as
+    controls."""
+    res = {}
+    F = rebuild(T)
+    keep = (F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['strikes'] >= 0) & (T['strikes'] <= 2))
+    T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
+    tau = float(params.get('tau', 0.26))
+    key_sub = (T['pitcher'] * 10 + (T['season'] - 2020)) * 100 + T['sub']
+    ok = np.isfinite(F['ax']) & np.isfinite(F['az'])
+    mx = loo_means(key_sub, F['ax'], ok); mz = loo_means(key_sub, F['az'], ok)
+    wx = np.where(np.isfinite(mx), F['ax'] - mx, np.nan); wz = np.where(np.isfinite(mz), F['az'] - mz, np.nan)
+    surprise_in = 0.5 * np.sqrt(wx ** 2 + wz ** 2) * tau ** 2 * 12          # inches of unexpected movement after the horizon
+    swing = (T['call'] == 1) | (T['call'] == 2); whiff = T['call'] == 2
+    u = np.where(T['stand_r'] == 1, T['px'], -T['px'])
+    inzone = (np.abs(u) <= ZONE_HALF) & (T['pz'] <= ZONE_TOP) & (T['pz'] >= ZONE_BOT)
+    pa_end = T['last_in_pa'] == 1
+    k_pa = pa_end & whiff & (T['strikes'] == 2); bb_pa = pa_end & (T['call'] == 0) & (T['balls'] == 3)
+    pit = T['pitcher']; up, inv = np.unique(pit, return_inverse=True)
+    dev = T['season'] <= 2024; fut = T['season'] >= 2025
+    def rate(num, den, period):
+        n = np.bincount(inv, weights=(num & period).astype(float), minlength=len(up)); d = np.bincount(inv, weights=(den & period).astype(float), minlength=len(up))
+        with np.errstate(invalid='ignore', divide='ignore'):
+            return n / d
+    def mean_of(v, period, mask=None):
+        m = period & np.isfinite(v) & (True if mask is None else mask)
+        n = np.bincount(inv, weights=np.where(m, v, 0.0), minlength=len(up)); d = np.bincount(inv, weights=m.astype(float), minlength=len(up))
+        with np.errstate(invalid='ignore', divide='ignore'):
+            return n / d
+    fb = np.isin(T['group'], (0, 1))
+    move = np.sqrt(F['asx'] ** 2 + F['asz'] ** 2)
+    X = {'k_rate': rate(k_pa, pa_end, dev), 'bb_rate': rate(bb_pa, pa_end, dev), 'o_swing': rate(swing & ~inzone, ~inzone, dev),
+         'whiff_per_swing': rate(whiff, swing, dev), 'zone_rate': rate(inzone, np.ones(len(inzone), bool), dev),
+         'fb_velo': mean_of(T['v0'].astype(float), dev, fb), 'fb_ride': mean_of(F['asz'], dev, fb), 'movement': mean_of(move, dev)}
+    S = {'surprise_in': mean_of(surprise_in, dev), 'surprise_fb_in': mean_of(surprise_in, dev, fb), 'surprise_offspeed_in': mean_of(surprise_in, dev, ~fb)}
+    Y = {'k_rate': rate(k_pa, pa_end, fut), 'bb_rate': rate(bb_pa, pa_end, fut), 'o_swing': rate(swing & ~inzone, ~inzone, fut),
+         'whiff_per_swing': rate(whiff, swing, fut), 'zone_rate': rate(inzone, np.ones(len(inzone), bool), fut)}
+    n_dev = np.bincount(inv, weights=dev.astype(float), minlength=len(up)); n_fut = np.bincount(inv, weights=fut.astype(float), minlength=len(up))
+    sel = np.flatnonzero((n_dev >= int(params.get('min_dev', 1500))) & (n_fut >= int(params.get('min_fut', 1000))))
+    res['n_pitchers'] = int(len(sel))
+    from scipy import stats
+    res['surprise_quantiles_in'] = {q: round(float(np.nanpercentile(S['surprise_in'][sel], q)), 3) for q in (10, 50, 90)}
+    res['corr_with_dev'] = {sk: {k: round(float(stats.spearmanr(S[sk][sel], v[sel], nan_policy='omit')[0]), 4) for k, v in X.items()} for sk in S}
+    # stability of the surprise itself: 2023-2024 against 2025-2026
+    S_fut = mean_of(surprise_in, fut)
+    res['surprise_year_to_year'] = round(float(stats.spearmanr(S['surprise_in'][sel], S_fut[sel], nan_policy='omit')[0]), 4)
+    X0 = np.column_stack([X[k][sel] for k in X])
+    inc = {}
+    for sk in S:
+        s = S[sk][sel]
+        for yk, yv in Y.items():
+            yy = yv[sel]; okr = np.isfinite(yy) & np.isfinite(X0).all(axis=1) & np.isfinite(s)
+            Xa = np.column_stack([np.ones(okr.sum()), X0[okr]]); Xb = np.column_stack([Xa, s[okr]])
+            def fit(Xm):
+                beta, *_ = np.linalg.lstsq(Xm, yy[okr], rcond=None); e = yy[okr] - Xm @ beta
+                H = Xm @ np.linalg.pinv(Xm.T @ Xm) @ Xm.T
+                return 1 - e.var() / yy[okr].var(), float(np.mean((e / (1 - np.diag(H))) ** 2)), beta
+            ra, la, _ = fit(Xa); rb, lb, beta = fit(Xb)
+            rr = np.random.default_rng(2); boots = []
+            for _ in range(500):
+                b = rr.integers(0, okr.sum(), okr.sum()); bb, *_ = np.linalg.lstsq(Xb[b], yy[okr][b], rcond=None); boots.append(bb[-1])
+            sd = float(np.std(s[okr]))
+            inc[f'{sk}->{yk}'] = {'r2': [round(float(ra), 4), round(float(rb), 4)], 'loo_mse_x1e5': [round(la * 1e5, 3), round(lb * 1e5, 3)],
+                                  'per_sd': round(float(beta[-1] * sd), 5), 'ci': [round(float(np.percentile(boots, 2.5) * sd), 5), round(float(np.percentile(boots, 97.5) * sd), 5)],
+                                  'outcome_sd': round(float(np.std(yy[okr])), 5), 'n': int(okr.sum())}
+    res['incremental'] = inc
+    return res
+
+
 def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']
     from cloud.security import unseal, key_bytes
@@ -1093,6 +1165,8 @@ def main():
             receipt['results'] = horizon4(T, params, stage)
         elif experiment == 'horizon5':
             receipt['results'] = horizon5(T, params, stage)
+        elif experiment == 'horizon6':
+            receipt['results'] = horizon6(T, params, stage)
         receipt['status'] = 'completed'
     except Exception as exc:
         receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:400]
