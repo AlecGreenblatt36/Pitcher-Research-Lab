@@ -1,0 +1,122 @@
+{
+ "schema": "brl.relief-exit.v1",
+ "name": "reliever exits from 2023, 2024 and 2026 relief decisions",
+ "fitted_on": [
+  2023,
+  2024,
+  2026
+ ],
+ "decisions": {
+  "mid": {
+   "fit": 91634,
+   "fit_removal_rate": 0.0912
+  },
+  "end": {
+   "fit": 42847,
+   "fit_removal_rate": 0.5745
+  }
+ },
+ "test": {
+  "mid": {
+   "decisions": 29264,
+   "actual": 0.0962,
+   "fitted": 0.0933,
+   "hand_set": 0.5663,
+   "log_lik_fitted": -0.2851,
+   "log_lik_hand_set": -1.7718
+  },
+  "end": {
+   "decisions": 13996,
+   "actual": 0.595,
+   "fitted": 0.5878,
+   "hand_set": 0.6126,
+   "log_lik_fitted": -0.5375,
+   "log_lik_hand_set": -0.8509
+  }
+ },
+ "mid": {
+  "names": [
+   "bf",
+   "bf2",
+   "over",
+   "under",
+   "runs",
+   "runs2",
+   "exp",
+   "late",
+   "ninth_inning",
+   "extra",
+   "close",
+   "blowout",
+   "lead",
+   "ninth_role",
+   "late_role",
+   "closer_ninth",
+   "runners",
+   "outs",
+   "third_batter"
+  ],
+  "intercept": -2.221593,
+  "beta": [
+   0.036776,
+   -0.032849,
+   0.004974,
+   -0.131224,
+   0.234508,
+   0.045385,
+   -0.099423,
+   0.373916,
+   -0.809124,
+   -0.227295,
+   0.416992,
+   -0.816256,
+   0.561677,
+   -0.382487,
+   -0.132552,
+   -0.85344,
+   0.46774,
+   -0.142128,
+   -0.501491
+  ]
+ },
+ "end": {
+  "names": [
+   "bf",
+   "bf2",
+   "over",
+   "under",
+   "runs",
+   "runs2",
+   "exp",
+   "late",
+   "ninth_inning",
+   "extra",
+   "close",
+   "blowout",
+   "lead",
+   "ninth_role",
+   "late_role",
+   "closer_ninth"
+  ],
+  "intercept": -0.156304,
+  "beta": [
+   0.276311,
+   -0.226655,
+   -0.042825,
+   -0.424911,
+   0.246346,
+   -0.051077,
+   -0.105775,
+   1.071533,
+   0.121373,
+   -0.91789,
+   0.193716,
+   -0.164662,
+   0.461063,
+   -1.257887,
+   1.036442,
+   0.297906
+  ]
+ },
+ "seconds": 13
+}

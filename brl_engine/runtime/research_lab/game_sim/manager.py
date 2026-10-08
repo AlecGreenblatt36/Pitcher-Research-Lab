@@ -35,6 +35,8 @@ class ManagerPolicy:
     # Optional fitted reliever choice (reliever_choice.RelieverChoice, BULLPEN-01). None keeps the hand-set scoring
     # below and draws exactly the same random numbers as before.
     reliever_choice: object = None
+    # Optional fitted reliever exits (relief_exit.ReliefExit, RELIEF-02). None keeps the hand-set rule below.
+    relief_exit: object = None
 
     def fatigue(
         self,
@@ -66,6 +68,8 @@ class ManagerPolicy:
     ) -> bool:
         if not self.removal_is_legal(line, inning_ended):
             return False
+        if self.relief_exit is not None and not line.is_starter:
+            return self.relief_exit.remove(pitcher, line, state, fielding_side, inning_ended, rng)
         if line.batters_faced >= pitcher.max_batters:
             return True
 

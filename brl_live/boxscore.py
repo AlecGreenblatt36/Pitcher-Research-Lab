@@ -342,6 +342,9 @@ class BoxAccumulator:
 # relief entry (BULLPEN-01; research_lab.game_sim.reliever_choice.RelieverChoice, table brl_live/reliever_choice.json from
 # tools/brl_reliever_choice.py): recent use, rest, role over the year and the last three weeks, strikeout record, the
 # next three hitters' hands and the game situation. Off until its replays are read; off, the hand-set scoring chooses.
+# relief_exit: when a reliever comes out, from logistic hazards fitted on every real relief decision point (RELIEF-02;
+# research_lab.game_sim.relief_exit.ReliefExit, table brl_live/relief_exit.json from tools/brl_relief_exit.py). Off until
+# its replays are read; off, the hand-set rule decides (it pulls relievers mid-inning far more often than managers do).
 # base_state: the stack's probabilities shaped by bases and outs (RUNS-02; brl_live.provider_adjust.BaseStateAdjust,
 # table brl_live/base_state_offsets.json from tools/brl_base_state.py). Off until its replays are read.
 # leash: in regular-season games each starter's expected batters faced is moved for short rest (openers), a relief
@@ -350,11 +353,12 @@ class BoxAccumulator:
 ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         'postseason_exp_scale':{'F':0.91,'D':0.91,'L':0.91,'W':1.0},
         'environment':True,'team_offsets':True,'steals':True,'transitions':True,'running_events':False,
-        'reliever_choice':False,'leash':False,'base_state':False}
+        'reliever_choice':False,'leash':False,'base_state':False,'relief_exit':False}
 
 TRANSITIONS_PATH=Path(__file__).resolve().parent/'transitions.json'
 RUNNING_EVENTS_PATH=Path(__file__).resolve().parent/'running_events.json'
 RELIEVER_CHOICE_PATH=Path(__file__).resolve().parent/'reliever_choice.json'
+RELIEF_EXIT_PATH=Path(__file__).resolve().parent/'relief_exit.json'
 LEASH_PATH=Path(__file__).resolve().parent/'leash.json'
 _KERNEL={}
 
@@ -388,14 +392,24 @@ def reliever_choice_for(settings):
         _KERNEL['c']=RelieverChoice(json.loads(RELIEVER_CHOICE_PATH.read_text()))
     return _KERNEL['c']
 
+def relief_exit_for(settings):
+    """The fitted reliever exits (brl_live/relief_exit.json, RELIEF-02) when switched on, else None."""
+    if not settings.get('relief_exit'):return None
+    if 'x' not in _KERNEL:
+        from research_lab.game_sim.relief_exit import ReliefExit
+        _KERNEL['x']=ReliefExit(json.loads(RELIEF_EXIT_PATH.read_text()))
+    return _KERNEL['x']
+
 def manager_for(manager,settings):
-    """(manager, label): the engine's manager with the fitted reliever choice attached when it is switched on (a copy,
-    so the engine's own manager is unchanged), else the manager itself and None."""
-    choice=reliever_choice_for(settings)
-    if choice is None:return manager,None
+    """(manager, label): the engine's manager with the fitted reliever choice and exits attached when they are switched
+    on (a copy, so the engine's own manager is unchanged), else the manager itself and None."""
+    choice=reliever_choice_for(settings);exits=relief_exit_for(settings)
+    if choice is None and exits is None:return manager,None
     import copy
-    m=copy.copy(manager);m.reliever_choice=choice
-    return m,choice.name
+    m=copy.copy(manager);labels=[]
+    if choice is not None:m.reliever_choice=choice;labels.append(choice.name)
+    if exits is not None:m.relief_exit=exits;labels.append(exits.name)
+    return m,'; '.join(labels)
 
 def running_events_for(settings):
     """The running plays between plate appearances (brl_live/running_events.json, TRANS-02) when switched on, else None."""

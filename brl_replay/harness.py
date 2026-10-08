@@ -119,7 +119,7 @@ def bats_lookup(h: pd.DataFrame, cutoff: str) -> dict:
 
 def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates: list, *, model_path: Path, model_sha256: str,
                  history_path: Path, hazard_path: Path, n_sims: int, physics_table=None, offsets=None, rest=False, environment=None,
-                 team_offsets=None, age_layer=None, steals=None, win_states=False, starter_lines=False, role_offsets=None, real_pa_check=False, transitions=None, hitter_lines=False, running_events=None, reliever_choice=None, leash=None, base_state=None, log=print) -> list[dict]:
+                 team_offsets=None, age_layer=None, steals=None, win_states=False, starter_lines=False, role_offsets=None, real_pa_check=False, transitions=None, hitter_lines=False, running_events=None, reliever_choice=None, leash=None, base_state=None, relief_exit=None, log=print) -> list[dict]:
     """Simulate every game on the given dates; one record per game (win counts, run histograms, starter outs).
 
     environment: optional {game_pk: seven log-multipliers} (brl_live/environment.py); games without an entry are unadjusted.
@@ -143,6 +143,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
     transitions: optional base-running kernel after each outcome (research_lab.game_sim.transitions.EmpiricalKernel).
     running_events: optional running plays between plate appearances other than steals (research_lab.game_sim.running_events).
     reliever_choice: optional fitted choice of the entering reliever (research_lab.game_sim.reliever_choice.RelieverChoice).
+    relief_exit: optional fitted reliever exits (research_lab.game_sim.relief_exit.ReliefExit).
     base_state: optional base-state offsets (brl_live.provider_adjust.load_base_state): the stack shaped by bases and outs,
         applied after the team offsets.
     leash: optional (research_lab.game_sim.starter_leash.Leash, AppearanceIndex of regular-season appearances): each
@@ -196,10 +197,12 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
         want_g = set(int(x) for x in games[games["date"].isin(dates)]["game_pk"])
         sub = h.loc[h["game_pk"].isin(want_g), ["game_pk", "pitcher", "outcome", "inning_topbot"]]
         sub_side = np.where(sub["inning_topbot"].astype(str).str.lower().str.startswith("top"), "home", "away")
+        npit_act = sub.groupby([sub["game_pk"].to_numpy(), sub_side])["pitcher"].nunique().to_dict()
         for (gpk_, side_), oc in sub.groupby([sub["game_pk"].to_numpy(), sub_side])["outcome"]:
             vc = oc.value_counts()
             act_lines[(int(gpk_), str(side_))] = {"bf": int(len(oc)), "k": int(vc.get("K", 0)), "bb": int(vc.get("BB_HBP", 0)),
-                                                  "h": int(vc.get("1B", 0) + vc.get("2B_3B", 0) + vc.get("HR", 0)), "hr": int(vc.get("HR", 0))}
+                                                  "h": int(vc.get("1B", 0) + vc.get("2B_3B", 0) + vc.get("HR", 0)), "hr": int(vc.get("HR", 0)),
+                                                  "pitchers": int(npit_act.get((gpk_, side_), 0))}
         for (gpk_, pid_), oc in sub.groupby(["game_pk", "pitcher"])["outcome"]:
             vc = oc.value_counts()
             act_lines[(int(gpk_), int(pid_))] = {"bf": int(len(oc)), "k": int(vc.get("K", 0)), "bb": int(vc.get("BB_HBP", 0)),
@@ -313,7 +316,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                 for sid_l in (int(g.away_starter), int(g.home_starter)):
                     pexp_g[sid_l] = leash[0].adjust(float(pexp.get(sid_l, hazard["league_mean_bf"])), leash[1].facts(sid_l, date))
             policy = FittedStarterPolicy(hazard, pexp_g, texp, {int(g.away_starter): g.away, int(g.home_starter): g.home},
-                                         reliever_choice=reliever_choice)
+                                         reliever_choice=reliever_choice, relief_exit=relief_exit)
             steal = None
             if steals is not None:
                 from brl_live.running import steal_model
@@ -326,6 +329,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
             s_outs = {"away": [], "home": []}
             sl = {side: {m_: np.zeros(n_, int) for m_, n_ in (("k", 21), ("bf", 46), ("h", 21), ("bb", 16), ("outs", 28))} for side in ("away", "home")} if starter_lines else None
             tot = {side: np.zeros(4) for side in ("away", "home")} if starter_lines else None   # team pitching: K, BF, BB+HBP, hits
+            npit = {side: 0 for side in ("away", "home")}                                         # pitchers used, summed over worlds
             wt = WinTable() if win_states else None
             halves = (WinTable(), WinTable()) if win_states == "split" else None
             hl = None
@@ -358,6 +362,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                         sd_ = ln.get("team_side")
                         if sd_ in tot:
                             tot[sd_] += (ln["strikeouts"], ln["batters_faced"], ln["walks_hbp"], ln["hits_allowed"])
+                            npit[sd_] += 1
                 if hl is not None:
                     cnt = {}
                     for e in r.events:
@@ -463,7 +468,8 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                     st_out[side] = {"pitcher": sid_, **{m_: v_.tolist() for m_, v_ in sl[side].items()}, "actual": act_lines.get((int(g.game_pk), sid_)),
                                     "prior_k_rate": round(float(rate_), 4), "prior_bf_365": prior_bf, "expected_bf": round(float(pexp_g.get(sid_, hazard["league_mean_bf"])), 2),
                                     "expected_bf_record": round(float(pexp.get(sid_, hazard["league_mean_bf"])), 2),
-                                    "team_sim_mean": [round(float(v_ / n_sims), 3) for v_ in tot[side]], "team_actual": act_lines.get((int(g.game_pk), side))}
+                                    "team_sim_mean": [round(float(v_ / n_sims), 3) for v_ in tot[side]], "team_actual": act_lines.get((int(g.game_pk), side)),
+                                    "team_pitchers_sim_mean": round(npit[side] / n_sims, 3)}
                 records[-1]["starters"] = st_out
             if wt is not None:
                 tb = wt.table()
