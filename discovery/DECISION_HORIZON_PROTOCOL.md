@@ -255,3 +255,32 @@ The plate-velocity term is reported but not interpreted: on synthetic pitches it
 Synthetic recovery (tools/brl_discovery.py horizon13; 335,000 pitches): umpires on the true crossing 0.0003 and
 -0.0007 (SE 0.001); umpires anticipating 120 ms (0.0144 planted) 0.0136 and 0.0121; hitters at 260 ms (0.0676
 planted) 0.061 to 0.064; batter zone tops and bottoms recovered (league 3.393 and 1.614 ft against 3.393 and 1.611).
+
+## Addendum 12, before the pitcher-level tunneling run (horizon14)
+
+Result since addendum 11: umpires judge the true crossing (tau squared 0.0002 on 2025 against the hitters' 0.0659
+through the same code); the horizon is not a tracking artifact.
+
+Can the pitch-level tunneling result become a scouting number for pitchers? For every consecutive pair of different
+pitch types in a plate appearance, the visual-angle separation of the two flights from the batter's eye 260 ms and
+175 ms before each reaches the plate and at the plate. A pitcher-season's decision-moment tunneling is the average
+260 ms separation of his different-type pairs. Outcome: chase above expected (swing rate on pitches outside the zone
+minus a league model's expectation for those pitches from location, count, pitch type, speed and the batter's prior
+swing rate, fitted on 2023-2024). Pitcher-seasons with at least 400 pitches outside the zone and 300 different-type
+pairs; halves by odd and even days need half of that.
+
+Predictions written now:
+1. The 260 ms separation is a stable pitcher trait: odd against even days at least 0.8, season to season at least 0.6.
+2. Cross-sample validity: separation measured on one half of the days against chase above expected on the other half,
+   with plate separation, the share of different-type pairs, fastball speed and rise, breaking-ball sweep and zone rate
+   held fixed: closer pairs at 260 ms go with more chases above expected (negative coefficient, interval excluding zero).
+   If not, the pitch-level effect does not make a pitcher-level number and it is dropped.
+3. 260 against 175 ms cannot be decided at this level: the two correlate about 0.9, and on synthetic pitches an effect
+   planted on release-point spread alone makes the earlier moment win with no decision moment involved. Both are
+   reported; neither is read as timing.
+4. Next season: beyond this season's chase above expected and the same controls, the 260 ms separation predicts next
+   season's (negative coefficient, interval excluding zero). The R squared gain is reported but cannot test this (its
+   interval is bounded at zero).
+Pipeline check on synthetic pitches (planted effect of 0.25 log-odds per SD of release closeness): cross-sample
+coefficient -1.22 points of chase per SD (-1.62 to -0.68); null scenario 0.02 (-0.15 to 0.25); next season -0.25
+(-0.49 to -0.01) planted, 0.08 (-0.06 to 0.22) null.

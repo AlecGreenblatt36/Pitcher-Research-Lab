@@ -1779,6 +1779,209 @@ def horizon13(T: dict, params: dict, stage) -> dict:
     return res
 
 
+def _wls(y, X, w):
+    """Weighted least squares with an intercept; returns coefficients (intercept first) and R squared."""
+    A = np.column_stack([np.ones(len(y)), X]); sw = np.sqrt(w)
+    beta = np.linalg.lstsq(A * sw[:, None], y * sw, rcond=None)[0]
+    r = y - A @ beta; ybar = np.average(y, weights=w)
+    return beta, float(1 - np.sum(w * r ** 2) / np.sum(w * (y - ybar) ** 2))
+
+
+def horizon14(T: dict, params: dict, stage) -> dict:
+    """Pitcher-level decision-moment tunneling (discovery/DECISION_HORIZON_PROTOCOL.md, addendum 12). For every
+    consecutive pair of pitches of different types in a plate appearance, the visual-angle separation of the two
+    flights from the batter's eye 260 ms and 175 ms before each reaches the plate, and at the plate. A pitcher-season's
+    tunneling is the average early separation of his different-type pairs. The outcome is chase above expected: his
+    swing rate on pitches outside the zone minus a league model's expectation for those pitches (location, count,
+    pitch type, speed, batter's prior swing rate). Tests: reliability (odd against even days, season to season);
+    cross-sample validity (tunneling on odd days against chase above expected on even days, with plate separation
+    and stuff held fixed); 260 against 175 ms; next season's chase above expected beyond this season's."""
+    res = {}
+    F = rebuild(T)
+    ok = (F['ok'] & (T['group'] >= 0) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2)
+          & (T['call'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1)))
+    order = np.lexsort((T['pitch_no'], T['ab'], T['game']))
+    prev = np.full(len(order), -1)
+    same = (T['game'][order][1:] == T['game'][order][:-1]) & (T['ab'][order][1:] == T['ab'][order][:-1]) & (T['pitch_no'][order][1:] == T['pitch_no'][order][:-1] + 1)
+    prev[order[1:][same]] = order[:-1][same]
+    has_prev = (prev >= 0) & ok & np.where(prev >= 0, ok[np.maximum(prev, 0)], False)
+    pi = np.flatnonzero(has_prev); pj = prev[pi]
+    eye_x = np.where(T['stand_r'] == 1, -2.4, 2.4); eye_y, eye_z = 1.0, 5.1
+
+    def angles(i, tau):
+        if tau > 0:
+            x, y, z = position_at(take(T, i), {k: v[i] for k, v in F.items()}, tau)
+        else:
+            x, y, z = T['px'][i].astype(float), np.full(len(i), YPLATE), T['pz'][i].astype(float)
+        d = np.maximum(y - eye_y, 0.5)
+        return np.degrees(np.arctan2(x - eye_x[i], d)), np.degrees(np.arctan2(z - eye_z, d))
+    sep = {}
+    for name, tau in (('s260', 0.26), ('s175', 0.175), ('plate', 0.0)):
+        a1, b1 = angles(pi, tau); a2, b2 = angles(pj, tau)
+        sep[name] = np.sqrt((a1 - a2) ** 2 + (b1 - b2) ** 2)
+    diff = T['group'][pi] != T['group'][pj]
+    res['pairs'] = {'all': int(len(pi)), 'different_types': int(diff.sum()),
+                    'median_deg_different': {k: round(float(np.median(v[diff])), 3) for k, v in sep.items()},
+                    'median_deg_same': {k: round(float(np.median(v[~diff])), 3) for k, v in sep.items()}}
+    stage('pairs')
+    # league expectation of a chase for every pitch outside the zone
+    u_all = np.where(T['stand_r'] == 1, T['px'], -T['px'])
+    inzone = (np.abs(u_all) <= ZONE_HALF) & (T['pz'] <= ZONE_TOP) & (T['pz'] >= ZONE_BOT)
+    swing = (T['call'] == 1) | (T['call'] == 2)
+    ooz = np.flatnonzero(ok & ~inzone)
+    C = control_block(T, swing_propensity(T))
+    oh = np.eye(7, dtype=np.float32)[np.clip(T['group'], 0, 6)]
+
+    def design(i):
+        uu = u_all[i]; zz = T['pz'][i]
+        e = np.maximum(np.maximum(np.abs(uu) - ZONE_HALF, zz - ZONE_TOP), ZONE_BOT - zz)
+        b = np.hstack([hats(e, E_KNOTS), hats(uu, U_KNOTS), hats(zz, Z_KNOTS)])
+        return np.hstack([location_block(T['px'][i], T['pz'][i], T['stand_r'][i], T['strikes'][i]), (b[:, :, None] * oh[i, None, :]).reshape(len(i), -1), C[i]]).astype(np.float32)
+    rng = np.random.default_rng(int(params.get('seed', 14)))
+    trn = ooz[np.isin(T['season'][ooz], (2023, 2024))]
+    trn = np.sort(rng.choice(trn, min(len(trn), int(params.get('train_n', 500000))), replace=False))
+    m = fit_logistic(design(trn), swing[trn].astype(np.int64))
+    p_exp = np.full(len(T['px']), np.nan)
+    for s0 in range(0, len(ooz), 300000):
+        ii = ooz[s0:s0 + 300000]; p_exp[ii] = m.predict_proba(design(ii))[:, 1]
+    stage('expected chase')
+    # pitcher-season (and odd or even day) aggregates
+    key = T['pitcher'] * 10 + (T['season'] - 2020)
+    half = (T['day'] % 2).astype(int)
+    fb = ok & np.isin(T['group'], (0, 1))
+
+    def agg(mask_pitch, mask_pair):
+        k_p = key[mask_pitch]; uk = np.unique(k_p)
+        out = {int(k): {} for k in uk}
+        def mean_by(keys, vals, name, w=None):
+            u, inv = np.unique(keys, return_inverse=True)
+            sm = np.bincount(inv, weights=vals if w is None else vals * w); cn = np.bincount(inv, weights=None if w is None else w)
+            for kk, s_, c_ in zip(u, sm, cn):
+                if int(kk) in out:
+                    out[int(kk)][name] = float(s_ / c_) if c_ > 0 else np.nan; out[int(kk)]['n_' + name] = float(c_)
+        oo = mask_pitch & ~inzone
+        mean_by(key[oo], swing[oo].astype(float), 'chase'); mean_by(key[oo], p_exp[oo], 'chase_exp')
+        mean_by(key[mask_pitch], inzone[mask_pitch].astype(float), 'zone')
+        sw = mask_pitch & swing; mean_by(key[sw], (T['call'][sw] == 2).astype(float), 'whiff')
+        fbm = mask_pitch & fb; mean_by(key[fbm], T['v0'][fbm].astype(float), 'fb_velo'); mean_by(key[fbm], F['asz'][fbm], 'fb_rise')
+        brk = mask_pitch & np.isin(T['group'], (3, 4)); mean_by(key[brk], np.abs(F['asx'][brk]), 'brk_sweep')
+        pm = mask_pair & diff
+        for nm in ('s260', 's175', 'plate'):
+            mean_by(key[pi][pm], sep[nm][pm], nm)
+        mean_by(key[pi][mask_pair], diff[mask_pair].astype(float), 'share_different')
+        return out
+    full = agg(ok, np.ones(len(pi), bool))
+    halves = [agg(ok & (half == h), half[pi] == h) for h in (0, 1)]
+    stage('aggregates')
+    min_ooz, min_pairs = int(params.get('min_ooz', 400)), int(params.get('min_pairs', 300))
+    cols = ['s260', 's175', 'plate', 'share_different', 'fb_velo', 'fb_rise', 'brk_sweep', 'zone', 'chase', 'chase_exp']
+
+    def table(dct, scale=1.0):
+        rows = []
+        for k, v in dct.items():
+            if v.get('n_chase', 0) >= min_ooz * scale and v.get('n_s260', 0) >= min_pairs * scale and all(np.isfinite(v.get(c, np.nan)) for c in cols if c != 'brk_sweep'):
+                rows.append([k] + [v.get(c, np.nan) for c in cols] + [v['n_chase'], v['n_s260']])
+        return np.array(rows, float)
+    A = table(full); H0 = table(halves[0], 0.5); H1 = table(halves[1], 0.5)
+    idx = {c: i + 1 for i, c in enumerate(cols)}; idx['n_chase'] = len(cols) + 1; idx['n_pairs'] = len(cols) + 2
+    res['pitcher_seasons'] = int(len(A))
+
+    def corr_join(X, Y, c):
+        kx = {int(r[0]): r for r in X}; common = [k for k in kx if k in {int(r[0]) for r in Y}]
+        ky = {int(r[0]): r for r in Y}
+        a = np.array([kx[k][idx[c]] for k in common]); b = np.array([ky[k][idx[c]] for k in common])
+        ok_ = np.isfinite(a) & np.isfinite(b)
+        return round(float(np.corrcoef(a[ok_], b[ok_])[0, 1]), 4), int(ok_.sum())
+    rel = {}
+    for c in ('s260', 's175', 'plate', 'chase', 'chase_exp'):
+        rel[c] = corr_join(H0, H1, c)
+    cae = lambda R: R[:, idx['chase']] - R[:, idx['chase_exp']]
+    k0 = {int(r[0]): r for r in H0}; k1 = {int(r[0]): r for r in H1}; common = sorted(set(k0) & set(k1))
+    a = np.array([cae(k0[k][None, :])[0] for k in common]); b = np.array([cae(k1[k][None, :])[0] for k in common])
+    rel['chase_above_expected'] = (round(float(np.corrcoef(a, b)[0, 1]), 4), len(common))
+    # season to season
+    kA = {int(r[0]): r for r in A}
+    nxt = [(k, k + 1) for k in kA if (k + 1) in kA and (k % 10) + 2020 < 2026]
+    yy = {}
+    for c in ('s260', 's175', 'plate'):
+        x1 = np.array([kA[k][idx[c]] for k, _ in nxt]); x2 = np.array([kA[k2][idx[c]] for _, k2 in nxt]); yy[c] = round(float(np.corrcoef(x1, x2)[0, 1]), 4)
+    x1 = np.array([cae(kA[k][None, :])[0] for k, _ in nxt]); x2 = np.array([cae(kA[k2][None, :])[0] for _, k2 in nxt]); yy['chase_above_expected'] = round(float(np.corrcoef(x1, x2)[0, 1]), 4)
+    res['reliability'] = {'odd_vs_even_days': rel, 'season_to_season': yy, 'pairs_of_seasons': len(nxt)}
+    stage('reliability')
+    # cross-sample validity: tunneling on one half, chase above expected on the other (both directions pooled)
+    def zs(v, w):
+        m_ = np.average(v, weights=w); s_ = np.sqrt(np.average((v - m_) ** 2, weights=w)); return (v - m_) / s_
+    rows = []
+    for src, dst in ((k0, k1), (k1, k0)):
+        for k in common:
+            r_s, r_d = src[k], dst[k]
+            if not np.isfinite(r_s[idx['brk_sweep']]):
+                r_s = r_s.copy(); r_s[idx['brk_sweep']] = 0.0
+            rows.append([k, cae(r_d[None, :])[0], r_s[idx['s260']], r_s[idx['s175']], r_s[idx['plate']], r_s[idx['share_different']], r_s[idx['fb_velo']], r_s[idx['fb_rise']],
+                         r_s[idx['brk_sweep']], r_s[idx['zone']], min(r_s[idx['n_chase']], r_d[idx['n_chase']])])
+    V = np.array(rows, float); w = V[:, -1]
+    names = ['s260', 's175', 'plate', 'share_different', 'fb_velo', 'fb_rise', 'brk_sweep', 'zone']
+    Z = np.column_stack([zs(V[:, 2 + j], w) for j in range(len(names))]); y = V[:, 1] * 100     # points of chase rate
+    specs = {'s260': ['s260', 'plate', 'share_different', 'fb_velo', 'fb_rise', 'brk_sweep', 'zone'],
+             's175': ['s175', 'plate', 'share_different', 'fb_velo', 'fb_rise', 'brk_sweep', 'zone'],
+             'both': ['s260', 's175', 'plate', 'share_different', 'fb_velo', 'fb_rise', 'brk_sweep', 'zone'],
+             'controls_only': ['plate', 'share_different', 'fb_velo', 'fb_rise', 'brk_sweep', 'zone']}
+    pk = V[:, 0].astype(np.int64) // 10; up, inv = np.unique(pk, return_inverse=True)
+    boot_rng = np.random.default_rng(15)
+    cross = {}
+    for nm, sp_ in specs.items():
+        X = Z[:, [names.index(c) for c in sp_]]
+        beta, r2 = _wls(y, X, w)
+        bs = []
+        for _ in range(int(params.get('boot', 300))):
+            cnt = np.bincount(boot_rng.integers(0, len(up), len(up)), minlength=len(up)).astype(float)[inv]
+            bs.append(_wls(y, X, w * cnt)[0][1:])
+        bs = np.array(bs)
+        cross[nm] = {'r2': round(r2, 4), 'coef_points_per_sd': {c: [round(float(beta[1 + j]), 3), round(float(np.percentile(bs[:, j], 2.5)), 3), round(float(np.percentile(bs[:, j], 97.5)), 3)] for j, c in enumerate(sp_)}}
+    cross['n_pitcher_seasons'] = int(len(common)); cross['corr_s260_s175'] = round(float(np.corrcoef(V[:, 2], V[:, 3])[0, 1]), 4)
+    cross['corr_s260_plate'] = round(float(np.corrcoef(V[:, 2], V[:, 4])[0, 1]), 4)
+    res['cross_sample'] = cross
+    stage('cross-sample validity')
+    # next season: chase above expected in t+1 on this season's chase above expected plus tunneling
+    rows = []
+    for k, k2 in nxt:
+        r1, r2_ = kA[k], kA[k2]
+        rows.append([cae(r2_[None, :])[0] * 100, cae(r1[None, :])[0] * 100, r1[idx['s260']], r1[idx['s175']], r1[idx['plate']], r1[idx['share_different']], r1[idx['fb_velo']], r1[idx['fb_rise']],
+                     (r1[idx['brk_sweep']] if np.isfinite(r1[idx['brk_sweep']]) else 0.0), r1[idx['zone']], min(r1[idx['n_chase']], r2_[idx['n_chase']]), k // 10])
+    N_ = np.array(rows, float); w2 = N_[:, -2]; y2 = N_[:, 0]
+    feats = ['cae_now', 's260', 's175', 'plate', 'share_different', 'fb_velo', 'fb_rise', 'brk_sweep', 'zone']
+    Z2 = np.column_stack([zs(N_[:, 1 + j], w2) for j in range(len(feats))])
+    up2, inv2 = np.unique(N_[:, -1].astype(np.int64), return_inverse=True)
+    nxt_out = {}
+    base_cols = ['cae_now', 'plate', 'share_different', 'fb_velo', 'fb_rise', 'brk_sweep', 'zone']
+    for nm, extra in (('base', []), ('plus_s260', ['s260']), ('plus_s175', ['s175'])):
+        cs = base_cols + extra
+        X = Z2[:, [feats.index(c) for c in cs]]
+        beta, r2 = _wls(y2, X, w2)
+        bs, gains = [], []
+        Xb_ = Z2[:, [feats.index(c) for c in base_cols]]
+        for _ in range(int(params.get('boot', 300))):
+            cnt = np.bincount(boot_rng.integers(0, len(up2), len(up2)), minlength=len(up2)).astype(float)[inv2]
+            b_ = _wls(y2, X, w2 * cnt); bs.append(b_[0][1:])
+            if extra:
+                gains.append(b_[1] - _wls(y2, Xb_, w2 * cnt)[1])
+        bs = np.array(bs)
+        row = {'r2': round(r2, 4), 'coef_points_per_sd': {c: [round(float(beta[1 + j]), 3), round(float(np.percentile(bs[:, j], 2.5)), 3), round(float(np.percentile(bs[:, j], 97.5)), 3)] for j, c in enumerate(cs)}}
+        if extra:
+            row['r2_gain'] = [round(float(np.mean(gains)), 4), round(float(np.percentile(gains, 2.5)), 4), round(float(np.percentile(gains, 97.5)), 4)]
+        nxt_out[nm] = row
+    nxt_out['n_pairs_of_seasons'] = int(len(N_))
+    res['next_season'] = nxt_out
+    stage('next season')
+    # 2026 leaderboard (per-pitcher summaries only)
+    lb = A[(A[:, 0] % 10) == 6]
+    lb = lb[lb[:, idx['n_pairs']] >= 600]
+    rows = [{'p': int(r[0]) // 10, 's260': round(float(r[idx['s260']]), 3), 's175': round(float(r[idx['s175']]), 3), 'plate': round(float(r[idx['plate']]), 3),
+             'chase': round(float(r[idx['chase']]), 4), 'chase_exp': round(float(r[idx['chase_exp']]), 4), 'pairs': int(r[idx['n_pairs']])} for r in lb]
+    res['leaderboard_2026'] = sorted(rows, key=lambda r: r['s260'])
+    return res
+
+
 def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']
     from cloud.security import unseal, key_bytes
@@ -1833,6 +2036,8 @@ def main():
             receipt['results'] = horizon12(T, params, stage)
         elif experiment == 'horizon13':
             receipt['results'] = horizon13(T, params, stage)
+        elif experiment == 'horizon14':
+            receipt['results'] = horizon14(T, params, stage)
         receipt['status'] = 'completed'
     except Exception as exc:
         receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:400]
