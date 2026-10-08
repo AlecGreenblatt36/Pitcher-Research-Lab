@@ -314,3 +314,44 @@ judging from 260 ms (0.0676 planted) 0.034 (0.027 to 0.042) — the selection of
 260 ms, halves the estimate; batters judging the crossing 0.004 (-0.006 to 0.015); catchers on the crossing -0.005
 (-0.015 to 0.006) in both runs; pitchers at 150 ms (0.0225 planted) 0.032 (0.011 to 0.052). So the test separates the two
 readings for batters (0.034 against 0.004) though it does not recover the full 0.0676.
+
+## Addendum 14, before the scarcity run (scarcity)
+
+Since addendum 13: challenges are a second decision about the pitch, and taking a pitch, hitters judge its crossing as
+well as catchers do (DISC-07).
+
+Practitioner input (not public): when a team is down to its last challenge its hitters get hesitant, and the zone gets a
+little wider on them. Under the 2026 rules each team has two challenges and keeps one that succeeds, so the challenges a
+team has left before a pitch are two minus its failed challenges (the extraction records both teams' failed challenges
+before every pitch). If the last challenge is worth more, a team holding one should spend it only on clearer misses:
+fewer challenges at the same location, a higher overturn rate among those made, and more clear misses left standing. A
+hitter who cannot count on a challenge may also protect the edge of the zone with two strikes.
+
+Instrument (tools/brl_discovery.py scarcity): every 2026 regular-season pitch of innings 1-9 (extra innings have their own
+challenge rule), the location against each batter's own zone (as in DISC-05 and DISC-07), the count, the inning (1-6, 7-8,
+9) and the batter's hand as controls. Challenges: logistic odds ratio of a challenge with one left against two (batters on
+called strikes, catchers on called balls); the same with the batter's own challenge habit from his other games; the same
+with the other team's challenges left as a placebo (it shares the game, the inning and the umpire but not the scarcity).
+Swings: odds ratio of a swing at pitches within two inches of the zone's edge with one and with no challenge left against
+two. Game-level bootstrap, 200 draws. Biases known in advance: a team that has already failed is more often an eager one,
+and leverage (the score) is not in the table; both push the challenge odds ratio up, toward no effect.
+
+Predictions written now:
+1. Batters: odds ratio between 0.45 and 0.80, interval excluding 1.
+2. Batters: overturn rate of the challenges made with one left at least 5 points above that with two left; a larger share
+   of clear misses (called strikes at least an inch outside the batter's zone) left standing with one left than with two.
+3. Catchers: odds ratio between 0.45 and 0.90, interval excluding 1 (the challenges are the team's, whoever spends them).
+4. Placebo: the other team's challenges left, odds ratio between 0.85 and 1.15 with the interval including 1, both roles.
+5. Swings with two strikes: none left against two, odds ratio between 1.00 and 1.25; one left against two, between 1.00
+   and 1.10. All counts reported, not predicted.
+6. Ninth inning: batters' challenge rate on clear misses with one left at least as high as with two left (a challenge
+   about to expire is not worth saving). Direction only; the sample is small.
+Falsifier for the practitioner's claim: batters' odds ratio at or above 0.90, or its interval including 1.
+
+Synthetic check (scratch generator; 1,600 games, about 400 batter and 400 catcher challenges, 20 to 30 bootstrap draws):
+batters planted at 0.50 recovered as 0.59 (0.29 to 0.84); a swing shift planted at 1.22 recovered as 1.18 (1.13 to 1.25)
+over all counts and 1.21 (1.04 to 1.37) with two strikes. Null (nothing planted, three seeds): batters 1.17, 0.94, 1.13;
+swings 0.98, 1.03, 0.95; catchers 0.76, 1.20, 1.63, and 0.69 in the planted run (no catcher effect planted). Two of these
+four catcher intervals exclude 1 with about 35 catcher challenges at one left, so the catcher interval is read with caution
+at small counts (the warm-started bootstrap fits converge to the same values as cold fits; checked). The 2026 season has
+about ten times these counts.

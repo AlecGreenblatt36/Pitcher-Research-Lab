@@ -2177,6 +2177,139 @@ def challenges(T: dict, X: dict, params: dict, stage) -> dict:
     return res
 
 
+def _zone_frame(T: dict, top: np.ndarray, bot: np.ndarray):
+    """Location against each batter's own zone: u (feet, toward his side positive), zz (zone units, 1.5 to 3.5 inside) and
+    edge (feet outside the zone, negative inside), plus the location, count, inning and handedness design used by DISC-08."""
+    n = len(T['balls'])
+    span = np.clip(top - bot, 1.2, 3.0)
+    u = np.where(T['stand_r'] == 1, T['px'], -T['px']); zz = 1.5 + 2.0 * (T['pz'] - bot) / span
+    edge = np.maximum(np.maximum(np.abs(u) - ZONE_HALF, zz - ZONE_TOP), ZONE_BOT - zz)
+    cnt = np.zeros((n, 12), np.float32); cnt[np.arange(n), np.clip(T['balls'], 0, 3) * 3 + np.clip(T['strikes'], 0, 2)] = 1
+    inn = np.zeros((n, 3), np.float32); inn[np.arange(n), np.where(T['inning'] <= 6, 0, np.where(T['inning'] <= 8, 1, 2))] = 1
+    base = np.hstack([hats(edge, EU_KNOTS), hats(u, U_KNOTS), hats(zz, Z_KNOTS), cnt, inn,
+                      T['stand_r'][:, None].astype(np.float32)]).astype(np.float32)
+    return u, zz, edge, base
+
+
+def _left_or(D: np.ndarray, y: np.ndarray, games: np.ndarray, params: dict, seed: int, k: int = 1) -> dict | list:
+    """Odds ratios of the last k columns (challenges-left indicators against two left), game-level bootstrap. One dict when
+    k is 1, else a list in column order."""
+    C = float(params.get('C', 1.0))
+    m = fit_logistic(D, y, C=C)
+    b = [float(x) for x in m.coef_[0][-k:]]
+    ug = np.unique(games); rng = np.random.default_rng(seed)
+    order = np.argsort(games, kind='stable'); gs = games[order]
+    starts = np.searchsorted(gs, ug); ends = np.searchsorted(gs, ug, side='right')
+    boots = []
+    for _ in range(int(params.get('boot', 100))):
+        pick = rng.integers(0, len(ug), len(ug))
+        ii = np.concatenate([order[starts[g]:ends[g]] for g in pick])
+        if y[ii].sum() < 20:
+            continue
+        boots.append([float(x) for x in fit_logistic(D[ii], y[ii], C=C, warm=(m.coef_, m.intercept_)).coef_[0][-k:]])
+    boots = np.asarray(boots).reshape(-1, k)
+    out = []
+    for j in range(k):
+        lo, hi = (float(np.percentile(boots[:, j], 2.5)), float(np.percentile(boots[:, j], 97.5))) if len(boots) else (None, None)
+        out.append({'log_odds': round(b[j], 4), 'odds_ratio': round(float(np.exp(b[j])), 4),
+                    'ci_odds_ratio': [round(float(np.exp(lo)), 4), round(float(np.exp(hi)), 4)] if len(boots) else None,
+                    'rows': int(len(y)), 'events': int(y.sum()), 'rows_flagged': int(D[:, D.shape[1] - k + j].sum()), 'boot_reps': int(len(boots))})
+    return out[0] if k == 1 else out
+
+
+def scarcity(T: dict, X: dict, params: dict, stage) -> dict:
+    """Addendum 14 (DISC-08): does running low on challenges change how hitters and catchers act? Innings 1-9 of 2026, with
+    each side's challenges left before the pitch (two minus its failed challenges; a successful challenge is kept).
+    Challenges (called pitches; batters on called strikes, catchers on called balls): the odds of a challenge with one left
+    against two at the same location against the batter's zone, count, inning and handedness (logistic; game-level
+    bootstrap), the same with the batter's own challenge habit from his other games, the overturn rate of the challenges
+    made, and how often a clear miss stands (a called strike at least an inch outside the batter's zone, or a called ball at
+    least an inch inside it), by challenges left; a placebo puts the other team's challenges left in the same model. Swings: the odds of a swing at pitches within two inches of the zone's
+    edge with the batting side one or no challenge left against two, all counts and two strikes."""
+    res = {}
+    F = rebuild(T)
+    top, bot, _ = batter_zones(T, F['ok'] & (T['group'] >= 0) & (T['call'] <= 2))
+    inch = 1.0 / 12.0
+    base_ok = (F['ok'] & (T['group'] >= 0) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2)
+               & (T['inning'] <= 9))
+    # swings near the edge, by the batting side's challenges left (every pitch with a swing decision)
+    okw = base_ok & (T['call'] <= 2)
+    Tw = take(T, okw); bat_left_w = np.clip(2 - X['bat_failed'][okw], 0, 2)
+    _, _, ew, basew = _zone_frame(Tw, top[okw], bot[okw])
+    swing = ((Tw['call'] == 1) | (Tw['call'] == 2)).astype(np.int64)
+    sw = {}
+    for name, sel in (('all_counts', np.ones(len(swing), bool)), ('two_strikes', Tw['strikes'] == 2)):
+        near = sel & (np.abs(ew) <= 2 * inch)
+        rates = {}
+        for side, ss in (('inside_edge', near & (ew <= 0)), ('outside_edge', near & (ew > 0))):
+            rates[side] = {f'left_{lv}': [round(float(swing[ss & (bat_left_w == lv)].mean()), 4) if (ss & (bat_left_w == lv)).any() else None,
+                                          int((ss & (bat_left_w == lv)).sum())] for lv in (2, 1, 0)}
+        idx = np.flatnonzero(near)
+        D = np.hstack([basew[idx], (bat_left_w[idx] == 1).astype(np.float32)[:, None], (bat_left_w[idx] == 0).astype(np.float32)[:, None]])
+        one, none = _left_or(D, swing[idx], Tw['game'][idx], params, 141, k=2)
+        sw[name] = {'swing_rates': rates, 'one_left_vs_two': one, 'none_left_vs_two': none}
+    res['swings_near_edge'] = sw
+    del Tw, basew
+    stage('swings near the edge')
+    ok = base_ok & (T['call'] == 0) & (X['orig'] >= 0)
+    T = take(T, ok); X = {k: v[ok] for k, v in X.items()}; top, bot = top[ok], bot[ok]
+    stage('called pitches, innings 1-9')
+    u, zz, edge, base = _zone_frame(T, top, bot)
+    for pname, orig, role, failed, clear in (
+            ('batter', 1, ROLE['batter'], X['bat_failed'], edge > inch),
+            ('catcher', 0, ROLE['catcher'], X['fld_failed'], edge < -inch)):
+        left = np.clip(2 - failed, 0, 2)
+        pm = X['orig'] == orig
+        y = (X['role'] == role).astype(np.int64)
+        over = X['over'].astype(float)
+        out = {'called': int(pm.sum()), 'challenges': int(y[pm].sum())}
+        table = []
+        for lv in (2, 1, 0):
+            sel = pm & (left == lv); csel = sel & clear; ch = sel & (y == 1)
+            stands = csel & ~((y == 1) & (over == 1))
+            table.append({'left': lv, 'called': int(sel.sum()), 'clear_misses': int(csel.sum()),
+                          'challenge_rate_on_clear_misses': round(float(y[csel].mean()), 4) if csel.any() else None,
+                          'clear_misses_that_stand': round(float(stands[csel].mean()), 4) if csel.any() else None,
+                          'challenges': int(ch.sum()), 'overturn_rate': round(float(over[ch].mean()), 4) if ch.any() else None})
+        out['by_challenges_left'] = table
+        by_inning = []
+        for lo_, hi_, name in ((1, 6, '1-6'), (7, 8, '7-8'), (9, 9, '9')):
+            row = {'innings': name}
+            for lv in (2, 1):
+                csel = pm & clear & (left == lv) & (T['inning'] >= lo_) & (T['inning'] <= hi_)
+                row[f'left_{lv}'] = [round(float(y[csel].mean()), 4) if csel.any() else None, int(csel.sum())]
+            by_inning.append(row)
+        out['challenge_rate_on_clear_misses_by_inning'] = by_inning
+        idx = np.flatnonzero(pm & (left >= 1))
+        one = (left[idx] == 1).astype(np.float32)[:, None]
+        out['one_left_vs_two'] = _left_or(np.hstack([base[idx], one]), y[idx], T['game'][idx], params, 14)
+        # placebo: the other team's challenges left (same game flow, inning and umpire, no scarcity of one's own)
+        other = np.clip(2 - (X['fld_failed'] if pname == 'batter' else X['bat_failed']), 0, 2)
+        o_other, o_one = _left_or(np.hstack([base[idx], (other[idx] <= 1).astype(np.float32)[:, None], one]), y[idx], T['game'][idx],
+                                  params, 16, k=2)
+        out['placebo_other_team_one_or_none_left'] = o_other
+        out['one_left_vs_two_with_placebo'] = o_one
+        if pname == 'batter':
+            # the batter's own habit: challenges per clear-miss called strike in his other games (shrunk to the league)
+            cm = pm & clear & (left >= 1)
+            bid = T['batter']; g = T['game']
+            ub, binv = np.unique(bid, return_inverse=True)
+            tot_c = np.bincount(binv, weights=(y * cm).astype(float), minlength=len(ub))
+            tot_n = np.bincount(binv, weights=cm.astype(float), minlength=len(ub))
+            key = bid.astype(np.int64) * 10_000_000 + g.astype(np.int64)
+            uk, kinv = np.unique(key, return_inverse=True)
+            gc = np.bincount(kinv, weights=(y * cm).astype(float), minlength=len(uk))[kinv]
+            gn = np.bincount(kinv, weights=cm.astype(float), minlength=len(uk))[kinv]
+            league = float(y[cm].mean()) if cm.any() else 0.05
+            prior = 20.0
+            habit = (tot_c[binv] - gc + prior * league) / (tot_n[binv] - gn + prior)
+            hl = np.log(habit / (1 - habit)).astype(np.float32)[:, None]
+            out['one_left_vs_two_with_habit'] = _left_or(np.hstack([base[idx], hl[idx], one]), y[idx], T['game'][idx], params, 15)
+        res[pname] = out
+        stage(pname)
+    return res
+
+
 def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']
     from cloud.security import unseal, key_bytes
@@ -2193,13 +2326,13 @@ def main():
     def stage(name):
         receipt['stages'].append({'stage': name, 'at_seconds': round(time.time() - t0, 1)}); print(name, round(time.time() - t0), 's', flush=True)
     try:
-        if experiment == 'challenges':
+        if experiment in ('challenges', 'scarcity'):
             stage('fetch the 2026 play-by-play')
             cdoc = challenge_study(int(params.get('season', 2026)), int(params.get('workers', 6)))
             T = pitch_table(cdoc, int(params.get('season', 2026))); X = challenge_columns(cdoc); del cdoc
             receipt['seasons_rows'] = {int(params.get('season', 2026)): int(len(T['season']))}
             assert len(X['role']) == len(T['season'])
-            receipt['results'] = challenges(T, X, params, stage)
+            receipt['results'] = (challenges if experiment == 'challenges' else scarcity)(T, X, params, stage)
             raise StopIteration
         tables = []
         for year in params.get('seasons', (2023, 2024, 2025, 2026)):
