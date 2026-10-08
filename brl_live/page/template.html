@@ -108,7 +108,17 @@ button { font: inherit; color: inherit; }
 .hero { background-color: var(--board); background-image: repeating-linear-gradient(180deg, rgba(255,255,255,.028) 0 1px, transparent 1px 38px); color: var(--chalk); }
 .chip { display: inline-block; width: 6px; height: 24px; border-radius: 2px; margin-right: 9px; vertical-align: -3px; box-shadow: 0 0 0 1px rgba(255,255,255,.25); }
 .hero .wrap { padding-top: 14px; padding-bottom: 18px; }
-.back { display: inline-flex; align-items: center; min-height: 44px; color: var(--chalk-dim); text-decoration: none; font-weight: 700; font-size: 15px; }
+.back { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; margin-left: -4px; padding-right: 8px; color: var(--chalk-dim); text-decoration: none; font-weight: 700; font-size: 15px; }
+.back svg { width: 16px; height: 16px; }
+.back:hover { color: var(--chalk); }
+.pill { display: inline-flex; align-items: center; gap: 6px; margin: 0 10px 4px 0; padding: 1px 10px; border-radius: 999px; font-weight: 700; font-size: 14px; line-height: 22px; vertical-align: 1px; background: rgba(255,255,255,.12); color: var(--chalk); }
+.pill.live { background: var(--live); color: #fff; }
+.pill.final { background: var(--chalk); color: var(--board); }
+.pill i { width: 7px; height: 7px; border-radius: 50%; background: #fff; animation: pulse 1.8s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+.hero-bar { position: relative; display: flex; height: 8px; margin: 12px 0 2px; border-radius: 4px; overflow: hidden; box-shadow: 0 0 0 1px rgba(255,255,255,.22); }
+.hero-bar i { display: block; height: 100%; }
+.hero-bar::after { content: ""; position: absolute; left: calc(50% - 1px); top: 0; bottom: 0; width: 2px; background: var(--board); opacity: .9; }
 .hero-meta { color: var(--chalk-dim); font-size: 15px; margin: 0 0 8px; }
 .hero-venue { margin-top: -4px; font-size: 14px; }
 .hero-cols { display: grid; grid-template-columns: 1fr 64px 64px; font-size: 14px; color: var(--chalk-dim); margin-top: 6px; }
@@ -176,12 +186,25 @@ button { font: inherit; color: inherit; }
 .note { font-size: 14px; color: var(--muted); margin: 8px 0 0; }
 
 /* Key moments */
-.wp { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 10px 6px; }
-.wp svg { display: block; width: 100%; height: auto; }
-.wp .axis { font-family: var(--display); font-weight: 600; font-size: 22px; fill: var(--muted); }
-.wp .team { font-family: var(--display); font-weight: 700; font-size: 26px; }
-.wp-cap { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 2px 4px; font-size: 15px; color: var(--muted); }
-.wp-cap b { font-family: var(--display); font-size: 20px; font-weight: 700; }
+.wp { margin: 0; background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 16px 16px 8px 52px; }
+.wp-plot { position: relative; height: 188px; margin-bottom: 30px; }
+.wp-plot svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.wp-a { opacity: .17; }
+.wp-grid { stroke: var(--rule-soft); stroke-width: 1; }
+.wp-mid { stroke: #9AA8A0; stroke-width: 1.5; }
+.wp-line { fill: none; stroke: var(--ink); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.wp-team, .wp-y { position: absolute; right: calc(100% + 10px); font-family: var(--display); font-weight: 700; font-size: 17px; line-height: 1; }
+.wp-team.wp-hi { top: 0; }
+.wp-team.wp-lo { bottom: 0; }
+.wp-y { top: 50%; transform: translateY(-50%); color: var(--muted); font-weight: 600; font-size: 15px; }
+.wp-inn { position: absolute; top: calc(100% + 8px); transform: translateX(-50%); font-family: var(--display); font-weight: 600; font-size: 15px; color: var(--muted); }
+.wp-inn:first-of-type { transform: none; }
+.wp-mark, .wp-dot { position: absolute; display: block; border-radius: 50%; transform: translate(-50%, -50%); }
+.wp-mark { width: 11px; height: 11px; background: var(--surface); border: 2.5px solid var(--ink); }
+.wp-dot { width: 14px; height: 14px; box-shadow: 0 0 0 3px var(--surface), 0 0 0 4px var(--ink); }
+.wp-cap { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-left: -36px; padding: 10px 0 6px; border-top: 1px solid var(--rule-soft); font-size: 15px; color: var(--muted); }
+.wp-cap b { font-family: var(--display); font-size: 21px; font-weight: 700; text-align: right; }
+@media (min-width: 720px) { .wp-plot { height: 236px; } }
 .spray { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 8px 8px 4px; }
 .spray svg { display: block; width: 100%; max-width: 420px; height: auto; margin: 0 auto; }
 .spray .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; justify-content: center; padding: 6px 0 4px; font-size: 14px; color: var(--muted); }
@@ -191,6 +214,7 @@ button { font: inherit; color: inherit; }
 .swings { list-style: none; margin: 10px 0 0; padding: 0; }
 h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--rule); color: var(--muted); }
 .swings li { display: grid; grid-template-columns: 64px 1fr auto; gap: 10px; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--rule-soft); font-size: 16px; }
+.swings + .note { margin-top: 6px; }
 .swings .inn { font-family: var(--display); font-weight: 600; color: var(--muted); }
 .swings .d { font-family: var(--display); font-weight: 700; font-size: 18px; white-space: nowrap; }
 .moments { list-style: none; margin: 0; padding: 0; }
@@ -347,7 +371,30 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
 @media (max-width: 380px) {
   .line td { font-size: 17px; min-width: 21px; }
 }
-@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+/* Desktop: wider pages; the game header splits in two; summary, odds and record read in two columns. */
+@media (min-width: 1000px) {
+  .hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr); gap: 0 48px; align-items: start; }
+  .hero-side .line-wrap { margin-top: 30px; }
+}
+@media (min-width: 1100px) {
+  .wrap { max-width: 1120px; }
+  .page-head p, .dstrip, .replay-note { max-width: 760px; }
+  .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .panel.tab-summary, .panel.tab-odds { column-count: 2; column-gap: 48px; }
+  .panel.tab-summary > *, .panel.tab-odds > * { break-inside: avoid; }
+  .panel .wide, .panel h2.divide { column-span: all; }
+  .record-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 48px; align-items: start; }
+  .record-cols .seasons { grid-template-columns: 1fr; }
+  .pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 48px; align-items: start; }
+  .hero-side { align-self: center; }
+  .wide .swings { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+  .wide .swings li { grid-template-columns: 1fr auto; grid-template-areas: "inn d" "t t"; gap: 2px 10px; padding: 10px 14px 12px; border: 1px solid var(--rule); border-radius: 10px; background: var(--surface); }
+  .wide .swings .inn { grid-area: inn; } .wide .swings .d { grid-area: d; } .wide .swings .t { grid-area: t; }
+  .panel.tab-box, .panel.tab-plays { max-width: 880px; }
+  .games-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .games-list .calls { grid-template-columns: repeat(2, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } .pill i { animation: none; } }
 </style>
 </head>
 <body>
@@ -516,6 +563,16 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     return "pregame";
   }
   var STATE_TEXT = { pregame: "Pregame", live: "Live", final: "Final" };
+  var CHEV_LEFT = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  /* The game's state as a pill ahead of the context line; a game in progress gets a slow pulse. */
+  function statusPill(st, text, pulsing) {
+    return '<span class="pill ' + esc(st) + '">' + (pulsing ? "<i></i>" : "") + esc(text) + "</span>";
+  }
+  /* The win chance as one bar in the team colors, the away share from the left. */
+  function heroBar(f, hp) {
+    if (hp == null || !isFinite(hp)) return "";
+    return '<div class="hero-bar" role="img" aria-label="' + esc("Win chance " + f.away.abbr + " " + pct(1 - hp) + ", " + f.home.abbr + " " + pct(hp)) + '"><i style="width:' + ((1 - hp) * 100).toFixed(1) + '%;background:var(--away)"></i><i style="flex:1;background:var(--home)"></i></div>';
+  }
   /* In-game snapshot for a game in progress (replaced every cycle, never scored). */
   function liveFor(pk) {
     var srv = D.live && D.live[pk], server = srv && !srv.error && srv.state ? srv : null, c = CLIENT[pk];
@@ -1041,8 +1098,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       real = { batting: bx.batting, pitching: bx.pitching, plays: lcPlays(feed), score: { away: sit.state.away_score, home: sit.state.home_score }, innings: inn, _real: true, _final: !!sit.final };
     }
     var fin = real ? real.score : (g ? { away: g.fa, home: g.fh } : null), fav = g ? favorite(f) : null;
-    var html = '<div class="game" style="--away:' + tc.away + ";--home:" + tc.home + '"><section class="hero"><div class="wrap"><a class="back" href="#/day/' + day + '">Back to ' + esc(dateLabel(day).replace(/^[A-Za-z]+, /, "")) + "</a>";
-    html += '<p class="hero-meta">' + esc([SERIES[f.game_type] || "", f.scheduled_start ? timeET(f.scheduled_start) + " ET" : "", fin ? "Final" : ""].filter(Boolean).join(". ")) + "</p>";
+    var html = '<div class="game" style="--away:' + tc.away + ";--home:" + tc.home + '"><section class="hero"><div class="wrap"><a class="back" href="#/day/' + day + '">' + CHEV_LEFT + "Back to " + esc(dateLabel(day).replace(/^[A-Za-z]+, /, "")) + "</a>";
+    html += '<div class="hero-grid"><div class="hero-main"><p class="hero-meta">' + (fin ? statusPill("final", "Final", false) : "") + esc([SERIES[f.game_type] || "", f.scheduled_start ? timeET(f.scheduled_start) + " ET" : ""].filter(Boolean).join(". ")) + "</p>";
     var venue = (gd.venue && gd.venue.name) || (g && g.v) || "", w = gd.weather || {};
     var wl = [w.temp ? w.temp + "\u00b0F" : "", w.condition || "", w.wind ? "wind " + w.wind : ""].filter(Boolean).join(", ");
     if (venue || wl) html += '<p class="hero-meta hero-venue">' + esc([venue, wl].filter(Boolean).join(". ")) + "</p>";
@@ -1052,13 +1109,15 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       html += '<div class="hero-row' + (fav === side ? " fav" : "") + '"><span class="abbr"><i class="chip" style="background:var(--' + side + ')"></i>' + esc(t.abbr) + '</span><span class="team-name">' + esc(nickname(t.name)) +
         (sp ? "<small>" + esc(sp) + "</small>" : "") + '</span><span class="big num">' + (fin ? esc(fin[side]) : "") + '</span><span class="pct num">' + (g ? pct(winProb(f, side)) : "") + "</span></div>";
     });
+    if (g) html += heroBar(f, homeProb(f));
+    html += '</div><div class="hero-side">';
     if (real && Object.keys(real.innings.away).length) html += lineScore(f, real);
     html += '<p class="hero-note">' + (g ? "Model replay: the win chance is what the model gives this game when re-run with only information from before it. The line score, box score and plays are the real game from MLB." :
-      "No model numbers for this game. The line score, box score and plays are the real game from MLB.") + "</p></div></section>";
+      "No model numbers for this game. The line score, box score and plays are the real game from MLB.") + "</p></div></div></div></section>";
     var tabs = [["summary", "Summary"], ["box", "Box score"], ["plays", "Plays"], ["odds", "Odds"]];
     if (!g) tabs.pop();
     html += '<nav class="tabs"><div class="wrap" role="tablist">' + tabs.map(function (t) { return '<button class="tab" role="tab" data-tab="' + t[0] + '" aria-selected="' + (t[0] === tab) + '">' + t[1] + "</button>"; }).join("") + "</div></nav>";
-    html += '<div class="wrap"><div class="panel">';
+    html += '<div class="wrap"><div class="panel tab-' + tab + '">';
     if (!real && tab !== "odds") html += '<p class="empty">MLB\'s game feed could not be reached, so the box score and plays are not available right now.</p>';
     else if (tab === "box") html += boxTab(f, real, null, pk, "Actual", true);
     else if (tab === "plays") html += playsTab(f, real) + '<p class="note">The real game from the official play-by-play.</p>';
@@ -1121,9 +1180,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var fav = favorite(f);
 
     var back = f.date && f.date !== D.date ? "#/day/" + f.date : "#/", tcg = teamColors(f);
-    var html = '<div class="game" style="--away:' + tcg.away + ";--home:" + tcg.home + '"><section class="hero"><div class="wrap"><a class="back" href="' + back + '">Back to games</a>';
+    var html = '<div class="game" style="--away:' + tcg.away + ";--home:" + tcg.home + '"><section class="hero"><div class="wrap"><a class="back" href="' + back + '">' + CHEV_LEFT + "Back to games</a>";
     var gctx = contextFor(f.game_pk), gline = contextLine(f, gctx, false) || SERIES[f.game_type], gw = weatherLine(gctx);
-    html += '<p class="hero-meta">' + esc([gline, timeET(f.scheduled_start) + " ET", lv ? "Live, " + liveWhere(lv) : STATE_TEXT[st]].filter(Boolean).join(". ")) + "</p>";
+    html += '<div class="hero-grid"><div class="hero-main"><p class="hero-meta">' + statusPill(st, lv ? liveWhere(lv) : STATE_TEXT[st], lv && !lv._final) + esc([gline, timeET(f.scheduled_start) + " ET"].filter(Boolean).join(". ")) + "</p>";
     if (gctx && (gctx.venue || gw)) html += '<p class="hero-meta hero-venue">' + esc([gctx.venue, gw].filter(Boolean).join(". ")) + "</p>";
     html += '<div class="hero-cols"><span></span><span>' + (actual ? "Final" : lv ? "Score" : (v && v.key !== "proj" ? v.label : "Projected")) + "</span><span>Win</span></div>";
     ["away", "home"].forEach(function (side) {
@@ -1134,6 +1193,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       html += '<div class="hero-row' + (isFav ? " fav" : "") + '"><span class="abbr"><i class="chip" style="background:var(--' + side + ')"></i>' + esc(t.abbr) + '</span><span class="team-name">' + esc(nickname(t.name)) +
         (starter ? "<small>" + esc(starter) + "</small>" : "") + '</span><span class="big num">' + esc(score) + '</span><span class="pct num">' + pct(win) + "</span></div>";
     });
+    html += heroBar(f, lv && lv.home_win_probability != null ? lv.home_win_probability : homeProb(f)) + '</div><div class="hero-side">';
     if (actual && actualBox && actualBox.innings) {
       html += lineScore(f, actualBox);
       html += '<p class="hero-note">' + (actualBox.plays && actualBox.plays.length ? "Final. The tabs show the real game and the projected game saved before first pitch." : "Line score is the real game. The tabs below show the projected game saved before first pitch.") + "</p>";
@@ -1142,7 +1202,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (lv.state && !lv._final) html += situation(f, lv);
       html += '<p class="hero-note">' + esc(liveNote(f, lv, fav)) + "</p>";
     } else if (s) html += lineScore(f, s);
-    html += "</div></section>";
+    html += "</div></div></div></section>";
 
     if (box && box.archived) html += '<div class="wrap"><p class="note">Archived day: the projected game is kept; the other simulated versions and player ranges are not.</p></div>';
     if (variants.length > 1) {
@@ -1159,7 +1219,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     html += '<nav class="tabs"><div class="wrap" role="tablist">' + tabs.map(function (t) {
       return '<button class="tab" role="tab" data-tab="' + t[0] + '" aria-selected="' + (t[0] === tab) + '">' + t[1] + "</button>";
     }).join("") + "</div></nav>";
-    html += '<div class="wrap"><div class="panel">';
+    html += '<div class="wrap"><div class="panel tab-' + tab + '">';
     /* The real plays show even when this cycle's continuation failed (the snapshot then has no win chance). */
     var real = realGame(st, lv || (D.live && D.live[pk]), actualBox);
     if (!s) html += '<p class="empty">The full simulated game is still being built for this forecast.</p>';
@@ -1499,30 +1559,46 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (o !== "home_run" && runs) what += ", " + runs + (runs === 1 ? " run scores" : " runs score");
     return who + " " + what;
   }
+  /* The plays that moved the win chance most (at least 4 points), biggest first: [{ i, d, play }]. */
+  function topSwings(pts, k) {
+    var sw = [];
+    /* A play's swing is the chance after it (the next point) less the chance before it. */
+    for (var i = 1; i + 1 < pts.length; i++) if (pts[i].play) sw.push({ i: i, d: (pts[i].after != null ? pts[i].after : pts[i + 1].p) - pts[i].p, play: pts[i].play });
+    sw.sort(function (a, b) { return Math.abs(b.d) - Math.abs(a.d); });
+    return sw.slice(0, k || 3).filter(function (s) { return Math.abs(s.d) >= .04; });
+  }
+  var WP_ID = 0;
+  /* Home win chance after every play: drawn in a 100 x 100 box stretched to the panel (lines keep their width),
+     labels and markers in HTML so their size never scales with the screen. Home on top, away below. */
   function winChart(f, box, real, lv) {
     if (!box || !box.win_table || !real || !real.plays.length) return "";
-    var pts = winSeries(f, box, real, lv), n = pts.length, W = 640, H = 300, L = 50, R = 14, T = 16, B = 40, pw = W - L - R, ph = H - T - B;
-    var x = function (i) { return L + pw * (n === 1 ? 0 : i / (n - 1)); }, y = function (p) { return T + ph * (1 - p); };
-    var d = pts.map(function (q, i) { return (i ? "L" : "M") + x(i).toFixed(1) + " " + y(q.p).toFixed(1); }).join(" ");
-    var area = d + " L" + x(n - 1).toFixed(1) + " " + y(.5).toFixed(1) + " L" + x(0).toFixed(1) + " " + y(.5).toFixed(1) + " Z";
-    var h = '<div class="wp"><svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Home win chance through the game">';
-    h += '<defs><clipPath id="wp-up"><rect x="0" y="0" width="' + W + '" height="' + y(.5) + '"/></clipPath><clipPath id="wp-dn"><rect x="0" y="' + y(.5) + '" width="' + W + '" height="' + (H - y(.5)) + '"/></clipPath></defs>';
-    h += '<path d="' + area + '" fill="var(--home)" opacity=".18" clip-path="url(#wp-up)"/><path d="' + area + '" fill="var(--away)" opacity=".18" clip-path="url(#wp-dn)"/>';
-    [1, .75, .5, .25, 0].forEach(function (g) { h += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(g) + '" y2="' + y(g) + '" stroke="var(--rule)" stroke-width="' + (g === .5 ? 2 : 1) + '"' + (g === .5 ? "" : ' stroke-dasharray="3 5"') + '/>'; });
-    [[1, "100"], [.5, "50"], [0, "0"]].forEach(function (g) { h += '<text class="axis" x="' + (L - 8) + '" y="' + (y(g[0]) + 7) + '" text-anchor="end">' + g[1] + "</text>"; });
-    var seen = {};
+    var pts = winSeries(f, box, real, lv), n = pts.length, id = "wp" + (++WP_ID);
+    var X = function (i) { return n === 1 ? 0 : i / (n - 1) * 100; }, Y = function (p) { return (1 - p) * 100; };
+    var d = pts.map(function (q, i) { return (i ? "L" : "M") + X(i).toFixed(2) + " " + Y(q.p).toFixed(2); }).join(" ");
+    var area = d + " L" + X(n - 1).toFixed(2) + " 50 L0 50 Z", last = pts[n - 1];
+    var side = last.p >= .5 ? "home" : "away", shown = pct(last.p >= .5 ? last.p : 1 - last.p), fav = favorite(f);
+    var label = last.label === "Final" ? "Final: " + nickname(f[side].name) + " won" : last.label + ": " + f[side].abbr + " " + shown;
+    var h = '<figure class="wp"><div class="wp-plot" role="img" aria-label="' + esc(f.home.abbr + " win chance through the game. " + label) + '">';
+    h += '<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><defs><clipPath id="' + id + 'u"><rect x="-1" y="-1" width="102" height="51"/></clipPath><clipPath id="' + id + 'd"><rect x="-1" y="50" width="102" height="51"/></clipPath></defs>';
+    h += '<path d="' + area + '" class="wp-a" style="fill:var(--home)" clip-path="url(#' + id + 'u)"/><path d="' + area + '" class="wp-a" style="fill:var(--away)" clip-path="url(#' + id + 'd)"/>';
+    [25, 75].forEach(function (g) { h += '<line x1="0" x2="100" y1="' + g + '" y2="' + g + '" class="wp-grid" vector-effect="non-scaling-stroke"/>'; });
+    var seen = {}, inns = "", lastAt = -99;
     pts.forEach(function (q, i) {
       if (!q.play || q.play.half !== "top" || seen[q.play.inning]) return;
       seen[q.play.inning] = 1;
-      h += '<line x1="' + x(i) + '" x2="' + x(i) + '" y1="' + T + '" y2="' + (H - B + 6) + '" stroke="var(--rule)" stroke-width="1"/><text class="axis" x="' + (x(i) + 5) + '" y="' + (H - 12) + '">' + q.play.inning + "</text>";
+      h += '<line x1="' + X(i).toFixed(2) + '" x2="' + X(i).toFixed(2) + '" y1="0" y2="100" class="wp-grid" vector-effect="non-scaling-stroke"/>';
+      /* Innings with few plays sit close together; a label too near the one before it is left off (its line stays). */
+      if (X(i) - lastAt >= 5.5) { inns += '<span class="wp-inn" style="left:' + X(i).toFixed(2) + '%">' + q.play.inning + "</span>"; lastAt = X(i); }
     });
-    h += '<path d="' + d + '" fill="none" stroke="var(--ink)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>';
-    var last = pts[n - 1];
-    h += '<circle cx="' + x(n - 1) + '" cy="' + y(last.p) + '" r="6" fill="var(--ink)"/>';
-    h += '<text class="team" x="' + (L + 8) + '" y="' + (T + 24) + '" fill="var(--home)">' + esc(f.home.abbr) + '</text><text class="team" x="' + (L + 8) + '" y="' + (H - B - 10) + '" fill="var(--away)">' + esc(f.away.abbr) + "</text>";
-    h += "</svg>";
-    var side = last.p >= .5 ? "home" : "away", shown = pct(last.p >= .5 ? last.p : 1 - last.p), fav = favorite(f);
-    h += '<div class="wp-cap"><span>Pregame: ' + esc(f[fav].abbr) + " " + pct(winProb(f, fav)) + '</span><b class="' + side + '-c">' + esc(last.label === "Final" ? "Final: " + nickname(f[side].name) + " won" : last.label + ": " + f[side].abbr + " " + shown) + "</b></div></div>";
+    h += '<line x1="0" x2="100" y1="50" y2="50" class="wp-mid" vector-effect="non-scaling-stroke"/>';
+    h += '<path d="' + d + '" class="wp-line" vector-effect="non-scaling-stroke"/></svg>';
+    h += '<span class="wp-team wp-hi" style="color:var(--home)">' + esc(f.home.abbr) + '</span><span class="wp-y">50</span><span class="wp-team wp-lo" style="color:var(--away)">' + esc(f.away.abbr) + "</span>" + inns;
+    topSwings(pts).forEach(function (s) {
+      var q = pts[s.i + 1] || pts[s.i];
+      h += '<i class="wp-mark" style="left:' + X(s.i + 1 < n ? s.i + 1 : s.i).toFixed(2) + "%;top:" + Y(q.p).toFixed(2) + '%" title="' + esc((s.play.half === "top" ? "Top " : "Bottom ") + ordinal(s.play.inning) + ": " + swingText(s.play, {})) + '"></i>';
+    });
+    h += '<i class="wp-dot" style="left:' + X(n - 1).toFixed(2) + "%;top:" + Y(last.p).toFixed(2) + "%;background:var(--" + side + ')"></i></div>';
+    h += '<figcaption class="wp-cap"><span>Pregame: ' + esc(f[fav].abbr) + " " + pct(winProb(f, fav)) + '</span><b class="' + side + '-c">' + esc(label) + "</b></figcaption></figure>";
     return h;
   }
   /* Where every ball in play landed, from the official landing coordinates (home plate near 125, 198). */
@@ -1551,16 +1627,12 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   }
   function biggestSwings(f, box, real, lv, short) {
     if (!box || !box.win_table || !real || real.plays.length < 2) return "";
-    var pts = winSeries(f, box, real, lv), swings = [];
-    /* A play's swing is the chance after it (the next point) less the chance before it. */
-    for (var i = 1; i + 1 < pts.length; i++) if (pts[i].play) swings.push({ d: (pts[i].after != null ? pts[i].after : pts[i + 1].p) - pts[i].p, play: pts[i].play });
-    swings.sort(function (a, b) { return Math.abs(b.d) - Math.abs(a.d); });
-    var top = swings.slice(0, 3).filter(function (sw) { return Math.abs(sw.d) >= .04; });
+    var top = topSwings(winSeries(f, box, real, lv));
     if (!top.length) return "";
     var h = '<ul class="swings">';
     top.forEach(function (sw) {
       var p = sw.play, side = sw.d >= 0 ? "home" : "away";
-      h += '<li><span class="inn">' + (p.half === "top" ? "Top " : "Bot ") + ordinal(p.inning) + "</span><span>" + esc(swingText(p, short)) + '</span><span class="d ' + side + '-c">' + esc(f[side].abbr) + " +" + Math.round(Math.abs(sw.d) * 100) + "%</span></li>";
+      h += '<li><span class="inn">' + (p.half === "top" ? "Top " : "Bot ") + ordinal(p.inning) + '</span><span class="t">' + esc(swingText(p, short)) + '</span><span class="d ' + side + '-c">' + esc(f[side].abbr) + " +" + Math.round(Math.abs(sw.d) * 100) + "%</span></li>";
     });
     return h + "</ul>";
   }
@@ -1578,7 +1650,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var rn = nameMap(real), rs = shortMap(real);
       var chart = winChart(f, box, real, lv);
       if (chart) {
-        h0 += '<section class="sec"><h2>Win chance through the game</h2><p class="lede">' + (real._final ? "How the model's win chance moved with every play, from first pitch to the final." : "How the model's win chance has moved with every play so far.") + "</p>" + chart + biggestSwings(f, box, real, lv, rs) + "</section>";
+        h0 += '<section class="sec wide"><h2>Win chance through the game</h2><p class="lede">' + (real._final ? "How the model's win chance moved with every play, from first pitch to the final." : "How the model's win chance has moved with every play so far.") + "</p>" + chart + biggestSwings(f, box, real, lv, rs) + "</section>";
       }
       var realScoring = real.plays.filter(function (p) { return p.runs_scored > 0; });
       h0 += '<section class="sec"><h2>' + (real._final ? "Scoring plays" : "Scoring plays so far") + "</h2>";
@@ -1646,7 +1718,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   /* Whole-number projected lines: the average over all simulated games, rounded. */
   function projectedLines(f, box) {
     if (!box || !box.teams) return "";
-    var h = '<section class="sec"><h2>Projected lines</h2><p class="lede">What the model expects from each hitter and starter tonight, averaged over all ' + Number(box.n_simulations || 10000).toLocaleString() + " simulated games and rounded to whole numbers. Hit and HR are each hitter's chance of at least one.</p><div class=\"lineups\">";
+    var h = '<section class="sec wide"><h2>Projected lines</h2><p class="lede">What the model expects from each hitter and starter tonight, averaged over all ' + Number(box.n_simulations || 10000).toLocaleString() + " simulated games and rounded to whole numbers. Hit and HR are each hitter's chance of at least one.</p><div class=\"lineups\">";
     ["away", "home"].forEach(function (side) {
       var bat = (box.teams[side].batting || []).slice().sort(function (a, b) { return (a.spot || 0) - (b.spot || 0); }), names = shortNames(bat);
       var sp = (box.teams[side].pitching || [])[0];
@@ -1796,6 +1868,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     });
     h += '</ul><p class="note">Ranges cover the middle half of simulated games.</p></section>';
 
+    h += '<div class="pair wide">';
     ["away", "home"].forEach(function (side) {
       var bat = box.teams[side].batting || [], bnames = shortNames(bat);
       h += '<section class="sec"><h3 class="team-h ' + side + '-c">' + esc(nickname(f[side].name)) + ' hitters</h3><div class="tbl-wrap"><table class="box"><thead><tr><th scope="col">Batters</th><th>1+ hit</th><th>2+ hits</th><th>HR</th><th>Walk</th></tr></thead><tbody>';
@@ -1806,15 +1879,16 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       });
       h += "</tbody></table></div></section>";
     });
+    h += '</div><div class="pair wide">';
     ["away", "home"].forEach(function (side) {
       var pen = (box.teams[side].pitching || []).filter(function (p) { return p.role !== "starter"; })
         .sort(function (a, b) { return b.appearance_probability - a.appearance_probability; });
       if (!pen.length) return;
-      h += '<section class="sec"><h3 class="team-h ' + side + '-c">' + esc(nickname(f[side].name)) + ' bullpen</h3><div class="tbl-wrap"><table class="box"><thead><tr><th scope="col">Pitchers</th><th>Pitches in game</th></tr></thead><tbody>';
+      h += '<section class="sec"><h3 class="team-h ' + side + '-c">' + esc(nickname(f[side].name)) + ' bullpen</h3><div class="tbl-wrap"><table class="box"><thead><tr><th scope="col">Pitchers</th><th>Chance to pitch</th></tr></thead><tbody>';
       pen.forEach(function (p) { h += "<tr><td>" + esc(lastName(p.name)) + "</td><td>" + pct(p.appearance_probability) + "</td></tr>"; });
       h += "</tbody></table></div></section>";
     });
-    return h;
+    return h + "</div>";
   }
   function runsChart(ra, rh) {
     var cap = 10, A = {}, H = {}, maxP = 0;
@@ -1896,7 +1970,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       (mk.better_than_coin_pct != null && mk.n ? '<div><b class="num">' + (mk.better_than_coin_pct >= 0 ? "+" : "") + mk.better_than_coin_pct.toFixed(1) + "%</b><span>market, same games</span></div>" : "") + "</div>";
     var rows = (rec.ladder || []).filter(function (r) { return r.better_than_coin_pct != null; });
     var max = Math.max(1, Math.max.apply(null, rows.map(function (r) { return Math.abs(r.better_than_coin_pct); })));
-    h += '<section class="sec"><h2>Better than a coin flip</h2><p class="lede">Win chance accuracy over ' + n + " scored " + (n === 1 ? "game" : "games") + '. Small samples swing a lot; judge after a few hundred.</p><ol class="ladder">';
+    h += '<div class="record-cols"><div><section class="sec"><h2>Better than a coin flip</h2><p class="lede">Win chance accuracy over ' + n + " scored " + (n === 1 ? "game" : "games") + '. Small samples swing a lot; judge after a few hundred.</p><ol class="ladder">';
     rows.forEach(function (r) {
       var v = r.better_than_coin_pct, w = (Math.abs(v) / max * 50).toFixed(1);
       h += "<li" + (r.key === "blend" ? ' class="you"' : "") + "><span>" + esc(r.name) + '</span><span class="bar"><i class="' + (v >= 0 ? "pos" : "neg") + '" style="width:' + w + '%"></i></span><span class="v num">' + (v >= 0 ? "+" : "") + v.toFixed(1) + "%</span></li>";
@@ -1911,6 +1985,15 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         ". Our side won " + dg.our_side_won + ". Closer to the result on average: " + (dg.ours_brier < dg.market_brier ? "our model" : dg.ours_brier > dg.market_brier ? "the market" : "neither") + ".</p>";
       h += "</section>";
     }
+    var aggs = (D.skill_scores && D.skill_scores.aggregates) || [];
+    var live = aggs.filter(function (a) { return a.n_games && a.model_score != null && a.baseline_score != null; });
+    if (live.length) {
+      h += '<section class="sec"><h2>Box score accuracy</h2><p class="lede">How much closer the model lands than a simple guess. Positive is better.</p><ul class="compare">';
+      live.forEach(function (a) { var g = (a.baseline_score - a.model_score) / a.baseline_score; h += "<li><span>" + esc(a.label) + " <small>(" + a.n_games + (a.n_games === 1 ? " game" : " games") + ")</small></span><b>" + (g >= 0 ? "+" : "") + Math.round(g * 100) + "%</b></li>"; });
+      h += "</ul></section>";
+    }
+    /* Desktop: the live record on the left, the replayed seasons on the right; phones read them in that order. */
+    h += "</div><div>" + replaySeasons(rec) + "</div></div>";
     h += '<section class="sec"><h2>Game by game</h2><ol class="games-list">';
     var shortDate = function (ymd) { if (!ymd) return ""; var d = new Date(ymd + "T12:00:00Z"); return d.toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric" }); };
     (rec.games || []).slice().reverse().forEach(function (g) {
@@ -1923,14 +2006,6 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         call("Headline", g.p_blend) + (g.p_ours != null && Math.abs(g.p_ours - g.p_blend) >= 0.005 ? call("Our model", g.p_ours) : "") + call("Simulator", g.p_sim) + call("Team model", g.p_team) + call("Market", g.p_market) + "</div></li>";
     });
     h += '</ol><p class="note">Green means the favored team won.</p></section>';
-    h += replaySeasons(rec);
-    var aggs = (D.skill_scores && D.skill_scores.aggregates) || [];
-    var live = aggs.filter(function (a) { return a.n_games && a.model_score != null && a.baseline_score != null; });
-    if (live.length) {
-      h += '<section class="sec"><h2>Box score accuracy</h2><p class="lede">How much closer the model lands than a simple guess. Positive is better.</p><ul class="compare">';
-      live.forEach(function (a) { var g = (a.baseline_score - a.model_score) / a.baseline_score; h += "<li><span>" + esc(a.label) + " <small>(" + a.n_games + (a.n_games === 1 ? " game" : " games") + ")</small></span><b>" + (g >= 0 ? "+" : "") + Math.round(g * 100) + "%</b></li>"; });
-      h += "</ul></section>";
-    }
     app.innerHTML = h + "</div>";
   }
 
