@@ -56,7 +56,7 @@ eye, against the decision and steering lines).
 ## Decision
 
 Continue, with the target changed: the league-level measurement holds, including against the reviewer's strongest
-rival, and tunneling scored at it beats the field's 175 ms choice for chases; the hitter and pitcher uses we expected
+rival and against tracking error (umpires on the same pitches show no horizon), and tunneling scored at it beats the field's 175 ms choice for chases; the hitter and pitcher uses we expected
 are dropped. The lever test ran tonight: within pitcher, early separation moves chase rate in the predicted direction, but
 season-to-season changes cannot separate 260 from 175 ms. Next experiment: a planned prospective test. Before the
 2027 season, freeze the pitchers and pitch types whose spring shapes moved their decision-moment separation most, with
