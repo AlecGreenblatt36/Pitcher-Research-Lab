@@ -1,0 +1,333 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "challenges",
+ "run_id": "37836217655",
+ "params": {
+  "experiment": "challenges",
+  "season": 2026,
+  "workers": 6,
+  "seed": 13,
+  "boot": 100,
+  "C": 0.3,
+  "tau2_grid": [
+   0.0,
+   0.01,
+   0.02,
+   0.04,
+   0.0684,
+   0.1
+  ],
+  "tau_h": 0.2615
+ },
+ "started_at": "2026-10-08T20:01:04.782228+00:00",
+ "stages": [
+  {
+   "stage": "fetch the 2026 play-by-play",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "called pitches",
+   "at_seconds": 99.3
+  },
+  {
+   "stage": "batter",
+   "at_seconds": 124.3
+  },
+  {
+   "stage": "catcher",
+   "at_seconds": 151.4
+  },
+  {
+   "stage": "pitcher",
+   "at_seconds": 163.3
+  }
+ ],
+ "seasons_rows": {
+  "2026": 714483
+ },
+ "results": {
+  "batter_zones": {
+   "top": {
+    "league_ft": 3.39,
+    "batters": 545,
+    "batter_p10_p50_p90": [
+     3.335,
+     3.388,
+     3.442
+    ]
+   },
+   "bot": {
+    "league_ft": 1.59,
+    "batters": 565,
+    "batter_p10_p50_p90": [
+     1.564,
+     1.59,
+     1.627
+    ]
+   }
+  },
+  "called": {
+   "pitches": 370808,
+   "original_strikes": 115093,
+   "challenges": {
+    "batter": 3468,
+    "catcher": 4294,
+    "pitcher": 133
+   },
+   "overturned": {
+    "batter": 0.5776,
+    "catcher": 0.5529,
+    "pitcher": 0.3985
+   }
+  },
+  "batter": {
+   "rows": 115093,
+   "challenges": 3468,
+   "profile": [
+    {
+     "tau2": 0.0,
+     "nats_per_1000_vs_crossing": 0.0
+    },
+    {
+     "tau2": 0.01,
+     "nats_per_1000_vs_crossing": -0.0033
+    },
+    {
+     "tau2": 0.02,
+     "nats_per_1000_vs_crossing": 0.2427
+    },
+    {
+     "tau2": 0.04,
+     "nats_per_1000_vs_crossing": 1.2123
+    },
+    {
+     "tau2": 0.0684,
+     "nats_per_1000_vs_crossing": 3.4684
+    },
+    {
+     "tau2": 0.1,
+     "nats_per_1000_vs_crossing": 6.7653
+    }
+   ],
+   "tau2": {
+    "halves": [
+     {
+      "tau2": 0.005751,
+      "se": 0.002481,
+      "ci": [
+       0.0007690971676900028,
+       0.010700870264298303
+      ],
+      "n": 57695,
+      "challenges": 1757
+     },
+     {
+      "tau2": 0.00296,
+      "se": 0.002546,
+      "ci": [
+       -0.0023613774810340377,
+       0.007076025633725377
+      ],
+      "n": 57398,
+      "challenges": 1711
+     }
+    ],
+    "pooled": 0.004392,
+    "se": 0.001777,
+    "ci": [
+     0.000909,
+     0.007874
+    ],
+    "tau_ms": 66.3
+   }
+  },
+  "catcher": {
+   "rows": 255715,
+   "challenges": 4294,
+   "profile": [
+    {
+     "tau2": 0.0,
+     "nats_per_1000_vs_crossing": 0.0
+    },
+    {
+     "tau2": 0.01,
+     "nats_per_1000_vs_crossing": 0.226
+    },
+    {
+     "tau2": 0.02,
+     "nats_per_1000_vs_crossing": 0.6337
+    },
+    {
+     "tau2": 0.04,
+     "nats_per_1000_vs_crossing": 2.1023
+    },
+    {
+     "tau2": 0.0684,
+     "nats_per_1000_vs_crossing": 4.9351
+    },
+    {
+     "tau2": 0.1,
+     "nats_per_1000_vs_crossing": 8.2757
+    }
+   ],
+   "tau2": {
+    "halves": [
+     {
+      "tau2": -0.008249,
+      "se": 0.00174,
+      "ci": [
+       -0.012004084196157238,
+       -0.004730156111098895
+      ],
+      "n": 127819,
+      "challenges": 2148
+     },
+     {
+      "tau2": -0.002914,
+      "se": 0.00178,
+      "ci": [
+       -0.006384987325190261,
+       0.001096990309513548
+      ],
+      "n": 127896,
+      "challenges": 2146
+     }
+    ],
+    "pooled": -0.005642,
+    "se": 0.001244,
+    "ci": [
+     -0.00808,
+     -0.003203
+    ],
+    "tau_ms": -75.1
+   }
+  },
+  "pitcher": {
+   "rows": 255715,
+   "challenges": 133,
+   "profile": [
+    {
+     "tau2": 0.0,
+     "nats_per_1000_vs_crossing": 0.0
+    },
+    {
+     "tau2": 0.01,
+     "nats_per_1000_vs_crossing": 0.0195
+    },
+    {
+     "tau2": 0.02,
+     "nats_per_1000_vs_crossing": 0.0388
+    },
+    {
+     "tau2": 0.04,
+     "nats_per_1000_vs_crossing": 0.0606
+    },
+    {
+     "tau2": 0.0684,
+     "nats_per_1000_vs_crossing": 0.1132
+    },
+    {
+     "tau2": 0.1,
+     "nats_per_1000_vs_crossing": 0.1584
+    }
+   ],
+   "tau2": {
+    "halves": [
+     {
+      "tau2": -0.020724,
+      "se": 0.011464,
+      "ci": [
+       -0.045130347023964366,
+       0.004461909846647816
+      ],
+      "n": 127819,
+      "challenges": 72
+     },
+     {
+      "tau2": -0.003294,
+      "se": 0.014583,
+      "ci": [
+       -0.03282028524873732,
+       0.02764125203481047
+      ],
+      "n": 127896,
+      "challenges": 61
+     }
+    ],
+    "pooled": -0.014067,
+    "se": 0.009012,
+    "ci": [
+     -0.031731,
+     0.003597
+    ],
+    "tau_ms": -118.6
+   }
+  },
+  "batter_overturn_by_late_inward_inches": {
+   "terciles_[inches, overturn rate, n]": [
+    [
+     -0.8,
+     0.6029,
+     1156
+    ],
+    [
+     0.2,
+     0.577,
+     1156
+    ],
+    [
+     1.23,
+     0.5528,
+     1156
+    ]
+   ],
+   "top_minus_bottom": -0.0502,
+   "se": 0.0205
+  },
+  "catcher_overturn_by_late_inward_inches": {
+   "terciles_[inches, overturn rate, n]": [
+    [
+     -0.78,
+     0.5604,
+     1431
+    ],
+    [
+     0.22,
+     0.5563,
+     1431
+    ],
+    [
+     1.27,
+     0.5419,
+     1432
+    ]
+   ],
+   "top_minus_bottom": -0.0185,
+   "se": 0.0186
+  },
+  "pitcher_overturn_by_late_inward_inches": {
+   "terciles_[inches, overturn rate, n]": [
+    [
+     -0.75,
+     0.3864,
+     44
+    ],
+    [
+     0.25,
+     0.4773,
+     44
+    ],
+    [
+     1.26,
+     0.3333,
+     45
+    ]
+   ],
+   "top_minus_bottom": -0.053,
+   "se": 0.1016
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-08T20:03:48.074765+00:00",
+ "seconds": 163.3
+}
