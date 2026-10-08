@@ -153,7 +153,7 @@ def gbm_experiment(features, locked_columns, extras, y, partitions, parts, confi
 # Linear weights (runs per plate appearance outcome, average out = about -0.27) for residual summaries.
 RV_WEIGHTS = np.array([-0.26, -0.28, 0.32, 0.47, 0.80, 1.40, 0.45])
 # Experiments that also score team offsets and residual bins on every variant's predictions.
-TEAM_EVAL = {'aging', 'stage2'}
+TEAM_EVAL = {'aging', 'stage2', 'role'}
 TEAM_GRID = [(k, hl, sides) for k in (2000.0, 4000.0, 8000.0) for hl in (90.0, 180.0, None) for sides in (('fld',), ('bat', 'fld'))]
 
 
@@ -211,6 +211,37 @@ def residual_bins(P, y, frame, mask):
         res[name] = {str(k): {'pa': int(len(v)), 'resid_x1000': round(float((v.o.mean() - v.p.mean()) * 1000), 2),
                               'se_x1000': round(float(v.o.std() / np.sqrt(len(v)) * 1000), 2)} for k, v in g}
     return res
+
+
+def role_aggregates(P, y, meta):
+    """Per (date, role, times through the order, batting side, inning bucket): plate appearances, observed counts, the
+    model's predicted sums and the predicted sums after the production context offsets. Group-level only."""
+    from brl_live.provider_adjust import load_offsets
+    ctx = load_offsets()['table']
+    bucket = np.where(meta['inning'] <= 1, '1st', np.where(meta['inning'] <= 8, 'mid', 'late'))
+    side = meta['bat_home'].astype(int).astype(str)
+    mult = np.stack([ctx[s_ + '_' + b_] for s_, b_ in zip(side, bucket)])
+    Q = P * mult; Q = Q / Q.sum(1, keepdims=True)
+    Y = np.eye(P.shape[1])[y]
+    df = pd.DataFrame({'d': meta['date'], 'r': meta['role'], 't': meta['tto'], 's': side, 'b': bucket})
+    rows = []
+    for (d, r, t, s_, b_), ii in df.groupby(['d', 'r', 't', 's', 'b']).indices.items():
+        rows.append({'date': d, 'role': r, 'tto': int(t), 'side': s_, 'bucket': b_, 'n': int(len(ii)), 'obs': [int(v) for v in Y[ii].sum(0)],
+                     'pred': [round(float(v), 4) for v in P[ii].sum(0)], 'pred_ctx': [round(float(v), 4) for v in Q[ii].sum(0)]})
+    summary = {}
+    for season in sorted(set(str(x)[:4] for x in meta['date'])):
+        m = np.array([str(x)[:4] == season for x in meta['date']])
+        for r in ('starter', 'reliever'):
+            mm = m & (meta['role'] == r)
+            if mm.any():
+                o, q_ = Y[mm].sum(0), Q[mm].sum(0)
+                summary[season + '_' + r] = {'pa': int(mm.sum()), 'obs_over_pred_ctx': [round(float(a / b), 4) for a, b in zip(o, q_)]}
+        for t in (1, 2, 3):
+            mm = m & (meta['role'] == 'starter') & (meta['tto'] == t)
+            if mm.any():
+                o, q_ = Y[mm].sum(0), Q[mm].sum(0)
+                summary[season + '_starter_tto' + str(t)] = {'pa': int(mm.sum()), 'obs_over_pred_ctx': [round(float(a / b), 4) for a, b in zip(o, q_)]}
+    return rows, summary
 
 
 def team_aggregates(P, y, frame, bat_names, fld_names):
@@ -365,6 +396,9 @@ SETS = {
     # aging layer fitted on each model's own earlier predictions (TEAM_EVAL path, stage2_eval).
     'stage2': {'v2': {'xvalue': True, 'recent_days': 30, 'aging': True, 'decay_days': 365, '_model_excludes_aging': True},
                'aging_dec365': {'xvalue': True, 'recent_days': 30, 'aging': True, 'decay_days': 365}},
+    # role: the production model's residuals by pitcher role (starter or reliever), times through the order and inning bucket,
+    # after the production context offsets (ROLE-01)
+    'role': {'v2': {'xvalue': True, 'recent_days': 30}},
     'defense': {'v2': {'xvalue': True, 'recent_days': 30}, 'defense': {'xvalue': True, 'recent_days': 30, 'defense': True},
                 'defense_k200': {'xvalue': True, 'recent_days': 30, 'defense': True, 'k_def': 200.0},
                 'defense_730': {'xvalue': True, 'recent_days': 30, 'defense': True, 'defense_days': 730}},
@@ -535,6 +569,14 @@ def main():
                 features[col + '_meta'] = ordered_pa[col].to_numpy(float)
             eval_mask = features['season'].isin((2025, 2026)).to_numpy()
             sub = features.loc[eval_mask].reset_index(drop=True)
+            if experiment == 'role':
+                first_p = ordered_pa.groupby([ordered_pa['game_pk'].to_numpy(), fld_names])['pitcher'].transform('first').to_numpy()
+                tto = pd.to_numeric(ordered_pa['n_thruorder_pitcher'], errors='coerce').fillna(1).clip(1, 3).astype(int).to_numpy() if 'n_thruorder_pitcher' in ordered_pa.columns else np.ones(len(ordered_pa), int)
+                role_meta = {'date': ordered_pa['date_key'].astype(str).str[:10].to_numpy()[eval_mask],
+                             'role': np.where(ordered_pa['pitcher'].to_numpy() == first_p, 'starter', 'reliever')[eval_mask],
+                             'tto': np.where(ordered_pa['pitcher'].to_numpy() == first_p, tto, 0)[eval_mask],
+                             'inning': pd.to_numeric(ordered_pa['inning'], errors='coerce').fillna(1).astype(int).to_numpy()[eval_mask],
+                             'bat_home': (~top)[eval_mask]}
             parts_eval = (('validation_blend_2025', blend_mask[eval_mask]), ('test_2026', test_mask[eval_mask]))
         for vname, params in variants.items():
             stage('build physics features ' + vname)
@@ -563,6 +605,13 @@ def main():
                 results[vname]['team_offsets'] = team_eval(P_all, y_sub, sub_meta, bat_i[eval_mask], fld_i[eval_mask], len(teams), parts_eval)
                 results[vname]['residual_bins_2026'] = residual_bins(P_all, y_sub, sub_meta, parts_eval[1][1])
                 aggregates = team_aggregates(P_all, y_sub, sub_meta, bat_names[eval_mask], fld_names[eval_mask])
+                if experiment == 'role':
+                    stage('role residuals ' + vname)
+                    r_rows, r_summary = role_aggregates(P_all, y_sub, role_meta)
+                    results[vname]['role_summary'] = r_summary
+                    raw_r = gzip.compress(json.dumps({'schema': 'brl.role-residuals.v1', 'variant': vname, 'labels': list(LABELS), 'rows': r_rows}).encode(), mtime=0)
+                    put_bytes(repo, token, f'research/role-resid-{vname}-{run_id}.json.gz', raw_r, branch, 'BRL: role residuals ' + vname)
+                    results[vname]['role_aggregates_file'] = f'research/role-resid-{vname}-{run_id}.json.gz'
                 if experiment == 'stage2' and age_cols:
                     stage('aging layer ' + vname)
                     s2, Q_aged = stage2_eval(P_all, y_sub, features.loc[eval_mask, age_cols].to_numpy(float), sub_meta, age_cols,
