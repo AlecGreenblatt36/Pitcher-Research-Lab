@@ -312,7 +312,8 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                 from types import SimpleNamespace
                 from research_lab.game_sim.locked_pa_provider import SIM_FROM_MODEL
                 model_of_sim = {v: k for k, v in SIM_FROM_MODEL.items()}
-                agg = {r_: {"pred": np.zeros(7), "obs": np.zeros(7), "n": 0, "layers": {nm_: np.zeros(7) for nm_, _ in chain[:-1]}} for r_ in ("starter", "reliever")}
+                agg = {r_: {"pred": np.zeros(7), "obs": np.zeros(7), "n": 0, "layers": {nm_: np.zeros(7) for nm_, _ in chain[:-1]},
+                            "ll": {nm_: 0.0 for nm_, _ in chain[:-1] + [("full", None)]}} for r_ in ("starter", "reliever")}
                 starters_ = {int(g.home_starter), int(g.away_starter)}
                 grp_ = {}      # (batting side 0 away 1 home, inning bucket, role, times through the order capped at 3): n, observed, bare, full
                 for row in real_rows.get(int(g.game_pk), []):
@@ -337,6 +338,10 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                         agg[r_]["layers"][nm_] += np.array([pr_[model_of_sim[lab]] for lab in MODEL_ORDER])
                     if str(row.outcome) in MODEL_ORDER:
                         agg[r_]["obs"][MODEL_ORDER.index(str(row.outcome))] += 1
+                        lab_ = model_of_sim[str(row.outcome)]          # the simulator's label of the observed outcome
+                        agg[r_]["ll"]["full"] += float(np.log(max(probs[lab_], 1e-12)))
+                        for nm_, pr_ in inner_:
+                            agg[r_]["ll"][nm_] += float(np.log(max(pr_[lab_], 1e-12)))
                     agg[r_]["n"] += 1
                     inn_ = int(row.inning)
                     gk_ = (int(side_b == "home"), "1st" if inn_ == 1 else ("mid" if inn_ <= 8 else "late"), r_[0], min(max(int(row.n_thruorder_pitcher or 1), 1), 3))
@@ -348,7 +353,8 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                     ge_[3] += np.array([probs[model_of_sim[lab]] for lab in MODEL_ORDER])
                 errs = agg.pop("errors", [])
                 records[-1]["real_pa"] = {r_: {"n": v_["n"], "pred": [round(float(x), 3) for x in v_["pred"]], "obs": [int(x) for x in v_["obs"]],
-                                               "layers": {nm_: [round(float(x), 3) for x in lv_] for nm_, lv_ in v_["layers"].items()}} for r_, v_ in agg.items()}
+                                               "layers": {nm_: [round(float(x), 3) for x in lv_] for nm_, lv_ in v_["layers"].items()},
+                                               "ll": {nm_: round(float(x), 4) for nm_, x in v_["ll"].items()}} for r_, v_ in agg.items()}
                 records[-1]["real_pa"]["groups"] = [[k_[0], k_[1], k_[2], k_[3], v_[0], [int(x) for x in v_[1]], [round(float(x), 4) for x in v_[2]], [round(float(x), 4) for x in v_[3]]]
                                                     for k_, v_ in sorted(grp_.items())]
                 if errs:
