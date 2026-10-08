@@ -8,7 +8,7 @@ Settings come from tools/replay_params.json on the trigger branch:
   date_from    first date to replay (default the season start)
   step         keep every step-th game (default 1)
   reference    path on the ledger branch of an earlier replay's per-game file to pair against (optional)
-  offsets      apply the production context offsets (default true)
+  offsets      apply the production context offsets (default true), or a path in the repository of another table in that format
   environment  path in the repository of a run-environment table (brl_live/environment.py) to apply per game
   conditions   path on the ledger branch of the game conditions file (tools/brl_game_conditions.py), needed with environment
   team_offsets {'rows': ledger-branch path of team residual rows (research/team-resid-*.json.gz), 'k', 'half_life', 'sides', 'center'}:
@@ -213,7 +213,9 @@ def main():
         offsets = None
         if use_offsets:
             from brl_live.provider_adjust import load_offsets
-            offsets = load_offsets()
+            offsets = load_offsets(ROOT / str(params['offsets'])) if isinstance(params.get('offsets'), str) else load_offsets()
+            receipt['offsets_table'] = {'path': params['offsets'] if isinstance(params.get('offsets'), str) else 'brl_live/context_offsets.json',
+                                        'estimated_through': offsets.get('estimated_through')}
         environment = None
         if params.get('environment'):
             from brl_live.environment import load_table, conditions, log_multipliers
