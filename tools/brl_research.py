@@ -280,6 +280,62 @@ def stage2_eval(P, y, A, frame, cols, bat_i, fld_i, n_teams):
     return out, Q_all
 
 
+def retrain_experiment(pa, physics, features, locked_columns, y, config, put, run_id) -> dict:
+    """Does retraining on the latest seasons beat the frozen 2023-2024 model? The frozen protocol (train 2023-2024 plus
+    the first half of 2025, calibrate on 2025) against a retrained one (train 2023-2025 plus the first half of 2026,
+    calibrate on mid-2026), both scored on the same final block of 2026 (mid-August on), with and without the aging and
+    recency features, then team offsets on top. Writes team residual rows of the best retrained model."""
+    from research_lab.pa_model.config import PAConfig
+    from research_lab.pa_model.model import fit_frozen_model, validation_partitions
+    from research_lab.pa_model.evaluation import probability_metrics, clustered_log_loss_difference_ci
+    new_cfg = PAConfig(train_years=(2023, 2024, 2025), validation_years=(2026,), test_years=(2027,), evaluation_mode='locked_final')
+    parts_new, audit_new = validation_partitions(features, new_cfg)
+    final = parts_new['blend']
+    out = {'final_block': {'rows': int(final.sum()), 'first_date': str(features.loc[final, 'date_key'].min()), 'last_date': str(features.loc[final, 'date_key'].max())},
+           'retrained_partitions': {k: int(v.sum()) for k, v in parts_new.items()}}
+    params = {'xvalue': True, 'recent_days': 30, 'aging': True, 'decay_days': 365}
+    extras, audit = build_extras(pa, physics, params)
+    for c in extras.columns:
+        features[c] = extras[c].to_numpy()
+    v2_cols = phys.feature_names({'xvalue': True, 'recent_days': 30})
+    age_cols = phys.AGING_FEATURES + phys.DECAY_FEATURES
+    games = features.loc[final, 'game_pk'].to_numpy()
+    probs, fitted_models = {}, {}
+    for name, cfg, cols in (('v2_frozen', config, v2_cols), ('v2_retrained', new_cfg, v2_cols),
+                            ('aging_frozen', config, v2_cols + age_cols), ('aging_retrained', new_cfg, v2_cols + age_cols)):
+        fitted, tuning = fit_frozen_model(features, list(locked_columns) + cols, cfg)
+        P = fitted.predict_proba(features.loc[final])
+        probs[name] = P; fitted_models[name] = fitted
+        out[name] = {'features': len(locked_columns) + len(cols), 'c': tuning['best_regularization_c'], 'final_block': probability_metrics(y[final], P).to_dict()}
+        if name != 'v2_frozen':
+            out[name]['minus_v2_frozen'] = clustered_log_loss_difference_ci(y[final], P, probs['v2_frozen'], games, replicates=600)
+        put(name)
+    # team offsets on top, from each model's own residuals on 2025-2026 rows before each date
+    ordered_pa = pa.sort_values(['date_key', 'game_pk', 'at_bat_number'], kind='mergesort').reset_index(drop=True)
+    top = ordered_pa['inning_topbot'].astype(str).str.lower().str.startswith('top').to_numpy()
+    bat_names = np.where(top, ordered_pa['away_team'].astype(str), ordered_pa['home_team'].astype(str))
+    fld_names = np.where(top, ordered_pa['home_team'].astype(str), ordered_pa['away_team'].astype(str))
+    teams = sorted(set(bat_names) | set(fld_names)); tix = {tm: i for i, tm in enumerate(teams)}
+    bat_i = np.array([tix[tm] for tm in bat_names]); fld_i = np.array([tix[tm] for tm in fld_names])
+    span = features['season'].isin((2025, 2026)).to_numpy()
+    Y = np.eye(7)[y[span]]; dates = features.loc[span, 'date_key'].astype(str).to_numpy()
+    final_in_span = final[span]
+    for name in ('v2_frozen', 'v2_retrained', 'aging_retrained'):
+        P_span = fitted_models[name].predict_proba(features.loc[span])
+        for k, hl in ((4000.0, 180.0), (8000.0, 180.0)):
+            Q = team_offsets(P_span, Y, dates, bat_i[span], fld_i[span], len(teams), k, hl, ('bat', 'fld'))
+            out[name][f'team_k{int(k)}_hl{int(hl)}_minus_v2_frozen'] = clustered_log_loss_difference_ci(y[final], Q[final_in_span], probs['v2_frozen'], games, replicates=600)
+            out[name][f'team_k{int(k)}_hl{int(hl)}_minus_self'] = clustered_log_loss_difference_ci(y[final], Q[final_in_span], probs[name], games, replicates=300)
+        meta = features.loc[span, ['date_key', 'game_pk', 'batter_history_pa', 'pitcher_history_pa']].copy()
+        meta['age_bat'] = ordered_pa.loc[span, 'age_bat'].to_numpy(float); meta['age_pit'] = ordered_pa.loc[span, 'age_pit'].to_numpy(float)
+        out[name]['residual_bins_final_block'] = residual_bins(P_span, y[span], meta, final_in_span)
+        if name == 'aging_retrained':
+            aggregates = team_aggregates(P_span, y[span], meta, bat_names[span], fld_names[span])
+            out['team_aggregates'] = {'variant': name, 'rows': len(aggregates)}
+            out['_aggregates'] = aggregates
+    return out
+
+
 def entrypoint_module():
     spec = importlib.util.spec_from_file_location('brl_entrypoint', ROOT / 'brl_engine' / 'entrypoint.py')
     module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
@@ -441,6 +497,17 @@ def main():
                 out['extra_coefficients_by_class'] = {LABELS[k]: {c: round(float(coef[k, i]), 4) for c, i in zip(extra_cols, idx)} for k in range(coef.shape[0])}
             return out
 
+        if experiment == 'retrain':
+            stage('retrain experiment')
+            res = retrain_experiment(pa, physics, features, locked_columns, y, config, stage, run_id)
+            aggregates = res.pop('_aggregates', None)
+            if aggregates:
+                raw = gzip.compress(json.dumps({'schema': 'brl.team-residuals.v1', 'variant': 'aging_retrained', 'labels': list(LABELS), 'rows': aggregates}).encode(), mtime=0)
+                put_bytes(repo, token, f'research/team-resid-aging_retrained-{run_id}.json.gz', raw, branch, 'BRL: team residuals, retrained model')
+                res['team_aggregates']['file'] = f'research/team-resid-aging_retrained-{run_id}.json.gz'
+            results['retrain'] = res
+            receipt['results'] = results; receipt['status'] = 'completed'
+            raise _Done()
         stage('fit locked')
         results['locked'] = fit_and_score('locked', list(locked_columns), [])
         if experiment in ('gbm', 'gbm_slow'):
