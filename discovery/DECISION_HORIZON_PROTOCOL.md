@@ -89,3 +89,26 @@ halfway); per-hitter horizons with split-half reliability under 0.2.
 Times-through-the-order split with measured pitcher physical change against his own baseline, pitch-type exposure
 and batters seeing a starter for the first time late in his outing. Prior work (Baseball Prospectus 2021-2025,
 Brill et al. 2023) covers much of it, so it is second.
+
+## Addendum, 02:50 ET, before any real-data outcome was seen (reviewer's challenge)
+
+The reviewer's strongest alternative: with one location map shared by all pitch types, the fastball observer
+slides each off-speed type's swing map by a fixed amount, so a type-by-location difference in swing behavior
+(breaking balls below the zone chased more, for any reason) shows up as a best tau above zero with no commit at
+all. Synthetic check: when hitters use the true location but swing at breaking balls as if 3 inches higher, the
+shared-map profile has a false minimum at 0.10 s.
+
+Added tests (experiment 'horizon2'), which become the decisive ones:
+
+- Selection on 2025, confirmation on 2026 (the first run picked its best cell on 2026).
+- Baseline with a separate location map for each pitch type group.
+- Within-type surprise only: the pitch's spin acceleration minus the pitcher's usual for that exact pitch type that
+  season (leave-one-out), projected over tau, with type maps. A type-level effect cannot produce it.
+- Primary fastballs only (fastball observer and own-type observer coincide).
+- Direct estimate of tau squared: the type-map model fixed at the true location, then the coefficient on the
+  displacement along its decision gradient, with a game-clustered interval. Under no commit it is zero.
+
+Synthetic recovery: planted 0.17 s commit gives 0.177-0.184 s (interval excludes zero); the null with the
+type-by-location effect gives an interval that includes zero for the within-type estimate while the between-type
+estimate is spuriously positive. Decision rule: a commit is supported only if the within-type estimate's 2026
+interval excludes zero and its point estimate falls between 0.10 and 0.25 s.

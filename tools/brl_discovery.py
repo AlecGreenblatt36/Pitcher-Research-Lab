@@ -75,7 +75,8 @@ def put_text(repo, token, path, text, branch, message):
 
 
 # ---------------------------------------------------------------- pitch table
-FIELDS = ('season', 'day', 'game', 'pitcher', 'batter', 'stand_r', 'throw_r', 'inning', 'group', 'balls', 'strikes', 'call',
+SUBTYPES = ('FF', 'FA', 'SI', 'FC', 'SL', 'ST', 'SV', 'CU', 'KC', 'CS', 'CH', 'FS', 'FO', 'SC', 'KN', 'EP')
+FIELDS = ('season', 'day', 'game', 'pitcher', 'batter', 'stand_r', 'throw_r', 'inning', 'group', 'sub', 'balls', 'strikes', 'call',
           'v0', 'v1', 'spin', 'pfx_x', 'pfx_z', 'px', 'pz', 'x0', 'z0', 'ext', 'last_in_pa', 'bunt_pa')
 CALLS = {'take': 0, 'swing_contact': 1, 'whiff': 2, 'other': 3}
 
@@ -101,6 +102,7 @@ def pitch_table(doc: dict, season: int) -> dict:
                 cols['stand_r'].append(1 if str(row.get('s') or 'R') == 'R' else 0); cols['throw_r'].append(1 if str(row.get('t') or 'R') == 'R' else 0)
                 cols['inning'].append(int(row.get('inning') or 0))
                 cols['group'].append(TYPE_GROUPS.get(str(typ or '').upper(), 6) if typ not in ('PO', 'IN', 'AB') else -1)
+                st = str(typ or '').upper(); cols['sub'].append(SUBTYPES.index(st) if st in SUBTYPES else len(SUBTYPES))
                 cols['balls'].append(int(balls if balls is not None else -1)); cols['strikes'].append(int(strikes if strikes is not None else -1))
                 cols['call'].append(call)
                 for k, v in (('v0', v0), ('v1', v1), ('spin', spin), ('pfx_x', pfx_x), ('pfx_z', pfx_z), ('px', px), ('pz', pz), ('x0', x0), ('z0', z0), ('ext', ext)):
@@ -560,6 +562,203 @@ def validate_hitters(h: dict, bt: dict) -> dict:
     return out
 
 
+def loo_means(keys: np.ndarray, values: np.ndarray, mask: np.ndarray) -> np.ndarray:
+    """Leave-one-out mean of values within each key (rows outside mask get the full mean of their key or nan)."""
+    k = keys; uk, inv = np.unique(k, return_inverse=True)
+    s = np.bincount(inv, weights=np.where(mask, values, 0.0), minlength=len(uk)); c = np.bincount(inv, weights=mask.astype(float), minlength=len(uk))
+    own = np.where(mask, values, 0.0); n = c[inv] - mask
+    with np.errstate(invalid='ignore', divide='ignore'):
+        return np.where(n > 0, (s[inv] - own) / n, np.nan)
+
+
+def offset_logit(y, off, g, w=None, iters=30):
+    """Logistic fit of y on an offset plus intercept a and slope b on g. Returns (a, b, se_b)."""
+    w = np.ones(len(y)) if w is None else w
+    a = b = 0.0
+    for _ in range(iters):
+        eta = off + a + b * g; p = 1 / (1 + np.exp(-eta)); r = w * (y - p); q = w * p * (1 - p)
+        H = np.array([[q.sum(), (q * g).sum()], [(q * g).sum(), (q * g * g).sum()]]); grad = np.array([r.sum(), (r * g).sum()])
+        step = np.linalg.solve(H + 1e-9 * np.eye(2), grad); a += step[0]; b += step[1]
+        if np.abs(step).max() < 1e-10:
+            break
+    cov = np.linalg.inv(H + 1e-9 * np.eye(2))
+    return float(a), float(b), float(np.sqrt(max(cov[1, 1], 0.0)))
+
+
+def boot_slope(y, off, g, games, reps=200, seed=3):
+    uc, inv = np.unique(games, return_inverse=True); rng = np.random.default_rng(seed); out = []
+    for _ in range(reps):
+        cnt = np.bincount(rng.integers(0, len(uc), len(uc)), minlength=len(uc)).astype(float)
+        out.append(offset_logit(y, off, g, w=cnt[inv], iters=12)[1])
+    return float(np.percentile(out, 2.5)), float(np.percentile(out, 97.5))
+
+
+def horizon2(T: dict, params: dict, stage) -> dict:
+    """The reviewer's tests (discovery/DECISION_HORIZON_PROTOCOL.md, addendum): selection on 2025 and confirmation
+    on 2026; pitch-type-specific location maps as the baseline; the profile over the within-type surprise only (how
+    much this pitch broke more or less than the pitcher's usual for that pitch type), which a type-by-location
+    interaction cannot produce; the primary-fastball subset; and a direct estimate of tau squared from the
+    displacement along the swing-decision gradient, for the within-type surprise and for the type-level shift."""
+    res = {}
+    F = rebuild(T)
+    keep = (F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2)
+            & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1)))
+    g = T['group']
+    res['rebuild'] = {'flight_time_50ft_s_p50': round(float(np.nanmedian(F['tf'][F['ok']])), 4),
+                      'spin_accel_by_group': {GROUP_NAMES[i]: {'asx': round(float(np.nanmean(F['asx'][F['ok'] & (g == i)])), 2),
+                                                               'asz': round(float(np.nanmean(F['asz'][F['ok'] & (g == i)])), 2)} for i in range(7)},
+                      'count_00_share': round(float(np.mean((T['balls'] == 0) & (T['strikes'] == 0))), 4)}
+    acc = observer_accels(T, F)
+    T = take(T, keep); F = {k: v[keep] for k, v in F.items()}; acc = {k: v[keep] for k, v in acc.items()}
+    swing = ((T['call'] == 1) | (T['call'] == 2)).astype(np.int64)
+    C = control_block(T, swing_propensity(T))
+    key_sub = (T['pitcher'] * 10 + (T['season'] - 2020)) * 100 + T['sub']
+    ok = np.isfinite(F['ax']) & np.isfinite(F['az'])
+    mx = loo_means(key_sub, F['ax'], ok); mz = loo_means(key_sub, F['az'], ok)
+    wx = np.where(np.isfinite(mx), F['ax'] - mx, 0.0); wz = np.where(np.isfinite(mz), F['az'] - mz, 0.0)
+    bx = np.where(np.isfinite(mx), mx, F['ax']) - acc['fb_ax']; bz = np.where(np.isfinite(mz), mz, F['az']) - acc['fb_az']
+    res['surprise_sd_ft_s2'] = {'within_x': round(float(np.std(wx)), 3), 'within_z': round(float(np.std(wz)), 3),
+                                'between_x': round(float(np.std(bx)), 3), 'between_z': round(float(np.std(bz)), 3)}
+    # primary fastball subtype of each pitcher-season
+    ps = T['pitcher'] * 10 + (T['season'] - 2020)
+    fbmask = np.isin(T['sub'], (0, 1, 2, 3))
+    kk = ps * 100 + T['sub']; uk, cnt = np.unique(kk[fbmask], return_counts=True)
+    best = {}
+    for k, c in zip(uk, cnt):
+        if k // 100 not in best or c > best[k // 100][1]:
+            best[k // 100] = (k, c)
+    prim = np.isin(kk, np.array([v[0] for v in best.values()]))
+    rng = np.random.default_rng(int(params.get('seed', 11)))
+    def sample(seasons, n):
+        ii = np.flatnonzero(np.isin(T['season'], seasons)); return np.sort(rng.choice(ii, min(len(ii), n), replace=False))
+    tr = sample((2023, 2024), int(params.get('train_n', 500000)))
+    va = sample((2025,), int(params.get('val_n', 500000)))
+    te = sample((2026,), int(params.get('test_n', 700000)))
+    res['split'] = {'train': int(len(tr)), 'select_2025': int(len(va)), 'test_2026': int(len(te))}
+    oh = np.eye(7, dtype=np.float32)[np.clip(T['group'], 0, 6)]
+
+    def shared(x, z, idx):
+        return np.hstack([location_block(x[idx], z[idx], T['stand_r'][idx], T['strikes'][idx]), C[idx]])
+
+    def typed(x, z, idx):
+        u = np.where(T['stand_r'][idx] == 1, x[idx], -x[idx]); zz = z[idx]
+        e = np.maximum(np.maximum(np.abs(u) - ZONE_HALF, zz - ZONE_TOP), ZONE_BOT - zz)
+        base = np.hstack([hats(e, E_KNOTS), hats(u, U_KNOTS), hats(zz, Z_KNOTS)])
+        inter = (base[:, :, None] * oh[idx, None, :]).reshape(len(idx), -1)
+        return np.hstack([location_block(x[idx], z[idx], T['stand_r'][idx], T['strikes'][idx]), inter, C[idx]])
+
+    def fit_score(designf, x, z, rows=None):
+        trr = tr if rows is None else tr[rows[tr]]; var = va if rows is None else va[rows[va]]; ter = te if rows is None else te[rows[te]]
+        m = fit_logistic(designf(x, z, trr), swing[trr])
+        out = {}
+        for name, idx in (('select_2025', var), ('test_2026', ter)):
+            p = m.predict_proba(designf(x, z, idx))[:, 1]; out[name] = logloss_vec(p, swing[idx])
+        return m, out
+
+    taus = [float(v) for v in params.get('taus', (0.0, 0.10, 0.15, 0.175, 0.20, 0.25))]
+    summary = {}
+    # P1: shared maps, type-level observers (the original test, now selected on 2025)
+    for obs in ('fastball', 'own_type'):
+        rows = []
+        for tau in taus:
+            x, z = (T['px'], T['pz']) if tau == 0 else projected(T, F, acc, obs, tau)
+            _, ll = fit_score(shared, x, z)
+            rows.append({'tau': tau, 'select_2025': float(ll['select_2025'].mean()), 'test_2026': float(ll['test_2026'].mean())})
+        summary['shared_' + obs] = rows; stage('shared ' + obs)
+    # baseline with pitch-type location maps at tau 0
+    m_typed, ll_t0 = fit_score(typed, T['px'], T['pz'])
+    summary['typed_actual'] = {'select_2025': float(ll_t0['select_2025'].mean()), 'test_2026': float(ll_t0['test_2026'].mean())}
+    stage('typed baseline')
+    # P2: type maps, within-type surprise only
+    rows = []
+    for tau in taus:
+        x, z = T['px'] - 0.5 * wx * tau ** 2, T['pz'] - 0.5 * wz * tau ** 2
+        _, ll = fit_score(typed, x, z)
+        r = {'tau': tau, 'select_2025': float(ll['select_2025'].mean()), 'test_2026': float(ll['test_2026'].mean())}
+        if tau > 0:
+            r['delta_2026'] = [round(v, 7) for v in clustered_ci(ll['test_2026'] - ll_t0['test_2026'], T['game'][te])]
+        rows.append(r)
+    summary['typed_within'] = rows; stage('typed within-type surprise')
+    # P3: primary fastballs only, shared maps, within-type surprise (fastball observer = own-type observer here)
+    rows = []
+    _, ll_f0 = fit_score(shared, T['px'], T['pz'], rows=prim)
+    for tau in taus:
+        x, z = T['px'] - 0.5 * wx * tau ** 2, T['pz'] - 0.5 * wz * tau ** 2
+        _, ll = (None, ll_f0) if tau == 0 else fit_score(shared, x, z, rows=prim)
+        r = {'tau': tau, 'select_2025': float(ll['select_2025'].mean()), 'test_2026': float(ll['test_2026'].mean())}
+        if tau > 0:
+            r['delta_2026'] = [round(v, 7) for v in clustered_ci(ll['test_2026'] - ll_f0['test_2026'], T['game'][te[prim[te]]])]
+        rows.append(r)
+    summary['fastball_within'] = rows; stage('primary fastballs')
+    res['profiles'] = summary
+    # L: direct estimate of tau^2 from displacement along the decision gradient (typed model fixed at tau 0)
+    h = 0.02
+    def grad_terms(idx, dx, dz):
+        f0 = np.empty(len(idx)); gt = np.empty(len(idx))
+        for s in range(0, len(idx), 250000):
+            ii = idx[s:s + 250000]
+            df = lambda x, z: m_typed.decision_function(typed(x, z, ii))
+            f0[s:s + 250000] = df(T['px'], T['pz'])
+            fx = (df(T['px'] + h, T['pz']) - df(T['px'] - h, T['pz'])) / (2 * h)
+            fz = (df(T['px'], T['pz'] + h) - df(T['px'], T['pz'] - h)) / (2 * h)
+            gt[s:s + 250000] = -0.5 * (fx * dx[ii] + fz * dz[ii])
+        return f0, gt
+    lin = {}
+    for name, idx in (('select_2025', va), ('test_2026', te)):
+        for part, dx, dz in (('within', wx, wz), ('between', bx, bz)):
+            for subset, rows in (('all', None), ('primary_fastball', prim)):
+                if part == 'between' and subset == 'primary_fastball':
+                    continue
+                ii = idx if rows is None else idx[rows[idx]]
+                off, gterm = grad_terms(ii, dx, dz)
+                a, b, se = offset_logit(swing[ii].astype(float), off, gterm)
+                lo, hi = boot_slope(swing[ii].astype(float), off, gterm, T['game'][ii], reps=int(params.get('boot', 150)))
+                lin[f'{name}/{part}/{subset}'] = {'tau_squared': round(b, 6), 'se': round(se, 6), 'ci': [round(lo, 6), round(hi, 6)],
+                                                  'tau_s': round(float(np.sign(b) * np.sqrt(abs(b))), 4), 'pitches': int(len(ii))}
+    res['gradient_estimate'] = lin; stage('gradient estimates')
+    # per-hitter: within-type tau^2 on 2023-2025 with the typed model, shrunk, split by odd and even days
+    dev = np.flatnonzero(T['season'] <= 2025)
+    off, gterm = grad_terms(dev, wx, wz)
+    yb = swing[dev].astype(float); bat = T['batter'][dev]; odd = (T['day'][dev] % 2).astype(int)
+    ub, inv = np.unique(bat, return_inverse=True); cnt = np.bincount(inv)
+    sel = np.flatnonzero(cnt >= int(params.get('hitter_min_pitches', 3000)))
+    order = np.argsort(inv, kind='stable'); bounds = np.flatnonzero(np.diff(inv[order])) + 1; groups = np.split(order, bounds)
+    est = []
+    for j in sel:
+        ii = groups[j]
+        _, b_all, se_all = offset_logit(yb[ii], off[ii], gterm[ii])
+        b_o = offset_logit(yb[ii][odd[ii] == 1], off[ii][odd[ii] == 1], gterm[ii][odd[ii] == 1])[1]
+        b_e = offset_logit(yb[ii][odd[ii] == 0], off[ii][odd[ii] == 0], gterm[ii][odd[ii] == 0])[1]
+        est.append((int(ub[j]), int(cnt[j]), b_all, se_all, b_o, b_e))
+    E = np.array(est, float) if est else np.zeros((0, 6))
+    hit = {'n_hitters': int(len(E)), 'min_pitches': int(params.get('hitter_min_pitches', 3000))}
+    if len(E) > 10:
+        mean = float(np.average(E[:, 2], weights=1 / E[:, 3] ** 2)); var_obs = float(np.var(E[:, 2])); var_noise = float(np.mean(E[:, 3] ** 2))
+        var_true = max(var_obs - var_noise, 0.0)
+        shrink = var_true / (var_true + E[:, 3] ** 2)
+        post = mean + shrink * (E[:, 2] - mean)
+        hit.update(pooled_tau_squared=round(mean, 6), sd_observed=round(float(np.sqrt(var_obs)), 6), sd_noise=round(float(np.sqrt(var_noise)), 6),
+                   sd_true=round(float(np.sqrt(var_true)), 6), split_half_correlation=round(float(np.corrcoef(E[:, 4], E[:, 5])[0, 1]), 4),
+                   rows=[{'batter': int(r[0]), 'pitches': int(r[1]), 'tau_squared': round(r[2], 6), 'se': round(r[3], 6), 'shrunk': round(float(p), 6)}
+                         for r, p in zip(E, post)])
+    res['hitters'] = hit; stage('per-hitter')
+    bt, notes = bat_tracking()
+    res['bat_tracking_fetch'] = notes
+    if hit.get('rows') and bt:
+        pairs = []
+        for r in hit['rows']:
+            sp = [v['bat_speed'] for v in (bt.get(r['batter']) or {}).values() if v.get('bat_speed')]
+            ln = [v['swing_length'] for v in (bt.get(r['batter']) or {}).values() if v.get('swing_length')]
+            if sp:
+                pairs.append((r['shrunk'], np.mean(sp), np.mean(ln) if ln else np.nan))
+        if len(pairs) > 20:
+            from scipy import stats
+            A = np.array(pairs)
+            res['hitters']['validation'] = {'n': len(pairs), 'bat_speed_spearman': round(float(stats.spearmanr(A[:, 0], A[:, 1])[0]), 4),
+                                            'swing_length_spearman': round(float(stats.spearmanr(A[np.isfinite(A[:, 2]), 0], A[np.isfinite(A[:, 2]), 2])[0]), 4)}
+    return res
+
+
 def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']
     from cloud.security import unseal, key_bytes
@@ -590,6 +789,8 @@ def main():
         receipt['seasons_rows'] = {int(s): int((T['season'] == s).sum()) for s in np.unique(T['season'])}
         if experiment == 'horizon':
             receipt['results'] = horizon(T, params, stage)
+        elif experiment == 'horizon2':
+            receipt['results'] = horizon2(T, params, stage)
         receipt['status'] = 'completed'
     except Exception as exc:
         receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:400]
