@@ -301,6 +301,11 @@ class LockedPAModelProvider:
         )
         self.state = HistoryState.build(history, self.cutoff_date, self._config)
         self._talent_cache: dict = {}
+        if self.physics is not None and getattr(self.physics, 'aging', None) is None:
+            from research_lab.pa_model.physics import uses_history
+            if uses_history(self.physics.sums.p):
+                # Aging and recency features read the plate-appearance history (all seasons), not the physics table.
+                self.physics.with_history(history)
 
     # ----- feature construction -------------------------------------------------
     def _get(self, table: dict, key) -> tuple[np.ndarray, float]:
@@ -405,7 +410,7 @@ class LockedPAModelProvider:
             key = (batter_id, pitcher_id, float(team_defense) if (uses_defense and team_defense is not None) else None)
             vector = self._physics_cache.get(key)
             if vector is None:
-                vector = self.physics.features(batter_id, pitcher_id, team_defense=(key[2] if uses_defense else None))
+                vector = self.physics.features(batter_id, pitcher_id, team_defense=(key[2] if uses_defense else None), age_bat=age_bat, age_pit=age_pit)
                 self._physics_cache[key] = vector
             parts.append(vector)
         # Training stored features as float32; replicate exactly.

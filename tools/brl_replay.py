@@ -11,6 +11,8 @@ Settings come from tools/replay_params.json on the trigger branch:
   offsets      apply the production context offsets (default true)
   environment  path in the repository of a run-environment table (brl_live/environment.py) to apply per game
   conditions   path on the ledger branch of the game conditions file (tools/brl_game_conditions.py), needed with environment
+  team_offsets {'rows': ledger-branch path of team residual rows (research/team-resid-*.json.gz), 'k', 'half_life', 'sides'}:
+               team offsets as they stood at the start of each date (brl_live/team_offsets.py)
 Outputs on the ledger branch: research/replay-<tag>-<run>.jsonl.gz (one record per game: win counts,
 run histograms, starter outs, final score) and research/replay-<tag>-<run>.json (scores, paired
 comparison, timing). Per-game model outputs and final scores are not private data; the plate
@@ -86,7 +88,7 @@ def _worker(dates: list) -> list:
     s = _SHARED
     return replay_dates(s['h'], s['app'], s['games'], dates, model_path=s['model_path'], model_sha256=s['model_sha256'], history_path=s['history_path'],
                         hazard_path=s['hazard_path'], n_sims=s['n_sims'], physics_table=s['physics_table'], offsets=s['offsets'], rest=s.get('rest', False),
-                        environment=s.get('environment'), log=lambda m: print(m, flush=True))
+                        environment=s.get('environment'), team_offsets=s.get('team_offsets'), log=lambda m: print(m, flush=True))
 
 
 def logit(p):
@@ -211,8 +213,20 @@ def main():
                                date=r.get('date'), wind_mph=r.get('wind_mph'), wind_dir=r.get('wind_dir'))
                 environment[int(g.game_pk)] = log_multipliers(c, table)
             receipt['environment'] = {'table': table.get('name'), 'conditions': params['conditions'], 'games_with_conditions': len(environment)}
+        team_offsets = None
+        if params.get('team_offsets'):
+            from brl_live.team_offsets import by_date
+            spec = params['team_offsets']
+            raw = read_blob(repo, token, str(spec['rows']), branch)
+            if raw is None:
+                raise ValueError('team residual rows missing on the ledger branch')
+            doc = json.loads(gzip.decompress(raw))
+            team_offsets = by_date(doc['rows'], sorted(games['date'].astype(str).unique()), k=float(spec.get('k', 4000.0)),
+                                   half_life=spec.get('half_life'), sides=tuple(spec.get('sides', ('bat', 'fld'))))
+            sizes = [max((abs(v) for t in day.values() for s in t.values() for v in s), default=0.0) for day in team_offsets.values()]
+            receipt['team_offsets'] = {**spec, 'dates': len(team_offsets), 'largest_offset': round(float(max(sizes, default=0.0)), 4)}
         _SHARED.update(h=h, app=app, games=games, model_path=model_path, model_sha256=model_sha256, history_path=history_path, hazard_path=hazard_path,
-                       n_sims=n_sims, physics_table=physics_table, offsets=offsets, rest=use_rest, environment=environment)
+                       n_sims=n_sims, physics_table=physics_table, offsets=offsets, rest=use_rest, environment=environment, team_offsets=team_offsets)
         stage(f'replay {len(games)} games with {workers} workers')
         dates = sorted(games['date'].unique())
         shards = [dates[w::workers] for w in range(workers)]

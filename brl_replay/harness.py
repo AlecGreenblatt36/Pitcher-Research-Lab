@@ -116,11 +116,12 @@ def bats_lookup(h: pd.DataFrame, cutoff: str) -> dict:
 
 def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates: list, *, model_path: Path, model_sha256: str,
                  history_path: Path, hazard_path: Path, n_sims: int, physics_table=None, offsets=None, rest=False, environment=None,
-                 log=print) -> list[dict]:
+                 team_offsets=None, log=print) -> list[dict]:
     """Simulate every game on the given dates; one record per game (win counts, run histograms, starter outs).
 
-    environment: optional {game_pk: seven log-multipliers} (brl_live/environment.py); games without an entry are unadjusted."""
-    from brl_live.provider_adjust import ContextAdjust, EnvironmentAdjust
+    environment: optional {game_pk: seven log-multipliers} (brl_live/environment.py); games without an entry are unadjusted.
+    team_offsets: optional {date: {team: {'bat': [7], 'fld': [7]}}} (brl_live/team_offsets.by_date), offsets at the start of each date."""
+    from brl_live.provider_adjust import ContextAdjust, EnvironmentAdjust, TeamAdjust
     hcols = h[HISTORY_COLUMNS]
     first = dates[0]
     base = LockedPAModelProvider(model_path, history_path, cutoff_date=first, game_date=first, park="NYY",
@@ -130,6 +131,9 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
     env = None
     if environment is not None:
         env = provider = EnvironmentAdjust(provider)
+    tadj = None
+    if team_offsets is not None:
+        tadj = provider = TeamAdjust(provider)
     hazard = joblib.load(hazard_path)
     records = []
     t0 = time.time()
@@ -144,7 +148,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
         if base.physics is not None:
             from research_lab.pa_model.physics import PhysicsState, DefenseState
             params = dict(base.physics.sums.p)
-            base.physics = PhysicsState.build(physics_table, date, params)
+            base.physics = PhysicsState.build(physics_table, date, params).with_history(hcols)
             base._physics_cache = {}
             if 'f_def' in base.physics_features:
                 defense = DefenseState.build(h, date, params)
@@ -157,6 +161,10 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
             cached.reset()
             if env is not None:
                 env.set_environment(environment.get(int(g.game_pk)))
+            if tadj is not None:
+                tday = team_offsets.get(date) or {}
+                get = lambda team, side: np.asarray(((tday.get(str(team)) or {}).get(side)) or [0.0] * 7, float)
+                tadj.set_teams({'away': (get(g.away, 'bat') + get(g.home, 'fld')).tolist(), 'home': (get(g.home, 'bat') + get(g.away, 'fld')).tolist()})
             teams = {}
             for side in ("away", "home"):
                 lineup = tuple(PlayerProfile(str(b), str(b), hands.get(b, first_stand.get(b, "R"))) for b in getattr(g, f"{side}_lineup"))

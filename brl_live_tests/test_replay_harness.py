@@ -54,3 +54,12 @@ def test_reconstruct_and_replay(tmp_path):
     same = replay_dates(h, app, g, dates, model_path=plain, model_sha256=sha256_file(plain), history_path=history_path, hazard_path=hazard, n_sims=4,
                         environment={}, log=lambda m: None)
     assert [r['home_hist'] for r in same] == [r['home_hist'] for r in out_plain]
+    # team offsets: the home team's hitters ten times likelier to homer raises the home runs; empty offsets change nothing
+    home_hr = {d: {str(t): {'bat': z.tolist(), 'fld': [0.0] * 7} for t in g['home']} for d in dates}
+    out_team = replay_dates(h, app, g, dates, model_path=plain, model_sha256=sha256_file(plain), history_path=history_path, hazard_path=hazard, n_sims=4,
+                            team_offsets=home_hr, log=lambda m: None)
+    home_runs = lambda rows: sum(sum(k * c for k, c in enumerate(r['home_hist'])) for r in rows)
+    assert home_runs(out_team) > home_runs(out_plain)
+    none = replay_dates(h, app, g, dates, model_path=plain, model_sha256=sha256_file(plain), history_path=history_path, hazard_path=hazard, n_sims=4,
+                        team_offsets={}, log=lambda m: None)
+    assert [r['home_hist'] for r in none] == [r['home_hist'] for r in out_plain]

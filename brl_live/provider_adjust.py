@@ -98,6 +98,28 @@ class EnvironmentAdjust:
         return getattr(self.inner, item)
 
 
+class TeamAdjust:
+    """Multiplies each plate appearance's probabilities by the batting team's and the fielding team's offsets
+    (brl_live/team_offsets.py). set_teams() takes {'away': log-multipliers while the away team bats, 'home': ...}."""
+    def __init__(self, inner, by_side=None):
+        self.inner = inner
+        self.set_teams(by_side)
+        self.name = getattr(inner, 'name', 'provider')
+        self.validation_status = getattr(inner, 'validation_status', '')
+
+    def set_teams(self, by_side):
+        self.m = {s: (np.ones(7) if not by_side or by_side.get(s) is None else np.exp(np.asarray(by_side[s], float))) for s in ('away', 'home')}
+
+    def probabilities(self, ctx):
+        base = self.inner.probabilities(ctx)
+        p = np.array([base[k] for k in SIM_LABELS], dtype=float) * self.m['home' if ctx.batting_side == 'home' else 'away']
+        p /= p.sum()
+        return dict(zip(SIM_LABELS, map(float, p)))
+
+    def __getattr__(self, item):
+        return getattr(self.inner, item)
+
+
 class TalentNoise:
     """One draw of player log-multipliers per world; new_world() must be called before each world."""
 
