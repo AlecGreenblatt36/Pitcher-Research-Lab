@@ -1,0 +1,27 @@
+name: BRL transitions
+on:
+  workflow_dispatch:
+  push:
+    branches: [diag/transitions]
+permissions:
+  contents: write
+jobs:
+  season:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        season: [2023, 2024, 2025, 2026]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check cryptography==46.0.4 numpy pandas
+      - name: Base-running transitions from the official play-by-play (aggregate counts only leave the runner)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRL_SEASON: ${{ matrix.season }}
+          BRL_WORKERS: '6'
+        run: python tools/brl_transitions.py
