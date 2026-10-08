@@ -7,7 +7,7 @@ SITE='https://alecgreenblatt36.github.io/Pitcher-Research-Lab/'
 ALLOWED_FORECAST_FIELDS=set('schema scope game_pk date game_type scheduled_start forecast_origin saved_at version lineup_status home away n_simulations seed home_win_probability probability_mcse projected_away_runs projected_home_runs team_baseline_probability market_probability model history_through postseason_regular_bullpen_logic automatic_runner github_run_id snapshot_hash'.split())
 OLD_FIELDS=set('actuals date forecasts publications scores status'.split())
 BOX_FIELDS=OLD_FIELDS|set('box_scores box_publications actual_boxes player_scores view_scope'.split())
-OPTIONAL_FIELDS={'skill_scores','record','live','market','generated_at','context'}
+OPTIONAL_FIELDS={'skill_scores','record','live','market','generated_at','context','series'}
 def utc(text):
     d=datetime.fromisoformat(text.replace('Z','+00:00'))
     if d.tzinfo is None:raise ValueError('Timezone required')
