@@ -1,0 +1,139 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "horizon9",
+ "run_id": "37740908440",
+ "params": {
+  "experiment": "horizon9",
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "train_n": 500000,
+  "boot": 60,
+  "seed": 11
+ },
+ "started_at": "2026-10-08T07:01:45.002921+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 9.1
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 18.1
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 27.6
+  },
+  {
+   "stage": "typed model",
+   "at_seconds": 72.9
+  },
+  {
+   "stage": "gradients",
+   "at_seconds": 83.3
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 713382
+ },
+ "results": {
+  "miss_sd_in": {
+   "movement_x": 2.05,
+   "movement_z": 2.06,
+   "line_x": 9.21,
+   "line_z": 10.28
+  },
+  "decomposition": {
+   "all": {
+    "k_movement": 0.4128,
+    "se_movement": 0.0044,
+    "k_line": -0.043,
+    "se_line": 0.0011,
+    "blind_window_expects_movement": 0.4667,
+    "median_flight_s": 0.3821,
+    "n": 1410708
+   },
+   "four-seam": {
+    "k_movement": 0.4593,
+    "se_movement": 0.0073,
+    "k_line": -0.0153,
+    "se_line": 0.0018,
+    "blind_window_expects_movement": 0.5085,
+    "median_flight_s": 0.366,
+    "n": 443853
+   },
+   "sinker": {
+    "k_movement": 0.4988,
+    "se_movement": 0.0129,
+    "k_line": -0.0748,
+    "se_line": 0.0031,
+    "blind_window_expects_movement": 0.504,
+    "median_flight_s": 0.3676,
+    "n": 226320
+   },
+   "slider/sweeper": {
+    "k_movement": 0.3017,
+    "se_movement": 0.0103,
+    "k_line": -0.0683,
+    "se_line": 0.0028,
+    "blind_window_expects_movement": 0.4159,
+    "median_flight_s": 0.4047,
+    "n": 314091
+   },
+   "curveball": {
+    "k_movement": 0.3344,
+    "se_movement": 0.0179,
+    "k_line": -0.0369,
+    "se_line": 0.0042,
+    "blind_window_expects_movement": 0.3714,
+    "median_flight_s": 0.4282,
+    "n": 116715
+   },
+   "changeup/splitter": {
+    "k_movement": 0.4162,
+    "se_movement": 0.0097,
+    "k_line": -0.0621,
+    "se_line": 0.0031,
+    "blind_window_expects_movement": 0.4256,
+    "median_flight_s": 0.4001,
+    "n": 199361
+   },
+   "two_strikes": {
+    "k_movement": 0.4061,
+    "se_movement": 0.0071,
+    "k_line": -0.0388,
+    "se_line": 0.0019,
+    "blind_window_expects_movement": 0.4581,
+    "median_flight_s": 0.3856,
+    "n": 423347
+   },
+   "fewer_strikes": {
+    "k_movement": 0.4172,
+    "se_movement": 0.0056,
+    "k_line": -0.0469,
+    "se_line": 0.0014,
+    "blind_window_expects_movement": 0.4694,
+    "median_flight_s": 0.381,
+    "n": 987361
+   },
+   "difference_ci": [
+    0.4498,
+    0.4653
+   ]
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-08T07:03:24.287348+00:00",
+ "seconds": 99.3
+}
