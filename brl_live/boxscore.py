@@ -297,12 +297,18 @@ class BoxAccumulator:
 # and to actual park scoring), and the production model stays v2 (RETRAIN-02). Table: brl_live/team_offsets.json,
 # v2 residuals through 2026-09-27, k 4,000, half-life 120 days, batting and fielding. Centered on the league since CENTER-01
 # (the context offsets carry the league level; uncentered, the replays ran 0.09 to 0.16 runs per game low).
+# transitions: base running after each outcome from real play-by-play (TRANS-01; research_lab.game_sim.transitions.EmpiricalKernel,
+# table brl_live/transitions.json from every 2023-2026 regular-season play, tools/brl_transition_kernel.py). The hand-set kernel
+# had half the real double plays and scored the runner from third on 13% of outs with fewer than two out (real 54%). Full
+# replays with cross-season kernels: batters per team-game 38.67 to 37.89 (actual 37.84, 2026) and 38.63 to 37.87 (37.66, 2025);
+# simulator win Brier -0.00061 (2026) and -0.00010 (2025); in-game win chance on the page -0.00024 (2026); totals better in 2026,
+# mixed in 2025. On since October 8, 2026.
 # steals: runner speeds from sprint speed and stolen-base attempts (brl_live/running.py, RUN-01). On since the full
 # 2026 replay (RUN-02): simulator win Brier 0.24405 to 0.24378, correlation with the market's closing log-odds 0.8235 to
 # 0.8354, totals closer to the market line, mean total unchanged.
 ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         'postseason_exp_scale':{'F':0.91,'D':0.91,'L':0.91,'W':1.0},
-        'environment':True,'team_offsets':True,'steals':True,'transitions':False}
+        'environment':True,'team_offsets':True,'steals':True,'transitions':True}
 
 TRANSITIONS_PATH=Path(__file__).resolve().parent/'transitions.json'
 _KERNEL={}

@@ -159,3 +159,18 @@ def test_altered_distribution_rejected_by_publication_hash():
 def test_no_publication_identity_not_scored():
     b,a=specimen();pub=publication(b);pub.pop('commit')
     assert score_player_boxes({'x':b},{'x':pub},{'1':a})['n_games']==0
+
+
+@pytest.mark.parametrize('seed',range(6))
+def test_box_scores_add_up_with_the_empirical_base_running_kernel(seed):
+    """With the production kernel (brl_live/transitions.json) the box still adds up: runs, hits, outs and the sacrifice flies."""
+    from brl_live.boxscore import transitions_for
+    kernel=transitions_for({'transitions':True})
+    assert kernel is not None and len(kernel.cells)>100 and transitions_for({'transitions':False}) is None
+    m=matchup();sim=ObservedSimulator(Provider(),SimulationConfig(max_innings=100,max_plate_appearances=4000),transitions=kernel)
+    r=sim.simulate(m,seed,record_events=True)
+    box=build_game_box(r,m,BookkeepingFit(history(),'2026-10-06'))
+    for side in ('away','home'):
+        assert sum(x['R'] for x in box['batting'][side])==getattr(r,side+'_score')
+        assert sum(x['H'] for x in box['batting'][side])==sum(x['H'] for x in box['pitching']['home' if side=='away' else 'away'])
+        assert sum(x['PA'] for x in box['batting'][side])==sum(x['AB']+x['BB']+x['HBP']+x['SF'] for x in box['batting'][side])
