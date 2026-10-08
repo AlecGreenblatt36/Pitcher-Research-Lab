@@ -1,0 +1,273 @@
+{
+ "schema": "brl.replay-receipt.v1",
+ "tag": "v2-prod-trans-1000-2026",
+ "model": "pa-2026-v2-physics",
+ "season": 2026,
+ "n_sims": 1000,
+ "date_from": "2026-01-01",
+ "step": 1,
+ "offsets": true,
+ "rest": false,
+ "workers": 4,
+ "run_id": "37807027252",
+ "shard": [
+  2,
+  8
+ ],
+ "started_at": "2026-10-08T16:17:17.219512+00:00",
+ "stages": [
+  {
+   "stage": "restore data package",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load physics tables",
+   "at_seconds": 3.5
+  },
+  {
+   "stage": "load history and reconstruct games",
+   "at_seconds": 7.7
+  },
+  {
+   "stage": "replay 311 games with 4 workers",
+   "at_seconds": 34.0
+  },
+  {
+   "stage": "score",
+   "at_seconds": 2247.2
+  }
+ ],
+ "model_selected": {
+  "name": "pa-2026-v2-physics",
+  "source": "private/models/pa-2026-v2-physics.enc",
+  "sha256": "4c8822abcb65eff2ec2fcf3a1d7c3b57f13dec0d21d26a9508e18f74944b3a54",
+  "fitted_at": "2026-10-07T09:43:32.959674+00:00",
+  "physics_features": 30
+ },
+ "physics_years": [
+  2025,
+  2026
+ ],
+ "physics_rows": 371785,
+ "games": 311,
+ "offsets_table": {
+  "path": "brl_live/context_offsets.json",
+  "estimated_through": "2026-09-27"
+ },
+ "environment": {
+  "table": "env-v1-fit2025",
+  "conditions": "research/conditions-37697026337.jsonl.gz",
+  "games_with_conditions": 311
+ },
+ "team_offsets": {
+  "rows": "research/team-resid-v2-37712616076.json.gz",
+  "k": 4000,
+  "half_life": 120,
+  "sides": [
+   "bat",
+   "fld"
+  ],
+  "center": true,
+  "dates": 23,
+  "largest_offset": 0.2552
+ },
+ "transitions": {
+  "path": "brl_replay/transitions_fit_2023_2025.json",
+  "name": "base running from 2023, 2024, 2025 play-by-play",
+  "cells": 167
+ },
+ "steals": {
+  "per_pa": 0.85
+ },
+ "scores": {
+  "p_sim": {
+   "brier": 0.2391052473453995,
+   "log_loss": 0.6709385711945365,
+   "better_than_coin_pct": 4.357901061840197
+  },
+  "p_team": {
+   "brier": 0.2427458104655659,
+   "log_loss": 0.6785219455213256,
+   "better_than_coin_pct": 2.901675813773641
+  },
+  "p_blend": {
+   "brier": 0.24025448835659138,
+   "log_loss": 0.6734180769264152,
+   "better_than_coin_pct": 3.8982046573634466
+  },
+  "p_coin": {
+   "brier": 0.25,
+   "log_loss": 0.6931471805599454,
+   "better_than_coin_pct": 0.0
+  },
+  "n_games": 311
+ },
+ "scores_by_month": {
+  "03": {
+   "p_sim": {
+    "brier": 0.20645223283210296,
+    "log_loss": 0.6046415726493224,
+    "better_than_coin_pct": 17.419106867158817
+   },
+   "p_team": {
+    "brier": 0.22097762663875,
+    "log_loss": 0.6344541117491737,
+    "better_than_coin_pct": 11.608949344499997
+   },
+   "p_blend": {
+    "brier": 0.2129757708728601,
+    "log_loss": 0.6182942060073155,
+    "better_than_coin_pct": 14.80969165085596
+   },
+   "p_coin": {
+    "brier": 0.25,
+    "log_loss": 0.6931471805599453,
+    "better_than_coin_pct": 0.0
+   },
+   "n_games": 8
+  },
+  "04": {
+   "p_sim": {
+    "brier": 0.23795534226921025,
+    "log_loss": 0.6683407703530684,
+    "better_than_coin_pct": 4.8178630923159
+   },
+   "p_team": {
+    "brier": 0.24622622267640001,
+    "log_loss": 0.6852965175714097,
+    "better_than_coin_pct": 1.5095109294399944
+   },
+   "p_blend": {
+    "brier": 0.24158315457606672,
+    "log_loss": 0.6758322085329416,
+    "better_than_coin_pct": 3.3667381695733134
+   },
+   "p_coin": {
+    "brier": 0.25,
+    "log_loss": 0.6931471805599455,
+    "better_than_coin_pct": 0.0
+   },
+   "n_games": 55
+  },
+  "05": {
+   "p_sim": {
+    "brier": 0.2559573384566573,
+    "log_loss": 0.7052710844219882,
+    "better_than_coin_pct": -2.3829353826629207
+   },
+   "p_team": {
+    "brier": 0.25437286876594545,
+    "log_loss": 0.7021332202100566,
+    "better_than_coin_pct": -1.7491475063781792
+   },
+   "p_blend": {
+    "brier": 0.25440609288655414,
+    "log_loss": 0.7021498544836074,
+    "better_than_coin_pct": -1.7624371546216544
+   },
+   "p_coin": {
+    "brier": 0.25,
+    "log_loss": 0.6931471805599455,
+    "better_than_coin_pct": 0.0
+   },
+   "n_games": 55
+  },
+  "06": {
+   "p_sim": {
+    "brier": 0.22816978850320507,
+    "log_loss": 0.6493369791959595,
+    "better_than_coin_pct": 8.732084598717972
+   },
+   "p_team": {
+    "brier": 0.23795626061880001,
+    "log_loss": 0.6688583639845034,
+    "better_than_coin_pct": 4.817495752479994
+   },
+   "p_blend": {
+    "brier": 0.23250486977649532,
+    "log_loss": 0.6580325459541356,
+    "better_than_coin_pct": 6.998052089401874
+   },
+   "p_coin": {
+    "brier": 0.25,
+    "log_loss": 0.6931471805599453,
+    "better_than_coin_pct": 0.0
+   },
+   "n_games": 40
+  },
+  "07": {
+   "p_sim": {
+    "brier": 0.24769722189407767,
+    "log_loss": 0.6882362831015181,
+    "better_than_coin_pct": 0.9211112423689327
+   },
+   "p_team": {
+    "brier": 0.24350482582322802,
+    "log_loss": 0.6801992586286026,
+    "better_than_coin_pct": 2.5980696707087914
+   },
+   "p_blend": {
+    "brier": 0.24486937120431937,
+    "log_loss": 0.6827734196263082,
+    "better_than_coin_pct": 2.0522515182722523
+   },
+   "p_coin": {
+    "brier": 0.25,
+    "log_loss": 0.6931471805599453,
+    "better_than_coin_pct": 0.0
+   },
+   "n_games": 57
+  },
+  "08": {
+   "p_sim": {
+    "brier": 0.22736691380547525,
+    "log_loss": 0.646992441338095,
+    "better_than_coin_pct": 9.053234477809902
+   },
+   "p_team": {
+    "brier": 0.23047145969175,
+    "log_loss": 0.6536102842683947,
+    "better_than_coin_pct": 7.811416123299997
+   },
+   "p_blend": {
+    "brier": 0.22818991484791315,
+    "log_loss": 0.6488780061201032,
+    "better_than_coin_pct": 8.72403406083474
+   },
+   "p_coin": {
+    "brier": 0.25,
+    "log_loss": 0.6931471805599453,
+    "better_than_coin_pct": 0.0
+   },
+   "n_games": 56
+  },
+  "09": {
+   "p_sim": {
+    "brier": 0.23917090651606135,
+    "log_loss": 0.6710396757029985,
+    "better_than_coin_pct": 4.331637393575461
+   },
+   "p_team": {
+    "brier": 0.24721871932344994,
+    "log_loss": 0.6877047091229413,
+    "better_than_coin_pct": 1.1125122706200252
+   },
+   "p_blend": {
+    "brier": 0.24248867300709342,
+    "log_loss": 0.67802749276389,
+    "better_than_coin_pct": 3.00453079716263
+   },
+   "p_coin": {
+    "brier": 0.25,
+    "log_loss": 0.6931471805599453,
+    "better_than_coin_pct": 0.0
+   },
+   "n_games": 40
+  }
+ },
+ "per_game_file": "research/replay-v2-prod-trans-1000-2026-37807027252-s2of8.jsonl.gz",
+ "per_game_sha256": "1437e781801723435a65ab45c8e6ae92e950dd671b8a6fe26a87bc4cc0ba9bfb",
+ "status": "completed",
+ "finished_at": "2026-10-08T16:55:07.851002+00:00",
+ "seconds": 2270.6
+}
