@@ -1,0 +1,223 @@
+{
+ "schema": "brl.challenge-probe.v1",
+ "run_id": "37835384951",
+ "games": [
+  823570,
+  823329,
+  824462,
+  824381,
+  822922,
+  824139,
+  824546,
+  823001,
+  822844,
+  824300,
+  823975,
+  823896
+ ],
+ "pitch_events": 3449,
+ "events_with_review": 38,
+ "review_types": {
+  "NH": 1,
+  "MJ": 36,
+  "MA": 1
+ },
+ "overturned": {
+  "False": 17,
+  "True": 21
+ },
+ "challenger_fields": {
+  "[]": 1,
+  "['challengeTeamId', 'player']": 36,
+  "['challengeTeamId']": 1
+ },
+ "keys_with_review_or_challenge": {
+  "allPlays[].about.hasReview": 600,
+  "currentPlay.playEvents[].details.hasReview": 71,
+  "allPlays[].playEvents[].reviewDetails": 23,
+  "currentPlay.about.hasReview": 12,
+  "allPlays[].reviewDetails": 10,
+  "allPlays[].reviewDetails.reviewType": 10,
+  "allPlays[].reviewDetails.challengeTeamId": 10,
+  "currentPlay.playEvents[].reviewDetails": 1,
+  "currentPlay.playEvents[].reviewDetails.reviewType": 1,
+  "currentPlay.playEvents[].reviewDetails.challengeTeamId": 1,
+  "currentPlay.reviewDetails": 1,
+  "currentPlay.reviewDetails.reviewType": 1,
+  "currentPlay.reviewDetails.challengeTeamId": 1
+ },
+ "description_examples": {
+  "Reds challenged (tag play), call on the field was overturned: Elly De La Cruz st": 1,
+  "Max Clark challenged (pitch result), call on the field was overturned: Passed ba": 1
+ },
+ "shapes": [
+  {
+   "event_keys": [
+    "count",
+    "details",
+    "endTime",
+    "index",
+    "isPitch",
+    "pitchData",
+    "pitchNumber",
+    "playId",
+    "reviewDetails",
+    "startTime",
+    "type"
+   ],
+   "review": {
+    "isOverturned": false,
+    "inProgress": false,
+    "reviewType": "NH"
+   },
+   "is_pitch": true,
+   "code": "F",
+   "description": "Foul"
+  },
+  {
+   "event_keys": [
+    "count",
+    "details",
+    "endTime",
+    "index",
+    "isPitch",
+    "pitchData",
+    "pitchNumber",
+    "playId",
+    "reviewDetails",
+    "startTime",
+    "type"
+   ],
+   "review": {
+    "isOverturned": true,
+    "inProgress": false,
+    "reviewType": "MJ",
+    "challengeTeamId": 143,
+    "player": [
+     "fullName",
+     "id",
+     "link"
+    ]
+   },
+   "is_pitch": true,
+   "code": "C",
+   "description": "Called Strike"
+  },
+  {
+   "event_keys": [
+    "count",
+    "details",
+    "endTime",
+    "index",
+    "isPitch",
+    "pitchData",
+    "pitchNumber",
+    "playId",
+    "reviewDetails",
+    "startTime",
+    "type"
+   ],
+   "review": {
+    "isOverturned": false,
+    "inProgress": false,
+    "reviewType": "MJ",
+    "challengeTeamId": 121,
+    "player": [
+     "fullName",
+     "id",
+     "link"
+    ]
+   },
+   "is_pitch": true,
+   "code": "B",
+   "description": "Ball"
+  },
+  {
+   "event_keys": [
+    "count",
+    "details",
+    "endTime",
+    "index",
+    "isPitch",
+    "pitchData",
+    "pitchNumber",
+    "playId",
+    "reviewDetails",
+    "startTime",
+    "type"
+   ],
+   "review": {
+    "isOverturned": true,
+    "inProgress": false,
+    "reviewType": "MJ",
+    "challengeTeamId": 143,
+    "player": [
+     "fullName",
+     "id",
+     "link"
+    ]
+   },
+   "is_pitch": true,
+   "code": "C",
+   "description": "Called Strike"
+  },
+  {
+   "event_keys": [
+    "count",
+    "details",
+    "endTime",
+    "index",
+    "isPitch",
+    "pitchData",
+    "pitchNumber",
+    "playId",
+    "reviewDetails",
+    "startTime",
+    "type"
+   ],
+   "review": {
+    "isOverturned": false,
+    "inProgress": false,
+    "reviewType": "MJ",
+    "challengeTeamId": 118,
+    "player": [
+     "fullName",
+     "id",
+     "link"
+    ]
+   },
+   "is_pitch": true,
+   "code": "C",
+   "description": "Called Strike"
+  },
+  {
+   "event_keys": [
+    "count",
+    "details",
+    "endTime",
+    "index",
+    "isPitch",
+    "pitchData",
+    "pitchNumber",
+    "playId",
+    "reviewDetails",
+    "startTime",
+    "type"
+   ],
+   "review": {
+    "isOverturned": false,
+    "inProgress": false,
+    "reviewType": "MJ",
+    "challengeTeamId": 134,
+    "player": [
+     "fullName",
+     "id",
+     "link"
+    ]
+   },
+   "is_pitch": true,
+   "code": "C",
+   "description": "Called Strike"
+  }
+ ]
+}
