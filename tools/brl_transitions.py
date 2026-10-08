@@ -49,16 +49,25 @@ def _rid(r):
 
 
 def apply_moves(bases: dict, moves: list) -> int:
-    """Apply runner movements that happen together (one event); returns outs made. Every runner leaves his base first."""
+    """Apply runner movements that happen together (one event); returns outs made. Every runner leaves his base first.
+    A runner listed more than once in the event (a steal and then an error on the throw) moves from his first start to
+    his last end, so he is never left on two bases."""
     outs = 0
-    parsed = []
+    per, order, parsed = {}, [], []
     for r in moves:
         mv = r.get('movement') or {}
-        parsed.append((mv.get('start'), mv.get('end'), bool(mv.get('isOut')), _rid(r)))
+        rid = _rid(r)
+        if rid is None:
+            parsed.append((mv.get('start'), mv.get('end'), bool(mv.get('isOut')), None))
+        elif rid not in per:
+            per[rid] = [mv.get('start'), mv.get('end'), bool(mv.get('isOut'))]
+            order.append(rid)
+        else:
+            per[rid][1] = mv.get('end')
+            per[rid][2] = per[rid][2] or bool(mv.get('isOut'))
+    parsed = [(per[rid][0], per[rid][1], per[rid][2], rid) for rid in order] + parsed
     for start, _, _, rid in parsed:
-        if start in bases and (rid is None or bases[start] == rid or bases[start] is None):
-            bases[start] = None
-        elif start in bases:
+        if start in bases:
             bases[start] = None
     for _, end, out, rid in parsed:
         if out:
@@ -66,6 +75,31 @@ def apply_moves(bases: dict, moves: list) -> int:
         elif end in bases and rid is not None:
             bases[end] = rid
     return outs
+
+
+STEAL_TYPES = {'stolen_base_2b', 'stolen_base_3b', 'stolen_base_home', 'caught_stealing_2b', 'caught_stealing_3b',
+               'caught_stealing_home', 'pickoff_caught_stealing_2b', 'pickoff_caught_stealing_3b', 'pickoff_caught_stealing_home'}
+
+
+def pre_pattern(start_bases: dict, groups: list) -> str:
+    """Where each runner on base at the start of the plate appearance is after the running events before the batted
+    ball (or before the play ended without one): '1' '2' '3' a base, 'H' scored, 'X' out, '-' no runner; keyed by the
+    base he started on, so a pinch runner or the extra-inning runner is followed by base, not by id."""
+    dest, first = {}, {}
+    for g in groups:
+        for r in g:
+            rid, mv = _rid(r), (r.get('movement') or {})
+            if rid is None:
+                continue
+            if rid not in first:
+                first[rid] = mv.get('start') if mv.get('start') in BASES else None
+            dest[rid] = 'X' if mv.get('isOut') else DEST.get(mv.get('end'), dest.get(rid))
+    by_base = {first[rid]: d for rid, d in dest.items() if first.get(rid) in BASES and d is not None}
+    return ''.join('-' if start_bases.get(b) is None else (by_base.get(b) or b[0]) for b in BASES)
+
+
+def _types(groups: list) -> list:
+    return sorted(set(str((r.get('details') or {}).get('eventType') or '') for g in groups for r in g) - {''})
 
 
 def resync(bases: dict, play: dict) -> None:
@@ -85,7 +119,7 @@ def mask_of(bases: dict) -> int:
 
 def game_rows(doc: dict) -> dict:
     """Contact transitions, earlier running events and decision rows of one game's play-by-play."""
-    out = {'contact': [], 'running': [], 'decisions': [], 'mismatch': 0, 'plays': 0}
+    out = {'contact': [], 'running': [], 'pre': [], 'phase': Counter(), 'decisions': [], 'mismatch': 0, 'plays': 0}
     key = None
     bases = {b: None for b in BASES}
     outs = 0
@@ -110,16 +144,26 @@ def game_rows(doc: dict) -> dict:
             groups[_pi(r) if _pi(r) is not None else 10_000 + order].append(r)
         start_bases, start_outs = dict(bases), outs
         pre_types, pre_outs = [], 0
-        contact_moves = []
+        contact_moves, pre_moves = [], []
         for idx in sorted(groups):
             if outcome is not None and last is not None and idx < last:
                 types = sorted(set(str((r.get('details') or {}).get('eventType') or '') for r in groups[idx]))
                 pre_types.extend(types)
                 pre_outs += apply_moves(bases, groups[idx])
+                pre_moves.append(groups[idx])
             else:
                 contact_moves.append(groups[idx])
         end_outs = (play.get('count') or {}).get('outs')
         if outcome is None:
+            # A plate appearance cut short by a running play (the third out on a pickoff or caught stealing, a walk-off
+            # wild pitch or balk): every movement came before any batted ball.
+            if contact_moves and mask_of(start_bases) and start_outs < 3:
+                types = _types(contact_moves)
+                scratch = dict(start_bases)
+                made = sum(apply_moves(scratch, g) for g in contact_moves)
+                out['pre'].append((mask_of(start_bases), start_outs, tuple(types), pre_pattern(start_bases, contact_moves), min(3 - start_outs, made), 'T'))
+                for t in types:
+                    out['phase'][('truncated', t)] += 1
             for g in contact_moves:
                 apply_moves(bases, g)
             outs = min(3, int(end_outs)) if isinstance(end_outs, int) else outs
@@ -131,6 +175,12 @@ def game_rows(doc: dict) -> dict:
         out['plays'] += 1
         c_bases, c_outs = dict(bases), min(3, start_outs + pre_outs)
         out['running'].append((mask_of(start_bases), start_outs, tuple(pre_types), mask_of(c_bases), c_outs))
+        if mask_of(start_bases):
+            out['pre'].append((mask_of(start_bases), start_outs, tuple(sorted(set(pre_types) - {''})), pre_pattern(start_bases, pre_moves), c_outs - start_outs, 'P'))
+        for t in set(pre_types) - {''}:
+            out['phase'][('pre', t)] += 1
+        for t in _types(contact_moves):
+            out['phase'][('final_pitch', t)] += 1
         batter = str(((play.get('matchup') or {}).get('batter') or {}).get('id') or '')
         # Each runner's destination, keyed by the base he started the play from (a pinch runner or the extra-inning runner
         # may carry another id than the one tracked on that base); the batter's by his id or a start off the bases.
@@ -232,6 +282,7 @@ def main():
         speed, sprint_mean = speed_table(json.loads(gzip.decompress((ROOT / 'brl_live' / 'running.json.gz').read_bytes())), season)
         receipt['sprint_mean'] = round(sprint_mean, 3); receipt['runners_with_speed'] = len(speed)
         contact = defaultdict(Counter); running = defaultdict(Counter); dec = defaultdict(Counter); events = defaultdict(Counter)
+        pre = defaultdict(Counter); phase = Counter()
         stats = Counter()
 
         def fetch(g):
@@ -258,10 +309,19 @@ def main():
                         dec['|'.join(map(str, d[:3]))][d[3]] += 1
                 for m0, o0, types, m1, o1 in rows['running']:
                     running[f'{m0}|{o0}'][f'{"+".join(types) or "none"}>{m1}|{o1}'] += 1
+                for m0, o0, types, pattern, made, kind in rows['pre']:
+                    pre[f'{m0}|{o0}'][f'{"+".join(types) or "none"}>{pattern}|{made}|{kind}'] += 1
+                for (ph, t), n in rows['phase'].items():
+                    phase[f'{ph}|{t}'] += n
         receipt.update(dict(stats))
         receipt['contact'] = {k: dict(v) for k, v in sorted(contact.items())}
         receipt['doubles_and_triples'] = {k: dict(v) for k, v in sorted(events.items())}
         receipt['running'] = {k: dict(v) for k, v in sorted(running.items())}
+        # Running events by the bases and outs at the start of each plate appearance with runners on (P) or cut short
+        # by one (T): event types, where each runner was after them ('1' '2' '3' 'H' 'X' '-', runner on first first) and
+        # the outs made. phase: how often each event type happens before the last pitch, on it, or ends the play.
+        receipt['pre'] = {k: dict(v) for k, v in sorted(pre.items())}
+        receipt['phase'] = dict(sorted(phase.items()))
         receipt['decisions'] = {k: dict(v) for k, v in sorted(dec.items())}
         receipt['status'] = 'completed'
     except Exception as exc:

@@ -77,3 +77,32 @@ def test_pinch_runners_and_the_extra_inning_runner_are_followed_by_base():
     p['matchup'].update({'postOnFirst': {'id': 5}, 'postOnSecond': {'id': 42}})
     rows = tr.game_rows({'allPlays': [p, play(1, True, 6, 'field_out', 1, [mv(6, None, None, 0, out=True, etype='field_out')])]})
     assert rows['contact'][1][2] == 3 and rows['contact'][1][6][:2] == ('5', '42')
+
+
+def test_running_events_before_contact_by_runner_and_cut_short_plays():
+    plays = [
+        play(1, True, 1, 'single', 0, [mv(1, None, '1B', 0)]),
+        play(1, True, 2, 'walk', 0, [mv(2, None, '1B', 0, etype='walk'), mv(1, '1B', '2B', 0, etype='walk')]),
+        # runners on first and second: a wild pitch on the second pitch moves both up, then the batter strikes out
+        play(1, True, 3, 'strikeout', 1, [mv(1, '2B', '3B', 1, etype='wild_pitch'), mv(2, '1B', '2B', 1, etype='wild_pitch'),
+                                          mv(3, None, None, 2, out=True, etype='strikeout')], n_pitches=3),
+        # second and third, one out: a passed ball scores the runner from third, then a ground out
+        play(1, True, 4, 'field_out', 2, [mv(1, '3B', 'score', 0, etype='passed_ball'), mv(4, None, None, 1, out=True, etype='field_out')], n_pitches=2),
+        # runner on second, two outs: picked off for the third out, the plate appearance never ends
+        play(1, True, 5, 'pickoff_2b', 3, [mv(2, '2B', None, 0, out=True, etype='pickoff_2b')]),
+        play(1, False, 11, 'single', 0, [mv(11, None, '1B', 0)]),
+        # a steal of second and an error on the throw in one event: the runner goes from first to third, on one base
+        play(1, False, 12, 'field_out', 1, [mv(11, '1B', '2B', 0, etype='stolen_base_2b'), mv(11, '2B', '3B', 0, etype='error'),
+                                            mv(12, None, None, 1, out=True, etype='field_out')], n_pitches=2),
+        play(1, False, 13, 'single', 1, [mv(13, None, '1B', 0), mv(11, '3B', 'score', 0)]),
+    ]
+    rows = tr.game_rows({'allPlays': plays})
+    pre = [r for r in rows['pre']]
+    assert (3, 0, ('wild_pitch',), '23-', 0, 'P') in pre             # both runners up one base before the strikeout
+    assert (6, 1, ('passed_ball',), '-2H', 0, 'P') in pre            # the runner from third scores, the one on second holds
+    assert (2, 2, ('pickoff_2b',), '-X-', 1, 'T') in pre             # cut short: the third out on the bases
+    assert (1, 0, ('error', 'stolen_base_2b'), '3--', 0, 'P') in pre # first to third, not on two bases
+    # the runner who reached third on the error scores on the single from there: contact state is third base only
+    assert rows['contact'][-1][2] == 4 and rows['contact'][-1][4] == '--H1'
+    assert rows['phase'][('pre', 'wild_pitch')] == 1 and rows['phase'][('truncated', 'pickoff_2b')] == 1
+    assert rows['mismatch'] == 0
