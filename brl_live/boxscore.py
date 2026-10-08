@@ -284,7 +284,9 @@ class BoxAccumulator:
 
 # Simulation-time adjustments on the locked model (brl_live/provider_adjust.py), measured on the
 # 2026 out-of-sample replay before being switched on (LEDGER.md): context offsets are on; per-world
-# talent noise at c=1 scored worse than the offsets alone and stays off.
+# talent noise at c=1 scored worse than the offsets alone and stays off. Since CTX-02 (October 8) the context table is
+# estimated on the model as the simulator serves it (physics table of the previous and current season), which also sets
+# the league's strikeout, walk and home-run level.
 # postseason_exp_scale: by game type, the factor on starters' and teams' expected batters faced that
 # drives the fitted starter hazard in postseason games. Measured on 294 postseason starts of 2023-2026
 # (research/postseason_usage-37606652416.json): starters face 0.866 of their own regular-season
