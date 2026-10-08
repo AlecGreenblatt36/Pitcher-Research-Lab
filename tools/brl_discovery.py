@@ -77,7 +77,7 @@ def put_text(repo, token, path, text, branch, message):
 # ---------------------------------------------------------------- pitch table
 SUBTYPES = ('FF', 'FA', 'SI', 'FC', 'SL', 'ST', 'SV', 'CU', 'KC', 'CS', 'CH', 'FS', 'FO', 'SC', 'KN', 'EP')
 FIELDS = ('season', 'day', 'game', 'pitcher', 'batter', 'stand_r', 'throw_r', 'inning', 'group', 'sub', 'balls', 'strikes', 'call',
-          'v0', 'v1', 'spin', 'pfx_x', 'pfx_z', 'px', 'pz', 'x0', 'z0', 'ext', 'last_in_pa', 'bunt_pa', 'ab', 'pitch_no', 'la', 'ls')
+          'v0', 'v1', 'spin', 'pfx_x', 'pfx_z', 'px', 'pz', 'x0', 'z0', 'ext', 'last_in_pa', 'bunt_pa', 'ab', 'pitch_no', 'la', 'ls', 'cs', 'zone')
 CALLS = {'take': 0, 'swing_contact': 1, 'whiff': 2, 'other': 3}
 
 
@@ -111,6 +111,11 @@ def pitch_table(doc: dict, season: int) -> dict:
                 cols['ab'].append(int(row.get('i') or 0)); cols['pitch_no'].append(j)
                 hit = row.get('hit') if j == len(pitches) - 1 and code in ('X', 'D', 'E') else None
                 cols['la'].append(np.nan if not hit or hit[1] is None else float(hit[1])); cols['ls'].append(np.nan if not hit or hit[0] is None else float(hit[0]))
+                cols['cs'].append(1 if code == 'C' else 0)
+                try:
+                    cols['zone'].append(int(_zone) if _zone is not None else -1)
+                except (TypeError, ValueError):
+                    cols['zone'].append(-1)
     out = {}
     for k, v in cols.items():
         out[k] = np.asarray(v, dtype=np.float32 if k in ('v0', 'v1', 'spin', 'pfx_x', 'pfx_z', 'px', 'pz', 'x0', 'z0', 'ext', 'la', 'ls') else np.int64)
@@ -1610,6 +1615,170 @@ def horizon12(T: dict, params: dict, stage) -> dict:
     return res
 
 
+EU_KNOTS = (-0.8, -0.4, -0.2, -0.1, -0.05, 0.0, 0.05, 0.1, 0.2, 0.4, 0.8, 1.5)
+
+
+def batter_zones(T: dict, ok: np.ndarray, prior_n: float = 100.0) -> tuple[np.ndarray, np.ndarray, dict]:
+    """Each batter's strike-zone top and bottom (ft) from the official zone numbers, which the feed assigns with the
+    batter's own zone (1-9 inside, top row 1-3, bottom row 7-9; 11-14 outside quadrants): near the middle of the
+    plate, the height that best separates the top row from pitches above it, and the bottom row from pitches below
+    it, pulled toward the league value by prior_n pitches. Returns per-pitch top and bottom and a summary."""
+    mid = ok & (np.abs(T['px']) < 0.5) & np.isfinite(T['pz'])
+    z = T['pz'].astype(np.float64); zn = T['zone']
+    sets = {'top': (mid & np.isin(zn, (1, 2, 3)), mid & np.isin(zn, (11, 12)) & (z > 2.5)),
+            'bot': (mid & np.isin(zn, (13, 14)) & (z < 2.5), mid & np.isin(zn, (7, 8, 9)))}   # (below, above) the boundary
+
+    def boundary(below, above):
+        if len(below) == 0 or len(above) == 0:
+            return np.nan
+        cand = np.unique(np.concatenate([below, above]))
+        b = np.sort(below); a = np.sort(above)
+        err = (len(b) - np.searchsorted(b, cand, side='right')) + np.searchsorted(a, cand, side='left')
+        best = cand[err == err.min()]
+        return float(np.median(best))
+    out = {}
+    summary = {}
+    for name, (lo_m, hi_m) in sets.items():
+        league = boundary(z[lo_m], z[hi_m])
+        val = np.full(len(z), league)
+        bat = T['batter']
+        ub = np.unique(bat[lo_m | hi_m])
+        lo_i = np.flatnonzero(lo_m); hi_i = np.flatnonzero(hi_m)
+        lo_b = bat[lo_i]; hi_b = bat[hi_i]
+        o_lo = np.argsort(lo_b, kind='stable'); o_hi = np.argsort(hi_b, kind='stable')
+        lo_s, hi_s = lo_b[o_lo], hi_b[o_hi]
+        est = {}
+        for b_ in ub:
+            a0, a1 = np.searchsorted(lo_s, b_, 'left'), np.searchsorted(lo_s, b_, 'right')
+            c0, c1 = np.searchsorted(hi_s, b_, 'left'), np.searchsorted(hi_s, b_, 'right')
+            zl = z[lo_i[o_lo[a0:a1]]]; zh = z[hi_i[o_hi[c0:c1]]]
+            n = min(len(zl), len(zh))
+            if n < 10:
+                continue
+            c = boundary(zl, zh)
+            est[int(b_)] = (n * c + prior_n * league) / (n + prior_n)
+        keys = np.array(sorted(est)); vals = np.array([est[k] for k in keys])
+        if len(keys):
+            val = lookup(keys, vals, bat, league)
+        out[name] = val
+        summary[name] = {'league_ft': round(league, 4), 'batters': int(len(keys)),
+                         'batter_p10_p50_p90': [round(float(v), 3) for v in np.percentile(vals, (10, 50, 90))] if len(vals) else None}
+    return out['top'], out['bot'], summary
+
+
+def horizon13(T: dict, params: dict, stage) -> dict:
+    """Umpires as a negative control for the decision horizon, and the umpire's own window
+    (discovery/DECISION_HORIZON_PROTOCOL.md, addendum 11). The same instrument as the decisive test (pitch-type location
+    maps, within-type movement surprise, displacement along the decision gradient) applied to called strikes on taken
+    pitches. If the hitters' horizon came from tracking error (the measured crossing and the measured movement erring
+    together), the umpires' calls would show it too, more sharply. Heights are standardized with each batter's own
+    zone, recovered from the official zone numbers. A second term moves the crossing along the ball's velocity at the
+    plate (positive: the call follows the ball past the front of the plate toward the glove). Hitters' swings are run
+    through the identical code for comparison."""
+    res = {}
+    F = rebuild(T)
+    ok = (F['ok'] & (T['group'] >= 0) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2)
+          & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1)) & (T['call'] <= 2))
+    top, bot, zsum = batter_zones(T, ok)
+    res['batter_zones'] = zsum
+    T = take(T, ok); F = {k: v[ok] for k, v in F.items()}; top, bot = top[ok], bot[ok]
+    stage('batter zones')
+    ps = T['pitcher'] * 10 + (T['season'] - 2020)
+    key_sub = ps * 100 + T['sub']
+    okx = np.isfinite(F['ax']) & np.isfinite(F['az'])
+    mx = loo_means(key_sub, F['ax'], okx); mz = loo_means(key_sub, F['az'], okx)
+    wx = np.where(np.isfinite(mx), F['ax'] - mx, 0.0); wz = np.where(np.isfinite(mz), F['az'] - mz, 0.0)
+    vxp = F['vx0'] + F['ax'] * F['tf']; vzp = F['vz0'] + F['az'] * F['tf']
+    res['plate_velocity_ft_s'] = {'vx_sd': round(float(np.std(vxp)), 3), 'vz_mean': round(float(np.mean(vzp)), 3), 'vz_sd': round(float(np.std(vzp)), 3)}
+    take_m = T['call'] == 0
+    res['taken'] = {'pitches': int(take_m.sum()), 'called_strike_share': round(float(T['cs'][take_m].mean()), 4),
+                    'zone_missing_share': round(float(np.mean(T['zone'] < 0)), 4)}
+    oh = np.eye(7, dtype=np.float32)[np.clip(T['group'], 0, 6)]
+    n = len(T['balls'])
+    cnt = np.zeros((n, 12), np.float32); cnt[np.arange(n), np.clip(T['balls'], 0, 3) * 3 + np.clip(T['strikes'], 0, 2)] = 1
+    C_ump = np.hstack([cnt, oh, hats(T['v0'].astype(np.float64), V_KNOTS), T['stand_r'][:, None].astype(np.float32),
+                       (T['stand_r'] == T['throw_r'])[:, None].astype(np.float32)])
+    C_hit = control_block(T, swing_propensity(T))
+    span = np.clip(top - bot, 1.2, 3.0)
+
+    def design(x, z, idx, Cm):
+        u = np.where(T['stand_r'][idx] == 1, x[idx], -x[idx])
+        zz = 1.5 + 2.0 * (z[idx] - bot[idx]) / span[idx]
+        e = np.maximum(np.maximum(np.abs(u) - ZONE_HALF, zz - ZONE_TOP), ZONE_BOT - zz)
+        base = np.hstack([hats(e, EU_KNOTS), hats(u, U_KNOTS), hats(zz, Z_KNOTS)])
+        blocks = [base * (T['strikes'][idx] == k)[:, None] for k in (0, 1, 2)] + [base * (T['balls'][idx] == 3)[:, None]]
+        inter = (base[:, :, None] * oh[idx, None, :]).reshape(len(idx), -1)
+        return np.hstack(blocks + [inter, Cm[idx]]).astype(np.float32)
+
+    rng = np.random.default_rng(int(params.get('seed', 13)))
+    pops = {'umpire': (take_m, T['cs'].astype(np.int64), C_ump), 'hitter': (np.ones(n, bool), ((T['call'] == 1) | (T['call'] == 2)).astype(np.int64), C_hit)}
+    grid = [float(v) for v in params.get('tau2_grid', (-0.02, -0.01, 0.0, 0.01, 0.02, 0.04, 0.0684))]
+    h = 0.02
+    for pname, (pm, y, Cm) in pops.items():
+        if pname not in params.get('populations', ('umpire', 'hitter')):
+            continue
+        def sample(seasons, k):
+            ii = np.flatnonzero(pm & np.isin(T['season'], seasons)); return np.sort(rng.choice(ii, min(len(ii), k), replace=False))
+        tr = sample((2023, 2024), int(params.get('train_n', 500000)))
+        va = sample((2025,), int(params.get('val_n', 400000)))
+        te = sample((2026,), int(params.get('test_n', 400000)))
+        out = {'split': {'train': int(len(tr)), 'select_2025': int(len(va)), 'test_2026': int(len(te))}}
+        D = lambda x, z, idx: design(x, z, idx, Cm)
+        m0 = fit_logistic(D(T['px'], T['pz'], tr), y[tr])
+        base_ll = {nm: logloss_vec(m0.predict_proba(D(T['px'], T['pz'], idx))[:, 1], y[idx]) for nm, idx in (('select_2025', va), ('test_2026', te))}
+        prof = []
+        for t2 in grid:
+            if t2 == 0.0:
+                prof.append({'tau2': 0.0, 'select_2025': float(base_ll['select_2025'].mean()), 'test_2026': float(base_ll['test_2026'].mean())})
+                continue
+            x, z = T['px'] - 0.5 * wx * t2, T['pz'] - 0.5 * wz * t2
+            m = fit_logistic(D(x, z, tr), y[tr])
+            r = {'tau2': t2}
+            for nm, idx in (('select_2025', va), ('test_2026', te)):
+                ll = logloss_vec(m.predict_proba(D(x, z, idx))[:, 1], y[idx]); r[nm] = float(ll.mean())
+                if nm == 'test_2026':
+                    r['delta_2026_per_1000'] = [round(v * 1000, 4) for v in clustered_ci(ll - base_ll['test_2026'], T['game'][idx], reps=200)]
+            prof.append(r)
+        out['profile'] = prof
+        stage(pname + ' profile')
+        # gradient estimates: within-type surprise (tau squared) and plate velocity (seconds past the front of the plate)
+        est = {}
+        for nm, idx in (('select_2025', va), ('test_2026', te)):
+            f0 = np.empty(len(idx)); fx = np.empty(len(idx)); fz = np.empty(len(idx))
+            for s0 in range(0, len(idx), 200000):
+                ii = idx[s0:s0 + 200000]; df = lambda x, z: m0.decision_function(D(x, z, ii))
+                f0[s0:s0 + 200000] = df(T['px'], T['pz'])
+                fx[s0:s0 + 200000] = (df(T['px'] + h, T['pz']) - df(T['px'] - h, T['pz'])) / (2 * h)
+                fz[s0:s0 + 200000] = (df(T['px'], T['pz'] + h) - df(T['px'], T['pz'] - h)) / (2 * h)
+            yy = y[idx].astype(float)
+            g_w = -0.5 * (fx * wx[idx] + fz * wz[idx]); g_v = fx * vxp[idx] + fz * vzp[idx]
+            perm = rng.permutation(len(idx)); g_shuf = -0.5 * (fx * wx[idx][perm] + fz * wz[idx][perm])
+            a, b, se = offset_logit(yy, f0, g_w)
+            lo, hi = boot_slope(yy, f0, g_w, T['game'][idx], reps=int(params.get('boot', 100)))
+            coef, se2 = offset_logit_k(yy, f0, np.column_stack([g_w, g_v]))
+            _, bs, ses = offset_logit(yy, f0, g_shuf)
+            row = {'tau2_within': round(b, 6), 'se': round(se, 6), 'ci': [round(lo, 6), round(hi, 6)],
+                   'tau_ms': round(float(np.sign(b) * np.sqrt(abs(b)) * 1000), 1),
+                   'joint': {'tau2_within': round(float(coef[0]), 6), 'se_tau2': round(float(se2[0]), 6),
+                             'delta_s': round(float(coef[1]), 5), 'se_delta': round(float(se2[1]), 5)},
+                   'shuffled_surprise': {'tau2': round(bs, 6), 'se': round(ses, 6)}, 'pitches': int(len(idx)),
+                   'mean_abs_gradient_per_ft': round(float(np.mean(np.sqrt(fx ** 2 + fz ** 2))), 3)}
+            if pname == 'umpire':
+                by = {}
+                for gi in (0, 1, 3, 4, 5):
+                    mk = T['group'][idx] == gi
+                    if mk.sum() > 2000:
+                        _, bg, sg = offset_logit(yy[mk], f0[mk], g_w[mk]); by[GROUP_NAMES[gi]] = {'tau2': round(bg, 6), 'se': round(sg, 6), 'n': int(mk.sum())}
+                row['by_type'] = by
+                edge = np.abs(f0) < 2.0
+                _, be, sge = offset_logit(yy[edge], f0[edge], g_w[edge]); row['near_the_edge'] = {'tau2': round(be, 6), 'se': round(sge, 6), 'n': int(edge.sum())}
+            est[nm] = row
+        out['gradient'] = est
+        stage(pname + ' gradient')
+        res[pname] = out
+    return res
+
+
 def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']
     from cloud.security import unseal, key_bytes
@@ -1662,6 +1831,8 @@ def main():
             receipt['results'] = horizon11(T, params, stage)
         elif experiment == 'horizon12':
             receipt['results'] = horizon12(T, params, stage)
+        elif experiment == 'horizon13':
+            receipt['results'] = horizon13(T, params, stage)
         receipt['status'] = 'completed'
     except Exception as exc:
         receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:400]

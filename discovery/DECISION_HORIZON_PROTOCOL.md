@@ -227,3 +227,31 @@ in play (at least 500), shrunk. Predictions written now: split-half reliability 
 measurement; faster bat speed goes with a smaller slope (steering later) and longer swings with a larger one; and it
 counts as new information only if, beyond the 2023-2024 values, it improves a 2025-2026 contact outcome (whiffs per
 swing, sweet-spot rate, hard-hit rate, launch-angle spread) with an interval that excludes zero.
+
+## Addendum 11, before the umpire run (horizon13)
+
+Result since addendum 10: per-hitter steering limit failed its reliability bar (0.18 against 0.2; dropped).
+
+Negative control for the main finding. If the 260 ms horizon came from tracking error rather than perception (the
+measured crossing and the measured movement erring together, so that subtracting part of the movement surprise
+cleans the location), any decision made on the true crossing would show the same positive tau squared through the
+same estimator. Umpires' calls on taken pitches are such a decision: the umpire watches the ball to the glove. The
+same instrument as the decisive test (pitch-type location maps, within-type movement surprise, displacement along
+the decision gradient) is applied to called strikes, with heights standardized by each batter's own zone (recovered
+from the official zone numbers) and count-specific maps including three-ball counts; hitters' swings go through the
+identical code for comparison. Trained on 2023-2024, measured on 2025 (primary) and 2026 (secondary: 2026 calls may
+include challenge reviews).
+
+Predictions written now:
+1. Umpires: within-type tau squared below 0.01 on 2025 (at most a seventh of the hitters' 0.0684). A negative value
+   is expected if calls follow the ball past the front of the plate toward the glove: on synthetic pitches, 20 ms of
+   travel past the plate gives -0.005 to -0.008. At 0.034 or above (half the hitters' value) the hitters' horizon
+   cannot be separated from tracking error and the finding is withdrawn until it can.
+2. Hitters through the same code: tau squared between 0.05 and 0.09.
+3. Umpires' held-out profile is best at tau squared of 0.01 or less, and the hitters' value (0.0684) fits worse than
+   the true crossing by at least 5 nats per 1,000 calls.
+The plate-velocity term is reported but not interpreted: on synthetic pitches it recovers 0.002 s for a planted
+0.020 s (the type maps absorb it), so the glove shows up in the surprise term instead.
+Synthetic recovery (tools/brl_discovery.py horizon13; 335,000 pitches): umpires on the true crossing 0.0003 and
+-0.0007 (SE 0.001); umpires anticipating 120 ms (0.0144 planted) 0.0136 and 0.0121; hitters at 260 ms (0.0676
+planted) 0.061 to 0.064; batter zone tops and bottoms recovered (league 3.393 and 1.614 ft against 3.393 and 1.611).
