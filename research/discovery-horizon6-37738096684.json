@@ -1,0 +1,344 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "horizon6",
+ "run_id": "37738096684",
+ "params": {
+  "experiment": "horizon6",
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "tau": 0.26,
+  "min_dev": 1500,
+  "min_fut": 1000,
+  "seed": 11
+ },
+ "started_at": "2026-10-08T06:32:02.494909+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 8.3
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 16.6
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 25.2
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 713382
+ },
+ "results": {
+  "n_pitchers": 234,
+  "surprise_quantiles_in": {
+   "10": 0.998,
+   "50": 1.113,
+   "90": 1.281
+  },
+  "corr_with_dev": {
+   "surprise_in": {
+    "k_rate": 0.1681,
+    "bb_rate": 0.1746,
+    "o_swing": -0.0797,
+    "whiff_per_swing": 0.1107,
+    "zone_rate": 0.0091,
+    "fb_velo": 0.4531,
+    "fb_ride": -0.0439,
+    "movement": -0.0104
+   },
+   "surprise_fb_in": {
+    "k_rate": 0.0997,
+    "bb_rate": 0.1862,
+    "o_swing": -0.1621,
+    "whiff_per_swing": 0.0826,
+    "zone_rate": -0.015,
+    "fb_velo": 0.3646,
+    "fb_ride": -0.2211,
+    "movement": -0.2052
+   },
+   "surprise_offspeed_in": {
+    "k_rate": 0.2074,
+    "bb_rate": 0.1091,
+    "o_swing": 0.0525,
+    "whiff_per_swing": 0.1353,
+    "zone_rate": 0.0467,
+    "fb_velo": 0.3534,
+    "fb_ride": 0.0997,
+    "movement": 0.2018
+   }
+  },
+  "surprise_year_to_year": 0.749,
+  "incremental": {
+   "surprise_in->k_rate": {
+    "r2": [
+     0.5528,
+     0.5551
+    ],
+    "loo_mse_x1e5": [
+     93.463,
+     94.001
+    ],
+    "per_sd": -0.00265,
+    "ci": [
+     -0.00754,
+     0.0025
+    ],
+    "outcome_sd": 0.04385,
+    "n": 234
+   },
+   "surprise_in->bb_rate": {
+    "r2": [
+     0.439,
+     0.4523
+    ],
+    "loo_mse_x1e5": [
+     29.226,
+     28.794
+    ],
+    "per_sd": 0.0032,
+    "ci": [
+     0.0006,
+     0.00604
+    ],
+    "outcome_sd": 0.02185,
+    "n": 234
+   },
+   "surprise_in->o_swing": {
+    "r2": [
+     0.3921,
+     0.3941
+    ],
+    "loo_mse_x1e5": [
+     54.776,
+     55.237
+    ],
+    "per_sd": -0.00159,
+    "ci": [
+     -0.00577,
+     0.00256
+    ],
+    "outcome_sd": 0.02874,
+    "n": 234
+   },
+   "surprise_in->whiff_per_swing": {
+    "r2": [
+     0.594,
+     0.594
+    ],
+    "loo_mse_x1e5": [
+     96.446,
+     97.494
+    ],
+    "per_sd": 0.00031,
+    "ci": [
+     -0.00493,
+     0.00535
+    ],
+    "outcome_sd": 0.04671,
+    "n": 234
+   },
+   "surprise_in->zone_rate": {
+    "r2": [
+     0.4916,
+     0.5027
+    ],
+    "loo_mse_x1e5": [
+     42.633,
+     42.051
+    ],
+    "per_sd": -0.0037,
+    "ci": [
+     -0.00684,
+     -8e-05
+    ],
+    "outcome_sd": 0.02777,
+    "n": 234
+   },
+   "surprise_fb_in->k_rate": {
+    "r2": [
+     0.5528,
+     0.556
+    ],
+    "loo_mse_x1e5": [
+     93.463,
+     93.603
+    ],
+    "per_sd": -0.00333,
+    "ci": [
+     -0.00809,
+     0.00179
+    ],
+    "outcome_sd": 0.04385,
+    "n": 234
+   },
+   "surprise_fb_in->bb_rate": {
+    "r2": [
+     0.439,
+     0.4541
+    ],
+    "loo_mse_x1e5": [
+     29.226,
+     28.71
+    ],
+    "per_sd": 0.00359,
+    "ci": [
+     0.00098,
+     0.00642
+    ],
+    "outcome_sd": 0.02185,
+    "n": 234
+   },
+   "surprise_fb_in->o_swing": {
+    "r2": [
+     0.3921,
+     0.3999
+    ],
+    "loo_mse_x1e5": [
+     54.776,
+     54.551
+    ],
+    "per_sd": -0.00339,
+    "ci": [
+     -0.00757,
+     0.00048
+    ],
+    "outcome_sd": 0.02874,
+    "n": 234
+   },
+   "surprise_fb_in->whiff_per_swing": {
+    "r2": [
+     0.594,
+     0.594
+    ],
+    "loo_mse_x1e5": [
+     96.446,
+     97.361
+    ],
+    "per_sd": 0.00014,
+    "ci": [
+     -0.00521,
+     0.00544
+    ],
+    "outcome_sd": 0.04671,
+    "n": 234
+   },
+   "surprise_fb_in->zone_rate": {
+    "r2": [
+     0.4916,
+     0.4992
+    ],
+    "loo_mse_x1e5": [
+     42.633,
+     42.385
+    ],
+    "per_sd": -0.00324,
+    "ci": [
+     -0.00655,
+     0.00025
+    ],
+    "outcome_sd": 0.02777,
+    "n": 234
+   },
+   "surprise_offspeed_in->k_rate": {
+    "r2": [
+     0.5528,
+     0.5529
+    ],
+    "loo_mse_x1e5": [
+     93.463,
+     94.35
+    ],
+    "per_sd": -0.00038,
+    "ci": [
+     -0.00434,
+     0.00395
+    ],
+    "outcome_sd": 0.04385,
+    "n": 234
+   },
+   "surprise_offspeed_in->bb_rate": {
+    "r2": [
+     0.439,
+     0.4448
+    ],
+    "loo_mse_x1e5": [
+     29.226,
+     29.218
+    ],
+    "per_sd": 0.00187,
+    "ci": [
+     -0.00066,
+     0.00442
+    ],
+    "outcome_sd": 0.02185,
+    "n": 234
+   },
+   "surprise_offspeed_in->o_swing": {
+    "r2": [
+     0.3921,
+     0.393
+    ],
+    "loo_mse_x1e5": [
+     54.776,
+     55.335
+    ],
+    "per_sd": 0.00095,
+    "ci": [
+     -0.00253,
+     0.00463
+    ],
+    "outcome_sd": 0.02874,
+    "n": 234
+   },
+   "surprise_offspeed_in->whiff_per_swing": {
+    "r2": [
+     0.594,
+     0.5941
+    ],
+    "loo_mse_x1e5": [
+     96.446,
+     97.419
+    ],
+    "per_sd": 0.0006,
+    "ci": [
+     -0.00378,
+     0.00487
+    ],
+    "outcome_sd": 0.04671,
+    "n": 234
+   },
+   "surprise_offspeed_in->zone_rate": {
+    "r2": [
+     0.4916,
+     0.4975
+    ],
+    "loo_mse_x1e5": [
+     42.633,
+     42.474
+    ],
+    "per_sd": -0.00239,
+    "ci": [
+     -0.00508,
+     0.00067
+    ],
+    "outcome_sd": 0.02777,
+    "n": 234
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-08T06:32:38.768977+00:00",
+ "seconds": 36.3
+}
