@@ -3,7 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#1F4A37">
+<meta name="theme-color" content="#1F4A37" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#143326" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
 <title>Baseball Research Lab</title>
 <style>
 /*FONTS*/
@@ -25,8 +27,26 @@
   --good: #1F6B47;
   --bad: #B42A30;
   --live: #C8312B;
+  --hover: #E7ECE8;
+  --rule-strong: #A9B6AD;
+  --mid: #9AA8A0;
+  --tint: #F6F8F5;
+  --good-tint: #EAF1EC;
+  --grass: #E6EEE4;
+  --dirt: #E9DFC7;
+  --field-line: #FFFFFF;
   --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
   --body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+/* Night: the same ballpark green, a dark field around it; team colors are lifted in script (teamColors) so dark
+   club colors stay readable. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0D1511; --surface: #141F19; --ink: #E4EBE6; --muted: #9AACA0; --rule: #2A3A31; --rule-soft: #1D2A23;
+    --board: #173B2C; --board-slot: #0F2A1E; --board-line: #2A5541; --good: #4DB184; --bad: #E2595F;
+    --hover: #1B2821; --rule-strong: #3F5348; --mid: #5F7468; --tint: #18241E; --good-tint: #163326;
+    --grass: #1A2A20; --dirt: #2B271E; --field-line: #3B4B41;
+  }
 }
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
@@ -59,12 +79,12 @@ button { font: inherit; color: inherit; }
 .dstrip-day.today b::after { content: ""; display: block; width: 6px; height: 6px; margin: 2px auto 0; border-radius: 50%; background: var(--lamp); }
 .dstrip-day.today { padding-top: 4px; }
 .dstrip-day b { font-family: var(--display); font-weight: 700; font-size: 23px; line-height: 1.05; color: var(--ink); }
-.dstrip-day:hover { background: #E7ECE8; }
+.dstrip-day:hover { background: var(--hover); }
 .dstrip-day[aria-current="date"] { background: var(--board); color: var(--chalk-dim); }
 .dstrip-day[aria-current="date"] b { color: var(--chalk); }
 .dstrip-step { display: inline-flex; align-items: center; justify-content: center; height: 44px; border-radius: 10px; color: var(--ink); }
 .dstrip-step svg { width: 16px; height: 16px; }
-.dstrip-step:hover { background: #E7ECE8; }
+.dstrip-step:hover { background: var(--hover); }
 .dstrip-step[aria-disabled="true"] { opacity: .28; pointer-events: none; }
 .dstrip-pick { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); color: var(--ink); cursor: pointer; }
 .dstrip-pick svg { width: 20px; height: 20px; }
@@ -72,7 +92,7 @@ button { font: inherit; color: inherit; }
 .replay-note { font-size: 14px; color: var(--muted); margin: 12px 0 0; padding: 9px 12px; border-left: 3px solid var(--lamp); background: var(--surface); border-radius: 0 8px 8px 0; }
 .cards { list-style: none; margin: 14px 0 32px; padding: 0; display: grid; gap: 12px; }
 .card { display: block; position: relative; overflow: hidden; text-decoration: none; background: var(--surface); border: 1px solid var(--rule); border-radius: 14px; padding: 12px 16px 16px; }
-.card:hover { border-color: #A9B6AD; }
+.card:hover { border-color: var(--rule-strong); }
 .card-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; display: flex; }
 .card-bar i { display: block; height: 100%; }
 .card-top { display: flex; justify-content: space-between; align-items: center; font-size: 15px; color: var(--muted); margin-bottom: 6px; }
@@ -191,7 +211,7 @@ button { font: inherit; color: inherit; }
 .wp-plot svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .wp-a { opacity: .17; }
 .wp-grid { stroke: var(--rule-soft); stroke-width: 1; }
-.wp-mid { stroke: #9AA8A0; stroke-width: 1.5; }
+.wp-mid { stroke: var(--mid); stroke-width: 1.5; }
 .wp-line { fill: none; stroke: var(--ink); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
 .wp-team, .wp-y { position: absolute; right: calc(100% + 10px); font-family: var(--display); font-weight: 700; font-size: 17px; line-height: 1; }
 .wp-team.wp-hi { top: 0; }
@@ -234,7 +254,7 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .lineup .who { min-width: 0; }
 .lineup .who small { display: block; color: var(--muted); font-size: 14px; white-space: normal; }
 .lineup .line { font-family: var(--display); font-weight: 700; font-size: 19px; white-space: nowrap; }
-.lineup li.sp { background: #F6F8F5; }
+.lineup li.sp { background: var(--tint); }
 .lineup li.lineup-h { grid-template-columns: 1fr 64px 64px; align-items: center; border-top: 0; border-radius: 8px 8px 0 0; padding: 8px 12px; border-bottom: 3px solid var(--tc); }
 .lineup li.lineup-h b { font-family: var(--display); font-size: 20px; color: var(--tc); }
 .lineup li.lineup-h span { font-size: 14px; font-weight: 700; color: var(--muted); text-align: right; }
@@ -274,7 +294,7 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .pa { display: grid; grid-template-columns: 42px 1fr auto; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--rule-soft); align-items: start; }
 .tag { font-family: var(--display); font-weight: 700; font-size: 15px; text-align: center; border-radius: 4px; padding: 1px 0; border: 1.5px solid var(--rule); color: var(--muted); }
 .tag.hit { color: #fff; border-color: transparent; }
-.tag.k { background: var(--ink); color: var(--chalk); border-color: var(--ink); }
+.tag.k { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .tag.bb { border-color: var(--ink); color: var(--ink); }
 .pa .what { font-size: 16px; }
 .pa .meta { display: block; font-size: 14px; color: var(--muted); }
@@ -325,13 +345,13 @@ small { font-size: 14px; }
 .seasons { display: grid; gap: 12px; }
 @media (min-width: 640px) { .seasons { grid-template-columns: 1fr 1fr; } }
 .seasons th small { font-weight: 400; }
-.seasons tr.you td { font-weight: 700; background: #F1F6F2; }
+.seasons tr.you td { font-weight: 700; background: var(--good-tint); }
 .ladder { list-style: none; padding: 0; margin: 0; }
 .ladder li { display: grid; grid-template-columns: 118px 1fr 64px; gap: 10px; align-items: center; padding: 8px 0; }
 .ladder li.you span:first-child { font-weight: 700; }
 .ladder .bar { position: relative; height: 16px; background: var(--rule-soft); border-radius: 3px; overflow: hidden; }
-.ladder .bar::before { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: #A9B6AD; }
-.ladder .bar i { position: absolute; top: 0; bottom: 0; background: #9AA8A0; }
+.ladder .bar::before { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: var(--rule-strong); }
+.ladder .bar i { position: absolute; top: 0; bottom: 0; background: var(--mid); }
 .ladder .bar i.pos { left: 50%; background: var(--board); }
 .ladder .bar i.neg { right: 50%; background: var(--bad); }
 .ladder .v { font-family: var(--display); font-weight: 700; font-size: 19px; text-align: right; }
@@ -346,8 +366,8 @@ small { font-size: 14px; }
 .games-list .call { border: 1px solid var(--rule-soft); border-radius: 8px; padding: 6px 8px; min-width: 0; }
 .games-list .call small { display: block; color: var(--muted); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .games-list .call b { font-family: var(--display); font-size: 19px; font-weight: 700; }
-.games-list .call.yes { border-color: var(--board); background: #EAF1EC; }
-.games-list .call.yes b { color: var(--board); }
+.games-list .call.yes { border-color: var(--good); background: var(--good-tint); }
+.games-list .call.yes b { color: var(--good); }
 .games-list .call.no b { color: var(--bad); }
 .empty-state { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 18px; }
 .empty-state h2 { margin-top: 0; }
@@ -395,6 +415,13 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   .games-list .calls { grid-template-columns: repeat(2, 1fr); }
 }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } .pill i { animation: none; } }
+@media (prefers-color-scheme: dark) {
+  .tab[aria-selected="true"] { border-bottom-color: var(--lamp); }
+  .ver[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+  .mark.yes { color: var(--good); }
+  .ladder .bar i.pos { background: var(--good); }
+  .games-list .call.yes { border-color: var(--good); }
+}
 </style>
 </head>
 <body>
@@ -462,7 +489,19 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var a = TEAM_COLORS[(f.away && f.away.abbr) || ""] || ["#2E5C9A", "#2E5C9A"], h = TEAM_COLORS[(f.home && f.home.abbr) || ""] || ["#B42A30", "#B42A30"];
     var ca = a[0], ch = h[0];
     if (colorGap(ca, ch) < 120) { if (colorGap(a[1], ch) >= 120) ca = a[1]; else if (colorGap(ca, h[1]) >= 120) ch = h[1]; }
-    return { away: ca, home: ch };
+    return NIGHT ? { away: lift(ca), home: lift(ch) } : { away: ca, home: ch };
+  }
+  /* Night theme: club colors darker than a set brightness are mixed with white until they read on the dark field. */
+  var NIGHT = !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  function luminance(rgb) {
+    var c = rgb.map(function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  }
+  function lift(hex) {
+    var rgb = hexRgb(hex), t = 0;
+    while (luminance(rgb.map(function (v) { return v + (255 - v) * t; })) < 0.16 && t < 0.9) t += 0.05;
+    var out = rgb.map(function (v) { return Math.round(v + (255 - v) * t); });
+    return "#" + out.map(function (v) { return (v < 16 ? "0" : "") + v.toString(16); }).join("");
   }
   function dateLabel(ymd) {
     var d = new Date(ymd + "T12:00:00Z");
@@ -1608,18 +1647,18 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var W = 320, H = 300, hx = 160, hy = 282, k = 1.36, s45 = Math.SQRT1_2;
     var h = '<div class="spray"><svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="' + balls.length + ' balls in play and where they landed">';
     var fence = 238, inf = 66;
-    h += '<path d="M' + (hx - fence * s45).toFixed(1) + " " + (hy - fence * s45).toFixed(1) + " A" + fence + " " + fence + " 0 0 1 " + (hx + fence * s45).toFixed(1) + " " + (hy - fence * s45).toFixed(1) + " L" + hx + " " + hy + ' Z" fill="#E6EEE4" stroke="none"/>';
-    h += '<path d="M' + (hx - inf * s45).toFixed(1) + " " + (hy - inf * s45).toFixed(1) + " A" + inf + " " + inf + " 0 0 1 " + (hx + inf * s45).toFixed(1) + " " + (hy - inf * s45).toFixed(1) + " L" + hx + " " + hy + ' Z" fill="#E9DFC7" stroke="none"/>';
-    h += '<path d="M' + hx + " " + hy + " L" + (hx - fence * s45).toFixed(1) + " " + (hy - fence * s45).toFixed(1) + " M" + hx + " " + hy + " L" + (hx + fence * s45).toFixed(1) + " " + (hy - fence * s45).toFixed(1) + '" stroke="#FFFFFF" stroke-width="2"/>';
+    h += '<path d="M' + (hx - fence * s45).toFixed(1) + " " + (hy - fence * s45).toFixed(1) + " A" + fence + " " + fence + " 0 0 1 " + (hx + fence * s45).toFixed(1) + " " + (hy - fence * s45).toFixed(1) + " L" + hx + " " + hy + ' Z" fill="var(--grass)" stroke="none"/>';
+    h += '<path d="M' + (hx - inf * s45).toFixed(1) + " " + (hy - inf * s45).toFixed(1) + " A" + inf + " " + inf + " 0 0 1 " + (hx + inf * s45).toFixed(1) + " " + (hy - inf * s45).toFixed(1) + " L" + hx + " " + hy + ' Z" fill="var(--dirt)" stroke="none"/>';
+    h += '<path d="M' + hx + " " + hy + " L" + (hx - fence * s45).toFixed(1) + " " + (hy - fence * s45).toFixed(1) + " M" + hx + " " + hy + " L" + (hx + fence * s45).toFixed(1) + " " + (hy - fence * s45).toFixed(1) + '" stroke="var(--field-line)" stroke-width="2"/>';
     h += '<path d="M' + (hx - fence * s45).toFixed(1) + " " + (hy - fence * s45).toFixed(1) + " A" + fence + " " + fence + " 0 0 1 " + (hx + fence * s45).toFixed(1) + " " + (hy - fence * s45).toFixed(1) + '" fill="none" stroke="var(--rule)" stroke-width="2"/>';
     var d = 38;
-    h += '<path d="M' + hx + " " + hy + " L" + (hx + d) + " " + (hy - d) + " L" + hx + " " + (hy - 2 * d) + " L" + (hx - d) + " " + (hy - d) + ' Z" fill="none" stroke="#FFFFFF" stroke-width="2"/>';
+    h += '<path d="M' + hx + " " + hy + " L" + (hx + d) + " " + (hy - d) + " L" + hx + " " + (hy - 2 * d) + " L" + (hx - d) + " " + (hy - d) + ' Z" fill="none" stroke="var(--field-line)" stroke-width="2"/>';
     balls.forEach(function (p) {
       var c = p.contact, x = hx + (c.x - 125.42) * k, y = hy - (198.27 - c.y) * k, side = p.half === "top" ? "away" : "home", o = p.box_outcome;
       x = Math.max(6, Math.min(W - 6, x)); y = Math.max(6, Math.min(H - 6, y));
       var hit = /single|double|triple|home_run/.test(o);
       if (o === "home_run") h += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="6.5" fill="var(--lamp)" stroke="var(--ink)" stroke-width="2"><title>' + esc(lastName(p.batter_name) + ", home run") + "</title></circle>";
-      else h += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="5.5" fill="' + (hit ? "var(--" + side + ")" : "#FFFFFF") + '" stroke="var(--' + side + ')" stroke-width="2"><title>' + esc(lastName(p.batter_name) + ", " + (hit ? o.replace(/_/g, " ") : "out")) + "</title></circle>";
+      else h += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="5.5" fill="' + (hit ? "var(--" + side + ")" : "var(--surface)") + '" stroke="var(--' + side + ')" stroke-width="2"><title>' + esc(lastName(p.batter_name) + ", " + (hit ? o.replace(/_/g, " ") : "out")) + "</title></circle>";
     });
     h += "</svg>";
     h += '<div class="legend"><span class="away-c"><i class="f"></i>' + esc(f.away.abbr) + ' hit</span><span class="away-c"><i></i>' + esc(f.away.abbr) + ' out</span><span class="home-c"><i class="f"></i>' + esc(f.home.abbr) + ' hit</span><span class="home-c"><i></i>' + esc(f.home.abbr) + ' out</span><span><i class="hr"></i>Home run</span></div></div>';
@@ -1900,9 +1939,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var y = r * rowH, a = A[r] || 0, hh = H[r] || 0, wa = a / maxP * half, wh = hh / maxP * half;
       o += '<rect x="' + (mid - gut - wa).toFixed(1) + '" y="' + (y + 4) + '" width="' + wa.toFixed(1) + '" height="16" fill="var(--away)"/>';
       o += '<rect x="' + (mid + gut) + '" y="' + (y + 4) + '" width="' + wh.toFixed(1) + '" height="16" fill="var(--home)"/>';
-      o += '<text x="' + mid + '" y="' + (y + 17) + '" text-anchor="middle" font-size="13" font-weight="700">' + r + (r === cap ? "+" : "") + "</text>";
-      if (a >= .02) o += '<text x="' + (mid - gut - wa - 5).toFixed(1) + '" y="' + (y + 17) + '" text-anchor="end" font-size="12" fill="#56645B">' + pct(a) + "</text>";
-      if (hh >= .02) o += '<text x="' + (mid + gut + wh + 5).toFixed(1) + '" y="' + (y + 17) + '" font-size="12" fill="#56645B">' + pct(hh) + "</text>";
+      o += '<text x="' + mid + '" y="' + (y + 17) + '" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">' + r + (r === cap ? "+" : "") + "</text>";
+      if (a >= .02) o += '<text x="' + (mid - gut - wa - 5).toFixed(1) + '" y="' + (y + 17) + '" text-anchor="end" font-size="12" fill="var(--muted)">' + pct(a) + "</text>";
+      if (hh >= .02) o += '<text x="' + (mid + gut + wh + 5).toFixed(1) + '" y="' + (y + 17) + '" font-size="12" fill="var(--muted)">' + pct(hh) + "</text>";
     }
     return '<svg viewBox="0 0 ' + W + " " + svgH + '" role="img" aria-label="Share of simulated games ending with each run total, by team">' + o + "</svg>";
   }
@@ -2052,6 +2091,10 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   function boot(json) {
     D = json;
     window.addEventListener("hashchange", route);
+    if (window.matchMedia) {
+      var scheme = window.matchMedia("(prefers-color-scheme: dark)"), onScheme = function () { NIGHT = scheme.matches; route(); };
+      if (scheme.addEventListener) scheme.addEventListener("change", onScheme); else if (scheme.addListener) scheme.addListener(onScheme);
+    }
     route();
     setInterval(lcTick, 15000);
     setTimeout(lcTick, 1200);
