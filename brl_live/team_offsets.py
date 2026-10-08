@@ -122,8 +122,26 @@ class OffsetState:
         return {t: {s: [round(float(v), 5) for v in self.offsets(t, s, day)] for s in ('bat', 'fld')} for t in teams}
 
 
-def by_date(rows: list[dict], dates, k: float = 4000.0, half_life: float | None = None, sides=('bat', 'fld')) -> dict:
-    """{date: {team: {'bat': [7], 'fld': [7]}}}: offsets at the start of each requested date (earlier rows only)."""
+def center_table(tb: dict) -> dict:
+    """Offsets with the league's average (the plain mean over teams, per side and outcome class) taken out, so the
+    offsets move teams against each other and leave the league's level to the context offsets (CENTER-01)."""
+    if not tb:
+        return tb
+    out = {t: dict(v) for t, v in tb.items()}
+    for side in ('bat', 'fld'):
+        vals = [np.asarray(v[side], float) for v in tb.values() if v.get(side) is not None]
+        if not vals:
+            continue
+        m = np.mean(vals, axis=0)
+        for t, v in tb.items():
+            if v.get(side) is not None:
+                out[t][side] = [round(float(x), 5) for x in np.asarray(v[side], float) - m]
+    return out
+
+
+def by_date(rows: list[dict], dates, k: float = 4000.0, half_life: float | None = None, sides=('bat', 'fld'), center: bool = False) -> dict:
+    """{date: {team: {'bat': [7], 'fld': [7]}}}: offsets at the start of each requested date (earlier rows only),
+    centered on the league when center is set."""
     want = sorted(set(str(d)[:10] for d in dates))
     days = defaultdict(list)
     for r in rows:
@@ -134,13 +152,13 @@ def by_date(rows: list[dict], dates, k: float = 4000.0, half_life: float | None 
     keys = sorted(set(days) | set(want))
     for d in keys:
         if d in want:
-            out[d] = st.table(_ord(d))
+            out[d] = center_table(st.table(_ord(d))) if center else st.table(_ord(d))
         st.absorb(days.get(d, []), opponents)
     return out
 
 
 def current_table(rows: list[dict], through: str | None = None, k: float = 4000.0, half_life: float | None = None,
-                  sides=('bat', 'fld'), source: str = '') -> dict:
+                  sides=('bat', 'fld'), source: str = '', center: bool = False) -> dict:
     """The production table: offsets after every row dated on or before `through` (default: all rows)."""
     through = through or max(r['date'] for r in rows)
     use = [r for r in rows if r['date'] <= through]
@@ -155,7 +173,7 @@ def current_table(rows: list[dict], through: str | None = None, k: float = 4000.
                   for s in ('bat', 'fld') if t in st.O[s]} for t in sorted(set(st.O['bat']) | set(st.O['fld']))}
     return {'schema': 'brl.team-offsets.v1', 'labels': list(LABELS), 'estimated_through': through, 'k': k, 'half_life': half_life,
             'sides': list(sides), 'last_day': st.last_day, 'league_share': [round(float(v), 6) for v in st.share()],
-            'source': source, 'teams': st.table(), 'counts': counts}
+            'source': source, 'center': bool(center), 'teams': center_table(st.table()) if center else st.table(), 'counts': counts}
 
 
 def load_table(path: Path = TABLE_PATH) -> dict:
@@ -184,4 +202,9 @@ def game_log_multipliers(table: dict, away: str, home: str, day: str | None = No
             return np.log((f * o + k * q) / (f * e + k * q))
         v = (teams.get(str(team)) or {}).get(side)
         return np.asarray(v, float) if v is not None else np.zeros(7)
+    if table.get('center'):
+        names = sorted(set(counts) | set(teams))
+        mean = {side: np.mean([get(t, side) for t in names], axis=0) if names else np.zeros(7) for side in ('bat', 'fld')}
+        raw = get
+        get = lambda team, side: raw(team, side) - mean[side]   # noqa: E731
     return {'away': (get(away, 'bat') + get(home, 'fld')).tolist(), 'home': (get(home, 'bat') + get(away, 'fld')).tolist()}

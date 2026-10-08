@@ -69,6 +69,45 @@ def test_current_table_and_game_multipliers():
     assert unknown == {'away': [0.0] * 7, 'home': [0.0] * 7}
 
 
+def test_centered_offsets_leave_the_league_level_alone():
+    # Every team's fielders get 30% more strikeouts than predicted: a league-level miss, not a team effect.
+    rows = []
+    for r in rows_for(n_days=40, k_boost=1.0, seed=2):
+        rows.append(r)
+    rng = np.random.default_rng(4)
+    boosted = []
+    for r in rows:
+        r = dict(r)
+        if r['side'] == 'bat':
+            true = BASE.copy(); true[1] *= 1.3; true /= true.sum()
+            obs = np.bincount(rng.choice(7, size=r['n'], p=true), minlength=7).tolist()
+            boosted.append((r['date'], r['team'], obs))
+    obs_of = {}
+    for d, t, o in boosted:
+        obs_of.setdefault(d, []).append(o)
+    # Rebuild matching batting and fielding rows with the boosted counts.
+    out = []
+    by_day = {}
+    for r in rows:
+        by_day.setdefault(r['date'], []).append(r)
+    for d, day in by_day.items():
+        bats = [r for r in day if r['side'] == 'bat']; flds = [r for r in day if r['side'] == 'fld']
+        for b, f, o in zip(bats, flds, obs_of[d]):
+            out.append({**b, 'obs': o}); out.append({**f, 'obs': o})
+    dates = sorted(by_day)
+    k_index = to.LABELS.index('K')
+    raw = to.by_date(out, dates, k=200.0)[dates[-1]]
+    cen = to.by_date(out, dates, k=200.0, center=True)[dates[-1]]
+    assert np.mean([raw[t]['bat'][k_index] + raw[t]['fld'][k_index] for t in raw]) > 0.1      # the league miss sits in the offsets
+    for side in ('bat', 'fld'):
+        assert abs(np.mean([cen[t][side][k_index] for t in cen])) < 1e-4                     # centered: no league level left
+    table = to.current_table(out, k=200.0, center=True)
+    assert table['center'] is True
+    m = to.game_log_multipliers(table, away='B', home='A', day=table['estimated_through'])
+    ms = [to.game_log_multipliers(table, away=a, home=h, day=table['estimated_through'])['away'][k_index] for a in 'ABCD' for h in 'ABCD' if a != h]
+    assert abs(np.mean(ms)) < 0.02 and len(m['away']) == 7
+
+
 class _Ctx:
     def __init__(self, side):
         self.batting_side = side

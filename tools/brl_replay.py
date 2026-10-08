@@ -11,7 +11,7 @@ Settings come from tools/replay_params.json on the trigger branch:
   offsets      apply the production context offsets (default true)
   environment  path in the repository of a run-environment table (brl_live/environment.py) to apply per game
   conditions   path on the ledger branch of the game conditions file (tools/brl_game_conditions.py), needed with environment
-  team_offsets {'rows': ledger-branch path of team residual rows (research/team-resid-*.json.gz), 'k', 'half_life', 'sides'}:
+  team_offsets {'rows': ledger-branch path of team residual rows (research/team-resid-*.json.gz), 'k', 'half_life', 'sides', 'center'}:
                team offsets as they stood at the start of each date (brl_live/team_offsets.py)
   age_layer    {'receipt': ledger-branch path of a stage2 research receipt, 'fit': 'fit_2025' | 'fit_2026' | 'fit_all', 'variant': 'v2'}:
                the aging and recency layer (brl_live/age_layer.py)
@@ -227,7 +227,7 @@ def main():
                 raise ValueError('team residual rows missing on the ledger branch')
             doc = json.loads(gzip.decompress(raw))
             team_offsets = by_date(doc['rows'], sorted(games['date'].astype(str).unique()), k=float(spec.get('k', 4000.0)),
-                                   half_life=spec.get('half_life'), sides=tuple(spec.get('sides', ('bat', 'fld'))))
+                                   half_life=spec.get('half_life'), sides=tuple(spec.get('sides', ('bat', 'fld'))), center=bool(spec.get('center')))
             sizes = [max((abs(v) for t in day.values() for s in t.values() for v in s), default=0.0) for day in team_offsets.values()]
             receipt['team_offsets'] = {**spec, 'dates': len(team_offsets), 'largest_offset': round(float(max(sizes, default=0.0)), 4)}
         age_layer = None
