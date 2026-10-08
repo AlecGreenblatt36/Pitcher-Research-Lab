@@ -152,6 +152,8 @@ SETS = {
     'matchup': {'v2': {'xvalue': True, 'recent_days': 30}, 'matchup': {'xvalue': True, 'recent_days': 30, 'matchup': True},
                 'matchup_k30': {'xvalue': True, 'recent_days': 30, 'matchup': True, 'k_type': 30.0},
                 'matchup_k150': {'xvalue': True, 'recent_days': 30, 'matchup': True, 'k_type': 150.0}},
+    'workload': {'v2': {'xvalue': True, 'recent_days': 30}, 'workload': {'xvalue': True, 'recent_days': 30, 'workload': True},
+                 'workload_matchup': {'xvalue': True, 'recent_days': 30, 'workload': True, 'matchup': True}},
     'defense': {'v2': {'xvalue': True, 'recent_days': 30}, 'defense': {'xvalue': True, 'recent_days': 30, 'defense': True},
                 'defense_k200': {'xvalue': True, 'recent_days': 30, 'defense': True, 'k_def': 200.0},
                 'defense_730': {'xvalue': True, 'recent_days': 30, 'defense': True, 'defense_days': 730}},

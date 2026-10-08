@@ -50,13 +50,15 @@ TYPE_FEATURES = ['b_whiff_fb', 'b_whiff_br', 'b_whiff_os', 'p_whiff_fb', 'p_whif
 # Matchup interactions: the batter's whiff weakness by pitch family (beyond his overall rate and the league's family rates),
 # weighted by tonight's pitcher's family mix; and his fastball weakness times the pitcher's velocity above the league.
 MATCHUP_FEATURES = ['mx_whiff', 'mx_velo']
+# Pitcher workload: pitched yesterday, back within three days, pitches in his last outing and over the last 14 days (hundreds).
+WORKLOAD_FEATURES = ['p_b2b', 'p_rest_short', 'p_last_n', 'p_load14']
 DEFENSE_FEATURES = ['f_def']            # the fielding team's out rate on fieldable balls in play above the league, prior window
 ENV_FEATURES = ['env_hr', 'env_k', 'env_bb', 'env_out', 'season_day']   # league run environment of the last 30 days vs the whole history
 ENV_CLASSES = {'env_hr': ('HR',), 'env_k': ('K',), 'env_bb': ('BB_HBP',), 'env_out': ('BIP_OUT',)}
 DEFAULT_PARAMS = {'k_rate': 150.0, 'k_bip': 60.0, 'k_velo': 100.0, 'xvalue': False, 'recent_days': 0,
                   'k_recent_pitch': 100.0, 'k_recent_bip': 40.0, 'k_cell': 40.0, 'pitch_types': False, 'k_type': 60.0,
                   'defense': False, 'k_def': 400.0, 'defense_days': 365, 'environment': False, 'env_days': 30, 'k_env': 2000.0,
-                  'matchup': False}
+                  'matchup': False, 'workload': False}
 FIELDABLE = {'BIP_OUT', '1B', '2B_3B', 'OTHER_REACH'}
 ENV_LABELS = ['BIP_OUT', 'K', 'BB_HBP', '1B', '2B_3B', 'HR', 'OTHER_REACH']
 ENV_INDEX = {l: i for i, l in enumerate(ENV_LABELS)}
@@ -82,6 +84,8 @@ def feature_names(params: dict | None = None) -> list[str]:
         names += TYPE_FEATURES
     if p.get('matchup'):
         names += MATCHUP_FEATURES
+    if p.get('workload'):
+        names += WORKLOAD_FEATURES
     if p.get('defense'):
         names += DEFENSE_FEATURES
     if p.get('environment'):
@@ -224,6 +228,7 @@ class _Sums:
         self.bcells, self.pcells = defaultdict(lambda: np.zeros((EV_BINS, LA_BINS))), defaultdict(lambda: np.zeros((EV_BINS, LA_BINS)))
         self.rec_p, self.rec_b = defaultdict(list), defaultdict(list)     # player -> [[day ordinal, pitch sums, bip sums], ...] per date
         self.env_days: list = []                                            # [day ordinal, counts by class (7)] per date, league wide
+        self.outings: dict = defaultdict(list)                              # pitcher -> [[day ordinal, pitches], ...] per date pitched
         self.env_total = np.zeros(7)
         self.names = feature_names(self.p)
         self.X = {name: i for i, name in enumerate(self.names)}
@@ -305,6 +310,16 @@ class _Sums:
             out[X['mx_whiff']] = sum(share[g] / total * dev[g] for g in dev)
             league_velo = Lp[PS['velo']] / max(Lp[PS['fb']], 1e-9)
             out[X['mx_velo']] = dev['fb'] * (own_velo - league_velo) / 5.0
+        if P.get('workload'):
+            outs_ = self.outings.get(pitcher)
+            if outs_:
+                rest = today - outs_[-1][0]
+                out[X['p_b2b']] = float(rest == 1)
+                out[X['p_rest_short']] = float(rest <= 3)
+                out[X['p_last_n']] = outs_[-1][1] / 100.0
+                out[X['p_load14']] = sum(n for d_, n in outs_[-14:] if d_ >= today - 14) / 100.0
+            else:
+                out[X['p_b2b']] = out[X['p_rest_short']] = out[X['p_last_n']] = out[X['p_load14']] = 0.0
         if P.get('recent_days'):
             k_rp, k_rb = float(P['k_recent_pitch']), float(P['k_recent_bip'])
             rp, rpb = self._recent(self.rec_p[pitcher], today) if pitcher in self.rec_p else (self.zero_p, self.zero_b)
@@ -345,12 +360,14 @@ class _Sums:
             self.env_days.append([today, counts]); self.env_total += counts
         cur_velo: dict = {}
         day_p: dict = {}; day_b: dict = {}
+        day_n: dict = {}
         want_xv, recent = bool(self.p.get('xvalue')), int(self.p.get('recent_days') or 0)
         for r in range(len(batters)):
             if np.isnan(M[r, 0]):
                 continue
             b, p = int(batters[r]), int(pitchers[r])
             self.bp[b] += M[r]; self.pp[p] += M[r]; self.Lp += M[r]
+            day_n[p] = day_n.get(p, 0.0) + float(M[r, PS['n']])
             if M[r, PS['fb']] > 0:
                 cv = cur_velo.get(p, (0.0, 0.0)); cur_velo[p] = (cv[0] + M[r, PS['fb']], cv[1] + M[r, PS['velo']])
             v = None
@@ -377,6 +394,8 @@ class _Sums:
             for key, e in day_b.items():
                 self.rec_b[key].append(e)
         self.last_velo.update(cur_velo)
+        for p_, n_ in day_n.items():
+            self.outings[p_].append([today, n_])
 
 
 def check_table(table: pd.DataFrame) -> None:
