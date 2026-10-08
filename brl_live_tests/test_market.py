@@ -101,3 +101,20 @@ def test_record_counts_line_moves_toward_our_number():
     assert build_record(ledger)['line_moves'] == {'threshold_logit': 0.1, 'n': 1, 'toward_ours': 0}
     ledger['market']['1']['p_home'] = 0.52
     assert build_record(ledger)['line_moves']['n'] == 0                                       # the line did not move
+
+
+def test_capture_adds_the_several_books_consensus():
+    import json as _json
+    from brl_live.market import vig_free_home
+    rows = [{'gameView': {'homeTeam': {'fullName': 'Atlanta Braves'}, 'awayTeam': {'fullName': 'Los Angeles Dodgers'}, 'startDate': '2026-10-07T23:08:00+00:00'},
+             'oddsViews': [{'sportsbook': 'draftkings', 'currentLine': {'homeOdds': 128, 'awayOdds': -155}}, {'sportsbook': 'fanduel', 'currentLine': {'homeOdds': 125, 'awayOdds': -148}}]}]
+    html = '<script id="__NEXT_DATA__" type="application/json">' + _json.dumps({'props': {'pageProps': {'oddsTables': [{'oddsTableModel': {'gameRows': rows}}]}}}) + '</script>'
+    def fetch(url):
+        return (schedule() if 'statsapi' in url else board()), {}
+    ledger = {}
+    r = capture(fetch, '2026-10-07', ledger, '2026-10-07T20:00:00+00:00', books_fetch=lambda url: html)
+    m = ledger['market']['1']
+    assert m['n_books'] == 2 and abs(m['p_home_cons'] - round((vig_free_home(128, -155) + vig_free_home(125, -148)) / 2, 4)) < 1e-9
+    assert m['first_p_home_cons'] == m['p_home_cons'] and r['books']['games_with_consensus'] == 1
+    r = capture(fetch, '2026-10-07', ledger, '2026-10-07T20:15:00+00:00', books_fetch=lambda url: (_ for _ in ()).throw(OSError('down')))
+    assert 'error' in r['books'] and ledger['market']['1']['p_home'] > 0

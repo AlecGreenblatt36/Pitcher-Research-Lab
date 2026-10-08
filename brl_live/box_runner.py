@@ -186,7 +186,8 @@ def _market(runner,ledger):
     now=runner.clock()
     try:
         day=now.astimezone(ZoneInfo('America/New_York')).date().isoformat()
-        ledger['market_receipt']=capture_market(runner.net.json,day,ledger,now.isoformat())
+        from .market_books import fetch_html
+        ledger['market_receipt']=capture_market(runner.net.json,day,ledger,now.isoformat(),books_fetch=fetch_html)
     except Exception as exc:
         ledger['market_receipt']={'error':type(exc).__name__+': '+str(exc)[:200],'at':now.isoformat()}
 

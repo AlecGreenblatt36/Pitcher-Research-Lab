@@ -168,8 +168,11 @@ def match(games: list, lines: list) -> dict:
     return out
 
 
-def capture(fetch_json, date_ymd: str, ledger: dict, now_iso: str) -> dict:
-    """Store the latest pregame market line per game in ledger['market']; returns a short receipt."""
+def capture(fetch_json, date_ymd: str, ledger: dict, now_iso: str, books_fetch=None) -> dict:
+    """Store the latest pregame market line per game in ledger['market']; returns a short receipt.
+
+    books_fetch: optional page reader for the several-books consensus (brl_live/market_books.py); a failure there
+    is recorded and the single-book line stands."""
     market = ledger.setdefault('market', {})
     schedule, _ = fetch_json(MLB_SCHEDULE.format(date=date_ymd))
     games = schedule_games(schedule)
@@ -191,11 +194,24 @@ def capture(fetch_json, date_ymd: str, ledger: dict, now_iso: str) -> dict:
                       'first_captured_at': prev.get('first_captured_at', prev.get('captured_at', now_iso)),
                       'source': 'ESPN public scoreboard'}
         captured += 1
+    books_note = None
+    if books_fetch is not None:
+        try:
+            from .market_books import consensus_for
+            pre = [g for g in games if g['state'] == 'Preview' and str(g['game_pk']) in market and market[str(g['game_pk'])].get('captured_at') == now_iso]
+            cons = consensus_for(pre, date_ymd, books_fetch)
+            for pk, c in cons.items():
+                m = market[str(pk)]
+                m.update(c)
+                m.setdefault('first_p_home_cons', c['p_home_cons'])
+            books_note = {'games_with_consensus': len(cons), 'mean_books': round(sum(c['n_books'] for c in cons.values()) / len(cons), 2) if cons else 0}
+        except Exception as exc:
+            books_note = {'error': type(exc).__name__ + ': ' + str(exc)[:160]}
     # Structure-only diagnostics (key names, no values) so a changed feed shape can be read from the ledger.
     events = board.get('events') or []
     comp0 = ((events[0].get('competitions') or [{}])[0]) if events else {}
     odds0 = (comp0.get('odds') or [{}])[0] if comp0 else {}
-    return {'date': date_ymd, 'schedule_games': len(games), 'lines_seen': len(lines), 'matched': len(matched), 'captured_pregame': captured,
+    return {'date': date_ymd, 'schedule_games': len(games), 'lines_seen': len(lines), 'matched': len(matched), 'captured_pregame': captured, 'books': books_note,
             'events': len(events), 'competition_keys': sorted(comp0.keys())[:40], 'odds_keys': sorted(odds0.keys())[:40],
             'odds_subkeys': {k: sorted(v.keys())[:20] for k, v in odds0.items() if isinstance(v, dict)},
             'moneyline_shape': {k: (sorted(v.keys())[:10] if isinstance(v, dict) else type(v).__name__) for k, v in (odds0.get('moneyline') or {}).items()} if isinstance(odds0.get('moneyline'), dict) else None,

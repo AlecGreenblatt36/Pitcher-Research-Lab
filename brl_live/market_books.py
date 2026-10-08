@@ -92,3 +92,38 @@ def consensus_total(books: dict, phase: str = 'current'):
     common = max(set(totals), key=totals.count)
     at = [vig_free_home(ln[1], ln[2]) for ln in lines if ln[0] == common and abs(ln[1]) >= 100 and abs(ln[2]) >= 100]
     return common, (sum(at) / len(at) if at else None), len(at)
+
+
+ALIASES = {'Oakland Athletics': 'Athletics', 'Sacramento Athletics': 'Athletics', "Oakland A's": 'Athletics', 'Cleveland Indians': 'Cleveland Guardians'}
+UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
+
+
+def _norm(name):
+    name = str(name or '').strip()
+    return ALIASES.get(name, name)
+
+
+def fetch_html(url: str, timeout: int = 30) -> str:
+    from urllib.request import Request, urlopen
+    with urlopen(Request(url, headers={'User-Agent': UA, 'Accept': 'text/html', 'Accept-Language': 'en-US,en;q=0.9'}), timeout=timeout) as r:
+        return r.read().decode('utf-8', 'replace')
+
+
+def consensus_for(games: list, date_ymd: str, fetch=fetch_html) -> dict:
+    """game_pk -> {'p_home_cons', 'n_books', 'books'} for schedule games (dicts with game_pk, start, home/away names)."""
+    from .market import _minutes_apart
+    page = parse_page(fetch(page_url(date_ymd, 'moneyline')), 'moneyline')
+    out, used = {}, set()
+    for g in games:
+        home, away = _norm((g.get('home') or {}).get('name')), _norm((g.get('away') or {}).get('name'))
+        cands = [i for i, x in enumerate(page) if i not in used and _norm(x['home']) == home and _norm(x['away']) == away]
+        if not cands:
+            continue
+        best = min(cands, key=lambda i: _minutes_apart(page[i]['start'], g.get('start')))
+        if len(cands) > 1 and _minutes_apart(page[best]['start'], g.get('start')) > 180:
+            continue
+        used.add(best)
+        p, n = consensus_home(page[best]['books'], 'current')
+        if p is not None:
+            out[g['game_pk']] = {'p_home_cons': round(p, 4), 'n_books': n, 'books': sorted(page[best]['books'])}
+    return out
