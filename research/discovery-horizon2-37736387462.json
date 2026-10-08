@@ -1,0 +1,2564 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "horizon2",
+ "run_id": "37736387462",
+ "params": {
+  "experiment": "horizon2",
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "train_n": 500000,
+  "val_n": 500000,
+  "test_n": 700000,
+  "taus": [
+   0.0,
+   0.1,
+   0.15,
+   0.175,
+   0.2,
+   0.25
+  ],
+  "boot": 150,
+  "hitter_min_pitches": 3000,
+  "seed": 11
+ },
+ "started_at": "2026-10-08T06:13:22.140954+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 9.8
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 19.0
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 28.4
+  },
+  {
+   "stage": "shared fastball",
+   "at_seconds": 149.2
+  },
+  {
+   "stage": "shared own_type",
+   "at_seconds": 256.4
+  },
+  {
+   "stage": "typed baseline",
+   "at_seconds": 292.9
+  },
+  {
+   "stage": "typed within-type surprise",
+   "at_seconds": 503.0
+  },
+  {
+   "stage": "primary fastballs",
+   "at_seconds": 546.2
+  },
+  {
+   "stage": "gradient estimates",
+   "at_seconds": 590.4
+  },
+  {
+   "stage": "per-hitter",
+   "at_seconds": 607.1
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 713382
+ },
+ "results": {
+  "rebuild": {
+   "flight_time_50ft_s_p50": 0.3829,
+   "spin_accel_by_group": {
+    "four-seam": {
+     "asx": -4.25,
+     "asz": 17.67
+    },
+    "sinker": {
+     "asx": -7.06,
+     "asz": 8.8
+    },
+    "cutter": {
+     "asx": 0.81,
+     "asz": 8.37
+    },
+    "slider/sweeper": {
+     "asx": 2.77,
+     "asz": 1.54
+    },
+    "curveball": {
+     "asx": 3.2,
+     "asz": -7.71
+    },
+    "changeup/splitter": {
+     "asx": -5.56,
+     "asz": 4.52
+    },
+    "other": {
+     "asx": -2.37,
+     "asz": 0.98
+    }
+   },
+   "count_00_share": 0.2569
+  },
+  "surprise_sd_ft_s2": {
+   "within_x": 2.268,
+   "within_z": 2.257,
+   "between_x": 10.797,
+   "between_z": 8.779
+  },
+  "split": {
+   "train": 500000,
+   "select_2025": 500000,
+   "test_2026": 700000
+  },
+  "profiles": {
+   "shared_fastball": [
+    {
+     "tau": 0.0,
+     "select_2025": 0.5018545628123874,
+     "test_2026": 0.506405389890714
+    },
+    {
+     "tau": 0.1,
+     "select_2025": 0.49255113445916715,
+     "test_2026": 0.4965919606686174
+    },
+    {
+     "tau": 0.15,
+     "select_2025": 0.4836775337970023,
+     "test_2026": 0.48730383239293407
+    },
+    {
+     "tau": 0.175,
+     "select_2025": 0.4800589136497108,
+     "test_2026": 0.4835590481066507
+    },
+    {
+     "tau": 0.2,
+     "select_2025": 0.47841132010954507,
+     "test_2026": 0.4818966235768223
+    },
+    {
+     "tau": 0.25,
+     "select_2025": 0.48545157559769,
+     "test_2026": 0.48930778230427496
+    }
+   ],
+   "shared_own_type": [
+    {
+     "tau": 0.0,
+     "select_2025": 0.5018545628123874,
+     "test_2026": 0.506405389890714
+    },
+    {
+     "tau": 0.1,
+     "select_2025": 0.5008262049641156,
+     "test_2026": 0.505375556147606
+    },
+    {
+     "tau": 0.15,
+     "select_2025": 0.4997484791548751,
+     "test_2026": 0.5042825151460565
+    },
+    {
+     "tau": 0.175,
+     "select_2025": 0.4991614876664308,
+     "test_2026": 0.5036990537155863
+    },
+    {
+     "tau": 0.2,
+     "select_2025": 0.49860653526318627,
+     "test_2026": 0.5031470046648665
+    },
+    {
+     "tau": 0.25,
+     "select_2025": 0.4977915221093608,
+     "test_2026": 0.5023552014620761
+    }
+   ],
+   "typed_actual": {
+    "select_2025": 0.4751365055593417,
+    "test_2026": 0.4794846218359211
+   },
+   "typed_within": [
+    {
+     "tau": 0.0,
+     "select_2025": 0.475139593816091,
+     "test_2026": 0.4794882524308356
+    },
+    {
+     "tau": 0.1,
+     "select_2025": 0.47393592604094964,
+     "test_2026": 0.47827798529563637,
+     "delta_2026": [
+      -0.0012066,
+      -0.0012424,
+      -0.0011673
+     ]
+    },
+    {
+     "tau": 0.15,
+     "select_2025": 0.4726691316609087,
+     "test_2026": 0.47700976505608583,
+     "delta_2026": [
+      -0.0024749,
+      -0.0025573,
+      -0.002389
+     ]
+    },
+    {
+     "tau": 0.175,
+     "select_2025": 0.4720066337557355,
+     "test_2026": 0.47633826113848665,
+     "delta_2026": [
+      -0.0031464,
+      -0.0032584,
+      -0.0030279
+     ]
+    },
+    {
+     "tau": 0.2,
+     "select_2025": 0.4713787033831851,
+     "test_2026": 0.4757089841493195,
+     "delta_2026": [
+      -0.0037756,
+      -0.0039249,
+      -0.0036177
+     ]
+    },
+    {
+     "tau": 0.25,
+     "select_2025": 0.4705371073989713,
+     "test_2026": 0.4748668557299287,
+     "delta_2026": [
+      -0.0046178,
+      -0.0048558,
+      -0.0043754
+     ]
+    }
+   ],
+   "fastball_within": [
+    {
+     "tau": 0.0,
+     "select_2025": 0.46752536862170857,
+     "test_2026": 0.47450685562852524
+    },
+    {
+     "tau": 0.1,
+     "select_2025": 0.4662219118034143,
+     "test_2026": 0.47319609924085143,
+     "delta_2026": [
+      -0.0013108,
+      -0.0013751,
+      -0.0012411
+     ]
+    },
+    {
+     "tau": 0.15,
+     "select_2025": 0.4648622268671641,
+     "test_2026": 0.47182346557919735,
+     "delta_2026": [
+      -0.0026834,
+      -0.0028331,
+      -0.0025255
+     ]
+    },
+    {
+     "tau": 0.175,
+     "select_2025": 0.46414443392556515,
+     "test_2026": 0.4711032767800931,
+     "delta_2026": [
+      -0.0034036,
+      -0.0036083,
+      -0.0031875
+     ]
+    },
+    {
+     "tau": 0.2,
+     "select_2025": 0.46348283656560385,
+     "test_2026": 0.4704220337550105,
+     "delta_2026": [
+      -0.0040848,
+      -0.0043563,
+      -0.0038094
+     ]
+    },
+    {
+     "tau": 0.25,
+     "select_2025": 0.46260634952069496,
+     "test_2026": 0.4694933669493504,
+     "delta_2026": [
+      -0.0050135,
+      -0.0054341,
+      -0.0045888
+     ]
+    }
+   ]
+  },
+  "gradient_estimate": {
+   "select_2025/within/all": {
+    "tau_squared": 0.067424,
+    "se": 0.001034,
+    "ci": [
+     0.06516,
+     0.069343
+    ],
+    "tau_s": 0.2597,
+    "pitches": 500000
+   },
+   "select_2025/within/primary_fastball": {
+    "tau_squared": 0.064309,
+    "se": 0.001484,
+    "ci": [
+     0.061471,
+     0.06741
+    ],
+    "tau_s": 0.2536,
+    "pitches": 200304
+   },
+   "select_2025/between/all": {
+    "tau_squared": 0.010812,
+    "se": 0.000238,
+    "ci": [
+     0.010353,
+     0.011292
+    ],
+    "tau_s": 0.104,
+    "pitches": 500000
+   },
+   "test_2026/within/all": {
+    "tau_squared": 0.068438,
+    "se": 0.000874,
+    "ci": [
+     0.06644,
+     0.070248
+    ],
+    "tau_s": 0.2616,
+    "pitches": 700000
+   },
+   "test_2026/within/primary_fastball": {
+    "tau_squared": 0.067186,
+    "se": 0.0013,
+    "ci": [
+     0.064745,
+     0.069807
+    ],
+    "tau_s": 0.2592,
+    "pitches": 266116
+   },
+   "test_2026/between/all": {
+    "tau_squared": 0.011978,
+    "se": 0.000198,
+    "ci": [
+     0.01152,
+     0.0125
+    ],
+    "tau_s": 0.1094,
+    "pitches": 700000
+   }
+  },
+  "hitters": {
+   "n_hitters": 303,
+   "min_pitches": 3000,
+   "pooled_tau_squared": 0.066913,
+   "sd_observed": 0.016066,
+   "sd_noise": 0.010585,
+   "sd_true": 0.012086,
+   "split_half_correlation": 0.3174,
+   "rows": [
+    {
+     "batter": 453568,
+     "pitches": 3411,
+     "tau_squared": 0.034978,
+     "se": 0.009836,
+     "shrunk": 0.047702
+    },
+    {
+     "batter": 456781,
+     "pitches": 3756,
+     "tau_squared": 0.070479,
+     "se": 0.012585,
+     "shrunk": 0.068624
+    },
+    {
+     "batter": 457705,
+     "pitches": 6413,
+     "tau_squared": 0.060936,
+     "se": 0.009407,
+     "shrunk": 0.063191
+    },
+    {
+     "batter": 457759,
+     "pitches": 5753,
+     "tau_squared": 0.089152,
+     "se": 0.009723,
+     "shrunk": 0.080414
+    },
+    {
+     "batter": 467793,
+     "pitches": 6821,
+     "tau_squared": 0.081207,
+     "se": 0.00877,
+     "shrunk": 0.076276
+    },
+    {
+     "batter": 500743,
+     "pitches": 3790,
+     "tau_squared": 0.059388,
+     "se": 0.012151,
+     "shrunk": 0.06317
+    },
+    {
+     "batter": 502054,
+     "pitches": 5533,
+     "tau_squared": 0.075837,
+     "se": 0.010554,
+     "shrunk": 0.071976
+    },
+    {
+     "batter": 502110,
+     "pitches": 3905,
+     "tau_squared": 0.049501,
+     "se": 0.012006,
+     "shrunk": 0.05815
+    },
+    {
+     "batter": 502671,
+     "pitches": 7633,
+     "tau_squared": 0.053975,
+     "se": 0.008357,
+     "shrunk": 0.05816
+    },
+    {
+     "batter": 514888,
+     "pitches": 6264,
+     "tau_squared": 0.092582,
+     "se": 0.00962,
+     "shrunk": 0.082626
+    },
+    {
+     "batter": 516782,
+     "pitches": 3896,
+     "tau_squared": 0.078567,
+     "se": 0.011594,
+     "shrunk": 0.072982
+    },
+    {
+     "batter": 518595,
+     "pitches": 3330,
+     "tau_squared": 0.043107,
+     "se": 0.01305,
+     "shrunk": 0.055921
+    },
+    {
+     "batter": 518692,
+     "pitches": 7604,
+     "tau_squared": 0.069137,
+     "se": 0.008254,
+     "shrunk": 0.06843
+    },
+    {
+     "batter": 518934,
+     "pitches": 3606,
+     "tau_squared": 0.035699,
+     "se": 0.012105,
+     "shrunk": 0.05133
+    },
+    {
+     "batter": 519203,
+     "pitches": 3078,
+     "tau_squared": 0.048896,
+     "se": 0.012337,
+     "shrunk": 0.05809
+    },
+    {
+     "batter": 519317,
+     "pitches": 4749,
+     "tau_squared": 0.08155,
+     "se": 0.011036,
+     "shrunk": 0.074895
+    },
+    {
+     "batter": 521692,
+     "pitches": 6583,
+     "tau_squared": 0.057797,
+     "se": 0.009629,
+     "shrunk": 0.061336
+    },
+    {
+     "batter": 527038,
+     "pitches": 4729,
+     "tau_squared": 0.031997,
+     "se": 0.010465,
+     "shrunk": 0.046958
+    },
+    {
+     "batter": 542303,
+     "pitches": 7860,
+     "tau_squared": 0.060267,
+     "se": 0.008465,
+     "shrunk": 0.062454
+    },
+    {
+     "batter": 543309,
+     "pitches": 3329,
+     "tau_squared": 0.054633,
+     "se": 0.013049,
+     "shrunk": 0.061243
+    },
+    {
+     "batter": 543760,
+     "pitches": 7480,
+     "tau_squared": 0.081326,
+     "se": 0.00859,
+     "shrunk": 0.076489
+    },
+    {
+     "batter": 543807,
+     "pitches": 7101,
+     "tau_squared": 0.069489,
+     "se": 0.008639,
+     "shrunk": 0.068618
+    },
+    {
+     "batter": 543877,
+     "pitches": 3279,
+     "tau_squared": 0.069349,
+     "se": 0.013074,
+     "shrunk": 0.068036
+    },
+    {
+     "batter": 545341,
+     "pitches": 3867,
+     "tau_squared": 0.057011,
+     "se": 0.011458,
+     "shrunk": 0.061698
+    },
+    {
+     "batter": 545361,
+     "pitches": 4571,
+     "tau_squared": 0.043116,
+     "se": 0.01041,
+     "shrunk": 0.053251
+    },
+    {
+     "batter": 547180,
+     "pitches": 6632,
+     "tau_squared": 0.10026,
+     "se": 0.009004,
+     "shrunk": 0.088359
+    },
+    {
+     "batter": 553869,
+     "pitches": 4334,
+     "tau_squared": 0.044314,
+     "se": 0.009502,
+     "shrunk": 0.052946
+    },
+    {
+     "batter": 553993,
+     "pitches": 7991,
+     "tau_squared": 0.063969,
+     "se": 0.008163,
+     "shrunk": 0.064891
+    },
+    {
+     "batter": 570482,
+     "pitches": 3277,
+     "tau_squared": 0.057721,
+     "se": 0.012652,
+     "shrunk": 0.062527
+    },
+    {
+     "batter": 571448,
+     "pitches": 6296,
+     "tau_squared": 0.067537,
+     "se": 0.009509,
+     "shrunk": 0.067298
+    },
+    {
+     "batter": 571657,
+     "pitches": 3360,
+     "tau_squared": 0.031643,
+     "se": 0.011678,
+     "shrunk": 0.048673
+    },
+    {
+     "batter": 571771,
+     "pitches": 4493,
+     "tau_squared": 0.081029,
+     "se": 0.011443,
+     "shrunk": 0.074356
+    },
+    {
+     "batter": 571970,
+     "pitches": 5320,
+     "tau_squared": 0.085635,
+     "se": 0.010851,
+     "shrunk": 0.077279
+    },
+    {
+     "batter": 572191,
+     "pitches": 3926,
+     "tau_squared": 0.059,
+     "se": 0.011706,
+     "shrunk": 0.06283
+    },
+    {
+     "batter": 572233,
+     "pitches": 7449,
+     "tau_squared": 0.05574,
+     "se": 0.008593,
+     "shrunk": 0.059491
+    },
+    {
+     "batter": 573262,
+     "pitches": 5797,
+     "tau_squared": 0.068823,
+     "se": 0.00955,
+     "shrunk": 0.068089
+    },
+    {
+     "batter": 575929,
+     "pitches": 5440,
+     "tau_squared": 0.079888,
+     "se": 0.009955,
+     "shrunk": 0.074643
+    },
+    {
+     "batter": 592192,
+     "pitches": 4484,
+     "tau_squared": 0.067182,
+     "se": 0.011197,
+     "shrunk": 0.067058
+    },
+    {
+     "batter": 592206,
+     "pitches": 6905,
+     "tau_squared": 0.05847,
+     "se": 0.008885,
+     "shrunk": 0.061432
+    },
+    {
+     "batter": 592273,
+     "pitches": 3341,
+     "tau_squared": 0.070015,
+     "se": 0.012187,
+     "shrunk": 0.068451
+    },
+    {
+     "batter": 592450,
+     "pitches": 7398,
+     "tau_squared": 0.068359,
+     "se": 0.008553,
+     "shrunk": 0.067877
+    },
+    {
+     "batter": 592518,
+     "pitches": 7294,
+     "tau_squared": 0.073071,
+     "se": 0.008316,
+     "shrunk": 0.071092
+    },
+    {
+     "batter": 592626,
+     "pitches": 4726,
+     "tau_squared": 0.06201,
+     "se": 0.010053,
+     "shrunk": 0.064015
+    },
+    {
+     "batter": 592663,
+     "pitches": 5843,
+     "tau_squared": 0.077022,
+     "se": 0.009607,
+     "shrunk": 0.073108
+    },
+    {
+     "batter": 592669,
+     "pitches": 4130,
+     "tau_squared": 0.06783,
+     "se": 0.011566,
+     "shrunk": 0.067391
+    },
+    {
+     "batter": 592696,
+     "pitches": 3093,
+     "tau_squared": 0.036783,
+     "se": 0.013592,
+     "shrunk": 0.053609
+    },
+    {
+     "batter": 592885,
+     "pitches": 6394,
+     "tau_squared": 0.067428,
+     "se": 0.009001,
+     "shrunk": 0.067244
+    },
+    {
+     "batter": 593160,
+     "pitches": 3490,
+     "tau_squared": 0.035503,
+     "se": 0.012405,
+     "shrunk": 0.051617
+    },
+    {
+     "batter": 593428,
+     "pitches": 6495,
+     "tau_squared": 0.051906,
+     "se": 0.009154,
+     "shrunk": 0.057376
+    },
+    {
+     "batter": 593871,
+     "pitches": 5347,
+     "tau_squared": 0.074913,
+     "se": 0.010157,
+     "shrunk": 0.071602
+    },
+    {
+     "batter": 595777,
+     "pitches": 6353,
+     "tau_squared": 0.081489,
+     "se": 0.008711,
+     "shrunk": 0.076506
+    },
+    {
+     "batter": 595879,
+     "pitches": 4488,
+     "tau_squared": 0.043807,
+     "se": 0.011082,
+     "shrunk": 0.054361
+    },
+    {
+     "batter": 596019,
+     "pitches": 8328,
+     "tau_squared": 0.074298,
+     "se": 0.007681,
+     "shrunk": 0.072173
+    },
+    {
+     "batter": 596115,
+     "pitches": 3469,
+     "tau_squared": 0.093684,
+     "se": 0.012603,
+     "shrunk": 0.079738
+    },
+    {
+     "batter": 596146,
+     "pitches": 5223,
+     "tau_squared": 0.072642,
+     "se": 0.009943,
+     "shrunk": 0.070329
+    },
+    {
+     "batter": 600869,
+     "pitches": 4458,
+     "tau_squared": 0.079532,
+     "se": 0.011422,
+     "shrunk": 0.073579
+    },
+    {
+     "batter": 602104,
+     "pitches": 4087,
+     "tau_squared": 0.049472,
+     "se": 0.011298,
+     "shrunk": 0.057605
+    },
+    {
+     "batter": 605137,
+     "pitches": 6741,
+     "tau_squared": 0.064718,
+     "se": 0.008629,
+     "shrunk": 0.065459
+    },
+    {
+     "batter": 605141,
+     "pitches": 7199,
+     "tau_squared": 0.071315,
+     "se": 0.008649,
+     "shrunk": 0.069824
+    },
+    {
+     "batter": 605170,
+     "pitches": 3232,
+     "tau_squared": 0.08176,
+     "se": 0.012853,
+     "shrunk": 0.07388
+    },
+    {
+     "batter": 606115,
+     "pitches": 5229,
+     "tau_squared": 0.051615,
+     "se": 0.010326,
+     "shrunk": 0.05807
+    },
+    {
+     "batter": 606192,
+     "pitches": 7392,
+     "tau_squared": 0.053997,
+     "se": 0.008781,
+     "shrunk": 0.05846
+    },
+    {
+     "batter": 606466,
+     "pitches": 6693,
+     "tau_squared": 0.06523,
+     "se": 0.009015,
+     "shrunk": 0.065832
+    },
+    {
+     "batter": 607043,
+     "pitches": 8135,
+     "tau_squared": 0.085034,
+     "se": 0.007722,
+     "shrunk": 0.079781
+    },
+    {
+     "batter": 607208,
+     "pitches": 7086,
+     "tau_squared": 0.048719,
+     "se": 0.008432,
+     "shrunk": 0.054675
+    },
+    {
+     "batter": 608070,
+     "pitches": 7994,
+     "tau_squared": 0.05123,
+     "se": 0.007958,
+     "shrunk": 0.055973
+    },
+    {
+     "batter": 608324,
+     "pitches": 7099,
+     "tau_squared": 0.078878,
+     "se": 0.009215,
+     "shrunk": 0.074479
+    },
+    {
+     "batter": 608348,
+     "pitches": 3369,
+     "tau_squared": 0.067675,
+     "se": 0.013644,
+     "shrunk": 0.067248
+    },
+    {
+     "batter": 608369,
+     "pitches": 5372,
+     "tau_squared": 0.097243,
+     "se": 0.010174,
+     "shrunk": 0.084664
+    },
+    {
+     "batter": 608385,
+     "pitches": 3188,
+     "tau_squared": 0.071933,
+     "se": 0.012442,
+     "shrunk": 0.06935
+    },
+    {
+     "batter": 608701,
+     "pitches": 3058,
+     "tau_squared": 0.059332,
+     "se": 0.013465,
+     "shrunk": 0.06353
+    },
+    {
+     "batter": 608841,
+     "pitches": 3660,
+     "tau_squared": 0.066412,
+     "se": 0.012406,
+     "shrunk": 0.066669
+    },
+    {
+     "batter": 621020,
+     "pitches": 7397,
+     "tau_squared": 0.056749,
+     "se": 0.008926,
+     "shrunk": 0.060336
+    },
+    {
+     "batter": 621035,
+     "pitches": 3110,
+     "tau_squared": 0.072392,
+     "se": 0.013347,
+     "shrunk": 0.069381
+    },
+    {
+     "batter": 621043,
+     "pitches": 5914,
+     "tau_squared": 0.076617,
+     "se": 0.009754,
+     "shrunk": 0.072789
+    },
+    {
+     "batter": 621438,
+     "pitches": 3431,
+     "tau_squared": 0.066849,
+     "se": 0.012578,
+     "shrunk": 0.066882
+    },
+    {
+     "batter": 621439,
+     "pitches": 4828,
+     "tau_squared": 0.091454,
+     "se": 0.010494,
+     "shrunk": 0.080905
+    },
+    {
+     "batter": 621493,
+     "pitches": 6978,
+     "tau_squared": 0.036945,
+     "se": 0.008872,
+     "shrunk": 0.047439
+    },
+    {
+     "batter": 621566,
+     "pitches": 9171,
+     "tau_squared": 0.077869,
+     "se": 0.007669,
+     "shrunk": 0.074724
+    },
+    {
+     "batter": 623993,
+     "pitches": 6421,
+     "tau_squared": 0.058712,
+     "se": 0.008801,
+     "shrunk": 0.061553
+    },
+    {
+     "batter": 624413,
+     "pitches": 8086,
+     "tau_squared": 0.074251,
+     "se": 0.008178,
+     "shrunk": 0.071946
+    },
+    {
+     "batter": 624424,
+     "pitches": 5880,
+     "tau_squared": 0.095913,
+     "se": 0.009382,
+     "shrunk": 0.085009
+    },
+    {
+     "batter": 624428,
+     "pitches": 4745,
+     "tau_squared": 0.056064,
+     "se": 0.010202,
+     "shrunk": 0.060578
+    },
+    {
+     "batter": 624585,
+     "pitches": 5936,
+     "tau_squared": 0.081816,
+     "se": 0.009846,
+     "shrunk": 0.075871
+    },
+    {
+     "batter": 624641,
+     "pitches": 3080,
+     "tau_squared": 0.065865,
+     "se": 0.013439,
+     "shrunk": 0.066444
+    },
+    {
+     "batter": 630105,
+     "pitches": 6916,
+     "tau_squared": 0.042807,
+     "se": 0.008269,
+     "shrunk": 0.050493
+    },
+    {
+     "batter": 641313,
+     "pitches": 3199,
+     "tau_squared": 0.058996,
+     "se": 0.013263,
+     "shrunk": 0.063321
+    },
+    {
+     "batter": 641343,
+     "pitches": 3549,
+     "tau_squared": 0.069326,
+     "se": 0.012287,
+     "shrunk": 0.0681
+    },
+    {
+     "batter": 641355,
+     "pitches": 6812,
+     "tau_squared": 0.040996,
+     "se": 0.008572,
+     "shrunk": 0.04967
+    },
+    {
+     "batter": 641487,
+     "pitches": 7218,
+     "tau_squared": 0.089497,
+     "se": 0.008872,
+     "shrunk": 0.081589
+    },
+    {
+     "batter": 641584,
+     "pitches": 3571,
+     "tau_squared": 0.087224,
+     "se": 0.01175,
+     "shrunk": 0.077355
+    },
+    {
+     "batter": 641598,
+     "pitches": 4387,
+     "tau_squared": 0.075496,
+     "se": 0.012491,
+     "shrunk": 0.071063
+    },
+    {
+     "batter": 641680,
+     "pitches": 5454,
+     "tau_squared": 0.077942,
+     "se": 0.00999,
+     "shrunk": 0.073465
+    },
+    {
+     "batter": 641857,
+     "pitches": 7926,
+     "tau_squared": 0.078054,
+     "se": 0.006753,
+     "shrunk": 0.075404
+    },
+    {
+     "batter": 641933,
+     "pitches": 3824,
+     "tau_squared": 0.071755,
+     "se": 0.011831,
+     "shrunk": 0.069386
+    },
+    {
+     "batter": 642086,
+     "pitches": 4243,
+     "tau_squared": 0.049611,
+     "se": 0.011133,
+     "shrunk": 0.057553
+    },
+    {
+     "batter": 642133,
+     "pitches": 4436,
+     "tau_squared": 0.075039,
+     "se": 0.011037,
+     "shrunk": 0.071344
+    },
+    {
+     "batter": 642350,
+     "pitches": 3258,
+     "tau_squared": 0.056909,
+     "se": 0.012139,
+     "shrunk": 0.061933
+    },
+    {
+     "batter": 642708,
+     "pitches": 3815,
+     "tau_squared": 0.057754,
+     "se": 0.011618,
+     "shrunk": 0.062153
+    },
+    {
+     "batter": 642715,
+     "pitches": 8090,
+     "tau_squared": 0.081473,
+     "se": 0.008119,
+     "shrunk": 0.076946
+    },
+    {
+     "batter": 642731,
+     "pitches": 3761,
+     "tau_squared": 0.052806,
+     "se": 0.011291,
+     "shrunk": 0.05938
+    },
+    {
+     "batter": 643217,
+     "pitches": 6028,
+     "tau_squared": 0.090551,
+     "se": 0.009205,
+     "shrunk": 0.081874
+    },
+    {
+     "batter": 643289,
+     "pitches": 4436,
+     "tau_squared": 0.037703,
+     "se": 0.011279,
+     "shrunk": 0.051299
+    },
+    {
+     "batter": 643376,
+     "pitches": 3872,
+     "tau_squared": 0.091059,
+     "se": 0.012014,
+     "shrunk": 0.079059
+    },
+    {
+     "batter": 643396,
+     "pitches": 4734,
+     "tau_squared": 0.057049,
+     "se": 0.010847,
+     "shrunk": 0.06145
+    },
+    {
+     "batter": 643446,
+     "pitches": 5562,
+     "tau_squared": 0.07811,
+     "se": 0.009454,
+     "shrunk": 0.07386
+    },
+    {
+     "batter": 643565,
+     "pitches": 4811,
+     "tau_squared": 0.047897,
+     "se": 0.01036,
+     "shrunk": 0.055951
+    },
+    {
+     "batter": 645277,
+     "pitches": 6571,
+     "tau_squared": 0.068704,
+     "se": 0.008847,
+     "shrunk": 0.068079
+    },
+    {
+     "batter": 646240,
+     "pitches": 7972,
+     "tau_squared": 0.094292,
+     "se": 0.007971,
+     "shrunk": 0.085992
+    },
+    {
+     "batter": 647304,
+     "pitches": 5916,
+     "tau_squared": 0.084177,
+     "se": 0.009801,
+     "shrunk": 0.077328
+    },
+    {
+     "batter": 650333,
+     "pitches": 6982,
+     "tau_squared": 0.044463,
+     "se": 0.008191,
+     "shrunk": 0.051528
+    },
+    {
+     "batter": 650402,
+     "pitches": 8090,
+     "tau_squared": 0.049,
+     "se": 0.008199,
+     "shrunk": 0.054645
+    },
+    {
+     "batter": 650489,
+     "pitches": 5761,
+     "tau_squared": 0.07721,
+     "se": 0.00951,
+     "shrunk": 0.073272
+    },
+    {
+     "batter": 650490,
+     "pitches": 7309,
+     "tau_squared": 0.059567,
+     "se": 0.008474,
+     "shrunk": 0.061988
+    },
+    {
+     "batter": 650559,
+     "pitches": 5026,
+     "tau_squared": 0.081917,
+     "se": 0.010504,
+     "shrunk": 0.07546
+    },
+    {
+     "batter": 650859,
+     "pitches": 4717,
+     "tau_squared": 0.083984,
+     "se": 0.011126,
+     "shrunk": 0.076153
+    },
+    {
+     "batter": 656305,
+     "pitches": 7320,
+     "tau_squared": 0.061128,
+     "se": 0.008642,
+     "shrunk": 0.063085
+    },
+    {
+     "batter": 656555,
+     "pitches": 3650,
+     "tau_squared": 0.074828,
+     "se": 0.012543,
+     "shrunk": 0.070724
+    },
+    {
+     "batter": 656582,
+     "pitches": 3947,
+     "tau_squared": 0.062151,
+     "se": 0.01208,
+     "shrunk": 0.064531
+    },
+    {
+     "batter": 656716,
+     "pitches": 5333,
+     "tau_squared": 0.066053,
+     "se": 0.00952,
+     "shrunk": 0.066383
+    },
+    {
+     "batter": 656775,
+     "pitches": 5751,
+     "tau_squared": 0.089796,
+     "se": 0.009841,
+     "shrunk": 0.080674
+    },
+    {
+     "batter": 656811,
+     "pitches": 5491,
+     "tau_squared": 0.085686,
+     "se": 0.009551,
+     "shrunk": 0.07847
+    },
+    {
+     "batter": 656941,
+     "pitches": 8932,
+     "tau_squared": 0.080506,
+     "se": 0.00777,
+     "shrunk": 0.076531
+    },
+    {
+     "batter": 657041,
+     "pitches": 5237,
+     "tau_squared": 0.071211,
+     "se": 0.010413,
+     "shrunk": 0.06938
+    },
+    {
+     "batter": 657077,
+     "pitches": 5561,
+     "tau_squared": 0.076423,
+     "se": 0.010066,
+     "shrunk": 0.072528
+    },
+    {
+     "batter": 657136,
+     "pitches": 4103,
+     "tau_squared": 0.073578,
+     "se": 0.011727,
+     "shrunk": 0.070346
+    },
+    {
+     "batter": 657557,
+     "pitches": 4071,
+     "tau_squared": 0.069506,
+     "se": 0.011841,
+     "shrunk": 0.068236
+    },
+    {
+     "batter": 657656,
+     "pitches": 4791,
+     "tau_squared": 0.067073,
+     "se": 0.010433,
+     "shrunk": 0.067005
+    },
+    {
+     "batter": 657757,
+     "pitches": 5762,
+     "tau_squared": 0.033758,
+     "se": 0.009421,
+     "shrunk": 0.046289
+    },
+    {
+     "batter": 660271,
+     "pitches": 7994,
+     "tau_squared": 0.05631,
+     "se": 0.008092,
+     "shrunk": 0.059591
+    },
+    {
+     "batter": 660670,
+     "pitches": 5409,
+     "tau_squared": 0.074536,
+     "se": 0.01035,
+     "shrunk": 0.071311
+    },
+    {
+     "batter": 660688,
+     "pitches": 4415,
+     "tau_squared": 0.066789,
+     "se": 0.011111,
+     "shrunk": 0.066846
+    },
+    {
+     "batter": 660821,
+     "pitches": 5558,
+     "tau_squared": 0.076954,
+     "se": 0.009584,
+     "shrunk": 0.073078
+    },
+    {
+     "batter": 661388,
+     "pitches": 7635,
+     "tau_squared": 0.064542,
+     "se": 0.0085,
+     "shrunk": 0.065327
+    },
+    {
+     "batter": 662139,
+     "pitches": 5299,
+     "tau_squared": 0.080141,
+     "se": 0.010042,
+     "shrunk": 0.074739
+    },
+    {
+     "batter": 663368,
+     "pitches": 3116,
+     "tau_squared": 0.07922,
+     "se": 0.014127,
+     "shrunk": 0.072114
+    },
+    {
+     "batter": 663457,
+     "pitches": 6068,
+     "tau_squared": 0.065253,
+     "se": 0.009649,
+     "shrunk": 0.065899
+    },
+    {
+     "batter": 663538,
+     "pitches": 7097,
+     "tau_squared": 0.046153,
+     "se": 0.00921,
+     "shrunk": 0.05378
+    },
+    {
+     "batter": 663586,
+     "pitches": 6444,
+     "tau_squared": 0.054483,
+     "se": 0.009241,
+     "shrunk": 0.059069
+    },
+    {
+     "batter": 663616,
+     "pitches": 4672,
+     "tau_squared": 0.057639,
+     "se": 0.010647,
+     "shrunk": 0.061691
+    },
+    {
+     "batter": 663624,
+     "pitches": 4983,
+     "tau_squared": 0.056905,
+     "se": 0.010325,
+     "shrunk": 0.061127
+    },
+    {
+     "batter": 663647,
+     "pitches": 5525,
+     "tau_squared": 0.083389,
+     "se": 0.010171,
+     "shrunk": 0.076558
+    },
+    {
+     "batter": 663656,
+     "pitches": 6200,
+     "tau_squared": 0.073489,
+     "se": 0.009353,
+     "shrunk": 0.071026
+    },
+    {
+     "batter": 663697,
+     "pitches": 7145,
+     "tau_squared": 0.066787,
+     "se": 0.008958,
+     "shrunk": 0.066832
+    },
+    {
+     "batter": 663728,
+     "pitches": 7656,
+     "tau_squared": 0.078031,
+     "se": 0.008216,
+     "shrunk": 0.074517
+    },
+    {
+     "batter": 663743,
+     "pitches": 3133,
+     "tau_squared": 0.069282,
+     "se": 0.013543,
+     "shrunk": 0.067963
+    },
+    {
+     "batter": 663757,
+     "pitches": 5538,
+     "tau_squared": 0.066937,
+     "se": 0.00969,
+     "shrunk": 0.066928
+    },
+    {
+     "batter": 663837,
+     "pitches": 4826,
+     "tau_squared": 0.056917,
+     "se": 0.010495,
+     "shrunk": 0.061214
+    },
+    {
+     "batter": 663886,
+     "pitches": 5352,
+     "tau_squared": 0.058902,
+     "se": 0.010018,
+     "shrunk": 0.062164
+    },
+    {
+     "batter": 663898,
+     "pitches": 3246,
+     "tau_squared": 0.057748,
+     "se": 0.011577,
+     "shrunk": 0.062133
+    },
+    {
+     "batter": 663993,
+     "pitches": 7973,
+     "tau_squared": 0.085925,
+     "se": 0.008253,
+     "shrunk": 0.07988
+    },
+    {
+     "batter": 664023,
+     "pitches": 8257,
+     "tau_squared": 0.08006,
+     "se": 0.007915,
+     "shrunk": 0.076114
+    },
+    {
+     "batter": 664034,
+     "pitches": 6240,
+     "tau_squared": 0.051961,
+     "se": 0.009195,
+     "shrunk": 0.057443
+    },
+    {
+     "batter": 664040,
+     "pitches": 5453,
+     "tau_squared": 0.075084,
+     "se": 0.009449,
+     "shrunk": 0.071984
+    },
+    {
+     "batter": 664056,
+     "pitches": 4777,
+     "tau_squared": 0.074342,
+     "se": 0.010946,
+     "shrunk": 0.070994
+    },
+    {
+     "batter": 664238,
+     "pitches": 3469,
+     "tau_squared": 0.064081,
+     "se": 0.01266,
+     "shrunk": 0.065562
+    },
+    {
+     "batter": 664702,
+     "pitches": 3066,
+     "tau_squared": 0.078624,
+     "se": 0.013454,
+     "shrunk": 0.072143
+    },
+    {
+     "batter": 664728,
+     "pitches": 4106,
+     "tau_squared": 0.063613,
+     "se": 0.011579,
+     "shrunk": 0.065192
+    },
+    {
+     "batter": 664761,
+     "pitches": 6146,
+     "tau_squared": 0.074876,
+     "se": 0.008957,
+     "shrunk": 0.072053
+    },
+    {
+     "batter": 664774,
+     "pitches": 4743,
+     "tau_squared": 0.067148,
+     "se": 0.010094,
+     "shrunk": 0.067051
+    },
+    {
+     "batter": 664913,
+     "pitches": 3272,
+     "tau_squared": 0.07444,
+     "se": 0.012601,
+     "shrunk": 0.07052
+    },
+    {
+     "batter": 664983,
+     "pitches": 3675,
+     "tau_squared": 0.077536,
+     "se": 0.011985,
+     "shrunk": 0.072269
+    },
+    {
+     "batter": 665161,
+     "pitches": 6280,
+     "tau_squared": 0.087608,
+     "se": 0.009532,
+     "shrunk": 0.079672
+    },
+    {
+     "batter": 665487,
+     "pitches": 6476,
+     "tau_squared": 0.058741,
+     "se": 0.008785,
+     "shrunk": 0.061566
+    },
+    {
+     "batter": 665489,
+     "pitches": 7508,
+     "tau_squared": 0.058774,
+     "se": 0.008211,
+     "shrunk": 0.061344
+    },
+    {
+     "batter": 665742,
+     "pitches": 8779,
+     "tau_squared": 0.05368,
+     "se": 0.008033,
+     "shrunk": 0.057735
+    },
+    {
+     "batter": 665750,
+     "pitches": 4767,
+     "tau_squared": 0.084176,
+     "se": 0.010508,
+     "shrunk": 0.076744
+    },
+    {
+     "batter": 665833,
+     "pitches": 4767,
+     "tau_squared": 0.047605,
+     "se": 0.010491,
+     "shrunk": 0.055901
+    },
+    {
+     "batter": 665862,
+     "pitches": 6106,
+     "tau_squared": 0.071906,
+     "se": 0.009347,
+     "shrunk": 0.070037
+    },
+    {
+     "batter": 665926,
+     "pitches": 6094,
+     "tau_squared": 0.055303,
+     "se": 0.009095,
+     "shrunk": 0.0595
+    },
+    {
+     "batter": 666023,
+     "pitches": 3689,
+     "tau_squared": 0.062559,
+     "se": 0.012219,
+     "shrunk": 0.06476
+    },
+    {
+     "batter": 666134,
+     "pitches": 4781,
+     "tau_squared": 0.043978,
+     "se": 0.008747,
+     "shrunk": 0.051862
+    },
+    {
+     "batter": 666139,
+     "pitches": 5510,
+     "tau_squared": 0.083239,
+     "se": 0.00942,
+     "shrunk": 0.077069
+    },
+    {
+     "batter": 666158,
+     "pitches": 3974,
+     "tau_squared": 0.077457,
+     "se": 0.011683,
+     "shrunk": 0.072364
+    },
+    {
+     "batter": 666160,
+     "pitches": 4251,
+     "tau_squared": 0.065361,
+     "se": 0.010015,
+     "shrunk": 0.065993
+    },
+    {
+     "batter": 666176,
+     "pitches": 4302,
+     "tau_squared": 0.085104,
+     "se": 0.010969,
+     "shrunk": 0.076888
+    },
+    {
+     "batter": 666181,
+     "pitches": 3935,
+     "tau_squared": 0.060402,
+     "se": 0.011162,
+     "shrunk": 0.063399
+    },
+    {
+     "batter": 666182,
+     "pitches": 5675,
+     "tau_squared": 0.078361,
+     "se": 0.009221,
+     "shrunk": 0.074149
+    },
+    {
+     "batter": 666185,
+     "pitches": 3144,
+     "tau_squared": 0.065993,
+     "se": 0.012118,
+     "shrunk": 0.066454
+    },
+    {
+     "batter": 666310,
+     "pitches": 4290,
+     "tau_squared": 0.042236,
+     "se": 0.011355,
+     "shrunk": 0.053806
+    },
+    {
+     "batter": 666397,
+     "pitches": 3810,
+     "tau_squared": 0.099239,
+     "se": 0.012524,
+     "shrunk": 0.082501
+    },
+    {
+     "batter": 666624,
+     "pitches": 5152,
+     "tau_squared": 0.059656,
+     "se": 0.010534,
+     "shrunk": 0.062789
+    },
+    {
+     "batter": 666969,
+     "pitches": 7214,
+     "tau_squared": 0.063468,
+     "se": 0.00821,
+     "shrunk": 0.064555
+    },
+    {
+     "batter": 666971,
+     "pitches": 6258,
+     "tau_squared": 0.038346,
+     "se": 0.009179,
+     "shrunk": 0.048796
+    },
+    {
+     "batter": 667670,
+     "pitches": 7074,
+     "tau_squared": 0.070376,
+     "se": 0.008286,
+     "shrunk": 0.069269
+    },
+    {
+     "batter": 668227,
+     "pitches": 8238,
+     "tau_squared": 0.049953,
+     "se": 0.007883,
+     "shrunk": 0.055015
+    },
+    {
+     "batter": 668670,
+     "pitches": 3227,
+     "tau_squared": 0.069895,
+     "se": 0.013175,
+     "shrunk": 0.068276
+    },
+    {
+     "batter": 668709,
+     "pitches": 4988,
+     "tau_squared": 0.083143,
+     "se": 0.010299,
+     "shrunk": 0.076316
+    },
+    {
+     "batter": 668715,
+     "pitches": 7567,
+     "tau_squared": 0.080736,
+     "se": 0.00858,
+     "shrunk": 0.076105
+    },
+    {
+     "batter": 668804,
+     "pitches": 7731,
+     "tau_squared": 0.076457,
+     "se": 0.008306,
+     "shrunk": 0.073396
+    },
+    {
+     "batter": 668901,
+     "pitches": 4346,
+     "tau_squared": 0.08929,
+     "se": 0.011449,
+     "shrunk": 0.078707
+    },
+    {
+     "batter": 668904,
+     "pitches": 3642,
+     "tau_squared": 0.06789,
+     "se": 0.012588,
+     "shrunk": 0.067382
+    },
+    {
+     "batter": 668930,
+     "pitches": 6963,
+     "tau_squared": 0.059782,
+     "se": 0.008358,
+     "shrunk": 0.062089
+    },
+    {
+     "batter": 668939,
+     "pitches": 6968,
+     "tau_squared": 0.070736,
+     "se": 0.00865,
+     "shrunk": 0.069441
+    },
+    {
+     "batter": 668942,
+     "pitches": 4014,
+     "tau_squared": 0.078508,
+     "se": 0.011818,
+     "shrunk": 0.072841
+    },
+    {
+     "batter": 669004,
+     "pitches": 4525,
+     "tau_squared": 0.070563,
+     "se": 0.010946,
+     "shrunk": 0.068918
+    },
+    {
+     "batter": 669016,
+     "pitches": 5608,
+     "tau_squared": 0.07916,
+     "se": 0.009518,
+     "shrunk": 0.074473
+    },
+    {
+     "batter": 669127,
+     "pitches": 5800,
+     "tau_squared": 0.095619,
+     "se": 0.009649,
+     "shrunk": 0.084445
+    },
+    {
+     "batter": 669221,
+     "pitches": 4132,
+     "tau_squared": 0.047467,
+     "se": 0.011875,
+     "shrunk": 0.057019
+    },
+    {
+     "batter": 669224,
+     "pitches": 3708,
+     "tau_squared": 0.095879,
+     "se": 0.012027,
+     "shrunk": 0.081467
+    },
+    {
+     "batter": 669242,
+     "pitches": 3692,
+     "tau_squared": 0.053555,
+     "se": 0.011713,
+     "shrunk": 0.060024
+    },
+    {
+     "batter": 669257,
+     "pitches": 6425,
+     "tau_squared": 0.067119,
+     "se": 0.009034,
+     "shrunk": 0.067045
+    },
+    {
+     "batter": 669261,
+     "pitches": 4177,
+     "tau_squared": 0.075561,
+     "se": 0.011257,
+     "shrunk": 0.071544
+    },
+    {
+     "batter": 669289,
+     "pitches": 3749,
+     "tau_squared": 0.066625,
+     "se": 0.012103,
+     "shrunk": 0.066769
+    },
+    {
+     "batter": 669357,
+     "pitches": 5117,
+     "tau_squared": 0.09347,
+     "se": 0.01009,
+     "shrunk": 0.082563
+    },
+    {
+     "batter": 669364,
+     "pitches": 3679,
+     "tau_squared": 0.089855,
+     "se": 0.011614,
+     "shrunk": 0.078841
+    },
+    {
+     "batter": 669394,
+     "pitches": 5414,
+     "tau_squared": 0.090113,
+     "se": 0.010029,
+     "shrunk": 0.080652
+    },
+    {
+     "batter": 669397,
+     "pitches": 3057,
+     "tau_squared": 0.080483,
+     "se": 0.01406,
+     "shrunk": 0.072679
+    },
+    {
+     "batter": 669701,
+     "pitches": 5506,
+     "tau_squared": 0.076911,
+     "se": 0.009866,
+     "shrunk": 0.072913
+    },
+    {
+     "batter": 669707,
+     "pitches": 4018,
+     "tau_squared": 0.046565,
+     "se": 0.011875,
+     "shrunk": 0.056559
+    },
+    {
+     "batter": 669720,
+     "pitches": 4509,
+     "tau_squared": 0.078076,
+     "se": 0.010735,
+     "shrunk": 0.073153
+    },
+    {
+     "batter": 669743,
+     "pitches": 3570,
+     "tau_squared": 0.061841,
+     "se": 0.012155,
+     "shrunk": 0.064391
+    },
+    {
+     "batter": 669911,
+     "pitches": 3843,
+     "tau_squared": 0.037278,
+     "se": 0.009423,
+     "shrunk": 0.048481
+    },
+    {
+     "batter": 670042,
+     "pitches": 4018,
+     "tau_squared": 0.09232,
+     "se": 0.011809,
+     "shrunk": 0.079911
+    },
+    {
+     "batter": 670242,
+     "pitches": 3578,
+     "tau_squared": 0.099008,
+     "se": 0.012114,
+     "shrunk": 0.082923
+    },
+    {
+     "batter": 670541,
+     "pitches": 4938,
+     "tau_squared": 0.067668,
+     "se": 0.010407,
+     "shrunk": 0.067347
+    },
+    {
+     "batter": 670623,
+     "pitches": 7096,
+     "tau_squared": 0.046269,
+     "se": 0.008484,
+     "shrunk": 0.053084
+    },
+    {
+     "batter": 670764,
+     "pitches": 3686,
+     "tau_squared": 0.090204,
+     "se": 0.011764,
+     "shrunk": 0.078873
+    },
+    {
+     "batter": 670770,
+     "pitches": 6009,
+     "tau_squared": 0.076696,
+     "se": 0.009594,
+     "shrunk": 0.072914
+    },
+    {
+     "batter": 671056,
+     "pitches": 3021,
+     "tau_squared": 0.070882,
+     "se": 0.013175,
+     "shrunk": 0.068727
+    },
+    {
+     "batter": 671213,
+     "pitches": 3482,
+     "tau_squared": 0.081551,
+     "se": 0.012536,
+     "shrunk": 0.073965
+    },
+    {
+     "batter": 671218,
+     "pitches": 4876,
+     "tau_squared": 0.069404,
+     "se": 0.01056,
+     "shrunk": 0.068326
+    },
+    {
+     "batter": 671277,
+     "pitches": 5394,
+     "tau_squared": 0.05119,
+     "se": 0.010042,
+     "shrunk": 0.057611
+    },
+    {
+     "batter": 671289,
+     "pitches": 3588,
+     "tau_squared": 0.068597,
+     "se": 0.010898,
+     "shrunk": 0.067842
+    },
+    {
+     "batter": 671732,
+     "pitches": 4816,
+     "tau_squared": 0.074077,
+     "se": 0.009698,
+     "shrunk": 0.071271
+    },
+    {
+     "batter": 671739,
+     "pitches": 5761,
+     "tau_squared": 0.064936,
+     "se": 0.009423,
+     "shrunk": 0.065684
+    },
+    {
+     "batter": 672275,
+     "pitches": 4885,
+     "tau_squared": 0.070238,
+     "se": 0.010392,
+     "shrunk": 0.068825
+    },
+    {
+     "batter": 672284,
+     "pitches": 3657,
+     "tau_squared": 0.06577,
+     "se": 0.011906,
+     "shrunk": 0.066333
+    },
+    {
+     "batter": 672356,
+     "pitches": 3686,
+     "tau_squared": 0.049832,
+     "se": 0.011627,
+     "shrunk": 0.058042
+    },
+    {
+     "batter": 672386,
+     "pitches": 5174,
+     "tau_squared": 0.040792,
+     "se": 0.010314,
+     "shrunk": 0.051798
+    },
+    {
+     "batter": 672515,
+     "pitches": 4378,
+     "tau_squared": 0.029031,
+     "se": 0.011338,
+     "shrunk": 0.046763
+    },
+    {
+     "batter": 672580,
+     "pitches": 6826,
+     "tau_squared": 0.068926,
+     "se": 0.009524,
+     "shrunk": 0.068155
+    },
+    {
+     "batter": 672640,
+     "pitches": 3655,
+     "tau_squared": 0.053676,
+     "se": 0.012622,
+     "shrunk": 0.060581
+    },
+    {
+     "batter": 672695,
+     "pitches": 6539,
+     "tau_squared": 0.073198,
+     "se": 0.009386,
+     "shrunk": 0.070833
+    },
+    {
+     "batter": 672761,
+     "pitches": 3255,
+     "tau_squared": 0.076907,
+     "se": 0.013151,
+     "shrunk": 0.071489
+    },
+    {
+     "batter": 672820,
+     "pitches": 4045,
+     "tau_squared": 0.033931,
+     "se": 0.011224,
+     "shrunk": 0.049204
+    },
+    {
+     "batter": 673237,
+     "pitches": 5263,
+     "tau_squared": 0.0805,
+     "se": 0.010613,
+     "shrunk": 0.074584
+    },
+    {
+     "batter": 673357,
+     "pitches": 5314,
+     "tau_squared": 0.050933,
+     "se": 0.009987,
+     "shrunk": 0.057417
+    },
+    {
+     "batter": 673490,
+     "pitches": 5454,
+     "tau_squared": 0.067927,
+     "se": 0.010085,
+     "shrunk": 0.067511
+    },
+    {
+     "batter": 673548,
+     "pitches": 7651,
+     "tau_squared": 0.059569,
+     "se": 0.008804,
+     "shrunk": 0.062115
+    },
+    {
+     "batter": 673962,
+     "pitches": 4579,
+     "tau_squared": 0.068483,
+     "se": 0.01093,
+     "shrunk": 0.067777
+    },
+    {
+     "batter": 676059,
+     "pitches": 3783,
+     "tau_squared": 0.060162,
+     "se": 0.012024,
+     "shrunk": 0.06352
+    },
+    {
+     "batter": 676391,
+     "pitches": 3438,
+     "tau_squared": 0.032139,
+     "se": 0.012281,
+     "shrunk": 0.049803
+    },
+    {
+     "batter": 676475,
+     "pitches": 5252,
+     "tau_squared": 0.048088,
+     "se": 0.00991,
+     "shrunk": 0.055656
+    },
+    {
+     "batter": 676609,
+     "pitches": 4454,
+     "tau_squared": 0.07917,
+     "se": 0.011325,
+     "shrunk": 0.07344
+    },
+    {
+     "batter": 676694,
+     "pitches": 4419,
+     "tau_squared": 0.097858,
+     "se": 0.011178,
+     "shrunk": 0.083592
+    },
+    {
+     "batter": 676801,
+     "pitches": 3201,
+     "tau_squared": 0.052418,
+     "se": 0.012678,
+     "shrunk": 0.060012
+    },
+    {
+     "batter": 676914,
+     "pitches": 3535,
+     "tau_squared": 0.068775,
+     "se": 0.012161,
+     "shrunk": 0.067838
+    },
+    {
+     "batter": 677587,
+     "pitches": 3361,
+     "tau_squared": 0.074339,
+     "se": 0.012394,
+     "shrunk": 0.070533
+    },
+    {
+     "batter": 677594,
+     "pitches": 7355,
+     "tau_squared": 0.082231,
+     "se": 0.008765,
+     "shrunk": 0.076952
+    },
+    {
+     "batter": 677649,
+     "pitches": 3429,
+     "tau_squared": 0.103827,
+     "se": 0.012898,
+     "shrunk": 0.084172
+    },
+    {
+     "batter": 677800,
+     "pitches": 3744,
+     "tau_squared": 0.083662,
+     "se": 0.011178,
+     "shrunk": 0.075941
+    },
+    {
+     "batter": 677950,
+     "pitches": 3504,
+     "tau_squared": 0.057214,
+     "se": 0.011983,
+     "shrunk": 0.062022
+    },
+    {
+     "batter": 677951,
+     "pitches": 7783,
+     "tau_squared": 0.06683,
+     "se": 0.008368,
+     "shrunk": 0.066857
+    },
+    {
+     "batter": 678246,
+     "pitches": 4517,
+     "tau_squared": 0.067699,
+     "se": 0.010658,
+     "shrunk": 0.067355
+    },
+    {
+     "batter": 678662,
+     "pitches": 6233,
+     "tau_squared": 0.060298,
+     "se": 0.007668,
+     "shrunk": 0.062196
+    },
+    {
+     "batter": 678882,
+     "pitches": 4492,
+     "tau_squared": 0.082705,
+     "se": 0.0115,
+     "shrunk": 0.075201
+    },
+    {
+     "batter": 679529,
+     "pitches": 6969,
+     "tau_squared": 0.054807,
+     "se": 0.009029,
+     "shrunk": 0.059143
+    },
+    {
+     "batter": 680574,
+     "pitches": 4012,
+     "tau_squared": 0.071574,
+     "se": 0.011822,
+     "shrunk": 0.069295
+    },
+    {
+     "batter": 680757,
+     "pitches": 7739,
+     "tau_squared": 0.05436,
+     "se": 0.008314,
+     "shrunk": 0.058392
+    },
+    {
+     "batter": 680776,
+     "pitches": 6801,
+     "tau_squared": 0.06703,
+     "se": 0.008723,
+     "shrunk": 0.06699
+    },
+    {
+     "batter": 680777,
+     "pitches": 4954,
+     "tau_squared": 0.049617,
+     "se": 0.010821,
+     "shrunk": 0.057313
+    },
+    {
+     "batter": 680869,
+     "pitches": 3602,
+     "tau_squared": 0.083354,
+     "se": 0.012174,
+     "shrunk": 0.075074
+    },
+    {
+     "batter": 680977,
+     "pitches": 5777,
+     "tau_squared": 0.072899,
+     "se": 0.009683,
+     "shrunk": 0.070559
+    },
+    {
+     "batter": 681082,
+     "pitches": 7386,
+     "tau_squared": 0.048973,
+     "se": 0.008172,
+     "shrunk": 0.054602
+    },
+    {
+     "batter": 681297,
+     "pitches": 4124,
+     "tau_squared": 0.091935,
+     "se": 0.011892,
+     "shrunk": 0.079626
+    },
+    {
+     "batter": 681351,
+     "pitches": 4471,
+     "tau_squared": 0.053392,
+     "se": 0.011137,
+     "shrunk": 0.059601
+    },
+    {
+     "batter": 681481,
+     "pitches": 4582,
+     "tau_squared": 0.058199,
+     "se": 0.010785,
+     "shrunk": 0.062062
+    },
+    {
+     "batter": 681546,
+     "pitches": 3562,
+     "tau_squared": 0.092526,
+     "se": 0.012726,
+     "shrunk": 0.079059
+    },
+    {
+     "batter": 681624,
+     "pitches": 4053,
+     "tau_squared": 0.06935,
+     "se": 0.011839,
+     "shrunk": 0.068157
+    },
+    {
+     "batter": 682626,
+     "pitches": 4057,
+     "tau_squared": 0.064321,
+     "se": 0.012157,
+     "shrunk": 0.065624
+    },
+    {
+     "batter": 682829,
+     "pitches": 7135,
+     "tau_squared": 0.074212,
+     "se": 0.008525,
+     "shrunk": 0.071787
+    },
+    {
+     "batter": 682928,
+     "pitches": 6698,
+     "tau_squared": 0.081225,
+     "se": 0.008959,
+     "shrunk": 0.07615
+    },
+    {
+     "batter": 682985,
+     "pitches": 6809,
+     "tau_squared": 0.067584,
+     "se": 0.008628,
+     "shrunk": 0.067358
+    },
+    {
+     "batter": 682998,
+     "pitches": 7498,
+     "tau_squared": 0.094764,
+     "se": 0.00864,
+     "shrunk": 0.085346
+    },
+    {
+     "batter": 683002,
+     "pitches": 7780,
+     "tau_squared": 0.076292,
+     "se": 0.008155,
+     "shrunk": 0.073358
+    },
+    {
+     "batter": 683011,
+     "pitches": 7471,
+     "tau_squared": 0.060068,
+     "se": 0.008439,
+     "shrunk": 0.062311
+    },
+    {
+     "batter": 683146,
+     "pitches": 3921,
+     "tau_squared": 0.059545,
+     "se": 0.010808,
+     "shrunk": 0.062819
+    },
+    {
+     "batter": 683734,
+     "pitches": 6341,
+     "tau_squared": 0.048786,
+     "se": 0.009083,
+     "shrunk": 0.055329
+    },
+    {
+     "batter": 683737,
+     "pitches": 5000,
+     "tau_squared": 0.077121,
+     "se": 0.010484,
+     "shrunk": 0.072738
+    },
+    {
+     "batter": 686217,
+     "pitches": 5197,
+     "tau_squared": 0.058123,
+     "se": 0.010349,
+     "shrunk": 0.061841
+    },
+    {
+     "batter": 686469,
+     "pitches": 5682,
+     "tau_squared": 0.050956,
+     "se": 0.009616,
+     "shrunk": 0.057142
+    },
+    {
+     "batter": 686668,
+     "pitches": 5656,
+     "tau_squared": 0.013201,
+     "se": 0.00772,
+     "shrunk": 0.028766
+    },
+    {
+     "batter": 686681,
+     "pitches": 4157,
+     "tau_squared": 0.064248,
+     "se": 0.011361,
+     "shrunk": 0.065498
+    },
+    {
+     "batter": 687263,
+     "pitches": 5662,
+     "tau_squared": 0.062181,
+     "se": 0.010169,
+     "shrunk": 0.064142
+    },
+    {
+     "batter": 687401,
+     "pitches": 4059,
+     "tau_squared": 0.073175,
+     "se": 0.011645,
+     "shrunk": 0.07016
+    },
+    {
+     "batter": 687462,
+     "pitches": 3433,
+     "tau_squared": 0.081134,
+     "se": 0.012836,
+     "shrunk": 0.073596
+    },
+    {
+     "batter": 690993,
+     "pitches": 3827,
+     "tau_squared": 0.052389,
+     "se": 0.011212,
+     "shrunk": 0.059106
+    },
+    {
+     "batter": 691016,
+     "pitches": 3494,
+     "tau_squared": 0.078183,
+     "se": 0.012288,
+     "shrunk": 0.072455
+    },
+    {
+     "batter": 691023,
+     "pitches": 3855,
+     "tau_squared": 0.031263,
+     "se": 0.011717,
+     "shrunk": 0.048535
+    },
+    {
+     "batter": 691026,
+     "pitches": 5300,
+     "tau_squared": 0.055274,
+     "se": 0.010721,
+     "shrunk": 0.060399
+    },
+    {
+     "batter": 691406,
+     "pitches": 3251,
+     "tau_squared": 0.078027,
+     "se": 0.013807,
+     "shrunk": 0.071735
+    },
+    {
+     "batter": 691718,
+     "pitches": 3730,
+     "tau_squared": 0.089098,
+     "se": 0.012431,
+     "shrunk": 0.077694
+    },
+    {
+     "batter": 693304,
+     "pitches": 3245,
+     "tau_squared": 0.0952,
+     "se": 0.01331,
+     "shrunk": 0.079696
+    },
+    {
+     "batter": 694192,
+     "pitches": 4192,
+     "tau_squared": 0.072123,
+     "se": 0.011796,
+     "shrunk": 0.069581
+    },
+    {
+     "batter": 694384,
+     "pitches": 4983,
+     "tau_squared": 0.08147,
+     "se": 0.010389,
+     "shrunk": 0.075285
+    },
+    {
+     "batter": 694671,
+     "pitches": 4571,
+     "tau_squared": 0.081714,
+     "se": 0.011325,
+     "shrunk": 0.074794
+    },
+    {
+     "batter": 695578,
+     "pitches": 4273,
+     "tau_squared": 0.021135,
+     "se": 0.011634,
+     "shrunk": 0.043152
+    },
+    {
+     "batter": 696100,
+     "pitches": 3260,
+     "tau_squared": 0.020854,
+     "se": 0.010458,
+     "shrunk": 0.040575
+    },
+    {
+     "batter": 696285,
+     "pitches": 3676,
+     "tau_squared": 0.050731,
+     "se": 0.012668,
+     "shrunk": 0.059202
+    },
+    {
+     "batter": 701538,
+     "pitches": 3888,
+     "tau_squared": 0.067814,
+     "se": 0.011006,
+     "shrunk": 0.067406
+    },
+    {
+     "batter": 702616,
+     "pitches": 3243,
+     "tau_squared": 0.063253,
+     "se": 0.012729,
+     "shrunk": 0.065177
+    },
+    {
+     "batter": 807799,
+     "pitches": 4475,
+     "tau_squared": 0.06971,
+     "se": 0.011023,
+     "shrunk": 0.06844
+    }
+   ],
+   "validation": {
+    "n": 303,
+    "bat_speed_spearman": 0.1177,
+    "swing_length_spearman": -0.0501
+   }
+  },
+  "bat_tracking_fetch": {
+   "2024": {
+    "url": "https://baseballsavant.mlb.com/leaderboard/bat-tracking?type=batter&seasonStart=",
+    "rows": 503,
+    "columns": [
+     "id",
+     "name",
+     "swings_competitive",
+     "percent_swings_competitive",
+     "contact",
+     "avg_bat_speed",
+     "hard_swing_rate",
+     "squared_up_per_bat_contact",
+     "squared_up_per_swing",
+     "blast_per_bat_contact",
+     "blast_per_swing",
+     "swing_length",
+     "swords",
+     "batter_run_value",
+     "whiffs",
+     "whiff_per_swing",
+     "batted_ball_events",
+     "batted_ball_event_per_swing"
+    ]
+   },
+   "2025": {
+    "url": "https://baseballsavant.mlb.com/leaderboard/bat-tracking?type=batter&seasonStart=",
+    "rows": 524,
+    "columns": [
+     "id",
+     "name",
+     "swings_competitive",
+     "percent_swings_competitive",
+     "contact",
+     "avg_bat_speed",
+     "hard_swing_rate",
+     "squared_up_per_bat_contact",
+     "squared_up_per_swing",
+     "blast_per_bat_contact",
+     "blast_per_swing",
+     "swing_length",
+     "swords",
+     "batter_run_value",
+     "whiffs",
+     "whiff_per_swing",
+     "batted_ball_events",
+     "batted_ball_event_per_swing"
+    ]
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-08T06:23:35.065936+00:00",
+ "seconds": 612.9
+}
