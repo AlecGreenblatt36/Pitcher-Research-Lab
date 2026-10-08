@@ -338,13 +338,36 @@ class BoxAccumulator:
 # running_events: wild pitches, passed balls, balks, pickoffs and the other running plays between plate appearances
 # (TRANS-02; research_lab.game_sim.running_events.RunningEvents, table brl_live/running_events.json from the transitions
 # lane, tools/brl_running_events.py). Off until its replays are read.
+# reliever_choice: which reliever enters at each pitching change, from a conditional logit fitted on every 2023-2026
+# relief entry (BULLPEN-01; research_lab.game_sim.reliever_choice.RelieverChoice, table brl_live/reliever_choice.json from
+# tools/brl_reliever_choice.py): recent use, rest, role over the year and the last three weeks, strikeout record, the
+# next three hitters' hands and the game situation. Off until its replays are read; off, the hand-set scoring chooses.
 ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         'postseason_exp_scale':{'F':0.91,'D':0.91,'L':0.91,'W':1.0},
-        'environment':True,'team_offsets':True,'steals':True,'transitions':True,'running_events':False}
+        'environment':True,'team_offsets':True,'steals':True,'transitions':True,'running_events':False,
+        'reliever_choice':False}
 
 TRANSITIONS_PATH=Path(__file__).resolve().parent/'transitions.json'
 RUNNING_EVENTS_PATH=Path(__file__).resolve().parent/'running_events.json'
+RELIEVER_CHOICE_PATH=Path(__file__).resolve().parent/'reliever_choice.json'
 _KERNEL={}
+
+def reliever_choice_for(settings):
+    """The fitted reliever choice (brl_live/reliever_choice.json, BULLPEN-01) when switched on, else None."""
+    if not settings.get('reliever_choice'):return None
+    if 'c' not in _KERNEL:
+        from research_lab.game_sim.reliever_choice import RelieverChoice
+        _KERNEL['c']=RelieverChoice(json.loads(RELIEVER_CHOICE_PATH.read_text()))
+    return _KERNEL['c']
+
+def manager_for(manager,settings):
+    """(manager, label): the engine's manager with the fitted reliever choice attached when it is switched on (a copy,
+    so the engine's own manager is unchanged), else the manager itself and None."""
+    choice=reliever_choice_for(settings)
+    if choice is None:return manager,None
+    import copy
+    m=copy.copy(manager);m.reliever_choice=choice
+    return m,choice.name
 
 def running_events_for(settings):
     """The running plays between plate appearances (brl_live/running_events.json, TRANS-02) when switched on, else None."""
@@ -416,7 +439,9 @@ def run_box_worlds(engine,matchup,history,date,seeds,full_history=None,settings=
     if kernel is not None:adjust_label=list(adjust_label)+[kernel.name]
     running=running_events_for(settings)
     if running is not None:adjust_label=list(adjust_label)+[running.name]
-    sim=ObservedSimulator(provider,config=engine.config,manager_policy=engine.manager,steals=steals,transitions=kernel,running_events=running)
+    manager,choice_label=manager_for(engine.manager,settings)
+    if choice_label:adjust_label=list(adjust_label)+[choice_label]
+    sim=ObservedSimulator(provider,config=engine.config,manager_policy=manager,steals=steals,transitions=kernel,running_events=running)
     accumulator=BoxAccumulator(matchup);results=[]
     for seed in seeds:
         if world_hook:world_hook(int(seed))

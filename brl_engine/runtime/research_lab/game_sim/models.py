@@ -58,8 +58,15 @@ class PitcherProfile:
     expected_batters: int = 6
     max_batters: int = 10
     available: bool = True
+    # Recent use, role and record of a reliever on the game date, as (name, value) pairs (brl_live.live_feed.reliever_usage;
+    # read by reliever_choice.RelieverChoice). Empty for starters and when unknown.
+    usage: tuple = ()
 
     def __post_init__(self) -> None:
+        if isinstance(self.usage, dict):
+            object.__setattr__(self, "usage", tuple(sorted((str(k), float(v)) for k, v in self.usage.items())))
+        elif self.usage:
+            object.__setattr__(self, "usage", tuple(sorted((str(k), float(v)) for k, v in self.usage)))
         object.__setattr__(self, "throws", (self.throws or "R").upper()[0])
         object.__setattr__(self, "role", (self.role or "reliever").lower())
         object.__setattr__(self, "stuff", _clip_rating(self.stuff))

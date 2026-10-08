@@ -1,0 +1,92 @@
+{
+ "schema": "brl.reliever-choice.v1",
+ "name": "reliever choice from 2023-2025 relief entries",
+ "fitted_on": [
+  2023,
+  2024,
+  2025
+ ],
+ "names": [
+  "log_share14",
+  "log_share30",
+  "pitched_d1",
+  "back_to_back",
+  "apps_d3",
+  "days_since",
+  "same_hand",
+  "ninth_x_save",
+  "ninth_x_tie_late",
+  "ninth_x_before8",
+  "late_x_late_close",
+  "late_x_early",
+  "late_x_blowout",
+  "share_x_late_close",
+  "share_x_blowout",
+  "medbf_x_early",
+  "medbf_x_blowout",
+  "medbf_x_mid",
+  "same_hand_x_mid",
+  "quality",
+  "quality_x_late_close",
+  "quality_x_save",
+  "quality_x_blowout",
+  "ninth_x_extra",
+  "same3",
+  "same3_x_late",
+  "same3_x_mid",
+  "ninth21_x_save",
+  "late21_x_late_close"
+ ],
+ "beta": [
+  -0.57654,
+  0.65105,
+  -1.28406,
+  -1.59808,
+  -0.51009,
+  -4.2182,
+  0.29491,
+  1.84869,
+  2.59505,
+  -1.99209,
+  0.21413,
+  -1.2117,
+  -0.30746,
+  0.28676,
+  -0.33602,
+  0.13215,
+  -0.06264,
+  -0.21809,
+  0.98058,
+  0.05767,
+  0.1891,
+  0.52171,
+  -0.25003,
+  -1.80012,
+  0.67249,
+  -0.38088,
+  -0.22015,
+  1.89191,
+  -0.10526
+ ],
+ "counts": {
+  "entries": 63415,
+  "outside_set": 4731,
+  "small_set": 0
+ },
+ "train": {
+  "entries": 44024,
+  "log_lik_per_entry": -1.7403,
+  "uniform": -2.1698,
+  "top1": 0.3357
+ },
+ "test": {
+  "seasons": [
+   2026
+  ],
+  "entries": 14660,
+  "log_lik_per_entry": -1.7651,
+  "uniform": -2.1996,
+  "top1": 0.3286
+ },
+ "seconds": 484
+}

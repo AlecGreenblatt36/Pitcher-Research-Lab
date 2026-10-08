@@ -33,7 +33,8 @@ def _pitcher(d: dict) -> PitcherProfile:
     return PitcherProfile(str(d['player_id']), str(d['name']), str(d.get('throws', 'R')), str(d.get('role', 'reliever')),
                           float(d.get('stuff', 0.0)), float(d.get('command', 0.0)), float(d.get('contact_management', 0.0)),
                           float(d.get('stamina', 0.5)), float(d.get('leverage', 0.5)), float(d.get('rest', 1.0)),
-                          int(d.get('expected_batters', 6)), int(d.get('max_batters', 10)), bool(d.get('available', True)))
+                          int(d.get('expected_batters', 6)), int(d.get('max_batters', 10)), bool(d.get('available', True)),
+                          tuple((str(k), float(v)) for k, v in (d.get('usage') or ())))
 
 
 def team(t: dict) -> TeamProfile:

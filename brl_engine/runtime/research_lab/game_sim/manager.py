@@ -32,6 +32,9 @@ def game_leverage(state: GameState, fielding_side: TeamSide) -> float:
 @dataclass
 class ManagerPolicy:
     three_batter_minimum: bool = True
+    # Optional fitted reliever choice (reliever_choice.RelieverChoice, BULLPEN-01). None keeps the hand-set scoring
+    # below and draws exactly the same random numbers as before.
+    reliever_choice: object = None
 
     def fatigue(
         self,
@@ -110,6 +113,7 @@ class ManagerPolicy:
         fielding_side: TeamSide,
         next_batter: PlayerProfile,
         rng: np.random.Generator,
+        upcoming=None,
     ) -> PitcherProfile | None:
         candidates = [
             pitcher
@@ -120,6 +124,8 @@ class ManagerPolicy:
         ]
         if not candidates:
             return None
+        if self.reliever_choice is not None:
+            return self.reliever_choice.select(candidates, state, fielding_side, next_batter, rng, upcoming)
 
         leverage = game_leverage(state, fielding_side)
         fielding_lead = state.score_for(fielding_side) - state.opponent_score_for(fielding_side)

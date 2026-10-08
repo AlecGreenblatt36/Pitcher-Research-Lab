@@ -46,10 +46,52 @@ def appearances(history: pd.DataFrame) -> pd.DataFrame:
     last_ab = h.groupby(['game_pk', 'fielding_team'])['at_bat_number'].transform('max')
     h = h.assign(_first=h.groupby(['game_pk', 'pitcher'])['at_bat_number'].transform('min') == first_ab,
                  _finish=h.groupby(['game_pk', 'pitcher'])['at_bat_number'].transform('max') == last_ab)
+    if 'outcome' in h.columns:
+        h = h.assign(_k=(h['outcome'].astype(str) == 'K').astype(int))
+    else:
+        h = h.assign(_k=0)
     return h.groupby(['game_pk', 'pitcher']).agg(
         date=('date_key', 'first'), team=('fielding_team', 'first'), bf=('at_bat_number', 'size'),
         entry_inning=('inning', 'min'), throws=('p_throws', 'first'), start=('_first', 'first'),
-        finished=('_finish', 'first')).reset_index()
+        finished=('_finish', 'first'), k=('_k', 'sum')).reset_index()
+
+
+def bullpen_usage(app: pd.DataFrame, team: str | None, cutoff: str, pids) -> dict:
+    """Recent use, role and strikeout record of each reliever in `pids` with `team` before the cutoff date (BULLPEN-01),
+    from the appearance table: his share of the team's relief batters faced over 14 and 30 days, appearances yesterday
+    and over the last two and three days, days since his last relief outing, his share of relief entries in the ninth
+    and in the eighth or later over 365 days and over the last 21 days (roles move with injuries and trades), his median
+    batters per relief outing, and his relief strikeouts and batters faced over 365 days. Outings for other teams do
+    not count. Returns {pid: {name: value}}."""
+    cutoff = str(cutoff)[:10]
+    day = pd.Timestamp(cutoff)
+    rel = app[(app['date'] < cutoff) & (app['team'] == team) & (~app['start'].astype(bool))] if team is not None else app.iloc[0:0]
+    rel = rel[rel['date'] >= (day - pd.Timedelta(days=365)).strftime('%Y-%m-%d')]
+    ago = (day - pd.to_datetime(rel['date'].astype(str).str[:10])).dt.days.to_numpy() if len(rel) else np.zeros(0, int)
+    bf = rel['bf'].to_numpy(float); who = rel['pitcher'].to_numpy()
+    inn = rel['entry_inning'].to_numpy(float)
+    k = rel['k'].to_numpy(float) if 'k' in rel.columns else np.zeros(len(rel))
+    tot14, tot30 = max(1.0, bf[ago <= 14].sum()), max(1.0, bf[ago <= 30].sum())
+    out = {}
+    for pid in pids:
+        m = who == pid
+        a, b = ago[m], bf[m]
+        out[pid] = {'share14': float(b[a <= 14].sum() / tot14), 'share30': float(b[a <= 30].sum() / tot30),
+                    'pitched_d1': float((a == 1).any()), 'apps_d2': float((a <= 2).sum()), 'apps_d3': float((a <= 3).sum()),
+                    'days_since': float(a.min()) if len(a) else 99.0,
+                    'ninth': float((inn[m] >= 9).mean()) if m.any() else 0.0, 'late': float((inn[m] >= 8).mean()) if m.any() else 0.0,
+                    'med_bf': float(np.median(b)) if m.any() else 4.0, 'k365': float(k[m].sum()), 'bf365': float(b.sum()),
+                    'apps21': float((a <= 21).sum()), 'ninth21': float((inn[m][a <= 21] >= 9).mean()) if (a <= 21).any() else 0.0,
+                    'late21': float((inn[m][a <= 21] >= 8).mean()) if (a <= 21).any() else 0.0}
+    return out
+
+
+def reliever_usage(app: pd.DataFrame, pid: int, cutoff: str, team: str | None = None) -> dict:
+    """bullpen_usage for one reliever; the team is his latest team before the cutoff when not given."""
+    if team is None:
+        mine = app[(app['pitcher'] == pid) & (app['date'] < str(cutoff)[:10])]
+        team = str(mine.sort_values('date')['team'].iloc[-1]) if len(mine) else None
+    return bullpen_usage(app, team, cutoff, [pid])[pid]
 
 
 # Reliever availability from recent use (RELIEF-01). The manager scores candidates with 0.70 x rest and
@@ -81,7 +123,8 @@ def reliever_rest(app: pd.DataFrame, pid: int, cutoff: str) -> float:
     return 1.0
 
 
-def reliever_profile(app: pd.DataFrame, pid: int, throws: str, name: str, cutoff: str, rest: bool | None = None) -> PitcherProfile:
+def reliever_profile(app: pd.DataFrame, pid: int, throws: str, name: str, cutoff: str, rest: bool | None = None,
+                     team: str | None = None) -> PitcherProfile:
     year_start = (pd.Timestamp(cutoff) - pd.Timedelta(days=365)).strftime('%Y-%m-%d')
     sg = app[(app['pitcher'] == pid) & (~app['start']) & (app['date'] < cutoff) & (app['date'] >= year_start)]
     late = float((sg['entry_inning'] >= 8).mean()) if len(sg) else 0.0
@@ -91,7 +134,8 @@ def reliever_profile(app: pd.DataFrame, pid: int, throws: str, name: str, cutoff
     use_rest = RELIEVER_REST if rest is None else rest
     return PitcherProfile(str(pid), name, throws, role=role, leverage=min(1.0, 0.3 + late),
                           rest=reliever_rest(app, pid, cutoff) if use_rest else 1.0,
-                          expected_batters=exp_bf, max_batters=max(exp_bf + 3, 6))
+                          expected_batters=exp_bf, max_batters=max(exp_bf + 3, 6),
+                          usage=reliever_usage(app, pid, cutoff, team))
 
 
 def starter_profile(app: pd.DataFrame, pid: int, throws: str, name: str, cutoff: str) -> PitcherProfile:

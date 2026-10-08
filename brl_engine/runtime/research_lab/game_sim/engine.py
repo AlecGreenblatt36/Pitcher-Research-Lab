@@ -501,14 +501,19 @@ class GameSimulator:
             state.away_lineup_index if fielding_side == "home" else state.home_lineup_index
         )
         next_batter = batting_team.lineup[next_index % 9]
-        replacement = self.manager.select_reliever(
-            fielding.profile.bullpen,
-            fielding.used_pitcher_ids,
-            state,
-            fielding_side,
-            next_batter,
-            rng,
-        )
+        if getattr(self.manager, "reliever_choice", None) is not None:
+            upcoming = [batting_team.lineup[(next_index + i) % 9] for i in range(3)]
+            replacement = self.manager.select_reliever(
+                fielding.profile.bullpen, fielding.used_pitcher_ids, state, fielding_side, next_batter, rng, upcoming=upcoming)
+        else:
+            replacement = self.manager.select_reliever(
+                fielding.profile.bullpen,
+                fielding.used_pitcher_ids,
+                state,
+                fielding_side,
+                next_batter,
+                rng,
+            )
         if replacement is None:
             return
         line.exit_inning = state.inning
