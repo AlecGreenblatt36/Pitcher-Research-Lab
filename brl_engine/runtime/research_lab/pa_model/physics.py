@@ -47,12 +47,16 @@ BASE_FEATURES = ['b_ev', 'b_la', 'b_hard', 'b_barrel', 'b_whiff', 'b_chase', 'b_
 XVALUE_FEATURES = ['b_xv', 'p_xv']
 RECENT_FEATURES = ['p_velo_rec', 'p_whiff_rec', 'p_csw_rec', 'b_ev_rec', 'b_whiff_rec', 'b_hard_rec']
 TYPE_FEATURES = ['b_whiff_fb', 'b_whiff_br', 'b_whiff_os', 'p_whiff_fb', 'p_whiff_br', 'p_whiff_os', 'p_share_fb', 'p_share_br']
+# Matchup interactions: the batter's whiff weakness by pitch family (beyond his overall rate and the league's family rates),
+# weighted by tonight's pitcher's family mix; and his fastball weakness times the pitcher's velocity above the league.
+MATCHUP_FEATURES = ['mx_whiff', 'mx_velo']
 DEFENSE_FEATURES = ['f_def']            # the fielding team's out rate on fieldable balls in play above the league, prior window
 ENV_FEATURES = ['env_hr', 'env_k', 'env_bb', 'env_out', 'season_day']   # league run environment of the last 30 days vs the whole history
 ENV_CLASSES = {'env_hr': ('HR',), 'env_k': ('K',), 'env_bb': ('BB_HBP',), 'env_out': ('BIP_OUT',)}
 DEFAULT_PARAMS = {'k_rate': 150.0, 'k_bip': 60.0, 'k_velo': 100.0, 'xvalue': False, 'recent_days': 0,
                   'k_recent_pitch': 100.0, 'k_recent_bip': 40.0, 'k_cell': 40.0, 'pitch_types': False, 'k_type': 60.0,
-                  'defense': False, 'k_def': 400.0, 'defense_days': 365, 'environment': False, 'env_days': 30, 'k_env': 2000.0}
+                  'defense': False, 'k_def': 400.0, 'defense_days': 365, 'environment': False, 'env_days': 30, 'k_env': 2000.0,
+                  'matchup': False}
 FIELDABLE = {'BIP_OUT', '1B', '2B_3B', 'OTHER_REACH'}
 ENV_LABELS = ['BIP_OUT', 'K', 'BB_HBP', '1B', '2B_3B', 'HR', 'OTHER_REACH']
 ENV_INDEX = {l: i for i, l in enumerate(ENV_LABELS)}
@@ -76,6 +80,8 @@ def feature_names(params: dict | None = None) -> list[str]:
         names += RECENT_FEATURES
     if p.get('pitch_types'):
         names += TYPE_FEATURES
+    if p.get('matchup'):
+        names += MATCHUP_FEATURES
     if p.get('defense'):
         names += DEFENSE_FEATURES
     if p.get('environment'):
@@ -286,6 +292,19 @@ class _Sums:
             out[X['p_whiff_os']] = shrunk(sp, PS['os_wh'], PS['os_sw'], Lp, k_t)
             out[X['p_share_fb']] = shrunk(sp, PS['fb'], PS['n'], Lp, k_rate)
             out[X['p_share_br']] = shrunk(sp, PS['br_n'], PS['n'], Lp, k_rate)
+        if P.get('matchup'):
+            k_t = float(P['k_type'])
+            league_all = Lp[PS['wh']] / max(Lp[PS['sw']], 1e-9)
+            rel_all = out[X['b_whiff']] - league_all
+            dev, share = {}, {}
+            for g, (wh, sw, n_) in {'fb': ('fb_wh', 'fb_sw', 'fb'), 'br': ('br_wh', 'br_sw', 'br_n'), 'os': ('os_wh', 'os_sw', 'os_n')}.items():
+                league_g = Lp[PS[wh]] / max(Lp[PS[sw]], 1e-9)
+                dev[g] = (shrunk(sb, PS[wh], PS[sw], Lp, k_t) - league_g) - rel_all
+                share[g] = shrunk(sp, PS[n_], PS['n'], Lp, k_rate)
+            total = max(sum(share.values()), 1e-9)
+            out[X['mx_whiff']] = sum(share[g] / total * dev[g] for g in dev)
+            league_velo = Lp[PS['velo']] / max(Lp[PS['fb']], 1e-9)
+            out[X['mx_velo']] = dev['fb'] * (own_velo - league_velo) / 5.0
         if P.get('recent_days'):
             k_rp, k_rb = float(P['k_recent_pitch']), float(P['k_recent_bip'])
             rp, rpb = self._recent(self.rec_p[pitcher], today) if pitcher in self.rec_p else (self.zero_p, self.zero_b)
