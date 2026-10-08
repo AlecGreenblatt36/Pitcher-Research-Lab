@@ -126,7 +126,9 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
     through the season before it, so nothing from the replayed season enters.
     win_states: also build the game's win table from the simulated plate appearances (brl_live/win_table.py, as the
     live forecast does) and record its win chance at the start of every real plate appearance of that game
-    ([inning, half 0 top 1 bottom, outs, runners mask, home lead, chance]); game states only, no player data."""
+    ([inning, half 0 top 1 bottom, outs, runners mask, home lead, chance]); game states only, no player data.
+    win_states='split' adds the chances from the even and the odd simulated games separately and the number of
+    simulated plate appearances in that state, so the table's own noise can be measured."""
     from brl_live.provider_adjust import ContextAdjust, EnvironmentAdjust, TeamAdjust
     hcols = h[HISTORY_COLUMNS]
     first = dates[0]
@@ -222,11 +224,15 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
             ha = np.zeros(MAX_RUNS + 1, int); aa = np.zeros(MAX_RUNS + 1, int)
             s_outs = {"away": [], "home": []}
             wt = WinTable() if win_states else None
-            for s in seeds:
+            halves = (WinTable(), WinTable()) if win_states == "split" else None
+            for si, s in enumerate(seeds):
                 r = sim.simulate(matchup, int(s), record_events=bool(win_states))
                 if wt is not None:
-                    wt.add({"score": {"home": r.home_score, "away": r.away_score},
-                            "plays": [e for e in r.events if e.get("outcome") not in ("stolen_base", "caught_stealing")]})
+                    box = {"score": {"home": r.home_score, "away": r.away_score},
+                           "plays": [e for e in r.events if e.get("outcome") not in ("stolen_base", "caught_stealing")]}
+                    wt.add(box)
+                    if halves is not None:
+                        halves[si % 2].add(box)
                 ha[min(r.home_score, MAX_RUNS)] += 1
                 aa[min(r.away_score, MAX_RUNS)] += 1
                 if r.winner == "home":
@@ -242,11 +248,16 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                             "home_runs": int(g.home_runs), "away_runs": int(g.away_runs)})
             if wt is not None:
                 tb = wt.table()
+                tabs = [h_.table() for h_ in halves] if halves is not None else []
                 st = []
                 for inn, half, outs, bases, lead in real_states.get(int(g.game_pk), []):
                     key = state_index(inn, half, outs, bases, lead)
-                    st.append([inn, 0 if half == "top" else 1, outs, int(sum(1 << k for k, b in enumerate(bases) if b)), lead, round(float(tb[key]), 4)])
-                records[-1]["p_table_start"] = round(float(tb[state_index(1, "top", 0, (), 0)]), 4)
+                    st.append([inn, 0 if half == "top" else 1, outs, int(sum(1 << k for k, b in enumerate(bases) if b)), lead, round(float(tb[key]), 4)]
+                              + [round(float(t_[key]), 4) for t_ in tabs] + ([int(wt.n[key])] if tabs else []))
+                k0 = state_index(1, "top", 0, (), 0)
+                records[-1]["p_table_start"] = round(float(tb[k0]), 4)
+                if tabs:
+                    records[-1]["p_table_start_halves"] = [round(float(t_[k0]), 4) for t_ in tabs]
                 records[-1]["states"] = st
         log(f"{date} {len(day)} games {time.time() - td:.1f}s ({di + 1}/{len(dates)}) cache hit {cached.hits / max(1, cached.hits + cached.misses):.2f}")
     log(f"done {time.time() - t0:.0f}s")
