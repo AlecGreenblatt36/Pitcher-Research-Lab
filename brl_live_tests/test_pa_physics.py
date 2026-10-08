@@ -103,3 +103,33 @@ def test_defense_feature_builder_matches_state_and_is_time_valid():
     state = phys.PhysicsState.build(table, '2026-05-08', params)
     v = state.features(10, 500, team_defense=D.value('HOM'))
     assert v[-1] == np.float64(D.value('HOM')) and len(v) == len(phys.BASE_FEATURES) + 1
+
+
+def test_aging_and_recency_features_match_between_builder_and_state():
+    pa, study = helpers.synthetic(n_games=40)
+    table = study_table(study)
+    pa = pa.copy()
+    pa['age_bat'] = 24 + (pa['batter'] % 12)          # batters 24 to 35, pitchers 27 and 28
+    pa['age_pit'] = 27 + (pa['pitcher'] - 500)
+    pa_sorted = pa.sort_values(['date_key', 'game_pk', 'at_bat_number'], kind='mergesort').reset_index(drop=True)
+    table = table.join(pa_sorted.set_index(['game_pk', 'at_bat_number'])['outcome'], on=['game_pk', 'at_bat_number'])
+    params = {'xvalue': True, 'recent_days': 3, 'aging': True, 'decay_days': 3, 'k_dec': 10.0}
+    built, _ = phys.build_features(pa, table, params)
+    assert list(built.columns[-16:]) == phys.AGING_FEATURES + phys.DECAY_FEATURES
+    first = pa_sorted.date_key == '2026-05-01'
+    # Nothing is known on the first date: no history gap and no recency deviation.
+    assert (built.loc[first, ['b_gap', 'p_gap'] + phys.DECAY_FEATURES] == 0).all().all()
+    later = pa_sorted.date_key >= '2026-05-05'
+    assert (built.loc[later, 'b_gap'] > 0).all() and built.loc[later, 'b_dec_HR'].abs().max() > 0
+    # Older batters (above 27) get a negative aging term once they have history; younger ones positive.
+    old = later & (pa_sorted.age_bat > 27); young = later & (pa_sorted.age_bat < 27)
+    assert (built.loc[old, 'b_aging'] < 0).all() and (built.loc[young, 'b_aging'] > 0).all()
+    for day in ('2026-05-01', '2026-05-04', '2026-05-10'):
+        state = phys.PhysicsState.build(table, day, params).with_history(pa)
+        rows = np.where(pa_sorted.date_key.to_numpy() == day)[0]
+        for r in rows[:30]:
+            expected = built.iloc[r].to_numpy(float)
+            got = state.features(int(pa_sorted.batter[r]), int(pa_sorted.pitcher[r]), age_bat=pa_sorted.age_bat[r], age_pit=pa_sorted.age_pit[r])
+            assert np.allclose(got, expected, atol=1e-5, equal_nan=True), (day, r, got - expected)
+    with pytest.raises(ValueError):
+        phys.PhysicsState.build(table, '2026-05-04', params).features(10, 500)

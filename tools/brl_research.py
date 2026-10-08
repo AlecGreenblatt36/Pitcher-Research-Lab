@@ -84,6 +84,24 @@ def put_text(repo, token, path, text, branch, message):
             time.sleep(2 + 3 * attempt)
 
 
+
+def put_bytes(repo, token, path, raw, branch, message):
+    url = f'https://api.github.com/repos/{repo}/contents/{path}'
+    for attempt in range(6):
+        payload = {'message': message, 'content': base64.b64encode(raw).decode(), 'branch': branch}
+        try:
+            payload['sha'] = api(url + '?ref=' + branch, token)['sha']
+        except HTTPError as exc:
+            if exc.code != 404:
+                raise
+        try:
+            return api(url, token, 'PUT', payload)
+        except HTTPError as exc:
+            if exc.code != 409 or attempt == 5:
+                raise
+            time.sleep(2 + 3 * attempt)
+
+
 class _Done(Exception):
     """Raised to leave the experiment body early with the receipt already filled."""
 
@@ -132,6 +150,82 @@ def gbm_experiment(features, locked_columns, extras, y, partitions, parts, confi
     return out_all
 
 
+# Linear weights (runs per plate appearance outcome, average out = about -0.27) for residual summaries.
+RV_WEIGHTS = np.array([-0.26, -0.28, 0.32, 0.47, 0.80, 1.40, 0.45])
+# Experiments that also score team offsets and residual bins on every variant's predictions.
+TEAM_EVAL = {'aging'}
+TEAM_GRID = [(k, hl, sides) for k in (2000.0, 4000.0, 8000.0) for hl in (90.0, 180.0, None) for sides in (('fld',), ('bat', 'fld'))]
+
+
+def team_offsets(P, Y, dates, bat, fld, n_teams, k, half_life, sides):
+    """Each date's probabilities times exp(batting team offset + fielding team offset), offsets = log((observed + k q) /
+    (expected + k q)) per class from strictly earlier dates (q league share; expected includes the other side's offset),
+    decayed by half_life days when given. Returns the adjusted probabilities (same order as P)."""
+    league = Y.mean(0)
+    O = {s: np.zeros((n_teams, 7)) for s in ('bat', 'fld')}; E = {s: np.zeros((n_teams, 7)) for s in ('bat', 'fld')}
+    Q = P.copy(); last = None
+    order = np.argsort(dates, kind='mergesort'); ds = dates[order]
+    bounds = np.flatnonzero(np.r_[True, ds[1:] != ds[:-1], True])
+    idx_t = {'bat': bat, 'fld': fld}
+    for a, b in zip(bounds[:-1], bounds[1:]):
+        ii = order[a:b]; day = pd.Timestamp(str(ds[a])[:10]).toordinal()
+        if half_life and last is not None:
+            f = 0.5 ** ((day - last) / half_life)
+            for s in O:
+                O[s] *= f; E[s] *= f
+        off = {s: (np.log((O[s] + k * league) / (E[s] + k * league)) if s in sides else np.zeros((n_teams, 7))) for s in ('bat', 'fld')}
+        L = np.log(np.clip(P[ii], 1e-12, 1)) + off['bat'][bat[ii]] + off['fld'][fld[ii]]
+        L -= L.max(1, keepdims=True); q = np.exp(L); q /= q.sum(1, keepdims=True); Q[ii] = q
+        for s, other in (('bat', 'fld'), ('fld', 'bat')):
+            pe = P[ii] * np.exp(off[other][idx_t[other][ii]]); pe /= pe.sum(1, keepdims=True)
+            np.add.at(O[s], idx_t[s][ii], Y[ii]); np.add.at(E[s], idx_t[s][ii], pe)
+        last = day
+    return Q
+
+
+def team_eval(P, y, frame, bat, fld, n_teams, parts_all):
+    """Team offsets on one variant's 2025-2026 predictions: log loss change per PA on each holdout part, game-clustered."""
+    from research_lab.pa_model.evaluation import clustered_log_loss_difference_ci
+    Y = np.eye(7)[y]
+    dates = frame['date_key'].astype(str).to_numpy()
+    out = {}
+    for k, hl, sides in TEAM_GRID:
+        Q = team_offsets(P, Y, dates, bat, fld, n_teams, k, hl, sides)
+        key = f'k{int(k)}_hl{int(hl) if hl else 0}_{"+".join(sides)}'
+        out[key] = {}
+        for part, mask in parts_all:
+            out[key][part] = clustered_log_loss_difference_ci(y[mask], Q[mask], P[mask], frame['game_pk'].to_numpy()[mask], replicates=300)
+    return out
+
+
+def residual_bins(P, y, frame, mask):
+    """Observed minus predicted runs per 1,000 plate appearances by batter and pitcher age and prior plate appearances."""
+    obs = RV_WEIGHTS[y[mask]]; pred = P[mask] @ RV_WEIGHTS
+    res = {}
+    for name, col, bins in (('batter_age', 'age_bat', [0, 23, 25, 27, 29, 31, 33, 35, 60]), ('pitcher_age', 'age_pit', [0, 23, 25, 27, 29, 31, 33, 35, 60]),
+                            ('batter_history', 'batter_history_pa', [-1, 0, 150, 600, 1200, 1e9]), ('pitcher_history', 'pitcher_history_pa', [-1, 0, 150, 600, 1200, 1e9])):
+        if col not in frame.columns:
+            continue
+        b = pd.cut(frame.loc[mask, col].to_numpy(float), bins)
+        g = pd.DataFrame({'b': b, 'o': obs, 'p': pred}).groupby('b', observed=True)
+        res[name] = {str(k): {'pa': int(len(v)), 'resid_x1000': round(float((v.o.mean() - v.p.mean()) * 1000), 2),
+                              'se_x1000': round(float(v.o.std() / np.sqrt(len(v)) * 1000), 2)} for k, v in g}
+    return res
+
+
+def team_aggregates(P, y, frame, bat_names, fld_names):
+    """Per (date, team, side): plate appearances, observed counts and predicted sums per class (team-level only)."""
+    Y = np.eye(7)[y]
+    df = pd.DataFrame({'d': frame['date_key'].astype(str).to_numpy()})
+    rows = []
+    for side, names in (('bat', bat_names), ('fld', fld_names)):
+        df['t'] = names
+        for (d, team), ii in df.groupby(['d', 't']).indices.items():
+            rows.append({'date': d, 'team': str(team), 'side': side, 'n': int(len(ii)),
+                         'obs': [int(v) for v in Y[ii].sum(0)], 'pred': [round(float(v), 4) for v in P[ii].sum(0)]})
+    return rows
+
+
 def entrypoint_module():
     spec = importlib.util.spec_from_file_location('brl_entrypoint', ROOT / 'brl_engine' / 'entrypoint.py')
     module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
@@ -154,6 +248,9 @@ SETS = {
                 'matchup_k150': {'xvalue': True, 'recent_days': 30, 'matchup': True, 'k_type': 150.0}},
     'workload': {'v2': {'xvalue': True, 'recent_days': 30}, 'workload': {'xvalue': True, 'recent_days': 30, 'workload': True},
                  'workload_matchup': {'xvalue': True, 'recent_days': 30, 'workload': True, 'matchup': True}},
+    'aging': {'v2': {'xvalue': True, 'recent_days': 30}, 'aging': {'xvalue': True, 'recent_days': 30, 'aging': True},
+              'dec365': {'xvalue': True, 'recent_days': 30, 'decay_days': 365},
+              'aging_dec365': {'xvalue': True, 'recent_days': 30, 'aging': True, 'decay_days': 365}},
     'defense': {'v2': {'xvalue': True, 'recent_days': 30}, 'defense': {'xvalue': True, 'recent_days': 30, 'defense': True},
                 'defense_k200': {'xvalue': True, 'recent_days': 30, 'defense': True, 'k_def': 200.0},
                 'defense_730': {'xvalue': True, 'recent_days': 30, 'defense': True, 'defense_days': 730}},
@@ -274,7 +371,7 @@ def main():
             fitted, tuning = fit_frozen_model(features, cols, config)
             out = {'feature_count': len(cols), 'best_regularization_c': tuning['best_regularization_c'], 'best_tune_log_loss': tuning['best_tune_log_loss'],
                    'calibration': {k: tuning['calibration'][k] for k in ('temperature', 'pre_calibration_log_loss', 'post_calibration_log_loss')}}
-            probs[name] = {}
+            probs[name] = {'_fitted': fitted} if experiment in TEAM_EVAL else {}
             for part, mask in parts:
                 p = fitted.predict_proba(features.loc[mask]); probs[name][part] = p
                 out[part] = probability_metrics(y[mask], p).to_dict()
@@ -299,6 +396,21 @@ def main():
             receipt['results'] = results; receipt['status'] = 'completed'
             raise _Done()
         variants = SETS.get(experiment) or {experiment: {}}
+        team_eval_on = experiment in TEAM_EVAL
+        if team_eval_on:
+            ordered_pa = pa.sort_values(['date_key', 'game_pk', 'at_bat_number'], kind='mergesort').reset_index(drop=True)
+            if not (ordered_pa['game_pk'].to_numpy() == features['game_pk'].to_numpy()).all():
+                raise ValueError('PA order does not match the feature frame')
+            top = ordered_pa['inning_topbot'].astype(str).str.lower().str.startswith('top').to_numpy()
+            bat_names = np.where(top, ordered_pa['away_team'].astype(str), ordered_pa['home_team'].astype(str))
+            fld_names = np.where(top, ordered_pa['home_team'].astype(str), ordered_pa['away_team'].astype(str))
+            teams = sorted(set(bat_names) | set(fld_names)); tix = {tm: i for i, tm in enumerate(teams)}
+            bat_i = np.array([tix[tm] for tm in bat_names]); fld_i = np.array([tix[tm] for tm in fld_names])
+            for col in ('age_bat', 'age_pit'):
+                features[col + '_meta'] = ordered_pa[col].to_numpy(float)
+            eval_mask = features['season'].isin((2025, 2026)).to_numpy()
+            sub = features.loc[eval_mask].reset_index(drop=True)
+            parts_eval = (('validation_blend_2025', blend_mask[eval_mask]), ('test_2026', test_mask[eval_mask]))
         for vname, params in variants.items():
             stage('build physics features ' + vname)
             extras, audit = build_extras(pa, physics, params)
@@ -311,6 +423,23 @@ def main():
             for part, mask in parts:
                 games = features.loc[mask, 'game_pk'].to_numpy()
                 results[vname][part + '_minus_locked'] = clustered_log_loss_difference_ci(y[mask], probs[vname][part], probs['locked'][part], games, replicates=600)
+            if team_eval_on:
+                stage('team offsets ' + vname)
+                fitted_v = probs[vname].pop('_fitted')
+                P_all = fitted_v.predict_proba(features.loc[eval_mask])
+                y_sub = y[eval_mask]
+                sub_meta = sub[['date_key', 'game_pk']].copy()
+                sub_meta['age_bat'] = features.loc[eval_mask, 'age_bat_meta'].to_numpy(); sub_meta['age_pit'] = features.loc[eval_mask, 'age_pit_meta'].to_numpy()
+                for col in ('batter_history_pa', 'pitcher_history_pa'):
+                    sub_meta[col] = features.loc[eval_mask, col].to_numpy(float)
+                results[vname]['team_offsets'] = team_eval(P_all, y_sub, sub_meta, bat_i[eval_mask], fld_i[eval_mask], len(teams), parts_eval)
+                results[vname]['residual_bins_2026'] = residual_bins(P_all, y_sub, sub_meta, parts_eval[1][1])
+                aggregates = team_aggregates(P_all, y_sub, sub_meta, bat_names[eval_mask], fld_names[eval_mask])
+                raw = gzip.compress(json.dumps({'schema': 'brl.team-residuals.v1', 'variant': vname, 'params': params, 'labels': list(LABELS),
+                                                'rows': aggregates}).encode(), mtime=0)
+                put_bytes(repo, token, f'research/team-resid-{vname}-{run_id}.json.gz', raw, branch, 'BRL: team residuals ' + vname)
+                results[vname]['team_aggregates_file'] = f'research/team-resid-{vname}-{run_id}.json.gz'
+                del P_all
             features.drop(columns=cols, inplace=True)
             del extras
         receipt['results'] = results

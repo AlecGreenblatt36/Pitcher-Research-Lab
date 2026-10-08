@@ -52,13 +52,20 @@ TYPE_FEATURES = ['b_whiff_fb', 'b_whiff_br', 'b_whiff_os', 'p_whiff_fb', 'p_whif
 MATCHUP_FEATURES = ['mx_whiff', 'mx_velo']
 # Pitcher workload: pitched yesterday, back within three days, pitches in his last outing and over the last 14 days (hundreds).
 WORKLOAD_FEATURES = ['p_b2b', 'p_rest_short', 'p_last_n', 'p_load14']
+# Aging and staleness (from the plate-appearance history, all seasons): years from the PA-weighted mean date of the
+# player's prior plate appearances to today, that gap times his distance from a peak age of 27 (young players improve
+# on their history, older ones decline), and age squared around 28.
+AGING_FEATURES = ['b_gap', 'b_aging', 'b_age_sq', 'p_gap', 'p_aging', 'p_age_sq']
+# Recency: log of the player's time-decayed rate (half-life decay_days) over his all-history rate, both shrunk, per class.
+DECAY_CLASSES = (('K', 'K'), ('BB', 'BB_HBP'), ('HR', 'HR'), ('1B', '1B'), ('XBH', '2B_3B'))
+DECAY_FEATURES = [f'{s}_dec_{name}' for s in ('b', 'p') for name, _ in DECAY_CLASSES]
 DEFENSE_FEATURES = ['f_def']            # the fielding team's out rate on fieldable balls in play above the league, prior window
 ENV_FEATURES = ['env_hr', 'env_k', 'env_bb', 'env_out', 'season_day']   # league run environment of the last 30 days vs the whole history
 ENV_CLASSES = {'env_hr': ('HR',), 'env_k': ('K',), 'env_bb': ('BB_HBP',), 'env_out': ('BIP_OUT',)}
 DEFAULT_PARAMS = {'k_rate': 150.0, 'k_bip': 60.0, 'k_velo': 100.0, 'xvalue': False, 'recent_days': 0,
                   'k_recent_pitch': 100.0, 'k_recent_bip': 40.0, 'k_cell': 40.0, 'pitch_types': False, 'k_type': 60.0,
                   'defense': False, 'k_def': 400.0, 'defense_days': 365, 'environment': False, 'env_days': 30, 'k_env': 2000.0,
-                  'matchup': False, 'workload': False}
+                  'matchup': False, 'workload': False, 'aging': False, 'decay_days': 0, 'k_dec': 60.0}
 FIELDABLE = {'BIP_OUT', '1B', '2B_3B', 'OTHER_REACH'}
 ENV_LABELS = ['BIP_OUT', 'K', 'BB_HBP', '1B', '2B_3B', 'HR', 'OTHER_REACH']
 ENV_INDEX = {l: i for i, l in enumerate(ENV_LABELS)}
@@ -90,7 +97,110 @@ def feature_names(params: dict | None = None) -> list[str]:
         names += DEFENSE_FEATURES
     if p.get('environment'):
         names += ENV_FEATURES
+    if p.get('aging'):
+        names += AGING_FEATURES
+    if p.get('decay_days'):
+        names += DECAY_FEATURES
     return names
+
+
+def uses_history(params: dict | None) -> bool:
+    """True when the features need the plate-appearance history (AgingState) besides the physics table."""
+    p = dict(DEFAULT_PARAMS, **(params or {}))
+    return bool(p.get('aging') or p.get('decay_days'))
+
+
+class AgingState:
+    """Staleness, age-curve and recency features from plate-appearance rows (date, batter, pitcher, outcome).
+
+    Fed one whole date at a time after that date is scored, like the other states, so a feature on date D only
+    sees dates before D. ``values(batter, pitcher, today, age_bat, age_pit)`` returns {feature name: value}.
+    """
+
+    def __init__(self, params: dict | None = None):
+        self.p = dict(DEFAULT_PARAMS, **(params or {}))
+        self.day = {'b': {}, 'p': {}}           # player -> [plate appearances, sum of their day ordinals]
+        self.all = {'b': {}, 'p': {}}           # player -> class counts (7) and total
+        self.dec = {'b': {}, 'p': {}}           # player -> [day of last update, decayed class counts and total]
+        self.league = np.zeros(8)
+        self.cutoff_day = None
+
+    def absorb_date(self, today: int, batters, pitchers, outcomes) -> None:
+        day_counts = {'b': {}, 'p': {}}
+        for b, p, o in zip(batters, pitchers, outcomes):
+            ci = ENV_INDEX.get(str(o))
+            for s, key in (('b', int(b)), ('p', int(p))):
+                e = self.day[s].get(key)
+                if e is None:
+                    e = self.day[s][key] = [0.0, 0.0]
+                e[0] += 1.0; e[1] += float(today)
+                if ci is not None:
+                    v = day_counts[s].get(key)
+                    if v is None:
+                        v = day_counts[s][key] = np.zeros(8)
+                    v[ci] += 1.0; v[7] += 1.0
+            if ci is not None:
+                self.league[ci] += 1.0; self.league[7] += 1.0
+        half = float(self.p.get('decay_days') or 0)
+        for s in ('b', 'p'):
+            for key, v in day_counts[s].items():
+                a = self.all[s].get(key)
+                self.all[s][key] = v.copy() if a is None else a + v
+                if half > 0:
+                    prev = self.dec[s].get(key)
+                    if prev is None:
+                        self.dec[s][key] = [today, v.copy()]
+                    else:
+                        prev[1] = prev[1] * 0.5 ** ((today - prev[0]) / half) + v
+                        prev[0] = today
+
+    def values(self, batter: int, pitcher: int, today: int, age_bat=None, age_pit=None) -> dict:
+        out = {}
+        P = self.p
+        if P.get('aging'):
+            for s, who, age in (('b', int(batter), age_bat), ('p', int(pitcher), age_pit)):
+                e = self.day[s].get(who)
+                gap = (today - e[1] / e[0]) / 365.25 if (e is not None and e[0] > 0) else 0.0
+                a = np.nan if age is None else float(age)
+                out[s + '_gap'] = gap
+                out[s + '_aging'] = gap * (27.0 - a) / 5.0
+                out[s + '_age_sq'] = ((a - 28.0) / 4.0) ** 2
+        half = float(P.get('decay_days') or 0)
+        if half > 0:
+            k = float(P['k_dec'])
+            total = self.league[7]
+            for s, who in (('b', int(batter)), ('p', int(pitcher))):
+                allc = self.all[s].get(who)
+                prev = self.dec[s].get(who)
+                dv = prev[1] * 0.5 ** ((today - prev[0]) / half) if prev is not None else None
+                for name, cls in DECAY_CLASSES:
+                    if total <= 0 or allc is None or dv is None:
+                        out[f'{s}_dec_{name}'] = 0.0
+                        continue
+                    i = ENV_INDEX[cls]
+                    league = self.league[i] / total
+                    plain = (allc[i] + k * league) / (allc[7] + k)
+                    recent = (dv[i] + k * plain) / (dv[7] + k)
+                    out[f'{s}_dec_{name}'] = float(np.log(max(recent, 1e-9) / max(plain, 1e-9)))
+        return out
+
+    @classmethod
+    def build(cls, history: pd.DataFrame, cutoff_date: str, params: dict | None = None) -> 'AgingState':
+        A = cls(params)
+        frame = history.loc[history['date_key'].astype(str).str[:10] < str(cutoff_date)[:10], ['date_key', 'game_pk', 'at_bat_number', 'batter', 'pitcher', 'outcome']]
+        frame = frame.sort_values(['date_key', 'game_pk', 'at_bat_number'], kind='mergesort').reset_index(drop=True)
+        dates = frame['date_key'].astype(str).str[:10].to_numpy()
+        day_ord = pd.to_datetime(pd.Series(dates)).map(pd.Timestamp.toordinal).to_numpy() if len(frame) else np.array([], int)
+        b, p, o = frame['batter'].to_numpy(int), frame['pitcher'].to_numpy(int), frame['outcome'].astype(str).to_numpy()
+        i, n = 0, len(frame)
+        while i < n:
+            j = i
+            while j < n and dates[j] == dates[i]:
+                j += 1
+            A.absorb_date(int(day_ord[i]), b[i:j], p[i:j], o[i:j])
+            i = j
+        A.cutoff_day = pd.Timestamp(str(cutoff_date)[:10]).toordinal()
+        return A
 
 
 def _num(value):
@@ -246,7 +356,7 @@ class _Sums:
                 sp_ += e[1]; sb_ += e[2]
         return sp_, sb_
 
-    def features(self, batter: int, pitcher: int, today: int, team_defense=None) -> np.ndarray:
+    def features(self, batter: int, pitcher: int, today: int, team_defense=None, aging_values=None) -> np.ndarray:
         P, X = self.p, self.X
         k_rate, k_bip, k_velo = float(P['k_rate']), float(P['k_bip']), float(P['k_velo'])
         Lp, Lb = self.Lp, self.Lb
@@ -347,6 +457,10 @@ class _Sums:
                 rate = (recent[idx].sum() + k * base) / (n_recent + k)
                 out[X[name]] = float(np.log(max(rate, 1e-6) / max(base, 1e-6)))
             out[X['season_day']] = float(today - _season_start(today))
+        if P.get('aging') or P.get('decay_days'):
+            names = (AGING_FEATURES if P.get('aging') else []) + (DECAY_FEATURES if P.get('decay_days') else [])
+            for name in names:
+                out[X[name]] = np.nan if aging_values is None else float(aging_values.get(name, np.nan))
         return out
 
     def absorb_date(self, today: int, batters, pitchers, M: np.ndarray, ev: np.ndarray, la: np.ndarray, run_value: np.ndarray | None, outcomes=None):
@@ -496,6 +610,12 @@ def build_features(pa: pd.DataFrame, table: pd.DataFrame, params: dict | None = 
         teams = DefenseState.fielding_teams(ordered)
         fieldable = ordered['outcome'].isin(FIELDABLE).to_numpy(); outs = (ordered['outcome'] == 'BIP_OUT').to_numpy()
         def_col = S.X['f_def']
+    want_age = uses_history(S.p)
+    if want_age:
+        A = AgingState(S.p)
+        all_outcomes = ordered['outcome'].astype(str).to_numpy()
+        age_b = ordered['age_bat'].to_numpy(float) if 'age_bat' in ordered.columns else np.full(len(ordered), np.nan)
+        age_p = ordered['age_pit'].to_numpy(float) if 'age_pit' in ordered.columns else np.full(len(ordered), np.nan)
     i, n = 0, len(ordered)
     while i < n:
         j = i
@@ -503,11 +623,14 @@ def build_features(pa: pd.DataFrame, table: pd.DataFrame, params: dict | None = 
             j += 1
         today = int(day_ord[i])
         for r in range(i, j):
-            out[r] = S.features(int(batters[r]), int(pitchers[r]), today, team_defense=(D.value(teams[r], today) if want_def else None))
+            av = A.values(int(batters[r]), int(pitchers[r]), today, age_b[r], age_p[r]) if want_age else None
+            out[r] = S.features(int(batters[r]), int(pitchers[r]), today, team_defense=(D.value(teams[r], today) if want_def else None), aging_values=av)
         S.absorb_date(today, batters[i:j], pitchers[i:j], M[i:j], ev[i:j], la[i:j], None if rv is None else rv[i:j],
                       outcomes=(ordered['outcome'].to_numpy()[i:j] if S.p.get('environment') else None))
         if want_def:
             D.absorb_date(today, teams[i:j], fieldable[i:j], outs[i:j])
+        if want_age:
+            A.absorb_date(today, batters[i:j], pitchers[i:j], all_outcomes[i:j])
         i = j
     audit['league_fastball_velocity'] = float(S.Lp[PS['velo']] / max(S.Lp[PS['fb']], 1)); audit['league_exit_velocity'] = float(S.Lb[BS['ev']] / max(S.Lb[BS['bip']], 1))
     audit['league_hard_hit_rate'] = float(S.Lb[BS['hard']] / max(S.Lb[BS['bip']], 1)); audit['league_whiff_per_swing'] = float(S.Lp[PS['wh']] / max(S.Lp[PS['sw']], 1))
@@ -527,6 +650,13 @@ class PhysicsState:
         self.sums, self.cutoff_date, self.n_rows = sums, cutoff_date, n_rows
         self.today = pd.Timestamp(cutoff_date).toordinal()
         self.names = sums.names
+        self.aging = None                       # AgingState from the PA history when the features need it (with_history)
+
+    def with_history(self, history: pd.DataFrame) -> 'PhysicsState':
+        """Attach the aging and recency state built from the plate-appearance history before the cutoff."""
+        if uses_history(self.sums.p):
+            self.aging = AgingState.build(history, self.cutoff_date, self.sums.p)
+        return self
 
     @classmethod
     def build(cls, table: pd.DataFrame, cutoff_date: str, params: dict | None = None, outcomes: pd.Series | None = None) -> 'PhysicsState':
@@ -558,5 +688,10 @@ class PhysicsState:
             i = j
         return cls(S, str(cutoff_date)[:10], n)
 
-    def features(self, batter: int, pitcher: int, team_defense=None) -> np.ndarray:
-        return self.sums.features(int(batter), int(pitcher), self.today, team_defense=team_defense)
+    def features(self, batter: int, pitcher: int, team_defense=None, age_bat=None, age_pit=None) -> np.ndarray:
+        av = None
+        if uses_history(self.sums.p):
+            if self.aging is None:
+                raise ValueError('aging and recency features need the plate-appearance history (PhysicsState.with_history)')
+            av = self.aging.values(int(batter), int(pitcher), self.today, age_bat, age_pit)
+        return self.sums.features(int(batter), int(pitcher), self.today, team_defense=team_defense, aging_values=av)
