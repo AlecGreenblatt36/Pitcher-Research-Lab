@@ -1,0 +1,71 @@
+{
+ "schema": "brl.context-offsets.v1",
+ "labels": [
+  "BIP_OUT",
+  "K",
+  "BB_HBP",
+  "1B",
+  "2B_3B",
+  "HR",
+  "OTHER_REACH"
+ ],
+ "pseudo_pa": 200.0,
+ "estimated_through": "2026-09-27",
+ "source": "log(observed/predicted) per class from the model's own predictions as the simulator serves it (pa-2026-v4-window, physics features from the last 548 days) on every 2026 regular-season plate appearance (replays v4-rpo-2025 and v4-rpo-2026); buckets are batting side (0 away, 1 home) x inning (1st, 2nd-8th as mid, 9th and later as late); 200 pseudo plate appearances per bucket at the bucket's predicted shares pull offsets toward zero",
+ "offsets": {
+  "0_1st": {
+   "BIP_OUT": -0.0379,
+   "K": 0.1421,
+   "BB_HBP": -0.0004,
+   "1B": -0.0808,
+   "2B_3B": -0.1588,
+   "HR": -0.0312,
+   "OTHER_REACH": 0.1269
+  },
+  "0_mid": {
+   "BIP_OUT": -0.003,
+   "K": -0.002,
+   "BB_HBP": 0.0438,
+   "1B": 0.0044,
+   "2B_3B": -0.0481,
+   "HR": -0.0375,
+   "OTHER_REACH": 0.0469
+  },
+  "0_late": {
+   "BIP_OUT": -0.0073,
+   "K": 0.0075,
+   "BB_HBP": 0.0146,
+   "1B": 0.0111,
+   "2B_3B": -0.0617,
+   "HR": -0.0068,
+   "OTHER_REACH": 0.1458
+  },
+  "1_1st": {
+   "BIP_OUT": -0.0371,
+   "K": 0.016,
+   "BB_HBP": 0.0568,
+   "1B": 0.0225,
+   "2B_3B": 0.0122,
+   "HR": 0.0946,
+   "OTHER_REACH": -0.0655
+  },
+  "1_mid": {
+   "BIP_OUT": 0.0012,
+   "K": -0.0034,
+   "BB_HBP": 0.0257,
+   "1B": 0.0087,
+   "2B_3B": -0.0625,
+   "HR": -0.0552,
+   "OTHER_REACH": 0.1184
+  },
+  "1_late": {
+   "BIP_OUT": -0.0315,
+   "K": 0.049,
+   "BB_HBP": 0.0316,
+   "1B": -0.0042,
+   "2B_3B": -0.0703,
+   "HR": -0.0295,
+   "OTHER_REACH": 0.2703
+  }
+ }
+}
