@@ -331,6 +331,12 @@ def adjusted_provider(provider,full_history,date,settings=ADJUST,environment=Non
         tt=load_team_table()
         provider=TeamAdjust(provider,game_log_multipliers(tt,teams[0],teams[1],date))
         label.append('team offsets through '+str(tt.get('estimated_through'))+(' (centered on the league)' if tt.get('center') else ''))
+    if settings.get('role_offsets'):
+        from .role_offsets import load_table as load_role_table,log_multipliers as role_multipliers
+        from .provider_adjust import RoleAdjust
+        rt=load_role_table()
+        provider=RoleAdjust(provider,role_multipliers(rt,date))
+        label.append('starter and reliever levels through '+str(rt.get('estimated_through')))
     c=float(settings.get('talent_noise_c') or 0.0)
     if c>0:
         if full_history is None:raise Blocked('Talent noise needs the assembled PA history')
