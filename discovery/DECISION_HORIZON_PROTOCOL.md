@@ -355,3 +355,9 @@ swings 0.98, 1.03, 0.95; catchers 0.76, 1.20, 1.63, and 0.69 in the planted run 
 four catcher intervals exclude 1 with about 35 catcher challenges at one left, so the catcher interval is read with caution
 at small counts (the warm-started bootstrap fits converge to the same values as cold fits; checked). The 2026 season has
 about ten times these counts.
+
+Result (run 37852742097, recorded after the run): batters 0.72 (0.66 to 0.78), catchers 0.47 (0.42 to 0.51); clear
+misses left standing up with one left (batters 77.8% to 81.6%, catchers 62.1% to 75.3%); overturn rates down, not up
+(59.1% to 53.8%, 55.8% to 53.7%); placebo 1.11 and 1.13 with intervals excluding 1; two-strike swings near the edge
+unchanged; ninth-inning challenge rates lower with one left. Predictions 1 and 3 held; 2 held for clear misses standing and
+failed for overturns; 4, 5 and 6 failed. LEDGER.md DISC-08.
