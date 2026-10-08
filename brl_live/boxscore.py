@@ -280,7 +280,7 @@ class BoxAccumulator:
 # box's adjustments; relievers keep their regular-season roles.
 ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         'postseason_exp_scale':{'F':0.91,'D':0.91,'L':0.91,'W':1.0},
-        'environment':False}
+        'environment':True}
 
 def adjusted_provider(provider,full_history,date,settings=ADJUST,environment=None):
     """Wrap the engine's provider with the enabled adjustments. Returns (provider, world_hook, label).
