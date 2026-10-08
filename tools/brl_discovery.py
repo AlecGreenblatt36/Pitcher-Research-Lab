@@ -874,6 +874,101 @@ def horizon3(T: dict, params: dict, stage) -> dict:
     return res
 
 
+def offset_logit_k(y, off, G, w=None, iters=30):
+    """Logistic fit of y on an offset plus an intercept and k slopes (columns of G). Returns (coef, se) for the slopes."""
+    w = np.ones(len(y)) if w is None else w
+    X = np.column_stack([np.ones(len(y)), G]); beta = np.zeros(X.shape[1])
+    for _ in range(iters):
+        p = 1 / (1 + np.exp(-(off + X @ beta))); r = w * (y - p); q = w * p * (1 - p)
+        H = X.T @ (X * q[:, None]) + 1e-9 * np.eye(X.shape[1]); step = np.linalg.solve(H, X.T @ r); beta += step
+        if np.abs(step).max() < 1e-10:
+            break
+    cov = np.linalg.inv(H)
+    return beta[1:], np.sqrt(np.clip(np.diag(cov)[1:], 0, None))
+
+
+def horizon4(T: dict, params: dict, stage) -> dict:
+    """Mechanism checks on the within-type surprise (protocol addendum 2): the horizontal and vertical surprises
+    should give the same commit time if hitters extrapolate the flight; commit time by pitch speed separates a
+    fixed time before arrival from a fixed distance; by pitch type, count, batter hand and season; and the
+    within-type profile carried past 0.25 s to find where it turns."""
+    res = {}
+    F = rebuild(T)
+    keep = (F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2)
+            & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1)))
+    T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
+    swing = ((T['call'] == 1) | (T['call'] == 2)).astype(np.int64)
+    C = control_block(T, swing_propensity(T))
+    key_sub = (T['pitcher'] * 10 + (T['season'] - 2020)) * 100 + T['sub']
+    ok = np.isfinite(F['ax']) & np.isfinite(F['az'])
+    mx = loo_means(key_sub, F['ax'], ok); mz = loo_means(key_sub, F['az'], ok); mv = loo_means(key_sub, T['v0'].astype(float), np.isfinite(T['v0']))
+    wx = np.where(np.isfinite(mx), F['ax'] - mx, 0.0); wz = np.where(np.isfinite(mz), F['az'] - mz, 0.0)
+    wv = np.where(np.isfinite(mv), T['v0'] - mv, 0.0)
+    rng = np.random.default_rng(int(params.get('seed', 11)))
+    def sample(seasons, n):
+        ii = np.flatnonzero(np.isin(T['season'], seasons)); return np.sort(rng.choice(ii, min(len(ii), n), replace=False))
+    tr = sample((2023, 2024), int(params.get('train_n', 500000)))
+    ev = np.flatnonzero(T['season'] >= 2025)
+    oh = np.eye(7, dtype=np.float32)[np.clip(T['group'], 0, 6)]
+
+    def typed(x, z, idx):
+        uu = np.where(T['stand_r'][idx] == 1, x[idx], -x[idx]); zz = z[idx]
+        e = np.maximum(np.maximum(np.abs(uu) - ZONE_HALF, zz - ZONE_TOP), ZONE_BOT - zz)
+        b = np.hstack([hats(e, E_KNOTS), hats(uu, U_KNOTS), hats(zz, Z_KNOTS)])
+        return np.hstack([location_block(x[idx], z[idx], T['stand_r'][idx], T['strikes'][idx]), (b[:, :, None] * oh[idx, None, :]).reshape(len(idx), -1), C[idx]])
+
+    m = fit_logistic(typed(T['px'], T['pz'], tr), swing[tr]); stage('typed model')
+    h = 0.02
+    f0 = np.empty(len(ev)); fx = np.empty(len(ev)); fz = np.empty(len(ev))
+    for s in range(0, len(ev), 250000):
+        ii = ev[s:s + 250000]; df = lambda x, z: m.decision_function(typed(x, z, ii))
+        f0[s:s + 250000] = df(T['px'], T['pz'])
+        fx[s:s + 250000] = (df(T['px'] + h, T['pz']) - df(T['px'] - h, T['pz'])) / (2 * h)
+        fz[s:s + 250000] = (df(T['px'], T['pz'] + h) - df(T['px'], T['pz'] - h)) / (2 * h)
+    stage('gradients')
+    y = swing[ev].astype(float); gx = -0.5 * fx * wx[ev]; gz = -0.5 * fz * wz[ev]; gb = gx + gz
+    games = T['game'][ev]
+
+    def est(mask, two=False):
+        if mask.sum() < 20000:
+            return None
+        if two:
+            coef, se = offset_logit_k(y[mask], f0[mask], np.column_stack([gx[mask], gz[mask]]))
+            return {'tau2_x': round(float(coef[0]), 5), 'se_x': round(float(se[0]), 5), 'tau2_z': round(float(coef[1]), 5), 'se_z': round(float(se[1]), 5),
+                    'tau_x': round(float(np.sign(coef[0]) * np.sqrt(abs(coef[0]))), 4), 'tau_z': round(float(np.sign(coef[1]) * np.sqrt(abs(coef[1]))), 4), 'n': int(mask.sum())}
+        a, b, se = offset_logit(y[mask], f0[mask], gb[mask])
+        return {'tau2': round(b, 5), 'se': round(se, 5), 'tau': round(float(np.sign(b) * np.sqrt(abs(b))), 4), 'n': int(mask.sum())}
+
+    allm = np.ones(len(ev), bool)
+    out = {'all': est(allm), 'x_and_z': est(allm, two=True)}
+    v0 = T['v0'][ev]
+    out['by_speed'] = {f'{lo}-{hi}': {**(est((v0 >= lo) & (v0 < hi)) or {}), 'mean_mph': round(float(v0[(v0 >= lo) & (v0 < hi)].mean()), 1) if ((v0 >= lo) & (v0 < hi)).any() else None}
+                       for lo, hi in ((60, 82), (82, 86), (86, 90), (90, 93), (93, 95), (95, 105))}
+    out['by_group'] = {GROUP_NAMES[gi]: est(T['group'][ev] == gi) for gi in range(6)}
+    out['by_strikes'] = {str(k): est(T['strikes'][ev] == k) for k in (0, 1, 2)}
+    out['by_batter_hand'] = {'right': est(T['stand_r'][ev] == 1), 'left': est(T['stand_r'][ev] == 0)}
+    out['same_hand'] = {'same': est(T['stand_r'][ev] == T['throw_r'][ev]), 'opposite': est(T['stand_r'][ev] != T['throw_r'][ev])}
+    out['by_season'] = {str(s): est(T['season'][ev] == s) for s in (2025, 2026)}
+    out['by_inning'] = {'1-3': est(T['inning'][ev] <= 3), '4-6': est((T['inning'][ev] >= 4) & (T['inning'][ev] <= 6)), '7+': est(T['inning'][ev] >= 7)}
+    # speed surprise as a placebo direction: a faster-than-usual pitch at the same place should not move the decision map
+    coef, se2 = offset_logit_k(y, f0, np.column_stack([gb, wv[ev]]))
+    out['with_speed_surprise'] = {'tau2': round(float(coef[0]), 5), 'se': round(float(se2[0]), 5), 'speed_coef_per_mph': round(float(coef[1]), 5), 'speed_se': round(float(se2[1]), 5)}
+    res['gradient'] = out; stage('splits')
+    # profile past 0.25 s on the within-type surprise (2026 log loss, type maps)
+    te = np.sort(rng.choice(np.flatnonzero(T['season'] == 2026), min(int((T['season'] == 2026).sum()), 600000), replace=False))
+    base = logloss_vec(m.predict_proba(typed(T['px'], T['pz'], te))[:, 1], swing[te])
+    prof = [{'tau': 0.0, 'd_per_1000': 0.0}]
+    for tau in [float(t) for t in params.get('taus_long', (0.2, 0.25, 0.3, 0.35, 0.4))]:
+        x = T['px'] - 0.5 * wx * tau ** 2; z = T['pz'] - 0.5 * wz * tau ** 2
+        mt = fit_logistic(typed(x, z, tr), swing[tr])
+        ll = logloss_vec(mt.predict_proba(typed(x, z, te))[:, 1], swing[te])
+        d = clustered_ci(ll - base, T['game'][te])
+        prof.append({'tau': tau, 'd_per_1000': round(d[0] * 1000, 3), 'ci': [round(d[1] * 1000, 3), round(d[2] * 1000, 3)]})
+        stage(f'long tau {tau}')
+    res['profile_long'] = prof
+    return res
+
+
 def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']
     from cloud.security import unseal, key_bytes
@@ -908,6 +1003,8 @@ def main():
             receipt['results'] = horizon2(T, params, stage)
         elif experiment == 'horizon3':
             receipt['results'] = horizon3(T, params, stage)
+        elif experiment == 'horizon4':
+            receipt['results'] = horizon4(T, params, stage)
         receipt['status'] = 'completed'
     except Exception as exc:
         receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:400]

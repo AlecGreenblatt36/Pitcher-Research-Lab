@@ -112,3 +112,23 @@ Synthetic recovery: planted 0.17 s commit gives 0.177-0.184 s (interval excludes
 type-by-location effect gives an interval that includes zero for the within-type estimate while the between-type
 estimate is spuriously positive. Decision rule: a commit is supported only if the within-type estimate's 2026
 interval excludes zero and its point estimate falls between 0.10 and 0.25 s.
+
+## Addendum 2, 04:05 ET, after the within-type result and before these checks ran
+
+Result of the decisive test (run 37736387462): the within-type surprise moves swing decisions with tau = 0.262 s on
+2026 (tau squared 0.0684, 95% interval 0.0664 to 0.0702), 0.260 s on 2025, 0.259 s on primary fastballs alone.
+The interval excludes zero by a wide margin, but the point estimate is just above the 0.25 s ceiling written above,
+so by the frozen rule this is not a clean pass; it is recorded as such.
+
+Mechanism checks that follow from the extrapolation reading (experiment 'horizon4'), with predictions written now:
+
+- Horizontal and vertical surprises fitted separately give the same commit time (within about 0.03 s). A generic
+  "nastier pitch" effect has no reason to scale the same way in both directions.
+- By pitch speed: a hitter who commits a fixed time before arrival shows the same tau at 80 and 95 mph; a hitter
+  who commits at a fixed distance shows tau falling as speed rises (tau times speed constant). Either result is
+  informative; no prediction about which.
+- A faster-than-usual pitch at the same place (speed surprise) should not shift swing decisions much once the
+  movement surprise is in; a large speed effect would point to an effort or intent confound.
+- The long profile (to 0.40 s) should turn back up past the commit time; a fit that keeps improving to 0.40 s
+  (before the ball is halfway) would mean the projection is tracking something other than a commit, such as
+  where the pitcher aimed.
