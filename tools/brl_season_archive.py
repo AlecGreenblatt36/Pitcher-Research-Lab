@@ -86,19 +86,27 @@ def main():
     if a.season == 2026:
         mk = pd.DataFrame(jl((S / 'harness/market_2026b.jsonl.gz').read_bytes()))
         mk['p_mk'] = mk['p_home']; mk['p_mk_open'] = mk.get('p_home_open')
+        books = S / 'harness/market_books_2026.jsonl.gz'
+        if books.exists():
+            # the several-books average where SportsBookReview's pages had the game, DraftKings otherwise
+            bk = pd.DataFrame(jl(books.read_bytes()))[['game_pk', 'p_cons_close', 'p_cons_open', 'n_close']]
+            mk = mk.merge(bk, on='game_pk', how='left')
+            use = mk['p_cons_close'].notna() & (mk['n_close'].fillna(0) >= 3)
+            mk.loc[use, 'p_mk'] = mk.loc[use, 'p_cons_close']
+            mk.loc[use & mk['p_cons_open'].notna(), 'p_mk_open'] = mk.loc[use & mk['p_cons_open'].notna(), 'p_cons_open']
         mk['total'] = mk['over_under']
         mk['p_over'] = [vigfree(o, u) if pd.notna(o) and pd.notna(u) else None for o, u in zip(mk['over_odds'], mk['under_odds'])]
         mk = mk.rename(columns={'home': 'home_name', 'away': 'away_name'})
     else:
         mk = pd.DataFrame(jl((S / 'harness/market_sbr_b.jsonl.gz').read_bytes()))
         mk = mk[mk['season'] == a.season]
-        mk['p_mk'] = mk['p_close_dk'].fillna(mk['p_close_avg']); mk['p_mk_open'] = mk['p_open_dk'].fillna(mk['p_open_avg'])
+        mk['p_mk'] = mk['p_close_avg'].fillna(mk['p_close_dk']); mk['p_mk_open'] = mk['p_open_avg'].fillna(mk['p_open_dk'])
         mk['total'] = [t[0] if isinstance(t, list) else None for t in mk['dk_total_close']]
         mk['p_over'] = [vigfree(t[1], t[2]) if isinstance(t, list) else None for t in mk['dk_total_close']]
         mk = mk.rename(columns={'home': 'home_name', 'away': 'away_name'})
     mk = mk[['game_pk', 'p_mk', 'p_mk_open', 'total', 'p_over', 'home_name', 'away_name']]
     d = r.merge(games, on='game_pk', how='left').merge(cond, on='game_pk', how='left').merge(tf, on='game_pk', how='left').merge(mk, on='game_pk', how='left')
-    version = next(v for v in hl.PARAMS['versions'] if v['name'] == 'taught-v2')
+    version = [v for v in hl.PARAMS['versions'] if v.get('kind') == 'taught'][-1]
     out = []
     for g in d.sort_values(['date', 'start', 'game_pk']).itertuples():
         p_sim = (g.home_wins + 0.5 * g.ties + 0.5) / (g.n + 1.0)

@@ -614,12 +614,23 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var o = D.record && D.record.ours && f._id != null ? D.record.ours[f._id] : null;
     return o == null ? homeProb(f) : o;
   }
+  /* The market's home win chance the headline uses: the several-books average when three or more books were read, else the single book. */
+  function marketProb(mk) {
+    if (!mk) return null;
+    if (mk.p_home_cons != null && (mk.n_books || 0) >= 3) return mk.p_home_cons;
+    return mk.p_home != null ? mk.p_home : null;
+  }
+  function weightsText() {
+    var w = D.record && D.record.headline_now;
+    if (!w || w.market == null) return "";
+    return Math.round(w.market * 100) + "% market, " + Math.round(w.ours * 100) + "% our model";
+  }
   /* Pregame card footnote: our independent model next to the market's line, once both exist. */
   function marketFoot(f) {
-    var mk = D.market && D.market[f.game_pk];
-    if (!taughtRecipe(f) || !mk || mk.p_home == null) return "";
-    var po = oursProb(f), side = po >= .5 ? "home" : "away", mside = mk.p_home >= .5 ? "home" : "away";
-    return ". Our model " + f[side].abbr + " " + pct(side === "home" ? po : 1 - po) + ", market " + f[mside].abbr + " " + pct(mside === "home" ? mk.p_home : 1 - mk.p_home);
+    var mk = D.market && D.market[f.game_pk], pm = marketProb(mk);
+    if (!taughtRecipe(f) || pm == null) return "";
+    var po = oursProb(f), side = po >= .5 ? "home" : "away", mside = pm >= .5 ? "home" : "away";
+    return ". Our model " + f[side].abbr + " " + pct(side === "home" ? po : 1 - po) + ", market " + f[mside].abbr + " " + pct(mside === "home" ? pm : 1 - pm);
   }
   function recipeOf(f) { return D.record && D.record.recipe && f._id != null ? D.record.recipe[f._id] || null : null; }
   function taughtRecipe(f) { var r = recipeOf(f); return !!(r && r.version && r.version !== "equal-v1"); }
@@ -1745,14 +1756,18 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     h += "<li><span>Simulator alone, " + Number(f.n_simulations).toLocaleString() + " games</span><b>" + fmt(f.home_win_probability) + "</b></li>";
     var tmp = box && box.team_model && box.team_model.p_home != null ? box.team_model.p_home : f.team_baseline_probability;
     if (tmp != null) h += "<li><span>Team model alone</span><b>" + fmt(tmp) + "</b></li>";
-    var mkt = D.market && D.market[f.game_pk];
-    if (mkt && mkt.p_home != null) h += "<li><span>Betting market, " + esc(mkt.provider || "") + " (" + esc(timeET(mkt.captured_at)) + " ET)</span><b>" + fmt(mkt.p_home) + "</b></li>";
+    var mkt = D.market && D.market[f.game_pk], pmk = marketProb(mkt);
+    if (mkt && mkt.p_home_cons != null && (mkt.n_books || 0) >= 3) {
+      h += "<li><span>Betting market, average of " + mkt.n_books + " books (" + esc(timeET(mkt.captured_at)) + " ET)</span><b>" + fmt(mkt.p_home_cons) + "</b></li>";
+      if (mkt.p_home != null) h += "<li><span>" + esc(mkt.provider || "Single book") + "</span><b>" + fmt(mkt.p_home) + "</b></li>";
+    } else if (mkt && mkt.p_home != null) h += "<li><span>Betting market, " + esc(mkt.provider || "") + " (" + esc(timeET(mkt.captured_at)) + " ET)</span><b>" + fmt(mkt.p_home) + "</b></li>";
     else if (f.market_probability != null) { var mk = f.market_probability; h += "<li><span>Betting market</span><b>" + (mk >= .5 ? esc(f.home.abbr) + " " + pct(mk) : esc(f.away.abbr) + " " + pct(1 - mk)) + "</b></li>"; }
     h += "</ul>";
-    if (taught && mkt && mkt.p_home != null) {
-      var gap = po - mkt.p_home, side = gap >= 0 ? "home" : "away", pts = Math.round(Math.abs(gap) * 100);
-      h += '<p class="note">' + (pts < 2 ? "Our model and the market agree on this game. The headline is 70% market, 30% our model." :
-        "Our model is " + pts + " points higher on the " + esc(nickname(f[side].name)) + " than the market. When our model has differed from the opening line, the line has moved toward our number about 7 times in 10 (2025 and 2026). By first pitch the market is slightly sharper, so the headline is 70% market, 30% our model.") + "</p>";
+    if (taught && pmk != null) {
+      var gap = po - pmk, side = gap >= 0 ? "home" : "away", pts = Math.round(Math.abs(gap) * 100), wt = weightsText();
+      h += '<p class="note">' + (pts < 2 ? "Our model and the market agree on this game." + (wt ? " The headline is " + wt + "." : "") :
+        "Our model is " + pts + " points higher on the " + esc(nickname(f[side].name)) + " than the market. When our model has differed from the opening line, the line has moved toward our number about 7 times in 10 (2025 and 2026)." +
+        (wt ? " By first pitch the market is slightly sharper, so the headline is " + wt + "." : "")) + "</p>";
     }
     h += "</section>";
 
@@ -1928,7 +1943,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       h += "<h2>What the model knows about each player</h2><p>Each plate appearance is scored by a seven-outcome model fitted on 2023 and 2024, tuned on 2025 and tested on the whole 2026 season before it was used. Beyond a player's results (and his splits, recent form, park and age), it reads the official pitch physics of every prior game: for hitters, exit velocity, launch angle, hard-hit and barrel rates, the expected run value of the way they hit the ball, swing, whiff, chase and in-zone contact rates, and how the last 30 days differ from their norm; for pitchers, fastball velocity and how the last outing compared with it, spin and movement, whiff, chase, zone and called-strike-plus-whiff rates, contact quality and ground-ball share allowed, and the same 30-day form. On the 2026 holdout this cut the model's error against the results-only version with the whole season held out.</p>";
     }
     h += "<h2>The headline number</h2><p>The win chance on each card is the best number we can give before first pitch. It starts from our own model, which combines the simulator with a team-strength model (runs scored and allowed, home field, recent form, and the starting pitchers: each starter's strikeout, walk and home-run rates against his team's usual rotation, weighted by how deep he usually goes). The weights were taught by the betting market: instead of fitting them to wins and losses, which are noisy, they were fitted to the market's closing lines on 4,140 regular-season games from 2025 and 2026, a far more precise target, then checked on real results from a season the fit never saw. Our model never sees a line when it makes a forecast.</p>";
-    h += "<p>Once the market's pregame line is posted, the headline combines the two on the log-odds scale, 70% market and 30% our model. Checked the same way, that mix was more accurate than the closing line alone in both 2025 and 2026, by a small margin. Before a line is posted the headline is our model alone. The Odds tab shows every part and the Record page scores each one separately, including the games where our model and the market disagree.</p>";
+    h += "<p>Once the market's pregame line is posted, the headline combines the two on the log-odds scale, " + (weightsText() || "60% market, 40% our model") + ". The market's line is the average of up to eight sportsbooks when they can be read (DraftKings alone otherwise). Checked the same way, that mix was more accurate than the closing line alone in both 2025 and 2026, by a small margin. Before a line is posted the headline is our model alone. The Odds tab shows every part and the Record page scores each one separately, including the games where our model and the market disagree.</p>";
     h += "<p>Why it matters for scouting: when our model has differed from the opening line, the line has moved toward our number by first pitch about 7 times in 10 (2025 and 2026, each season checked with a model taught on the other). Our model reads lineups, starters and form that the opening line has not priced yet.</p>";
     h += "<p>Changes to the recipe take effect from a stated time and never rewrite a game that has started. Through October 7, 2026 the headline was a plain average of the simulator and the team model.</p>";
     var adj = {};

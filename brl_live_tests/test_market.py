@@ -118,3 +118,16 @@ def test_capture_adds_the_several_books_consensus():
     assert m['first_p_home_cons'] == m['p_home_cons'] and r['books']['games_with_consensus'] == 1
     r = capture(fetch, '2026-10-07', ledger, '2026-10-07T20:15:00+00:00', books_fetch=lambda url: (_ for _ in ()).throw(OSError('down')))
     assert 'error' in r['books'] and ledger['market']['1']['p_home'] > 0
+
+
+def test_record_uses_the_several_books_average_when_read():
+    f = {'game_pk': 1, 'version': 1, 'saved_at': '2026-10-07T18:00:00Z', 'date': '2026-10-07', 'home_win_probability': 0.6, 'team_baseline_probability': 0.55,
+         'away': {'abbr': 'LAD'}, 'home': {'abbr': 'ATL'}}
+    ledger = {'forecasts': {'a': f}, 'publications': {'a': {'commit': 'a' * 40, 'published_at': '2026-10-07T18:05:00Z'}},
+              'actuals': {'1': {'away': 2, 'home': 5, 'first_pitch_observed_at': '2026-10-07T22:10:00Z'}},
+              'market': {'1': {'p_home': 0.62, 'captured_at': '2026-10-07T21:50:00Z', 'p_home_cons': 0.6, 'n_books': 8}}}
+    assert build_record(ledger)['games'][0]['p_market'] == 0.6
+    ledger['market']['1']['n_books'] = 2
+    assert build_record(ledger)['games'][0]['p_market'] == 0.62
+    rec = build_record(ledger)
+    assert set(rec['headline_now']) == {'name', 'kind', 'market', 'ours'}

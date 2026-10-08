@@ -7,7 +7,8 @@ Through October 7, 2026 it was the equal-weight log-odds average of the simulato
 team model. From October 8 it is our independent model (the simulator, the team model, the
 starters and the team ratings, weighted to match the market's closing lines on the 2025 and
 2026 regular seasons) combined with the market's pregame line when one was captured before
-first pitch: 70% market and 30% our model on the log-odds scale. A game is scored with the
+first pitch (the several-books average when read, else DraftKings), on the log-odds scale with the weights in
+headline_params.json (60% market, 40% our model from October 8). A game is scored with the
 recipe in force at its first pitch, so a change never rewrites a started game.
 
 Track record
@@ -84,12 +85,15 @@ def build_record(ledger: dict) -> dict:
         return {'p_home': p} if p is not None else None
 
     def pregame_market(pk, before=None):
-        """The last market line captured while the game was pregame (and before first pitch when known)."""
+        """The last market line captured while the game was pregame (and before first pitch when known):
+        the several-books average when at least three books were read, else the single book."""
         mk = market.get(str(pk))
         if not mk or mk.get('p_home') is None or not mk.get('captured_at'):
             return None
         if before is not None and not _ts(mk['captured_at']) < _ts(before):
             return None
+        if mk.get('p_home_cons') is not None and (mk.get('n_books') or 0) >= 3:
+            return float(mk['p_home_cons'])
         return float(mk['p_home'])
 
     # The version in force: at first pitch for games that have started, now for the rest.
@@ -170,7 +174,8 @@ def build_record(ledger: dict) -> dict:
     moves = {'threshold_logit': 0.1, 'n': 0, 'toward_ours': 0}
     for g in games:
         mk = market.get(str(g['game_pk'])) or {}
-        first, last = mk.get('first_p_home'), g.get('p_market')
+        consensus = mk.get('p_home_cons') is not None and (mk.get('n_books') or 0) >= 3
+        first, last = (mk.get('first_p_home_cons') if consensus else mk.get('first_p_home')), g.get('p_market')
         if first is None or last is None or not mk.get('first_captured_at') or abs(last - first) < 1e-4:
             continue
         gap = _logit(g['p_ours']) - _logit(first)
@@ -178,8 +183,10 @@ def build_record(ledger: dict) -> dict:
             continue
         moves['n'] += 1
         moves['toward_ours'] += int((last - first) * gap > 0)
+    now_v = version_at()
     return {
         'schema': 'brl.record.v3',
+        'headline_now': {'name': now_v['name'], 'kind': now_v.get('kind'), 'market': (now_v.get('headline') or {}).get('market'), 'ours': (now_v.get('headline') or {}).get('ours')},
         'line_moves': moves,
         'market_note': ('Betting market rows use the last ESPN scoreboard moneyline captured while the game was pregame, vig removed. '
                         'Our model never uses it; the headline combines the two when a pregame line exists.'),
