@@ -120,6 +120,36 @@ class TeamAdjust:
         return getattr(self.inner, item)
 
 
+class RoleAdjust:
+    """Multiplies each plate appearance's probabilities by the pitcher's role offsets (brl_live/role_offsets.py): the
+    starter by how many times he has gone through the order (1, 2, 3 or more), any other pitcher as a reliever.
+    set_roles() takes {role: seven log-multipliers}."""
+    def __init__(self, inner, by_role=None):
+        self.inner = inner
+        self.set_roles(by_role)
+        self.name = getattr(inner, 'name', 'provider')
+        self.validation_status = getattr(inner, 'validation_status', '')
+
+    def set_roles(self, by_role):
+        self.m = {k: np.exp(np.asarray(v, float)) for k, v in (by_role or {}).items() if v is not None}
+
+    def probabilities(self, ctx):
+        base = self.inner.probabilities(ctx)
+        if not self.m:
+            return base
+        starter = str(getattr(ctx.pitcher, 'role', '') or '') == 'starter'
+        key = ('starter_' + str(min(max(int(getattr(ctx, 'times_through_order', 1) or 1), 1), 3))) if starter else 'reliever'
+        m = self.m.get(key)
+        if m is None:
+            return base
+        p = np.array([base[k] for k in SIM_LABELS], dtype=float) * m
+        p /= p.sum()
+        return dict(zip(SIM_LABELS, map(float, p)))
+
+    def __getattr__(self, item):
+        return getattr(self.inner, item)
+
+
 class TalentNoise:
     """One draw of player log-multipliers per world; new_world() must be called before each world."""
 
