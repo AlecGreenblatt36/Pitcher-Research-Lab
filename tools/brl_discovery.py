@@ -1178,6 +1178,84 @@ def horizon7(T: dict, params: dict, stage) -> dict:
     return res
 
 
+def position_at(T, F, tau):
+    """Rebuilt position (x, y, z, ft) of each pitch tau seconds before it reaches the front of the plate."""
+    t = F['tf'] - tau
+    v0 = T['v0'].astype(np.float64) * FT_PER_MPH
+    y = Y0 - v0 * t + 0.5 * F['ay'] * t ** 2
+    x = T['x0'] + F['vx0'] * t + 0.5 * F['ax'] * t ** 2
+    z = T['z0'] + F['vz0'] * t + 0.5 * F['az'] * t ** 2
+    return x, y, z
+
+
+def horizon8(T: dict, params: dict, stage) -> dict:
+    """Tunneling at the measured horizon. For each pitch that follows another in the same plate appearance, the
+    visual-angle separation between the two flights (as seen from the batter's eye) at the same time before each
+    reaches the plate. Profile over that time: which moment's separation best predicts a chase (swing at a pitch
+    outside the zone) and a whiff (miss on a swing) on the second pitch, beyond its own type, speed, movement and
+    location, the first pitch's type and location, the count and the batter. Prediction written before the run:
+    chases are best predicted near 260 ms and whiffs closer to the 100-125 ms steering limit; public metrics use
+    150-175 ms."""
+    res = {}
+    F = rebuild(T)
+    base_ok = F['ok'] & (T['group'] >= 0) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2)
+    order = np.lexsort((T['pitch_no'], T['ab'], T['game']))
+    prev = np.full(len(order), -1)
+    same = (T['game'][order][1:] == T['game'][order][:-1]) & (T['ab'][order][1:] == T['ab'][order][:-1]) & (T['pitch_no'][order][1:] == T['pitch_no'][order][:-1] + 1)
+    prev[order[1:][same]] = order[:-1][same]
+    has_prev = (prev >= 0) & base_ok & np.where(prev >= 0, base_ok[np.maximum(prev, 0)], False) & (T['call'] <= 2)
+    idx = np.flatnonzero(has_prev); pidx = prev[idx]
+    res['pairs'] = int(len(idx))
+    swing = ((T['call'] == 1) | (T['call'] == 2)); whiff = T['call'] == 2
+    C = control_block(T, swing_propensity(T))
+    oh = np.eye(7, dtype=np.float32)[np.clip(T['group'], 0, 6)]
+    u_all = np.where(T['stand_r'] == 1, T['px'], -T['px'])
+    inzone = (np.abs(u_all) <= ZONE_HALF) & (T['pz'] <= ZONE_TOP) & (T['pz'] >= ZONE_BOT)
+    eye_x = np.where(T['stand_r'] == 1, -2.4, 2.4); eye_y, eye_z = 1.0, 5.1
+
+    def angles(i, tau):
+        x, y, z = position_at(take(T, i), {k: v[i] for k, v in F.items()}, tau) if tau > 0 else (T['px'][i].astype(float), np.full(len(i), YPLATE), T['pz'][i].astype(float))
+        d = np.maximum(y - eye_y, 0.5)
+        return np.degrees(np.arctan2(x - eye_x[i], d)), np.degrees(np.arctan2(z - eye_z, d))
+
+    def base_design(i, j):
+        uu = u_all[i]; zz = T['pz'][i]
+        e = np.maximum(np.maximum(np.abs(uu) - ZONE_HALF, zz - ZONE_TOP), ZONE_BOT - zz)
+        b = np.hstack([hats(e, E_KNOTS), hats(uu, U_KNOTS), hats(zz, Z_KNOTS)])
+        prev_loc = np.hstack([hats(u_all[j], U_KNOTS), hats(T['pz'][j].astype(float), Z_KNOTS)])
+        prev_type = oh[j]
+        mv = np.column_stack([F['asx'][i] * np.where(T['throw_r'][i] == 1, 1, -1), F['asz'][i]]) / 10.0
+        return np.hstack([location_block(T['px'][i], T['pz'][i], T['stand_r'][i], T['strikes'][i]), (b[:, :, None] * oh[i, None, :]).reshape(len(i), -1),
+                          C[i], prev_loc, prev_type, prev_type * oh[i].sum(axis=1, keepdims=True) * (T['group'][i] == T['group'][j])[:, None], mv]).astype(np.float32)
+
+    taus = [float(t) for t in params.get('taus', (0.0, 0.10, 0.125, 0.15, 0.175, 0.20, 0.225, 0.26, 0.30, 0.35))]
+    D_KNOTS = (0.0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 5.0)
+    dev = T['season'][idx] <= 2024; fut = ~dev
+    out = {}
+    for name, sel in (('chase', ~inzone[idx]), ('whiff', swing[idx]), ('swing_in_zone', inzone[idx])):
+        ii = idx[sel]; jj = pidx[sel]
+        y = (whiff[ii] if name == 'whiff' else swing[ii]).astype(np.int64)
+        dv, fu = dev[sel], fut[sel]
+        rng = np.random.default_rng(3)
+        trn = np.flatnonzero(dv); trn = np.sort(rng.choice(trn, min(len(trn), int(params.get('train_n', 400000))), replace=False))
+        tst = np.flatnonzero(fu); tst = np.sort(rng.choice(tst, min(len(tst), int(params.get('test_n', 400000))), replace=False))
+        Xb = base_design(ii, jj)
+        mb = fit_logistic(Xb[trn], y[trn]); llb = logloss_vec(mb.predict_proba(Xb[tst])[:, 1], y[tst])
+        prof = []
+        for tau in taus:
+            ax_i, az_i = angles(ii, tau); ax_j, az_j = angles(jj, tau)
+            sep = np.sqrt((ax_i - ax_j) ** 2 + (az_i - az_j) ** 2)
+            X = np.hstack([Xb, hats(sep, D_KNOTS)])
+            m = fit_logistic(X[trn], y[trn]); ll = logloss_vec(m.predict_proba(X[tst])[:, 1], y[tst])
+            d = clustered_ci(ll - llb, T['game'][ii][tst])
+            prof.append({'tau': tau, 'gain_per_1000': round(-d[0] * 1000, 4), 'ci': [round(-d[2] * 1000, 4), round(-d[1] * 1000, 4)],
+                         'sep_median_deg': round(float(np.median(sep)), 3)})
+        out[name] = {'pitches_train': int(len(trn)), 'pitches_test': int(len(tst)), 'rate_test': round(float(y[tst].mean()), 4), 'base_logloss': float(llb.mean()), 'profile': prof}
+        stage('tunnel ' + name)
+    res['outcomes'] = out
+    return res
+
+
 def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']
     from cloud.security import unseal, key_bytes
@@ -1220,6 +1298,8 @@ def main():
             receipt['results'] = horizon6(T, params, stage)
         elif experiment == 'horizon7':
             receipt['results'] = horizon7(T, params, stage)
+        elif experiment == 'horizon8':
+            receipt['results'] = horizon8(T, params, stage)
         receipt['status'] = 'completed'
     except Exception as exc:
         receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:400]

@@ -168,3 +168,18 @@ against the pitch's vertical movement surprise; the implied contact horizon depe
 (decide early, steer later) shows a contact horizon clearly shorter than 0.26 s for any k in 16 to 25; a contact
 horizon equal to or longer than the decision horizon would mean the bat path is set when the swing decision is made.
 The horizontal surprise is a placebo for launch angle and should give a slope near zero.
+
+## Addendum 6, before the tunneling run (horizon8)
+
+Contact horizon result (run 37738373322): launch angle follows the vertical surprise with a slope implying the bat is
+steered until about 100 to 125 ms (assumed geometry), against 1.08 to 1.69 if it were set at the decision; prediction
+met. Per-hitter and pitcher-variability uses failed (DISC-02).
+
+Tunneling test: for each pitch following another in the same plate appearance, the visual-angle separation between
+the two flights, seen from the batter's eye, at the same time before each reaches the plate; separation entered as a
+flexible term on top of the second pitch's own type, speed, movement and location, the first pitch's type and
+location, the count and the batter. Fit 2023-2024, score 2025-2026, profile over the time. Predictions written now:
+for chases the most useful separation is near 260 ms, clearly earlier than the 150-175 ms used publicly; for whiffs
+the useful separation is later (nearer the 100-125 ms steering limit). If both peak at 150-175 ms the public choice
+stands; if separation adds nothing at any time beyond the pitches themselves, pairwise tunneling carries no
+information our pitch-level model does not already have.
