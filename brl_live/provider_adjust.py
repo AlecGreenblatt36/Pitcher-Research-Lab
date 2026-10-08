@@ -140,6 +140,8 @@ class RoleAdjust:
         starter = str(getattr(ctx.pitcher, 'role', '') or '') == 'starter'
         key = ('starter_' + str(min(max(int(getattr(ctx, 'times_through_order', 1) or 1), 1), 3))) if starter else 'reliever'
         m = self.m.get(key)
+        if m is None and starter:
+            m = self.m.get('starter')
         if m is None:
             return base
         p = np.array([base[k] for k in SIM_LABELS], dtype=float) * m

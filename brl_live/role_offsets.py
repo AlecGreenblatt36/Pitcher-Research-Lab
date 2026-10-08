@@ -8,8 +8,8 @@ optionally decayed with a half-life in days:
 
     offset[role, class] = log((observed + k q) / (predicted + k q))
 
-Roles: 'starter_1', 'starter_2', 'starter_3' (the starter facing the order the first, second, third or later time) and
-'reliever'. Input rows are group-level sums only (research/role-resid-*.json.gz: one per date, role, times through the
+Roles: 'starter_1', 'starter_2', 'starter_3' (the starter facing the order the first, second, third or later time),
+'starter' (rows that pool the starter's times through the order) and 'reliever'. Input rows are group-level sums only (research/role-resid-*.json.gz: one per date, role, times through the
 order, batting side and inning bucket).
 """
 from __future__ import annotations
@@ -23,7 +23,7 @@ from pathlib import Path
 import numpy as np
 
 LABELS = ('BIP_OUT', 'K', 'BB_HBP', '1B', '2B_3B', 'HR', 'OTHER_REACH')
-ROLES = ('starter_1', 'starter_2', 'starter_3', 'reliever')
+ROLES = ('starter_1', 'starter_2', 'starter_3', 'starter', 'reliever')
 TABLE_PATH = Path(__file__).resolve().parent / 'role_offsets.json'
 
 
@@ -32,7 +32,10 @@ def _ord(ymd: str) -> int:
 
 
 def role_key(role: str, tto: int) -> str:
-    return 'reliever' if role != 'starter' else 'starter_' + str(min(max(int(tto or 1), 1), 3))
+    """'reliever'; 'starter_1' to 'starter_3' by times through the order; 'starter' for rows that pool all of them (tto 0)."""
+    if role != 'starter':
+        return 'reliever'
+    return 'starter' if int(tto or 0) == 0 else 'starter_' + str(min(max(int(tto), 1), 3))
 
 
 def read_rows(path) -> list[dict]:
@@ -78,7 +81,7 @@ class RoleState:
         return np.log((o * f + self.k * q) / (e * f + self.k * q))
 
     def table(self, day: int | None = None) -> dict:
-        return {key: [round(float(v), 5) for v in self.offsets(key, day)] for key in ROLES}
+        return {key: [round(float(v), 5) for v in self.offsets(key, day)] for key in ROLES if key in self.O}
 
 
 def by_date(rows: list[dict], dates, k: float = 2000.0, half_life: float | None = None) -> dict:

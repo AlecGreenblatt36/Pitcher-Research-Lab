@@ -243,7 +243,8 @@ def main():
         if params.get('role_offsets'):
             from brl_live.role_offsets import by_date as role_by_date
             rspec = params['role_offsets']
-            rraw = read_blob(repo, token, rspec['rows'], branch)
+            local = ROOT / str(rspec['rows'])
+            rraw = local.read_bytes() if str(rspec['rows']).startswith('brl_replay/') and local.exists() else read_blob(repo, token, rspec['rows'], branch)
             if rraw is None:
                 raise ValueError('role residual rows missing on the ledger branch')
             rdoc = json.loads(gzip.decompress(rraw) if rraw[:2] == b'\x1f\x8b' else rraw)
