@@ -1,6 +1,6 @@
 # Decision horizon: when does a hitter stop using the ball's flight? (protocol, frozen before results)
 
-Written 2026-10-08 01:55 ET, before any outcome from this experiment was looked at.
+Written 2026-10-08 and committed at 01:50 ET (commit 70807e93), before any outcome from this experiment was looked at.
 
 ## The question
 
@@ -90,7 +90,7 @@ Times-through-the-order split with measured pitcher physical change against his 
 and batters seeing a starter for the first time late in his outing. Prior work (Baseball Prospectus 2021-2025,
 Brill et al. 2023) covers much of it, so it is second.
 
-## Addendum, 02:50 ET, before any real-data outcome was seen (reviewer's challenge)
+## Addendum, committed 02:12 ET (90a5ddd7), before any real-data outcome was seen (reviewer's challenge)
 
 The reviewer's strongest alternative: with one location map shared by all pitch types, the fastball observer
 slides each off-speed type's swing map by a fixed amount, so a type-by-location difference in swing behavior
@@ -113,7 +113,7 @@ type-by-location effect gives an interval that includes zero for the within-type
 estimate is spuriously positive. Decision rule: a commit is supported only if the within-type estimate's 2026
 interval excludes zero and its point estimate falls between 0.10 and 0.25 s.
 
-## Addendum 2, 04:05 ET, after the within-type result and before these checks ran
+## Addendum 2, committed 02:26 ET (f1fc7503), after the within-type result and before these checks ran
 
 Result of the decisive test (run 37736387462): the within-type surprise moves swing decisions with tau = 0.262 s on
 2026 (tau squared 0.0684, 95% interval 0.0664 to 0.0702), 0.260 s on 2025, 0.259 s on primary fastballs alone.
