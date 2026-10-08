@@ -137,8 +137,9 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
     (strikeout share over the prior 365 days shrunk toward 22% by 150 batters; expected batters faced from the hazard).
     real_pa_check: also run the game's full probability stack (model, context, environment, team and role offsets) on
     every real plate appearance of the game (its batter, pitcher, inning, outs, runners, score and times through the
-    order) and record the predicted and observed counts per outcome class for starters and relievers, so the
-    simulator's own totals can be told apart from the probabilities it draws from.
+    order) and record the predicted and observed counts per outcome class for starters and relievers, by groups of side,
+    inning, role and times through the order, and by bases (empty, first only, a runner in scoring position) and outs, so
+    the simulator's own totals can be told apart from the probabilities it draws from.
     transitions: optional base-running kernel after each outcome (research_lab.game_sim.transitions.EmpiricalKernel).
     running_events: optional running plays between plate appearances other than steals (research_lab.game_sim.running_events).
     reliever_choice: optional fitted choice of the entering reliever (research_lab.game_sim.reliever_choice.RelieverChoice).
@@ -389,6 +390,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                             "ll": {nm_: 0.0 for nm_, _ in chain[:-1] + [("full", None)]}} for r_ in ("starter", "reliever")}
                 starters_ = {int(g.home_starter), int(g.away_starter)}
                 grp_ = {}      # (batting side 0 away 1 home, inning bucket, role, times through the order capped at 3): n, observed, bare, full
+                bgrp_ = {}     # (bases 0 empty, 1 first only, 2 a runner in scoring position; outs): n, observed, full
                 for row in real_rows.get(int(g.game_pk), []):
                     try:
                         side_b = "home" if int(row.is_home_batter) == 1 else "away"
@@ -424,12 +426,21 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                         ge_[1][MODEL_ORDER.index(str(row.outcome))] += 1
                     ge_[2] += np.array([inner_[0][1][model_of_sim[lab]] for lab in MODEL_ORDER]) if inner_ else np.array([probs[model_of_sim[lab]] for lab in MODEL_ORDER])
                     ge_[3] += np.array([probs[model_of_sim[lab]] for lab in MODEL_ORDER])
+                    on_ = tuple(int(x or 0) for x in (row.runner_1b, row.runner_2b, row.runner_3b))
+                    bk_ = (0 if not any(on_) else 1 if not (on_[1] or on_[2]) else 2, min(max(int(row.outs_when_up), 0), 2))
+                    be_ = bgrp_.setdefault(bk_, [0, np.zeros(7), np.zeros(7)])
+                    be_[0] += 1
+                    if str(row.outcome) in MODEL_ORDER:
+                        be_[1][MODEL_ORDER.index(str(row.outcome))] += 1
+                    be_[2] += np.array([probs[model_of_sim[lab]] for lab in MODEL_ORDER])
                 errs = agg.pop("errors", [])
                 records[-1]["real_pa"] = {r_: {"n": v_["n"], "pred": [round(float(x), 3) for x in v_["pred"]], "obs": [int(x) for x in v_["obs"]],
                                                "layers": {nm_: [round(float(x), 3) for x in lv_] for nm_, lv_ in v_["layers"].items()},
                                                "ll": {nm_: round(float(x), 4) for nm_, x in v_["ll"].items()}} for r_, v_ in agg.items()}
                 records[-1]["real_pa"]["groups"] = [[k_[0], k_[1], k_[2], k_[3], v_[0], [int(x) for x in v_[1]], [round(float(x), 4) for x in v_[2]], [round(float(x), 4) for x in v_[3]]]
                                                     for k_, v_ in sorted(grp_.items())]
+                records[-1]["real_pa"]["bases"] = [[k_[0], k_[1], v_[0], [int(x) for x in v_[1]], [round(float(x), 4) for x in v_[2]]]
+                                                   for k_, v_ in sorted(bgrp_.items())]
                 if errs:
                     records[-1]["real_pa"]["errors"] = {"count": len(errs), "first": errs[0]}
             if sl is not None:
