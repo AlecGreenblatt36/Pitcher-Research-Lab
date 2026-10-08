@@ -1,7 +1,7 @@
 # Decision horizon: results (October 8, 2026)
 
 Protocol and every prediction, each committed before the run it governs: `discovery/DECISION_HORIZON_PROTOCOL.md`.
-Code: `tools/brl_discovery.py` (experiments `horizon` to `horizon7`), workflow `brl-discovery`. Receipts on the ledger
+Code: `tools/brl_discovery.py` (experiments `horizon` to `horizon13`), workflow `brl-discovery`. Receipts on the ledger
 branch: `research/discovery-<experiment>-<run>.json`. Data: MLB's public pitch-by-pitch feeds, 2023-2026 regular
 seasons, 2,847,795 pitches (2,827,719 swing-or-take decisions after dropping bunts, pitchouts, intentional balls and
 hit batters), processed inside Actions; only model results and per-player summaries left the runner.
@@ -29,8 +29,8 @@ to 18); 25.7% of pitches at 0-0 (counts are pre-pitch).
 | 37738936962, 37741128823 | Tunneling scored at the measured horizon (2,104,443 consecutive pitch pairs) | The previous-pitch separation (visual angle from the batter's eye) best predicts a chase at 260 ms: 1.31 nats per 1,000 against 1.03 at the public 175 ms and 0.05 at the plate; head to head on 526,205 out-of-zone pitches, 260 ms beats 175 ms by 0.27 nats per 1,000 (0.22 to 0.32). Swings at strikes peak at the same moment. Whiffs get almost nothing from tunneling at any time (prediction for whiffs failed). |
 | 37741959956, 37742304034 | Lever: within pitcher, does a change in a pitch's early separation from its usual predecessors change its chase rate (2,715 pitch types, consecutive seasons 2023-2026 pooled) | More separation at the decision moment, fewer chases: -0.51 points of chase rate per typical change (-0.74 to -0.27), with changes in its own speed, movement, zone rate and height held fixed; 175 ms alone -0.64 (-0.91 to -0.37). Together they cannot be separated (260: -0.03, -0.57 to 0.46; 175: -0.61, -1.20 to 0.02), so this test supports the lever's direction, not its timing. Whiffs: no relation. |
 | 37738373322 | After deciding, how late is the bat steered (balls in play) | Launch angle rises 0.248 degrees per unit of up-and-down surprise (SE 0.003); sideways placebo 0.033. With an assumed 16 to 25 degrees per inch of bat-ball offset, the bat is steered until about 100 to 125 ms before the plate (111 ms at 20). If it were set at the decision, the slope would be 1.08 to 1.69. Balls in play exclude the largest misses, which biases this number short. |
-
 | 37743322069 | Per-hitter steering limit (launch-angle slope on vertical surprise, 2023-2024, 206 hitters) | Repeats weakly: odd against even days 0.18, under the 0.2 set in advance. Bat speed -0.13 (the predicted sign), swing length -0.05. The apparent late steerers (Eugenio Suarez, Corey Seager, Aaron Judge, Ronald Acuna Jr.) are mostly power hitters who miss rather than mishit when fooled, which hides the effect in their balls in play. Dropped. |
+| 37751569525 | Negative control: umpires' called strikes (1,477,048 taken pitches) through the identical instrument, heights standardized by each batter's zone recovered from the official zone numbers | Umpires: tau squared 0.0002 on 2025 (interval -0.0007 to 0.0014, about 15 ms) and -0.0012 on 2026; their held-out fit is best at the true crossing, and the hitters' value fits 19.6 nats per 1,000 calls worse. Their calls are 3.6 times sharper in location than swings, so tracking error would show more clearly in them. Hitters on the same pitches through the same code: 0.0659 and 0.0653 (257 and 256 ms). The horizon belongs to the hitters, not to the tracking system. Umpires are not fooled by late movement (a small positive for curveballs in 2025, 0.0057 with SE 0.0023, does not repeat in 2026); their calls follow the ball slightly past the front of the plate (plate-velocity term positive; its size is not recoverable). All three predictions held. |
 
 ## Reading
 
@@ -39,6 +39,8 @@ pitch), at a fixed time regardless of speed, count, pitch type or how often the 
 keeps being aimed until roughly 100 to 125 ms. The 150 to 175 ms decision point that public tunneling and deception
 metrics assume is neither moment. At the pitch-type level, decisions follow a gravity-only projection: a four-seamer's
 last 5.4 inches of ride after 225 ms do not enter the decision, which is the rising fastball measured at league scale.
+
+It is not a tracking artifact: umpires calling the same tracked pitches, through the same code, judge the true crossing (15 ms against the hitters' 257 ms), although their calls depend on location about 3.6 times as sharply as swings do.
 
 What this is not: a per-hitter scouting number (redundant with chase rate) or a pitcher variability number
 (wildness). Nothing here is causal about training. The flight is rebuilt, not tracked along its path; the zone is a
