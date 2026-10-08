@@ -116,7 +116,7 @@ def bats_lookup(h: pd.DataFrame, cutoff: str) -> dict:
 
 def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates: list, *, model_path: Path, model_sha256: str,
                  history_path: Path, hazard_path: Path, n_sims: int, physics_table=None, offsets=None, rest=False, environment=None,
-                 team_offsets=None, age_layer=None, steals=None, win_states=False, starter_lines=False, role_offsets=None, log=print) -> list[dict]:
+                 team_offsets=None, age_layer=None, steals=None, win_states=False, starter_lines=False, role_offsets=None, real_pa_check=False, log=print) -> list[dict]:
     """Simulate every game on the given dates; one record per game (win counts, run histograms, starter outs).
 
     environment: optional {game_pk: seven log-multipliers} (brl_live/environment.py); games without an entry are unadjusted.
@@ -131,7 +131,11 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
     simulated plate appearances in that state, so the table's own noise can be measured.
     starter_lines: also record each starter's simulated distributions (strikeouts, batters faced, hits, walks and hit
     batters, outs) with his actual line in that game (box-score facts) and a simple baseline from earlier dates only
-    (strikeout share over the prior 365 days shrunk toward 22% by 150 batters; expected batters faced from the hazard)."""
+    (strikeout share over the prior 365 days shrunk toward 22% by 150 batters; expected batters faced from the hazard).
+    real_pa_check: also run the game's full probability stack (model, context, environment, team and role offsets) on
+    every real plate appearance of the game (its batter, pitcher, inning, outs, runners, score and times through the
+    order) and record the predicted and observed counts per outcome class for starters and relievers, so the
+    simulator's own totals can be told apart from the probabilities it draws from."""
     from brl_live.provider_adjust import ContextAdjust, EnvironmentAdjust, TeamAdjust, RoleAdjust
     hcols = h[HISTORY_COLUMNS]
     first = dates[0]
@@ -198,6 +202,15 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
             return 0.22, 0
         bf_ = int(cbf[hi - 1] - (cbf[lo - 1] if lo > 0 else 0)); k_ = int(ck[hi - 1] - (ck[lo - 1] if lo > 0 else 0))
         return (k_ + 0.22 * 150.0) / (bf_ + 150.0), bf_
+    real_rows = {}
+    if real_pa_check:
+        want_r = set(int(x) for x in games[games["date"].isin(dates)]["game_pk"])
+        rcols = ["game_pk", "at_bat_number", "batter", "pitcher", "stand", "p_throws", "is_home_batter", "inning", "outs_when_up",
+                 "runner_1b", "runner_2b", "runner_3b", "bat_score", "fld_score", "n_thruorder_pitcher", "outcome"]
+        rsub = h.loc[h["game_pk"].isin(want_r), rcols].sort_values(["game_pk", "at_bat_number"], kind="mergesort")
+        for gpk_, gq in rsub.groupby("game_pk", sort=False):
+            real_rows[int(gpk_)] = list(gq.itertuples(index=False))
+    MODEL_ORDER = ("BIP_OUT", "K", "BB_HBP", "1B", "2B_3B", "HR", "OTHER_REACH")
     records = []
     t0 = time.time()
     for di, date in enumerate(dates):
@@ -293,6 +306,36 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                             "home_wins": hw, "ties": ties, "home_hist": ha.tolist(), "away_hist": aa.tolist(),
                             "home_starter_outs": float(np.mean(s_outs["home"])), "away_starter_outs": float(np.mean(s_outs["away"])),
                             "home_runs": int(g.home_runs), "away_runs": int(g.away_runs)})
+            if real_pa_check:
+                from types import SimpleNamespace
+                from research_lab.game_sim.locked_pa_provider import SIM_FROM_MODEL
+                model_of_sim = {v: k for k, v in SIM_FROM_MODEL.items()}
+                agg = {r_: {"pred": np.zeros(7), "obs": np.zeros(7), "n": 0} for r_ in ("starter", "reliever")}
+                starters_ = {int(g.home_starter), int(g.away_starter)}
+                for row in real_rows.get(int(g.game_pk), []):
+                    try:
+                        side_b = "home" if int(row.is_home_batter) == 1 else "away"
+                        fld_team = teams["away" if side_b == "home" else "home"]
+                        ctx = SimpleNamespace(
+                            batter=PlayerProfile(str(int(row.batter)), str(int(row.batter)), str(row.stand or "R")),
+                            pitcher=PitcherProfile(str(int(row.pitcher)), str(int(row.pitcher)), str(row.p_throws or "R"), role="starter" if int(row.pitcher) in starters_ else "reliever"),
+                            batting_side=side_b, inning=int(row.inning), half="bottom" if side_b == "home" else "top", outs=int(row.outs_when_up),
+                            bases=tuple(True if int(x or 0) else None for x in (row.runner_1b, row.runner_2b, row.runner_3b)),
+                            batting_score=int(row.bat_score), fielding_score=int(row.fld_score), score_diff=int(row.bat_score) - int(row.fld_score),
+                            times_through_order=int(row.n_thruorder_pitcher or 1), fielding_team_defense=float(getattr(fld_team, "defense", 0.0) or 0.0))
+                        probs = provider.probabilities(ctx)
+                    except Exception as exc_:
+                        agg.setdefault("errors", []).append(type(exc_).__name__ + ": " + str(exc_)[:80])
+                        continue
+                    r_ = "starter" if int(row.pitcher) in starters_ else "reliever"
+                    agg[r_]["pred"] += np.array([probs[model_of_sim[lab]] for lab in MODEL_ORDER])
+                    if str(row.outcome) in MODEL_ORDER:
+                        agg[r_]["obs"][MODEL_ORDER.index(str(row.outcome))] += 1
+                    agg[r_]["n"] += 1
+                errs = agg.pop("errors", [])
+                records[-1]["real_pa"] = {r_: {"n": v_["n"], "pred": [round(float(x), 3) for x in v_["pred"]], "obs": [int(x) for x in v_["obs"]]} for r_, v_ in agg.items()}
+                if errs:
+                    records[-1]["real_pa"]["errors"] = {"count": len(errs), "first": errs[0]}
             if sl is not None:
                 st_out = {}
                 for side in ("away", "home"):
