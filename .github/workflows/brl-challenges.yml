@@ -1,0 +1,21 @@
+name: BRL challenges
+on:
+  workflow_dispatch:
+  push:
+    branches: [diag/challenges]
+permissions:
+  contents: write
+jobs:
+  challenges:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check cryptography==46.0.4 numpy pandas
+      - name: Ball-strike challenges from the official play-by-play (field names, counts and aggregates only leave the runner)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python "tools/$(tr -d '[:space:]' < tools/challenges_job.txt)"
