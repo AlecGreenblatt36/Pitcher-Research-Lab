@@ -104,7 +104,8 @@ def test_run_live_update_end_to_end():
     assert out['projected_final']['away'] >= 3 and out['projected_final']['home'] >= 2
     assert out['state']['inning'] == 6 and out['on_mound'] == {'away': '301', 'home': '402'}
     assert out['due_up'] == {'away': 'Player 104', 'home': 'Player 207'}
-    assert out['adjustments'] == ['context offsets through 2026-09-27']
+    assert out['adjustments'][0] == 'context offsets through 2026-09-27'
+    assert any(label.startswith('stolen bases and runner speed through') for label in out['adjustments'][1:])
     again = run_live_update(engine, m, start, state, game, None, n_worlds=300, updated_at='x')
     assert again['home_win_probability'] == out['home_win_probability']
 

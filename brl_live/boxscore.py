@@ -292,10 +292,12 @@ class BoxAccumulator:
 # box's adjustments; relievers keep their regular-season roles.
 # team_offsets: the batting and the fielding team's offsets beyond the PA model (brl_live/team_offsets.py, TEAM-01/02),
 # off until the full replays pass.
-# steals: runner speeds from sprint speed and stolen-base attempts (brl_live/running.py, RUN-01), off until replays pass.
+# steals: runner speeds from sprint speed and stolen-base attempts (brl_live/running.py, RUN-01). On since the full
+# 2026 replay (RUN-02): simulator win Brier 0.24405 to 0.24378, correlation with the market's closing log-odds 0.8235 to
+# 0.8354, totals closer to the market line, mean total unchanged.
 ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         'postseason_exp_scale':{'F':0.91,'D':0.91,'L':0.91,'W':1.0},
-        'environment':True,'team_offsets':False,'steals':False}
+        'environment':True,'team_offsets':False,'steals':True}
 
 def steal_model_for(settings,matchup,date):
     """The base-running model for a game when steals are on, else None. Regular-season games use the current
