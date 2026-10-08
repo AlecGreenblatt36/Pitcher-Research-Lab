@@ -15,6 +15,10 @@ log-odds + 0.545 team-model log-odds).
 Simulator correlation with the closing log-odds 0.82 to 0.87 (2026); mean total runs 8.96 against 8.95 actual (2026),
 8.89 against 8.90 (2025). Not switched: the retrained player model (RETRAIN-02). Discovery: DISC-01 to DISC-05.
 
+Later on October 8: in-game win chance averaged with the league table (LIVE-04, both seasons); pitcher-level tunneling measured and found descriptive only (DISC-06); starter projections being scored (PLAYER-01).
+
+Standing goals (Alec): the best simulator and page; continual evaluation and improvement, every change replayed on full seasons before it goes live; a scouting focus; measuring things not measured before, with predictions written before each run and failures kept. Nothing new is made public without Alec's approval (the discovery page is private).
+
 ## Checkpoint — October 7, 2026 (Claude takes over the project)
 
 Evidence base: a full out-of-sample replay of the 2026 regular season with the locked PA model and fitted starter hazard, every input prior-date (lineups and starters as they actually played, bullpens from the team's last 14 days, roles from the prior 365 days), 2,427 games, 200 worlds each, finite-path corrected. Scores are winner Brier (coin flip = 0.25000); "better than coin" = (0.25 - Brier) / 0.25. Fair team model: negative-binomial runs with decayed, shrunk offense/defense ratings and prior-data home field, tuned on 2025 only (tau = 180 days, k = 15).
