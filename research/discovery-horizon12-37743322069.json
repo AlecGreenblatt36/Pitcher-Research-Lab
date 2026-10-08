@@ -1,0 +1,243 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "horizon12",
+ "run_id": "37743322069",
+ "params": {
+  "experiment": "horizon12",
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "min_bip": 500,
+  "seed": 11
+ },
+ "started_at": "2026-10-08T07:44:13.251096+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 6.6
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 13.4
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 20.3
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 713382
+ },
+ "results": {
+  "hitters": 206,
+  "slope": {
+   "pooled": 0.2432,
+   "sd_observed": 0.0898,
+   "sd_noise": 0.0753,
+   "sd_true": 0.049,
+   "split_half": 0.1801
+  },
+  "corr_with_dev": {
+   "whiff": -0.1701,
+   "sweet": -0.1383,
+   "hard": -0.0968,
+   "la_sd": 0.1987
+  },
+  "incremental": {
+   "whiff": {
+    "r2": [
+     0.7513,
+     0.7559
+    ],
+    "loo_x1e5": [
+     92.747,
+     91.77
+    ],
+    "per_sd": -0.00421,
+    "ci": [
+     -0.00798,
+     -0.0002
+    ],
+    "n": 199
+   },
+   "sweet": {
+    "r2": [
+     0.214,
+     0.2164
+    ],
+    "loo_x1e5": [
+     141.854,
+     142.576
+    ],
+    "per_sd": 0.00208,
+    "ci": [
+     -0.0032,
+     0.00707
+    ],
+    "n": 199
+   },
+   "hard": {
+    "r2": [
+     0.6173,
+     0.6211
+    ],
+    "loo_x1e5": [
+     241.097,
+     240.873
+    ],
+    "per_sd": -0.00496,
+    "ci": [
+     -0.01165,
+     0.00174
+    ],
+    "n": 199
+   },
+   "la_sd": {
+    "r2": [
+     0.3875,
+     0.3897
+    ],
+    "loo_x1e5": [
+     270605.207,
+     272511.176
+    ],
+    "per_sd": -0.09949,
+    "ci": [
+     -0.34744,
+     0.12419
+    ],
+    "n": 199
+   }
+  },
+  "bat_tracking_fetch": {
+   "2024": {
+    "url": "https://baseballsavant.mlb.com/leaderboard/bat-tracking?type=batter&seasonStart=",
+    "rows": 503
+   },
+   "2025": {
+    "url": "https://baseballsavant.mlb.com/leaderboard/bat-tracking?type=batter&seasonStart=",
+    "rows": 524
+   }
+  },
+  "bat_tracking": {
+   "n": 206,
+   "bat_speed_spearman": -0.1284,
+   "swing_length_spearman": -0.0498
+  },
+  "examples": {
+   "latest_steering": [
+    {
+     "batter": 553993,
+     "slope": 0.1821
+    },
+    {
+     "batter": 694384,
+     "slope": 0.1875
+    },
+    {
+     "batter": 608369,
+     "slope": 0.1896
+    },
+    {
+     "batter": 543807,
+     "slope": 0.1908
+    },
+    {
+     "batter": 669004,
+     "slope": 0.1908
+    },
+    {
+     "batter": 666139,
+     "slope": 0.1932
+    },
+    {
+     "batter": 592450,
+     "slope": 0.194
+    },
+    {
+     "batter": 666624,
+     "slope": 0.1964
+    },
+    {
+     "batter": 660670,
+     "slope": 0.1976
+    },
+    {
+     "batter": 686668,
+     "slope": 0.1986
+    },
+    {
+     "batter": 669289,
+     "slope": 0.2013
+    },
+    {
+     "batter": 641584,
+     "slope": 0.2016
+    }
+   ],
+   "earliest_steering": [
+    {
+     "batter": 621493,
+     "slope": 0.3094
+    },
+    {
+     "batter": 571448,
+     "slope": 0.3069
+    },
+    {
+     "batter": 621043,
+     "slope": 0.3021
+    },
+    {
+     "batter": 663538,
+     "slope": 0.301
+    },
+    {
+     "batter": 453568,
+     "slope": 0.2894
+    },
+    {
+     "batter": 683734,
+     "slope": 0.2892
+    },
+    {
+     "batter": 571771,
+     "slope": 0.2891
+    },
+    {
+     "batter": 592206,
+     "slope": 0.288
+    },
+    {
+     "batter": 657077,
+     "slope": 0.2864
+    },
+    {
+     "batter": 657557,
+     "slope": 0.2844
+    },
+    {
+     "batter": 444482,
+     "slope": 0.2831
+    },
+    {
+     "batter": 622534,
+     "slope": 0.2828
+    }
+   ]
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-08T07:44:46.318529+00:00",
+ "seconds": 33.1
+}
