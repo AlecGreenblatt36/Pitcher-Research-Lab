@@ -278,15 +278,18 @@ class BoxAccumulator:
 # 28% of those starts end before 16 batters against 8% in the regular season. A factor of 0.91
 # reproduces that ratio in the simulator (0.869; share under 16 batters 0.25). Recorded in each
 # box's adjustments; relievers keep their regular-season roles.
+# team_offsets: the batting and the fielding team's offsets beyond the PA model (brl_live/team_offsets.py, TEAM-01/02),
+# off until the full replays pass.
 ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         'postseason_exp_scale':{'F':0.91,'D':0.91,'L':0.91,'W':1.0},
-        'environment':True}
+        'environment':True,'team_offsets':False}
 
-def adjusted_provider(provider,full_history,date,settings=ADJUST,environment=None):
+def adjusted_provider(provider,full_history,date,settings=ADJUST,environment=None,teams=None):
     """Wrap the engine's provider with the enabled adjustments. Returns (provider, world_hook, label).
 
-    environment: the game's conditions (brl_live/environment.conditions) when the run environment is on."""
-    from .provider_adjust import ContextAdjust,TalentNoise,EnvironmentAdjust,history_talent_inputs
+    environment: the game's conditions (brl_live/environment.conditions) when the run environment is on.
+    teams: (away abbreviation, home abbreviation) for the team offsets."""
+    from .provider_adjust import ContextAdjust,TalentNoise,EnvironmentAdjust,TeamAdjust,history_talent_inputs
     label=[];hook=None
     if settings.get('context_offsets'):
         provider=ContextAdjust(provider);label.append('context offsets through '+str(provider.offsets.get('estimated_through')))
@@ -294,6 +297,11 @@ def adjusted_provider(provider,full_history,date,settings=ADJUST,environment=Non
         from .environment import load_table,log_multipliers,describe
         table=load_table()
         provider=EnvironmentAdjust(provider,log_multipliers(environment,table));label.append(describe(environment,table))
+    if settings.get('team_offsets') and teams and all(teams):
+        from .team_offsets import load_table as load_team_table,game_log_multipliers
+        tt=load_team_table()
+        provider=TeamAdjust(provider,game_log_multipliers(tt,teams[0],teams[1],date))
+        label.append('team offsets through '+str(tt.get('estimated_through')))
     c=float(settings.get('talent_noise_c') or 0.0)
     if c>0:
         if full_history is None:raise Blocked('Talent noise needs the assembled PA history')
@@ -302,9 +310,9 @@ def adjusted_provider(provider,full_history,date,settings=ADJUST,environment=Non
         hook=provider.new_world;label.append('per-world talent noise c=%g'%c)
     return provider,hook,label
 
-def run_box_worlds(engine,matchup,history,date,seeds,full_history=None,settings=ADJUST,environment=None):
+def run_box_worlds(engine,matchup,history,date,seeds,full_history=None,settings=ADJUST,environment=None,teams=None):
     fit=BookkeepingFit(history,date,full_history=full_history)
-    provider,world_hook,adjust_label=adjusted_provider(engine.provider,full_history,date,settings,environment)
+    provider,world_hook,adjust_label=adjusted_provider(engine.provider,full_history,date,settings,environment,teams)
     if getattr(engine.manager,'adjust_label',None):adjust_label=list(adjust_label)+[engine.manager.adjust_label]
     sim=ObservedSimulator(provider,config=engine.config,manager_policy=engine.manager)
     accumulator=BoxAccumulator(matchup);results=[]

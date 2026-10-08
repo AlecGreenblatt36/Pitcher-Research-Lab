@@ -49,13 +49,14 @@ class BoxSimulator(RefreshedSimulator):
             environment=conditions_from_feed(feed.get('gameData') or {})
         except Exception:
             environment=None
-        return run_live_update(engine,matchup,start,state,game,self.history,updated_at=updated_at,environment=environment)
+        return run_live_update(engine,matchup,start,state,game,self.history,updated_at=updated_at,environment=environment,
+                               teams=((game.get('away') or {}).get('abbr'),(game.get('home') or {}).get('abbr')))
     def run(self,game,matchup):
         parameters={'date':game['date'],'park':game['home']['abbr'],'game':game,
                     'matchup':asdict(matchup),'config':config_for(game['game_type'])}
         engine,decoded=make_history_engine(parameters,self.path,getattr(self,'physics_table',None))
         results,box=run_box_worlds(engine,decoded,self.annotations,game['date'],draw_seeds(game['game_pk']),full_history=self.history,
-                                   environment=getattr(self,'environment',None))
+                                   environment=getattr(self,'environment',None),teams=(game['away'].get('abbr'),game['home'].get('abbr')))
         baseline=predict(game,self.rows,self.fit)
         # The team half of the headline blend: our decayed negative-binomial team model, the one
         # measured on the 2026 replay next to the simulator. The runtime's own baseline is kept

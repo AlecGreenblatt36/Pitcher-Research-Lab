@@ -88,3 +88,13 @@ def test_team_adjust_uses_the_batting_side():
     assert sum(away.values()) == pytest.approx(1.0)
     adj.set_teams(None)
     assert adj.probabilities(_Ctx('away'))['strikeout'] == pytest.approx(BASE[1])
+
+
+def test_adjusted_provider_applies_team_offsets_when_switched_on(monkeypatch):
+    from brl_live import boxscore
+    table = to.current_table(rows_for(), k=200.0, source='test')
+    monkeypatch.setattr(to, 'load_table', lambda path=to.TABLE_PATH: table)
+    on, _, label = boxscore.adjusted_provider(_Inner(), None, table['estimated_through'], settings={'team_offsets': True}, teams=('B', 'A'))
+    off, _, label_off = boxscore.adjusted_provider(_Inner(), None, table['estimated_through'], settings={'team_offsets': False}, teams=('B', 'A'))
+    assert any('team offsets through' in x for x in label) and not label_off
+    assert on.probabilities(_Ctx('away'))['strikeout'] > off.probabilities(_Ctx('away'))['strikeout']
