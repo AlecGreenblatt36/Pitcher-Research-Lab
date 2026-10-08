@@ -68,6 +68,17 @@ def apply_moves(bases: dict, moves: list) -> int:
     return outs
 
 
+def resync(bases: dict, play: dict) -> None:
+    """Take the official runners after the play when the feed lists them (fixes pinch runners and the extra-inning runner)."""
+    m = play.get('matchup') or {}
+    keys = {'1B': 'postOnFirst', '2B': 'postOnSecond', '3B': 'postOnThird'}
+    if not any(k in m for k in keys.values()):
+        return
+    for b, k in keys.items():
+        v = (m.get(k) or {}).get('id')
+        bases[b] = None if v is None else str(v)
+
+
 def mask_of(bases: dict) -> int:
     return sum(1 << i for i, b in enumerate(BASES) if bases.get(b))
 
@@ -85,6 +96,8 @@ def game_rows(doc: dict) -> dict:
         half = (about.get('inning'), bool(about.get('isTopInning')))
         if half != key:
             key, bases, outs = half, {b: None for b in BASES}, 0
+            if int(about.get('inning') or 0) >= 10:
+                bases['2B'] = 'auto'           # extra innings start with a runner on second (since 2020; id unknown until he moves)
         result = play.get('result') or {}
         event = str(result.get('eventType') or '')
         outcome = map_event(event)
@@ -112,18 +125,29 @@ def game_rows(doc: dict) -> dict:
             outs = min(3, int(end_outs)) if isinstance(end_outs, int) else outs
             if outs >= 3:
                 bases = {b: None for b in BASES}
+            else:
+                resync(bases, play)
             continue
         out['plays'] += 1
         c_bases, c_outs = dict(bases), min(3, start_outs + pre_outs)
         out['running'].append((mask_of(start_bases), start_outs, tuple(pre_types), mask_of(c_bases), c_outs))
         batter = str(((play.get('matchup') or {}).get('batter') or {}).get('id') or '')
-        dest = {}
+        # Each runner's destination, keyed by the base he started the play from (a pinch runner or the extra-inning runner
+        # may carry another id than the one tracked on that base); the batter's by his id or a start off the bases.
+        dest, first_start = {}, {}
         for g in contact_moves:
             for r in g:
                 rid, mv = _rid(r), (r.get('movement') or {})
                 if rid is None:
                     continue
+                if rid not in first_start:
+                    first_start[rid] = mv.get('start') if mv.get('start') in BASES else None
                 dest[rid] = 'X' if mv.get('isOut') else DEST.get(mv.get('end'), dest.get(rid))
+        by_base = {first_start[rid]: d for rid, d in dest.items() if first_start.get(rid) in BASES and rid != batter}
+        batter_dest = dest.get(batter)
+        if batter_dest is None:
+            starts_off = [d for rid, d in dest.items() if first_start.get(rid) is None and rid not in c_bases.values()]
+            batter_dest = starts_off[0] if len(starts_off) == 1 else None
         if c_outs >= 3:
             out['mismatch'] += 1       # the inning ended before the batted ball (should not happen for a completed plate appearance)
             bases = {b: None for b in BASES}; outs = 3
@@ -131,8 +155,8 @@ def game_rows(doc: dict) -> dict:
         pattern = []
         for b in BASES:
             rid = c_bases[b]
-            pattern.append('-' if rid is None else (dest.get(rid) or b[0]))
-        pb = dest.get(batter)
+            pattern.append('-' if rid is None else (by_base.get(b) or b[0]))
+        pb = batter_dest
         if pb is None:
             pb = 'X' if outcome in ('K', 'BIP_OUT') else ('H' if outcome == 'HR' else '?')
         pattern.append(pb)
@@ -147,6 +171,8 @@ def game_rows(doc: dict) -> dict:
         outs = new_outs
         if outs >= 3:
             bases = {b: None for b in BASES}
+        else:
+            resync(bases, play)
     return out
 
 
