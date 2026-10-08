@@ -345,6 +345,8 @@ class BoxAccumulator:
 # relief_exit: when a reliever comes out, from logistic hazards fitted on every real relief decision point (RELIEF-02;
 # research_lab.game_sim.relief_exit.ReliefExit, table brl_live/relief_exit.json from tools/brl_relief_exit.py). Off until
 # its replays are read; off, the hand-set rule decides (it pulls relievers mid-inning far more often than managers do).
+# relief_hooks: with relief_exit, each team's tendency to pull relievers faster or slower than the fitted hazard
+# (RELIEF-03; table brl_live/relief_hooks.json from tools/brl_relief_hooks.py). Off until its replays are read.
 # base_state: the stack's probabilities shaped by bases and outs (RUNS-02; brl_live.provider_adjust.BaseStateAdjust,
 # table brl_live/base_state_offsets.json from tools/brl_base_state.py). Off until its replays are read.
 # leash: in regular-season games each starter's expected batters faced is moved for short rest (openers), a relief
@@ -353,12 +355,13 @@ class BoxAccumulator:
 ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         'postseason_exp_scale':{'F':0.91,'D':0.91,'L':0.91,'W':1.0},
         'environment':True,'team_offsets':True,'steals':True,'transitions':True,'running_events':False,
-        'reliever_choice':False,'leash':False,'base_state':False,'relief_exit':False}
+        'reliever_choice':False,'leash':False,'base_state':False,'relief_exit':False,'relief_hooks':False}
 
 TRANSITIONS_PATH=Path(__file__).resolve().parent/'transitions.json'
 RUNNING_EVENTS_PATH=Path(__file__).resolve().parent/'running_events.json'
 RELIEVER_CHOICE_PATH=Path(__file__).resolve().parent/'reliever_choice.json'
 RELIEF_EXIT_PATH=Path(__file__).resolve().parent/'relief_exit.json'
+RELIEF_HOOKS_PATH=Path(__file__).resolve().parent/'relief_hooks.json'
 LEASH_PATH=Path(__file__).resolve().parent/'leash.json'
 _KERNEL={}
 
@@ -400,15 +403,25 @@ def relief_exit_for(settings):
         _KERNEL['x']=ReliefExit(json.loads(RELIEF_EXIT_PATH.read_text()))
     return _KERNEL['x']
 
-def manager_for(manager,settings):
-    """(manager, label): the engine's manager with the fitted reliever choice and exits attached when they are switched
-    on (a copy, so the engine's own manager is unchanged), else the manager itself and None."""
-    choice=reliever_choice_for(settings);exits=relief_exit_for(settings)
+def relief_hooks_for(settings):
+    """The team hook offsets (brl_live/relief_hooks.json, RELIEF-03) when switched on with the fitted exits, else None."""
+    if not (settings.get('relief_hooks') and settings.get('relief_exit')):return None
+    if 'h' not in _KERNEL:_KERNEL['h']=json.loads(RELIEF_HOOKS_PATH.read_text())
+    return _KERNEL['h']
+
+def manager_for(manager,settings,teams=None):
+    """(manager, label): the engine's manager with the fitted reliever choice and exits (and, given the game's teams as
+    (away, home) abbreviations, their hook offsets) attached when switched on (a copy, so the engine's own manager is
+    unchanged), else the manager itself and None."""
+    choice=reliever_choice_for(settings);exits=relief_exit_for(settings);hooks=relief_hooks_for(settings)
     if choice is None and exits is None:return manager,None
     import copy
     m=copy.copy(manager);labels=[]
     if choice is not None:m.reliever_choice=choice;labels.append(choice.name)
     if exits is not None:m.relief_exit=exits;labels.append(exits.name)
+    if hooks is not None and teams and all(teams):
+        t=hooks.get('teams') or {}
+        m.relief_offsets={'away':t.get(str(teams[0]).upper()),'home':t.get(str(teams[1]).upper())};labels.append(str(hooks.get('name')))
     return m,'; '.join(labels)
 
 def running_events_for(settings):
@@ -484,7 +497,7 @@ def run_box_worlds(engine,matchup,history,date,seeds,full_history=None,settings=
     if kernel is not None:adjust_label=list(adjust_label)+[kernel.name]
     running=running_events_for(settings)
     if running is not None:adjust_label=list(adjust_label)+[running.name]
-    manager,choice_label=manager_for(engine.manager,settings)
+    manager,choice_label=manager_for(engine.manager,settings,teams)
     if choice_label:adjust_label=list(adjust_label)+[choice_label]
     sim=ObservedSimulator(provider,config=engine.config,manager_policy=manager,steals=steals,transitions=kernel,running_events=running)
     accumulator=BoxAccumulator(matchup);results=[]

@@ -40,7 +40,7 @@ def run_live_update(engine, matchup, start, state: dict, game: dict, full_histor
     running = running_events_for(settings)
     if running is not None:
         labels = list(labels) + [running.name]
-    manager, choice_label = manager_for(engine.manager, settings)
+    manager, choice_label = manager_for(engine.manager, settings, teams)
     if choice_label:
         labels = list(labels) + [choice_label]
     sim = LiveSimulator(provider, config=engine.config, manager_policy=manager, steals=steals, transitions=kernel,

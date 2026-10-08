@@ -37,6 +37,8 @@ class ManagerPolicy:
     reliever_choice: object = None
     # Optional fitted reliever exits (relief_exit.ReliefExit, RELIEF-02). None keeps the hand-set rule below.
     relief_exit: object = None
+    # Optional per-side hook offsets for the fitted exits ({'away': {'mid', 'end'}, 'home': ...}, RELIEF-03).
+    relief_offsets: object = None
 
     def fatigue(
         self,
@@ -69,7 +71,8 @@ class ManagerPolicy:
         if not self.removal_is_legal(line, inning_ended):
             return False
         if self.relief_exit is not None and not line.is_starter:
-            return self.relief_exit.remove(pitcher, line, state, fielding_side, inning_ended, rng)
+            return self.relief_exit.remove(pitcher, line, state, fielding_side, inning_ended, rng,
+                                           (self.relief_offsets or {}).get(fielding_side))
         if line.batters_faced >= pitcher.max_batters:
             return True
 

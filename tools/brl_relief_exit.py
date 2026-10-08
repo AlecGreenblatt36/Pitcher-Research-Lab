@@ -22,58 +22,9 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT / 'brl_engine' / 'runtime'))
-from research_lab.game_sim.relief_exit import MID, COMMON, features     # noqa: E402
+from research_lab.game_sim.relief_exit import MID, COMMON     # noqa: E402
 
-COLS = ['game_pk', 'date_key', 'at_bat_number', 'pitcher', 'inning', 'inning_topbot', 'outs_when_up', 'runner_1b', 'runner_2b',
-        'runner_3b', 'bat_score', 'fld_score', 'home_team', 'away_team', 'game_type']
-
-
-def decisions(h: pd.DataFrame) -> pd.DataFrame:
-    h = h[h['game_type'] == 'R'].sort_values(['game_pk', 'at_bat_number']).reset_index(drop=True)
-    h['date'] = h['date_key'].astype(str).str[:10]
-    h['season'] = h['date'].str[:4].astype(int)
-    top = h['inning_topbot'].astype(str).str.lower().str.startswith('top')
-    h['bat'] = np.where(top, 'away', 'home')
-    h['team'] = np.where(top, h['home_team'], h['away_team'])          # the fielding team
-    h['on'] = h[['runner_1b', 'runner_2b', 'runner_3b']].fillna(0).astype(bool).sum(axis=1)
-    g = h.groupby(['game_pk', 'bat'], sort=False)
-    for c in ('pitcher', 'inning', 'outs_when_up', 'on', 'bat_score', 'fld_score'):
-        h['n_' + c] = g[c].shift(-1)
-    h['starter'] = g['pitcher'].transform('first')
-    rel = h[(h['pitcher'] != h['starter'])].copy()
-    k = rel.groupby(['game_pk', 'bat', 'pitcher'])
-    rel['bf'] = k.cumcount() + 1
-    rel['entry_score'] = k['bat_score'].transform('first')
-    rel['inherited'] = k['on'].transform('first')
-    rel['entry_inning'] = k['inning'].transform('first')
-    rel = rel[rel['n_pitcher'].notna()].copy()                          # the game went on
-    rel['runs'] = np.maximum(0, rel['n_bat_score'] - rel['entry_score'] - rel['inherited'])
-    rel['ended'] = (rel['n_inning'] != rel['inning']).astype(int)
-    rel['removed'] = (rel['n_pitcher'] != rel['pitcher']).astype(int)
-    rel['lead'] = rel['n_fld_score'] - rel['n_bat_score']
-    # usual length (any team) and role with this team, from relief outings in the previous 365 days
-    outings = rel.groupby(['game_pk', 'pitcher']).agg(date=('date', 'first'), team=('team', 'first'), bf=('bf', 'max'),
-                                                       inn=('entry_inning', 'first')).reset_index()
-    outings['day'] = pd.to_datetime(outings['date']).values.astype('datetime64[D]').astype(np.int64)
-    exp, ninth, late = {}, {}, {}
-    for pid, o in outings.sort_values('day').groupby('pitcher'):
-        day = o['day'].to_numpy(); bf = o['bf'].to_numpy(float); inn = o['inn'].to_numpy(); team = o['team'].to_numpy()
-        for i, gpk in enumerate(o['game_pk'].to_numpy()):
-            m = (day < day[i]) & (day >= day[i] - 365)
-            exp[(gpk, pid)] = int(max(3, round(float(np.median(bf[m]))))) if m.any() else 4
-            mt = m & (team == team[i])
-            ninth[(gpk, pid)] = float((inn[mt] >= 9).mean()) if mt.any() else 0.0
-            late[(gpk, pid)] = float((inn[mt] >= 8).mean()) if mt.any() else 0.0
-    key = list(zip(rel['game_pk'], rel['pitcher']))
-    rel['exp'] = [exp[x] for x in key]; rel['ninth'] = [ninth[x] for x in key]; rel['late'] = [late[x] for x in key]
-    rel['n_on'] = rel['n_on'].fillna(0); rel['n_outs_when_up'] = rel['n_outs_when_up'].fillna(0)
-    return rel
-
-
-def design(d: pd.DataFrame, names) -> np.ndarray:
-    rows = [features(bf, ex, r, int(inn), ld, nn, lt, on, min(int(o), 2)) for bf, ex, r, inn, ld, nn, lt, on, o in
-            zip(d['bf'], d['exp'], d['runs'], d['inning'], d['lead'], d['ninth'], d['late'], d['n_on'], d['n_outs_when_up'])]
-    return np.array([[x[n] for n in names] for x in rows], float)
+from brl_replay.relief_decisions import COLS, decisions, design      # noqa: E402,F401  (one implementation, shared)
 
 
 def hand_set(d: pd.DataFrame) -> np.ndarray:

@@ -96,3 +96,28 @@ def test_switch_off_and_production_copy():
     assert m is not base and isinstance(m.relief_exit, ReliefExit) and m.reliever_choice is None and base.relief_exit is None
     m, label = manager_for(base, dict(ADJUST, relief_exit=True, reliever_choice=True))
     assert m.relief_exit is not None and m.reliever_choice is not None and ';' in label
+
+
+def test_team_hooks_move_the_hazard_and_use_prior_dates_only():
+    from brl_replay.relief_decisions import HookOffsets
+    ex = ReliefExit(DOC); rng = np.random.default_rng(1)
+    p = PitcherProfile('R1', 'Reliever', 'R', role='setup', expected_batters=4, usage={'ninth': 0.1, 'late': 0.8})
+    st = GameState(inning=7, half='top', outs=1, home_score=3, away_score=2)
+    base = np.mean([ex.remove(p, line(4), st, 'home', False, rng) for _ in range(6000)])
+    quick = np.mean([ex.remove(p, line(4), st, 'home', False, rng, {'mid': 1.0, 'end': 0.0}) for _ in range(6000)])
+    assert quick > base * 1.8
+    # a team that removes every time against p = 0.2 gets a positive offset; days on or after the date do not count
+    d = pd.DataFrame({'team': ['AAA'] * 40 + ['BBB'] * 40, 'date': ['2026-06-01'] * 20 + ['2026-06-10'] * 20 + ['2026-06-01'] * 40,
+                      'ended': [0] * 80, 'removed': [1] * 40 + [0] * 40})
+    hooks = HookOffsets(d, np.full(80, 0.2), half_life=90, k=10)
+    a1, a2 = hooks.at('AAA', '2026-06-05'), hooks.at('AAA', '2026-06-11')
+    assert a1['mid'] > 0 and a2['mid'] > a1['mid'] and hooks.at('BBB', '2026-06-05')['mid'] < 0 and a1['end'] == 0.0
+    assert hooks.at('AAA', '2026-06-01')['mid'] == 0.0
+
+
+def test_production_attaches_both_sides_hooks():
+    from brl_live.boxscore import ADJUST, manager_for
+    m, label = manager_for(ManagerPolicy(), dict(ADJUST, relief_exit=True, relief_hooks=True), ('NYY', 'DET'))
+    assert set(m.relief_offsets) == {'away', 'home'} and set(m.relief_offsets['away']) == {'mid', 'end'} and 'hooks' in label
+    m, _ = manager_for(ManagerPolicy(), dict(ADJUST, relief_exit=False, relief_hooks=True), ('NYY', 'DET'))
+    assert getattr(m, 'relief_offsets', None) is None

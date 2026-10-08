@@ -8,6 +8,7 @@ deep into the bullpen. After each plate appearance a reliever completes, the haz
 runs charged to him, his usual length (median batters per relief outing over the last year), his role (share of entries
 in the ninth and in the eighth or later), the inning, the fielding team's lead and, in the middle of an inning, the
 runners on base and outs. The three-batter rule stands: in the middle of an inning nobody leaves before his third batter.
+Teams differ reliably in how fast they pull relievers (RELIEF-03): an optional per-team offset moves the log-odds.
 
 doc (brl_live/relief_exit.json, from tools/brl_relief_exit.py): {'name': ..., 'mid': {'names', 'intercept', 'beta'},
 'end': {'names', 'intercept', 'beta'}}.
@@ -66,8 +67,13 @@ class ReliefExit:
         return 'mid', features(line.batters_faced, pitcher.expected_batters, line.runs_allowed, state.inning, lead, ninth, late,
                                runners, min(state.outs, 2))
 
-    def remove(self, pitcher, line, state, fielding_side, inning_ended, rng) -> bool:
+    def remove(self, pitcher, line, state, fielding_side, inning_ended, rng, offset=None) -> bool:
+        """offset: the fielding team's hook tendency {'mid': log-odds, 'end': log-odds} (RELIEF-03), or None."""
         if not inning_ended and line.batters_faced < 3:
             return False
         key, x = self.facts(pitcher, line, state, fielding_side, inning_ended)
-        return bool(rng.random() < self.probability(key, x))
+        p = self.probability(key, x)
+        if offset:
+            z = math.log(p / (1.0 - p)) + float(offset.get(key, 0.0))
+            p = 1.0 / (1.0 + math.exp(-z)) if z >= 0 else math.exp(z) / (1.0 + math.exp(z))
+        return bool(rng.random() < p)
