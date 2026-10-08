@@ -33,13 +33,18 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
-### In flight
+### In flight (updated 6:40 p.m. Eastern)
 
-TRANS-02 (LEDGER.md, registered 21:01 UTC, commit 324d8193): wild pitches, passed balls, balks, pickoffs and defensive
-indifference (0.48 plays per team-game, brl_live/running_events.json from transitions lane run 37842492748). Four
-replays started 21:01 to 21:03 UTC: runs 37843813177 (2026, cross-season tables), 37843877011 (2025), 37843922662 (2026,
-production context table, no plays) and 37843965520 (2026, production table, with plays). Decision rule in the ledger
-row. Evaluate with the scratch scripts env_eval.py (pairs two replay tags) and trans/team_rates.py, trans/staff_split.py.
+- TRANS-02 (running plays, registered 21:01 UTC, commit 324d8193). Read so far: A (cross-season tables) adds 0.14 runs
+  per game in both seasons (9.12 vs 8.95 actual in 2026, 9.07 vs 8.90 in 2025), squared error +0.06/+0.07, P(over)
+  worse, win Brier +0.00014 (2026) and -0.00082 (2025). B (2026, production table, no plays) already runs at 8.98 vs
+  8.95, so by the registered rule the plays wait for the source of the excess. C (run 37843965520) still running.
+- BULLPEN-01 (fitted reliever choice, registered in commit f937f79b, off in ADJUST): replays 37851994243 (2026) and
+  37852034410 (2025) against the CTX-02 replays v2-prod-trans-ctx-1000-YYYY. Evaluate with env_eval.py and
+  trans/staff_split.py; decision rule in the ledger row.
+- RUNS-01 (where the run excess comes from, registered in commit b372a7db): check-only runs 37852951760 (2026) and
+  37852989061 (2025) with the stack on real plate appearances by bases and outs; read with scratch trans/rpa_bases.py.
+- DISC-08 (challenge scarcity, addendum 14, commit cce58fb2): discovery run 37852742097.
 
 ### Known gaps, measured
 
@@ -57,7 +62,7 @@ row. Evaluate with the scratch scripts env_eval.py (pairs two replay tags) and t
 ### Working notes
 
 Tests: `cd /tmp && PYTHONPATH="<repo>/brl_engine/runtime:<repo>" python3 -m pytest -c /dev/null --rootdir=<repo>
---import-mode=importlib <repo>/brl_engine/tests <repo>/brl_live_tests -q -p no:cacheprovider` (284 passed, 1 skipped).
+--import-mode=importlib <repo>/brl_engine/tests <repo>/brl_live_tests -q -p no:cacheprovider` (292 passed, 1 skipped).
 Lanes start on a push to their diag branch with a params file: diag/replay (tools/replay_params.json), diag/research,
 diag/fit-model, diag/discovery, diag/transitions, diag/challenges. Receipts land under research/ on brl-live-data.
 Scratch analysis scripts live in the sandbox only (re-create from the ledger rows if lost).
