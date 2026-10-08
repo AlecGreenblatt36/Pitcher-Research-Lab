@@ -1,7 +1,7 @@
 # Decision horizon: results (October 8, 2026)
 
 Protocol and every prediction, each committed before the run it governs: `discovery/DECISION_HORIZON_PROTOCOL.md`.
-Code: `tools/brl_discovery.py` (experiments `horizon` to `horizon13`), workflow `brl-discovery`. Receipts on the ledger
+Code: `tools/brl_discovery.py` (experiments `horizon` to `horizon14`), workflow `brl-discovery`. Receipts on the ledger
 branch: `research/discovery-<experiment>-<run>.json`. Data: MLB's public pitch-by-pitch feeds, 2023-2026 regular
 seasons, 2,847,795 pitches (2,827,719 swing-or-take decisions after dropping bunts, pitchouts, intentional balls and
 hit batters), processed inside Actions; only model results and per-player summaries left the runner.
@@ -31,6 +31,7 @@ to 18); 25.7% of pitches at 0-0 (counts are pre-pitch).
 | 37738373322 | After deciding, how late is the bat steered (balls in play) | Launch angle rises 0.248 degrees per unit of up-and-down surprise (SE 0.003); sideways placebo 0.033. With an assumed 16 to 25 degrees per inch of bat-ball offset, the bat is steered until about 100 to 125 ms before the plate (111 ms at 20). If it were set at the decision, the slope would be 1.08 to 1.69. Balls in play exclude the largest misses, which biases this number short. |
 | 37743322069 | Per-hitter steering limit (launch-angle slope on vertical surprise, 2023-2024, 206 hitters) | Repeats weakly: odd against even days 0.18, under the 0.2 set in advance. Bat speed -0.13 (the predicted sign), swing length -0.05. The apparent late steerers (Eugenio Suarez, Corey Seager, Aaron Judge, Ronald Acuna Jr.) are mostly power hitters who miss rather than mishit when fooled, which hides the effect in their balls in play. Dropped. |
 | 37751569525 | Negative control: umpires' called strikes (1,477,048 taken pitches) through the identical instrument, heights standardized by each batter's zone recovered from the official zone numbers | Umpires: tau squared 0.0002 on 2025 (interval -0.0007 to 0.0014, about 15 ms) and -0.0012 on 2026; their held-out fit is best at the true crossing, and the hitters' value fits 19.6 nats per 1,000 calls worse. Their calls are 3.6 times sharper in location than swings, so tracking error would show more clearly in them. Hitters on the same pitches through the same code: 0.0659 and 0.0653 (257 and 256 ms). The horizon belongs to the hitters, not to the tracking system. Umpires are not fooled by late movement (a small positive for curveballs in 2025, 0.0057 with SE 0.0023, does not repeat in 2026); their calls follow the ball slightly past the front of the plate (plate-velocity term positive; its size is not recoverable). All three predictions held. |
+| 37775965368 | Pitcher-level decision-moment tunneling: each pitcher-season's average 260 ms separation of back-to-back pitches of different types (1,340,514 pairs, 1,347 pitcher-seasons) against chase above expected (swings outside the zone beyond a league model of location, count, pitch type, speed and the batter's swing rate) | A stable trait (odd against even days 0.91, season to season 0.82). Measured on one half of the days, closer pairs go with more chases above expected on the other half, weakly: -0.209 points of chase rate per SD (-0.401 to -0.001), with plate separation, mix, fastball speed and rise, breaking sweep and zone rate fixed. Nothing for next season beyond this season's chase above expected (+0.06, -0.09 to 0.23): that prediction failed. 175 ms is indistinguishable (correlation 0.93), as predicted. A description of how an arsenal hides, not a forecasting number. Closest in 2026: Cam Schlittler, Jacob Misiorowski, Louis Varland; farthest: Sean Newcomb, Matt Boyd, Spencer Arrighetti, Framber Valdez. |
 
 ## Reading
 
@@ -42,7 +43,7 @@ last 5.4 inches of ride after 225 ms do not enter the decision, which is the ris
 
 It is not a tracking artifact: umpires calling the same tracked pitches, through the same code, judge the true crossing (15 ms against the hitters' 257 ms), although their calls depend on location about 3.6 times as sharply as swings do.
 
-What this is not: a per-hitter scouting number (redundant with chase rate) or a pitcher variability number
+What this is not: a per-pitcher tunneling forecast (stable, weakly tied to chases, nothing for next season), a per-hitter scouting number (redundant with chase rate) or a pitcher variability number
 (wildness). Nothing here is causal about training. The flight is rebuilt, not tracked along its path; the zone is a
 fixed box; the contact horizon rests on an assumed geometry.
 
