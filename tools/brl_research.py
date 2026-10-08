@@ -153,7 +153,7 @@ def gbm_experiment(features, locked_columns, extras, y, partitions, parts, confi
 # Linear weights (runs per plate appearance outcome, average out = about -0.27) for residual summaries.
 RV_WEIGHTS = np.array([-0.26, -0.28, 0.32, 0.47, 0.80, 1.40, 0.45])
 # Experiments that also score team offsets and residual bins on every variant's predictions.
-TEAM_EVAL = {'aging'}
+TEAM_EVAL = {'aging', 'stage2'}
 TEAM_GRID = [(k, hl, sides) for k in (2000.0, 4000.0, 8000.0) for hl in (90.0, 180.0, None) for sides in (('fld',), ('bat', 'fld'))]
 
 
@@ -226,6 +226,60 @@ def team_aggregates(P, y, frame, bat_names, fld_names):
     return rows
 
 
+def offset_fit(P, Y, Z, l2=1.0, w0=None):
+    """Multinomial correction on top of fixed probabilities P: log-odds log P + Z W (columns of W sum to zero), L-BFGS."""
+    from scipy.optimize import minimize
+    n, F = Z.shape; K = Y.shape[1]; base = np.log(np.clip(P, 1e-12, 1))
+    def f(w):
+        W = w.reshape(F, K); W = W - W.mean(1, keepdims=True)
+        L = base + Z @ W; L -= L.max(1, keepdims=True); lse = np.log(np.exp(L).sum(1))
+        ll = -(Y * (L - lse[:, None])).sum() / n
+        Q = np.exp(L - lse[:, None]); G = Z.T @ (Q - Y) / n; G = G - G.mean(1, keepdims=True)
+        return ll + 0.5 * l2 / n * (W ** 2).sum(), (G + l2 / n * W).ravel()
+    r = minimize(f, np.zeros(F * K) if w0 is None else w0, jac=True, method='L-BFGS-B', options={'maxiter': 500})
+    W = r.x.reshape(F, K); return W - W.mean(1, keepdims=True)
+
+
+def offset_apply(P, Z, W):
+    L = np.log(np.clip(P, 1e-12, 1)) + Z @ W; L -= L.max(1, keepdims=True); Q = np.exp(L); return Q / Q.sum(1, keepdims=True)
+
+
+def stage2_eval(P, y, A, frame, cols, bat_i, fld_i, n_teams):
+    """Aging layer on top of a fitted model's 2025-2026 predictions: fitted on earlier rows, scored on later ones;
+    then team offsets on top of it. A: the aging and recency columns (NaN filled by column means)."""
+    from research_lab.pa_model.evaluation import clustered_log_loss_difference_ci
+    Y = np.eye(7)[y]; dates = frame['date_key'].astype(str).to_numpy(); games = frame['game_pk'].to_numpy()
+    A = np.where(np.isnan(A), np.nanmean(A, axis=0), A)
+    out = {}
+    splits = {'fit_2025_score_2026': (dates < '2026-01-01', dates >= '2026-01-01'),
+              'fit_through_june_2026_score_july_on': (dates < '2026-06-28', dates >= '2026-06-28'),
+              'fit_2025_first_part_score_2025_blend': (dates < '2025-08-14', (dates >= '2025-08-14') & (dates < '2026-01-01'))}
+    coefs = {}
+    for name, (tr, te) in splits.items():
+        mu, sd = A[tr].mean(0), A[tr].std(0) + 1e-9
+        W = offset_fit(P[tr], Y[tr], (A[tr] - mu) / sd)
+        Q = offset_apply(P[te], (A[te] - mu) / sd, W)
+        out[name] = clustered_log_loss_difference_ci(y[te], Q, P[te], games[te], replicates=300)
+        if name == 'fit_2025_score_2026':
+            coefs['fit_2025'] = {'mean': mu.tolist(), 'sd': sd.tolist(), 'coef': np.round(W, 5).tolist()}
+    for label, tr in (('fit_2026', dates >= '2026-01-01'), ('fit_all', np.ones(len(dates), bool))):
+        mu, sd = A[tr].mean(0), A[tr].std(0) + 1e-9
+        W = offset_fit(P[tr], Y[tr], (A[tr] - mu) / sd)
+        coefs[label] = {'mean': mu.tolist(), 'sd': sd.tolist(), 'coef': np.round(W, 5).tolist()}
+    out['coefficients'] = {'columns': list(cols), 'labels': list(LABELS), **coefs}
+    # Team offsets on top of the aging layer fitted on 2025 (2026 scored) and on 2025's first part (2025 blend scored)
+    c25 = coefs['fit_2025']; Z = (A - np.array(c25['mean'])) / np.array(c25['sd'])
+    Q_all = offset_apply(P, Z, np.array(c25['coef']))
+    test26, blend25 = dates >= '2026-01-01', (dates >= '2025-08-14') & (dates < '2026-01-01')
+    for k, hl in ((4000.0, 180.0), (8000.0, 180.0)):
+        Qt = team_offsets(Q_all, Y, dates, bat_i, fld_i, n_teams, k, hl, ('bat', 'fld'))
+        out[f'aging_layer_plus_team_k{int(k)}_hl{int(hl)}'] = {
+            'test_2026_vs_base': clustered_log_loss_difference_ci(y[test26], Qt[test26], P[test26], games[test26], replicates=300),
+            'test_2026_vs_aging_layer': clustered_log_loss_difference_ci(y[test26], Qt[test26], Q_all[test26], games[test26], replicates=300)}
+    out['residual_bins_2026_after_aging_layer'] = residual_bins(Q_all, y, frame, test26)
+    return out, Q_all
+
+
 def entrypoint_module():
     spec = importlib.util.spec_from_file_location('brl_entrypoint', ROOT / 'brl_engine' / 'entrypoint.py')
     module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
@@ -251,6 +305,10 @@ SETS = {
     'aging': {'v2': {'xvalue': True, 'recent_days': 30}, 'aging': {'xvalue': True, 'recent_days': 30, 'aging': True},
               'dec365': {'xvalue': True, 'recent_days': 30, 'decay_days': 365},
               'aging_dec365': {'xvalue': True, 'recent_days': 30, 'aging': True, 'decay_days': 365}},
+    # stage2: one feature build with the aging and recency columns; v2 fitted without them, aging_dec365 with them; an
+    # aging layer fitted on each model's own earlier predictions (TEAM_EVAL path, stage2_eval).
+    'stage2': {'v2': {'xvalue': True, 'recent_days': 30, 'aging': True, 'decay_days': 365, '_model_excludes_aging': True},
+               'aging_dec365': {'xvalue': True, 'recent_days': 30, 'aging': True, 'decay_days': 365}},
     'defense': {'v2': {'xvalue': True, 'recent_days': 30}, 'defense': {'xvalue': True, 'recent_days': 30, 'defense': True},
                 'defense_k200': {'xvalue': True, 'recent_days': 30, 'defense': True, 'k_def': 200.0},
                 'defense_730': {'xvalue': True, 'recent_days': 30, 'defense': True, 'defense_days': 730}},
@@ -413,13 +471,16 @@ def main():
             parts_eval = (('validation_blend_2025', blend_mask[eval_mask]), ('test_2026', test_mask[eval_mask]))
         for vname, params in variants.items():
             stage('build physics features ' + vname)
+            params = dict(params); excl = params.pop('_model_excludes_aging', False)
             extras, audit = build_extras(pa, physics, params)
             results.setdefault('physics_join', {})[vname] = audit
             cols = list(extras.columns)
             for c in cols:
                 features[c] = extras[c].to_numpy()
+            age_cols = [c for c in cols if c in phys.AGING_FEATURES + phys.DECAY_FEATURES]
+            model_cols = [c for c in cols if not (excl and c in age_cols)]
             stage('fit ' + vname)
-            results[vname] = fit_and_score(vname, list(locked_columns) + cols, cols)
+            results[vname] = fit_and_score(vname, list(locked_columns) + model_cols, model_cols)
             for part, mask in parts:
                 games = features.loc[mask, 'game_pk'].to_numpy()
                 results[vname][part + '_minus_locked'] = clustered_log_loss_difference_ci(y[mask], probs[vname][part], probs['locked'][part], games, replicates=600)
@@ -435,6 +496,15 @@ def main():
                 results[vname]['team_offsets'] = team_eval(P_all, y_sub, sub_meta, bat_i[eval_mask], fld_i[eval_mask], len(teams), parts_eval)
                 results[vname]['residual_bins_2026'] = residual_bins(P_all, y_sub, sub_meta, parts_eval[1][1])
                 aggregates = team_aggregates(P_all, y_sub, sub_meta, bat_names[eval_mask], fld_names[eval_mask])
+                if experiment == 'stage2' and age_cols:
+                    stage('aging layer ' + vname)
+                    s2, Q_aged = stage2_eval(P_all, y_sub, features.loc[eval_mask, age_cols].to_numpy(float), sub_meta, age_cols,
+                                             bat_i[eval_mask], fld_i[eval_mask], len(teams))
+                    results[vname]['aging_layer'] = s2
+                    aged = team_aggregates(Q_aged, y_sub, sub_meta, bat_names[eval_mask], fld_names[eval_mask])
+                    raw2 = gzip.compress(json.dumps({'schema': 'brl.team-residuals.v1', 'variant': vname + '+aging-layer-fit2025', 'params': params,
+                                                     'labels': list(LABELS), 'rows': aged}).encode(), mtime=0)
+                    put_bytes(repo, token, f'research/team-resid-{vname}-aged-{run_id}.json.gz', raw2, branch, 'BRL: team residuals after the aging layer ' + vname)
                 raw = gzip.compress(json.dumps({'schema': 'brl.team-residuals.v1', 'variant': vname, 'params': params, 'labels': list(LABELS),
                                                 'rows': aggregates}).encode(), mtime=0)
                 put_bytes(repo, token, f'research/team-resid-{vname}-{run_id}.json.gz', raw, branch, 'BRL: team residuals ' + vname)
