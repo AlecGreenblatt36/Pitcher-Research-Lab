@@ -4,7 +4,7 @@ score the simulator, the team model and the production blend, and compare with a
 Settings come from tools/replay_params.json on the trigger branch:
   model        'locked-pa-2026-v1' (data package) or a fitted model name with a manifest in brl_engine/models/
   season       2026 (default)
-  n_sims       worlds per game (default 200)
+  n_sims       worlds per game (default 200; 0 with real_pa_check runs only the check on real plate appearances)
   date_from    first date to replay (default the season start)
   step         keep every step-th game (default 1)
   reference    path on the ledger branch of an earlier replay's per-game file to pair against (optional)
@@ -140,7 +140,7 @@ def main():
     if settings.exists():
         params = json.loads(settings.read_text())
     model = str(params.get('model') or 'locked-pa-2026-v1'); season = int(params.get('season') or 2026)
-    n_sims = int(params.get('n_sims') or 200); date_from = str(params.get('date_from') or f'{season}-01-01'); step = int(params.get('step') or 1)
+    n_sims = int(200 if params.get('n_sims') is None else params['n_sims']); date_from = str(params.get('date_from') or f'{season}-01-01'); step = int(params.get('step') or 1)
     reference = params.get('reference'); use_offsets = bool(params.get('offsets', True)); use_rest = bool(params.get('rest', False))
     tag = str(params.get('tag') or model)
     n_shards = max(1, int(params.get('shards') or 1)); shard = int(os.environ.get('BRL_REPLAY_SHARD') or 0)

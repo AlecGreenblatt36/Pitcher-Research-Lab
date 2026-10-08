@@ -305,7 +305,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                             tot[sd_] += (ln["strikeouts"], ln["batters_faced"], ln["walks_hbp"], ln["hits_allowed"])
             records.append({"game_pk": int(g.game_pk), "date": date, "home": g.home, "away": g.away, "n": n_sims,
                             "home_wins": hw, "ties": ties, "home_hist": ha.tolist(), "away_hist": aa.tolist(),
-                            "home_starter_outs": float(np.mean(s_outs["home"])), "away_starter_outs": float(np.mean(s_outs["away"])),
+                            "home_starter_outs": float(np.mean(s_outs["home"])) if s_outs["home"] else 0.0, "away_starter_outs": float(np.mean(s_outs["away"])) if s_outs["away"] else 0.0,
                             "home_runs": int(g.home_runs), "away_runs": int(g.away_runs)})
             if real_pa_check:
                 from types import SimpleNamespace
@@ -313,6 +313,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                 model_of_sim = {v: k for k, v in SIM_FROM_MODEL.items()}
                 agg = {r_: {"pred": np.zeros(7), "obs": np.zeros(7), "n": 0, "layers": {nm_: np.zeros(7) for nm_, _ in chain[:-1]}} for r_ in ("starter", "reliever")}
                 starters_ = {int(g.home_starter), int(g.away_starter)}
+                grp_ = {}      # (batting side 0 away 1 home, inning bucket, role, times through the order capped at 3): n, observed, bare, full
                 for row in real_rows.get(int(g.game_pk), []):
                     try:
                         side_b = "home" if int(row.is_home_batter) == 1 else "away"
@@ -336,9 +337,19 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                     if str(row.outcome) in MODEL_ORDER:
                         agg[r_]["obs"][MODEL_ORDER.index(str(row.outcome))] += 1
                     agg[r_]["n"] += 1
+                    inn_ = int(row.inning)
+                    gk_ = (int(side_b == "home"), "1st" if inn_ == 1 else ("mid" if inn_ <= 8 else "late"), r_[0], min(max(int(row.n_thruorder_pitcher or 1), 1), 3))
+                    ge_ = grp_.setdefault(gk_, [0, np.zeros(7), np.zeros(7), np.zeros(7)])
+                    ge_[0] += 1
+                    if str(row.outcome) in MODEL_ORDER:
+                        ge_[1][MODEL_ORDER.index(str(row.outcome))] += 1
+                    ge_[2] += np.array([inner_[0][1][model_of_sim[lab]] for lab in MODEL_ORDER]) if inner_ else np.array([probs[model_of_sim[lab]] for lab in MODEL_ORDER])
+                    ge_[3] += np.array([probs[model_of_sim[lab]] for lab in MODEL_ORDER])
                 errs = agg.pop("errors", [])
                 records[-1]["real_pa"] = {r_: {"n": v_["n"], "pred": [round(float(x), 3) for x in v_["pred"]], "obs": [int(x) for x in v_["obs"]],
                                                "layers": {nm_: [round(float(x), 3) for x in lv_] for nm_, lv_ in v_["layers"].items()}} for r_, v_ in agg.items()}
+                records[-1]["real_pa"]["groups"] = [[k_[0], k_[1], k_[2], k_[3], v_[0], [int(x) for x in v_[1]], [round(float(x), 4) for x in v_[2]], [round(float(x), 4) for x in v_[3]]]
+                                                    for k_, v_ in sorted(grp_.items())]
                 if errs:
                     records[-1]["real_pa"]["errors"] = {"count": len(errs), "first": errs[0]}
             if sl is not None:
