@@ -308,6 +308,20 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .pa .runs { font-family: var(--display); font-weight: 700; font-size: 17px; white-space: nowrap; }
 .change { font-size: 14px; color: var(--muted); padding: 8px 0 2px; font-style: italic; }
 
+/* Our number against the market */
+.edges { margin-top: 6px; }
+.edge-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.edge-list a { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; text-decoration: none; background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 10px 14px; min-height: 44px; }
+.edge-list li.big a { border-left: 4px solid var(--lamp); }
+.edge-list span small { display: block; color: var(--muted); font-size: 14px; font-family: var(--body); font-weight: 400; }
+.edge-list .eg-game { grid-column: 1 / -1; font-family: var(--display); font-weight: 700; font-size: 19px; }
+.edge-list .eg-ours, .edge-list .eg-mkt { font-family: var(--display); font-size: 18px; font-weight: 600; }
+.edge-list .eg-gap { grid-column: 1 / -1; font-size: 15px; color: var(--muted); }
+.edge-list li.big .eg-gap { color: var(--ink); }
+.edge-list .eg-gap b { font-family: var(--display); font-size: 18px; }
+@media (min-width: 720px) { .edge-list a { grid-template-columns: 1.1fr 1fr 1.4fr 1.2fr; align-items: end; } .edge-list .eg-game, .edge-list .eg-gap { grid-column: auto; } }
+@media (min-width: 1100px) { .edges { max-width: 1120px; } }
+
 /* Matchups grid */
 .mu-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; }
 .mu { border-collapse: collapse; width: 100%; font-family: var(--display); }
@@ -1015,9 +1029,38 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         : (f.lineup_status && f.lineup_status.away === "official" && f.lineup_status.home === "official" ? "Official lineups" : "Projected lineups") + marketFoot(f);
       html += '<div class="card-foot">' + esc(foot) + "</div></a></li>";
     });
-    html += "</ol></div>";
+    html += "</ol>" + edgesBoard(games) + "</div>";
     app.innerHTML = html;
     wireDayNav();
+  }
+  /* Where our model and the betting market disagree, and which way the line has moved since we first read it.
+     Our model never sees the market (the headline does); when it differs from the opening line by 2.5 points or more
+     the line has moved toward it about 7 times in 10 over the 2025 and 2026 regular seasons (CLV-02). */
+  function edgesBoard(games) {
+    var rows = [];
+    games.forEach(function (f) {
+      if (!taughtRecipe(f) || gameState(f.game_pk) !== "pregame") return;
+      var mk = D.market && D.market[f.game_pk], now = marketProb(mk);
+      if (now == null) return;
+      var open = mk.first_p_home_cons != null ? mk.first_p_home_cons : mk.first_p_home != null ? mk.first_p_home : now;
+      var po = oursProb(f), gap = po - open;
+      rows.push({ f: f, po: po, open: open, now: now, gap: gap, moved: now - open });
+    });
+    if (!rows.length) return "";
+    rows.sort(function (a, b) { return Math.abs(b.gap) - Math.abs(a.gap); });
+    var side = function (f, p) { var s = p >= .5 ? "home" : "away"; return esc(f[s].abbr) + " " + pct(s === "home" ? p : 1 - p); };
+    var h = '<section class="sec edges"><h2>Our number against the market</h2><p class="lede">Our model never sees the betting line. When the two differ by 2.5 points or more, the line has moved toward our number about 7 times in 10 (2025 and 2026 regular seasons).</p><ul class="edge-list">';
+    rows.forEach(function (r) {
+      var big = Math.abs(r.gap) >= 0.025, fav = r.gap >= 0 ? "home" : "away", pts = Math.round(Math.abs(r.moved) * 100);
+      var lean = big ? 'Our model leans <b class="' + fav + '-c">' + esc(r.f[fav].abbr) + " by " + Math.round(Math.abs(r.gap) * 100) + "</b> points. " +
+        (pts >= 1 ? "The line has moved " + pts + (pts === 1 ? " point " : " points ") + (r.moved * r.gap > 0 ? "toward" : "away from") + " our number since we first read it." : "The line has not moved since we first read it.")
+        : "Within 2 points of the market.";
+      h += '<li class="' + (big ? "big" : "") + '"><a href="#/game/' + r.f.game_pk + '"><span class="eg-game">' + esc(r.f.away.abbr + " at " + r.f.home.abbr) + '</span><span class="eg-ours"><small>Our model</small>' + side(r.f, r.po) +
+        '</span><span class="eg-mkt"><small>Market</small>' + side(r.f, r.open) + " first, " + side(r.f, r.now) + ' now</span><span class="eg-gap">' + lean + "</span></a></li>";
+    });
+    var lm = D.record && D.record.line_moves;
+    h += "</ul>" + (lm && lm.n ? '<p class="note">Scored so far this October: in ' + lm.n + (lm.n === 1 ? " game" : " games") + " where our final number differed from the first line we read, the line moved toward ours " + lm.toward_ours + (lm.toward_ours === 1 ? " time." : " times.") + "</p>" : "") + "</section>";
+    return h;
   }
 
   /* ---------- the date strip: a week of days, earlier and later weeks, any date in the archive ---------- */
