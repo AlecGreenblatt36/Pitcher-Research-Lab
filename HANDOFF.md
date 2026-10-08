@@ -33,18 +33,22 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
-### In flight (updated 6:40 p.m. Eastern)
+### In flight (updated 6:45 p.m. Eastern)
 
-- TRANS-02 (running plays, registered 21:01 UTC, commit 324d8193). Read so far: A (cross-season tables) adds 0.14 runs
-  per game in both seasons (9.12 vs 8.95 actual in 2026, 9.07 vs 8.90 in 2025), squared error +0.06/+0.07, P(over)
-  worse, win Brier +0.00014 (2026) and -0.00082 (2025). B (2026, production table, no plays) already runs at 8.98 vs
-  8.95, so by the registered rule the plays wait for the source of the excess. C (run 37843965520) still running.
-- BULLPEN-01 (fitted reliever choice, registered in commit f937f79b, off in ADJUST): replays 37851994243 (2026) and
-  37852034410 (2025) against the CTX-02 replays v2-prod-trans-ctx-1000-YYYY. Evaluate with env_eval.py and
-  trans/staff_split.py; decision rule in the ledger row.
-- RUNS-01 (where the run excess comes from, registered in commit b372a7db): check-only runs 37852951760 (2026) and
-  37852989061 (2025) with the stack on real plate appearances by bases and outs; read with scratch trans/rpa_bases.py.
+- TRANS-02 (running plays): read and recorded. The plays add 0.14 runs a game in every comparison; the simulator already
+  runs at the actual level without them, so they stay off until RUNS-01 finds where the simulated outcomes carry the
+  extra runs. Win chances lean better with the plays (+0.00014, -0.00082, -0.00038).
+- BULLPEN-01 (fitted reliever choice, commit f937f79b, off in ADJUST): replays 37851994243 (2026) and 37852034410 (2025)
+  against the CTX-02 replays v2-prod-trans-ctx-1000-YYYY. Evaluate with env_eval.py, trans/staff_split.py,
+  trans/team_rates.py and harness/starter_eval.py; decision rule in the ledger row.
+- LEASH-01 (starter leash, commit 5705abb2, off in ADJUST): replays 37854594794 (2026) and 37854634286 (2025), tags
+  v2-prod-trans-ctx-leash-1000-YYYY. Read with trans/starter_leash.py (groups) and harness/starter_eval.py (CRPS).
+- RUNS-01 (where the run excess comes from, commit b372a7db): check-only runs 37852951760 (2026) and 37852989061 (2025);
+  read with trans/rpa_bases.py.
 - DISC-08 (challenge scarcity, addendum 14, commit cce58fb2): discovery run 37852742097.
+- RUN-03 (steal step double count): measured, no change needed. With the empirical kernel the step gives 0.84 attempts
+  per team-game at per_pa 0.85 (it gave 0.90 with the hand-set kernel), against 0.83 (2025) and 0.81 (2026) real
+  attempts outside the last pitch (transitions lane run 37842492748).
 
 ### Known gaps, measured
 
@@ -54,10 +58,9 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   the simulated games the bullpens are another 1.5% short and allow about 0.7% more hits, because the simulator's
   manager picks relievers without regard to how much each one actually pitches (brl_replay/harness.bullpen takes every
   reliever used in the last 14 days; manager.select_reliever has no usage or quality term).
-- Steals: the steal step was calibrated to all attempts (0.90 per team-game), but the kernel already holds the attempts
-  on the last pitch of a plate appearance (0.07 per team-game in 2026); the step should target the attempts before
-  contact plus the inning-ending ones (about 0.80).
-- Starters face 0.2 more batters than real; extra innings are the in-game table's weakest spot.
+- Starters: the average (+0.2 batters too many in 2026) hides openers and short rest (+8.2), starts after a relief
+  outing (+4.7), returns from layoffs (+1.5, then +0.7) and regular starts 0.3 to 0.4 short (LEASH-01 in flight).
+- Extra innings are the in-game table's weakest spot.
 
 ### Working notes
 
