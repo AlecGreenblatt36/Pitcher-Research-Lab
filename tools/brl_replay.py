@@ -13,6 +13,8 @@ Settings come from tools/replay_params.json on the trigger branch:
   conditions   path on the ledger branch of the game conditions file (tools/brl_game_conditions.py), needed with environment
   team_offsets {'rows': ledger-branch path of team residual rows (research/team-resid-*.json.gz), 'k', 'half_life', 'sides'}:
                team offsets as they stood at the start of each date (brl_live/team_offsets.py)
+  age_layer    {'receipt': ledger-branch path of a stage2 research receipt, 'fit': 'fit_2025' | 'fit_2026' | 'fit_all', 'variant': 'v2'}:
+               the aging and recency layer (brl_live/age_layer.py)
 Outputs on the ledger branch: research/replay-<tag>-<run>.jsonl.gz (one record per game: win counts,
 run histograms, starter outs, final score) and research/replay-<tag>-<run>.json (scores, paired
 comparison, timing). Per-game model outputs and final scores are not private data; the plate
@@ -88,7 +90,7 @@ def _worker(dates: list) -> list:
     s = _SHARED
     return replay_dates(s['h'], s['app'], s['games'], dates, model_path=s['model_path'], model_sha256=s['model_sha256'], history_path=s['history_path'],
                         hazard_path=s['hazard_path'], n_sims=s['n_sims'], physics_table=s['physics_table'], offsets=s['offsets'], rest=s.get('rest', False),
-                        environment=s.get('environment'), team_offsets=s.get('team_offsets'), log=lambda m: print(m, flush=True))
+                        environment=s.get('environment'), team_offsets=s.get('team_offsets'), age_layer=s.get('age_layer'), log=lambda m: print(m, flush=True))
 
 
 def logit(p):
@@ -225,8 +227,18 @@ def main():
                                    half_life=spec.get('half_life'), sides=tuple(spec.get('sides', ('bat', 'fld'))))
             sizes = [max((abs(v) for t in day.values() for s in t.values() for v in s), default=0.0) for day in team_offsets.values()]
             receipt['team_offsets'] = {**spec, 'dates': len(team_offsets), 'largest_offset': round(float(max(sizes, default=0.0)), 4)}
+        age_layer = None
+        if params.get('age_layer'):
+            from brl_live.age_layer import layer_from_receipt
+            spec = params['age_layer']
+            raw = read_blob(repo, token, str(spec['receipt']), branch)
+            if raw is None:
+                raise ValueError('stage2 receipt missing on the ledger branch')
+            age_layer = layer_from_receipt(json.loads(raw), fit=str(spec.get('fit', 'fit_all')), variant=str(spec.get('variant', 'v2')))
+            receipt['age_layer'] = {**spec, 'columns': len(age_layer['columns'])}
         _SHARED.update(h=h, app=app, games=games, model_path=model_path, model_sha256=model_sha256, history_path=history_path, hazard_path=hazard_path,
-                       n_sims=n_sims, physics_table=physics_table, offsets=offsets, rest=use_rest, environment=environment, team_offsets=team_offsets)
+                       n_sims=n_sims, physics_table=physics_table, offsets=offsets, rest=use_rest, environment=environment, team_offsets=team_offsets,
+                       age_layer=age_layer)
         stage(f'replay {len(games)} games with {workers} workers')
         dates = sorted(games['date'].unique())
         shards = [dates[w::workers] for w in range(workers)]

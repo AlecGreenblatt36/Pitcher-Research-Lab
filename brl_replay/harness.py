@@ -116,11 +116,12 @@ def bats_lookup(h: pd.DataFrame, cutoff: str) -> dict:
 
 def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates: list, *, model_path: Path, model_sha256: str,
                  history_path: Path, hazard_path: Path, n_sims: int, physics_table=None, offsets=None, rest=False, environment=None,
-                 team_offsets=None, log=print) -> list[dict]:
+                 team_offsets=None, age_layer=None, log=print) -> list[dict]:
     """Simulate every game on the given dates; one record per game (win counts, run histograms, starter outs).
 
     environment: optional {game_pk: seven log-multipliers} (brl_live/environment.py); games without an entry are unadjusted.
-    team_offsets: optional {date: {team: {'bat': [7], 'fld': [7]}}} (brl_live/team_offsets.by_date), offsets at the start of each date."""
+    team_offsets: optional {date: {team: {'bat': [7], 'fld': [7]}}} (brl_live/team_offsets.by_date), offsets at the start of each date.
+    age_layer: optional aging and recency layer (brl_live/age_layer.py); its AgingState advances date by date from the history."""
     from brl_live.provider_adjust import ContextAdjust, EnvironmentAdjust, TeamAdjust
     hcols = h[HISTORY_COLUMNS]
     first = dates[0]
@@ -134,6 +135,16 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
     tadj = None
     if team_offsets is not None:
         tadj = provider = TeamAdjust(provider)
+    aadj = None
+    if age_layer is not None:
+        from research_lab.pa_model.physics import AgingState
+        from brl_live.age_layer import AgeAdjust
+        a_state = AgingState(age_layer.get('params') or {'aging': True, 'decay_days': 365, 'k_dec': 60.0})
+        hs = hcols.sort_values(['date_key', 'game_pk', 'at_bat_number'], kind='mergesort')
+        a_dates = hs['date_key'].astype(str).str[:10].to_numpy()
+        a_b, a_p, a_o = hs['batter'].to_numpy(int), hs['pitcher'].to_numpy(int), hs['outcome'].astype(str).to_numpy()
+        a_pos = 0
+        aadj = provider = AgeAdjust(provider, age_layer, a_state, 0)
     hazard = joblib.load(hazard_path)
     records = []
     t0 = time.time()
@@ -144,6 +155,14 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
         td = time.time()
         base.state = HistoryState.build(hcols, date, base._config)
         base.cutoff_date = base.game_date = date
+        if aadj is not None:
+            while a_pos < len(a_dates) and a_dates[a_pos] < date:
+                a_end = a_pos
+                while a_end < len(a_dates) and a_dates[a_end] == a_dates[a_pos]:
+                    a_end += 1
+                a_state.absorb_date(pd.Timestamp(a_dates[a_pos]).toordinal(), a_b[a_pos:a_end], a_p[a_pos:a_end], a_o[a_pos:a_end])
+                a_pos = a_end
+            aadj.set_day(a_state, pd.Timestamp(date).toordinal())
         defense = None
         if base.physics is not None:
             from research_lab.pa_model.physics import PhysicsState, DefenseState
@@ -161,6 +180,8 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
             cached.reset()
             if env is not None:
                 env.set_environment(environment.get(int(g.game_pk)))
+            if aadj is not None:
+                aadj.reset()
             if tadj is not None:
                 tday = team_offsets.get(date) or {}
                 get = lambda team, side: np.asarray(((tday.get(str(team)) or {}).get(side)) or [0.0] * 7, float)

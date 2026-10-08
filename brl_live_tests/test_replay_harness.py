@@ -63,3 +63,15 @@ def test_reconstruct_and_replay(tmp_path):
     none = replay_dates(h, app, g, dates, model_path=plain, model_sha256=sha256_file(plain), history_path=history_path, hazard_path=hazard, n_sims=4,
                         team_offsets={}, log=lambda m: None)
     assert [r['home_hist'] for r in none] == [r['home_hist'] for r in out_plain]
+    # aging layer: zero coefficients change nothing; a large home-run weight on the batter's history gap raises scoring
+    from research_lab.pa_model import physics as phys
+    cols = phys.AGING_FEATURES + phys.DECAY_FEATURES
+    zero = {'columns': cols, 'labels': ['BIP_OUT', 'K', 'BB_HBP', '1B', '2B_3B', 'HR', 'OTHER_REACH'], 'mean': [0.0] * 16, 'sd': [1.0] * 16,
+            'coef': [[0.0] * 7 for _ in cols], 'params': {'aging': True, 'decay_days': 365, 'k_dec': 60.0}}
+    same_age = replay_dates(h, app, g, dates, model_path=plain, model_sha256=sha256_file(plain), history_path=history_path, hazard_path=hazard, n_sims=4,
+                            age_layer=zero, log=lambda m: None)
+    assert [r['home_hist'] for r in same_age] == [r['home_hist'] for r in out_plain]
+    big = dict(zero, coef=[[0.0] * 7 for _ in cols]); big['coef'][cols.index('b_gap')] = [0, 0, 0, 0, 0, 40.0, 0]
+    out_age = replay_dates(h, app, g, dates, model_path=plain, model_sha256=sha256_file(plain), history_path=history_path, hazard_path=hazard, n_sims=4,
+                           age_layer=big, log=lambda m: None)
+    assert runs(out_age) > runs(out_plain)
