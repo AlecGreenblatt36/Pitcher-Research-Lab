@@ -116,12 +116,14 @@ def bats_lookup(h: pd.DataFrame, cutoff: str) -> dict:
 
 def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates: list, *, model_path: Path, model_sha256: str,
                  history_path: Path, hazard_path: Path, n_sims: int, physics_table=None, offsets=None, rest=False, environment=None,
-                 team_offsets=None, age_layer=None, log=print) -> list[dict]:
+                 team_offsets=None, age_layer=None, steals=None, log=print) -> list[dict]:
     """Simulate every game on the given dates; one record per game (win counts, run histograms, starter outs).
 
     environment: optional {game_pk: seven log-multipliers} (brl_live/environment.py); games without an entry are unadjusted.
     team_offsets: optional {date: {team: {'bat': [7], 'fld': [7]}}} (brl_live/team_offsets.by_date), offsets at the start of each date.
-    age_layer: optional aging and recency layer (brl_live/age_layer.py); its AgingState advances date by date from the history."""
+    age_layer: optional aging and recency layer (brl_live/age_layer.py); its AgingState advances date by date from the history.
+    steals: optional {'per_pa': ...} base-running settings (brl_live/running.py); each date uses running statistics
+    through the season before it, so nothing from the replayed season enters."""
     from brl_live.provider_adjust import ContextAdjust, EnvironmentAdjust, TeamAdjust
     hcols = h[HISTORY_COLUMNS]
     first = dates[0]
@@ -196,7 +198,11 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                 teams[side] = TeamProfile(team, team, lineup, starter, pen, defense=(float(defense.value(team)) if defense is not None else 0.0))
             matchup = GameMatchup(away=teams["away"], home=teams["home"], venue=g.park, game_type="R")
             policy = FittedStarterPolicy(hazard, pexp, texp, {int(g.away_starter): g.away, int(g.home_starter): g.home})
-            sim = GameSimulator(provider, manager_policy=policy)
+            steal = None
+            if steals is not None:
+                from brl_live.running import steal_model
+                steal = steal_model(int(str(date)[:4]) - 1, **{k: float(v) for k, v in steals.items() if k in ('per_pa', 'third')})
+            sim = GameSimulator(provider, manager_policy=policy, steals=steal)
             rng = np.random.default_rng(int(g.game_pk))
             seeds = rng.integers(0, np.iinfo(np.int32).max, size=n_sims, dtype=np.int64)
             hw = ties = 0

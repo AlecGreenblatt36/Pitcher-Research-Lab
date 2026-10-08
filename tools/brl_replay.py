@@ -15,6 +15,8 @@ Settings come from tools/replay_params.json on the trigger branch:
                team offsets as they stood at the start of each date (brl_live/team_offsets.py)
   age_layer    {'receipt': ledger-branch path of a stage2 research receipt, 'fit': 'fit_2025' | 'fit_2026' | 'fit_all', 'variant': 'v2'}:
                the aging and recency layer (brl_live/age_layer.py)
+  steals       {'per_pa': attempt scale}: runner speeds and stolen bases (brl_live/running.py), statistics through the
+               season before each replayed date
 Outputs on the ledger branch: research/replay-<tag>-<run>.jsonl.gz (one record per game: win counts,
 run histograms, starter outs, final score) and research/replay-<tag>-<run>.json (scores, paired
 comparison, timing). Per-game model outputs and final scores are not private data; the plate
@@ -90,7 +92,8 @@ def _worker(dates: list) -> list:
     s = _SHARED
     return replay_dates(s['h'], s['app'], s['games'], dates, model_path=s['model_path'], model_sha256=s['model_sha256'], history_path=s['history_path'],
                         hazard_path=s['hazard_path'], n_sims=s['n_sims'], physics_table=s['physics_table'], offsets=s['offsets'], rest=s.get('rest', False),
-                        environment=s.get('environment'), team_offsets=s.get('team_offsets'), age_layer=s.get('age_layer'), log=lambda m: print(m, flush=True))
+                        environment=s.get('environment'), team_offsets=s.get('team_offsets'), age_layer=s.get('age_layer'), steals=s.get('steals'),
+                        log=lambda m: print(m, flush=True))
 
 
 def logit(p):
@@ -236,9 +239,13 @@ def main():
                 raise ValueError('stage2 receipt missing on the ledger branch')
             age_layer = layer_from_receipt(json.loads(raw), fit=str(spec.get('fit', 'fit_all')), variant=str(spec.get('variant', 'v2')))
             receipt['age_layer'] = {**spec, 'columns': len(age_layer['columns'])}
+        steals = None
+        if params.get('steals'):
+            steals = {k: float(v) for k, v in dict(params['steals']).items() if k in ('per_pa', 'third')}
+            receipt['steals'] = steals
         _SHARED.update(h=h, app=app, games=games, model_path=model_path, model_sha256=model_sha256, history_path=history_path, hazard_path=hazard_path,
                        n_sims=n_sims, physics_table=physics_table, offsets=offsets, rest=use_rest, environment=environment, team_offsets=team_offsets,
-                       age_layer=age_layer)
+                       age_layer=age_layer, steals=steals)
         stage(f'replay {len(games)} games with {workers} workers')
         dates = sorted(games['date'].unique())
         shards = [dates[w::workers] for w in range(workers)]

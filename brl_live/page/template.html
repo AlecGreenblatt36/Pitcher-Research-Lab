@@ -882,6 +882,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       case "double": verb = contactWords("hit", c, "doubles"); tag = "2B"; cls = "hit"; break;
       case "triple": verb = contactWords("hit", c, "triples"); tag = "3B"; cls = "hit"; break;
       case "home_run": verb = contactWords("hr", c, HOMER[p.runs_scored] || "homers"); tag = "HR"; cls = "hit"; break;
+      case "stolen_base": verb = "steals " + ((desc.match(/steals (second|third)/i) || [])[1] || "a base"); tag = "SB"; break;
+      case "caught_stealing": verb = "is caught stealing " + ((desc.match(/stealing (second|third)/i) || [])[1] || "a base"); tag = "CS"; break;
       case "other_reach":
         if (/fielder/i.test(desc)) { verb = contactWords("fc", c, "reaches on a fielder's choice"); tag = "FC"; }
         else { verb = contactWords("error", c, "reaches on an error"); tag = "E"; }
@@ -1904,8 +1906,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         var style = parts.cls === "hit" ? ' style="background:var(--' + bat + ')"' : "";
         var seq = pitchText(p), zone = p.official ? zoneGraphic(p) : "";
         var seqHtml = seq ? (zone ? '<span class="seq">' + zone + '<span class="pitches">' + esc(seq) + "</span></span>" : '<span class="pitches">' + esc(seq) + "</span>") : "";
+        var steal = p.box_outcome === "stolen_base" || p.box_outcome === "caught_stealing";
         h += '<div class="pa"><span class="tag ' + parts.cls + '"' + style + ">" + parts.tag + '</span><span class="what">' + esc(parts.text) +
-          '<span class="meta">vs ' + esc(short[String(p.pitcher_id)] || lastName(p.pitcher_name)) + (p.estimated_pitches ? ", " + p.estimated_pitches + (p.estimated_pitches === 1 ? " pitch" : " pitches") : "") + "</span>" +
+          (steal ? "" : '<span class="meta">vs ' + esc(short[String(p.pitcher_id)] || lastName(p.pitcher_name)) + (p.estimated_pitches ? ", " + p.estimated_pitches + (p.estimated_pitches === 1 ? " pitch" : " pitches") : "") + "</span>") +
           seqHtml + "</span>" +
           '<span class="runs ' + bat + '-c">' + (p.runs_scored ? esc(scoreText(f, p)) : "") + "</span></div>";
       });

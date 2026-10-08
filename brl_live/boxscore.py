@@ -18,7 +18,8 @@ from .world_selection import world_features, select_worlds, SELECTION_NOTE
 from .pitch_bridge import PitchBridge, pitch_list, contact_of, MIN_BATTER_CONTACT
 from .win_table import WinTable
 
-BAT = ('PA','AB','H','2B','3B','HR','R','RBI','BB','HBP','K','SF')
+BAT = ('PA','AB','H','2B','3B','HR','R','RBI','BB','HBP','K','SF','SB','CS')
+STEALS = ('stolen_base','caught_stealing')
 PIT = ('outs','PC','H','R','BB','HBP','K','HR','BF')
 SIDE = ('away','home')
 
@@ -154,6 +155,17 @@ def build_game_box(result,matchup,fit:BookkeepingFit) -> dict[str,Any]:
     pa_counts=Counter();innings={s:{} for s in SIDE};plays=[]
     for event,scored in zip(result.events,result.box_scoring_trace):
         e=dict(event);s=e['batting_side'];fs='home' if s=='away' else 'away';pid=str(e['pitcher_id']);bid=str(e['batter_id'])
+        if e['outcome'] in STEALS:
+            # A steal between plate appearances: the runner's SB or CS, the pitcher's out on a caught stealing; no PA.
+            runner=batting[s].get(bid)
+            if runner is not None:runner['SB' if e['outcome']=='stolen_base' else 'CS']+=1
+            p=pitching[fs].setdefault(pid,dict(player_id=pid,name=e['pitcher_name'],**_zeros(PIT)))
+            p['outs']+=e['outs_after']-e['outs_before']
+            e.update(box_outcome=e['outcome'],rbi=0,scoring_players=[],estimated_pitches=0,pitches=[],contact=None)
+            plays.append({k:e[k] for k in ('inning','half','batter_id','batter_name','pitcher_id','pitcher_name',
+                'box_outcome','description','outs_before','outs_after','runs_scored','away_score','home_score',
+                'bases_before','bases_after','scoring_players','rbi','estimated_pitches','pitches','contact')})
+            continue
         b=batting[s][bid];p=pitching[fs].setdefault(pid,dict(player_id=pid,name=e['pitcher_name'],**_zeros(PIT)))
         b['PA']+=1;p['BF']+=1;pa_counts[s]+=1
         o=e['outcome'];e['batter_hand']=('L' if throws[pid]=='R' else 'R') if hands[bid]=='S' else hands[bid];hbp,pc,pitches=fit.draw(e,rng);p['PC']+=pc
@@ -280,9 +292,21 @@ class BoxAccumulator:
 # box's adjustments; relievers keep their regular-season roles.
 # team_offsets: the batting and the fielding team's offsets beyond the PA model (brl_live/team_offsets.py, TEAM-01/02),
 # off until the full replays pass.
+# steals: runner speeds from sprint speed and stolen-base attempts (brl_live/running.py, RUN-01), off until replays pass.
 ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         'postseason_exp_scale':{'F':0.91,'D':0.91,'L':0.91,'W':1.0},
-        'environment':True,'team_offsets':False}
+        'environment':True,'team_offsets':False,'steals':False}
+
+def steal_model_for(settings,matchup,date):
+    """The base-running model for a game when steals are on, else None. Regular-season games use the current
+    season's running statistics only when the data was fetched before the game's date; postseason games always do."""
+    if not settings.get('steals'):return None
+    from .running import steal_model,load_running
+    season=int(str(date)[:4]);through=season
+    if getattr(matchup,'game_type','R')=='R':
+        fetched=str((load_running().get('fetched_at') or {}).get(str(season)) or '')[:10]
+        if not fetched or fetched>=str(date)[:10]:through=season-1
+    return steal_model(through)
 
 def adjusted_provider(provider,full_history,date,settings=ADJUST,environment=None,teams=None):
     """Wrap the engine's provider with the enabled adjustments. Returns (provider, world_hook, label).
@@ -314,7 +338,9 @@ def run_box_worlds(engine,matchup,history,date,seeds,full_history=None,settings=
     fit=BookkeepingFit(history,date,full_history=full_history)
     provider,world_hook,adjust_label=adjusted_provider(engine.provider,full_history,date,settings,environment,teams)
     if getattr(engine.manager,'adjust_label',None):adjust_label=list(adjust_label)+[engine.manager.adjust_label]
-    sim=ObservedSimulator(provider,config=engine.config,manager_policy=engine.manager)
+    steals=steal_model_for(settings,matchup,date)
+    if steals is not None:adjust_label=list(adjust_label)+[steals.describe()]
+    sim=ObservedSimulator(provider,config=engine.config,manager_policy=engine.manager,steals=steals)
     accumulator=BoxAccumulator(matchup);results=[]
     for seed in seeds:
         if world_hook:world_hook(int(seed))

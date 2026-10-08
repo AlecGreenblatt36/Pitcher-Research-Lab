@@ -13,7 +13,7 @@ from collections import Counter
 
 import numpy as np
 
-from .boxscore import ADJUST, adjusted_provider
+from .boxscore import ADJUST, adjusted_provider, steal_model_for
 from .live_sim import LiveSimulator
 
 LIVE_WORLDS = 2000
@@ -31,7 +31,10 @@ def _distribution(counter: Counter, n: int) -> dict:
 def run_live_update(engine, matchup, start, state: dict, game: dict, full_history, *, n_worlds: int = LIVE_WORLDS,
                     settings=ADJUST, updated_at: str = '', environment=None, teams=None) -> dict:
     provider, hook, labels = adjusted_provider(engine.provider, full_history, game['date'], settings, environment, teams)
-    sim = LiveSimulator(provider, config=engine.config, manager_policy=engine.manager)
+    steals = steal_model_for(settings, matchup, game['date'])
+    if steals is not None:
+        labels = list(labels) + [steals.describe()]
+    sim = LiveSimulator(provider, config=engine.config, manager_policy=engine.manager, steals=steals)
     seeds = np.random.default_rng(_state_key(game['game_pk'], state)).integers(0, np.iinfo(np.int32).max, size=n_worlds, dtype=np.int64)
     home = ties = 0
     pairs: Counter = Counter(); away_runs: Counter = Counter(); home_runs: Counter = Counter(); innings: Counter = Counter()

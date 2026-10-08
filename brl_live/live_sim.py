@@ -109,6 +109,8 @@ class LiveSimulator(GameSimulator):
 
     def simulate_from(self, matchup: GameMatchup, seed: int, start: LiveStart, *, record_events: bool = False) -> GameResult:
         start.validate(matchup)
+        if self.steals is not None:
+            matchup = self.steals.with_speeds(matchup)
         rng = np.random.default_rng(seed)
         state = GameState(inning=start.inning, half=start.half, outs=start.outs,
                           away_score=start.away_score, home_score=start.home_score,
@@ -207,6 +209,8 @@ class LiveSimulator(GameSimulator):
                 state.complete = True
                 self._close_active_lines(lines, state.inning, state.half)
                 break
+            if self.steals is not None and state.outs < 3:
+                self._steal_step(state, batting_side, batting, fielding, lines, rng, record_events, events)
             if state.outs >= 3:
                 self._maybe_change_pitcher(fielding, fielding_side, batting.profile, state, lines, inning_ended=True, rng=rng)
                 state.bases = [None, None, None]

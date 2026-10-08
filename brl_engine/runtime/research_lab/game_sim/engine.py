@@ -81,8 +81,12 @@ class GameSimulator:
         provider: PAProbabilityProvider,
         config: SimulationConfig | None = None,
         manager_policy: ManagerPolicy | None = None,
+        steals=None,
     ) -> None:
         self.provider = provider
+        # Optional base-running model (brl_live.running.StealModel): runner speeds and stolen-base attempts. When it
+        # is None the engine draws exactly the same random numbers as before.
+        self.steals = steals
         self.config = config or SimulationConfig()
         self.manager = manager_policy or ManagerPolicy(
             three_batter_minimum=self.config.three_batter_minimum
@@ -97,6 +101,8 @@ class GameSimulator:
     ) -> GameResult:
         rng = np.random.default_rng(seed)
         should_record = self.config.record_events if record_events is None else record_events
+        if self.steals is not None:
+            matchup = self.steals.with_speeds(matchup)
         state = GameState()
         runtimes: dict[TeamSide, _TeamRuntime] = {
             "away": _TeamRuntime(matchup.away, matchup.away.starter),
@@ -255,6 +261,9 @@ class GameSimulator:
                 self._close_active_lines(lines, state.inning, state.half)
                 break
 
+            if self.steals is not None and state.outs < 3:
+                self._steal_step(state, batting_side, batting, fielding, lines, rng, should_record, events)
+
             if state.outs >= 3:
                 self._maybe_change_pitcher(
                     fielding,
@@ -345,6 +354,44 @@ class GameSimulator:
             ),
             ended_by_plate_appearance_cap=ended_by_cap,
         )
+
+    def _steal_step(self, state, batting_side, batting, fielding, lines, rng, should_record, events) -> None:
+        """Between plate appearances: the lead runner with the next base open may try to steal (second or third).
+        A caught stealing is an out for the pitcher on the mound; nothing scores on a steal."""
+        bases = state.bases
+        if bases[0] is not None and bases[1] is None:
+            runner, frm, to = bases[0], 0, 1
+        elif bases[1] is not None and bases[2] is None:
+            runner, frm, to = bases[1], 1, 2
+        else:
+            return
+        margin = state.score_for(batting_side) - state.opponent_score_for(batting_side)
+        pitcher = fielding.current_pitcher
+        p_attempt = self.steals.attempt(runner.player_id, to, state.inning, margin, pitcher.player_id)
+        if p_attempt <= 0.0 or rng.random() >= p_attempt:
+            return
+        outs_before, bases_before = state.outs, state.base_ids()
+        new = list(bases)
+        new[frm] = None
+        target = ("second", "third")[to - 1]
+        if rng.random() < self.steals.success(runner.player_id, to, pitcher.player_id):
+            new[to] = runner
+            outcome, description = "stolen_base", f"{runner.name} steals {target}."
+        else:
+            outcome, description = "caught_stealing", f"{runner.name} caught stealing {target}."
+            state.outs = min(3, state.outs + 1)
+            line = lines.get(pitcher.player_id)
+            if line is not None:
+                line.outs_recorded += 1
+        state.bases = new
+        self._charge_scored_runners([], lines)
+        if should_record:
+            events.append(GameEvent(
+                inning=state.inning, half=state.half, batting_side=batting_side, batting_team=batting.profile.name,
+                batter_id=runner.player_id, batter_name=runner.name, pitcher_id=pitcher.player_id, pitcher_name=pitcher.name,
+                outcome=outcome, outs_before=outs_before, outs_after=state.outs, bases_before=bases_before,
+                bases_after=state.base_ids(), runs_scored=0, away_score=state.away_score, home_score=state.home_score,
+                description=description))
 
     def _ensure_pitcher_line(
         self,
