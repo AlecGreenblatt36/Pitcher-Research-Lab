@@ -1,0 +1,368 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "horizon8",
+ "run_id": "37738936962",
+ "params": {
+  "experiment": "horizon8",
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "train_n": 400000,
+  "test_n": 400000,
+  "taus": [
+   0.0,
+   0.1,
+   0.125,
+   0.15,
+   0.175,
+   0.2,
+   0.225,
+   0.26,
+   0.3,
+   0.35
+  ],
+  "seed": 11
+ },
+ "started_at": "2026-10-08T06:41:05.017732+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 7.2
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 14.1
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 21.1
+  },
+  {
+   "stage": "tunnel chase",
+   "at_seconds": 262.8
+  },
+  {
+   "stage": "tunnel whiff",
+   "at_seconds": 483.3
+  },
+  {
+   "stage": "tunnel swing_in_zone",
+   "at_seconds": 599.9
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 713382
+ },
+ "results": {
+  "pairs": 2104443,
+  "outcomes": {
+   "chase": {
+    "pitches_train": 400000,
+    "pitches_test": 400000,
+    "rate_test": 0.3221,
+    "base_logloss": 0.47023165950087276,
+    "profile": [
+     {
+      "tau": 0.0,
+      "gain_per_1000": 0.0508,
+      "ci": [
+       0.0098,
+       0.0879
+      ],
+      "sep_median_deg": 7.482
+     },
+     {
+      "tau": 0.1,
+      "gain_per_1000": 0.3546,
+      "ci": [
+       0.2527,
+       0.4459
+      ],
+      "sep_median_deg": 5.561
+     },
+     {
+      "tau": 0.125,
+      "gain_per_1000": 0.5698,
+      "ci": [
+       0.4438,
+       0.6769
+      ],
+      "sep_median_deg": 4.144
+     },
+     {
+      "tau": 0.15,
+      "gain_per_1000": 0.7902,
+      "ci": [
+       0.641,
+       0.9176
+      ],
+      "sep_median_deg": 3.174
+     },
+     {
+      "tau": 0.175,
+      "gain_per_1000": 1.0339,
+      "ci": [
+       0.8653,
+       1.1717
+      ],
+      "sep_median_deg": 2.476
+     },
+     {
+      "tau": 0.2,
+      "gain_per_1000": 1.2184,
+      "ci": [
+       1.0416,
+       1.3729
+      ],
+      "sep_median_deg": 1.956
+     },
+     {
+      "tau": 0.225,
+      "gain_per_1000": 1.289,
+      "ci": [
+       1.101,
+       1.4501
+      ],
+      "sep_median_deg": 1.555
+     },
+     {
+      "tau": 0.26,
+      "gain_per_1000": 1.3116,
+      "ci": [
+       1.1231,
+       1.4719
+      ],
+      "sep_median_deg": 1.132
+     },
+     {
+      "tau": 0.3,
+      "gain_per_1000": 1.1831,
+      "ci": [
+       0.9937,
+       1.3381
+      ],
+      "sep_median_deg": 0.779
+     },
+     {
+      "tau": 0.35,
+      "gain_per_1000": 0.7371,
+      "ci": [
+       0.5996,
+       0.8643
+      ],
+      "sep_median_deg": 0.471
+     }
+    ]
+   },
+   "whiff": {
+    "pitches_train": 400000,
+    "pitches_test": 400000,
+    "rate_test": 0.2269,
+    "base_logloss": 0.44047696494054894,
+    "profile": [
+     {
+      "tau": 0.0,
+      "gain_per_1000": 0.0013,
+      "ci": [
+       -0.0103,
+       0.0134
+      ],
+      "sep_median_deg": 5.48
+     },
+     {
+      "tau": 0.1,
+      "gain_per_1000": 0.0095,
+      "ci": [
+       -0.0079,
+       0.0263
+      ],
+      "sep_median_deg": 4.325
+     },
+     {
+      "tau": 0.125,
+      "gain_per_1000": -0.0048,
+      "ci": [
+       -0.03,
+       0.0199
+      ],
+      "sep_median_deg": 3.228
+     },
+     {
+      "tau": 0.15,
+      "gain_per_1000": 0.0117,
+      "ci": [
+       -0.0154,
+       0.038
+      ],
+      "sep_median_deg": 2.483
+     },
+     {
+      "tau": 0.175,
+      "gain_per_1000": 0.0267,
+      "ci": [
+       -0.0016,
+       0.0541
+      ],
+      "sep_median_deg": 1.948
+     },
+     {
+      "tau": 0.2,
+      "gain_per_1000": 0.0357,
+      "ci": [
+       0.0083,
+       0.064
+      ],
+      "sep_median_deg": 1.55
+     },
+     {
+      "tau": 0.225,
+      "gain_per_1000": 0.0231,
+      "ci": [
+       -0.0031,
+       0.0504
+      ],
+      "sep_median_deg": 1.242
+     },
+     {
+      "tau": 0.26,
+      "gain_per_1000": 0.0119,
+      "ci": [
+       -0.0179,
+       0.0388
+      ],
+      "sep_median_deg": 0.915
+     },
+     {
+      "tau": 0.3,
+      "gain_per_1000": 0.0024,
+      "ci": [
+       -0.0237,
+       0.0312
+      ],
+      "sep_median_deg": 0.64
+     },
+     {
+      "tau": 0.35,
+      "gain_per_1000": -0.0129,
+      "ci": [
+       -0.0342,
+       0.0109
+      ],
+      "sep_median_deg": 0.396
+     }
+    ]
+   },
+   "swing_in_zone": {
+    "pitches_train": 400000,
+    "pitches_test": 400000,
+    "rate_test": 0.7452,
+    "base_logloss": 0.4557619606730703,
+    "profile": [
+     {
+      "tau": 0.0,
+      "gain_per_1000": 0.0636,
+      "ci": [
+       0.0162,
+       0.1089
+      ],
+      "sep_median_deg": 5.225
+     },
+     {
+      "tau": 0.1,
+      "gain_per_1000": 0.2343,
+      "ci": [
+       0.1572,
+       0.3166
+      ],
+      "sep_median_deg": 4.171
+     },
+     {
+      "tau": 0.125,
+      "gain_per_1000": 0.3402,
+      "ci": [
+       0.2485,
+       0.4423
+      ],
+      "sep_median_deg": 3.125
+     },
+     {
+      "tau": 0.15,
+      "gain_per_1000": 0.5112,
+      "ci": [
+       0.4031,
+       0.6328
+      ],
+      "sep_median_deg": 2.413
+     },
+     {
+      "tau": 0.175,
+      "gain_per_1000": 0.591,
+      "ci": [
+       0.4754,
+       0.7175
+      ],
+      "sep_median_deg": 1.902
+     },
+     {
+      "tau": 0.2,
+      "gain_per_1000": 0.6102,
+      "ci": [
+       0.482,
+       0.7444
+      ],
+      "sep_median_deg": 1.518
+     },
+     {
+      "tau": 0.225,
+      "gain_per_1000": 0.6395,
+      "ci": [
+       0.5103,
+       0.773
+      ],
+      "sep_median_deg": 1.22
+     },
+     {
+      "tau": 0.26,
+      "gain_per_1000": 0.6478,
+      "ci": [
+       0.5201,
+       0.7813
+      ],
+      "sep_median_deg": 0.901
+     },
+     {
+      "tau": 0.3,
+      "gain_per_1000": 0.6265,
+      "ci": [
+       0.5073,
+       0.7481
+      ],
+      "sep_median_deg": 0.63
+     },
+     {
+      "tau": 0.35,
+      "gain_per_1000": 0.4373,
+      "ci": [
+       0.3337,
+       0.5365
+      ],
+      "sep_median_deg": 0.387
+     }
+    ]
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-08T06:51:04.969887+00:00",
+ "seconds": 600.0
+}
