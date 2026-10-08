@@ -1,0 +1,3705 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "horizon",
+ "run_id": "37734449007",
+ "params": {
+  "experiment": "horizon",
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "train_per_season": 150000,
+  "test_n": 400000,
+  "taus": [
+   0.0,
+   0.075,
+   0.1,
+   0.125,
+   0.15,
+   0.175,
+   0.2,
+   0.225,
+   0.25,
+   0.3
+  ],
+  "observers": [
+   "straight",
+   "fastball",
+   "own_type",
+   "mix"
+  ],
+  "kappa": 1.0,
+  "hitter_fit_n": 500000,
+  "hitter_min_pitches": 2500,
+  "seed": 11
+ },
+ "started_at": "2026-10-08T05:51:20.694367+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 8.2
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 16.2
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 24.1
+  },
+  {
+   "stage": "observer accelerations",
+   "at_seconds": 32.6
+  },
+  {
+   "stage": "tau 0 (true crossing)",
+   "at_seconds": 35.5
+  },
+  {
+   "stage": "straight tau 0.075: -0.00780",
+   "at_seconds": 64.6
+  },
+  {
+   "stage": "straight tau 0.1: -0.01358",
+   "at_seconds": 78.8
+  },
+  {
+   "stage": "straight tau 0.125: -0.02046",
+   "at_seconds": 93.5
+  },
+  {
+   "stage": "straight tau 0.15: -0.02777",
+   "at_seconds": 108.4
+  },
+  {
+   "stage": "straight tau 0.175: -0.03445",
+   "at_seconds": 124.0
+  },
+  {
+   "stage": "straight tau 0.2: -0.03910",
+   "at_seconds": 138.9
+  },
+  {
+   "stage": "straight tau 0.225: -0.04031",
+   "at_seconds": 157.0
+  },
+  {
+   "stage": "straight tau 0.25: -0.03703",
+   "at_seconds": 174.5
+  },
+  {
+   "stage": "straight tau 0.3: -0.01699",
+   "at_seconds": 188.4
+  },
+  {
+   "stage": "fastball tau 0.075: -0.00573",
+   "at_seconds": 203.4
+  },
+  {
+   "stage": "fastball tau 0.1: -0.00984",
+   "at_seconds": 218.1
+  },
+  {
+   "stage": "fastball tau 0.125: -0.01452",
+   "at_seconds": 233.1
+  },
+  {
+   "stage": "fastball tau 0.15: -0.01916",
+   "at_seconds": 249.3
+  },
+  {
+   "stage": "fastball tau 0.175: -0.02287",
+   "at_seconds": 262.0
+  },
+  {
+   "stage": "fastball tau 0.2: -0.02447",
+   "at_seconds": 280.1
+  },
+  {
+   "stage": "fastball tau 0.225: -0.02274",
+   "at_seconds": 293.6
+  },
+  {
+   "stage": "fastball tau 0.25: -0.01685",
+   "at_seconds": 306.0
+  },
+  {
+   "stage": "fastball tau 0.3: +0.00671",
+   "at_seconds": 317.4
+  },
+  {
+   "stage": "own_type tau 0.075: -0.00060",
+   "at_seconds": 330.5
+  },
+  {
+   "stage": "own_type tau 0.1: -0.00103",
+   "at_seconds": 346.4
+  },
+  {
+   "stage": "own_type tau 0.125: -0.00154",
+   "at_seconds": 360.2
+  },
+  {
+   "stage": "own_type tau 0.15: -0.00212",
+   "at_seconds": 377.8
+  },
+  {
+   "stage": "own_type tau 0.175: -0.00270",
+   "at_seconds": 392.3
+  },
+  {
+   "stage": "own_type tau 0.2: -0.00324",
+   "at_seconds": 402.2
+  },
+  {
+   "stage": "own_type tau 0.225: -0.00373",
+   "at_seconds": 417.5
+  },
+  {
+   "stage": "own_type tau 0.25: -0.00405",
+   "at_seconds": 431.2
+  },
+  {
+   "stage": "own_type tau 0.3: -0.00401",
+   "at_seconds": 445.1
+  },
+  {
+   "stage": "mix tau 0.075: -0.00343",
+   "at_seconds": 464.4
+  },
+  {
+   "stage": "mix tau 0.1: -0.00617",
+   "at_seconds": 483.6
+  },
+  {
+   "stage": "mix tau 0.125: -0.00966",
+   "at_seconds": 503.4
+  },
+  {
+   "stage": "mix tau 0.15: -0.01376",
+   "at_seconds": 525.5
+  },
+  {
+   "stage": "mix tau 0.175: -0.01828",
+   "at_seconds": 549.2
+  },
+  {
+   "stage": "mix tau 0.2: -0.02288",
+   "at_seconds": 570.0
+  },
+  {
+   "stage": "mix tau 0.225: -0.02707",
+   "at_seconds": 590.1
+  },
+  {
+   "stage": "mix tau 0.25: -0.03034",
+   "at_seconds": 612.8
+  },
+  {
+   "stage": "mix tau 0.3: -0.03182",
+   "at_seconds": 634.4
+  },
+  {
+   "stage": "checks at the best observer and tau",
+   "at_seconds": 634.4
+  },
+  {
+   "stage": "per-hitter horizons",
+   "at_seconds": 801.3
+  },
+  {
+   "stage": "bat tracking",
+   "at_seconds": 1035.9
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 713382
+ },
+ "results": {
+  "pitches": {
+   "all": 2847795,
+   "kept": 2827719
+  },
+  "rebuild": {
+   "flight_time_50ft_s": {
+    "p05": 0.3552,
+    "p50": 0.3829,
+    "p95": 0.437
+   },
+   "time_last_40ft_s_p50": 0.3067,
+   "spin_accel_by_group": {
+    "four-seam": {
+     "asx_mean": -4.25,
+     "asz_mean": 17.67,
+     "n": 903464
+    },
+    "sinker": {
+     "asx_mean": -7.06,
+     "asz_mean": 8.8,
+     "n": 451463
+    },
+    "cutter": {
+     "asx_mean": 0.81,
+     "asz_mean": 8.37,
+     "n": 224082
+    },
+    "slider/sweeper": {
+     "asx_mean": 2.77,
+     "asz_mean": 1.54,
+     "n": 637997
+    },
+    "curveball": {
+     "asx_mean": 3.2,
+     "asz_mean": -7.71,
+     "n": 234723
+    },
+    "changeup/splitter": {
+     "asx_mean": -5.56,
+     "asz_mean": 4.52,
+     "n": 389638
+    },
+    "other": {
+     "asx_mean": -2.37,
+     "asz_mean": 0.98,
+     "n": 2689
+    }
+   }
+  },
+  "split": {
+   "train": 450000,
+   "test": 400000,
+   "swing_rate_test": 0.4762
+  },
+  "actual": {
+   "test_logloss": 0.5061978640287863,
+   "train_logloss": 0.4993455186401278
+  },
+  "profiles": {
+   "straight": [
+    {
+     "tau": 0.0,
+     "test_logloss": 0.5061978640287863,
+     "train_logloss": 0.4993455186401278,
+     "delta_vs_actual": [
+      0.0,
+      0.0,
+      0.0
+     ]
+    },
+    {
+     "tau": 0.075,
+     "test_logloss": 0.49839989400656076,
+     "train_logloss": 0.49174454098894255,
+     "delta_vs_actual": [
+      -0.007798,
+      -0.007918,
+      -0.007675
+     ]
+    },
+    {
+     "tau": 0.1,
+     "test_logloss": 0.4926154891455347,
+     "train_logloss": 0.4861269381910368,
+     "delta_vs_actual": [
+      -0.013582,
+      -0.013794,
+      -0.013358
+     ]
+    },
+    {
+     "tau": 0.125,
+     "test_logloss": 0.48574138219784,
+     "train_logloss": 0.47946158600335215,
+     "delta_vs_actual": [
+      -0.020456,
+      -0.020778,
+      -0.020108
+     ]
+    },
+    {
+     "tau": 0.15,
+     "test_logloss": 0.47843006630988116,
+     "train_logloss": 0.4723820377764775,
+     "delta_vs_actual": [
+      -0.027768,
+      -0.028201,
+      -0.027295
+     ]
+    },
+    {
+     "tau": 0.175,
+     "test_logloss": 0.47174856487302025,
+     "train_logloss": 0.4659054809364506,
+     "delta_vs_actual": [
+      -0.034449,
+      -0.035059,
+      -0.03382
+     ]
+    },
+    {
+     "tau": 0.2,
+     "test_logloss": 0.46709650017552157,
+     "train_logloss": 0.4613455059987366,
+     "delta_vs_actual": [
+      -0.039101,
+      -0.039893,
+      -0.038296
+     ]
+    },
+    {
+     "tau": 0.225,
+     "test_logloss": 0.46588615780021375,
+     "train_logloss": 0.460167445139803,
+     "delta_vs_actual": [
+      -0.040312,
+      -0.041311,
+      -0.039351
+     ]
+    },
+    {
+     "tau": 0.25,
+     "test_logloss": 0.4691697248303706,
+     "train_logloss": 0.46340445808135555,
+     "delta_vs_actual": [
+      -0.037028,
+      -0.038214,
+      -0.035907
+     ]
+    },
+    {
+     "tau": 0.3,
+     "test_logloss": 0.4892054450055544,
+     "train_logloss": 0.48373327372468705,
+     "delta_vs_actual": [
+      -0.016992,
+      -0.018512,
+      -0.015643
+     ]
+    }
+   ],
+   "fastball": [
+    {
+     "tau": 0.0,
+     "test_logloss": 0.5061978640287863,
+     "train_logloss": 0.4993455186401278,
+     "delta_vs_actual": [
+      0.0,
+      0.0,
+      0.0
+     ]
+    },
+    {
+     "tau": 0.075,
+     "test_logloss": 0.5004677959575687,
+     "train_logloss": 0.49411070912211835,
+     "delta_vs_actual": [
+      -0.00573,
+      -0.005832,
+      -0.005619
+     ]
+    },
+    {
+     "tau": 0.1,
+     "test_logloss": 0.4963614063444893,
+     "train_logloss": 0.4903888772500758,
+     "delta_vs_actual": [
+      -0.009836,
+      -0.010025,
+      -0.00964
+     ]
+    },
+    {
+     "tau": 0.125,
+     "test_logloss": 0.4916732858978536,
+     "train_logloss": 0.48614987888858213,
+     "delta_vs_actual": [
+      -0.014525,
+      -0.014814,
+      -0.014217
+     ]
+    },
+    {
+     "tau": 0.15,
+     "test_logloss": 0.4870409157496374,
+     "train_logloss": 0.4819600307008404,
+     "delta_vs_actual": [
+      -0.019157,
+      -0.019576,
+      -0.018711
+     ]
+    },
+    {
+     "tau": 0.175,
+     "test_logloss": 0.4833237086646953,
+     "train_logloss": 0.4786421977749951,
+     "delta_vs_actual": [
+      -0.022874,
+      -0.023429,
+      -0.02226
+     ]
+    },
+    {
+     "tau": 0.2,
+     "test_logloss": 0.48172523770019526,
+     "train_logloss": 0.47728841538841976,
+     "delta_vs_actual": [
+      -0.024473,
+      -0.025205,
+      -0.023664
+     ]
+    },
+    {
+     "tau": 0.225,
+     "test_logloss": 0.48345740865365544,
+     "train_logloss": 0.4790975012310098,
+     "delta_vs_actual": [
+      -0.02274,
+      -0.023658,
+      -0.021731
+     ]
+    },
+    {
+     "tau": 0.25,
+     "test_logloss": 0.48934655454430476,
+     "train_logloss": 0.48494044510425804,
+     "delta_vs_actual": [
+      -0.016851,
+      -0.017985,
+      -0.015716
+     ]
+    },
+    {
+     "tau": 0.3,
+     "test_logloss": 0.5129076993310099,
+     "train_logloss": 0.5085037031355977,
+     "delta_vs_actual": [
+      0.00671,
+      0.005285,
+      0.0082
+     ]
+    }
+   ],
+   "own_type": [
+    {
+     "tau": 0.0,
+     "test_logloss": 0.5061978640287863,
+     "train_logloss": 0.4993455186401278,
+     "delta_vs_actual": [
+      0.0,
+      0.0,
+      0.0
+     ]
+    },
+    {
+     "tau": 0.075,
+     "test_logloss": 0.5056008936612403,
+     "train_logloss": 0.4987412322340975,
+     "delta_vs_actual": [
+      -0.000597,
+      -0.000624,
+      -0.000569
+     ]
+    },
+    {
+     "tau": 0.1,
+     "test_logloss": 0.5051693735060264,
+     "train_logloss": 0.4983009100127426,
+     "delta_vs_actual": [
+      -0.001028,
+      -0.001076,
+      -0.00098
+     ]
+    },
+    {
+     "tau": 0.125,
+     "test_logloss": 0.5046590309611835,
+     "train_logloss": 0.49777787273166624,
+     "delta_vs_actual": [
+      -0.001539,
+      -0.001614,
+      -0.001462
+     ]
+    },
+    {
+     "tau": 0.15,
+     "test_logloss": 0.5040821215828423,
+     "train_logloss": 0.49719430693183286,
+     "delta_vs_actual": [
+      -0.002116,
+      -0.00222,
+      -0.002006
+     ]
+    },
+    {
+     "tau": 0.175,
+     "test_logloss": 0.5034997926611324,
+     "train_logloss": 0.49659632852008745,
+     "delta_vs_actual": [
+      -0.002698,
+      -0.002844,
+      -0.002551
+     ]
+    },
+    {
+     "tau": 0.2,
+     "test_logloss": 0.5029580690264239,
+     "train_logloss": 0.4960321794984553,
+     "delta_vs_actual": [
+      -0.00324,
+      -0.00343,
+      -0.003047
+     ]
+    },
+    {
+     "tau": 0.225,
+     "test_logloss": 0.502469867270535,
+     "train_logloss": 0.495530447445991,
+     "delta_vs_actual": [
+      -0.003728,
+      -0.003969,
+      -0.00348
+     ]
+    },
+    {
+     "tau": 0.25,
+     "test_logloss": 0.5021503619060436,
+     "train_logloss": 0.4951796169672238,
+     "delta_vs_actual": [
+      -0.004048,
+      -0.004342,
+      -0.003743
+     ]
+    },
+    {
+     "tau": 0.3,
+     "test_logloss": 0.502185065570651,
+     "train_logloss": 0.49514537110551105,
+     "delta_vs_actual": [
+      -0.004013,
+      -0.004432,
+      -0.003573
+     ]
+    }
+   ],
+   "mix": [
+    {
+     "tau": 0.0,
+     "test_logloss": 0.5061978640287863,
+     "train_logloss": 0.4993455186401278,
+     "delta_vs_actual": [
+      0.0,
+      0.0,
+      0.0
+     ]
+    },
+    {
+     "tau": 0.075,
+     "test_logloss": 0.502769112224998,
+     "train_logloss": 0.49618107827201674,
+     "delta_vs_actual": [
+      -0.003429,
+      -0.003481,
+      -0.003372
+     ]
+    },
+    {
+     "tau": 0.1,
+     "test_logloss": 0.5000270154067241,
+     "train_logloss": 0.49364092454189795,
+     "delta_vs_actual": [
+      -0.006171,
+      -0.006266,
+      -0.006074
+     ]
+    },
+    {
+     "tau": 0.125,
+     "test_logloss": 0.496541516590003,
+     "train_logloss": 0.490419815227146,
+     "delta_vs_actual": [
+      -0.009656,
+      -0.00981,
+      -0.009501
+     ]
+    },
+    {
+     "tau": 0.15,
+     "test_logloss": 0.49243362728290024,
+     "train_logloss": 0.4866101577341589,
+     "delta_vs_actual": [
+      -0.013764,
+      -0.013996,
+      -0.01353
+     ]
+    },
+    {
+     "tau": 0.175,
+     "test_logloss": 0.487919113547732,
+     "train_logloss": 0.4824267654398703,
+     "delta_vs_actual": [
+      -0.018279,
+      -0.01859,
+      -0.017964
+     ]
+    },
+    {
+     "tau": 0.2,
+     "test_logloss": 0.48331289008543854,
+     "train_logloss": 0.47817225251804113,
+     "delta_vs_actual": [
+      -0.022885,
+      -0.023284,
+      -0.022466
+     ]
+    },
+    {
+     "tau": 0.225,
+     "test_logloss": 0.4791277683454224,
+     "train_logloss": 0.47424365617393505,
+     "delta_vs_actual": [
+      -0.02707,
+      -0.027608,
+      -0.026516
+     ]
+    },
+    {
+     "tau": 0.25,
+     "test_logloss": 0.47586025639592816,
+     "train_logloss": 0.47113905114088983,
+     "delta_vs_actual": [
+      -0.030338,
+      -0.030972,
+      -0.029677
+     ]
+    },
+    {
+     "tau": 0.3,
+     "test_logloss": 0.47438257171678866,
+     "train_logloss": 0.4694704494986647,
+     "delta_vs_actual": [
+      -0.031815,
+      -0.032705,
+      -0.030915
+     ]
+    }
+   ]
+  },
+  "best": {
+   "observer": "straight",
+   "tau": 0.225,
+   "test_logloss": 0.46588615780021375,
+   "gain_vs_actual": -0.04031170622857255
+  },
+  "best_closed_form": {
+   "observer": "straight",
+   "tau": 0.225,
+   "test_logloss": 0.46588615780021375,
+   "gain_vs_actual": -0.04031170622857255
+  },
+  "check_shuffle": {
+   "test_logloss": 0.4733931231915268,
+   "train_logloss": 0.46729457337689845,
+   "delta_vs_actual": [
+    -0.032805,
+    -0.033764,
+    -0.031879
+   ]
+  },
+  "check_both": {
+   "test_logloss": 0.4615745748686478,
+   "delta_vs_actual": [
+    -0.044623,
+    -0.045519,
+    -0.043609
+   ]
+  },
+  "check_split": {
+   "outside": {
+    "test_pitches": 190977,
+    "profile": [
+     {
+      "tau": 0.0,
+      "test_logloss": 0.46973678548676695
+     },
+     {
+      "tau": 0.075,
+      "test_logloss": 0.4601159098329161
+     },
+     {
+      "tau": 0.1,
+      "test_logloss": 0.453221197350774
+     },
+     {
+      "tau": 0.125,
+      "test_logloss": 0.4457016610962581
+     },
+     {
+      "tau": 0.15,
+      "test_logloss": 0.43850976337650915
+     },
+     {
+      "tau": 0.175,
+      "test_logloss": 0.43282726196113397
+     },
+     {
+      "tau": 0.2,
+      "test_logloss": 0.42940073020100233
+     },
+     {
+      "tau": 0.225,
+      "test_logloss": 0.428749627379108
+     },
+     {
+      "tau": 0.25,
+      "test_logloss": 0.43070851218799905
+     },
+     {
+      "tau": 0.3,
+      "test_logloss": 0.441775554572174
+     }
+    ]
+   },
+   "inside": {
+    "test_pitches": 209023,
+    "profile": [
+     {
+      "tau": 0.0,
+      "test_logloss": 0.5338125482457546
+     },
+     {
+      "tau": 0.075,
+      "test_logloss": 0.5253056994640153
+     },
+     {
+      "tau": 0.1,
+      "test_logloss": 0.5191480667481111
+     },
+     {
+      "tau": 0.125,
+      "test_logloss": 0.51212895474899
+     },
+     {
+      "tau": 0.15,
+      "test_logloss": 0.5051351820471605
+     },
+     {
+      "tau": 0.175,
+      "test_logloss": 0.4989909541617388
+     },
+     {
+      "tau": 0.2,
+      "test_logloss": 0.4945745937408088
+     },
+     {
+      "tau": 0.225,
+      "test_logloss": 0.49212181086405604
+     },
+     {
+      "tau": 0.25,
+      "test_logloss": 0.4915958852941834
+     },
+     {
+      "tau": 0.3,
+      "test_logloss": 0.49447406738561733
+     }
+    ]
+   }
+  },
+  "hitters": {
+   "grid": [
+    0.0,
+    0.025,
+    0.05,
+    0.075,
+    0.1,
+    0.125,
+    0.15,
+    0.175,
+    0.2,
+    0.225,
+    0.25,
+    0.275,
+    0.3
+   ],
+   "observer": "straight",
+   "min_pitches": 2500,
+   "n_hitters": 347,
+   "pooled_profile_per_1000": [
+    0.0,
+    0.85,
+    3.3807,
+    7.4981,
+    13.0124,
+    19.5238,
+    26.389,
+    32.5712,
+    36.7158,
+    37.4645,
+    33.7464,
+    25.2216,
+    12.5133
+   ],
+   "tau_quantiles": {
+    "10": 0.1894,
+    "25": 0.2043,
+    "50": 0.2182,
+    "75": 0.2331,
+    "90": 0.2494
+   },
+   "split_half_correlation": 0.849,
+   "rows": [
+    {
+     "batter": 444482,
+     "pitches": 2529,
+     "tau": 0.2085,
+     "tau_odd": 0.2174,
+     "tau_even": 0.1969,
+     "gain_at_best_vs_0_per_1000": 34.8949
+    },
+    {
+     "batter": 453568,
+     "pitches": 3411,
+     "tau": 0.1724,
+     "tau_odd": 0.1569,
+     "tau_even": 0.196,
+     "gain_at_best_vs_0_per_1000": 11.7024
+    },
+    {
+     "batter": 455117,
+     "pitches": 2656,
+     "tau": 0.2318,
+     "tau_odd": 0.2402,
+     "tau_even": 0.2237,
+     "gain_at_best_vs_0_per_1000": 34.6493
+    },
+    {
+     "batter": 456781,
+     "pitches": 3756,
+     "tau": 0.2226,
+     "tau_odd": 0.2204,
+     "tau_even": 0.2247,
+     "gain_at_best_vs_0_per_1000": 33.9572
+    },
+    {
+     "batter": 457705,
+     "pitches": 6413,
+     "tau": 0.1701,
+     "tau_odd": 0.1728,
+     "tau_even": 0.1673,
+     "gain_at_best_vs_0_per_1000": 19.2011
+    },
+    {
+     "batter": 457759,
+     "pitches": 5753,
+     "tau": 0.2204,
+     "tau_odd": 0.223,
+     "tau_even": 0.2182,
+     "gain_at_best_vs_0_per_1000": 41.0179
+    },
+    {
+     "batter": 467793,
+     "pitches": 6821,
+     "tau": 0.227,
+     "tau_odd": 0.229,
+     "tau_even": 0.2246,
+     "gain_at_best_vs_0_per_1000": 50.5364
+    },
+    {
+     "batter": 500743,
+     "pitches": 3790,
+     "tau": 0.2267,
+     "tau_odd": 0.2273,
+     "tau_even": 0.2259,
+     "gain_at_best_vs_0_per_1000": 46.2221
+    },
+    {
+     "batter": 502054,
+     "pitches": 5533,
+     "tau": 0.206,
+     "tau_odd": 0.2094,
+     "tau_even": 0.2031,
+     "gain_at_best_vs_0_per_1000": 34.4654
+    },
+    {
+     "batter": 502110,
+     "pitches": 3905,
+     "tau": 0.2177,
+     "tau_odd": 0.2096,
+     "tau_even": 0.2248,
+     "gain_at_best_vs_0_per_1000": 38.0951
+    },
+    {
+     "batter": 502671,
+     "pitches": 7633,
+     "tau": 0.2222,
+     "tau_odd": 0.2101,
+     "tau_even": 0.2333,
+     "gain_at_best_vs_0_per_1000": 31.0019
+    },
+    {
+     "batter": 514888,
+     "pitches": 6264,
+     "tau": 0.2551,
+     "tau_odd": 0.2566,
+     "tau_even": 0.2536,
+     "gain_at_best_vs_0_per_1000": 51.7315
+    },
+    {
+     "batter": 516782,
+     "pitches": 3896,
+     "tau": 0.2063,
+     "tau_odd": 0.2248,
+     "tau_even": 0.1926,
+     "gain_at_best_vs_0_per_1000": 29.5265
+    },
+    {
+     "batter": 518595,
+     "pitches": 3330,
+     "tau": 0.217,
+     "tau_odd": 0.2144,
+     "tau_even": 0.2186,
+     "gain_at_best_vs_0_per_1000": 35.9757
+    },
+    {
+     "batter": 518692,
+     "pitches": 7604,
+     "tau": 0.1937,
+     "tau_odd": 0.1968,
+     "tau_even": 0.1904,
+     "gain_at_best_vs_0_per_1000": 31.5588
+    },
+    {
+     "batter": 518735,
+     "pitches": 2575,
+     "tau": 0.2273,
+     "tau_odd": 0.2322,
+     "tau_even": 0.2232,
+     "gain_at_best_vs_0_per_1000": 35.7577
+    },
+    {
+     "batter": 518792,
+     "pitches": 2798,
+     "tau": 0.2067,
+     "tau_odd": 0.2089,
+     "tau_even": 0.2052,
+     "gain_at_best_vs_0_per_1000": 32.9133
+    },
+    {
+     "batter": 518934,
+     "pitches": 3606,
+     "tau": 0.2141,
+     "tau_odd": 0.2226,
+     "tau_even": 0.2049,
+     "gain_at_best_vs_0_per_1000": 36.3983
+    },
+    {
+     "batter": 519203,
+     "pitches": 3078,
+     "tau": 0.2342,
+     "tau_odd": 0.239,
+     "tau_even": 0.2254,
+     "gain_at_best_vs_0_per_1000": 36.0003
+    },
+    {
+     "batter": 519317,
+     "pitches": 4749,
+     "tau": 0.2282,
+     "tau_odd": 0.2307,
+     "tau_even": 0.2243,
+     "gain_at_best_vs_0_per_1000": 31.5869
+    },
+    {
+     "batter": 521692,
+     "pitches": 6583,
+     "tau": 0.2419,
+     "tau_odd": 0.2494,
+     "tau_even": 0.2347,
+     "gain_at_best_vs_0_per_1000": 17.8699
+    },
+    {
+     "batter": 527038,
+     "pitches": 4729,
+     "tau": 0.1827,
+     "tau_odd": 0.1941,
+     "tau_even": 0.1712,
+     "gain_at_best_vs_0_per_1000": 15.7668
+    },
+    {
+     "batter": 542303,
+     "pitches": 7860,
+     "tau": 0.2074,
+     "tau_odd": 0.2088,
+     "tau_even": 0.2058,
+     "gain_at_best_vs_0_per_1000": 32.8895
+    },
+    {
+     "batter": 543257,
+     "pitches": 2739,
+     "tau": 0.2103,
+     "tau_odd": 0.2079,
+     "tau_even": 0.2115,
+     "gain_at_best_vs_0_per_1000": 35.4282
+    },
+    {
+     "batter": 543309,
+     "pitches": 3329,
+     "tau": 0.2494,
+     "tau_odd": 0.2527,
+     "tau_even": 0.2458,
+     "gain_at_best_vs_0_per_1000": 48.8028
+    },
+    {
+     "batter": 543760,
+     "pitches": 7480,
+     "tau": 0.173,
+     "tau_odd": 0.1733,
+     "tau_even": 0.1726,
+     "gain_at_best_vs_0_per_1000": 23.6084
+    },
+    {
+     "batter": 543807,
+     "pitches": 7103,
+     "tau": 0.1616,
+     "tau_odd": 0.1597,
+     "tau_even": 0.163,
+     "gain_at_best_vs_0_per_1000": 15.744
+    },
+    {
+     "batter": 543877,
+     "pitches": 3279,
+     "tau": 0.2297,
+     "tau_odd": 0.2312,
+     "tau_even": 0.2278,
+     "gain_at_best_vs_0_per_1000": 33.6224
+    },
+    {
+     "batter": 545341,
+     "pitches": 3867,
+     "tau": 0.2398,
+     "tau_odd": 0.2264,
+     "tau_even": 0.2517,
+     "gain_at_best_vs_0_per_1000": 51.392
+    },
+    {
+     "batter": 545361,
+     "pitches": 4571,
+     "tau": 0.1487,
+     "tau_odd": 0.1481,
+     "tau_even": 0.1493,
+     "gain_at_best_vs_0_per_1000": 13.8725
+    },
+    {
+     "batter": 547180,
+     "pitches": 6632,
+     "tau": 0.2187,
+     "tau_odd": 0.2175,
+     "tau_even": 0.2204,
+     "gain_at_best_vs_0_per_1000": 48.6612
+    },
+    {
+     "batter": 547989,
+     "pitches": 2872,
+     "tau": 0.2212,
+     "tau_odd": 0.222,
+     "tau_even": 0.2199,
+     "gain_at_best_vs_0_per_1000": 29.98
+    },
+    {
+     "batter": 553869,
+     "pitches": 4334,
+     "tau": 0.2261,
+     "tau_odd": 0.2262,
+     "tau_even": 0.226,
+     "gain_at_best_vs_0_per_1000": 38.6278
+    },
+    {
+     "batter": 553993,
+     "pitches": 7991,
+     "tau": 0.1924,
+     "tau_odd": 0.1811,
+     "tau_even": 0.2002,
+     "gain_at_best_vs_0_per_1000": 22.6189
+    },
+    {
+     "batter": 570482,
+     "pitches": 3277,
+     "tau": 0.2362,
+     "tau_odd": 0.2465,
+     "tau_even": 0.2252,
+     "gain_at_best_vs_0_per_1000": 48.2113
+    },
+    {
+     "batter": 571448,
+     "pitches": 6296,
+     "tau": 0.205,
+     "tau_odd": 0.2073,
+     "tau_even": 0.2032,
+     "gain_at_best_vs_0_per_1000": 17.5
+    },
+    {
+     "batter": 571657,
+     "pitches": 3360,
+     "tau": 0.2391,
+     "tau_odd": 0.2396,
+     "tau_even": 0.2375,
+     "gain_at_best_vs_0_per_1000": 32.8691
+    },
+    {
+     "batter": 571745,
+     "pitches": 2669,
+     "tau": 0.2224,
+     "tau_odd": 0.2293,
+     "tau_even": 0.2139,
+     "gain_at_best_vs_0_per_1000": 39.4515
+    },
+    {
+     "batter": 571771,
+     "pitches": 4493,
+     "tau": 0.2137,
+     "tau_odd": 0.2091,
+     "tau_even": 0.2174,
+     "gain_at_best_vs_0_per_1000": 37.4444
+    },
+    {
+     "batter": 571970,
+     "pitches": 5320,
+     "tau": 0.2171,
+     "tau_odd": 0.2185,
+     "tau_even": 0.2159,
+     "gain_at_best_vs_0_per_1000": 40.076
+    },
+    {
+     "batter": 572191,
+     "pitches": 3926,
+     "tau": 0.2458,
+     "tau_odd": 0.2464,
+     "tau_even": 0.2451,
+     "gain_at_best_vs_0_per_1000": 74.4762
+    },
+    {
+     "batter": 572233,
+     "pitches": 7449,
+     "tau": 0.1941,
+     "tau_odd": 0.1993,
+     "tau_even": 0.1878,
+     "gain_at_best_vs_0_per_1000": 32.0487
+    },
+    {
+     "batter": 573262,
+     "pitches": 5797,
+     "tau": 0.2156,
+     "tau_odd": 0.2146,
+     "tau_even": 0.2168,
+     "gain_at_best_vs_0_per_1000": 41.4753
+    },
+    {
+     "batter": 575929,
+     "pitches": 5440,
+     "tau": 0.178,
+     "tau_odd": 0.1757,
+     "tau_even": 0.1803,
+     "gain_at_best_vs_0_per_1000": 15.5209
+    },
+    {
+     "batter": 592192,
+     "pitches": 4484,
+     "tau": 0.1871,
+     "tau_odd": 0.1929,
+     "tau_even": 0.1787,
+     "gain_at_best_vs_0_per_1000": 20.3185
+    },
+    {
+     "batter": 592206,
+     "pitches": 6905,
+     "tau": 0.2342,
+     "tau_odd": 0.2361,
+     "tau_even": 0.2324,
+     "gain_at_best_vs_0_per_1000": 44.2126
+    },
+    {
+     "batter": 592273,
+     "pitches": 3341,
+     "tau": 0.2365,
+     "tau_odd": 0.2526,
+     "tau_even": 0.2021,
+     "gain_at_best_vs_0_per_1000": 37.3406
+    },
+    {
+     "batter": 592450,
+     "pitches": 7398,
+     "tau": 0.1771,
+     "tau_odd": 0.1821,
+     "tau_even": 0.1718,
+     "gain_at_best_vs_0_per_1000": 16.2175
+    },
+    {
+     "batter": 592518,
+     "pitches": 7294,
+     "tau": 0.2043,
+     "tau_odd": 0.2066,
+     "tau_even": 0.2021,
+     "gain_at_best_vs_0_per_1000": 33.6842
+    },
+    {
+     "batter": 592626,
+     "pitches": 4726,
+     "tau": 0.249,
+     "tau_odd": 0.2564,
+     "tau_even": 0.241,
+     "gain_at_best_vs_0_per_1000": 54.7965
+    },
+    {
+     "batter": 592663,
+     "pitches": 5843,
+     "tau": 0.2169,
+     "tau_odd": 0.2155,
+     "tau_even": 0.2189,
+     "gain_at_best_vs_0_per_1000": 30.3619
+    },
+    {
+     "batter": 592669,
+     "pitches": 4130,
+     "tau": 0.2523,
+     "tau_odd": 0.2581,
+     "tau_even": 0.2457,
+     "gain_at_best_vs_0_per_1000": 56.0472
+    },
+    {
+     "batter": 592696,
+     "pitches": 3093,
+     "tau": 0.2176,
+     "tau_odd": 0.2221,
+     "tau_even": 0.2129,
+     "gain_at_best_vs_0_per_1000": 31.6072
+    },
+    {
+     "batter": 592885,
+     "pitches": 6394,
+     "tau": 0.2068,
+     "tau_odd": 0.2057,
+     "tau_even": 0.2077,
+     "gain_at_best_vs_0_per_1000": 37.6457
+    },
+    {
+     "batter": 593160,
+     "pitches": 3490,
+     "tau": 0.1997,
+     "tau_odd": 0.2088,
+     "tau_even": 0.1934,
+     "gain_at_best_vs_0_per_1000": 24.5459
+    },
+    {
+     "batter": 593428,
+     "pitches": 6495,
+     "tau": 0.2119,
+     "tau_odd": 0.2198,
+     "tau_even": 0.2025,
+     "gain_at_best_vs_0_per_1000": 28.3758
+    },
+    {
+     "batter": 593871,
+     "pitches": 5347,
+     "tau": 0.2153,
+     "tau_odd": 0.2121,
+     "tau_even": 0.2187,
+     "gain_at_best_vs_0_per_1000": 35.7048
+    },
+    {
+     "batter": 594807,
+     "pitches": 2573,
+     "tau": 0.2852,
+     "tau_odd": 0.2788,
+     "tau_even": 0.3,
+     "gain_at_best_vs_0_per_1000": 82.0459
+    },
+    {
+     "batter": 595777,
+     "pitches": 6353,
+     "tau": 0.212,
+     "tau_odd": 0.2156,
+     "tau_even": 0.2068,
+     "gain_at_best_vs_0_per_1000": 42.1803
+    },
+    {
+     "batter": 595879,
+     "pitches": 4488,
+     "tau": 0.3,
+     "tau_odd": 0.3,
+     "tau_even": 0.3,
+     "gain_at_best_vs_0_per_1000": 93.8392
+    },
+    {
+     "batter": 596019,
+     "pitches": 8328,
+     "tau": 0.1952,
+     "tau_odd": 0.1999,
+     "tau_even": 0.1908,
+     "gain_at_best_vs_0_per_1000": 30.4775
+    },
+    {
+     "batter": 596115,
+     "pitches": 3469,
+     "tau": 0.2387,
+     "tau_odd": 0.2427,
+     "tau_even": 0.233,
+     "gain_at_best_vs_0_per_1000": 44.8391
+    },
+    {
+     "batter": 596142,
+     "pitches": 2640,
+     "tau": 0.2428,
+     "tau_odd": 0.2451,
+     "tau_even": 0.2404,
+     "gain_at_best_vs_0_per_1000": 38.9846
+    },
+    {
+     "batter": 596146,
+     "pitches": 5223,
+     "tau": 0.2174,
+     "tau_odd": 0.2111,
+     "tau_even": 0.2244,
+     "gain_at_best_vs_0_per_1000": 47.2101
+    },
+    {
+     "batter": 600869,
+     "pitches": 4458,
+     "tau": 0.2349,
+     "tau_odd": 0.244,
+     "tau_even": 0.2274,
+     "gain_at_best_vs_0_per_1000": 50.9317
+    },
+    {
+     "batter": 602104,
+     "pitches": 4087,
+     "tau": 0.1876,
+     "tau_odd": 0.1904,
+     "tau_even": 0.1828,
+     "gain_at_best_vs_0_per_1000": 25.8823
+    },
+    {
+     "batter": 605137,
+     "pitches": 6741,
+     "tau": 0.2137,
+     "tau_odd": 0.2061,
+     "tau_even": 0.2202,
+     "gain_at_best_vs_0_per_1000": 38.945
+    },
+    {
+     "batter": 605141,
+     "pitches": 7199,
+     "tau": 0.1937,
+     "tau_odd": 0.1928,
+     "tau_even": 0.1946,
+     "gain_at_best_vs_0_per_1000": 28.1485
+    },
+    {
+     "batter": 605170,
+     "pitches": 3232,
+     "tau": 0.2279,
+     "tau_odd": 0.2326,
+     "tau_even": 0.2228,
+     "gain_at_best_vs_0_per_1000": 47.9944
+    },
+    {
+     "batter": 605204,
+     "pitches": 2700,
+     "tau": 0.1922,
+     "tau_odd": 0.1916,
+     "tau_even": 0.1928,
+     "gain_at_best_vs_0_per_1000": 34.6354
+    },
+    {
+     "batter": 606115,
+     "pitches": 5229,
+     "tau": 0.2008,
+     "tau_odd": 0.1993,
+     "tau_even": 0.2026,
+     "gain_at_best_vs_0_per_1000": 29.0885
+    },
+    {
+     "batter": 606192,
+     "pitches": 7392,
+     "tau": 0.1872,
+     "tau_odd": 0.1829,
+     "tau_even": 0.191,
+     "gain_at_best_vs_0_per_1000": 21.1633
+    },
+    {
+     "batter": 606466,
+     "pitches": 6693,
+     "tau": 0.1966,
+     "tau_odd": 0.1987,
+     "tau_even": 0.1945,
+     "gain_at_best_vs_0_per_1000": 30.4408
+    },
+    {
+     "batter": 607043,
+     "pitches": 8135,
+     "tau": 0.2117,
+     "tau_odd": 0.2079,
+     "tau_even": 0.2145,
+     "gain_at_best_vs_0_per_1000": 41.0331
+    },
+    {
+     "batter": 607208,
+     "pitches": 7086,
+     "tau": 0.2055,
+     "tau_odd": 0.2082,
+     "tau_even": 0.2026,
+     "gain_at_best_vs_0_per_1000": 29.6866
+    },
+    {
+     "batter": 607732,
+     "pitches": 2598,
+     "tau": 0.2231,
+     "tau_odd": 0.2184,
+     "tau_even": 0.2298,
+     "gain_at_best_vs_0_per_1000": 31.4078
+    },
+    {
+     "batter": 608070,
+     "pitches": 7994,
+     "tau": 0.1897,
+     "tau_odd": 0.1873,
+     "tau_even": 0.1921,
+     "gain_at_best_vs_0_per_1000": 19.8719
+    },
+    {
+     "batter": 608324,
+     "pitches": 7099,
+     "tau": 0.1891,
+     "tau_odd": 0.1905,
+     "tau_even": 0.1875,
+     "gain_at_best_vs_0_per_1000": 26.7094
+    },
+    {
+     "batter": 608348,
+     "pitches": 3369,
+     "tau": 0.2047,
+     "tau_odd": 0.2088,
+     "tau_even": 0.1987,
+     "gain_at_best_vs_0_per_1000": 34.2087
+    },
+    {
+     "batter": 608369,
+     "pitches": 5372,
+     "tau": 0.1979,
+     "tau_odd": 0.1956,
+     "tau_even": 0.2007,
+     "gain_at_best_vs_0_per_1000": 36.4082
+    },
+    {
+     "batter": 608385,
+     "pitches": 3188,
+     "tau": 0.1885,
+     "tau_odd": 0.1922,
+     "tau_even": 0.1833,
+     "gain_at_best_vs_0_per_1000": 26.6296
+    },
+    {
+     "batter": 608701,
+     "pitches": 3058,
+     "tau": 0.1882,
+     "tau_odd": 0.1765,
+     "tau_even": 0.1983,
+     "gain_at_best_vs_0_per_1000": 24.2296
+    },
+    {
+     "batter": 608841,
+     "pitches": 3660,
+     "tau": 0.2162,
+     "tau_odd": 0.2086,
+     "tau_even": 0.2272,
+     "gain_at_best_vs_0_per_1000": 31.0221
+    },
+    {
+     "batter": 609280,
+     "pitches": 2709,
+     "tau": 0.2141,
+     "tau_odd": 0.2038,
+     "tau_even": 0.2206,
+     "gain_at_best_vs_0_per_1000": 26.9824
+    },
+    {
+     "batter": 621020,
+     "pitches": 7397,
+     "tau": 0.2048,
+     "tau_odd": 0.1979,
+     "tau_even": 0.2124,
+     "gain_at_best_vs_0_per_1000": 41.2679
+    },
+    {
+     "batter": 621035,
+     "pitches": 3110,
+     "tau": 0.1846,
+     "tau_odd": 0.1887,
+     "tau_even": 0.1798,
+     "gain_at_best_vs_0_per_1000": 24.0304
+    },
+    {
+     "batter": 621043,
+     "pitches": 5914,
+     "tau": 0.2494,
+     "tau_odd": 0.2533,
+     "tau_even": 0.2458,
+     "gain_at_best_vs_0_per_1000": 47.9477
+    },
+    {
+     "batter": 621438,
+     "pitches": 3431,
+     "tau": 0.2554,
+     "tau_odd": 0.2617,
+     "tau_even": 0.2516,
+     "gain_at_best_vs_0_per_1000": 42.8294
+    },
+    {
+     "batter": 621439,
+     "pitches": 4828,
+     "tau": 0.2123,
+     "tau_odd": 0.2029,
+     "tau_even": 0.2192,
+     "gain_at_best_vs_0_per_1000": 31.0095
+    },
+    {
+     "batter": 621493,
+     "pitches": 6978,
+     "tau": 0.1847,
+     "tau_odd": 0.1858,
+     "tau_even": 0.1838,
+     "gain_at_best_vs_0_per_1000": 20.9831
+    },
+    {
+     "batter": 621566,
+     "pitches": 9171,
+     "tau": 0.207,
+     "tau_odd": 0.2056,
+     "tau_even": 0.2083,
+     "gain_at_best_vs_0_per_1000": 32.3632
+    },
+    {
+     "batter": 622534,
+     "pitches": 2570,
+     "tau": 0.2107,
+     "tau_odd": 0.22,
+     "tau_even": 0.2035,
+     "gain_at_best_vs_0_per_1000": 37.6727
+    },
+    {
+     "batter": 623993,
+     "pitches": 6421,
+     "tau": 0.2402,
+     "tau_odd": 0.2273,
+     "tau_even": 0.2568,
+     "gain_at_best_vs_0_per_1000": 30.2273
+    },
+    {
+     "batter": 624413,
+     "pitches": 8086,
+     "tau": 0.2023,
+     "tau_odd": 0.2023,
+     "tau_even": 0.2023,
+     "gain_at_best_vs_0_per_1000": 30.0033
+    },
+    {
+     "batter": 624415,
+     "pitches": 2651,
+     "tau": 0.22,
+     "tau_odd": 0.221,
+     "tau_even": 0.2188,
+     "gain_at_best_vs_0_per_1000": 56.7466
+    },
+    {
+     "batter": 624424,
+     "pitches": 5880,
+     "tau": 0.2055,
+     "tau_odd": 0.2068,
+     "tau_even": 0.2039,
+     "gain_at_best_vs_0_per_1000": 34.4024
+    },
+    {
+     "batter": 624428,
+     "pitches": 4745,
+     "tau": 0.2012,
+     "tau_odd": 0.2014,
+     "tau_even": 0.2008,
+     "gain_at_best_vs_0_per_1000": 30.0539
+    },
+    {
+     "batter": 624431,
+     "pitches": 2547,
+     "tau": 0.2664,
+     "tau_odd": 0.266,
+     "tau_even": 0.2669,
+     "gain_at_best_vs_0_per_1000": 50.382
+    },
+    {
+     "batter": 624585,
+     "pitches": 5936,
+     "tau": 0.205,
+     "tau_odd": 0.2065,
+     "tau_even": 0.2035,
+     "gain_at_best_vs_0_per_1000": 31.3185
+    },
+    {
+     "batter": 624641,
+     "pitches": 3080,
+     "tau": 0.2191,
+     "tau_odd": 0.2113,
+     "tau_even": 0.2315,
+     "gain_at_best_vs_0_per_1000": 33.4198
+    },
+    {
+     "batter": 628451,
+     "pitches": 2996,
+     "tau": 0.199,
+     "tau_odd": 0.1977,
+     "tau_even": 0.2004,
+     "gain_at_best_vs_0_per_1000": 27.9575
+    },
+    {
+     "batter": 630105,
+     "pitches": 6916,
+     "tau": 0.1854,
+     "tau_odd": 0.1897,
+     "tau_even": 0.18,
+     "gain_at_best_vs_0_per_1000": 21.8244
+    },
+    {
+     "batter": 641313,
+     "pitches": 3199,
+     "tau": 0.2015,
+     "tau_odd": 0.203,
+     "tau_even": 0.1997,
+     "gain_at_best_vs_0_per_1000": 25.2384
+    },
+    {
+     "batter": 641343,
+     "pitches": 3549,
+     "tau": 0.2137,
+     "tau_odd": 0.2146,
+     "tau_even": 0.2125,
+     "gain_at_best_vs_0_per_1000": 43.1351
+    },
+    {
+     "batter": 641355,
+     "pitches": 6812,
+     "tau": 0.2503,
+     "tau_odd": 0.2421,
+     "tau_even": 0.2598,
+     "gain_at_best_vs_0_per_1000": 45.7495
+    },
+    {
+     "batter": 641487,
+     "pitches": 7218,
+     "tau": 0.2063,
+     "tau_odd": 0.205,
+     "tau_even": 0.2075,
+     "gain_at_best_vs_0_per_1000": 35.8751
+    },
+    {
+     "batter": 641584,
+     "pitches": 3571,
+     "tau": 0.2296,
+     "tau_odd": 0.2328,
+     "tau_even": 0.2255,
+     "gain_at_best_vs_0_per_1000": 62.6841
+    },
+    {
+     "batter": 641598,
+     "pitches": 4387,
+     "tau": 0.2076,
+     "tau_odd": 0.1971,
+     "tau_even": 0.2229,
+     "gain_at_best_vs_0_per_1000": 35.5321
+    },
+    {
+     "batter": 641680,
+     "pitches": 5454,
+     "tau": 0.2226,
+     "tau_odd": 0.228,
+     "tau_even": 0.2171,
+     "gain_at_best_vs_0_per_1000": 46.2369
+    },
+    {
+     "batter": 641857,
+     "pitches": 7926,
+     "tau": 0.2043,
+     "tau_odd": 0.2046,
+     "tau_even": 0.2039,
+     "gain_at_best_vs_0_per_1000": 26.6102
+    },
+    {
+     "batter": 641933,
+     "pitches": 3824,
+     "tau": 0.2132,
+     "tau_odd": 0.2005,
+     "tau_even": 0.2252,
+     "gain_at_best_vs_0_per_1000": 31.5022
+    },
+    {
+     "batter": 642086,
+     "pitches": 4243,
+     "tau": 0.2122,
+     "tau_odd": 0.2016,
+     "tau_even": 0.223,
+     "gain_at_best_vs_0_per_1000": 35.9153
+    },
+    {
+     "batter": 642133,
+     "pitches": 4436,
+     "tau": 0.2642,
+     "tau_odd": 0.2563,
+     "tau_even": 0.269,
+     "gain_at_best_vs_0_per_1000": 60.1649
+    },
+    {
+     "batter": 642136,
+     "pitches": 2745,
+     "tau": 0.1728,
+     "tau_odd": 0.1756,
+     "tau_even": 0.1696,
+     "gain_at_best_vs_0_per_1000": 24.8115
+    },
+    {
+     "batter": 642350,
+     "pitches": 3258,
+     "tau": 0.2441,
+     "tau_odd": 0.2211,
+     "tau_even": 0.2774,
+     "gain_at_best_vs_0_per_1000": 44.1022
+    },
+    {
+     "batter": 642708,
+     "pitches": 3815,
+     "tau": 0.2505,
+     "tau_odd": 0.2437,
+     "tau_even": 0.2598,
+     "gain_at_best_vs_0_per_1000": 52.6045
+    },
+    {
+     "batter": 642715,
+     "pitches": 8090,
+     "tau": 0.2121,
+     "tau_odd": 0.2124,
+     "tau_even": 0.2118,
+     "gain_at_best_vs_0_per_1000": 37.2844
+    },
+    {
+     "batter": 642731,
+     "pitches": 3761,
+     "tau": 0.2655,
+     "tau_odd": 0.2861,
+     "tau_even": 0.2465,
+     "gain_at_best_vs_0_per_1000": 47.4169
+    },
+    {
+     "batter": 643217,
+     "pitches": 6028,
+     "tau": 0.214,
+     "tau_odd": 0.2136,
+     "tau_even": 0.2145,
+     "gain_at_best_vs_0_per_1000": 41.4667
+    },
+    {
+     "batter": 643289,
+     "pitches": 4436,
+     "tau": 0.2322,
+     "tau_odd": 0.2302,
+     "tau_even": 0.2343,
+     "gain_at_best_vs_0_per_1000": 52.1244
+    },
+    {
+     "batter": 643376,
+     "pitches": 3872,
+     "tau": 0.1808,
+     "tau_odd": 0.181,
+     "tau_even": 0.1806,
+     "gain_at_best_vs_0_per_1000": 25.2788
+    },
+    {
+     "batter": 643396,
+     "pitches": 4734,
+     "tau": 0.2215,
+     "tau_odd": 0.2193,
+     "tau_even": 0.2236,
+     "gain_at_best_vs_0_per_1000": 39.4243
+    },
+    {
+     "batter": 643446,
+     "pitches": 5562,
+     "tau": 0.1946,
+     "tau_odd": 0.2025,
+     "tau_even": 0.1866,
+     "gain_at_best_vs_0_per_1000": 30.9348
+    },
+    {
+     "batter": 643565,
+     "pitches": 4811,
+     "tau": 0.1722,
+     "tau_odd": 0.1786,
+     "tau_even": 0.1654,
+     "gain_at_best_vs_0_per_1000": 21.425
+    },
+    {
+     "batter": 645277,
+     "pitches": 6571,
+     "tau": 0.2016,
+     "tau_odd": 0.2039,
+     "tau_even": 0.1996,
+     "gain_at_best_vs_0_per_1000": 36.7361
+    },
+    {
+     "batter": 646240,
+     "pitches": 7972,
+     "tau": 0.2224,
+     "tau_odd": 0.2203,
+     "tau_even": 0.2245,
+     "gain_at_best_vs_0_per_1000": 48.566
+    },
+    {
+     "batter": 647304,
+     "pitches": 5916,
+     "tau": 0.2366,
+     "tau_odd": 0.2308,
+     "tau_even": 0.2427,
+     "gain_at_best_vs_0_per_1000": 57.61
+    },
+    {
+     "batter": 647351,
+     "pitches": 2541,
+     "tau": 0.2438,
+     "tau_odd": 0.2477,
+     "tau_even": 0.2399,
+     "gain_at_best_vs_0_per_1000": 55.8204
+    },
+    {
+     "batter": 650333,
+     "pitches": 6982,
+     "tau": 0.1899,
+     "tau_odd": 0.1945,
+     "tau_even": 0.1846,
+     "gain_at_best_vs_0_per_1000": 18.5038
+    },
+    {
+     "batter": 650391,
+     "pitches": 2912,
+     "tau": 0.2415,
+     "tau_odd": 0.2244,
+     "tau_even": 0.2607,
+     "gain_at_best_vs_0_per_1000": 47.4898
+    },
+    {
+     "batter": 650402,
+     "pitches": 8090,
+     "tau": 0.1976,
+     "tau_odd": 0.2036,
+     "tau_even": 0.1911,
+     "gain_at_best_vs_0_per_1000": 32.1862
+    },
+    {
+     "batter": 650489,
+     "pitches": 5761,
+     "tau": 0.2202,
+     "tau_odd": 0.217,
+     "tau_even": 0.2239,
+     "gain_at_best_vs_0_per_1000": 41.5888
+    },
+    {
+     "batter": 650490,
+     "pitches": 7309,
+     "tau": 0.1732,
+     "tau_odd": 0.1771,
+     "tau_even": 0.1691,
+     "gain_at_best_vs_0_per_1000": 21.8564
+    },
+    {
+     "batter": 650559,
+     "pitches": 5026,
+     "tau": 0.2024,
+     "tau_odd": 0.2009,
+     "tau_even": 0.204,
+     "gain_at_best_vs_0_per_1000": 22.5302
+    },
+    {
+     "batter": 650859,
+     "pitches": 4717,
+     "tau": 0.2204,
+     "tau_odd": 0.2021,
+     "tau_even": 0.2374,
+     "gain_at_best_vs_0_per_1000": 47.5502
+    },
+    {
+     "batter": 655316,
+     "pitches": 2528,
+     "tau": 0.1919,
+     "tau_odd": 0.1933,
+     "tau_even": 0.1911,
+     "gain_at_best_vs_0_per_1000": 27.2514
+    },
+    {
+     "batter": 656305,
+     "pitches": 7320,
+     "tau": 0.2012,
+     "tau_odd": 0.2052,
+     "tau_even": 0.1961,
+     "gain_at_best_vs_0_per_1000": 38.3128
+    },
+    {
+     "batter": 656555,
+     "pitches": 3650,
+     "tau": 0.2194,
+     "tau_odd": 0.2133,
+     "tau_even": 0.2271,
+     "gain_at_best_vs_0_per_1000": 37.1072
+    },
+    {
+     "batter": 656582,
+     "pitches": 3947,
+     "tau": 0.2051,
+     "tau_odd": 0.2045,
+     "tau_even": 0.2061,
+     "gain_at_best_vs_0_per_1000": 32.7574
+    },
+    {
+     "batter": 656716,
+     "pitches": 5333,
+     "tau": 0.2194,
+     "tau_odd": 0.2192,
+     "tau_even": 0.2195,
+     "gain_at_best_vs_0_per_1000": 46.2244
+    },
+    {
+     "batter": 656775,
+     "pitches": 5751,
+     "tau": 0.2046,
+     "tau_odd": 0.2107,
+     "tau_even": 0.1979,
+     "gain_at_best_vs_0_per_1000": 40.9155
+    },
+    {
+     "batter": 656811,
+     "pitches": 5491,
+     "tau": 0.2265,
+     "tau_odd": 0.2222,
+     "tau_even": 0.2329,
+     "gain_at_best_vs_0_per_1000": 54.0703
+    },
+    {
+     "batter": 656896,
+     "pitches": 2742,
+     "tau": 0.1991,
+     "tau_odd": 0.1952,
+     "tau_even": 0.2039,
+     "gain_at_best_vs_0_per_1000": 30.0017
+    },
+    {
+     "batter": 656941,
+     "pitches": 8932,
+     "tau": 0.2179,
+     "tau_odd": 0.2178,
+     "tau_even": 0.2179,
+     "gain_at_best_vs_0_per_1000": 41.3978
+    },
+    {
+     "batter": 656976,
+     "pitches": 2806,
+     "tau": 0.2236,
+     "tau_odd": 0.2177,
+     "tau_even": 0.2307,
+     "gain_at_best_vs_0_per_1000": 40.2122
+    },
+    {
+     "batter": 657041,
+     "pitches": 5237,
+     "tau": 0.2111,
+     "tau_odd": 0.2184,
+     "tau_even": 0.203,
+     "gain_at_best_vs_0_per_1000": 35.05
+    },
+    {
+     "batter": 657077,
+     "pitches": 5561,
+     "tau": 0.223,
+     "tau_odd": 0.2243,
+     "tau_even": 0.2212,
+     "gain_at_best_vs_0_per_1000": 43.4399
+    },
+    {
+     "batter": 657136,
+     "pitches": 4103,
+     "tau": 0.2475,
+     "tau_odd": 0.2548,
+     "tau_even": 0.2394,
+     "gain_at_best_vs_0_per_1000": 61.024
+    },
+    {
+     "batter": 657557,
+     "pitches": 4071,
+     "tau": 0.2112,
+     "tau_odd": 0.2063,
+     "tau_even": 0.2157,
+     "gain_at_best_vs_0_per_1000": 42.2404
+    },
+    {
+     "batter": 657656,
+     "pitches": 4791,
+     "tau": 0.2168,
+     "tau_odd": 0.2253,
+     "tau_even": 0.2071,
+     "gain_at_best_vs_0_per_1000": 37.8653
+    },
+    {
+     "batter": 657757,
+     "pitches": 5762,
+     "tau": 0.232,
+     "tau_odd": 0.2434,
+     "tau_even": 0.2206,
+     "gain_at_best_vs_0_per_1000": 32.2072
+    },
+    {
+     "batter": 660162,
+     "pitches": 2692,
+     "tau": 0.2159,
+     "tau_odd": 0.206,
+     "tau_even": 0.2298,
+     "gain_at_best_vs_0_per_1000": 39.4228
+    },
+    {
+     "batter": 660271,
+     "pitches": 7994,
+     "tau": 0.2324,
+     "tau_odd": 0.2296,
+     "tau_even": 0.2357,
+     "gain_at_best_vs_0_per_1000": 41.8718
+    },
+    {
+     "batter": 660670,
+     "pitches": 5409,
+     "tau": 0.1748,
+     "tau_odd": 0.1803,
+     "tau_even": 0.1688,
+     "gain_at_best_vs_0_per_1000": 22.9467
+    },
+    {
+     "batter": 660688,
+     "pitches": 4415,
+     "tau": 0.2473,
+     "tau_odd": 0.2628,
+     "tau_even": 0.2357,
+     "gain_at_best_vs_0_per_1000": 46.2374
+    },
+    {
+     "batter": 660821,
+     "pitches": 5559,
+     "tau": 0.2413,
+     "tau_odd": 0.2446,
+     "tau_even": 0.2385,
+     "gain_at_best_vs_0_per_1000": 49.6947
+    },
+    {
+     "batter": 661388,
+     "pitches": 7635,
+     "tau": 0.19,
+     "tau_odd": 0.1895,
+     "tau_even": 0.1905,
+     "gain_at_best_vs_0_per_1000": 25.9946
+    },
+    {
+     "batter": 662139,
+     "pitches": 5299,
+     "tau": 0.2132,
+     "tau_odd": 0.2165,
+     "tau_even": 0.2093,
+     "gain_at_best_vs_0_per_1000": 43.7929
+    },
+    {
+     "batter": 663368,
+     "pitches": 3116,
+     "tau": 0.1778,
+     "tau_odd": 0.1893,
+     "tau_even": 0.1699,
+     "gain_at_best_vs_0_per_1000": 18.3156
+    },
+    {
+     "batter": 663457,
+     "pitches": 6068,
+     "tau": 0.2256,
+     "tau_odd": 0.2251,
+     "tau_even": 0.2262,
+     "gain_at_best_vs_0_per_1000": 49.7306
+    },
+    {
+     "batter": 663538,
+     "pitches": 7097,
+     "tau": 0.2084,
+     "tau_odd": 0.2019,
+     "tau_even": 0.2148,
+     "gain_at_best_vs_0_per_1000": 25.8032
+    },
+    {
+     "batter": 663586,
+     "pitches": 6444,
+     "tau": 0.2171,
+     "tau_odd": 0.2137,
+     "tau_even": 0.2213,
+     "gain_at_best_vs_0_per_1000": 41.7585
+    },
+    {
+     "batter": 663616,
+     "pitches": 4672,
+     "tau": 0.2337,
+     "tau_odd": 0.2285,
+     "tau_even": 0.239,
+     "gain_at_best_vs_0_per_1000": 48.6284
+    },
+    {
+     "batter": 663624,
+     "pitches": 4983,
+     "tau": 0.2279,
+     "tau_odd": 0.2202,
+     "tau_even": 0.2365,
+     "gain_at_best_vs_0_per_1000": 51.8197
+    },
+    {
+     "batter": 663647,
+     "pitches": 5525,
+     "tau": 0.2437,
+     "tau_odd": 0.2457,
+     "tau_even": 0.2406,
+     "gain_at_best_vs_0_per_1000": 53.8766
+    },
+    {
+     "batter": 663656,
+     "pitches": 6200,
+     "tau": 0.1872,
+     "tau_odd": 0.1846,
+     "tau_even": 0.189,
+     "gain_at_best_vs_0_per_1000": 31.8852
+    },
+    {
+     "batter": 663697,
+     "pitches": 7145,
+     "tau": 0.1826,
+     "tau_odd": 0.1832,
+     "tau_even": 0.1819,
+     "gain_at_best_vs_0_per_1000": 25.6355
+    },
+    {
+     "batter": 663698,
+     "pitches": 2790,
+     "tau": 0.2408,
+     "tau_odd": 0.2485,
+     "tau_even": 0.2337,
+     "gain_at_best_vs_0_per_1000": 46.4
+    },
+    {
+     "batter": 663728,
+     "pitches": 7656,
+     "tau": 0.2434,
+     "tau_odd": 0.2423,
+     "tau_even": 0.2445,
+     "gain_at_best_vs_0_per_1000": 58.7549
+    },
+    {
+     "batter": 663743,
+     "pitches": 3133,
+     "tau": 0.2358,
+     "tau_odd": 0.2618,
+     "tau_even": 0.212,
+     "gain_at_best_vs_0_per_1000": 50.9303
+    },
+    {
+     "batter": 663757,
+     "pitches": 5538,
+     "tau": 0.2026,
+     "tau_odd": 0.2071,
+     "tau_even": 0.1978,
+     "gain_at_best_vs_0_per_1000": 33.3179
+    },
+    {
+     "batter": 663837,
+     "pitches": 4826,
+     "tau": 0.2254,
+     "tau_odd": 0.2227,
+     "tau_even": 0.2283,
+     "gain_at_best_vs_0_per_1000": 47.137
+    },
+    {
+     "batter": 663886,
+     "pitches": 5352,
+     "tau": 0.2171,
+     "tau_odd": 0.2156,
+     "tau_even": 0.2184,
+     "gain_at_best_vs_0_per_1000": 44.798
+    },
+    {
+     "batter": 663898,
+     "pitches": 3246,
+     "tau": 0.2475,
+     "tau_odd": 0.2505,
+     "tau_even": 0.244,
+     "gain_at_best_vs_0_per_1000": 63.5458
+    },
+    {
+     "batter": 663993,
+     "pitches": 7973,
+     "tau": 0.2082,
+     "tau_odd": 0.2121,
+     "tau_even": 0.2051,
+     "gain_at_best_vs_0_per_1000": 37.9423
+    },
+    {
+     "batter": 664023,
+     "pitches": 8257,
+     "tau": 0.1968,
+     "tau_odd": 0.2012,
+     "tau_even": 0.1911,
+     "gain_at_best_vs_0_per_1000": 31.2961
+    },
+    {
+     "batter": 664034,
+     "pitches": 6240,
+     "tau": 0.1936,
+     "tau_odd": 0.193,
+     "tau_even": 0.1943,
+     "gain_at_best_vs_0_per_1000": 28.4482
+    },
+    {
+     "batter": 664040,
+     "pitches": 5453,
+     "tau": 0.2025,
+     "tau_odd": 0.2074,
+     "tau_even": 0.1982,
+     "gain_at_best_vs_0_per_1000": 38.7884
+    },
+    {
+     "batter": 664056,
+     "pitches": 4777,
+     "tau": 0.2592,
+     "tau_odd": 0.2463,
+     "tau_even": 0.2733,
+     "gain_at_best_vs_0_per_1000": 49.3523
+    },
+    {
+     "batter": 664238,
+     "pitches": 3469,
+     "tau": 0.2139,
+     "tau_odd": 0.2172,
+     "tau_even": 0.2102,
+     "gain_at_best_vs_0_per_1000": 41.5813
+    },
+    {
+     "batter": 664702,
+     "pitches": 3066,
+     "tau": 0.2303,
+     "tau_odd": 0.2238,
+     "tau_even": 0.2376,
+     "gain_at_best_vs_0_per_1000": 47.0712
+    },
+    {
+     "batter": 664728,
+     "pitches": 4106,
+     "tau": 0.2471,
+     "tau_odd": 0.2426,
+     "tau_even": 0.2537,
+     "gain_at_best_vs_0_per_1000": 44.0943
+    },
+    {
+     "batter": 664761,
+     "pitches": 6146,
+     "tau": 0.231,
+     "tau_odd": 0.2228,
+     "tau_even": 0.2397,
+     "gain_at_best_vs_0_per_1000": 57.8432
+    },
+    {
+     "batter": 664774,
+     "pitches": 4743,
+     "tau": 0.1998,
+     "tau_odd": 0.2089,
+     "tau_even": 0.1894,
+     "gain_at_best_vs_0_per_1000": 31.6872
+    },
+    {
+     "batter": 664913,
+     "pitches": 3273,
+     "tau": 0.2315,
+     "tau_odd": 0.2361,
+     "tau_even": 0.2243,
+     "gain_at_best_vs_0_per_1000": 50.6123
+    },
+    {
+     "batter": 664983,
+     "pitches": 3675,
+     "tau": 0.2418,
+     "tau_odd": 0.2289,
+     "tau_even": 0.2538,
+     "gain_at_best_vs_0_per_1000": 51.4127
+    },
+    {
+     "batter": 665019,
+     "pitches": 2578,
+     "tau": 0.2276,
+     "tau_odd": 0.2303,
+     "tau_even": 0.2252,
+     "gain_at_best_vs_0_per_1000": 47.8352
+    },
+    {
+     "batter": 665161,
+     "pitches": 6280,
+     "tau": 0.2285,
+     "tau_odd": 0.2284,
+     "tau_even": 0.2286,
+     "gain_at_best_vs_0_per_1000": 42.2099
+    },
+    {
+     "batter": 665487,
+     "pitches": 6476,
+     "tau": 0.1859,
+     "tau_odd": 0.1848,
+     "tau_even": 0.1868,
+     "gain_at_best_vs_0_per_1000": 27.4632
+    },
+    {
+     "batter": 665489,
+     "pitches": 7508,
+     "tau": 0.2051,
+     "tau_odd": 0.2009,
+     "tau_even": 0.2097,
+     "gain_at_best_vs_0_per_1000": 33.8474
+    },
+    {
+     "batter": 665742,
+     "pitches": 8779,
+     "tau": 0.1655,
+     "tau_odd": 0.1673,
+     "tau_even": 0.1635,
+     "gain_at_best_vs_0_per_1000": 16.3523
+    },
+    {
+     "batter": 665750,
+     "pitches": 4767,
+     "tau": 0.2197,
+     "tau_odd": 0.2237,
+     "tau_even": 0.2153,
+     "gain_at_best_vs_0_per_1000": 50.3711
+    },
+    {
+     "batter": 665828,
+     "pitches": 2895,
+     "tau": 0.2311,
+     "tau_odd": 0.2271,
+     "tau_even": 0.2367,
+     "gain_at_best_vs_0_per_1000": 58.5989
+    },
+    {
+     "batter": 665833,
+     "pitches": 4767,
+     "tau": 0.2739,
+     "tau_odd": 0.2658,
+     "tau_even": 0.2806,
+     "gain_at_best_vs_0_per_1000": 60.5403
+    },
+    {
+     "batter": 665862,
+     "pitches": 6106,
+     "tau": 0.2362,
+     "tau_odd": 0.2368,
+     "tau_even": 0.2358,
+     "gain_at_best_vs_0_per_1000": 58.6119
+    },
+    {
+     "batter": 665926,
+     "pitches": 6094,
+     "tau": 0.2226,
+     "tau_odd": 0.2244,
+     "tau_even": 0.2202,
+     "gain_at_best_vs_0_per_1000": 33.1461
+    },
+    {
+     "batter": 666018,
+     "pitches": 2713,
+     "tau": 0.2094,
+     "tau_odd": 0.2087,
+     "tau_even": 0.21,
+     "gain_at_best_vs_0_per_1000": 34.7257
+    },
+    {
+     "batter": 666023,
+     "pitches": 3689,
+     "tau": 0.199,
+     "tau_odd": 0.2028,
+     "tau_even": 0.195,
+     "gain_at_best_vs_0_per_1000": 27.6883
+    },
+    {
+     "batter": 666134,
+     "pitches": 4781,
+     "tau": 0.259,
+     "tau_odd": 0.2652,
+     "tau_even": 0.2533,
+     "gain_at_best_vs_0_per_1000": 71.9788
+    },
+    {
+     "batter": 666139,
+     "pitches": 5510,
+     "tau": 0.2169,
+     "tau_odd": 0.2143,
+     "tau_even": 0.2184,
+     "gain_at_best_vs_0_per_1000": 42.1016
+    },
+    {
+     "batter": 666158,
+     "pitches": 3974,
+     "tau": 0.2367,
+     "tau_odd": 0.2339,
+     "tau_even": 0.2388,
+     "gain_at_best_vs_0_per_1000": 59.1366
+    },
+    {
+     "batter": 666160,
+     "pitches": 4251,
+     "tau": 0.2438,
+     "tau_odd": 0.2483,
+     "tau_even": 0.2397,
+     "gain_at_best_vs_0_per_1000": 47.0276
+    },
+    {
+     "batter": 666176,
+     "pitches": 4302,
+     "tau": 0.1974,
+     "tau_odd": 0.1975,
+     "tau_even": 0.1973,
+     "gain_at_best_vs_0_per_1000": 24.806
+    },
+    {
+     "batter": 666181,
+     "pitches": 3935,
+     "tau": 0.2091,
+     "tau_odd": 0.2064,
+     "tau_even": 0.213,
+     "gain_at_best_vs_0_per_1000": 33.7373
+    },
+    {
+     "batter": 666182,
+     "pitches": 5675,
+     "tau": 0.2422,
+     "tau_odd": 0.2343,
+     "tau_even": 0.252,
+     "gain_at_best_vs_0_per_1000": 61.1051
+    },
+    {
+     "batter": 666185,
+     "pitches": 3144,
+     "tau": 0.1954,
+     "tau_odd": 0.1815,
+     "tau_even": 0.2061,
+     "gain_at_best_vs_0_per_1000": 28.7339
+    },
+    {
+     "batter": 666310,
+     "pitches": 4290,
+     "tau": 0.219,
+     "tau_odd": 0.2227,
+     "tau_even": 0.2148,
+     "gain_at_best_vs_0_per_1000": 35.4015
+    },
+    {
+     "batter": 666397,
+     "pitches": 3810,
+     "tau": 0.2152,
+     "tau_odd": 0.2116,
+     "tau_even": 0.22,
+     "gain_at_best_vs_0_per_1000": 39.7845
+    },
+    {
+     "batter": 666624,
+     "pitches": 5152,
+     "tau": 0.2407,
+     "tau_odd": 0.2414,
+     "tau_even": 0.2399,
+     "gain_at_best_vs_0_per_1000": 60.3083
+    },
+    {
+     "batter": 666969,
+     "pitches": 7214,
+     "tau": 0.1891,
+     "tau_odd": 0.1724,
+     "tau_even": 0.2015,
+     "gain_at_best_vs_0_per_1000": 20.4698
+    },
+    {
+     "batter": 666971,
+     "pitches": 6258,
+     "tau": 0.163,
+     "tau_odd": 0.1566,
+     "tau_even": 0.1686,
+     "gain_at_best_vs_0_per_1000": 9.71
+    },
+    {
+     "batter": 667670,
+     "pitches": 7074,
+     "tau": 0.2296,
+     "tau_odd": 0.2383,
+     "tau_even": 0.2212,
+     "gain_at_best_vs_0_per_1000": 51.2973
+    },
+    {
+     "batter": 668227,
+     "pitches": 8238,
+     "tau": 0.1779,
+     "tau_odd": 0.1709,
+     "tau_even": 0.1846,
+     "gain_at_best_vs_0_per_1000": 14.725
+    },
+    {
+     "batter": 668670,
+     "pitches": 3227,
+     "tau": 0.2131,
+     "tau_odd": 0.2148,
+     "tau_even": 0.211,
+     "gain_at_best_vs_0_per_1000": 38.4216
+    },
+    {
+     "batter": 668709,
+     "pitches": 4988,
+     "tau": 0.2039,
+     "tau_odd": 0.2034,
+     "tau_even": 0.2046,
+     "gain_at_best_vs_0_per_1000": 38.5343
+    },
+    {
+     "batter": 668715,
+     "pitches": 7568,
+     "tau": 0.2103,
+     "tau_odd": 0.204,
+     "tau_even": 0.2157,
+     "gain_at_best_vs_0_per_1000": 41.2072
+    },
+    {
+     "batter": 668804,
+     "pitches": 7731,
+     "tau": 0.1999,
+     "tau_odd": 0.1995,
+     "tau_even": 0.2003,
+     "gain_at_best_vs_0_per_1000": 35.2893
+    },
+    {
+     "batter": 668901,
+     "pitches": 4346,
+     "tau": 0.2476,
+     "tau_odd": 0.252,
+     "tau_even": 0.2438,
+     "gain_at_best_vs_0_per_1000": 54.7313
+    },
+    {
+     "batter": 668904,
+     "pitches": 3642,
+     "tau": 0.2208,
+     "tau_odd": 0.2121,
+     "tau_even": 0.2294,
+     "gain_at_best_vs_0_per_1000": 35.3489
+    },
+    {
+     "batter": 668930,
+     "pitches": 6963,
+     "tau": 0.2268,
+     "tau_odd": 0.2343,
+     "tau_even": 0.2187,
+     "gain_at_best_vs_0_per_1000": 43.0413
+    },
+    {
+     "batter": 668939,
+     "pitches": 6968,
+     "tau": 0.2188,
+     "tau_odd": 0.2155,
+     "tau_even": 0.2233,
+     "gain_at_best_vs_0_per_1000": 37.7771
+    },
+    {
+     "batter": 668942,
+     "pitches": 4014,
+     "tau": 0.2149,
+     "tau_odd": 0.2111,
+     "tau_even": 0.2176,
+     "gain_at_best_vs_0_per_1000": 35.1091
+    },
+    {
+     "batter": 669004,
+     "pitches": 4525,
+     "tau": 0.2163,
+     "tau_odd": 0.2107,
+     "tau_even": 0.2227,
+     "gain_at_best_vs_0_per_1000": 45.1631
+    },
+    {
+     "batter": 669016,
+     "pitches": 5608,
+     "tau": 0.2368,
+     "tau_odd": 0.2399,
+     "tau_even": 0.2337,
+     "gain_at_best_vs_0_per_1000": 52.0443
+    },
+    {
+     "batter": 669065,
+     "pitches": 2627,
+     "tau": 0.207,
+     "tau_odd": 0.2072,
+     "tau_even": 0.2068,
+     "gain_at_best_vs_0_per_1000": 43.0276
+    },
+    {
+     "batter": 669127,
+     "pitches": 5800,
+     "tau": 0.2411,
+     "tau_odd": 0.241,
+     "tau_even": 0.2412,
+     "gain_at_best_vs_0_per_1000": 54.3119
+    },
+    {
+     "batter": 669221,
+     "pitches": 4132,
+     "tau": 0.2136,
+     "tau_odd": 0.2107,
+     "tau_even": 0.2155,
+     "gain_at_best_vs_0_per_1000": 37.405
+    },
+    {
+     "batter": 669224,
+     "pitches": 3708,
+     "tau": 0.2218,
+     "tau_odd": 0.2082,
+     "tau_even": 0.2357,
+     "gain_at_best_vs_0_per_1000": 48.7953
+    },
+    {
+     "batter": 669242,
+     "pitches": 3692,
+     "tau": 0.2535,
+     "tau_odd": 0.2486,
+     "tau_even": 0.2592,
+     "gain_at_best_vs_0_per_1000": 69.5074
+    },
+    {
+     "batter": 669257,
+     "pitches": 6425,
+     "tau": 0.2207,
+     "tau_odd": 0.221,
+     "tau_even": 0.2201,
+     "gain_at_best_vs_0_per_1000": 42.1717
+    },
+    {
+     "batter": 669261,
+     "pitches": 4177,
+     "tau": 0.2043,
+     "tau_odd": 0.2112,
+     "tau_even": 0.1983,
+     "gain_at_best_vs_0_per_1000": 32.5177
+    },
+    {
+     "batter": 669289,
+     "pitches": 3749,
+     "tau": 0.1894,
+     "tau_odd": 0.1778,
+     "tau_even": 0.1956,
+     "gain_at_best_vs_0_per_1000": 22.4142
+    },
+    {
+     "batter": 669357,
+     "pitches": 5117,
+     "tau": 0.2197,
+     "tau_odd": 0.2115,
+     "tau_even": 0.225,
+     "gain_at_best_vs_0_per_1000": 44.1759
+    },
+    {
+     "batter": 669364,
+     "pitches": 3679,
+     "tau": 0.2041,
+     "tau_odd": 0.211,
+     "tau_even": 0.1984,
+     "gain_at_best_vs_0_per_1000": 39.9333
+    },
+    {
+     "batter": 669394,
+     "pitches": 5414,
+     "tau": 0.2552,
+     "tau_odd": 0.2651,
+     "tau_even": 0.246,
+     "gain_at_best_vs_0_per_1000": 57.0482
+    },
+    {
+     "batter": 669397,
+     "pitches": 3057,
+     "tau": 0.217,
+     "tau_odd": 0.2145,
+     "tau_even": 0.219,
+     "gain_at_best_vs_0_per_1000": 44.746
+    },
+    {
+     "batter": 669477,
+     "pitches": 2651,
+     "tau": 0.216,
+     "tau_odd": 0.2087,
+     "tau_even": 0.2228,
+     "gain_at_best_vs_0_per_1000": 30.3385
+    },
+    {
+     "batter": 669701,
+     "pitches": 5506,
+     "tau": 0.1964,
+     "tau_odd": 0.2054,
+     "tau_even": 0.189,
+     "gain_at_best_vs_0_per_1000": 27.0255
+    },
+    {
+     "batter": 669707,
+     "pitches": 4018,
+     "tau": 0.215,
+     "tau_odd": 0.2185,
+     "tau_even": 0.2122,
+     "gain_at_best_vs_0_per_1000": 34.702
+    },
+    {
+     "batter": 669720,
+     "pitches": 4509,
+     "tau": 0.2479,
+     "tau_odd": 0.2474,
+     "tau_even": 0.2485,
+     "gain_at_best_vs_0_per_1000": 48.9761
+    },
+    {
+     "batter": 669743,
+     "pitches": 3570,
+     "tau": 0.1738,
+     "tau_odd": 0.1769,
+     "tau_even": 0.1713,
+     "gain_at_best_vs_0_per_1000": 21.1221
+    },
+    {
+     "batter": 669911,
+     "pitches": 3843,
+     "tau": 0.2754,
+     "tau_odd": 0.3,
+     "tau_even": 0.2505,
+     "gain_at_best_vs_0_per_1000": 53.6028
+    },
+    {
+     "batter": 670032,
+     "pitches": 2719,
+     "tau": 0.1899,
+     "tau_odd": 0.1842,
+     "tau_even": 0.1932,
+     "gain_at_best_vs_0_per_1000": 24.9489
+    },
+    {
+     "batter": 670042,
+     "pitches": 4018,
+     "tau": 0.2242,
+     "tau_odd": 0.2261,
+     "tau_even": 0.2226,
+     "gain_at_best_vs_0_per_1000": 51.1754
+    },
+    {
+     "batter": 670242,
+     "pitches": 3578,
+     "tau": 0.2182,
+     "tau_odd": 0.2249,
+     "tau_even": 0.2102,
+     "gain_at_best_vs_0_per_1000": 42.8162
+    },
+    {
+     "batter": 670541,
+     "pitches": 4938,
+     "tau": 0.2348,
+     "tau_odd": 0.2402,
+     "tau_even": 0.2297,
+     "gain_at_best_vs_0_per_1000": 41.7729
+    },
+    {
+     "batter": 670623,
+     "pitches": 7096,
+     "tau": 0.1942,
+     "tau_odd": 0.1939,
+     "tau_even": 0.1947,
+     "gain_at_best_vs_0_per_1000": 27.9878
+    },
+    {
+     "batter": 670764,
+     "pitches": 3686,
+     "tau": 0.2183,
+     "tau_odd": 0.2248,
+     "tau_even": 0.212,
+     "gain_at_best_vs_0_per_1000": 57.7459
+    },
+    {
+     "batter": 670770,
+     "pitches": 6009,
+     "tau": 0.2154,
+     "tau_odd": 0.2161,
+     "tau_even": 0.2146,
+     "gain_at_best_vs_0_per_1000": 42.6108
+    },
+    {
+     "batter": 671056,
+     "pitches": 3021,
+     "tau": 0.219,
+     "tau_odd": 0.2255,
+     "tau_even": 0.2122,
+     "gain_at_best_vs_0_per_1000": 42.6521
+    },
+    {
+     "batter": 671213,
+     "pitches": 3482,
+     "tau": 0.2061,
+     "tau_odd": 0.2023,
+     "tau_even": 0.2107,
+     "gain_at_best_vs_0_per_1000": 31.5915
+    },
+    {
+     "batter": 671218,
+     "pitches": 4876,
+     "tau": 0.2213,
+     "tau_odd": 0.2259,
+     "tau_even": 0.2173,
+     "gain_at_best_vs_0_per_1000": 44.6023
+    },
+    {
+     "batter": 671277,
+     "pitches": 5394,
+     "tau": 0.2042,
+     "tau_odd": 0.2151,
+     "tau_even": 0.1961,
+     "gain_at_best_vs_0_per_1000": 17.8374
+    },
+    {
+     "batter": 671289,
+     "pitches": 3588,
+     "tau": 0.2091,
+     "tau_odd": 0.2174,
+     "tau_even": 0.2019,
+     "gain_at_best_vs_0_per_1000": 36.1354
+    },
+    {
+     "batter": 671732,
+     "pitches": 4816,
+     "tau": 0.248,
+     "tau_odd": 0.2474,
+     "tau_even": 0.2486,
+     "gain_at_best_vs_0_per_1000": 62.399
+    },
+    {
+     "batter": 671739,
+     "pitches": 5761,
+     "tau": 0.2559,
+     "tau_odd": 0.2565,
+     "tau_even": 0.2551,
+     "gain_at_best_vs_0_per_1000": 61.7099
+    },
+    {
+     "batter": 672275,
+     "pitches": 4885,
+     "tau": 0.2086,
+     "tau_odd": 0.2031,
+     "tau_even": 0.2141,
+     "gain_at_best_vs_0_per_1000": 32.2321
+    },
+    {
+     "batter": 672284,
+     "pitches": 3657,
+     "tau": 0.2422,
+     "tau_odd": 0.2409,
+     "tau_even": 0.2434,
+     "gain_at_best_vs_0_per_1000": 55.5391
+    },
+    {
+     "batter": 672356,
+     "pitches": 3686,
+     "tau": 0.218,
+     "tau_odd": 0.2087,
+     "tau_even": 0.2276,
+     "gain_at_best_vs_0_per_1000": 43.6343
+    },
+    {
+     "batter": 672386,
+     "pitches": 5174,
+     "tau": 0.1995,
+     "tau_odd": 0.2009,
+     "tau_even": 0.1979,
+     "gain_at_best_vs_0_per_1000": 31.1645
+    },
+    {
+     "batter": 672515,
+     "pitches": 4378,
+     "tau": 0.1893,
+     "tau_odd": 0.176,
+     "tau_even": 0.2027,
+     "gain_at_best_vs_0_per_1000": 25.0071
+    },
+    {
+     "batter": 672580,
+     "pitches": 6826,
+     "tau": 0.209,
+     "tau_odd": 0.2001,
+     "tau_even": 0.2184,
+     "gain_at_best_vs_0_per_1000": 33.9063
+    },
+    {
+     "batter": 672640,
+     "pitches": 3655,
+     "tau": 0.2076,
+     "tau_odd": 0.2149,
+     "tau_even": 0.1987,
+     "gain_at_best_vs_0_per_1000": 37.4035
+    },
+    {
+     "batter": 672695,
+     "pitches": 6539,
+     "tau": 0.2066,
+     "tau_odd": 0.2113,
+     "tau_even": 0.2016,
+     "gain_at_best_vs_0_per_1000": 34.9106
+    },
+    {
+     "batter": 672761,
+     "pitches": 3255,
+     "tau": 0.2438,
+     "tau_odd": 0.2333,
+     "tau_even": 0.255,
+     "gain_at_best_vs_0_per_1000": 49.8114
+    },
+    {
+     "batter": 672820,
+     "pitches": 4045,
+     "tau": 0.2715,
+     "tau_odd": 0.3,
+     "tau_even": 0.2606,
+     "gain_at_best_vs_0_per_1000": 52.4872
+    },
+    {
+     "batter": 673237,
+     "pitches": 5263,
+     "tau": 0.2388,
+     "tau_odd": 0.2402,
+     "tau_even": 0.2375,
+     "gain_at_best_vs_0_per_1000": 49.97
+    },
+    {
+     "batter": 673357,
+     "pitches": 5314,
+     "tau": 0.206,
+     "tau_odd": 0.2,
+     "tau_even": 0.2129,
+     "gain_at_best_vs_0_per_1000": 26.2764
+    },
+    {
+     "batter": 673490,
+     "pitches": 5454,
+     "tau": 0.2082,
+     "tau_odd": 0.2078,
+     "tau_even": 0.2085,
+     "gain_at_best_vs_0_per_1000": 37.2153
+    },
+    {
+     "batter": 673548,
+     "pitches": 7651,
+     "tau": 0.1911,
+     "tau_odd": 0.1901,
+     "tau_even": 0.192,
+     "gain_at_best_vs_0_per_1000": 24.4315
+    },
+    {
+     "batter": 673962,
+     "pitches": 4579,
+     "tau": 0.255,
+     "tau_odd": 0.2433,
+     "tau_even": 0.2655,
+     "gain_at_best_vs_0_per_1000": 68.3637
+    },
+    {
+     "batter": 676059,
+     "pitches": 3783,
+     "tau": 0.2281,
+     "tau_odd": 0.2273,
+     "tau_even": 0.2288,
+     "gain_at_best_vs_0_per_1000": 51.6388
+    },
+    {
+     "batter": 676116,
+     "pitches": 2821,
+     "tau": 0.2137,
+     "tau_odd": 0.22,
+     "tau_even": 0.206,
+     "gain_at_best_vs_0_per_1000": 51.6494
+    },
+    {
+     "batter": 676391,
+     "pitches": 3438,
+     "tau": 0.2305,
+     "tau_odd": 0.2267,
+     "tau_even": 0.2348,
+     "gain_at_best_vs_0_per_1000": 37.4732
+    },
+    {
+     "batter": 676475,
+     "pitches": 5252,
+     "tau": 0.2345,
+     "tau_odd": 0.2282,
+     "tau_even": 0.2419,
+     "gain_at_best_vs_0_per_1000": 49.5631
+    },
+    {
+     "batter": 676609,
+     "pitches": 4454,
+     "tau": 0.2591,
+     "tau_odd": 0.2544,
+     "tau_even": 0.2639,
+     "gain_at_best_vs_0_per_1000": 46.709
+    },
+    {
+     "batter": 676694,
+     "pitches": 4419,
+     "tau": 0.2155,
+     "tau_odd": 0.2177,
+     "tau_even": 0.2133,
+     "gain_at_best_vs_0_per_1000": 37.9738
+    },
+    {
+     "batter": 676801,
+     "pitches": 3201,
+     "tau": 0.2009,
+     "tau_odd": 0.1958,
+     "tau_even": 0.207,
+     "gain_at_best_vs_0_per_1000": 32.6842
+    },
+    {
+     "batter": 676914,
+     "pitches": 3535,
+     "tau": 0.2204,
+     "tau_odd": 0.2222,
+     "tau_even": 0.2184,
+     "gain_at_best_vs_0_per_1000": 44.6223
+    },
+    {
+     "batter": 677587,
+     "pitches": 3361,
+     "tau": 0.2429,
+     "tau_odd": 0.2423,
+     "tau_even": 0.2434,
+     "gain_at_best_vs_0_per_1000": 58.504
+    },
+    {
+     "batter": 677594,
+     "pitches": 7355,
+     "tau": 0.2262,
+     "tau_odd": 0.2289,
+     "tau_even": 0.2237,
+     "gain_at_best_vs_0_per_1000": 45.1996
+    },
+    {
+     "batter": 677649,
+     "pitches": 3429,
+     "tau": 0.2681,
+     "tau_odd": 0.2731,
+     "tau_even": 0.2641,
+     "gain_at_best_vs_0_per_1000": 68.359
+    },
+    {
+     "batter": 677800,
+     "pitches": 3744,
+     "tau": 0.208,
+     "tau_odd": 0.2098,
+     "tau_even": 0.2056,
+     "gain_at_best_vs_0_per_1000": 41.5357
+    },
+    {
+     "batter": 677950,
+     "pitches": 3504,
+     "tau": 0.2417,
+     "tau_odd": 0.2347,
+     "tau_even": 0.249,
+     "gain_at_best_vs_0_per_1000": 61.6729
+    },
+    {
+     "batter": 677951,
+     "pitches": 7783,
+     "tau": 0.2244,
+     "tau_odd": 0.2209,
+     "tau_even": 0.2281,
+     "gain_at_best_vs_0_per_1000": 44.7192
+    },
+    {
+     "batter": 678009,
+     "pitches": 2647,
+     "tau": 0.2309,
+     "tau_odd": 0.232,
+     "tau_even": 0.2294,
+     "gain_at_best_vs_0_per_1000": 51.0028
+    },
+    {
+     "batter": 678246,
+     "pitches": 4517,
+     "tau": 0.1864,
+     "tau_odd": 0.1808,
+     "tau_even": 0.1911,
+     "gain_at_best_vs_0_per_1000": 33.3001
+    },
+    {
+     "batter": 678662,
+     "pitches": 6233,
+     "tau": 0.257,
+     "tau_odd": 0.2547,
+     "tau_even": 0.2597,
+     "gain_at_best_vs_0_per_1000": 61.1137
+    },
+    {
+     "batter": 678882,
+     "pitches": 4492,
+     "tau": 0.2582,
+     "tau_odd": 0.2606,
+     "tau_even": 0.2553,
+     "gain_at_best_vs_0_per_1000": 68.0249
+    },
+    {
+     "batter": 679529,
+     "pitches": 6969,
+     "tau": 0.1989,
+     "tau_odd": 0.1955,
+     "tau_even": 0.2025,
+     "gain_at_best_vs_0_per_1000": 33.1322
+    },
+    {
+     "batter": 680474,
+     "pitches": 2627,
+     "tau": 0.2041,
+     "tau_odd": 0.2086,
+     "tau_even": 0.1995,
+     "gain_at_best_vs_0_per_1000": 42.1728
+    },
+    {
+     "batter": 680574,
+     "pitches": 4012,
+     "tau": 0.2335,
+     "tau_odd": 0.2405,
+     "tau_even": 0.226,
+     "gain_at_best_vs_0_per_1000": 52.3824
+    },
+    {
+     "batter": 680718,
+     "pitches": 2794,
+     "tau": 0.2271,
+     "tau_odd": 0.1943,
+     "tau_even": 0.2386,
+     "gain_at_best_vs_0_per_1000": 21.5555
+    },
+    {
+     "batter": 680757,
+     "pitches": 7739,
+     "tau": 0.1977,
+     "tau_odd": 0.1981,
+     "tau_even": 0.1972,
+     "gain_at_best_vs_0_per_1000": 28.6643
+    },
+    {
+     "batter": 680776,
+     "pitches": 6801,
+     "tau": 0.2217,
+     "tau_odd": 0.219,
+     "tau_even": 0.2239,
+     "gain_at_best_vs_0_per_1000": 44.0465
+    },
+    {
+     "batter": 680777,
+     "pitches": 4954,
+     "tau": 0.2558,
+     "tau_odd": 0.2518,
+     "tau_even": 0.2608,
+     "gain_at_best_vs_0_per_1000": 52.4583
+    },
+    {
+     "batter": 680779,
+     "pitches": 2594,
+     "tau": 0.188,
+     "tau_odd": 0.1928,
+     "tau_even": 0.1744,
+     "gain_at_best_vs_0_per_1000": 16.7946
+    },
+    {
+     "batter": 680869,
+     "pitches": 3602,
+     "tau": 0.2041,
+     "tau_odd": 0.2027,
+     "tau_even": 0.2059,
+     "gain_at_best_vs_0_per_1000": 40.287
+    },
+    {
+     "batter": 680977,
+     "pitches": 5777,
+     "tau": 0.2225,
+     "tau_odd": 0.2253,
+     "tau_even": 0.2194,
+     "gain_at_best_vs_0_per_1000": 45.032
+    },
+    {
+     "batter": 681082,
+     "pitches": 7386,
+     "tau": 0.1741,
+     "tau_odd": 0.1686,
+     "tau_even": 0.1798,
+     "gain_at_best_vs_0_per_1000": 14.4771
+    },
+    {
+     "batter": 681297,
+     "pitches": 4124,
+     "tau": 0.2334,
+     "tau_odd": 0.2426,
+     "tau_even": 0.225,
+     "gain_at_best_vs_0_per_1000": 47.8723
+    },
+    {
+     "batter": 681351,
+     "pitches": 4471,
+     "tau": 0.2218,
+     "tau_odd": 0.2271,
+     "tau_even": 0.2168,
+     "gain_at_best_vs_0_per_1000": 39.9447
+    },
+    {
+     "batter": 681481,
+     "pitches": 4582,
+     "tau": 0.2221,
+     "tau_odd": 0.2229,
+     "tau_even": 0.2212,
+     "gain_at_best_vs_0_per_1000": 43.8537
+    },
+    {
+     "batter": 681546,
+     "pitches": 3562,
+     "tau": 0.228,
+     "tau_odd": 0.2276,
+     "tau_even": 0.2283,
+     "gain_at_best_vs_0_per_1000": 59.4048
+    },
+    {
+     "batter": 681624,
+     "pitches": 4053,
+     "tau": 0.2212,
+     "tau_odd": 0.2202,
+     "tau_even": 0.2223,
+     "gain_at_best_vs_0_per_1000": 45.8727
+    },
+    {
+     "batter": 681807,
+     "pitches": 2541,
+     "tau": 0.243,
+     "tau_odd": 0.2467,
+     "tau_even": 0.24,
+     "gain_at_best_vs_0_per_1000": 53.0422
+    },
+    {
+     "batter": 682177,
+     "pitches": 2557,
+     "tau": 0.1901,
+     "tau_odd": 0.1914,
+     "tau_even": 0.1884,
+     "gain_at_best_vs_0_per_1000": 25.9577
+    },
+    {
+     "batter": 682622,
+     "pitches": 2573,
+     "tau": 0.2698,
+     "tau_odd": 0.2671,
+     "tau_even": 0.2748,
+     "gain_at_best_vs_0_per_1000": 75.8787
+    },
+    {
+     "batter": 682626,
+     "pitches": 4057,
+     "tau": 0.2341,
+     "tau_odd": 0.2307,
+     "tau_even": 0.2379,
+     "gain_at_best_vs_0_per_1000": 45.4622
+    },
+    {
+     "batter": 682829,
+     "pitches": 7135,
+     "tau": 0.3,
+     "tau_odd": 0.3,
+     "tau_even": 0.3,
+     "gain_at_best_vs_0_per_1000": 83.627
+    },
+    {
+     "batter": 682928,
+     "pitches": 6698,
+     "tau": 0.2627,
+     "tau_odd": 0.2629,
+     "tau_even": 0.2624,
+     "gain_at_best_vs_0_per_1000": 70.9312
+    },
+    {
+     "batter": 682985,
+     "pitches": 6809,
+     "tau": 0.2189,
+     "tau_odd": 0.2166,
+     "tau_even": 0.2215,
+     "gain_at_best_vs_0_per_1000": 46.7964
+    },
+    {
+     "batter": 682998,
+     "pitches": 7498,
+     "tau": 0.2372,
+     "tau_odd": 0.2387,
+     "tau_even": 0.2355,
+     "gain_at_best_vs_0_per_1000": 56.75
+    },
+    {
+     "batter": 683002,
+     "pitches": 7780,
+     "tau": 0.2174,
+     "tau_odd": 0.2226,
+     "tau_even": 0.2126,
+     "gain_at_best_vs_0_per_1000": 39.8117
+    },
+    {
+     "batter": 683011,
+     "pitches": 7471,
+     "tau": 0.2067,
+     "tau_odd": 0.2029,
+     "tau_even": 0.2107,
+     "gain_at_best_vs_0_per_1000": 39.5108
+    },
+    {
+     "batter": 683146,
+     "pitches": 3921,
+     "tau": 0.222,
+     "tau_odd": 0.2298,
+     "tau_even": 0.2123,
+     "gain_at_best_vs_0_per_1000": 37.2803
+    },
+    {
+     "batter": 683734,
+     "pitches": 6341,
+     "tau": 0.2262,
+     "tau_odd": 0.2252,
+     "tau_even": 0.2271,
+     "gain_at_best_vs_0_per_1000": 36.6934
+    },
+    {
+     "batter": 683737,
+     "pitches": 5000,
+     "tau": 0.2305,
+     "tau_odd": 0.2273,
+     "tau_even": 0.2333,
+     "gain_at_best_vs_0_per_1000": 55.8749
+    },
+    {
+     "batter": 686217,
+     "pitches": 5197,
+     "tau": 0.2287,
+     "tau_odd": 0.2248,
+     "tau_even": 0.2347,
+     "gain_at_best_vs_0_per_1000": 39.6432
+    },
+    {
+     "batter": 686469,
+     "pitches": 5682,
+     "tau": 0.2319,
+     "tau_odd": 0.2255,
+     "tau_even": 0.2391,
+     "gain_at_best_vs_0_per_1000": 37.293
+    },
+    {
+     "batter": 686668,
+     "pitches": 5656,
+     "tau": 0.2367,
+     "tau_odd": 0.2363,
+     "tau_even": 0.2371,
+     "gain_at_best_vs_0_per_1000": 48.7896
+    },
+    {
+     "batter": 686681,
+     "pitches": 4157,
+     "tau": 0.2251,
+     "tau_odd": 0.2269,
+     "tau_even": 0.2234,
+     "gain_at_best_vs_0_per_1000": 37.5519
+    },
+    {
+     "batter": 686797,
+     "pitches": 2619,
+     "tau": 0.2512,
+     "tau_odd": 0.2571,
+     "tau_even": 0.2419,
+     "gain_at_best_vs_0_per_1000": 48.9612
+    },
+    {
+     "batter": 686823,
+     "pitches": 2862,
+     "tau": 0.2294,
+     "tau_odd": 0.2302,
+     "tau_even": 0.2283,
+     "gain_at_best_vs_0_per_1000": 46.3478
+    },
+    {
+     "batter": 687263,
+     "pitches": 5662,
+     "tau": 0.2077,
+     "tau_odd": 0.1939,
+     "tau_even": 0.224,
+     "gain_at_best_vs_0_per_1000": 25.35
+    },
+    {
+     "batter": 687401,
+     "pitches": 4059,
+     "tau": 0.2654,
+     "tau_odd": 0.2676,
+     "tau_even": 0.2625,
+     "gain_at_best_vs_0_per_1000": 68.6764
+    },
+    {
+     "batter": 687462,
+     "pitches": 3433,
+     "tau": 0.22,
+     "tau_odd": 0.221,
+     "tau_even": 0.2188,
+     "gain_at_best_vs_0_per_1000": 49.5422
+    },
+    {
+     "batter": 687597,
+     "pitches": 2977,
+     "tau": 0.2328,
+     "tau_odd": 0.2321,
+     "tau_even": 0.2336,
+     "gain_at_best_vs_0_per_1000": 45.9274
+    },
+    {
+     "batter": 690993,
+     "pitches": 3827,
+     "tau": 0.2259,
+     "tau_odd": 0.2218,
+     "tau_even": 0.232,
+     "gain_at_best_vs_0_per_1000": 46.0833
+    },
+    {
+     "batter": 691016,
+     "pitches": 3494,
+     "tau": 0.2199,
+     "tau_odd": 0.2258,
+     "tau_even": 0.2133,
+     "gain_at_best_vs_0_per_1000": 36.8612
+    },
+    {
+     "batter": 691023,
+     "pitches": 3855,
+     "tau": 0.2688,
+     "tau_odd": 0.252,
+     "tau_even": 0.2765,
+     "gain_at_best_vs_0_per_1000": 38.8301
+    },
+    {
+     "batter": 691026,
+     "pitches": 5300,
+     "tau": 0.221,
+     "tau_odd": 0.2258,
+     "tau_even": 0.2152,
+     "gain_at_best_vs_0_per_1000": 31.7314
+    },
+    {
+     "batter": 691406,
+     "pitches": 3251,
+     "tau": 0.2522,
+     "tau_odd": 0.2512,
+     "tau_even": 0.2531,
+     "gain_at_best_vs_0_per_1000": 66.9109
+    },
+    {
+     "batter": 691718,
+     "pitches": 3730,
+     "tau": 0.2049,
+     "tau_odd": 0.21,
+     "tau_even": 0.1982,
+     "gain_at_best_vs_0_per_1000": 28.5573
+    },
+    {
+     "batter": 693304,
+     "pitches": 3245,
+     "tau": 0.2205,
+     "tau_odd": 0.2196,
+     "tau_even": 0.2221,
+     "gain_at_best_vs_0_per_1000": 45.6011
+    },
+    {
+     "batter": 694192,
+     "pitches": 4192,
+     "tau": 0.2503,
+     "tau_odd": 0.2545,
+     "tau_even": 0.2467,
+     "gain_at_best_vs_0_per_1000": 56.931
+    },
+    {
+     "batter": 694384,
+     "pitches": 4983,
+     "tau": 0.2253,
+     "tau_odd": 0.2229,
+     "tau_even": 0.2278,
+     "gain_at_best_vs_0_per_1000": 50.8615
+    },
+    {
+     "batter": 694671,
+     "pitches": 4571,
+     "tau": 0.2283,
+     "tau_odd": 0.2248,
+     "tau_even": 0.2314,
+     "gain_at_best_vs_0_per_1000": 52.1073
+    },
+    {
+     "batter": 695578,
+     "pitches": 4273,
+     "tau": 0.2558,
+     "tau_odd": 0.2432,
+     "tau_even": 0.2638,
+     "gain_at_best_vs_0_per_1000": 45.6027
+    },
+    {
+     "batter": 696100,
+     "pitches": 3260,
+     "tau": 0.2617,
+     "tau_odd": 0.268,
+     "tau_even": 0.2529,
+     "gain_at_best_vs_0_per_1000": 58.8186
+    },
+    {
+     "batter": 696285,
+     "pitches": 3676,
+     "tau": 0.2252,
+     "tau_odd": 0.2294,
+     "tau_even": 0.2205,
+     "gain_at_best_vs_0_per_1000": 42.5939
+    },
+    {
+     "batter": 700250,
+     "pitches": 2755,
+     "tau": 0.2036,
+     "tau_odd": 0.2057,
+     "tau_even": 0.2022,
+     "gain_at_best_vs_0_per_1000": 31.5187
+    },
+    {
+     "batter": 700932,
+     "pitches": 2638,
+     "tau": 0.2248,
+     "tau_odd": 0.2185,
+     "tau_even": 0.232,
+     "gain_at_best_vs_0_per_1000": 39.8633
+    },
+    {
+     "batter": 701538,
+     "pitches": 3888,
+     "tau": 0.2127,
+     "tau_odd": 0.2105,
+     "tau_even": 0.2147,
+     "gain_at_best_vs_0_per_1000": 39.9193
+    },
+    {
+     "batter": 702616,
+     "pitches": 3243,
+     "tau": 0.2239,
+     "tau_odd": 0.2298,
+     "tau_even": 0.2192,
+     "gain_at_best_vs_0_per_1000": 57.2052
+    },
+    {
+     "batter": 807799,
+     "pitches": 4475,
+     "tau": 0.2177,
+     "tau_odd": 0.2208,
+     "tau_even": 0.2146,
+     "gain_at_best_vs_0_per_1000": 37.1214
+    },
+    {
+     "batter": 808982,
+     "pitches": 2901,
+     "tau": 0.2028,
+     "tau_odd": 0.2017,
+     "tau_even": 0.2041,
+     "gain_at_best_vs_0_per_1000": 36.1297
+    }
+   ],
+   "validation": {
+    "n": 347,
+    "bat_speed": {
+     "spearman": 0.1316,
+     "p": 0.014144014364571904,
+     "n": 347
+    },
+    "swing_length": {
+     "spearman": 0.0585,
+     "p": 0.2770616011176904,
+     "n": 347
+    }
+   }
+  },
+  "bat_tracking_fetch": {
+   "2024": {
+    "url": "https://baseballsavant.mlb.com/leaderboard/bat-tracking?type=batter&seasonStart=",
+    "rows": 503,
+    "columns": [
+     "id",
+     "name",
+     "swings_competitive",
+     "percent_swings_competitive",
+     "contact",
+     "avg_bat_speed",
+     "hard_swing_rate",
+     "squared_up_per_bat_contact",
+     "squared_up_per_swing",
+     "blast_per_bat_contact",
+     "blast_per_swing",
+     "swing_length",
+     "swords",
+     "batter_run_value",
+     "whiffs",
+     "whiff_per_swing",
+     "batted_ball_events",
+     "batted_ball_event_per_swing"
+    ]
+   },
+   "2025": {
+    "url": "https://baseballsavant.mlb.com/leaderboard/bat-tracking?type=batter&seasonStart=",
+    "rows": 524,
+    "columns": [
+     "id",
+     "name",
+     "swings_competitive",
+     "percent_swings_competitive",
+     "contact",
+     "avg_bat_speed",
+     "hard_swing_rate",
+     "squared_up_per_bat_contact",
+     "squared_up_per_swing",
+     "blast_per_bat_contact",
+     "blast_per_swing",
+     "swing_length",
+     "swords",
+     "batter_run_value",
+     "whiffs",
+     "whiff_per_swing",
+     "batted_ball_events",
+     "batted_ball_event_per_swing"
+    ]
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-08T06:08:41.065992+00:00",
+ "seconds": 1040.4
+}
