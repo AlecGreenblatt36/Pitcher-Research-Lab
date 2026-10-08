@@ -153,7 +153,7 @@ def gbm_experiment(features, locked_columns, extras, y, partitions, parts, confi
 # Linear weights (runs per plate appearance outcome, average out = about -0.27) for residual summaries.
 RV_WEIGHTS = np.array([-0.26, -0.28, 0.32, 0.47, 0.80, 1.40, 0.45])
 # Experiments that also score team offsets and residual bins on every variant's predictions.
-TEAM_EVAL = {'aging', 'stage2', 'role'}
+TEAM_EVAL = {'aging', 'stage2', 'role', 'window'}
 TEAM_GRID = [(k, hl, sides) for k in (2000.0, 4000.0, 8000.0) for hl in (90.0, 180.0, None) for sides in (('fld',), ('bat', 'fld'))]
 
 
@@ -399,6 +399,8 @@ SETS = {
     # role: the production model's residuals by pitcher role (starter or reliever), times through the order and inning bucket,
     # after the production context offsets (ROLE-01)
     'role': {'v2': {'xvalue': True, 'recent_days': 30}},
+    # window: the physics features limited to the last 548 days (RETRAIN-03) against all history; team residual rows for both
+    'window': {'v2': {'xvalue': True, 'recent_days': 30}, 'w548': {'xvalue': True, 'recent_days': 30, 'window_days': 548}},
     'defense': {'v2': {'xvalue': True, 'recent_days': 30}, 'defense': {'xvalue': True, 'recent_days': 30, 'defense': True},
                 'defense_k200': {'xvalue': True, 'recent_days': 30, 'defense': True, 'k_def': 200.0},
                 'defense_730': {'xvalue': True, 'recent_days': 30, 'defense': True, 'defense_days': 730}},
