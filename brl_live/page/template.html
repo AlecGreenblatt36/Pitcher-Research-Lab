@@ -1951,7 +1951,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   /* Whole-number projected lines: the average over all simulated games, rounded. */
   function projectedLines(f, box) {
     if (!box || !box.teams) return "";
-    var h = '<section class="sec wide"><h2>Projected lines</h2><p class="lede">What the model expects from each hitter and starter tonight, averaged over all ' + Number(box.n_simulations || 10000).toLocaleString() + " simulated games and rounded to whole numbers. Hit and HR are each hitter's chance of at least one.</p><div class=\"lineups\">";
+    var h = '<section class="sec wide"><h2>Projected lines</h2><p class="lede">What the model expects from each hitter and starter tonight, averaged over all ' + Number(box.n_simulations || 10000).toLocaleString() + " simulated games and rounded to whole numbers. Hit and HR are each hitter's chance of at least one in his own plate appearances: the simulated lineup spot bats all game, so each chance allows for how often a starter in that spot gives way to a pinch hitter or a substitute (from 2% of the leadoff spot's plate appearances to 7% of the ninth's).</p><div class=\"lineups\">";
     ["away", "home"].forEach(function (side) {
       var bat = (box.teams[side].batting || []).slice().sort(function (a, b) { return (a.spot || 0) - (b.spot || 0); }), names = shortNames(bat);
       var sp = (box.teams[side].pitching || [])[0];

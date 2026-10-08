@@ -223,6 +223,11 @@ def build_game_box(result,matchup,fit:BookkeepingFit) -> dict[str,Any]:
 def _distribution(counter,n):
     return {'n':n,'counts':[[int(k),int(v)] for k,v in sorted(counter.items())]}
 
+# Share of a lineup slot's plate appearances taken by the hitter who started there, by batting order spot, from every
+# 2023-2025 regular-season game (the team's k-th plate appearance belongs to spot (k-1) mod 9 + 1). Scored on 2026 (PLAYER-02):
+# the hit chance's mean 0.633 to 0.617 against 0.607 actual, Brier -0.00064; home runs -0.00010.
+STARTER_SHARE=(0.974,0.976,0.976,0.977,0.969,0.962,0.953,0.942,0.927)
+
 class BoxAccumulator:
     def __init__(self,matchup):
         self.matchup=matchup;self.n=0;self.hist={s:{'batting':{},'pitching':{}} for s in SIDE}
@@ -254,8 +259,12 @@ class BoxAccumulator:
                          'means':{k:sum(value*count for value,count in v['stats'][k].items())/self.n for k in fields},
                          'distributions':{k:_distribution(v['stats'][k],self.n) for k in fields}}
                     if kind=='batting':
-                        row['hit_probability']=1-v['stats']['H'].get(0,0)/self.n
-                        row['hr_probability']=1-v['stats']['HR'].get(0,0)/self.n
+                        # The simulated lineup slot bats all game; the hitter himself does not (pinch hitters, defensive
+                        # changes): his chance keeps each of the slot's hits with his share of the slot's plate appearances
+                        # (PLAYER-02).
+                        keep=STARTER_SHARE[min(max(int(v.get('spot') or 1),1),9)-1]
+                        row['hit_probability']=1-sum(c*(1-keep)**k for k,c in v['stats']['H'].items())/self.n
+                        row['hr_probability']=1-sum(c*(1-keep)**k for k,c in v['stats']['HR'].items())/self.n
                     else:
                         row['appearance_probability']=v['appeared']/self.n
                         row['means']['IP']=row['means']['outs']/3
