@@ -1511,6 +1511,105 @@ def horizon11(T: dict, params: dict, stage) -> dict:
     return res
 
 
+def horizon12(T: dict, params: dict, stage) -> dict:
+    """The second clock per hitter: how much a hitter's launch angle follows the pitch's vertical movement surprise
+    (a hitter who keeps steering later is thrown off less, a smaller slope). Measured on 2023-2024, checked for
+    repeatability (odd and even days), against public bat speed and swing length, and against 2025-2026 contact
+    outcomes with the 2023-2024 values of the same outcomes as controls."""
+    res = {}
+    F = rebuild(T)
+    keep = F['ok'] & (T['group'] >= 0) & (T['balls'] >= 0) & (T['strikes'] >= 0) & (T['strikes'] <= 2)
+    T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
+    key_sub = (T['pitcher'] * 10 + (T['season'] - 2020)) * 100 + T['sub']
+    ok = np.isfinite(F['az'])
+    mz = loo_means(key_sub, F['az'], ok)
+    s_in = 0.5 * np.where(np.isfinite(mz), F['az'] - mz, np.nan) * 12.0
+    bip = np.isfinite(T['la']) & np.isfinite(s_in) & (T['ls'] > 40)
+    idx = np.flatnonzero(bip)
+    oh = np.eye(7)[np.clip(T['group'][idx], 0, 6)]
+    cnt = np.zeros((len(idx), 12)); cnt[np.arange(len(idx)), np.clip(T['balls'][idx], 0, 3) * 3 + np.clip(T['strikes'][idx], 0, 2)] = 1
+    uu = np.where(T['stand_r'][idx] == 1, T['px'][idx], -T['px'][idx])
+    X = np.hstack([oh, cnt, hats(T['pz'][idx].astype(float), Z_KNOTS), hats(uu.astype(float), U_KNOTS), hats(T['v0'][idx].astype(float), V_KNOTS)])
+    y = T['la'][idx].astype(float)
+    beta, *_ = np.linalg.lstsq(X, y, rcond=None); r = y - X @ beta
+    s = s_in[idx]; bat = T['batter'][idx]; day = T['day'][idx]; season = T['season'][idx]
+    dev = season <= 2024
+    ub, inv = np.unique(bat, return_inverse=True)
+    def slopes(mask):
+        n = np.bincount(inv[mask], minlength=len(ub)).astype(float)
+        sx = np.bincount(inv[mask], weights=s[mask], minlength=len(ub)); sy = np.bincount(inv[mask], weights=r[mask], minlength=len(ub))
+        sxx = np.bincount(inv[mask], weights=s[mask] ** 2, minlength=len(ub)); sxy = np.bincount(inv[mask], weights=s[mask] * r[mask], minlength=len(ub))
+        syy = np.bincount(inv[mask], weights=r[mask] ** 2, minlength=len(ub))
+        with np.errstate(invalid='ignore', divide='ignore'):
+            vx = sxx / n - (sx / n) ** 2; cxy = sxy / n - (sx / n) * (sy / n); b = cxy / vx
+            resid_var = (syy / n - (sy / n) ** 2) - b * cxy
+            se = np.sqrt(resid_var / (n * vx))
+        return b, se, n
+    b_all, se_all, n_all = slopes(dev)
+    b_odd, _, _ = slopes(dev & (day % 2 == 1)); b_even, _, _ = slopes(dev & (day % 2 == 0))
+    sel = n_all >= int(params.get('min_bip', 500))
+    mean = float(np.average(b_all[sel], weights=1 / se_all[sel] ** 2)); var_obs = float(np.var(b_all[sel])); var_noise = float(np.mean(se_all[sel] ** 2))
+    var_true = max(var_obs - var_noise, 0.0)
+    shrunk = mean + (var_true / (var_true + se_all ** 2)) * (b_all - mean)
+    res['hitters'] = int(sel.sum())
+    res['slope'] = {'pooled': round(mean, 4), 'sd_observed': round(float(np.sqrt(var_obs)), 4), 'sd_noise': round(float(np.sqrt(var_noise)), 4),
+                    'sd_true': round(float(np.sqrt(var_true)), 4), 'split_half': round(float(np.corrcoef(b_odd[sel], b_even[sel])[0, 1]), 4)}
+    # outcomes per hitter (all pitches, not just balls in play)
+    swing = (T['call'] == 1) | (T['call'] == 2); whiff = T['call'] == 2
+    allb = T['batter']; ia = np.searchsorted(ub, allb); okb = (ia < len(ub)) & (ub[np.clip(ia, 0, len(ub) - 1)] == allb)
+    def rate(num, den, period):
+        m = okb & period
+        nn = np.bincount(ia[m], weights=num[m].astype(float), minlength=len(ub)); dd = np.bincount(ia[m], weights=den[m].astype(float), minlength=len(ub))
+        with np.errstate(invalid='ignore', divide='ignore'):
+            return nn / dd
+    la_all = T['la']; ls_all = T['ls']; inplay = np.isfinite(la_all) & (ls_all > 40)
+    sweet = inplay & (la_all >= 8) & (la_all <= 32); hard = inplay & (ls_all >= 95)
+    outs = {}
+    for tag, period in (('dev', T['season'] <= 2024), ('fut', T['season'] >= 2025)):
+        outs[tag] = {'whiff': rate(whiff, swing, period), 'sweet': rate(sweet, inplay, period), 'hard': rate(hard, inplay, period),
+                     'la_sd': None}
+        m = okb & period & inplay
+        n_ = np.bincount(ia[m], minlength=len(ub)).astype(float); s1 = np.bincount(ia[m], weights=la_all[m], minlength=len(ub)); s2 = np.bincount(ia[m], weights=la_all[m] ** 2, minlength=len(ub))
+        with np.errstate(invalid='ignore', divide='ignore'):
+            outs[tag]['la_sd'] = np.sqrt(s2 / n_ - (s1 / n_) ** 2)
+    from scipy import stats
+    res['corr_with_dev'] = {k: round(float(stats.spearmanr(shrunk[sel], v[sel], nan_policy='omit')[0]), 4) for k, v in outs['dev'].items()}
+    inc = {}
+    X0 = np.column_stack([outs['dev'][k][sel] for k in ('whiff', 'sweet', 'hard', 'la_sd')])
+    for fk in ('whiff', 'sweet', 'hard', 'la_sd'):
+        yy = outs['fut'][fk][sel]; okr = np.isfinite(yy) & np.isfinite(X0).all(axis=1)
+        Xa = np.column_stack([np.ones(okr.sum()), X0[okr]]); Xb = np.column_stack([Xa, shrunk[sel][okr]])
+        def fit(Xm):
+            bb, *_ = np.linalg.lstsq(Xm, yy[okr], rcond=None); e = yy[okr] - Xm @ bb
+            H = Xm @ np.linalg.pinv(Xm.T @ Xm) @ Xm.T
+            return 1 - e.var() / yy[okr].var(), float(np.mean((e / (1 - np.diag(H))) ** 2)), bb
+        ra, la_, _ = fit(Xa); rb, lb, bb = fit(Xb)
+        rr = np.random.default_rng(5); boots = []
+        for _ in range(500):
+            pick = rr.integers(0, okr.sum(), okr.sum()); c, *_ = np.linalg.lstsq(Xb[pick], yy[okr][pick], rcond=None); boots.append(c[-1])
+        sd = float(np.std(shrunk[sel][okr]))
+        inc[fk] = {'r2': [round(float(ra), 4), round(float(rb), 4)], 'loo_x1e5': [round(la_ * 1e5, 3), round(lb * 1e5, 3)], 'per_sd': round(float(bb[-1] * sd), 5),
+                   'ci': [round(float(np.percentile(boots, 2.5) * sd), 5), round(float(np.percentile(boots, 97.5) * sd), 5)], 'n': int(okr.sum())}
+    res['incremental'] = inc
+    bt, notes = bat_tracking()
+    res['bat_tracking_fetch'] = {k: {kk: vv for kk, vv in v.items() if kk != 'columns'} for k, v in notes.items()}
+    pairs = []
+    for j in np.flatnonzero(sel):
+        seasons_bt = bt.get(int(ub[j])) or {}
+        sp = [v['bat_speed'] for v in seasons_bt.values() if v.get('bat_speed')]; ln = [v['swing_length'] for v in seasons_bt.values() if v.get('swing_length')]
+        if sp:
+            pairs.append((shrunk[j], np.mean(sp), np.mean(ln) if ln else np.nan))
+    if len(pairs) > 20:
+        A = np.array(pairs)
+        res['bat_tracking'] = {'n': len(pairs), 'bat_speed_spearman': round(float(stats.spearmanr(A[:, 0], A[:, 1])[0]), 4),
+                               'swing_length_spearman': round(float(stats.spearmanr(A[np.isfinite(A[:, 2]), 0], A[np.isfinite(A[:, 2]), 2])[0]), 4)}
+    order = np.argsort(shrunk[sel])
+    ids = ub[sel]
+    res['examples'] = {'latest_steering': [{'batter': int(ids[i]), 'slope': round(float(shrunk[sel][i]), 4)} for i in order[:12]],
+                       'earliest_steering': [{'batter': int(ids[i]), 'slope': round(float(shrunk[sel][i]), 4)} for i in order[-12:][::-1]]}
+    return res
+
+
 def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']
     from cloud.security import unseal, key_bytes
@@ -1561,6 +1660,8 @@ def main():
             receipt['results'] = horizon10(T, params, stage)
         elif experiment == 'horizon11':
             receipt['results'] = horizon11(T, params, stage)
+        elif experiment == 'horizon12':
+            receipt['results'] = horizon12(T, params, stage)
         receipt['status'] = 'completed'
     except Exception as exc:
         receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:400]

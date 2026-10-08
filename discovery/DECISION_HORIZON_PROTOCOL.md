@@ -216,3 +216,14 @@ The 2025 to 2026 change test (run 37741959956, 927 pitch types) supported the di
 fewer chases: -0.040 per degree, interval -0.069 to -0.008) but could not separate 260 from 175 ms (both negative
 alone; in one model neither interval excludes zero). The same frozen specification is now run on 2023-2024,
 2024-2025 and 2025-2026 changes pooled, with intervals resampling pitchers. Same predictions as addendum 8.
+
+## Addendum 10, before the per-hitter steering run (horizon12)
+
+Pooled change test (run 37742304034, 2,715 pitch types over three season pairs): direction supported (-0.51 points of
+chase per typical change at 260 ms, -0.74 to -0.27), timing not separable from 175 ms by this design.
+
+The second clock per hitter: each hitter's slope of launch angle on the vertical movement surprise, 2023-2024 balls
+in play (at least 500), shrunk. Predictions written now: split-half reliability of at least 0.2 or it is not a
+measurement; faster bat speed goes with a smaller slope (steering later) and longer swings with a larger one; and it
+counts as new information only if, beyond the 2023-2024 values, it improves a 2025-2026 contact outcome (whiffs per
+swing, sweet-spot rate, hard-hit rate, launch-angle spread) with an interval that excludes zero.
