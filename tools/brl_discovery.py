@@ -1982,6 +1982,201 @@ def horizon14(T: dict, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- ball-strike challenges (2026, from the official play-by-play)
+ROLE = {'none': 0, 'batter': 1, 'catcher': 2, 'pitcher': 3}
+
+
+def challenge_rows(doc: dict) -> list:
+    """Study-shaped rows of one game's play-by-play with five extra fields on every pitch: the challenger's role (0 none,
+    1 batter, 2 catcher, 3 pitcher), overturned (0/1), the original call (1 strike, 0 ball, -1 not a called pitch), and the
+    batting and the fielding team's failed challenges before this pitch in the game (every pitch, challenged or not)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('brl_backfill_for_challenges', ROOT / 'tools' / 'brl_bookkeeping_backfill.py')
+    bf = importlib.util.module_from_spec(spec); spec.loader.exec_module(bf)
+    rows, failed = [], {}
+    for play in (doc or {}).get('allPlays') or []:
+        about = play.get('about') or {}
+        if not about.get('isComplete'):
+            continue
+        m = play.get('matchup') or {}
+        batter = (m.get('batter') or {}).get('id'); pitcher = (m.get('pitcher') or {}).get('id')
+        if batter is None or pitcher is None:
+            continue
+        ph = bf.physics(play)
+        pitch_events = [e for e in play.get('playEvents') or [] if e.get('isPitch') is True]
+        if len(pitch_events) != len(ph['pitches']):
+            continue
+        extra = []
+        bat_side = 'away' if about.get('isTopInning') else 'home'; fld_side = 'home' if bat_side == 'away' else 'away'
+        for e, pt in zip(pitch_events, ph['pitches']):
+            code = str((e.get('details') or {}).get('code') or '')
+            balls0, strikes0 = pt[2], pt[3]
+            c = e.get('count') or {}
+            balls1, strikes1 = int(c.get('balls', balls0) or 0), int(c.get('strikes', strikes0) or 0)
+            called = code in ('B', '*B', 'C')
+            final = 1 if strikes1 > strikes0 else 0 if balls1 > balls0 else (1 if code == 'C' else 0)
+            role, over, orig = 0, 0, (final if called else -1)
+            bat_f, fld_f = failed.get(bat_side, 0), failed.get(fld_side, 0)
+            rd = e.get('reviewDetails') or {}
+            if called and rd and rd.get('reviewType') == 'MJ' and rd.get('player'):
+                pid = (rd.get('player') or {}).get('id')
+                role = 1 if pid == batter else 3 if pid == pitcher else 2
+                over = 1 if rd.get('isOverturned') else 0
+                orig = (1 - final) if over else final
+                if not over:
+                    side = bat_side if role == 1 else fld_side
+                    failed[side] = failed.get(side, 0) + 1
+            extra.append([role, over, orig, bat_f, fld_f])
+        pitches = [list(pt) + ex for pt, ex in zip(ph['pitches'], extra)]
+        rows.append({'i': int(about['atBatIndex']), 'inning': about.get('inning'), 'half': 'top' if about.get('isTopInning') else 'bottom',
+                     'o': 'X', 'e': str((play.get('result') or {}).get('eventType') or ''), 'p': int(pitcher), 'b': int(batter),
+                     's': str((m.get('batSide') or {}).get('code') or 'R'), 't': str((m.get('pitchHand') or {}).get('code') or ''),
+                     'pitches': pitches, 'hit': ph['hit']})
+    return rows
+
+
+def challenge_study(season: int, workers: int = 6) -> dict:
+    """The season's regular-season play-by-play as a study document whose pitches carry the challenge fields."""
+    import importlib.util
+    from concurrent.futures import ThreadPoolExecutor
+    spec = importlib.util.spec_from_file_location('brl_backfill_for_challenges2', ROOT / 'tools' / 'brl_bookkeeping_backfill.py')
+    bf = importlib.util.module_from_spec(spec); spec.loader.exec_module(bf)
+    games = [g for g in bf.completed_games(season, f'{season}-11-30') if g['game_type'] == 'R']
+
+    def fetch(g):
+        for attempt in range(3):
+            try:
+                return g, bf.get_json(f'{bf.API}/game/{g["game_pk"]}/playByPlay')
+            except Exception:
+                time.sleep(3 * (attempt + 1))
+        return g, None
+    out = {'schema': 'challenge-study', 'year': season, 'games': {}}
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        for g, doc in pool.map(fetch, games):
+            if doc:
+                out['games'][str(g['game_pk'])] = {'date': g['date'], 'game_type': 'R', 'rows': challenge_rows(doc)}
+    return out
+
+
+def challenge_columns(doc: dict) -> dict:
+    """The five challenge fields in pitch_table's row order (same games, rows and skips)."""
+    cols = {'role': [], 'over': [], 'orig': [], 'bat_failed': [], 'fld_failed': []}
+    for gpk, game in (doc.get('games') or {}).items():
+        if game.get('game_type') != 'R':
+            continue
+        for row in game.get('rows') or []:
+            if row.get('b') is None or row.get('p') is None:
+                continue
+            for pt in row.get('pitches') or []:
+                ex = (list(pt) + [None] * 20)[15:20]
+                cols['role'].append(int(ex[0] or 0)); cols['over'].append(int(ex[1] or 0))
+                cols['orig'].append(-1 if ex[2] is None else int(ex[2]))
+                cols['bat_failed'].append(int(ex[3] or 0)); cols['fld_failed'].append(int(ex[4] or 0))
+    return {k: np.asarray(v, np.int64) for k, v in cols.items()}
+
+
+def challenges(T: dict, X: dict, params: dict, stage) -> dict:
+    """Addendum 13: who sees the end of the pitch? The decision to challenge a called pitch, by batters (called strikes),
+    catchers and pitchers (called balls), through the instrument of the umpire test: a location model with pitch-type maps
+    and each batter's zone, and the decision displaced along the within-type late movement (tau squared; hitters' swings
+    0.066, umpires' calls 0). Cross-fitted by game halves. Then batters' overturn rate by the late movement toward the zone."""
+    res = {}
+    F = rebuild(T)
+    ok = (F['ok'] & (T['group'] >= 0) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2)
+          & (T['call'] == 0) & (X['orig'] >= 0))
+    top, bot, zsum = batter_zones(T, F['ok'] & (T['group'] >= 0) & (T['call'] <= 2))
+    res['batter_zones'] = zsum
+    T = take(T, ok); F = {k: v[ok] for k, v in F.items()}; X = {k: v[ok] for k, v in X.items()}; top, bot = top[ok], bot[ok]
+    stage('called pitches')
+    ps = T['pitcher'] * 10 + (T['season'] - 2020)
+    key_sub = ps * 100 + T['sub']
+    okx = np.isfinite(F['ax']) & np.isfinite(F['az'])
+    mx = loo_means(key_sub, F['ax'], okx); mz = loo_means(key_sub, F['az'], okx)
+    wx = np.where(np.isfinite(mx), F['ax'] - mx, 0.0); wz = np.where(np.isfinite(mz), F['az'] - mz, 0.0)
+    n = len(T['balls'])
+    res['called'] = {'pitches': int(n), 'original_strikes': int((X['orig'] == 1).sum()),
+                     'challenges': {r: int(((X['role'] == v)).sum()) for r, v in ROLE.items() if v},
+                     'overturned': {r: round(float(X['over'][X['role'] == v].mean()), 4) if (X['role'] == v).any() else None for r, v in ROLE.items() if v}}
+    oh = np.eye(7, dtype=np.float32)[np.clip(T['group'], 0, 6)]
+    cnt = np.zeros((n, 12), np.float32); cnt[np.arange(n), np.clip(T['balls'], 0, 3) * 3 + np.clip(T['strikes'], 0, 2)] = 1
+    inn = np.zeros((n, 3), np.float32); inn[np.arange(n), np.where(T['inning'] <= 6, 0, np.where(T['inning'] <= 8, 1, 2))] = 1
+    def left_block(failed):
+        b_ = np.zeros((n, 3), np.float32); b_[np.arange(n), np.clip(2 - failed, 0, 2)] = 1; return b_
+    common = np.hstack([cnt, oh, inn, T['stand_r'][:, None].astype(np.float32), (T['stand_r'] == T['throw_r'])[:, None].astype(np.float32)])
+    Cm_by_role = {'batter': np.hstack([common, left_block(X['bat_failed'])]), 'catcher': np.hstack([common, left_block(X['fld_failed'])]),
+                  'pitcher': np.hstack([common, left_block(X['fld_failed'])])}
+    span = np.clip(top - bot, 1.2, 3.0)
+
+    def edge(x, z, idx):
+        u = np.where(T['stand_r'][idx] == 1, x[idx], -x[idx]); zz = 1.5 + 2.0 * (z[idx] - bot[idx]) / span[idx]
+        return u, zz, np.maximum(np.maximum(np.abs(u) - ZONE_HALF, zz - ZONE_TOP), ZONE_BOT - zz)
+
+    def design(x, z, idx, Cm):
+        u, zz, e = edge(x, z, idx)
+        base = np.hstack([hats(e, EU_KNOTS), hats(u, U_KNOTS), hats(zz, Z_KNOTS)])
+        return np.hstack([base, (base[:, :, None] * oh[idx, None, :]).reshape(len(idx), -1), Cm[idx]]).astype(np.float32)
+
+    halves = (T['game'] % 2 == 0)
+    grid = [float(v) for v in params.get('tau2_grid', (0.0, 0.01, 0.02, 0.04, 0.0684, 0.1))]
+    h = 0.02
+    pops = {'batter': (X['orig'] == 1, X['role'] == ROLE['batter']), 'catcher': (X['orig'] == 0, X['role'] == ROLE['catcher']),
+            'pitcher': (X['orig'] == 0, X['role'] == ROLE['pitcher'])}
+    for pname, (pm, ych) in pops.items():
+        y = ych.astype(np.int64)
+        out = {'rows': int(pm.sum()), 'challenges': int(y[pm].sum())}
+        if out['challenges'] < 50:
+            res[pname] = out
+            continue
+        prof = {t2: [0.0, 0] for t2 in grid}
+        est = []
+        Cm = Cm_by_role[pname]
+        for a_half in (True, False):
+            tr = np.flatnonzero(pm & (halves == a_half)); te = np.flatnonzero(pm & (halves != a_half))
+            C = float(params.get('C', 0.3))
+            m0 = fit_logistic(design(T['px'], T['pz'], tr, Cm), y[tr], C=C)
+            for t2 in grid:
+                x, z = T['px'] - 0.5 * wx * t2, T['pz'] - 0.5 * wz * t2
+                m = m0 if t2 == 0.0 else fit_logistic(design(x, z, tr, Cm), y[tr], C=C)
+                ll = logloss_vec(m.predict_proba(design(x, z, te, Cm))[:, 1], y[te])
+                prof[t2][0] += ll.sum(); prof[t2][1] += len(te)
+            df = lambda x, z: m0.decision_function(design(x, z, te, Cm))
+            f0 = df(T['px'], T['pz'])
+            fx = (df(T['px'] + h, T['pz']) - df(T['px'] - h, T['pz'])) / (2 * h)
+            fz = (df(T['px'], T['pz'] + h) - df(T['px'], T['pz'] - h)) / (2 * h)
+            g_w = -0.5 * (fx * wx[te] + fz * wz[te])
+            a, b, se = offset_logit(y[te].astype(float), f0, g_w)
+            lo, hi = boot_slope(y[te].astype(float), f0, g_w, T['game'][te], reps=int(params.get('boot', 100)))
+            est.append({'tau2': b, 'se': se, 'ci': [lo, hi], 'n': int(len(te)), 'challenges': int(y[te].sum())})
+        p0 = prof[0.0][0] / prof[0.0][1]
+        out['profile'] = [{'tau2': t2, 'nats_per_1000_vs_crossing': round((v[0] / v[1] - p0) * 1000, 4)} for t2, v in prof.items()]
+        w_ = np.array([1 / max(e['se'], 1e-9) ** 2 for e in est]); b_ = np.array([e['tau2'] for e in est])
+        pooled = float((w_ * b_).sum() / w_.sum()); se_p = float(1 / np.sqrt(w_.sum()))
+        out['tau2'] = {'halves': [{k: (round(v, 6) if isinstance(v, float) else v) for k, v in e.items()} for e in est],
+                       'pooled': round(pooled, 6), 'se': round(se_p, 6), 'ci': [round(pooled - 1.96 * se_p, 6), round(pooled + 1.96 * se_p, 6)],
+                       'tau_ms': round(float(np.sign(pooled) * np.sqrt(abs(pooled)) * 1000), 1)}
+        res[pname] = out
+        stage(pname)
+    # Overturn rate by the late movement toward the zone: the edge distance of the pitch as it would look from 260 ms
+    # minus at the crossing (positive: it moved late toward or into the zone)
+    tau_h = float(params.get('tau_h', 0.2615))
+    idx_all = np.arange(n)
+    _, _, e0 = edge(T['px'], T['pz'], idx_all)
+    _, _, eh = edge(T['px'] - 0.5 * wx * tau_h ** 2, T['pz'] - 0.5 * wz * tau_h ** 2, idx_all)
+    inward = eh - e0
+    for pname, v in (('batter', ROLE['batter']), ('catcher', ROLE['catcher']), ('pitcher', ROLE['pitcher'])):
+        sel = np.flatnonzero(X['role'] == v)
+        if len(sel) < 60:
+            continue
+        q = np.quantile(inward[sel], (1 / 3, 2 / 3))
+        terc = np.digitize(inward[sel], q)
+        rates = [[round(float(inward[sel][terc == k].mean() * 12), 2), round(float(X['over'][sel][terc == k].mean()), 4), int((terc == k).sum())] for k in range(3)]
+        d = X['over'][sel][terc == 2].astype(float); c = X['over'][sel][terc == 0].astype(float)
+        se = float(np.sqrt(d.var() / max(len(d), 1) + c.var() / max(len(c), 1)))
+        res[pname + '_overturn_by_late_inward_inches'] = {'terciles_[inches, overturn rate, n]': rates,
+                                                          'top_minus_bottom': round(float(d.mean() - c.mean()), 4), 'se': round(se, 4)}
+    return res
+
+
 def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']
     from cloud.security import unseal, key_bytes
@@ -1998,6 +2193,14 @@ def main():
     def stage(name):
         receipt['stages'].append({'stage': name, 'at_seconds': round(time.time() - t0, 1)}); print(name, round(time.time() - t0), 's', flush=True)
     try:
+        if experiment == 'challenges':
+            stage('fetch the 2026 play-by-play')
+            cdoc = challenge_study(int(params.get('season', 2026)), int(params.get('workers', 6)))
+            T = pitch_table(cdoc, int(params.get('season', 2026))); X = challenge_columns(cdoc); del cdoc
+            receipt['seasons_rows'] = {int(params.get('season', 2026)): int(len(T['season']))}
+            assert len(X['role']) == len(T['season'])
+            receipt['results'] = challenges(T, X, params, stage)
+            raise StopIteration
         tables = []
         for year in params.get('seasons', (2023, 2024, 2025, 2026)):
             stage(f'load {year}')
@@ -2038,6 +2241,8 @@ def main():
             receipt['results'] = horizon13(T, params, stage)
         elif experiment == 'horizon14':
             receipt['results'] = horizon14(T, params, stage)
+        receipt['status'] = 'completed'
+    except StopIteration:
         receipt['status'] = 'completed'
     except Exception as exc:
         receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:400]

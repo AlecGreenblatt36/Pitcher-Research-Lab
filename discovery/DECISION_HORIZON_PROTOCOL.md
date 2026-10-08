@@ -284,3 +284,33 @@ Predictions written now:
 Pipeline check on synthetic pitches (planted effect of 0.25 log-odds per SD of release closeness): cross-sample
 coefficient -1.22 points of chase per SD (-1.62 to -0.68); null scenario 0.02 (-0.15 to 0.25); next season -0.25
 (-0.49 to -0.01) planted, 0.08 (-0.06 to 0.22) null.
+
+## Addendum 13, before the challenge run (challenges)
+
+Since addendum 12: pitcher-level tunneling is stable but descriptive only (DISC-06).
+
+In 2026 batters, catchers and pitchers can challenge the umpire's ball or strike, and the official play-by-play records
+each challenge on the pitch with who made it and whether the call was overturned (probe run 37835384951: 36 player
+challenges on pitches in 12 late-September games). A challenge is a second decision about the same pitch, made after the
+ball is caught, by people who saw it from different places. If hitters' perception of the pitch freezes about 260 ms
+before the plate (DISC-01), a batter's decision to challenge a called strike should follow where the pitch looked from
+there, not where it crossed. A catcher catches the ball and sees where it ends: his challenges of called balls should
+follow the crossing, like the umpires' calls (DISC-05).
+
+Instrument: the umpire-test code (pitch-type location maps with each batter's own zone, edge distance, count, inning,
+pitch type, handedness and the challenging side's challenges left as controls); the decision is displaced along the
+within-type late movement and tau squared estimated with the offset-logit gradient, cross-fitted on even and odd games
+(every 2026 regular-season game, fetched on the runner; aggregates only leave it).
+
+Predictions written now:
+1. Batters (called strikes, outcome: the batter challenged): tau squared above zero with the interval excluding zero,
+   between 0.02 and 0.06, and the held-out profile better at 0.02 or 0.0684 than at the crossing.
+2. Catchers (called balls, outcome: the catcher challenged): the interval includes zero and the estimate is below 0.015.
+3. Pitchers (called balls): no prediction; reported.
+The overturn rate by late movement toward the zone is reported for each role but not predicted (on synthetic pitches its
+sign depends on the selection of taken pitches as much as on perception).
+Synthetic recovery (tools/brl_discovery.py challenges; 1,200 games, about 300 to 400 challenges per role): batters
+judging from 260 ms (0.0676 planted) 0.034 (0.027 to 0.042) — the selection of taken pitches, which hitters also choose at
+260 ms, halves the estimate; batters judging the crossing 0.004 (-0.006 to 0.015); catchers on the crossing -0.005
+(-0.015 to 0.006) in both runs; pitchers at 150 ms (0.0225 planted) 0.032 (0.011 to 0.052). So the test separates the two
+readings for batters (0.034 against 0.004) though it does not recover the full 0.0676.
