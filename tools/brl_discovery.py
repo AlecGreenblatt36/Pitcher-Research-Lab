@@ -1338,6 +1338,72 @@ def horizon9(T: dict, params: dict, stage) -> dict:
     return res
 
 
+def horizon10(T: dict, params: dict, stage) -> dict:
+    """Arsenal flights for the pitch-pair explorer, and the paired tunneling comparison of 260 against 175 ms.
+    Exports per pitcher and pitch type in 2026 (at least 60 pitches): count, average start and end speed, average
+    position and velocity at 50 ft, average accelerations, average crossing, chase and whiff rates. Aggregates
+    only, like a public arsenal table; no pitch rows."""
+    res = {}
+    F = rebuild(T)
+    ok = F['ok'] & (T['group'] >= 0)
+    s26 = ok & (T['season'] == int(params.get('season', 2026)))
+    key = T['pitcher'] * 100 + T['sub']
+    swing = (T['call'] == 1) | (T['call'] == 2); whiff = T['call'] == 2
+    u = np.where(T['stand_r'] == 1, T['px'], -T['px'])
+    inzone = (np.abs(u) <= ZONE_HALF) & (T['pz'] <= ZONE_TOP) & (T['pz'] >= ZONE_BOT)
+    uk, inv = np.unique(key[s26], return_inverse=True)
+    cnt = np.bincount(inv)
+    def m(v):
+        return np.bincount(inv, weights=v[s26].astype(float), minlength=len(uk)) / np.maximum(cnt, 1)
+    fields = {'v0': T['v0'], 'v1': T['v1'], 'x0': T['x0'], 'z0': T['z0'], 'vx0': F['vx0'], 'vz0': F['vz0'], 'ax': F['ax'], 'az': F['az'], 'ay': F['ay'],
+              'px': T['px'], 'pz': T['pz'], 'ext': np.where(np.isfinite(T['ext']), T['ext'], 6.3), 'throw_r': T['throw_r']}
+    means = {k: m(v) for k, v in fields.items()}
+    out_sw = np.bincount(inv, weights=(swing & ~inzone)[s26].astype(float), minlength=len(uk)); out_n = np.bincount(inv, weights=(~inzone)[s26].astype(float), minlength=len(uk))
+    sw_n = np.bincount(inv, weights=swing[s26].astype(float), minlength=len(uk)); wh = np.bincount(inv, weights=whiff[s26].astype(float), minlength=len(uk))
+    rows = []
+    for j in np.flatnonzero(cnt >= int(params.get('min_pitches', 60))):
+        rows.append({'p': int(uk[j] // 100), 't': SUBTYPES[int(uk[j] % 100)] if int(uk[j] % 100) < len(SUBTYPES) else 'OT', 'n': int(cnt[j]),
+                     **{k: round(float(v[j]), 4) for k, v in means.items()},
+                     'chase': round(float(out_sw[j] / out_n[j]), 4) if out_n[j] > 0 else None, 'whiff': round(float(wh[j] / sw_n[j]), 4) if sw_n[j] > 0 else None})
+    res['arsenal'] = rows; res['arsenal_season'] = int(params.get('season', 2026)); stage('arsenal')
+    # paired: chase model with the separation at 260 ms against the same model with it at 175 ms
+    base_ok = F['ok'] & (T['group'] >= 0) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2)
+    order = np.lexsort((T['pitch_no'], T['ab'], T['game']))
+    prev = np.full(len(order), -1)
+    same = (T['game'][order][1:] == T['game'][order][:-1]) & (T['ab'][order][1:] == T['ab'][order][:-1]) & (T['pitch_no'][order][1:] == T['pitch_no'][order][:-1] + 1)
+    prev[order[1:][same]] = order[:-1][same]
+    has_prev = (prev >= 0) & base_ok & np.where(prev >= 0, base_ok[np.maximum(prev, 0)], False) & (T['call'] <= 2) & ~inzone
+    idx = np.flatnonzero(has_prev); pidx = prev[idx]
+    C = control_block(T, swing_propensity(T))
+    oh = np.eye(7, dtype=np.float32)[np.clip(T['group'], 0, 6)]
+    eye_x = np.where(T['stand_r'] == 1, -2.4, 2.4)
+    def angles(i, tau):
+        x, y, z = position_at(take(T, i), {k: v[i] for k, v in F.items()}, tau)
+        d = np.maximum(y - 1.0, 0.5)
+        return np.degrees(np.arctan2(x - eye_x[i], d)), np.degrees(np.arctan2(z - 5.1, d))
+    uu = u[idx]; zz = T['pz'][idx]
+    e = np.maximum(np.maximum(np.abs(uu) - ZONE_HALF, zz - ZONE_TOP), ZONE_BOT - zz)
+    b = np.hstack([hats(e, E_KNOTS), hats(uu, U_KNOTS), hats(zz, Z_KNOTS)])
+    mv = np.column_stack([F['asx'][idx] * np.where(T['throw_r'][idx] == 1, 1, -1), F['asz'][idx]]) / 10.0
+    Xb = np.hstack([location_block(T['px'][idx], T['pz'][idx], T['stand_r'][idx], T['strikes'][idx]), (b[:, :, None] * oh[idx, None, :]).reshape(len(idx), -1), C[idx],
+                    hats(u[pidx], U_KNOTS), hats(T['pz'][pidx].astype(float), Z_KNOTS), oh[pidx], mv]).astype(np.float32)
+    y = swing[idx].astype(np.int64)
+    rng = np.random.default_rng(3)
+    dv = np.flatnonzero(T['season'][idx] <= 2024); fu = np.flatnonzero(T['season'][idx] >= 2025)
+    trn = np.sort(rng.choice(dv, min(len(dv), 500000), replace=False)); tst = fu
+    D_KNOTS = (0.0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 5.0)
+    lls = {}
+    for tau in (0.175, 0.26):
+        a1, b1 = angles(idx, tau); a2, b2 = angles(pidx, tau)
+        X = np.hstack([Xb, hats(np.sqrt((a1 - a2) ** 2 + (b1 - b2) ** 2), D_KNOTS)])
+        mdl = fit_logistic(X[trn], y[trn]); lls[tau] = logloss_vec(mdl.predict_proba(X[tst])[:, 1], y[tst])
+        stage(f'paired {tau}')
+    d = clustered_ci(lls[0.26] - lls[0.175], T['game'][idx][tst], reps=500)
+    res['paired_260_minus_175_per_1000'] = [round(v * 1000, 4) for v in d]
+    res['paired_test_pitches'] = int(len(tst))
+    return res
+
+
 def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']
     from cloud.security import unseal, key_bytes
@@ -1384,6 +1450,8 @@ def main():
             receipt['results'] = horizon8(T, params, stage)
         elif experiment == 'horizon9':
             receipt['results'] = horizon9(T, params, stage)
+        elif experiment == 'horizon10':
+            receipt['results'] = horizon10(T, params, stage)
         receipt['status'] = 'completed'
     except Exception as exc:
         receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:400]
