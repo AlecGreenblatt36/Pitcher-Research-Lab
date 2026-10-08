@@ -153,3 +153,18 @@ pitcher whose pitches vary more around their own average shape may win more swin
 overall movement as controls. Written before the run: a useful pitcher number needs a bootstrap interval for its
 effect that excludes zero on chase or whiff and a lower leave-one-out error. A positive effect on walks with no gain
 on chase or whiff would mean the spread is wildness, not deception.
+
+## Addendum 5, before the contact-horizon run (horizon7)
+
+Results so far (runs 37737624724 and 37737930311): horizontal and vertical surprises give the same commit time
+(0.258 and 0.264 s); the commit time is the same from 79 to 97 mph (0.254 to 0.266 s), so it is a fixed time before
+arrival, not a fixed distance; the same in every count, inning and season; the long profile peaks at 0.25 to 0.30 s
+and turns back by 0.40 s. Familiarity: the within-type horizon does not fall with times faced (0.259, 0.263, 0.268)
+or with pitch-type exposure, so the prediction that hitters learn a pitcher's late movement within a game failed.
+
+Next question: after deciding to swing, how late can the hitter still steer the bat? Launch angle on balls in play
+against the pitch's vertical movement surprise; the implied contact horizon depends on an assumed bat-ball geometry
+(k degrees of launch angle per inch of offset, reported for 12 to 25). Written before the run: a two-stage hitter
+(decide early, steer later) shows a contact horizon clearly shorter than 0.26 s for any k in 16 to 25; a contact
+horizon equal to or longer than the decision horizon would mean the bat path is set when the swing decision is made.
+The horizontal surprise is a placebo for launch angle and should give a slope near zero.

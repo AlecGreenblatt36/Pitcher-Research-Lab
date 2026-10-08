@@ -77,7 +77,7 @@ def put_text(repo, token, path, text, branch, message):
 # ---------------------------------------------------------------- pitch table
 SUBTYPES = ('FF', 'FA', 'SI', 'FC', 'SL', 'ST', 'SV', 'CU', 'KC', 'CS', 'CH', 'FS', 'FO', 'SC', 'KN', 'EP')
 FIELDS = ('season', 'day', 'game', 'pitcher', 'batter', 'stand_r', 'throw_r', 'inning', 'group', 'sub', 'balls', 'strikes', 'call',
-          'v0', 'v1', 'spin', 'pfx_x', 'pfx_z', 'px', 'pz', 'x0', 'z0', 'ext', 'last_in_pa', 'bunt_pa', 'ab', 'pitch_no')
+          'v0', 'v1', 'spin', 'pfx_x', 'pfx_z', 'px', 'pz', 'x0', 'z0', 'ext', 'last_in_pa', 'bunt_pa', 'ab', 'pitch_no', 'la', 'ls')
 CALLS = {'take': 0, 'swing_contact': 1, 'whiff': 2, 'other': 3}
 
 
@@ -109,9 +109,11 @@ def pitch_table(doc: dict, season: int) -> dict:
                     cols[k].append(np.nan if v is None else float(v))
                 cols['last_in_pa'].append(1 if j == len(pitches) - 1 else 0); cols['bunt_pa'].append(bunt)
                 cols['ab'].append(int(row.get('i') or 0)); cols['pitch_no'].append(j)
+                hit = row.get('hit') if j == len(pitches) - 1 and code in ('X', 'D', 'E') else None
+                cols['la'].append(np.nan if not hit or hit[1] is None else float(hit[1])); cols['ls'].append(np.nan if not hit or hit[0] is None else float(hit[0]))
     out = {}
     for k, v in cols.items():
-        out[k] = np.asarray(v, dtype=np.float32 if k in ('v0', 'v1', 'spin', 'pfx_x', 'pfx_z', 'px', 'pz', 'x0', 'z0', 'ext') else np.int64)
+        out[k] = np.asarray(v, dtype=np.float32 if k in ('v0', 'v1', 'spin', 'pfx_x', 'pfx_z', 'px', 'pz', 'x0', 'z0', 'ext', 'la', 'ls') else np.int64)
     return out
 
 
@@ -1127,6 +1129,55 @@ def horizon6(T: dict, params: dict, stage) -> dict:
     return res
 
 
+def horizon7(T: dict, params: dict, stage) -> dict:
+    """Contact horizon: after deciding to swing, how late can the hitter still steer the bat? For balls in play, the
+    launch angle against the pitch's vertical movement surprise. If the bat is aimed at the crossing projected from
+    tau_c before the plate, the ball arrives 0.5 * wz * tau_c^2 above the aim, and contact below the ball's center
+    lifts the launch angle by about k degrees per inch (bat-ball geometry; Brantley and Kording 2022 use a ball radius
+    of 1.45 in). The slope b of launch angle on 0.5 * wz (inches per s^2) gives tau_c = sqrt(b / k); k is reported
+    as a range because it is assumed, not measured. Also: vertical surprise against whiffs on swings."""
+    res = {}
+    F = rebuild(T)
+    keep = F['ok'] & (T['group'] >= 0) & (T['balls'] >= 0) & (T['strikes'] >= 0) & (T['strikes'] <= 2)
+    T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
+    key_sub = (T['pitcher'] * 10 + (T['season'] - 2020)) * 100 + T['sub']
+    ok = np.isfinite(F['az']) & np.isfinite(F['ax'])
+    mz = loo_means(key_sub, F['az'], ok); mx = loo_means(key_sub, F['ax'], ok)
+    wz = np.where(np.isfinite(mz), F['az'] - mz, np.nan); wx = np.where(np.isfinite(mx), F['ax'] - mx, np.nan)
+    s_in = 0.5 * wz * 12.0                       # inches of vertical surprise per s^2 of horizon
+    bip = np.isfinite(T['la']) & np.isfinite(s_in) & (T['ls'] > 40)
+    n = int(bip.sum()); res['balls_in_play'] = n
+    def design(idx):
+        oh = np.eye(7)[np.clip(T['group'][idx], 0, 6)]
+        cnt = np.zeros((len(idx), 12)); cnt[np.arange(len(idx)), np.clip(T['balls'][idx], 0, 3) * 3 + np.clip(T['strikes'][idx], 0, 2)] = 1
+        u = np.where(T['stand_r'][idx] == 1, T['px'][idx], -T['px'][idx])
+        return np.hstack([oh, cnt, hats(T['pz'][idx].astype(float), Z_KNOTS), hats(u.astype(float), U_KNOTS), hats(T['v0'][idx].astype(float), V_KNOTS),
+                          (T['stand_r'][idx] == T['throw_r'][idx])[:, None].astype(float)])
+    out = {}
+    for name, mask in (('all', bip), ('fastballs', bip & np.isin(T['group'], (0, 1, 2))), ('breaking', bip & np.isin(T['group'], (3, 4))), ('offspeed', bip & (T['group'] == 5)),
+                       ('2025-2026', bip & (T['season'] >= 2025)), ('2023-2024', bip & (T['season'] <= 2024))):
+        idx = np.flatnonzero(mask)
+        X = np.column_stack([design(idx), s_in[idx]]); y = T['la'][idx].astype(float)
+        beta, *_ = np.linalg.lstsq(X, y, rcond=None); e = y - X @ beta
+        # game-clustered standard error for the last coefficient
+        XtX_inv = np.linalg.pinv(X.T @ X); g = T['game'][idx]; ug, gi = np.unique(g, return_inverse=True)
+        S = np.zeros((len(ug), X.shape[1])); np.add.at(S, gi, X * e[:, None]); meat = S.T @ S
+        se = float(np.sqrt((XtX_inv @ meat @ XtX_inv)[-1, -1]))
+        b = float(beta[-1])
+        out[name] = {'n': int(len(idx)), 'slope_deg_per_in_s2': round(b, 3), 'se': round(se, 3),
+                     'tau_c_for_k': {str(k): (round(float(np.sqrt(b / k)), 4) if b > 0 else None) for k in (12, 16, 20, 25)}}
+    res['launch_angle'] = out; stage('launch angle')
+    # placebo: horizontal surprise should not move launch angle the same way
+    idx = np.flatnonzero(bip & np.isfinite(wx))
+    X = np.column_stack([design(idx), s_in[idx], 0.5 * wx[idx] * 12.0]); y = T['la'][idx].astype(float)
+    beta, *_ = np.linalg.lstsq(X, y, rcond=None)
+    res['placebo_horizontal_slope'] = round(float(beta[-1]), 3); res['vertical_slope_same_fit'] = round(float(beta[-2]), 3)
+    # decision horizon reference from the same pitches would be ~0.26 s; implied launch-angle change if the bat
+    # were aimed from the decision horizon: k * 0.26^2 per inch-per-s^2
+    res['reference_slope_if_tau_c_equals_decision_horizon'] = {str(k): round(k * 0.26 ** 2, 3) for k in (12, 16, 20, 25)}
+    return res
+
+
 def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']
     from cloud.security import unseal, key_bytes
@@ -1167,6 +1218,8 @@ def main():
             receipt['results'] = horizon5(T, params, stage)
         elif experiment == 'horizon6':
             receipt['results'] = horizon6(T, params, stage)
+        elif experiment == 'horizon7':
+            receipt['results'] = horizon7(T, params, stage)
         receipt['status'] = 'completed'
     except Exception as exc:
         receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:400]
