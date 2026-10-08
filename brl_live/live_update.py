@@ -13,7 +13,7 @@ from collections import Counter
 
 import numpy as np
 
-from .boxscore import ADJUST, adjusted_provider, steal_model_for, transitions_for
+from .boxscore import ADJUST, adjusted_provider, running_events_for, steal_model_for, transitions_for
 from .live_sim import LiveSimulator
 
 LIVE_WORLDS = 2000
@@ -37,7 +37,11 @@ def run_live_update(engine, matchup, start, state: dict, game: dict, full_histor
     kernel = transitions_for(settings)
     if kernel is not None:
         labels = list(labels) + [kernel.name]
-    sim = LiveSimulator(provider, config=engine.config, manager_policy=engine.manager, steals=steals, transitions=kernel)
+    running = running_events_for(settings)
+    if running is not None:
+        labels = list(labels) + [running.name]
+    sim = LiveSimulator(provider, config=engine.config, manager_policy=engine.manager, steals=steals, transitions=kernel,
+                        running_events=running)
     seeds = np.random.default_rng(_state_key(game['game_pk'], state)).integers(0, np.iinfo(np.int32).max, size=n_worlds, dtype=np.int64)
     home = ties = 0
     pairs: Counter = Counter(); away_runs: Counter = Counter(); home_runs: Counter = Counter(); innings: Counter = Counter()

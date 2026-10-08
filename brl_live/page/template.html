@@ -884,6 +884,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     return base + on + (spot ? " to " + spot : "");
   }
   var RUNNER_TAG = [[/caught stealing|pickoff/i, "CS"], [/picks off|pickoff/i, "PK"], [/wild pitch/i, "WP"], [/passed ball/i, "PB"], [/balk/i, "BK"]];
+  var RUN_PLAY = { wild_pitch: "WP", passed_ball: "PB", balk: "BK", defensive_indifference: "DI", pickoff: "PK", pickoff_error: "E", error: "E", other_advance: "Adv", runner_out: "Out" };
   function playParts(p, names, short) {
     short = short || {};
     var who = short[String(p.batter_id)] || lastName(p.batter_name), desc = p.description || "", o = p.box_outcome, verb, tag, cls = "", c = p.contact || null;
@@ -899,6 +900,13 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         else otag = ["Out", ""];
       }
       return { text: desc || (who + " " + (o === "runner" ? "runner play" : o.replace(/_/g, " ")) + "."), tag: otag[0], cls: otag[1] };
+    }
+    if (RUN_PLAY[o]) {
+      /* A simulated running play between plate appearances (wild pitch, passed ball, balk, pickoff ...): the engine's
+         words with each runner's name shortened as elsewhere. */
+      var words = desc;
+      Object.keys(names || {}).forEach(function (id) { var n = names[id]; if (n && words.indexOf(n) >= 0) words = words.split(n).join(short[String(id)] || lastName(n)); });
+      return { text: words || (who + " " + o.replace(/_/g, " ") + "."), tag: RUN_PLAY[o], cls: "" };
     }
     switch (o) {
       case "strikeout": verb = "strikes out"; tag = "K"; cls = "k"; break;
@@ -2035,7 +2043,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         var style = parts.cls === "hit" ? ' style="background:var(--' + bat + ')"' : "";
         var seq = pitchText(p), zone = p.official ? zoneGraphic(p) : "";
         var seqHtml = seq ? (zone ? '<span class="seq">' + zone + '<span class="pitches">' + esc(seq) + "</span></span>" : '<span class="pitches">' + esc(seq) + "</span>") : "";
-        var steal = p.box_outcome === "stolen_base" || p.box_outcome === "caught_stealing";
+        var steal = p.box_outcome === "stolen_base" || p.box_outcome === "caught_stealing" || !!RUN_PLAY[p.box_outcome];
         h += '<div class="pa"><span class="tag ' + parts.cls + '"' + style + ">" + parts.tag + '</span><span class="what">' + esc(parts.text) +
           (steal ? "" : '<span class="meta">vs ' + esc(short[String(p.pitcher_id)] || lastName(p.pitcher_name)) + (p.estimated_pitches ? ", " + p.estimated_pitches + (p.estimated_pitches === 1 ? " pitch" : " pitches") : "") + "</span>") +
           seqHtml + "</span>" +

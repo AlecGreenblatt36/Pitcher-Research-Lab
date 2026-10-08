@@ -22,6 +22,8 @@ from .win_table import WinTable
 
 BAT = ('PA','AB','H','2B','3B','HR','R','RBI','BB','HBP','K','SF','SB','CS')
 STEALS = ('stolen_base','caught_stealing')
+# Running plays between plate appearances other than steals (research_lab.game_sim.running_events, TRANS-02).
+RUNNING = ('wild_pitch','passed_ball','balk','defensive_indifference','pickoff','pickoff_error','error','other_advance','runner_out')
 PIT = ('outs','PC','H','R','BB','HBP','K','HR','BF')
 SIDE = ('away','home')
 
@@ -164,6 +166,22 @@ def build_game_box(result,matchup,fit:BookkeepingFit) -> dict[str,Any]:
             p=pitching[fs].setdefault(pid,dict(player_id=pid,name=e['pitcher_name'],**_zeros(PIT)))
             p['outs']+=e['outs_after']-e['outs_before']
             e.update(box_outcome=e['outcome'],rbi=0,scoring_players=[],estimated_pitches=0,pitches=[],contact=None)
+            plays.append({k:e[k] for k in ('inning','half','batter_id','batter_name','pitcher_id','pitcher_name',
+                'box_outcome','description','outs_before','outs_after','runs_scored','away_score','home_score',
+                'bases_before','bases_after','scoring_players','rbi','estimated_pitches','pitches','contact')})
+            continue
+        if e['outcome'] in RUNNING:
+            # A wild pitch, passed ball, balk, pickoff ... between plate appearances: runs for the runners who scored
+            # (charged to their responsible pitchers), the out to the pitcher on the mound; no PA, no RBI.
+            p=pitching[fs].setdefault(pid,dict(player_id=pid,name=e['pitcher_name'],**_zeros(PIT)))
+            p['outs']+=e['outs_after']-e['outs_before']
+            for runner,responsible,automatic in scored:
+                batting[s][str(runner)]['R']+=1
+                charged=pid if responsible is None else str(responsible)
+                if charged not in pitching[fs]:raise Blocked('Missing responsible pitcher in box score')
+                pitching[fs][charged]['R']+=1
+            line=innings[s].setdefault(str(e['inning']),{'R':0,'H':0});line['R']+=e['runs_scored']
+            e.update(box_outcome=e['outcome'],rbi=0,scoring_players=[str(x[0]) for x in scored],estimated_pitches=0,pitches=[],contact=None)
             plays.append({k:e[k] for k in ('inning','half','batter_id','batter_name','pitcher_id','pitcher_name',
                 'box_outcome','description','outs_before','outs_after','runs_scored','away_score','home_score',
                 'bases_before','bases_after','scoring_players','rbi','estimated_pitches','pitches','contact')})
@@ -317,12 +335,24 @@ class BoxAccumulator:
 # steals: runner speeds from sprint speed and stolen-base attempts (brl_live/running.py, RUN-01). On since the full
 # 2026 replay (RUN-02): simulator win Brier 0.24405 to 0.24378, correlation with the market's closing log-odds 0.8235 to
 # 0.8354, totals closer to the market line, mean total unchanged.
+# running_events: wild pitches, passed balls, balks, pickoffs and the other running plays between plate appearances
+# (TRANS-02; research_lab.game_sim.running_events.RunningEvents, table brl_live/running_events.json from the transitions
+# lane, tools/brl_running_events.py). Off until its replays are read.
 ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         'postseason_exp_scale':{'F':0.91,'D':0.91,'L':0.91,'W':1.0},
-        'environment':True,'team_offsets':True,'steals':True,'transitions':True}
+        'environment':True,'team_offsets':True,'steals':True,'transitions':True,'running_events':False}
 
 TRANSITIONS_PATH=Path(__file__).resolve().parent/'transitions.json'
+RUNNING_EVENTS_PATH=Path(__file__).resolve().parent/'running_events.json'
 _KERNEL={}
+
+def running_events_for(settings):
+    """The running plays between plate appearances (brl_live/running_events.json, TRANS-02) when switched on, else None."""
+    if not settings.get('running_events'):return None
+    if 'r' not in _KERNEL:
+        from research_lab.game_sim.running_events import RunningEvents
+        _KERNEL['r']=RunningEvents(json.loads(RUNNING_EVENTS_PATH.read_text()))
+    return _KERNEL['r']
 
 def transitions_for(settings):
     """The empirical base-running kernel (brl_live/transitions.json, TRANS-01) when it is switched on, else None (the
@@ -384,7 +414,9 @@ def run_box_worlds(engine,matchup,history,date,seeds,full_history=None,settings=
     if steals is not None:adjust_label=list(adjust_label)+[steals.describe()]
     kernel=transitions_for(settings)
     if kernel is not None:adjust_label=list(adjust_label)+[kernel.name]
-    sim=ObservedSimulator(provider,config=engine.config,manager_policy=engine.manager,steals=steals,transitions=kernel)
+    running=running_events_for(settings)
+    if running is not None:adjust_label=list(adjust_label)+[running.name]
+    sim=ObservedSimulator(provider,config=engine.config,manager_policy=engine.manager,steals=steals,transitions=kernel,running_events=running)
     accumulator=BoxAccumulator(matchup);results=[]
     for seed in seeds:
         if world_hook:world_hook(int(seed))

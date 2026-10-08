@@ -19,6 +19,8 @@ Settings come from tools/replay_params.json on the trigger branch:
                season before each replayed date
   hitter_lines record each lineup hitter's simulated chances and his actual line (brl_replay.harness.replay_dates)
   transitions  path in the repository of a base-running kernel (tools/brl_transition_kernel.py) used after each outcome
+  running_events path in the repository of a running-plays table (tools/brl_running_events.py): wild pitches, passed
+               balls, balks, pickoffs and the rest between plate appearances
   physics_years 'recent' (default: the previous and the replayed season, as the live runtime loads), 'all' (every sealed
                season from 2023, as the model was fitted) or a list of years
   physics_join  keep only physics rows whose game, plate appearance, batter and pitcher are in the plate-appearance
@@ -100,7 +102,8 @@ def _worker(dates: list) -> list:
                         hazard_path=s['hazard_path'], n_sims=s['n_sims'], physics_table=s['physics_table'], offsets=s['offsets'], rest=s.get('rest', False),
                         environment=s.get('environment'), team_offsets=s.get('team_offsets'), age_layer=s.get('age_layer'), steals=s.get('steals'),
                         win_states=s.get('win_states') or False, starter_lines=bool(s.get('starter_lines')), role_offsets=s.get('role_offsets'), real_pa_check=bool(s.get('real_pa_check')),
-                        transitions=s.get('transitions'), hitter_lines=bool(s.get('hitter_lines')), log=lambda m: print(m, flush=True))
+                        transitions=s.get('transitions'), hitter_lines=bool(s.get('hitter_lines')), running_events=s.get('running_events'),
+                        log=lambda m: print(m, flush=True))
 
 
 def logit(p):
@@ -275,6 +278,11 @@ def main():
             kdoc = json.loads((ROOT / str(params['transitions'])).read_text())
             transitions = EmpiricalKernel(kdoc)
             receipt['transitions'] = {'path': params['transitions'], 'name': transitions.name, 'cells': len(transitions.cells)}
+        running_events = None
+        if params.get('running_events'):
+            from research_lab.game_sim.running_events import RunningEvents
+            running_events = RunningEvents(json.loads((ROOT / str(params['running_events'])).read_text()))
+            receipt['running_events'] = {'path': params['running_events'], 'name': running_events.name, 'cells': len(running_events.cells)}
         steals = None
         if params.get('steals'):
             steals = {k: float(v) for k, v in dict(params['steals']).items() if k in ('per_pa', 'third')}
@@ -282,7 +290,7 @@ def main():
         _SHARED.update(h=h, app=app, games=games, model_path=model_path, model_sha256=model_sha256, history_path=history_path, hazard_path=hazard_path,
                        n_sims=n_sims, physics_table=physics_table, offsets=offsets, rest=use_rest, environment=environment, team_offsets=team_offsets,
                        age_layer=age_layer, steals=steals, win_states=(params.get('win_states') if params.get('win_states') == 'split' else bool(params.get('win_states'))), starter_lines=bool(params.get('starter_lines')), role_offsets=role_offsets, real_pa_check=bool(params.get('real_pa_check')), transitions=transitions,
-                       hitter_lines=bool(params.get('hitter_lines')))
+                       hitter_lines=bool(params.get('hitter_lines')), running_events=running_events)
         if params.get('win_states'):
             receipt['win_states'] = True
         stage(f'replay {len(games)} games with {workers} workers')

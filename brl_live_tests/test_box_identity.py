@@ -45,7 +45,7 @@ def page_vars(*names):
     return '\n'.join(out)
 
 def test_play_wording_uses_drawn_contact():
-    code=page_vars('HOMER','SPOT','FIELDER','SHAPE','OUT_VERB','DP_ROUTE')+page_functions('contactWords','playParts','listNames')
+    code=page_vars('HOMER','SPOT','FIELDER','SHAPE','OUT_VERB','DP_ROUTE','RUN_PLAY')+page_functions('contactWords','playParts','listNames')
     prefix="const assert=require('assert');function lastName(n){return n.split(' ').pop();}"
     cases=[({'box_outcome':'single','contact':{'t':'L','loc':8}},"Betts singles on a line drive to center field."),
            ({'box_outcome':'single','contact':{'t':'G','loc':6}},"Betts singles on a ground ball to shortstop."),
@@ -62,9 +62,11 @@ def test_play_wording_uses_drawn_contact():
            ({'box_outcome':'bip_out','description':'x drove in a run on a sacrifice fly.','contact':{'t':'F','loc':9},'scoring_players':['7']},"Betts hits a sacrifice fly to right field, Smith scores."),
            ({'box_outcome':'other_reach','description':'x reached on an error or other play.','contact':{'t':'G','loc':6}},"Betts reaches on an error by the shortstop."),
            ({'box_outcome':'other_reach','description':"x reached on a fielder's choice.",'contact':{'t':'G','loc':4}},"Betts reaches on a fielder's choice to second base."),
-           ({'box_outcome':'strikeout','contact':None},"Betts strikes out.")]
+           ({'box_outcome':'strikeout','contact':None},"Betts strikes out."),
+           # a simulated running play between plate appearances keeps the engine's words with short names
+           ({'box_outcome':'wild_pitch','description':'Wild pitch: Will Smith scores; Mookie Betts to second.','scoring_players':['7']},"Wild pitch: Smith scores; Betts to second.")]
     import json
-    checks=''.join("assert.equal(playParts(Object.assign({batter_id:'1',batter_name:'Mookie Betts'},%s),{'7':'Will Smith'},{}).text,%s);"%(json.dumps(p),json.dumps(t)) for p,t in cases)
+    checks=''.join("assert.equal(playParts(Object.assign({batter_id:'1',batter_name:'Mookie Betts'},%s),{'7':'Will Smith','1':'Mookie Betts'},{}).text,%s);"%(json.dumps(p),json.dumps(t)) for p,t in cases)
     subprocess.run(['node','-e',prefix+code+checks],check=True)
 
 def test_series_and_record_context_lines():

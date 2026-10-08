@@ -19,9 +19,11 @@ import pandas as pd
 from research_lab.game_sim.engine import GameSimulator
 from research_lab.game_sim.locked_pa_provider import HistoryState, LockedPAModelProvider
 from research_lab.game_sim.models import GameMatchup, PitcherProfile, PlayerProfile, TeamProfile
+from research_lab.game_sim.running_events import KINDS as RUNNING_KINDS
 from research_lab.game_sim.starter_hazard import FittedStarterPolicy, tendencies_at
 
 MAX_RUNS = 30
+NON_PA = frozenset({"stolen_base", "caught_stealing", *RUNNING_KINDS})     # events between plate appearances
 HISTORY_COLUMNS = ["date_key", "game_pk", "at_bat_number", "batter", "pitcher", "stand", "p_throws", "park", "outcome", "age_bat", "age_pit"]
 
 
@@ -116,7 +118,7 @@ def bats_lookup(h: pd.DataFrame, cutoff: str) -> dict:
 
 def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates: list, *, model_path: Path, model_sha256: str,
                  history_path: Path, hazard_path: Path, n_sims: int, physics_table=None, offsets=None, rest=False, environment=None,
-                 team_offsets=None, age_layer=None, steals=None, win_states=False, starter_lines=False, role_offsets=None, real_pa_check=False, transitions=None, hitter_lines=False, log=print) -> list[dict]:
+                 team_offsets=None, age_layer=None, steals=None, win_states=False, starter_lines=False, role_offsets=None, real_pa_check=False, transitions=None, hitter_lines=False, running_events=None, log=print) -> list[dict]:
     """Simulate every game on the given dates; one record per game (win counts, run histograms, starter outs).
 
     environment: optional {game_pk: seven log-multipliers} (brl_live/environment.py); games without an entry are unadjusted.
@@ -137,6 +139,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
     order) and record the predicted and observed counts per outcome class for starters and relievers, so the
     simulator's own totals can be told apart from the probabilities it draws from.
     transitions: optional base-running kernel after each outcome (research_lab.game_sim.transitions.EmpiricalKernel).
+    running_events: optional running plays between plate appearances other than steals (research_lab.game_sim.running_events).
     hitter_lines: also record each lineup hitter's simulated chances (at least one hit, a home run, a strikeout, a walk), mean
     plate appearances, hits and home runs, the hits histogram, his actual line in that game (box-score facts) and a baseline
     from earlier dates only (his hit and home-run rates per plate appearance over the prior 365 days, shrunk toward the league)."""
@@ -299,7 +302,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
             if steals is not None:
                 from brl_live.running import steal_model
                 steal = steal_model(int(str(date)[:4]) - 1, **{k: float(v) for k, v in steals.items() if k in ('per_pa', 'third')})
-            sim = GameSimulator(provider, manager_policy=policy, steals=steal, transitions=transitions)
+            sim = GameSimulator(provider, manager_policy=policy, steals=steal, transitions=transitions, running_events=running_events)
             rng = np.random.default_rng(int(g.game_pk))
             seeds = rng.integers(0, np.iinfo(np.int32).max, size=n_sims, dtype=np.int64)
             hw = ties = 0
@@ -318,7 +321,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                 r = sim.simulate(matchup, int(s), record_events=bool(win_states) or bool(hitter_lines))
                 if wt is not None:
                     box = {"score": {"home": r.home_score, "away": r.away_score},
-                           "plays": [e for e in r.events if e.get("outcome") not in ("stolen_base", "caught_stealing")]}
+                           "plays": [e for e in r.events if e.get("outcome") not in NON_PA]}
                     wt.add(box)
                     if halves is not None:
                         halves[si % 2].add(box)
@@ -343,7 +346,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                     cnt = {}
                     for e in r.events:
                         o_ = e.get("outcome"); bid_ = (str(e.get("batting_side")), str(e.get("batter_id")))
-                        if o_ in ("stolen_base", "caught_stealing") or bid_ not in hl:
+                        if o_ in NON_PA or bid_ not in hl:
                             continue
                         c_ = cnt.setdefault(bid_, [0, 0, 0, 0, 0])            # PA, hits, home runs, strikeouts, walks
                         c_[0] += 1

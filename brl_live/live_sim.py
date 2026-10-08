@@ -211,6 +211,11 @@ class LiveSimulator(GameSimulator):
                 break
             if self.steals is not None and state.outs < 3:
                 self._steal_step(state, batting_side, batting, fielding, lines, rng, record_events, events)
+            if getattr(self, 'running_events', None) is not None and state.outs < 3:
+                if self._running_event_step(state, batting_side, batting, fielding, lines, inning_runs, rng, record_events, events):
+                    state.complete = True
+                    self._close_active_lines(lines, state.inning, state.half)
+                    break
             if state.outs >= 3:
                 self._maybe_change_pitcher(fielding, fielding_side, batting.profile, state, lines, inning_ended=True, rng=rng)
                 state.bases = [None, None, None]

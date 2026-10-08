@@ -83,6 +83,7 @@ class GameSimulator:
         manager_policy: ManagerPolicy | None = None,
         steals=None,
         transitions=None,
+        running_events=None,
     ) -> None:
         self.provider = provider
         # Optional base-running model (brl_live.running.StealModel): runner speeds and stolen-base attempts. When it
@@ -91,6 +92,9 @@ class GameSimulator:
         # Optional base-running kernel after each outcome (transitions.EmpiricalKernel, from real play-by-play); None
         # keeps the hand-set kernel (transitions.apply_outcome).
         self.transitions = transitions
+        # Optional running plays between plate appearances other than steals (running_events.RunningEvents: wild
+        # pitches, passed balls, balks, pickoffs ...). None draws exactly the same random numbers as before.
+        self.running_events = running_events
         self.config = config or SimulationConfig()
         self.manager = manager_policy or ManagerPolicy(
             three_batter_minimum=self.config.three_batter_minimum
@@ -268,6 +272,12 @@ class GameSimulator:
             if self.steals is not None and state.outs < 3:
                 self._steal_step(state, batting_side, batting, fielding, lines, rng, should_record, events)
 
+            if self.running_events is not None and state.outs < 3:
+                if self._running_event_step(state, batting_side, batting, fielding, lines, inning_runs, rng, should_record, events):
+                    state.complete = True
+                    self._close_active_lines(lines, state.inning, state.half)
+                    break
+
             if state.outs >= 3:
                 self._maybe_change_pitcher(
                     fielding,
@@ -396,6 +406,51 @@ class GameSimulator:
                 outcome=outcome, outs_before=outs_before, outs_after=state.outs, bases_before=bases_before,
                 bases_after=state.base_ids(), runs_scored=0, away_score=state.away_score, home_score=state.home_score,
                 description=description))
+
+    def _running_event_step(self, state, batting_side, batting, fielding, lines, inning_runs, rng, should_record, events) -> bool:
+        """Between plate appearances: a running play other than a steal (wild pitch, passed ball, balk, pickoff,
+        defensive indifference ...) may move the runners. Runs score for the runners' responsible pitchers; an out
+        counts for the pitcher on the mound. Returns True when the play ends the game (a walk-off run)."""
+        draw = self.running_events.draw(state.bases, state.outs, rng)
+        if draw is None:
+            return False
+        kind, pattern, _ = draw
+        bases = list(state.bases)
+        new, scored, put_out = self.running_events.apply(bases, pattern)
+        description, lead = self.running_events.describe(kind, bases, pattern)
+        if (
+            state.half == "bottom"
+            and state.inning >= self.config.regulation_innings
+            and state.home_score <= state.away_score
+            and state.home_score + len(scored) > state.away_score
+        ):
+            scored = scored[:state.away_score - state.home_score + 1]
+        outs_before, bases_before = state.outs, state.base_ids()
+        pitcher = fielding.current_pitcher
+        if put_out:
+            credited = min(len(put_out), 3 - state.outs)
+            state.outs = min(3, state.outs + len(put_out))
+            line = lines.get(pitcher.player_id)
+            if line is not None:
+                line.outs_recorded += credited
+        state.bases = new
+        self._charge_scored_runners(scored, lines)
+        runs = len(scored)
+        state.add_runs(batting_side, runs)
+        inning_runs[batting_side][state.inning] += runs
+        if should_record:
+            who = lead or (scored[0] if scored else None)
+            events.append(GameEvent(
+                inning=state.inning, half=state.half, batting_side=batting_side, batting_team=batting.profile.name,
+                batter_id=who.player_id if who is not None else "", batter_name=who.name if who is not None else "",
+                pitcher_id=pitcher.player_id, pitcher_name=pitcher.name, outcome=kind, outs_before=outs_before,
+                outs_after=state.outs, bases_before=bases_before, bases_after=state.base_ids(), runs_scored=runs,
+                away_score=state.away_score, home_score=state.home_score, description=description))
+        return (
+            state.half == "bottom"
+            and state.inning >= self.config.regulation_innings
+            and state.home_score > state.away_score
+        )
 
     def _ensure_pitcher_line(
         self,
