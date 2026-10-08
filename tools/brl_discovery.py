@@ -759,6 +759,121 @@ def horizon2(T: dict, params: dict, stage) -> dict:
     return res
 
 
+def horizon3(T: dict, params: dict, stage) -> dict:
+    """Is a hitter's horizon new information or a re-expression of his chase rate? Horizons are measured on
+    2023-2024 only (shared location map with the straight observer, as in the first run, and with pitch-type maps
+    so the league's type-level differences are absorbed), then tested against what the same hitters did in
+    2025-2026: strikeout rate, walk rate, chase rate and whiffs on breaking balls, controlling for the plate-
+    discipline statistics a scout already has from 2023-2024."""
+    res = {}
+    F = rebuild(T)
+    keep = (F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2)
+            & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1)))
+    T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
+    swing = ((T['call'] == 1) | (T['call'] == 2)).astype(np.int64); whiff = (T['call'] == 2)
+    C = control_block(T, swing_propensity(T))
+    u = np.where(T['stand_r'] == 1, T['px'], -T['px'])
+    inzone = (np.abs(u) <= ZONE_HALF) & (T['pz'] <= ZONE_TOP) & (T['pz'] >= ZONE_BOT)
+    brk = np.isin(T['group'], (3, 4))
+    dev = np.flatnonzero(T['season'] <= 2024); fut = np.flatnonzero(T['season'] >= 2025)
+    rng = np.random.default_rng(int(params.get('seed', 11)))
+    fit_idx = np.sort(rng.choice(dev, min(len(dev), int(params.get('hitter_fit_n', 500000))), replace=False))
+    oh = np.eye(7, dtype=np.float32)[np.clip(T['group'], 0, 6)]
+
+    def shared(x, z, idx):
+        return np.hstack([location_block(x[idx], z[idx], T['stand_r'][idx], T['strikes'][idx]), C[idx]])
+
+    def typed(x, z, idx):
+        uu = np.where(T['stand_r'][idx] == 1, x[idx], -x[idx]); zz = z[idx]
+        e = np.maximum(np.maximum(np.abs(uu) - ZONE_HALF, zz - ZONE_TOP), ZONE_BOT - zz)
+        b = np.hstack([hats(e, E_KNOTS), hats(uu, U_KNOTS), hats(zz, Z_KNOTS)])
+        return np.hstack([location_block(x[idx], z[idx], T['stand_r'][idx], T['strikes'][idx]), (b[:, :, None] * oh[idx, None, :]).reshape(len(idx), -1), C[idx]])
+
+    bat = T['batter']; ub, inv = np.unique(bat, return_inverse=True)
+    n_dev = np.bincount(inv[dev], minlength=len(ub)); n_fut = np.bincount(inv[fut], minlength=len(ub))
+    sel = (n_dev >= int(params.get('min_dev', 2000))) & (n_fut >= int(params.get('min_fut', 1500)))
+    odd = (T['day'] % 2).astype(int)
+    out_h = {}
+    for name, designf, grid in (('shared', shared, [round(x, 3) for x in np.arange(0.0, 0.3001, 0.025)]),
+                                ('typed', typed, [0.0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30])):
+        LL = np.zeros((len(grid), len(ub))); LLh = np.zeros((2, len(grid), len(ub)))
+        for gi, tau in enumerate(grid):
+            x = T['px'] - 0.5 * F['asx'] * tau ** 2; z = T['pz'] - 0.5 * F['asz'] * tau ** 2      # straight observer
+            m = fit_logistic(designf(x, z, fit_idx), swing[fit_idx])
+            ll = np.zeros(len(dev))
+            for s in range(0, len(dev), 250000):
+                ii = dev[s:s + 250000]
+                ll[s:s + 250000] = -logloss_vec(m.predict_proba(designf(x, z, ii))[:, 1], swing[ii])
+            LL[gi] = np.bincount(inv[dev], weights=ll, minlength=len(ub))
+            for h in (0, 1):
+                LLh[h, gi] = np.bincount(inv[dev], weights=ll * (odd[dev] == h), minlength=len(ub))
+            stage(f'{name} tau {tau}')
+
+        def peak(curve):
+            i = int(np.argmax(curve)); step = grid[1] - grid[0]
+            if 0 < i < len(grid) - 1:
+                y0, y1, y2 = curve[i - 1], curve[i], curve[i + 1]; den = y0 - 2 * y1 + y2
+                return float(grid[i] + (np.clip(0.5 * (y0 - y2) / den, -1, 1) * step if den < 0 else 0.0))
+            return float(grid[i])
+        out_h[name] = {'grid': grid, 'tau': np.array([peak(LL[:, j]) for j in range(len(ub))]),
+                       'odd': np.array([peak(LLh[1, :, j]) for j in range(len(ub))]), 'even': np.array([peak(LLh[0, :, j]) for j in range(len(ub))]),
+                       'pooled': [round(float(v), 2) for v in (LL[:, sel].sum(axis=1) - LL[0, sel].sum()) / n_dev[sel].sum() * 1000]}
+
+    def rate(num_mask, den_mask, idx):
+        num = np.bincount(inv[idx], weights=num_mask[idx].astype(float), minlength=len(ub)); den = np.bincount(inv[idx], weights=den_mask[idx].astype(float), minlength=len(ub))
+        with np.errstate(invalid='ignore', divide='ignore'):
+            return num / den
+    pa_end = T['last_in_pa'] == 1
+    k_pa = pa_end & (T['call'] == 2) & (T['strikes'] == 2)
+    bb_pa = pa_end & (T['call'] == 0) & (T['balls'] == 3)
+    stats_dev = {'o_swing': rate(swing.astype(bool) & ~inzone, ~inzone, dev), 'z_swing': rate(swing.astype(bool) & inzone, inzone, dev),
+                 'whiff_per_swing': rate(whiff, swing.astype(bool), dev), 'k_rate': rate(k_pa, pa_end, dev), 'bb_rate': rate(bb_pa, pa_end, dev),
+                 'brk_chase': rate(swing.astype(bool) & ~inzone & brk, ~inzone & brk, dev)}
+    stats_fut = {'k_rate': rate(k_pa, pa_end, fut), 'bb_rate': rate(bb_pa, pa_end, fut), 'o_swing': rate(swing.astype(bool) & ~inzone, ~inzone, fut),
+                 'brk_chase': rate(swing.astype(bool) & ~inzone & brk, ~inzone & brk, fut), 'brk_whiff': rate(whiff & brk, swing.astype(bool) & brk, fut),
+                 'whiff_per_swing': rate(whiff, swing.astype(bool), fut)}
+    idx = np.flatnonzero(sel)
+    res['n_hitters'] = int(len(idx))
+    rows = []
+    for j in idx:
+        rows.append({'batter': int(ub[j]), 'n_dev': int(n_dev[j]), 'n_fut': int(n_fut[j]),
+                     **{f'tau_{k}': round(float(out_h[k]['tau'][j]), 4) for k in out_h},
+                     **{f'dev_{k}': round(float(v[j]), 4) for k, v in stats_dev.items()}, **{f'fut_{k}': round(float(v[j]), 4) for k, v in stats_fut.items()}})
+    res['rows'] = rows
+    res['pooled_profiles'] = {k: {'grid': v['grid'], 'per_1000': v['pooled']} for k, v in out_h.items()}
+    from scipy import stats
+    tests = {}
+    for hk in out_h:
+        t = out_h[hk]['tau'][idx]
+        tests[hk] = {'split_half': round(float(np.corrcoef(out_h[hk]['odd'][idx], out_h[hk]['even'][idx])[0, 1]), 4),
+                     'corr_with_dev': {k: round(float(stats.spearmanr(t, v[idx], nan_policy='omit')[0]), 4) for k, v in stats_dev.items()}}
+        # incremental validity: future outcome on the 2023-2024 discipline statistics, with and without the horizon
+        X0 = np.column_stack([stats_dev[k][idx] for k in ('o_swing', 'z_swing', 'whiff_per_swing', 'k_rate', 'bb_rate', 'brk_chase')])
+        inc = {}
+        for fk in ('k_rate', 'bb_rate', 'o_swing', 'brk_chase', 'brk_whiff', 'whiff_per_swing'):
+            y = stats_fut[fk][idx]; okr = np.isfinite(y) & np.isfinite(X0).all(axis=1) & np.isfinite(t)
+            Xa = np.column_stack([np.ones(okr.sum()), X0[okr]]); Xb = np.column_stack([Xa, t[okr]])
+            def r2(X):
+                beta, *_ = np.linalg.lstsq(X, y[okr], rcond=None); e = y[okr] - X @ beta; return 1 - e.var() / y[okr].var(), beta
+            ra, _ = r2(Xa); rb, beta = r2(Xb)
+            # leave-one-out prediction error with and without the horizon
+            def loo(X):
+                H = X @ np.linalg.pinv(X.T @ X) @ X.T; beta, *_ = np.linalg.lstsq(X, y[okr], rcond=None); e = y[okr] - X @ beta
+                return float(np.mean((e / (1 - np.diag(H))) ** 2))
+            boots = []
+            rr = np.random.default_rng(1)
+            for _ in range(500):
+                b = rr.integers(0, okr.sum(), okr.sum())
+                bb, *_ = np.linalg.lstsq(Xb[b], y[okr][b], rcond=None); boots.append(bb[-1])
+            sd_t = float(np.std(t[okr]))
+            inc[fk] = {'r2_without': round(float(ra), 4), 'r2_with': round(float(rb), 4), 'loo_mse_without': loo(Xa), 'loo_mse_with': loo(Xb),
+                       'coef_per_sd_horizon': round(float(beta[-1] * sd_t), 5), 'ci_per_sd': [round(float(np.percentile(boots, 2.5) * sd_t), 5), round(float(np.percentile(boots, 97.5) * sd_t), 5)],
+                       'outcome_sd': round(float(np.std(y[okr])), 5), 'n': int(okr.sum())}
+        tests[hk]['incremental'] = inc
+    res['tests'] = tests
+    return res
+
+
 def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']
     from cloud.security import unseal, key_bytes
@@ -791,6 +906,8 @@ def main():
             receipt['results'] = horizon(T, params, stage)
         elif experiment == 'horizon2':
             receipt['results'] = horizon2(T, params, stage)
+        elif experiment == 'horizon3':
+            receipt['results'] = horizon3(T, params, stage)
         receipt['status'] = 'completed'
     except Exception as exc:
         receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:400]
