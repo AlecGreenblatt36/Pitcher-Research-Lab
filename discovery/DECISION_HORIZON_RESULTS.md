@@ -25,6 +25,8 @@ to 18); 25.7% of pitches at 0-0 (counts are pre-pitch).
 | 37737930311 | Does facing a pitcher again move it (times through the order) | No: 259, 263, 268 ms the first, second and third time; flat with pitch-type exposure. Prediction (falls with exposure) failed. Hitters do not read late movement better as the game goes on. |
 | 37736961636 | Per-hitter horizon: new information or chase rate restated | Very repeatable (odd against even days 0.84) and sorts hitters as scouts would (latest: Mike Trout 149 ms, George Springer, Lourdes Gurriel Jr., Juan Soto 166 ms; earliest: Javier Baez and Elly De La Cruz at the 300 ms grid edge, Adam Duvall, Oneil Cruz). But measured on 2023-2024 it adds nothing to 2025-2026 strikeout, walk, chase or breaking-ball whiff rates beyond 2023-2024 plate-discipline numbers (R squared changes in the fourth decimal, intervals span zero). Bat speed correlates +0.13 (the protocol predicted negative). Dropped as a scouting number. |
 | 37738096684 | Pitcher side: does more shape surprise win decisions | Median 1.1 in of unexpected movement per pitch after the horizon, stable year to year (0.75). No effect on future chase or whiff; more walks (+0.32 pts per SD, interval excludes zero) and fewer pitches in the zone. It is wildness, not deception, exactly the pattern the pre-run rule named. Dropped. |
+| 37740908440 | Blind window or expectation pull (reviewer's strongest rival): split each pitch's miss from the pitcher's usual spot into movement surprise and the line it left the hand on | Movement part discounted 0.413 (a blind window from 261 ms predicts 0.467); line part -0.043 (predicted 0); difference 0.450 to 0.465. A pull toward an expected spot would discount both the same: rejected. By type: four-seam 0.46, sinker 0.50, changeup 0.42, curveball 0.33, slider 0.30 (sliders partly anticipated). Implied commit with pitcher-season intercepts: 245 ms. |
+| 37738936962, 37741128823 | Tunneling scored at the measured horizon (2,104,443 consecutive pitch pairs) | The previous-pitch separation (visual angle from the batter's eye) best predicts a chase at 260 ms: 1.31 nats per 1,000 against 1.03 at the public 175 ms and 0.05 at the plate; head to head on 526,205 out-of-zone pitches, 260 ms beats 175 ms by 0.27 nats per 1,000 (0.22 to 0.32). Swings at strikes peak at the same moment. Whiffs get almost nothing from tunneling at any time (prediction for whiffs failed). |
 | 37738373322 | After deciding, how late is the bat steered (balls in play) | Launch angle rises 0.248 degrees per unit of up-and-down surprise (SE 0.003); sideways placebo 0.033. With an assumed 16 to 25 degrees per inch of bat-ball offset, the bat is steered until about 100 to 125 ms before the plate (111 ms at 20). If it were set at the decision, the slope would be 1.08 to 1.69. Balls in play exclude the largest misses, which biases this number short. |
 
 ## Reading
@@ -39,10 +41,19 @@ What this is not: a per-hitter scouting number (redundant with chase rate) or a 
 (wildness). Nothing here is causal about training. The flight is rebuilt, not tracked along its path; the zone is a
 fixed box; the contact horizon rests on an assumed geometry.
 
+## Instrument
+
+`Decision Horizon` page (private artifact, built from the receipts): the flight at the commit point, every profile
+and check, hitters (with the failure), pitchers (with the failure), the steering limit, tunneling at the right
+moment, and a pitch pair explorer for 679 pitchers' 2026 arsenals (average flights, visual angle from the batter's
+eye, against the decision and steering lines).
+
 ## Decision
 
-Continue, with the target changed: the league-level measurement holds; the hitter and pitcher uses we expected are
-dropped. Next experiment: re-score consecutive pitch pairs at the measured horizons (separation at 260 ms, at 175 ms
-and at the plate) and test which predicts chase and whiff on the second pitch beyond its stuff and location, fitted
-on 2023-2024 and scored on 2025-2026. If 260 ms wins, the field's deception metrics are measured at the wrong moment
-and the corrected version is a pitch-design tool.
+Continue, with the target changed: the league-level measurement holds, including against the reviewer's strongest
+rival, and tunneling scored at it beats the field's 175 ms choice for chases; the hitter and pitcher uses we expected
+are dropped. Next experiment: move from prediction to a lever. For pitchers whose pair separation at the 260 ms
+decision moment changed between 2025 and 2026 (new grips, slots, shapes), test whether that change predicts the change
+in chase rate on the second pitch beyond the change in its own speed, movement and location mix, with the separation
+at the plate as the placebo. Cheaper second step: replace the assumed bat-ball geometry in the steering limit with
+Statcast's measured swing timing and miss distance.
