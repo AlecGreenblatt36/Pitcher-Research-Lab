@@ -233,9 +233,12 @@ def main(public_dir):
         manifest_path=ROOT/'brl_engine'/'models'/(bridge.MODEL_NAME+'.json')
         manifest=json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
         year=utcnow().astimezone(ZoneInfo('America/New_York')).year
-        sim.physics_table,physics_receipt=assemble_physics_table(cache,index,utcnow(),years=seasons_for(manifest,year))
-        physics_receipt['seasons_mode']=SEASONS
-        if SEASONS=='fit':
+        # A model fitted with a physics window (physics_params window_days) reads exactly that window, so it gets every
+        # fitted season joined to the history and the window does the trimming, as in its fit.
+        mode='fit' if int((manifest.get('physics_params') or {}).get('window_days') or 0)>0 else SEASONS
+        sim.physics_table,physics_receipt=assemble_physics_table(cache,index,utcnow(),years=seasons_for(manifest,year,mode))
+        physics_receipt['seasons_mode']=mode
+        if mode=='fit':
             # As the fit's builder: only plate appearances that are in the history the talent features read.
             sim.physics_table,dropped=join_history(sim.physics_table,sim.history)
             physics_receipt['rows_not_in_history']=dropped;physics_receipt['rows']=int(len(sim.physics_table))

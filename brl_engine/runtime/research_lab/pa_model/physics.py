@@ -15,6 +15,10 @@ every feature is a shrunk rate or mean over a player's prior dates:
            rates, exit velocity, hard-hit and ground-ball share allowed, pitches seen; optionally
            expected run value allowed and 30-day deviations
 
+window_days (0 = every prior date) limits the player and league sums, the contact-cell values and their counts to the
+plate appearances of the last window_days days before the date (the 30-day form features, the last outing and the
+workload keep their own windows), so a fit and the live runtime can read the same recent window.
+
 Two implementations must agree exactly: the chronological builder used for model fitting
 (``build_features``: date-blocked like the engine's own feature builder) and ``PhysicsState``
 (the counters as they stand at the start of one date, used by the live provider). The test
@@ -65,7 +69,7 @@ ENV_CLASSES = {'env_hr': ('HR',), 'env_k': ('K',), 'env_bb': ('BB_HBP',), 'env_o
 DEFAULT_PARAMS = {'k_rate': 150.0, 'k_bip': 60.0, 'k_velo': 100.0, 'xvalue': False, 'recent_days': 0,
                   'k_recent_pitch': 100.0, 'k_recent_bip': 40.0, 'k_cell': 40.0, 'pitch_types': False, 'k_type': 60.0,
                   'defense': False, 'k_def': 400.0, 'defense_days': 365, 'environment': False, 'env_days': 30, 'k_env': 2000.0,
-                  'matchup': False, 'workload': False, 'aging': False, 'decay_days': 0, 'k_dec': 60.0}
+                  'matchup': False, 'workload': False, 'aging': False, 'decay_days': 0, 'k_dec': 60.0, 'window_days': 0}
 FIELDABLE = {'BIP_OUT', '1B', '2B_3B', 'OTHER_REACH'}
 ENV_LABELS = ['BIP_OUT', 'K', 'BB_HBP', '1B', '2B_3B', 'HR', 'OTHER_REACH']
 ENV_INDEX = {l: i for i, l in enumerate(ENV_LABELS)}
@@ -340,6 +344,8 @@ class _Sums:
         self.env_days: list = []                                            # [day ordinal, counts by class (7)] per date, league wide
         self.outings: dict = defaultdict(list)                              # pitcher -> [[day ordinal, pitches], ...] per date pitched
         self.env_total = np.zeros(7)
+        self.window = int(self.p.get('window_days') or 0)
+        self.day_parts: list = []                                          # [day ordinal, contributions] per date when windowed
         self.names = feature_names(self.p)
         self.X = {name: i for i, name in enumerate(self.names)}
 
@@ -355,6 +361,24 @@ class _Sums:
             if e[0] >= today - days:
                 sp_ += e[1]; sb_ += e[2]
         return sp_, sb_
+
+    def expire(self, today: int) -> None:
+        """Remove the contributions of dates older than the window (no-op without one)."""
+        if not self.window:
+            return
+        while self.day_parts and self.day_parts[0][0] < today - self.window:
+            _, part = self.day_parts.pop(0)
+            for table, inc in ((self.bp, part['bp']), (self.pp, part['pp']), (self.bb, part['bb']), (self.pb, part['pb'])):
+                for key, v in inc.items():
+                    table[key] -= v
+            self.Lp -= part['Lp']; self.Lb -= part['Lb']
+            for table, inc in ((self.bcells, part['bcells']), (self.pcells, part['pcells'])):
+                for key, cells in inc.items():
+                    for ci, cj in cells:
+                        table[key][ci, cj] -= 1.0
+            for ci, cj, rv in part['cells']:
+                self.cell_sum[ci, cj] -= rv; self.cell_n[ci, cj] -= 1.0
+                self.cell_value_total[0] -= rv; self.cell_value_total[1] -= 1.0
 
     def features(self, batter: int, pitcher: int, today: int, team_defense=None, aging_values=None) -> np.ndarray:
         P, X = self.p, self.X
@@ -476,11 +500,18 @@ class _Sums:
         day_p: dict = {}; day_b: dict = {}
         day_n: dict = {}
         want_xv, recent = bool(self.p.get('xvalue')), int(self.p.get('recent_days') or 0)
+        part = None
+        if self.window:
+            part = {'bp': defaultdict(lambda: np.zeros(len(PITCH_SUMS))), 'pp': defaultdict(lambda: np.zeros(len(PITCH_SUMS))),
+                    'bb': defaultdict(lambda: np.zeros(len(BIP_SUMS))), 'pb': defaultdict(lambda: np.zeros(len(BIP_SUMS))),
+                    'Lp': np.zeros(len(PITCH_SUMS)), 'Lb': np.zeros(len(BIP_SUMS)), 'bcells': defaultdict(list), 'pcells': defaultdict(list), 'cells': []}
         for r in range(len(batters)):
             if np.isnan(M[r, 0]):
                 continue
             b, p = int(batters[r]), int(pitchers[r])
             self.bp[b] += M[r]; self.pp[p] += M[r]; self.Lp += M[r]
+            if part is not None:
+                part['bp'][b] += M[r]; part['pp'][p] += M[r]; part['Lp'] += M[r]
             day_n[p] = day_n.get(p, 0.0) + float(M[r, PS['n']])
             if M[r, PS['fb']] > 0:
                 cv = cur_velo.get(p, (0.0, 0.0)); cur_velo[p] = (cv[0] + M[r, PS['fb']], cv[1] + M[r, PS['velo']])
@@ -488,12 +519,16 @@ class _Sums:
             if not np.isnan(ev[r]):
                 v = bip_vector(ev[r], la[r])
                 self.bb[b] += v; self.pb[p] += v; self.Lb += v
+                if part is not None:
+                    part['bb'][b] += v; part['pb'][p] += v; part['Lb'] += v
                 if want_xv:
                     ci, cj = cell_of(ev[r], la[r])
                     self.bcells[b][ci, cj] += 1.0; self.pcells[p][ci, cj] += 1.0
                     rv = float(run_value[r]) if run_value is not None else 0.0
                     self.cell_sum[ci, cj] += rv; self.cell_n[ci, cj] += 1.0
                     self.cell_value_total[0] += rv; self.cell_value_total[1] += 1.0
+                    if part is not None:
+                        part['bcells'][b].append((ci, cj)); part['pcells'][p].append((ci, cj)); part['cells'].append((ci, cj, rv))
             if recent:
                 for table, key in ((day_p, p), (day_b, b)):
                     e = table.get(key)
@@ -510,6 +545,8 @@ class _Sums:
         self.last_velo.update(cur_velo)
         for p_, n_ in day_n.items():
             self.outings[p_].append([today, n_])
+        if part is not None:
+            self.day_parts.append([today, part])
 
 
 def check_table(table: pd.DataFrame) -> None:
@@ -622,6 +659,7 @@ def build_features(pa: pd.DataFrame, table: pd.DataFrame, params: dict | None = 
         while j < n and dates[j] == dates[i]:
             j += 1
         today = int(day_ord[i])
+        S.expire(today)
         for r in range(i, j):
             av = A.values(int(batters[r]), int(pitchers[r]), today, age_b[r], age_p[r]) if want_age else None
             out[r] = S.features(int(batters[r]), int(pitchers[r]), today, team_defense=(D.value(teams[r], today) if want_def else None), aging_values=av)
@@ -686,6 +724,7 @@ class PhysicsState:
             S.absorb_date(int(day_ord[i]), batters[i:j], pitchers[i:j], M[i:j], ev[i:j], la[i:j], None if rv is None else rv[i:j],
                           outcomes=None if outcomes is None else outcomes[i:j])
             i = j
+        S.expire(pd.Timestamp(str(cutoff_date)[:10]).toordinal())
         return cls(S, str(cutoff_date)[:10], n)
 
     def features(self, batter: int, pitcher: int, team_defense=None, age_bat=None, age_pit=None) -> np.ndarray:

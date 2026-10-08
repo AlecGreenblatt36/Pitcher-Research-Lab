@@ -133,3 +133,24 @@ def test_aging_and_recency_features_match_between_builder_and_state():
             assert np.allclose(got, expected, atol=1e-5, equal_nan=True), (day, r, got - expected)
     with pytest.raises(ValueError):
         phys.PhysicsState.build(table, '2026-05-04', params).features(10, 500)
+
+
+def test_windowed_state_matches_the_chronological_builder():
+    pa, study = helpers.synthetic(n_games=40)
+    table = study_table(study)
+    pa_sorted = pa.sort_values(['date_key', 'game_pk', 'at_bat_number'], kind='mergesort').reset_index(drop=True)
+    outcomes = pa_sorted.set_index(['game_pk', 'at_bat_number'])['outcome']
+    table = table.join(outcomes, on=['game_pk', 'at_bat_number'])
+    params = {'xvalue': True, 'recent_days': 3, 'window_days': 4}
+    built, _ = phys.build_features(pa, table, params)
+    full, _ = phys.build_features(pa, table, {'xvalue': True, 'recent_days': 3})
+    late = (pa_sorted.date_key >= '2026-05-08').to_numpy()
+    assert (built.loc[late, 'p_pitch_n'] < full.loc[late, 'p_pitch_n']).any()          # older pitches leave the window
+    assert (built.loc[late, 'b_bip_n'] <= full.loc[late, 'b_bip_n']).all()
+    for day in ('2026-05-04', '2026-05-10'):
+        state = phys.PhysicsState.build(table, day, params)
+        rows = np.where(pa_sorted.date_key.to_numpy() == day)[0]
+        assert len(rows)
+        for r in rows[:30]:
+            got = state.features(int(pa_sorted.batter[r]), int(pa_sorted.pitcher[r]))
+            assert np.allclose(got, built.iloc[r].to_numpy(float), atol=1e-5), (day, r)
