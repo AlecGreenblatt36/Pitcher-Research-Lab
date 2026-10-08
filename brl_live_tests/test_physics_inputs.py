@@ -102,3 +102,16 @@ def test_live_inputs_carry_team_defense_into_profiles():
         def value(self, team): return {'CLE': 0.015, 'CWS': -0.01}.get(team, 0.0)
     src = inspect.getsource(contracts.live_inputs)
     assert "defense.value(str(t.get('abbreviation') or '').upper())" in src and 'team_defense' in src
+
+
+def test_seasons_follow_the_fit_and_rows_follow_the_history():
+    from brl_live.physics_inputs import seasons_for, join_history
+    manifest = {'physics_seasons': [2023, 2024, 2025, 2026]}
+    assert seasons_for(manifest, 2026, 'live') == (2025, 2026)
+    assert seasons_for(manifest, 2026, 'fit') == (2023, 2024, 2025, 2026)
+    assert seasons_for(manifest, 2027, 'fit') == (2023, 2024, 2025, 2026, 2027)     # the new season joins the fitted ones
+    assert seasons_for({}, 2026, 'fit') == (2025, 2026)                            # no fitted seasons recorded: as live
+    table = pd.DataFrame({'game_pk': [1, 1, 2, 3], 'at_bat_number': [1, 2, 1, 1], 'batter': [11, 12, 13, 14], 'pitcher': [21, 21, 22, 23], 'n': [3.0, 4.0, 5.0, 6.0]})
+    history = pd.DataFrame({'game_pk': [1, 1, 2], 'at_bat_number': [1, 2, 1], 'batter': [11, 99, 13], 'pitcher': [21, 21, 22], 'outcome': ['K', 'K', '1B']})
+    kept, dropped = join_history(table, history)
+    assert dropped == 2 and list(kept.n) == [3.0, 5.0]           # game 3 is not in the history (postseason); 1/2 has another batter

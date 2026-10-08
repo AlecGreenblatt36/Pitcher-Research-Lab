@@ -20,6 +20,29 @@ from research_lab.pa_model.physics import table_from_feed, TABLE_COLUMNS, RUN_VA
 from research_lab.pa_model.outcomes import map_event
 from .bookkeeping_season import load_physics_table
 
+# Which seasons the physics features are built from. 'live': the previous and the current season (the original
+# runtime). 'fit': every season the selected model's fit used (its manifest's physics_seasons) plus the current one,
+# keeping only rows of plate appearances that are in the plate-appearance history, as the fit's chronological builder
+# does; with 'live' the count features and the shrunk rates differ from the ones the model was fitted on (SKEW-01).
+SEASONS = 'live'
+
+
+def seasons_for(manifest: dict, year: int, mode: str | None = None) -> tuple:
+    """The seasons to load for a forecast in `year`."""
+    mode = SEASONS if mode is None else mode
+    fitted = [int(y) for y in (manifest.get('physics_seasons') or []) if int(y) <= int(year)]
+    if mode == 'fit' and fitted:
+        return tuple(sorted(set(fitted) | {int(year) - 1, int(year)}))
+    return (int(year) - 1, int(year))
+
+
+def join_history(table: pd.DataFrame, history: pd.DataFrame) -> tuple[pd.DataFrame, int]:
+    """Only physics rows whose game, plate appearance, batter and pitcher are in the history (as the fit's builder)."""
+    keys = history[['game_pk', 'at_bat_number', 'batter', 'pitcher']].dropna().astype('int64').drop_duplicates(['game_pk', 'at_bat_number'])
+    t = table.astype({'game_pk': 'int64', 'at_bat_number': 'int64', 'batter': 'int64', 'pitcher': 'int64'})
+    kept = t.merge(keys, on=['game_pk', 'at_bat_number', 'batter', 'pitcher'], how='inner').reset_index(drop=True)
+    return kept, int(len(table) - len(kept))
+
 
 def assemble_physics_table(cache, index: dict, origin: datetime, years: tuple | None = None) -> tuple[pd.DataFrame, dict]:
     """Season tables plus day-cache feeds after their coverage; (table, receipt)."""

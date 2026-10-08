@@ -228,10 +228,17 @@ def main(public_dir):
     physics_receipt=None
     if bridge.MODEL_NAME!='locked-pa-2026-v1':
         # A selected model with physics features needs the per-PA physics table through yesterday.
-        from .physics_inputs import assemble_physics_table
-        sim.physics_table,physics_receipt=assemble_physics_table(cache,index,utcnow())
+        from .physics_inputs import assemble_physics_table,seasons_for,join_history,SEASONS
+        from zoneinfo import ZoneInfo
         manifest_path=ROOT/'brl_engine'/'models'/(bridge.MODEL_NAME+'.json')
         manifest=json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
+        year=utcnow().astimezone(ZoneInfo('America/New_York')).year
+        sim.physics_table,physics_receipt=assemble_physics_table(cache,index,utcnow(),years=seasons_for(manifest,year))
+        physics_receipt['seasons_mode']=SEASONS
+        if SEASONS=='fit':
+            # As the fit's builder: only plate appearances that are in the history the talent features read.
+            sim.physics_table,dropped=join_history(sim.physics_table,sim.history)
+            physics_receipt['rows_not_in_history']=dropped;physics_receipt['rows']=int(len(sim.physics_table))
         if 'f_def' in (manifest.get('physics_features') or []):
             # The model reads each fielding team's defense: out rate on fieldable balls in play above the
             # league over the prior window, from the same history the forecasts use, through yesterday.
