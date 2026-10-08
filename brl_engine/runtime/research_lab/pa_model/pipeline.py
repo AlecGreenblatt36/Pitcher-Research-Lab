@@ -118,10 +118,14 @@ def run_benchmark(
     config: PAConfig | None = None,
     extra_features: pd.DataFrame | None = None,
     bundle_extra: dict | None = None,
+    blend_as_test: bool = False,
 ) -> dict:
     """The locked benchmark. ``extra_features`` (one row per PA in the builder's chronological
     order, e.g. the pitch-physics features) are appended to every feature family; ``bundle_extra``
-    is merged into the saved model bundle (physics parameters and feature list, a model name)."""
+    is merged into the saved model bundle (physics parameters and feature list, a model name).
+    ``blend_as_test``: when the test years have no rows yet (a model retrained on the latest season),
+    the metrics are reported on the validation season's final block, the one used only for the
+    ensemble weight."""
     config = config or PAConfig()
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
@@ -137,6 +141,8 @@ def run_benchmark(
         all_feature_columns = list(all_feature_columns) + [str(c) for c in extra_features.columns]
     partitions, partition_audit = validation_partitions(features, config)
     test_mask = features["season"].isin(config.test_years).to_numpy()
+    if not test_mask.any() and blend_as_test:
+        test_mask = partitions["blend"]
     if not test_mask.any():
         raise ValueError("test period contains no rows")
     test = features.loc[test_mask].reset_index(drop=True)

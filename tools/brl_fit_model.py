@@ -109,7 +109,11 @@ def main():
         pa_path = next(data_root.rglob('plate_appearances.csv.gz'))
         from research_lab.pa_model.config import PAConfig
         from research_lab.pa_model.pipeline import run_benchmark
-        config = PAConfig(train_years=(2023, 2024), validation_years=(2025,), test_years=(2026,), evaluation_mode='locked_final')
+        # Training window from tools/fit_model_params.json (default: the frozen 2023-2024 protocol). A retrained model
+        # (train 2023-2025, validate on 2026, no test season yet) reports its metrics on 2026's final block (RETRAIN-01).
+        config = PAConfig(train_years=tuple(settings.get('train_years') or (2023, 2024)), validation_years=tuple(settings.get('validation_years') or (2025,)),
+                          test_years=tuple(settings.get('test_years') or (2026,)), evaluation_mode='locked_final')
+        receipt['config'] = {'train_years': list(config.train_years), 'validation_years': list(config.validation_years), 'test_years': list(config.test_years)}
         stage('load plate appearances')
         pa = pd.read_csv(pa_path, low_memory=False)
         pa['date_key'] = pa['date_key'].astype(str)
@@ -130,7 +134,7 @@ def main():
         stage('run the locked benchmark with physics features')
         out = work / 'model'
         bundle_extra = {'physics_params': dict(phys.DEFAULT_PARAMS, **params), 'physics_features': list(extras.columns), 'name': name}
-        report = run_benchmark(pa, out, config, extra_features=extras, bundle_extra=bundle_extra)
+        report = run_benchmark(pa, out, config, extra_features=extras, bundle_extra=bundle_extra, blend_as_test=bool(settings.get('blend_as_test')))
         stage('seal the model')
         raw_model = (out / 'pa_model.joblib').read_bytes()
         cipher = seal(raw_model, key, model_purpose(name))
