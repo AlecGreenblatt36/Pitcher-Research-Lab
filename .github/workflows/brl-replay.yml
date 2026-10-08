@@ -6,7 +6,7 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: brl-replay
+  group: brl-replay-${{ github.run_id }}
   cancel-in-progress: false
 jobs:
   plan:

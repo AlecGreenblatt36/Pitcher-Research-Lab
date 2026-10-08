@@ -6,7 +6,7 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: brl-research
+  group: brl-research-${{ github.run_id }}
   cancel-in-progress: false
 jobs:
   research:
