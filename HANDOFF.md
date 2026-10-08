@@ -43,6 +43,11 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   v2-prod-trans-ctx-leash-1000-YYYY. Read with trans/starter_leash.py and harness/starter_eval.py.
 - RUNS-02 (shape by bases and outs, commit 010617ec): replays 37856958529 (2026) and 37856998314 (2025), tags
   v2-prod-trans-ctx-bs-1000-YYYY.
+- RELIEF-03 (team hook offsets on the fitted exits, commit ab6d82a2): replays 37860073667 (2026) and 37860108046
+  (2025), tags v2-prod-trans-ctx-penh-1000-YYYY, judged against BULLPEN-02's replays.
+- LEASH-01 2026 read (not yet recorded): starters' batters faced +0.21 to +0.02, RMSE 4.41 to 3.87, batters-faced CRPS
+  2.274 to 2.046, strikeout CRPS 1.235 to 1.209, every group within its predicted bound; win Brier +0.0003 (-0.0001,
+  +0.0007), so the per-season win bound fails in 2026. Waiting for 2025.
 - Read and recorded today: TRANS-02 (plays real, off until the run level is understood), BULLPEN-01 (better win Brier in
   both seasons, -0.0004 each, pooled interval upper end +0.0002, but the registered per-season bound was not met; retested
   in BULLPEN-02), RUNS-01 (no calibration miss by base state for hits; the shape by bases and outs is consistent across
