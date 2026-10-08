@@ -1,5 +1,20 @@
 # BRL experiment and operations ledger
 
+## Checkpoint, October 8, 2026, 6 a.m. Eastern
+
+Production simulator (pa-2026-v2-physics with ADJUST in brl_live/boxscore.py): context offsets, run environment (ENV-03),
+team offsets centered on the league (TEAM-05, CENTER-01), base running (RUN-01, RUN-02), postseason starter usage.
+Headline: taught-v4 from October 8, 14:00 UTC (HEADLINE-04): 60% market line, 40% our model (0.039 + 0.543 simulator
+log-odds + 0.545 team-model log-odds).
+
+| Season (full replay, 1,000 worlds, same seeds) | Simulator before tonight | Simulator now | Closing line | Headline (each season taught on the other) |
+|---|---|---|---|---|
+| 2026, 2,454 games (out of sample) | 0.24405 | 0.24378 | 0.24326 | 0.24317 |
+| 2025, 1,686 games with a closing line (player model tuned on 2025; read the changes, not the level) | 0.24448 | 0.24253 | 0.24235 | 0.24150 |
+
+Simulator correlation with the closing log-odds 0.82 to 0.87 (2026); mean total runs 8.96 against 8.95 actual (2026),
+8.89 against 8.90 (2025). Not switched: the retrained player model (RETRAIN-02). Discovery: DISC-01 to DISC-05.
+
 ## Checkpoint — October 7, 2026 (Claude takes over the project)
 
 Evidence base: a full out-of-sample replay of the 2026 regular season with the locked PA model and fitted starter hazard, every input prior-date (lineups and starters as they actually played, bullpens from the team's last 14 days, roles from the prior 365 days), 2,427 games, 200 worlds each, finite-path corrected. Scores are winner Brier (coin flip = 0.25000); "better than coin" = (0.25 - Brier) / 0.25. Fair team model: negative-binomial runs with decayed, shrunk offense/defense ratings and prior-data home field, tuned on 2025 only (tau = 180 days, k = 15).
