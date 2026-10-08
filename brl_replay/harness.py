@@ -116,14 +116,17 @@ def bats_lookup(h: pd.DataFrame, cutoff: str) -> dict:
 
 def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates: list, *, model_path: Path, model_sha256: str,
                  history_path: Path, hazard_path: Path, n_sims: int, physics_table=None, offsets=None, rest=False, environment=None,
-                 team_offsets=None, age_layer=None, steals=None, log=print) -> list[dict]:
+                 team_offsets=None, age_layer=None, steals=None, win_states=False, log=print) -> list[dict]:
     """Simulate every game on the given dates; one record per game (win counts, run histograms, starter outs).
 
     environment: optional {game_pk: seven log-multipliers} (brl_live/environment.py); games without an entry are unadjusted.
     team_offsets: optional {date: {team: {'bat': [7], 'fld': [7]}}} (brl_live/team_offsets.by_date), offsets at the start of each date.
     age_layer: optional aging and recency layer (brl_live/age_layer.py); its AgingState advances date by date from the history.
     steals: optional {'per_pa': ...} base-running settings (brl_live/running.py); each date uses running statistics
-    through the season before it, so nothing from the replayed season enters."""
+    through the season before it, so nothing from the replayed season enters.
+    win_states: also build the game's win table from the simulated plate appearances (brl_live/win_table.py, as the
+    live forecast does) and record its win chance at the start of every real plate appearance of that game
+    ([inning, half 0 top 1 bottom, outs, runners mask, home lead, chance]); game states only, no player data."""
     from brl_live.provider_adjust import ContextAdjust, EnvironmentAdjust, TeamAdjust
     hcols = h[HISTORY_COLUMNS]
     first = dates[0]
@@ -148,6 +151,16 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
         a_pos = 0
         aadj = provider = AgeAdjust(provider, age_layer, a_state, 0)
     hazard = joblib.load(hazard_path)
+    real_states = {}
+    if win_states:
+        from brl_live.win_table import WinTable, state_index
+        want = set(int(x) for x in games[games["date"].isin(dates)]["game_pk"])
+        cols = ["game_pk", "at_bat_number", "inning", "inning_topbot", "outs_when_up", "runner_1b", "runner_2b", "runner_3b", "home_score", "away_score"]
+        rs = h.loc[h["game_pk"].isin(want), cols].sort_values(["game_pk", "at_bat_number"], kind="mergesort")
+        for gpk, grp in rs.groupby("game_pk", sort=False):
+            real_states[int(gpk)] = [(int(r.inning), "top" if str(r.inning_topbot).lower().startswith("top") else "bottom", int(r.outs_when_up),
+                                      (bool(r.runner_1b), bool(r.runner_2b), bool(r.runner_3b)), int(r.home_score) - int(r.away_score))
+                                     for r in grp.itertuples(index=False)]
     records = []
     t0 = time.time()
     for di, date in enumerate(dates):
@@ -208,8 +221,12 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
             hw = ties = 0
             ha = np.zeros(MAX_RUNS + 1, int); aa = np.zeros(MAX_RUNS + 1, int)
             s_outs = {"away": [], "home": []}
+            wt = WinTable() if win_states else None
             for s in seeds:
-                r = sim.simulate(matchup, int(s), record_events=False)
+                r = sim.simulate(matchup, int(s), record_events=bool(win_states))
+                if wt is not None:
+                    wt.add({"score": {"home": r.home_score, "away": r.away_score},
+                            "plays": [e for e in r.events if e.get("outcome") not in ("stolen_base", "caught_stealing")]})
                 ha[min(r.home_score, MAX_RUNS)] += 1
                 aa[min(r.away_score, MAX_RUNS)] += 1
                 if r.winner == "home":
@@ -223,6 +240,14 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                             "home_wins": hw, "ties": ties, "home_hist": ha.tolist(), "away_hist": aa.tolist(),
                             "home_starter_outs": float(np.mean(s_outs["home"])), "away_starter_outs": float(np.mean(s_outs["away"])),
                             "home_runs": int(g.home_runs), "away_runs": int(g.away_runs)})
+            if wt is not None:
+                tb = wt.table()
+                st = []
+                for inn, half, outs, bases, lead in real_states.get(int(g.game_pk), []):
+                    key = state_index(inn, half, outs, bases, lead)
+                    st.append([inn, 0 if half == "top" else 1, outs, int(sum(1 << k for k, b in enumerate(bases) if b)), lead, round(float(tb[key]), 4)])
+                records[-1]["p_table_start"] = round(float(tb[state_index(1, "top", 0, (), 0)]), 4)
+                records[-1]["states"] = st
         log(f"{date} {len(day)} games {time.time() - td:.1f}s ({di + 1}/{len(dates)}) cache hit {cached.hits / max(1, cached.hits + cached.misses):.2f}")
     log(f"done {time.time() - t0:.0f}s")
     return records
