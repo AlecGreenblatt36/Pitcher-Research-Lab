@@ -293,7 +293,8 @@ class BoxAccumulator:
 # team_offsets: the batting and the fielding team's offsets beyond the PA model (brl_live/team_offsets.py, TEAM-01,
 # TEAM-05). On: both full replays improved (2026 win Brier -0.00041, 2025 -0.00052; totals closer to the market line
 # and to actual park scoring), and the production model stays v2 (RETRAIN-02). Table: brl_live/team_offsets.json,
-# v2 residuals through 2026-09-27, k 4,000, half-life 120 days, batting and fielding.
+# v2 residuals through 2026-09-27, k 4,000, half-life 120 days, batting and fielding. Centered on the league since CENTER-01
+# (the context offsets carry the league level; uncentered, the replays ran 0.09 to 0.16 runs per game low).
 # steals: runner speeds from sprint speed and stolen-base attempts (brl_live/running.py, RUN-01). On since the full
 # 2026 replay (RUN-02): simulator win Brier 0.24405 to 0.24378, correlation with the market's closing log-odds 0.8235 to
 # 0.8354, totals closer to the market line, mean total unchanged.
@@ -329,7 +330,7 @@ def adjusted_provider(provider,full_history,date,settings=ADJUST,environment=Non
         from .team_offsets import load_table as load_team_table,game_log_multipliers
         tt=load_team_table()
         provider=TeamAdjust(provider,game_log_multipliers(tt,teams[0],teams[1],date))
-        label.append('team offsets through '+str(tt.get('estimated_through')))
+        label.append('team offsets through '+str(tt.get('estimated_through'))+(' (centered on the league)' if tt.get('center') else ''))
     c=float(settings.get('talent_noise_c') or 0.0)
     if c>0:
         if full_history is None:raise Blocked('Talent noise needs the assembled PA history')
