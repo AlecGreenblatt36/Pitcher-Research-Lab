@@ -1256,6 +1256,88 @@ def horizon8(T: dict, params: dict, stage) -> dict:
     return res
 
 
+def horizon9(T: dict, params: dict, stage) -> dict:
+    """Blind window or expectation pull? (reviewer's strongest remaining alternative.) Each pitch's miss from where
+    this pitcher usually puts this pitch type in this kind of count to this batter side is split into the part from
+    its movement surprise over the flight from 50 ft (0.5 * w * t_f^2) and the rest, the line it left the hand on.
+    Both enter as displacements along the type-map swing gradient, with pitcher-season intercepts. A blind window
+    discounts the movement part by about (tau / t_f)^2 and the line part not at all (the hitter sees the line long
+    before he commits). A pull toward the expected spot discounts both parts the same."""
+    res = {}
+    F = rebuild(T)
+    keep = (F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2)
+            & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1)))
+    T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
+    swing = ((T['call'] == 1) | (T['call'] == 2)).astype(np.int64)
+    C = control_block(T, swing_propensity(T))
+    ps = T['pitcher'] * 10 + (T['season'] - 2020)
+    key_sub = ps * 100 + T['sub']
+    ok = np.isfinite(F['ax']) & np.isfinite(F['az'])
+    mx = loo_means(key_sub, F['ax'], ok); mz = loo_means(key_sub, F['az'], ok)
+    wx = np.where(np.isfinite(mx), F['ax'] - mx, 0.0); wz = np.where(np.isfinite(mz), F['az'] - mz, 0.0)
+    bucket = np.clip(T['strikes'], 0, 2) * 2 + (T['balls'] >= 2)
+    key_loc = (key_sub * 2 + T['stand_r']) * 6 + bucket
+    key_loc2 = key_sub * 2 + T['stand_r']
+    allok = np.isfinite(T['px']) & np.isfinite(T['pz'])
+    ex = loo_means(key_loc, T['px'].astype(float), allok); ez = loo_means(key_loc, T['pz'].astype(float), allok)
+    uk, cnt = np.unique(key_loc, return_counts=True); n_key = cnt[np.searchsorted(uk, key_loc)]
+    ex2 = loo_means(key_loc2, T['px'].astype(float), allok); ez2 = loo_means(key_loc2, T['pz'].astype(float), allok)
+    ex = np.where((n_key >= 12) & np.isfinite(ex), ex, ex2); ez = np.where((n_key >= 12) & np.isfinite(ez), ez, ez2)
+    good = np.isfinite(ex) & np.isfinite(ez)
+    mvx, mvz = 0.5 * wx * F['tf'] ** 2, 0.5 * wz * F['tf'] ** 2
+    rlx, rlz = (T['px'] - ex) - mvx, (T['pz'] - ez) - mvz
+    res['miss_sd_in'] = {'movement_x': round(float(np.std(mvx[good]) * 12), 2), 'movement_z': round(float(np.std(mvz[good]) * 12), 2),
+                         'line_x': round(float(np.std(rlx[good]) * 12), 2), 'line_z': round(float(np.std(rlz[good]) * 12), 2)}
+    rng = np.random.default_rng(int(params.get('seed', 11)))
+    dev_all = np.flatnonzero(T['season'] <= 2024)
+    tr = np.sort(rng.choice(dev_all, min(len(dev_all), int(params.get('train_n', 500000))), replace=False))
+    ev = np.flatnonzero((T['season'] >= 2025) & good)
+    oh = np.eye(7, dtype=np.float32)[np.clip(T['group'], 0, 6)]
+
+    def typed(x, z, idx):
+        uu = np.where(T['stand_r'][idx] == 1, x[idx], -x[idx]); zz = z[idx]
+        e = np.maximum(np.maximum(np.abs(uu) - ZONE_HALF, zz - ZONE_TOP), ZONE_BOT - zz)
+        b = np.hstack([hats(e, E_KNOTS), hats(uu, U_KNOTS), hats(zz, Z_KNOTS)])
+        return np.hstack([location_block(x[idx], z[idx], T['stand_r'][idx], T['strikes'][idx]), (b[:, :, None] * oh[idx, None, :]).reshape(len(idx), -1), C[idx]])
+    m = fit_logistic(typed(T['px'], T['pz'], tr), swing[tr]); stage('typed model')
+    h = 0.02
+    f0 = np.empty(len(ev)); fx = np.empty(len(ev)); fz = np.empty(len(ev))
+    for s in range(0, len(ev), 250000):
+        ii = ev[s:s + 250000]; df = lambda x, z: m.decision_function(typed(x, z, ii))
+        f0[s:s + 250000] = df(T['px'], T['pz'])
+        fx[s:s + 250000] = (df(T['px'] + h, T['pz']) - df(T['px'] - h, T['pz'])) / (2 * h)
+        fz[s:s + 250000] = (df(T['px'], T['pz'] + h) - df(T['px'], T['pz'] - h)) / (2 * h)
+    stage('gradients')
+    y = swing[ev].astype(float)
+    # pitcher-season intercepts on top of the typed model (ridge toward zero)
+    up, inv = np.unique(ps[ev], return_inverse=True); c = np.zeros(len(up))
+    for _ in range(8):
+        p = 1 / (1 + np.exp(-(f0 + c[inv])))
+        num = np.bincount(inv, weights=y - p, minlength=len(up)); den = np.bincount(inv, weights=p * (1 - p), minlength=len(up)) + 50.0
+        c += num / den - 50.0 * c / den
+    off = f0 + c[inv]
+    g_mv = -(fx * mvx[ev] + fz * mvz[ev]); g_rl = -(fx * rlx[ev] + fz * rlz[ev])
+
+    def two(mask):
+        coef, se = offset_logit_k(y[mask], off[mask], np.column_stack([g_mv[mask], g_rl[mask]]))
+        tf = float(np.median(F['tf'][ev][mask]))
+        return {'k_movement': round(float(coef[0]), 4), 'se_movement': round(float(se[0]), 4), 'k_line': round(float(coef[1]), 4), 'se_line': round(float(se[1]), 4),
+                'blind_window_expects_movement': round((0.261 / tf) ** 2, 4), 'median_flight_s': round(tf, 4), 'n': int(mask.sum())}
+    out = {'all': two(np.ones(len(ev), bool))}
+    for gi in (0, 1, 3, 4, 5):
+        out[GROUP_NAMES[gi]] = two(T['group'][ev] == gi)
+    out['two_strikes'] = two(T['strikes'][ev] == 2); out['fewer_strikes'] = two(T['strikes'][ev] < 2)
+    # bootstrap by game for the difference k_movement - k_line
+    games = T['game'][ev]; ug, gi_ = np.unique(games, return_inverse=True); rr = np.random.default_rng(9); diffs = []
+    for _ in range(int(params.get('boot', 60))):
+        w = np.bincount(rr.integers(0, len(ug), len(ug)), minlength=len(ug)).astype(float)[gi_]
+        coef, _ = offset_logit_k(y, off, np.column_stack([g_mv, g_rl]), w=w, iters=10)
+        diffs.append(coef[0] - coef[1])
+    out['difference_ci'] = [round(float(np.percentile(diffs, 2.5)), 4), round(float(np.percentile(diffs, 97.5)), 4)]
+    res['decomposition'] = out
+    return res
+
+
 def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']
     from cloud.security import unseal, key_bytes
@@ -1300,6 +1382,8 @@ def main():
             receipt['results'] = horizon7(T, params, stage)
         elif experiment == 'horizon8':
             receipt['results'] = horizon8(T, params, stage)
+        elif experiment == 'horizon9':
+            receipt['results'] = horizon9(T, params, stage)
         receipt['status'] = 'completed'
     except Exception as exc:
         receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:400]

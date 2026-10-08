@@ -183,3 +183,15 @@ for chases the most useful separation is near 260 ms, clearly earlier than the 1
 the useful separation is later (nearer the 100-125 ms steering limit). If both peak at 150-175 ms the public choice
 stands; if separation adds nothing at any time beyond the pitches themselves, pairwise tunneling carries no
 information our pitch-level model does not already have.
+
+## Addendum 7, before the blind-window test (horizon9)
+
+Reviewer's strongest remaining alternative after the mechanism checks: expectation pull. Hitters' calls could be
+pulled toward where they expect this pitcher to put this pitch in this count; the within-type surprise is correlated
+with the miss from that spot, so "decides as if it moved normally" could appear with no blind window at all. Test
+(reviewer's design): split each pitch's miss from the pitcher's usual spot (same pitch type, batter side, count
+bucket, season, leave-one-out) into the movement-surprise part over the flight from 50 ft and the rest (the line it
+left the hand on); both as displacements along the type-map gradient with pitcher-season intercepts, on 2025-2026.
+Predictions written now: a blind window discounts the movement part by about (0.261 / t_f)^2, near 0.45, and the line
+part near zero; expectation pull discounts both by the same amount. Synthetic check with a planted blind window: 0.186
+for movement (0.193 expected) and 0.009 for the line.
