@@ -44,6 +44,44 @@
     "fitted_on": "fixed weights chosen on 2025 and 2026 results, each season scored with our model taught on the other season's market",
     "checked": "2025: 0.24177 against the closing line's 0.24235 (-0.00058 [-0.00135, +0.00019]); 2026: 0.24311 against 0.24326 (-0.00014 [-0.00065, +0.00037]); paired by date"
    }
+  },
+  {
+   "name": "taught-v4",
+   "effective_from": "2026-10-08T14:00:00+00:00",
+   "kind": "taught",
+   "note": "Our model taught by the market's closing lines on simulations with the production settings: run environment, team offsets (TEAM-05) and base running (RUN-02). Replaces taught-v3, whose weights were fitted on simulations without team offsets and base running (HEADLINE-04 in LEDGER.md).",
+   "ours": {
+    "features": [
+     "x_sim",
+     "x_team",
+     "sp_home",
+     "sp_away",
+     "off_home",
+     "def_home",
+     "off_away",
+     "def_away"
+    ],
+    "intercept": 0.06788,
+    "coef": [
+     0.52101,
+     0.1354,
+     -0.83605,
+     0.96428,
+     0.54311,
+     -0.70642,
+     -0.54993,
+     0.67651
+    ],
+    "fitted_on": "least squares on the market's closing log-odds (vig removed), 4,140 regular-season games: 2025 through August 16 and 2026; simulator at 1,000 worlds per game with the run environment, team offsets and base running, all inputs from prior dates",
+    "checked": "taught on 2025 and scored on 2026 results: Brier 0.24369; taught on 2026 and scored on 2025: 0.24175 against the closing line's 0.24235"
+   },
+   "headline": {
+    "intercept": 0.0,
+    "market": 0.6,
+    "ours": 0.4,
+    "fitted_on": "fixed weights, unchanged from taught-v3",
+    "checked": "2025: 0.24150 against the closing line's 0.24235 (-0.00085 [-0.00171, +0.00003]); 2026: 0.24315 against 0.24325 (-0.00011 [-0.00065, +0.00042]); paired by date, each season's model taught on the other season"
+   }
   }
  ]
 }
