@@ -1,0 +1,21 @@
+name: BRL market books
+on:
+  workflow_dispatch:
+  push:
+    branches: [diag/books]
+permissions:
+  contents: write
+jobs:
+  books:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Several sportsbooks' lines for the season from SportsBookReview (public odds only, no secrets)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRL_BOOKS_SEASON: '2026'
+        run: python tools/brl_market_books_history.py
