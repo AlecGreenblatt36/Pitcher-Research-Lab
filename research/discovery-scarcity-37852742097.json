@@ -1,0 +1,377 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "scarcity",
+ "run_id": "37852742097",
+ "params": {
+  "experiment": "scarcity",
+  "season": 2026,
+  "workers": 6,
+  "boot": 200,
+  "C": 1.0
+ },
+ "started_at": "2026-10-08T22:27:52.158671+00:00",
+ "stages": [
+  {
+   "stage": "fetch the 2026 play-by-play",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "swings near the edge",
+   "at_seconds": 474.2
+  },
+  {
+   "stage": "called pitches, innings 1-9",
+   "at_seconds": 474.4
+  },
+  {
+   "stage": "batter",
+   "at_seconds": 1063.4
+  },
+  {
+   "stage": "catcher",
+   "at_seconds": 1622.1
+  }
+ ],
+ "seasons_rows": {
+  "2026": 714483
+ },
+ "results": {
+  "swings_near_edge": {
+   "all_counts": {
+    "swing_rates": {
+     "inside_edge": {
+      "left_2": [
+       0.5722,
+       65647
+      ],
+      "left_1": [
+       0.5776,
+       19101
+      ],
+      "left_0": [
+       0.5826,
+       3043
+      ]
+     },
+     "outside_edge": {
+      "left_2": [
+       0.4916,
+       58413
+      ],
+      "left_1": [
+       0.5018,
+       16739
+      ],
+      "left_0": [
+       0.5017,
+       2621
+      ]
+     }
+    },
+    "one_left_vs_two": {
+     "log_odds": 0.0109,
+     "odds_ratio": 1.011,
+     "ci_odds_ratio": [
+      0.9763,
+      1.0367
+     ],
+     "rows": 165564,
+     "events": 88802,
+     "rows_flagged": 35840,
+     "boot_reps": 200
+    },
+    "none_left_vs_two": {
+     "log_odds": 0.0144,
+     "odds_ratio": 1.0145,
+     "ci_odds_ratio": [
+      0.9576,
+      1.079
+     ],
+     "rows": 165564,
+     "events": 88802,
+     "rows_flagged": 5664,
+     "boot_reps": 200
+    }
+   },
+   "two_strikes": {
+    "swing_rates": {
+     "inside_edge": {
+      "left_2": [
+       0.8029,
+       17406
+      ],
+      "left_1": [
+       0.8021,
+       5246
+      ],
+      "left_0": [
+       0.8141,
+       839
+      ]
+     },
+     "outside_edge": {
+      "left_2": [
+       0.7104,
+       16415
+      ],
+      "left_1": [
+       0.7123,
+       4859
+      ],
+      "left_0": [
+       0.7166,
+       808
+      ]
+     }
+    },
+    "one_left_vs_two": {
+     "log_odds": -0.0059,
+     "odds_ratio": 0.9941,
+     "ci_odds_ratio": [
+      0.9325,
+      1.0499
+     ],
+     "rows": 45573,
+     "events": 34569,
+     "rows_flagged": 10105,
+     "boot_reps": 200
+    },
+    "none_left_vs_two": {
+     "log_odds": 0.0136,
+     "odds_ratio": 1.0137,
+     "ci_odds_ratio": [
+      0.9143,
+      1.1265
+     ],
+     "rows": 45573,
+     "events": 34569,
+     "rows_flagged": 1647,
+     "boot_reps": 200
+    }
+   }
+  },
+  "batter": {
+   "called": 113965,
+   "challenges": 3378,
+   "by_challenges_left": [
+    {
+     "left": 2,
+     "called": 85549,
+     "clear_misses": 3660,
+     "challenge_rate_on_clear_misses": 0.2224,
+     "clear_misses_that_stand": 0.7779,
+     "challenges": 2672,
+     "overturn_rate": 0.5909
+    },
+    {
+     "left": 1,
+     "called": 24558,
+     "clear_misses": 1116,
+     "challenge_rate_on_clear_misses": 0.1846,
+     "clear_misses_that_stand": 0.8163,
+     "challenges": 706,
+     "overturn_rate": 0.5382
+    },
+    {
+     "left": 0,
+     "called": 3858,
+     "clear_misses": 170,
+     "challenge_rate_on_clear_misses": 0.0,
+     "clear_misses_that_stand": 1.0,
+     "challenges": 0,
+     "overturn_rate": null
+    }
+   ],
+   "challenge_rate_on_clear_misses_by_inning": [
+    {
+     "innings": "1-6",
+     "left_2": [
+      0.2107,
+      2696
+     ],
+     "left_1": [
+      0.18,
+      500
+     ]
+    },
+    {
+     "innings": "7-8",
+     "left_2": [
+      0.249,
+      739
+     ],
+     "left_1": [
+      0.1658,
+      398
+     ]
+    },
+    {
+     "innings": "9",
+     "left_2": [
+      0.2756,
+      225
+     ],
+     "left_1": [
+      0.2294,
+      218
+     ]
+    }
+   ],
+   "one_left_vs_two": {
+    "log_odds": -0.3295,
+    "odds_ratio": 0.7193,
+    "ci_odds_ratio": [
+     0.6593,
+     0.7831
+    ],
+    "rows": 110107,
+    "events": 3378,
+    "rows_flagged": 24558,
+    "boot_reps": 200
+   },
+   "placebo_other_team_one_or_none_left": {
+    "log_odds": 0.1037,
+    "odds_ratio": 1.1092,
+    "ci_odds_ratio": [
+     1.0194,
+     1.2199
+    ],
+    "rows": 110107,
+    "events": 3378,
+    "rows_flagged": 27156,
+    "boot_reps": 200
+   },
+   "one_left_vs_two_with_placebo": {
+    "log_odds": -0.336,
+    "odds_ratio": 0.7146,
+    "ci_odds_ratio": [
+     0.6565,
+     0.7885
+    ],
+    "rows": 110107,
+    "events": 3378,
+    "rows_flagged": 24558,
+    "boot_reps": 200
+   },
+   "one_left_vs_two_with_habit": {
+    "log_odds": -0.3454,
+    "odds_ratio": 0.7079,
+    "ci_odds_ratio": [
+     0.6481,
+     0.7867
+    ],
+    "rows": 110107,
+    "events": 3378,
+    "rows_flagged": 24558,
+    "boot_reps": 200
+   }
+  },
+  "catcher": {
+   "called": 252747,
+   "challenges": 4207,
+   "by_challenges_left": [
+    {
+     "left": 2,
+     "called": 188910,
+     "clear_misses": 3039,
+     "challenge_rate_on_clear_misses": 0.3807,
+     "clear_misses_that_stand": 0.6213,
+     "challenges": 3549,
+     "overturn_rate": 0.5579
+    },
+    {
+     "left": 1,
+     "called": 55142,
+     "clear_misses": 819,
+     "challenge_rate_on_clear_misses": 0.2479,
+     "clear_misses_that_stand": 0.7534,
+     "challenges": 658,
+     "overturn_rate": 0.5365
+    },
+    {
+     "left": 0,
+     "called": 8695,
+     "clear_misses": 154,
+     "challenge_rate_on_clear_misses": 0.0,
+     "clear_misses_that_stand": 1.0,
+     "challenges": 0,
+     "overturn_rate": null
+    }
+   ],
+   "challenge_rate_on_clear_misses_by_inning": [
+    {
+     "innings": "1-6",
+     "left_2": [
+      0.3637,
+      2411
+     ],
+     "left_1": [
+      0.2257,
+      412
+     ]
+    },
+    {
+     "innings": "7-8",
+     "left_2": [
+      0.4176,
+      510
+     ],
+     "left_1": [
+      0.2474,
+      287
+     ]
+    },
+    {
+     "innings": "9",
+     "left_2": [
+      0.5678,
+      118
+     ],
+     "left_1": [
+      0.325,
+      120
+     ]
+    }
+   ],
+   "one_left_vs_two": {
+    "log_odds": -0.7628,
+    "odds_ratio": 0.4663,
+    "ci_odds_ratio": [
+     0.4215,
+     0.5099
+    ],
+    "rows": 244052,
+    "events": 4207,
+    "rows_flagged": 55142,
+    "boot_reps": 200
+   },
+   "placebo_other_team_one_or_none_left": {
+    "log_odds": 0.1199,
+    "odds_ratio": 1.1274,
+    "ci_odds_ratio": [
+     1.0523,
+     1.2291
+    ],
+    "rows": 244052,
+    "events": 4207,
+    "rows_flagged": 59754,
+    "boot_reps": 200
+   },
+   "one_left_vs_two_with_placebo": {
+    "log_odds": -0.7697,
+    "odds_ratio": 0.4631,
+    "ci_odds_ratio": [
+     0.4149,
+     0.5155
+    ],
+    "rows": 244052,
+    "events": 4207,
+    "rows_flagged": 55142,
+    "boot_reps": 200
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-08T22:54:54.309483+00:00",
+ "seconds": 1622.2
+}
