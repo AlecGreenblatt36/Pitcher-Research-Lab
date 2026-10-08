@@ -77,7 +77,7 @@ def put_text(repo, token, path, text, branch, message):
 # ---------------------------------------------------------------- pitch table
 SUBTYPES = ('FF', 'FA', 'SI', 'FC', 'SL', 'ST', 'SV', 'CU', 'KC', 'CS', 'CH', 'FS', 'FO', 'SC', 'KN', 'EP')
 FIELDS = ('season', 'day', 'game', 'pitcher', 'batter', 'stand_r', 'throw_r', 'inning', 'group', 'sub', 'balls', 'strikes', 'call',
-          'v0', 'v1', 'spin', 'pfx_x', 'pfx_z', 'px', 'pz', 'x0', 'z0', 'ext', 'last_in_pa', 'bunt_pa')
+          'v0', 'v1', 'spin', 'pfx_x', 'pfx_z', 'px', 'pz', 'x0', 'z0', 'ext', 'last_in_pa', 'bunt_pa', 'ab', 'pitch_no')
 CALLS = {'take': 0, 'swing_contact': 1, 'whiff': 2, 'other': 3}
 
 
@@ -108,6 +108,7 @@ def pitch_table(doc: dict, season: int) -> dict:
                 for k, v in (('v0', v0), ('v1', v1), ('spin', spin), ('pfx_x', pfx_x), ('pfx_z', pfx_z), ('px', px), ('pz', pz), ('x0', x0), ('z0', z0), ('ext', ext)):
                     cols[k].append(np.nan if v is None else float(v))
                 cols['last_in_pa'].append(1 if j == len(pitches) - 1 else 0); cols['bunt_pa'].append(bunt)
+                cols['ab'].append(int(row.get('i') or 0)); cols['pitch_no'].append(j)
     out = {}
     for k, v in cols.items():
         out[k] = np.asarray(v, dtype=np.float32 if k in ('v0', 'v1', 'spin', 'pfx_x', 'pfx_z', 'px', 'pz', 'x0', 'z0', 'ext') else np.int64)
@@ -969,6 +970,91 @@ def horizon4(T: dict, params: dict, stage) -> dict:
     return res
 
 
+def familiarity(T: dict) -> tuple[np.ndarray, np.ndarray]:
+    """For each pitch: how many earlier plate appearances this batter had against this pitcher in this game, and how
+    many earlier pitches of this exact pitch type he had seen from him in this game (current PA included)."""
+    order = np.lexsort((T['pitch_no'], T['ab'], T['batter'], T['pitcher'], T['game']))
+    g, p, b, ab, sub = T['game'][order], T['pitcher'][order], T['batter'][order], T['ab'][order], T['sub'][order]
+    tto = np.zeros(len(order), np.int64); expo = np.zeros(len(order), np.int64)
+    start = 0
+    n = len(order)
+    while start < n:
+        end = start
+        while end < n and g[end] == g[start] and p[end] == p[start] and b[end] == b[start]:
+            end += 1
+        abs_ = ab[start:end]; uniq = np.unique(abs_)
+        tto[start:end] = np.searchsorted(uniq, abs_)
+        seen = {}
+        for k in range(start, end):
+            s = int(sub[k]); expo[k] = seen.get(s, 0); seen[s] = seen.get(s, 0) + 1
+        start = end
+    out_t = np.empty(n, np.int64); out_e = np.empty(n, np.int64)
+    out_t[order] = tto; out_e[order] = expo
+    return out_t, out_e
+
+
+def horizon5(T: dict, params: dict, stage) -> dict:
+    """Does seeing a pitcher again move a hitter's horizon later? Within-type commit time (type maps, as in the
+    decisive test) and the type-level projection reliance (one shared map, gravity-only projection) by how many
+    times the batter has faced this pitcher today and by how many pitches of this type he has already seen today."""
+    res = {}
+    F = rebuild(T)
+    keep = (F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2)
+            & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1)))
+    tto, expo = familiarity(T)
+    T = take(T, keep); F = {k: v[keep] for k, v in F.items()}; tto = tto[keep]; expo = expo[keep]
+    swing = ((T['call'] == 1) | (T['call'] == 2)).astype(np.int64)
+    C = control_block(T, swing_propensity(T))
+    key_sub = (T['pitcher'] * 10 + (T['season'] - 2020)) * 100 + T['sub']
+    ok = np.isfinite(F['ax']) & np.isfinite(F['az'])
+    mx = loo_means(key_sub, F['ax'], ok); mz = loo_means(key_sub, F['az'], ok)
+    wx = np.where(np.isfinite(mx), F['ax'] - mx, 0.0); wz = np.where(np.isfinite(mz), F['az'] - mz, 0.0)
+    rng = np.random.default_rng(int(params.get('seed', 11)))
+    dev_all = np.flatnonzero(T['season'] <= 2024)
+    tr = np.sort(rng.choice(dev_all, min(len(dev_all), int(params.get('train_n', 500000))), replace=False))
+    ev = np.flatnonzero(T['season'] >= 2025)
+    oh = np.eye(7, dtype=np.float32)[np.clip(T['group'], 0, 6)]
+
+    def typed(x, z, idx):
+        uu = np.where(T['stand_r'][idx] == 1, x[idx], -x[idx]); zz = z[idx]
+        e = np.maximum(np.maximum(np.abs(uu) - ZONE_HALF, zz - ZONE_TOP), ZONE_BOT - zz)
+        b = np.hstack([hats(e, E_KNOTS), hats(uu, U_KNOTS), hats(zz, Z_KNOTS)])
+        return np.hstack([location_block(x[idx], z[idx], T['stand_r'][idx], T['strikes'][idx]), (b[:, :, None] * oh[idx, None, :]).reshape(len(idx), -1), C[idx]])
+
+    def shared(x, z, idx):
+        return np.hstack([location_block(x[idx], z[idx], T['stand_r'][idx], T['strikes'][idx]), C[idx]])
+    h = 0.02
+    terms = {}
+    for name, designf, dx, dz in (('within', typed, wx, wz), ('type_level', shared, F['asx'], F['asz'])):
+        m = fit_logistic(designf(T['px'], T['pz'], tr), swing[tr])
+        f0 = np.empty(len(ev)); gt = np.empty(len(ev))
+        for s in range(0, len(ev), 250000):
+            ii = ev[s:s + 250000]; df = lambda x, z: m.decision_function(designf(x, z, ii))
+            f0[s:s + 250000] = df(T['px'], T['pz'])
+            fx = (df(T['px'] + h, T['pz']) - df(T['px'] - h, T['pz'])) / (2 * h); fz = (df(T['px'], T['pz'] + h) - df(T['px'], T['pz'] - h)) / (2 * h)
+            gt[s:s + 250000] = -0.5 * (fx * dx[ii] + fz * dz[ii])
+        terms[name] = (f0, gt); stage('gradient ' + name)
+    y = swing[ev].astype(float)
+    tt = tto[ev]; ee = expo[ev]; starter_like = np.ones(len(ev), bool)
+
+    def est(name, mask):
+        if mask.sum() < 15000:
+            return None
+        f0, gt = terms[name]
+        a, b, se = offset_logit(y[mask], f0[mask], gt[mask])
+        return {'tau2': round(b, 5), 'se': round(se, 5), 'tau': round(float(np.sign(b) * np.sqrt(abs(b))), 4), 'n': int(mask.sum())}
+    out = {}
+    for name in terms:
+        out[name] = {'all': est(name, np.ones(len(ev), bool)),
+                     'times_faced': {str(k): est(name, (tt == k) if k < 3 else (tt >= 3)) for k in (0, 1, 2, 3)},
+                     'type_seen_today': {lab: est(name, msk) for lab, msk in (('0', ee == 0), ('1-2', (ee >= 1) & (ee <= 2)), ('3-5', (ee >= 3) & (ee <= 5)), ('6+', ee >= 6))},
+                     'type_seen_first_time_faced': {lab: est(name, msk & (tt == 0)) for lab, msk in (('0', ee == 0), ('1-2', (ee >= 1) & (ee <= 2)), ('3+', ee >= 3))},
+                     'times_faced_first_pitch_of_type': {str(k): est(name, ((tt == k) if k < 2 else (tt >= 2)) & (ee == 0)) for k in (0, 1, 2)}}
+    res['by_familiarity'] = out
+    res['counts'] = {'times_faced': {str(k): int(((tt == k) if k < 3 else (tt >= 3)).sum()) for k in (0, 1, 2, 3)}}
+    return res
+
+
 def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']
     from cloud.security import unseal, key_bytes
@@ -1005,6 +1091,8 @@ def main():
             receipt['results'] = horizon3(T, params, stage)
         elif experiment == 'horizon4':
             receipt['results'] = horizon4(T, params, stage)
+        elif experiment == 'horizon5':
+            receipt['results'] = horizon5(T, params, stage)
         receipt['status'] = 'completed'
     except Exception as exc:
         receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:400]

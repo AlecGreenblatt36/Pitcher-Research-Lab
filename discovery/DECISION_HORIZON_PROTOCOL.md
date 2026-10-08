@@ -132,3 +132,13 @@ Mechanism checks that follow from the extrapolation reading (experiment 'horizon
 - The long profile (to 0.40 s) should turn back up past the commit time; a fit that keeps improving to 0.40 s
   (before the ball is halfway) would mean the projection is tracking something other than a commit, such as
   where the pitcher aimed.
+
+## Addendum 3, before the familiarity run (horizon5)
+
+Question: does facing a pitcher again change the horizon? This bridges to the times-through-the-order debate.
+Within-type commit time (type maps) and type-level projection reliance (one shared map, gravity-only projection),
+by the number of earlier plate appearances against this pitcher today (0, 1, 2, 3+) and by how many pitches of
+this exact type the batter has already seen from him today. Written before the run: if hitters learn a pitcher,
+both measures fall with exposure (later commit, less reliance on the projected path); if the times-through-the-order
+penalty is the pitcher tiring, they stay flat. Selection (only better starters reach a third time through) is a
+known weakness of the times-faced split; the pitch-type exposure split within a first plate appearance is cleaner.
