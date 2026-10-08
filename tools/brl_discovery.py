@@ -1404,6 +1404,111 @@ def horizon10(T: dict, params: dict, stage) -> dict:
     return res
 
 
+def horizon11(T: dict, params: dict, stage) -> dict:
+    """From prediction to a lever: pitchers change grips, slots and shapes between seasons. For each pitcher's pitch
+    type in both 2025 and 2026, how far its average flight is from the flights of the pitches that usually come before
+    it (weighted by how often each one does), at the 260 ms decision moment, at 175 ms and at the plate. Does the
+    change in separation at the decision moment predict the change in chase rate on that pitch type, beyond the change
+    in its own speed, movement, location and usage? Pitcher-level changes difference out everything fixed about him."""
+    res = {}
+    F = rebuild(T)
+    ok = F['ok'] & (T['group'] >= 0) & (T['balls'] >= 0) & (T['strikes'] >= 0) & (T['strikes'] <= 2)
+    seasons = (int(params.get('from_season', 2025)), int(params.get('to_season', 2026)))
+    swing = (T['call'] == 1) | (T['call'] == 2); whiff = T['call'] == 2
+    u = np.where(T['stand_r'] == 1, T['px'], -T['px'])
+    inzone = (np.abs(u) <= ZONE_HALF) & (T['pz'] <= ZONE_TOP) & (T['pz'] >= ZONE_BOT)
+    order = np.lexsort((T['pitch_no'], T['ab'], T['game']))
+    prev = np.full(len(order), -1)
+    same = (T['game'][order][1:] == T['game'][order][:-1]) & (T['ab'][order][1:] == T['ab'][order][:-1]) & (T['pitch_no'][order][1:] == T['pitch_no'][order][:-1] + 1)
+    prev[order[1:][same]] = order[:-1][same]
+    unit = {}
+    for s in seasons:
+        msk = ok & (T['season'] == s)
+        key = T['pitcher'] * 100 + T['sub']
+        uk, inv = np.unique(key[msk], return_inverse=True); cnt = np.bincount(inv)
+        mean = lambda v: np.bincount(inv, weights=v[msk].astype(float), minlength=len(uk)) / np.maximum(cnt, 1)
+        fl = {k: mean(v) for k, v in (('v0', T['v0']), ('v1', T['v1']), ('x0', T['x0']), ('z0', T['z0']), ('vx0', F['vx0']), ('vz0', F['vz0']),
+                                       ('ax', F['ax']), ('az', F['az']), ('ay', F['ay']), ('px', T['px']), ('pz', T['pz']), ('asx', F['asx']), ('asz', F['asz']))}
+        sums = lambda m: np.bincount(inv, weights=m[msk].astype(float), minlength=len(uk))
+        chase = sums(swing & ~inzone) / np.maximum(sums(~inzone), 1); wh = sums(whiff) / np.maximum(sums(swing), 1); zone = sums(inzone) / np.maximum(cnt, 1)
+        # transitions: previous pitch type for each pitch of this type
+        pm = msk & (prev >= 0)
+        pidx = prev[pm]; cur_key = key[pm]; prev_key = T['pitcher'][pidx] * 100 + T['sub'][pidx]
+        trans = {}
+        for c, p_ in zip(cur_key, prev_key):
+            if c != p_ and c // 100 == p_ // 100:
+                d = trans.setdefault(int(c), {}); d[int(p_)] = d.get(int(p_), 0) + 1
+        tot = np.bincount(np.unique(T['pitcher'][msk], return_inverse=True)[1])
+        for j, k in enumerate(uk):
+            unit[(int(k), s)] = {'n': int(cnt[j]), 'chase': float(chase[j]), 'whiff': float(wh[j]), 'zone': float(zone[j]),
+                                 **{f: float(v[j]) for f, v in fl.items()}, 'trans': trans.get(int(k), {})}
+    def pos(r, tau, eye_x):
+        V0, V1 = r['v0'] * FT_PER_MPH, r['v1'] * FT_PER_MPH; tf = (V0 - V1) / r['ay']; t = tf - tau
+        y = Y0 - V0 * t + 0.5 * r['ay'] * t * t; x = r['x0'] + r['vx0'] * t + 0.5 * r['ax'] * t * t; z = r['z0'] + r['vz0'] * t + 0.5 * r['az'] * t * t
+        d = max(y - 1.0, 0.5)
+        return np.degrees(np.arctan2(x - eye_x, d)), np.degrees(np.arctan2(z - 5.1, d)), x, z
+    def sep(a, b, tau):
+        out = []
+        for ex in (-2.4, 2.4):
+            a1, b1, xa, za = pos(a, tau, ex); a2, b2, xb, zb = pos(b, tau, ex)
+            out.append(np.hypot(a1 - a2, b1 - b2))
+        return float(np.mean(out))
+    def plate(a, b):
+        return float(np.hypot(a['px'] - b['px'], a['pz'] - b['pz']) * 12)
+    rows = []
+    min_n = int(params.get('min_n', 150))
+    for (k, s), r in unit.items():
+        if s != seasons[0] or (k, seasons[1]) not in unit:
+            continue
+        r2 = unit[(k, seasons[1])]
+        if r['n'] < min_n or r2['n'] < min_n:
+            continue
+        feats = {}
+        okk = True
+        for tag, rr, ss in (('a', r, seasons[0]), ('b', r2, seasons[1])):
+            tr = {p_: c for p_, c in rr['trans'].items() if (p_, ss) in unit and unit[(p_, ss)]['n'] >= 60}
+            w = sum(tr.values())
+            if w < 40:
+                okk = False; break
+            feats[tag] = {'s260': sum(c * sep(rr, unit[(p_, ss)], 0.26) for p_, c in tr.items()) / w,
+                          's175': sum(c * sep(rr, unit[(p_, ss)], 0.175) for p_, c in tr.items()) / w,
+                          'plate': sum(c * plate(rr, unit[(p_, ss)]) for p_, c in tr.items()) / w}
+        if not okk:
+            continue
+        rows.append({'pitcher': k // 100, 'type': SUBTYPES[k % 100] if k % 100 < len(SUBTYPES) else 'OT', 'n': min(r['n'], r2['n']),
+                     'd_chase': r2['chase'] - r['chase'], 'd_whiff': r2['whiff'] - r['whiff'], 'd_s260': feats['b']['s260'] - feats['a']['s260'],
+                     'd_s175': feats['b']['s175'] - feats['a']['s175'], 'd_plate': feats['b']['plate'] - feats['a']['plate'],
+                     'd_v0': r2['v0'] - r['v0'], 'd_asx': abs(r2['asx']) - abs(r['asx']), 'd_asz': r2['asz'] - r['asz'], 'd_zone': r2['zone'] - r['zone'],
+                     'd_pz': r2['pz'] - r['pz'], 's260_a': feats['a']['s260']})
+    res['units'] = len(rows)
+    stage('units')
+    if len(rows) < 50:
+        return res
+    import numpy.linalg as la
+    A = {k: np.array([x[k] for x in rows], float) for k in rows[0] if k not in ('type',)}
+    w = np.sqrt(A['n'])
+    piv = A['pitcher']; up, pinv = np.unique(piv, return_inverse=True)
+    def fit(ycol, xcols):
+        X = np.column_stack([np.ones(len(w))] + [A[c] for c in xcols]); y = A[ycol]
+        Xw, yw = X * w[:, None], y * w
+        beta = la.lstsq(Xw, yw, rcond=None)[0]
+        rng = np.random.default_rng(4); boots = []
+        for _ in range(800):
+            pick = rng.integers(0, len(up), len(up)); idx = np.concatenate([np.flatnonzero(pinv == p) for p in pick])
+            boots.append(la.lstsq(Xw[idx], yw[idx], rcond=None)[0])
+        B = np.array(boots)
+        return {c: {'coef': round(float(beta[i + 1]), 5), 'ci': [round(float(np.percentile(B[:, i + 1], 2.5)), 5), round(float(np.percentile(B[:, i + 1], 97.5)), 5)],
+                    'sd_x': round(float(np.std(A[c])), 4)} for i, c in enumerate(xcols)}
+    controls = ['d_v0', 'd_asx', 'd_asz', 'd_zone', 'd_pz']
+    res['sd_change'] = {k: round(float(np.std(A[k])), 4) for k in ('d_s260', 'd_s175', 'd_plate', 'd_chase', 'd_whiff')}
+    res['chase'] = {'s260': fit('d_chase', ['d_s260', 'd_plate'] + controls), 's175': fit('d_chase', ['d_s175', 'd_plate'] + controls),
+                    'both': fit('d_chase', ['d_s260', 'd_s175', 'd_plate'] + controls)}
+    res['whiff'] = {'s260': fit('d_whiff', ['d_s260', 'd_plate'] + controls)}
+    big = np.abs(A['d_s260']) > np.percentile(np.abs(A['d_s260']), 80)
+    res['largest_changes'] = sorted([{k: (round(v, 4) if isinstance(v, float) else v) for k, v in x.items()} for x, b in zip(rows, big) if b], key=lambda x: -abs(x['d_s260']))[:40]
+    return res
+
+
 def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']
     from cloud.security import unseal, key_bytes
@@ -1452,6 +1557,8 @@ def main():
             receipt['results'] = horizon9(T, params, stage)
         elif experiment == 'horizon10':
             receipt['results'] = horizon10(T, params, stage)
+        elif experiment == 'horizon11':
+            receipt['results'] = horizon11(T, params, stage)
         receipt['status'] = 'completed'
     except Exception as exc:
         receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:400]

@@ -195,3 +195,17 @@ left the hand on); both as displacements along the type-map gradient with pitche
 Predictions written now: a blind window discounts the movement part by about (0.261 / t_f)^2, near 0.45, and the line
 part near zero; expectation pull discounts both by the same amount. Synthetic check with a planted blind window: 0.186
 for movement (0.193 expected) and 0.009 for the line.
+
+## Addendum 8, before the within-pitcher change test (horizon11)
+
+Results since addendum 7: blind window confirmed (movement discounted 0.413 against 0.467 predicted, line -0.043);
+tunneling separation predicts chases best at 260 ms and beats 175 ms head to head by 0.27 nats per 1,000 (0.22 to
+0.32); tunneling adds nothing for whiffs.
+
+Lever test: for each pitcher's pitch type thrown at least 150 times in both 2025 and 2026, its average flight's
+visual-angle separation from the flights of the pitches that usually precede it (weighted by how often), at 260 ms,
+at 175 ms and at the plate; change from 2025 to 2026 against the change in its chase rate, with changes in its speed,
+movement, zone rate and height as controls, weighted by pitches, intervals by resampling pitchers. Predictions written
+now: more separation at the decision moment means fewer chases (negative coefficient), and the 260 ms change predicts
+better than the 175 ms change. Power is the main risk: most pitchers change little, so an interval spanning zero is
+the likely outcome if the effect is small, and would be reported as not established rather than as no effect.
