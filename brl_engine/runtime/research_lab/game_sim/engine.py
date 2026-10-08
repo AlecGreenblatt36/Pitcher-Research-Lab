@@ -82,11 +82,15 @@ class GameSimulator:
         config: SimulationConfig | None = None,
         manager_policy: ManagerPolicy | None = None,
         steals=None,
+        transitions=None,
     ) -> None:
         self.provider = provider
         # Optional base-running model (brl_live.running.StealModel): runner speeds and stolen-base attempts. When it
         # is None the engine draws exactly the same random numbers as before.
         self.steals = steals
+        # Optional base-running kernel after each outcome (transitions.EmpiricalKernel, from real play-by-play); None
+        # keeps the hand-set kernel (transitions.apply_outcome).
+        self.transitions = transitions
         self.config = config or SimulationConfig()
         self.manager = manager_policy or ManagerPolicy(
             three_batter_minimum=self.config.three_batter_minimum
@@ -180,7 +184,7 @@ class GameSimulator:
 
             outs_before = state.outs
             bases_before = state.base_ids()
-            transition = apply_outcome(
+            transition = (self.transitions.apply if self.transitions is not None else apply_outcome)(
                 outcome=outcome,
                 bases=state.bases,
                 batter=batter,

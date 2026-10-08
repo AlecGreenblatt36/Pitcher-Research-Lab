@@ -165,7 +165,7 @@ class LiveSimulator(GameSimulator):
             outcome_counts[outcome] += 1
             outs_before = state.outs
             bases_before = state.base_ids()
-            transition = apply_outcome(outcome=outcome, bases=state.bases, batter=batter,
+            transition = (self.transitions.apply if getattr(self, 'transitions', None) is not None else apply_outcome)(outcome=outcome, bases=state.bases, batter=batter,
                                        responsible_pitcher_id=pitcher.player_id, outs_before=outs_before,
                                        batting_team_baserunning=batting.profile.baserunning,
                                        fielding_team_defense=fielding.profile.defense, rng=rng)

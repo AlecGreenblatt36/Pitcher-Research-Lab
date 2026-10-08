@@ -266,3 +266,100 @@ def apply_outcome(
         )
 
     raise ValueError(f"unsupported outcome: {outcome}")
+
+
+# ----- empirical kernel ----------------------------------------------------------------------------------------------
+# Destinations in a pattern: '-' no runner on that base, '1' '2' '3' a base, 'H' scored, 'X' out. A pattern lists the
+# runner on first, second and third and then the batter.
+_SLOT_DECISIONS = {
+    # outcome: {slot: (decision, letters that count as the aggressive result)}; slot 0-2 the runner on that base, 3 the batter
+    "single": {1: ("single_from_2nd", "H"), 0: ("single_from_1st", "3H")},
+    "double_triple": {0: ("double_from_1st", "H"), 3: ("triple", "3H")},
+    "bip_out": {2: ("out_from_3rd", "H"), 1: ("out_from_2nd", "3H")},
+}
+
+
+class EmpiricalKernel:
+    """Base running after each outcome as it happens in MLB: for each outcome, bases and outs at contact, the observed
+    joint destinations of every runner and the batter (from the official play-by-play, tools/brl_transitions.py),
+    tilted by the runners' speeds on the main advance decisions and on the double play.
+
+    doc: {'cells': {'<sim outcome>|<bases mask>|<outs>': [[pattern, probability], ...]},
+          'tilts': {decision: {'beta': log-odds per unit of speed, 'center': mean speed in that decision}}}.
+    Each tilt multiplies the patterns where that runner takes the aggressive result (or, for the double play, where two
+    or more are out) by exp(beta * (speed - center)). Cells missing from the doc (and home runs) use the hand-set kernel."""
+
+    def __init__(self, doc: dict):
+        self.name = str(doc.get("name") or "empirical base running")
+        words = doc.get("descriptions") or {}
+        # How the box score words a play the kernel cannot tell apart: a run from third on an out (sacrifice fly or a
+        # ground ball) and a batter reaching without a hit (fielder's choice or error), by the real shares.
+        self.sac_fly_share = float(words.get("sac_fly_share", 0.59))
+        self.fielders_choice_share = {int(k): float(v) for k, v in (words.get("fielders_choice_share") or {}).items()}
+        self.tilts = {k: (float(v["beta"]), float(v.get("center", 0.5))) for k, v in (doc.get("tilts") or {}).items()}
+        self.cells = {}
+        for key, rows in (doc.get("cells") or {}).items():
+            outcome, mask, outs = key.split("|")
+            mask, outs = int(mask), int(outs)
+            pats = [str(r[0]) for r in rows]
+            p = np.asarray([float(r[1]) for r in rows], float)
+            if p.sum() <= 0:
+                continue
+            cols, beta, center, source = [], [], [], []
+            for slot, (decision, letters) in _SLOT_DECISIONS.get(outcome, {}).items():
+                if decision in self.tilts and (slot == 3 or (mask >> slot) & 1):
+                    cols.append([1.0 if pat[slot] in letters else 0.0 for pat in pats])
+                    beta.append(self.tilts[decision][0]); center.append(self.tilts[decision][1]); source.append(slot)
+            if outcome == "bip_out" and mask & 1 and outs < 2:
+                dp = [1.0 if pat.count("X") >= 2 else 0.0 for pat in pats]
+                for slot, decision in ((0, "double_play_runner"), (3, "double_play_batter")):
+                    if decision in self.tilts:
+                        cols.append(dp); beta.append(self.tilts[decision][0]); center.append(self.tilts[decision][1]); source.append(slot)
+            ind = np.asarray(cols, float).T if cols else np.zeros((len(pats), 0))
+            self.cells[(outcome, mask, outs)] = (pats, p / p.sum(), ind, np.asarray(beta, float), np.asarray(center, float), tuple(source))
+
+    def apply(self, outcome, bases, batter, responsible_pitcher_id, outs_before, batting_team_baserunning, fielding_team_defense, rng):
+        first, second, third = list(bases)
+        mask = int(first is not None) | (int(second is not None) << 1) | (int(third is not None) << 2)
+        cell = self.cells.get((outcome, mask, int(outs_before)))
+        if cell is None or outcome == "home_run":
+            return apply_outcome(outcome, bases, batter, responsible_pitcher_id, outs_before, batting_team_baserunning, fielding_team_defense, rng)
+        pats, p, ind, beta, center, source = cell
+        if len(beta):
+            who = (first, second, third, batter)
+            speeds = np.asarray([float(getattr(who[s], "speed", 0.5)) for s in source], float)
+            w = p * np.exp(ind @ (beta * (speeds - center)))
+            w = w / w.sum()
+        else:
+            w = p
+        pat = pats[int(rng.choice(len(pats), p=w))]
+        batter_runner = _batter_runner(batter, responsible_pitcher_id)
+        runners = [first, second, third, batter_runner]
+        new_bases: list[BaseRunner | None] = [None, None, None]
+        scored: list[BaseRunner] = []
+        retired: list[str] = []
+        outs = 0
+        for slot in (2, 1, 0, 3):            # scoring order: third, second, first, batter
+            runner, d = runners[slot], pat[slot]
+            if runner is None or d == "-":
+                continue
+            if d == "H":
+                scored.append(runner)
+            elif d == "X":
+                retired.append(runner.player_id); outs += 1
+            else:
+                new_bases[int(d) - 1] = runner
+        if outcome == "bip_out":
+            if outs >= 2:
+                verb = "grounded into a double play" if outs == 2 else "hit into a triple play"
+            elif pat[2] == "H" and pat[3] == "X" and int(outs_before) < 2:
+                verb = "drove in a run on a sacrifice fly" if rng.random() < self.sac_fly_share else "grounded out, and a run scored"
+            else:
+                verb = "made an out"
+        elif outcome == "other_reach":
+            verb = "reached on a fielder's choice" if rng.random() < self.fielders_choice_share.get(mask, 0.0) else "reached on an error"
+        elif outcome == "double_triple":
+            verb = "tripled" if pat[3] == "3" else "doubled"
+        else:
+            verb = {"strikeout": "struck out", "bb_hbp": "reached on a walk or hit by pitch", "single": "singled"}.get(outcome, outcome)
+        return TransitionResult(new_bases, outs, scored, retired, f"{batter.name} {verb}.")

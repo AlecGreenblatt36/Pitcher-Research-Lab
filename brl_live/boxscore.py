@@ -9,7 +9,9 @@ from collections import Counter,defaultdict
 from dataclasses import asdict
 from typing import Any
 import hashlib
+import json
 import math
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from app.safety import Blocked
@@ -300,7 +302,19 @@ class BoxAccumulator:
 # 0.8354, totals closer to the market line, mean total unchanged.
 ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         'postseason_exp_scale':{'F':0.91,'D':0.91,'L':0.91,'W':1.0},
-        'environment':True,'team_offsets':True,'steals':True}
+        'environment':True,'team_offsets':True,'steals':True,'transitions':False}
+
+TRANSITIONS_PATH=Path(__file__).resolve().parent/'transitions.json'
+_KERNEL={}
+
+def transitions_for(settings):
+    """The empirical base-running kernel (brl_live/transitions.json, TRANS-01) when it is switched on, else None (the
+    engine's hand-set kernel)."""
+    if not settings.get('transitions'):return None
+    if 'k' not in _KERNEL:
+        from research_lab.game_sim.transitions import EmpiricalKernel
+        _KERNEL['k']=EmpiricalKernel(json.loads(TRANSITIONS_PATH.read_text()))
+    return _KERNEL['k']
 
 def steal_model_for(settings,matchup,date):
     """The base-running model for a game when steals are on, else None. Regular-season games use the current
@@ -351,7 +365,9 @@ def run_box_worlds(engine,matchup,history,date,seeds,full_history=None,settings=
     if getattr(engine.manager,'adjust_label',None):adjust_label=list(adjust_label)+[engine.manager.adjust_label]
     steals=steal_model_for(settings,matchup,date)
     if steals is not None:adjust_label=list(adjust_label)+[steals.describe()]
-    sim=ObservedSimulator(provider,config=engine.config,manager_policy=engine.manager,steals=steals)
+    kernel=transitions_for(settings)
+    if kernel is not None:adjust_label=list(adjust_label)+[kernel.name]
+    sim=ObservedSimulator(provider,config=engine.config,manager_policy=engine.manager,steals=steals,transitions=kernel)
     accumulator=BoxAccumulator(matchup);results=[]
     for seed in seeds:
         if world_hook:world_hook(int(seed))
