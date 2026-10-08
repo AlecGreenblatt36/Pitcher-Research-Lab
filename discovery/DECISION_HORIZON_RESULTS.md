@@ -27,6 +27,7 @@ to 18); 25.7% of pitches at 0-0 (counts are pre-pitch).
 | 37738096684 | Pitcher side: does more shape surprise win decisions | Median 1.1 in of unexpected movement per pitch after the horizon, stable year to year (0.75). No effect on future chase or whiff; more walks (+0.32 pts per SD, interval excludes zero) and fewer pitches in the zone. It is wildness, not deception, exactly the pattern the pre-run rule named. Dropped. |
 | 37740908440 | Blind window or expectation pull (reviewer's strongest rival): split each pitch's miss from the pitcher's usual spot into movement surprise and the line it left the hand on | Movement part discounted 0.413 (a blind window from 261 ms predicts 0.467); line part -0.043 (predicted 0); difference 0.450 to 0.465. A pull toward an expected spot would discount both the same: rejected. By type: four-seam 0.46, sinker 0.50, changeup 0.42, curveball 0.33, slider 0.30 (sliders partly anticipated). Implied commit with pitcher-season intercepts: 245 ms. |
 | 37738936962, 37741128823 | Tunneling scored at the measured horizon (2,104,443 consecutive pitch pairs) | The previous-pitch separation (visual angle from the batter's eye) best predicts a chase at 260 ms: 1.31 nats per 1,000 against 1.03 at the public 175 ms and 0.05 at the plate; head to head on 526,205 out-of-zone pitches, 260 ms beats 175 ms by 0.27 nats per 1,000 (0.22 to 0.32). Swings at strikes peak at the same moment. Whiffs get almost nothing from tunneling at any time (prediction for whiffs failed). |
+| 37741959956, 37742304034 | Lever: within pitcher, does a change in a pitch's early separation from its usual predecessors change its chase rate (2,715 pitch types, consecutive seasons 2023-2026 pooled) | More separation at the decision moment, fewer chases: -0.51 points of chase rate per typical change (-0.74 to -0.27), with changes in its own speed, movement, zone rate and height held fixed; 175 ms alone -0.64 (-0.91 to -0.37). Together they cannot be separated (260: -0.03, -0.57 to 0.46; 175: -0.61, -1.20 to 0.02), so this test supports the lever's direction, not its timing. Whiffs: no relation. |
 | 37738373322 | After deciding, how late is the bat steered (balls in play) | Launch angle rises 0.248 degrees per unit of up-and-down surprise (SE 0.003); sideways placebo 0.033. With an assumed 16 to 25 degrees per inch of bat-ball offset, the bat is steered until about 100 to 125 ms before the plate (111 ms at 20). If it were set at the decision, the slope would be 1.08 to 1.69. Balls in play exclude the largest misses, which biases this number short. |
 
 ## Reading
@@ -52,8 +53,9 @@ eye, against the decision and steering lines).
 
 Continue, with the target changed: the league-level measurement holds, including against the reviewer's strongest
 rival, and tunneling scored at it beats the field's 175 ms choice for chases; the hitter and pitcher uses we expected
-are dropped. Next experiment: move from prediction to a lever. For pitchers whose pair separation at the 260 ms
-decision moment changed between 2025 and 2026 (new grips, slots, shapes), test whether that change predicts the change
-in chase rate on the second pitch beyond the change in its own speed, movement and location mix, with the separation
-at the plate as the placebo. Cheaper second step: replace the assumed bat-ball geometry in the steering limit with
-Statcast's measured swing timing and miss distance.
+are dropped. The lever test ran tonight: within pitcher, early separation moves chase rate in the predicted direction, but
+season-to-season changes cannot separate 260 from 175 ms. Next experiment: a planned prospective test. Before the
+2027 season, freeze the pitchers and pitch types whose spring shapes moved their decision-moment separation most, with
+the predicted direction and size of each chase-rate change, and score it in May against a speed-and-movement-only
+forecast and against the 175 ms version on pitchers where the two separations moved differently. Cheaper side step:
+replace the assumed bat-ball geometry in the steering limit with Statcast's measured swing timing and miss distance.
