@@ -143,15 +143,16 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                                  expected_sha256=model_sha256, physics_table=physics_table)
     cached = CachedProvider(base)
     provider = ContextAdjust(cached, offsets) if offsets else cached
+    chain = [('bare', cached)] + ([('context', provider)] if offsets else [])      # each layer, for the real plate appearance check
     env = None
     if environment is not None:
-        env = provider = EnvironmentAdjust(provider)
+        env = provider = EnvironmentAdjust(provider); chain.append(('environment', env))
     tadj = None
     if team_offsets is not None:
-        tadj = provider = TeamAdjust(provider)
+        tadj = provider = TeamAdjust(provider); chain.append(('team', tadj))
     radj = None
     if role_offsets is not None:
-        radj = provider = RoleAdjust(provider)
+        radj = provider = RoleAdjust(provider); chain.append(('role', radj))
     aadj = None
     if age_layer is not None:
         from research_lab.pa_model.physics import AgingState
@@ -161,7 +162,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
         a_dates = hs['date_key'].astype(str).str[:10].to_numpy()
         a_b, a_p, a_o = hs['batter'].to_numpy(int), hs['pitcher'].to_numpy(int), hs['outcome'].astype(str).to_numpy()
         a_pos = 0
-        aadj = provider = AgeAdjust(provider, age_layer, a_state, 0)
+        aadj = provider = AgeAdjust(provider, age_layer, a_state, 0); chain.append(('age', aadj))
     hazard = joblib.load(hazard_path)
     real_states = {}
     if win_states:
@@ -310,7 +311,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                 from types import SimpleNamespace
                 from research_lab.game_sim.locked_pa_provider import SIM_FROM_MODEL
                 model_of_sim = {v: k for k, v in SIM_FROM_MODEL.items()}
-                agg = {r_: {"pred": np.zeros(7), "obs": np.zeros(7), "n": 0} for r_ in ("starter", "reliever")}
+                agg = {r_: {"pred": np.zeros(7), "obs": np.zeros(7), "n": 0, "layers": {nm_: np.zeros(7) for nm_, _ in chain[:-1]}} for r_ in ("starter", "reliever")}
                 starters_ = {int(g.home_starter), int(g.away_starter)}
                 for row in real_rows.get(int(g.game_pk), []):
                     try:
@@ -324,16 +325,20 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                             batting_score=int(row.bat_score), fielding_score=int(row.fld_score), score_diff=int(row.bat_score) - int(row.fld_score),
                             times_through_order=int(row.n_thruorder_pitcher or 1), fielding_team_defense=float(getattr(fld_team, "defense", 0.0) or 0.0))
                         probs = provider.probabilities(ctx)
+                        inner_ = [(nm_, ob_.probabilities(ctx)) for nm_, ob_ in chain[:-1]]
                     except Exception as exc_:
                         agg.setdefault("errors", []).append(type(exc_).__name__ + ": " + str(exc_)[:80])
                         continue
                     r_ = "starter" if int(row.pitcher) in starters_ else "reliever"
                     agg[r_]["pred"] += np.array([probs[model_of_sim[lab]] for lab in MODEL_ORDER])
+                    for nm_, pr_ in inner_:
+                        agg[r_]["layers"][nm_] += np.array([pr_[model_of_sim[lab]] for lab in MODEL_ORDER])
                     if str(row.outcome) in MODEL_ORDER:
                         agg[r_]["obs"][MODEL_ORDER.index(str(row.outcome))] += 1
                     agg[r_]["n"] += 1
                 errs = agg.pop("errors", [])
-                records[-1]["real_pa"] = {r_: {"n": v_["n"], "pred": [round(float(x), 3) for x in v_["pred"]], "obs": [int(x) for x in v_["obs"]]} for r_, v_ in agg.items()}
+                records[-1]["real_pa"] = {r_: {"n": v_["n"], "pred": [round(float(x), 3) for x in v_["pred"]], "obs": [int(x) for x in v_["obs"]],
+                                               "layers": {nm_: [round(float(x), 3) for x in lv_] for nm_, lv_ in v_["layers"].items()}} for r_, v_ in agg.items()}
                 if errs:
                     records[-1]["real_pa"]["errors"] = {"count": len(errs), "first": errs[0]}
             if sl is not None:

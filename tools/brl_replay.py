@@ -17,6 +17,10 @@ Settings come from tools/replay_params.json on the trigger branch:
                the aging and recency layer (brl_live/age_layer.py)
   steals       {'per_pa': attempt scale}: runner speeds and stolen bases (brl_live/running.py), statistics through the
                season before each replayed date
+  physics_years 'recent' (default: the previous and the replayed season, as the live runtime loads), 'all' (every sealed
+               season from 2023, as the model was fitted) or a list of years
+  physics_join  keep only physics rows whose game, plate appearance, batter and pitcher are in the plate-appearance
+               history (as the fit's chronological builder does; drops postseason rows)
 Outputs on the ledger branch: research/replay-<tag>-<run>.jsonl.gz (one record per game: win counts,
 run histograms, starter outs, final score) and research/replay-<tag>-<run>.json (scores, paired
 comparison, timing). Per-game model outputs and final scores are not private data; the plate
@@ -174,7 +178,10 @@ def main():
             from brl_live.bookkeeping_season import physics_path, physics_purpose
             from cloud.security import unseal, key_bytes
             tables = []
-            for year in (season - 1, season):
+            py = params.get('physics_years') or 'recent'
+            years = list(range(2023, season + 1)) if py == 'all' else ([int(y) for y in py] if isinstance(py, list) else [season - 1, season])
+            receipt['physics_years'] = years
+            for year in years:
                 raw = read_blob(repo, token, physics_path(year), branch)
                 if raw is None:
                     raise ValueError(f'physics table for {year} is not sealed')
@@ -186,6 +193,13 @@ def main():
         from brl_replay.games import load_history, reconstruct
         from brl_replay.harness import appearances
         h = load_history(history_path)
+        if physics_table is not None and params.get('physics_join'):
+            keys = h[['game_pk', 'at_bat_number', 'batter', 'pitcher']].drop_duplicates(['game_pk', 'at_bat_number']).astype('int64')
+            before = int(len(physics_table))
+            physics_table = physics_table.drop_duplicates(['game_pk', 'at_bat_number'])
+            physics_table = physics_table.astype({'game_pk': 'int64', 'at_bat_number': 'int64', 'batter': 'int64', 'pitcher': 'int64'})
+            physics_table = physics_table.merge(keys, on=['game_pk', 'at_bat_number', 'batter', 'pitcher'], how='inner').reset_index(drop=True)
+            receipt['physics_join'] = {'before': before, 'after': int(len(physics_table))}
         app = appearances(h)
         games = reconstruct(h)
         games['date'] = games['date'].astype(str)
