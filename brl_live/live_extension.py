@@ -64,6 +64,14 @@ def make_history_engine(parameters: dict, history_path: Path, physics_table=None
         raise Blocked('Original manager artifact changed')
     pexp, texp = tendencies_at(history, parameters['date'], float(manager_doc['league_mean_bf']))
     matchup = bridge.decode_matchup(parameters['matchup'])
+    leash_label = None
+    if str(matchup.game_type) == 'R':
+        from .boxscore import ADJUST, leash_for, leash_pexp
+        leash = leash_for(ADJUST)
+        if leash is not None:
+            pexp = leash_pexp(leash, history, pexp, [matchup.away.starter.player_id, matchup.home.starter.player_id],
+                              parameters['date'], float(manager_doc['league_mean_bf']))
+            leash_label = leash.name
     scale = postseason_scale(str(matchup.game_type))
     if scale is not None:
         # Postseason managers pull starters earlier: the fitted hazard is driven through the starter's
@@ -76,6 +84,8 @@ def make_history_engine(parameters: dict, history_path: Path, physics_table=None
     if scale is not None:
         manager.league = float(manager.league) * scale
         manager.adjust_label = 'postseason starter usage (expected batters x%.2f)' % scale
+    elif leash_label:
+        manager.adjust_label = leash_label
     return GameSimulator(provider, manager_policy=manager,
                          config=SimulationConfig(**parameters.get('config', {}))), matchup
 

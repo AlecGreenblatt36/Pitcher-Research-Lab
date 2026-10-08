@@ -119,7 +119,7 @@ def bats_lookup(h: pd.DataFrame, cutoff: str) -> dict:
 
 def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates: list, *, model_path: Path, model_sha256: str,
                  history_path: Path, hazard_path: Path, n_sims: int, physics_table=None, offsets=None, rest=False, environment=None,
-                 team_offsets=None, age_layer=None, steals=None, win_states=False, starter_lines=False, role_offsets=None, real_pa_check=False, transitions=None, hitter_lines=False, running_events=None, reliever_choice=None, log=print) -> list[dict]:
+                 team_offsets=None, age_layer=None, steals=None, win_states=False, starter_lines=False, role_offsets=None, real_pa_check=False, transitions=None, hitter_lines=False, running_events=None, reliever_choice=None, leash=None, log=print) -> list[dict]:
     """Simulate every game on the given dates; one record per game (win counts, run histograms, starter outs).
 
     environment: optional {game_pk: seven log-multipliers} (brl_live/environment.py); games without an entry are unadjusted.
@@ -143,6 +143,8 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
     transitions: optional base-running kernel after each outcome (research_lab.game_sim.transitions.EmpiricalKernel).
     running_events: optional running plays between plate appearances other than steals (research_lab.game_sim.running_events).
     reliever_choice: optional fitted choice of the entering reliever (research_lab.game_sim.reliever_choice.RelieverChoice).
+    leash: optional (research_lab.game_sim.starter_leash.Leash, AppearanceIndex of regular-season appearances): each
+        starter's expected batters faced moved for short rest, a relief outing before, a return from a layoff and the month.
     hitter_lines: also record each lineup hitter's simulated chances (at least one hit, a home run, a strikeout, a walk), mean
     plate appearances, hits and home runs, the hits histogram, his actual line in that game (box-score facts) and a baseline
     from earlier dates only (his hit and home-run rates per plate appearance over the prior 365 days, shrunk toward the league)."""
@@ -300,7 +302,12 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                 pen = tuple(p for p in bullpen(app, team, date, sid, rest=rest) if p.player_id != str(sid))
                 teams[side] = TeamProfile(team, team, lineup, starter, pen, defense=(float(defense.value(team)) if defense is not None else 0.0))
             matchup = GameMatchup(away=teams["away"], home=teams["home"], venue=g.park, game_type="R")
-            policy = FittedStarterPolicy(hazard, pexp, texp, {int(g.away_starter): g.away, int(g.home_starter): g.home},
+            pexp_g = pexp
+            if leash is not None:
+                pexp_g = dict(pexp)
+                for sid_l in (int(g.away_starter), int(g.home_starter)):
+                    pexp_g[sid_l] = leash[0].adjust(float(pexp.get(sid_l, hazard["league_mean_bf"])), leash[1].facts(sid_l, date))
+            policy = FittedStarterPolicy(hazard, pexp_g, texp, {int(g.away_starter): g.away, int(g.home_starter): g.home},
                                          reliever_choice=reliever_choice)
             steal = None
             if steals is not None:
@@ -449,7 +456,8 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                     sid_ = int(getattr(g, f"{side}_starter"))
                     rate_, prior_bf = prior_k_rate(sid_, date)
                     st_out[side] = {"pitcher": sid_, **{m_: v_.tolist() for m_, v_ in sl[side].items()}, "actual": act_lines.get((int(g.game_pk), sid_)),
-                                    "prior_k_rate": round(float(rate_), 4), "prior_bf_365": prior_bf, "expected_bf": round(float(pexp.get(sid_, hazard["league_mean_bf"])), 2),
+                                    "prior_k_rate": round(float(rate_), 4), "prior_bf_365": prior_bf, "expected_bf": round(float(pexp_g.get(sid_, hazard["league_mean_bf"])), 2),
+                                    "expected_bf_record": round(float(pexp.get(sid_, hazard["league_mean_bf"])), 2),
                                     "team_sim_mean": [round(float(v_ / n_sims), 3) for v_ in tot[side]], "team_actual": act_lines.get((int(g.game_pk), side))}
                 records[-1]["starters"] = st_out
             if wt is not None:

@@ -19,7 +19,7 @@ import pandas as pd
 from scipy.optimize import minimize
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / 'brl_engine' / 'runtime')); sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT / 'brl_engine' / 'runtime'))
 from brl_live.live_feed import bullpen_usage                                   # noqa: E402
 from brl_replay.harness import appearances                                    # noqa: E402
 from research_lab.game_sim.reliever_choice import features, situation         # noqa: E402

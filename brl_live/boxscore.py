@@ -342,15 +342,41 @@ class BoxAccumulator:
 # relief entry (BULLPEN-01; research_lab.game_sim.reliever_choice.RelieverChoice, table brl_live/reliever_choice.json from
 # tools/brl_reliever_choice.py): recent use, rest, role over the year and the last three weeks, strikeout record, the
 # next three hitters' hands and the game situation. Off until its replays are read; off, the hand-set scoring chooses.
+# leash: in regular-season games each starter's expected batters faced is moved for short rest (openers), a relief
+# outing before the start, the first two starts back from a layoff of 20 days or more, March and September (LEASH-01;
+# research_lab.game_sim.starter_leash, table brl_live/leash.json from tools/brl_leash.py). Off until its replays are read.
 ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         'postseason_exp_scale':{'F':0.91,'D':0.91,'L':0.91,'W':1.0},
         'environment':True,'team_offsets':True,'steals':True,'transitions':True,'running_events':False,
-        'reliever_choice':False}
+        'reliever_choice':False,'leash':False}
 
 TRANSITIONS_PATH=Path(__file__).resolve().parent/'transitions.json'
 RUNNING_EVENTS_PATH=Path(__file__).resolve().parent/'running_events.json'
 RELIEVER_CHOICE_PATH=Path(__file__).resolve().parent/'reliever_choice.json'
+LEASH_PATH=Path(__file__).resolve().parent/'leash.json'
 _KERNEL={}
+
+def leash_for(settings):
+    """The starter-leash table (brl_live/leash.json, LEASH-01) when switched on, else None."""
+    if not settings.get('leash'):return None
+    if 'l' not in _KERNEL:
+        from research_lab.game_sim.starter_leash import Leash
+        _KERNEL['l']=Leash(json.loads(LEASH_PATH.read_text()))
+    return _KERNEL['l']
+
+def leash_pexp(leash,history,pexp,starters,date,league):
+    """pexp with each of the game's starters moved by the leash table, from his regular-season appearances before the
+    game's date."""
+    from research_lab.game_sim.starter_leash import AppearanceIndex
+    from .live_feed import appearances
+    ids=[int(x) for x in starters]
+    h=history[history['date_key'].astype(str).str[:10]<str(date)[:10]]
+    if 'game_type' in h.columns:h=h[h['game_type']=='R']
+    app=appearances(h[h['game_pk'].isin(h.loc[h['pitcher'].isin(ids),'game_pk'].unique())])
+    index=AppearanceIndex.from_frame(app[app['pitcher'].isin(ids)])
+    out=dict(pexp)
+    for pid in ids:out[pid]=leash.adjust(float(pexp.get(pid,league)),index.facts(pid,date))
+    return out
 
 def reliever_choice_for(settings):
     """The fitted reliever choice (brl_live/reliever_choice.json, BULLPEN-01) when switched on, else None."""
