@@ -2310,6 +2310,96 @@ def scarcity(T: dict, X: dict, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- ZONE-01: pitch location across the 2026 definition change
+YMID = 8.5 / 12.0          # the middle of the plate, Statcast's reference for plate_x and plate_z from 2026
+
+
+def zone_audit(T: dict, params: dict, stage) -> dict:
+    """Statcast documents that plate_x and plate_z moved from the front of the plate (through 2025) to its middle (2026)
+    and that the zone's top and bottom became the ABS zone. Is the move in our feed's pitch locations, and how big is it?
+    Same pitcher and pitch type in consecutive seasons: the change in mean height at the plate (2025 to 2026, with 2023
+    to 2024 and 2024 to 2025 as controls) against the drop the ball makes between the front and the middle of the plate,
+    computed from each pitch's own flight (pitches that arrive steeper drop more in those 8.5 inches, so a definition
+    change scales with the pitch's descent; a change in where pitchers aim does not). Also the Statcast zone field's
+    in-zone share and called strikes by zone and height, by season. Aggregates only."""
+    res = {}
+    F = rebuild(T)
+    ok = F['ok'] & (T['group'] >= 0) & np.isfinite(T['v1'])
+    vy = T['v1'].astype(np.float64) * FT_PER_MPH
+    with np.errstate(invalid='ignore', divide='ignore'):
+        dt = (YPLATE - YMID) / vy
+    dz_pred = (F['vz0'] + F['az'] * F['tf']) * dt          # height at the middle minus height at the front (ft)
+    dx_pred = (F['vx0'] + F['ax'] * F['tf']) * dt
+    ok &= np.isfinite(dz_pred) & np.isfinite(dx_pred)
+    seasons = [int(s) for s in np.unique(T['season'])]
+    res['predicted_drop_in'] = {GROUP_NAMES[g]: round(float(np.nanmean(dz_pred[ok & (T['group'] == g) & (T['season'] <= 2025)]) * 12.0), 3)
+                                for g in range(6)}
+    key = T['pitcher'].astype(np.int64) * 100 + T['sub'].astype(np.int64)
+    stats = {}
+    for s in seasons:
+        m = ok & (T['season'] == s)
+        uk, inv = np.unique(key[m], return_inverse=True)
+        n = np.bincount(inv, minlength=len(uk))
+        stats[s] = {'keys': uk, 'n': n, 'pz': np.bincount(inv, weights=T['pz'][m].astype(np.float64), minlength=len(uk)) / np.maximum(n, 1),
+                    'dz': np.bincount(inv, weights=dz_pred[m], minlength=len(uk)) / np.maximum(n, 1),
+                    'grp': np.bincount(inv, weights=T['group'][m].astype(np.float64), minlength=len(uk)) / np.maximum(n, 1)}
+    min_n = int(params.get('min_pitches', 50))
+    pairs = {}
+    for a, b in zip(seasons[:-1], seasons[1:]):
+        # the predicted move comes from a third season's flights: a pitch's computed descent depends on its own measured
+        # height, so taking it from either season of the pair would tie it to that season's noise (regression to the mean)
+        c = min((x for x in seasons if x not in (a, b)), key=lambda x: (abs(x - a), x))
+        A, B, Cs = stats[a], stats[b], stats[c]
+        common, ia, ib = np.intersect1d(A['keys'], B['keys'], return_indices=True)
+        common, ja, jc = np.intersect1d(common, Cs['keys'], return_indices=True)
+        ia, ib = ia[ja], ib[ja]
+        keep = (A['n'][ia] >= min_n) & (B['n'][ib] >= min_n) & (Cs['n'][jc] >= min_n)
+        ia, ib, jc = ia[keep], ib[keep], jc[keep]
+        w = np.minimum(A['n'][ia], B['n'][ib]).astype(np.float64)
+        change = B['pz'][ib] - A['pz'][ia]
+        pred = Cs['dz'][jc]
+        grp = np.rint(A['grp'][ia]).astype(int)
+        out = {'pairs': int(len(ia)), 'pitches': int(w.sum()), 'predicted_from_season': int(c),
+               'mean_change_in': round(float(np.average(change, weights=w) * 12.0), 3),
+               'by_group': {}}
+        X = np.c_[np.ones(len(ia)), pred]
+        beta = np.linalg.lstsq(X * np.sqrt(w)[:, None], change * np.sqrt(w), rcond=None)[0]
+        rng = np.random.default_rng(int(params.get('seed', 11))); draws = []
+        for _ in range(int(params.get('reps', 300))):
+            j = rng.integers(0, len(ia), len(ia))
+            draws.append(np.linalg.lstsq(X[j] * np.sqrt(w[j])[:, None], change[j] * np.sqrt(w[j]), rcond=None)[0][1])
+        out['slope_on_predicted_drop'] = [round(float(beta[1]), 3), round(float(np.percentile(draws, 2.5)), 3), round(float(np.percentile(draws, 97.5)), 3)]
+        for g in range(6):
+            mg = grp == g
+            if mg.sum() >= 20:
+                out['by_group'][GROUP_NAMES[g]] = {'pairs': int(mg.sum()), 'change_in': round(float(np.average(change[mg], weights=w[mg]) * 12.0), 3),
+                                                   'predicted_in': round(float(np.average(pred[mg], weights=w[mg]) * 12.0), 3)}
+        pairs[f'{a}_to_{b}'] = out
+    res['same_pitcher_and_type'] = pairs
+    stage('paired location change')
+    zone = T['zone']; called = (T['call'] == 0) & np.isin(T['zone'], np.arange(1, 15))
+    cs = T['cs'] == 1
+    by_season = {}
+    for s in seasons:
+        m = (T['season'] == s) & (zone >= 1)
+        inz = m & (zone <= 9)
+        ms = called & (T['season'] == s)
+        z = T['pz'][ms].astype(np.float64)
+        bands = {}
+        for lo, hi in ((1.2, 1.4), (1.4, 1.6), (1.6, 1.8), (3.2, 3.4), (3.4, 3.6), (3.6, 3.8)):
+            b = (z >= lo) & (z < hi) & (np.abs(T['px'][ms]) <= 0.5)
+            bands[f'{lo:.1f}-{hi:.1f}ft'] = {'taken': int(b.sum()), 'called_strike': round(float(cs[ms][b].mean()), 4) if b.any() else None}
+        by_season[s] = {'pitches_with_zone': int(m.sum()), 'zone_missing_share': round(float(np.mean(zone[T['season'] == s] < 1)), 4),
+                        'in_zone_share': round(float(inz.sum() / max(m.sum(), 1)), 4),
+                        'called_strike_in_zone_1_9': round(float(cs[ms & (zone <= 9)].mean()), 4) if (ms & (zone <= 9)).any() else None,
+                        'called_strike_outside_11_14': round(float(cs[ms & (zone >= 11)].mean()), 4) if (ms & (zone >= 11)).any() else None,
+                        'mean_pz_ft': round(float(np.nanmean(T['pz'][T['season'] == s])), 4),
+                        'called_strike_by_height_middle_third': bands}
+    res['zone_field_and_calls'] = by_season
+    stage('zone field')
+    return res
+
+
 def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']
     from cloud.security import unseal, key_bytes
@@ -2374,6 +2464,8 @@ def main():
             receipt['results'] = horizon13(T, params, stage)
         elif experiment == 'horizon14':
             receipt['results'] = horizon14(T, params, stage)
+        elif experiment == 'zone_audit':
+            receipt['results'] = zone_audit(T, params, stage)
         receipt['status'] = 'completed'
     except StopIteration:
         receipt['status'] = 'completed'
