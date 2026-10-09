@@ -84,7 +84,7 @@ expectation model scores how surprising each pitch is to that hitter at that mom
 - ZONE-01: the definition change in the feed's own locations (running).
 - M1 first test after DATA-02, M3 on the feed data in parallel.
 
-## Results through October 9, 2026, 11 a.m. (ledger rows carry every number and interval)
+## Results through October 9, 2026, 9:40 a.m. Eastern (ledger rows carry every number and interval)
 
 Credited (frozen code, scored once on the untouched months, August 1 to September 27, 2026):
 
@@ -92,6 +92,11 @@ Credited (frozen code, scored once on the untouched months, August 1 to Septembe
   where the pitch appears to be headed 260 ms before the plate (gravity-only projection) predicts his swings 40.2 nats
   per 1,000 decisions better than his standard heat map of where pitches cross the plate, and predicts his chasing
   against a specific pitcher's arsenal with a calibration slope of 0.95.
+  That gain was measured against the standard heat map inside a logistic model. Against a gradient-boosted learner
+  given the same pitch inputs (BENCH-01), most of it belongs to the league part, which boosting learns from the raw
+  inputs (it beats our logistic model by 23 nats); the hitter-specific maps read at the decision moment still add
+  about 3 nats per 1,000 decisions beyond boosting with the heat map, in 2025 and in 2026 through July (BENCH-01F
+  scores it once on the untouched months). The best swing model is boosting with both maps as inputs.
 - **Misses and contact follow where the ball arrives** (MATCHUP-03, CONTACT-03, DAMAGE-01F). The spread of a hitter's
   contact depth from bat tracking is his contact window (contact depth is only seen on contact, so the spread is the
   range of timing he survives, not his timing error) and predicts misses beyond his whiff rate; damage on contact is
@@ -113,6 +118,11 @@ Credited (frozen code, scored once on the untouched months, August 1 to Septembe
   untouched months (+0.59 nats per 1,000 decisions [0.28, 0.88]); hitter maps already carry it. Part of a hitter's
   high-versus-low own part is his zone height (ZONEMAP-01, correlation 0.35), and re-priced on batter zones the edge
   keeps 85 to 94% of its value (VALUE-15), so about a tenth of it is zone height.
+- **Hitters judge a pitch's side against their own body** (STANCE-01, development): each hitter's distance off the
+  plate, recovered from the bat-tracking contact points (reliability 0.99), goes with his sideways chase pattern: an inch
+  farther off the plate, about 0.75 points less chasing away relative to inside (r -0.27 and -0.30), and hitters who
+  moved between 2025 and 2026 shifted their pattern the same way (-0.31). Moving the whole swing surface by his position
+  does not improve the model (MATCHUP-09), so it is a scouting signal: a stance change announces a chase-pattern change.
 - **The times-through-the-order penalty is the pitcher's pitch count** (WARMUP-01, development): against fresh
   relievers hitters do not warm up (-0.003 runs per earlier plate appearance), familiarity with a pitcher adds nothing
   measurable, and the decline tracks pitches thrown (+0.026 runs per plate appearance per 100); a substitute's first
@@ -124,7 +134,8 @@ formula as the source of the geometry signal (CONTACT-01, -02); locating the ste
 (STEER-01); pitch-type surprise (SEQ-01); velocity, flight reading and pitch-type familiarity as the
 times-through-the-order penalty (FATIGUE-01, EXPOSURE-01); pair-specific strikeout effects large enough for the
 simulator (ENGINE-01: real, about 0.4 points of strikeout rate); command measured from repeated aims (COMMAND-02);
-chase spots explained by the bat path (SWINGMAP-01).
+chase spots explained by the bat path (SWINGMAP-01); timing carried across a pitching change (CHANGE-01: hitters re-time
+fully between pitchers); the swing surface shifted by where the hitter stands (MATCHUP-09).
 
 ## What is original against the closest published work (checked October 9, 2026)
 
