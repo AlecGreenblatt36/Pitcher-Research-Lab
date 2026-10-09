@@ -5424,6 +5424,24 @@ def fatigue(T: dict, params: dict, stage) -> dict:
     TD = np.column_stack([np.where(tv, today, 0.0), tv.astype(float)])
     X0 = np.hstack([pc, tto_d, rb, rp, plat])
     designs = {'M0_count_tto_rates': X0, 'M1_plus_drift': np.hstack([X0, D]), 'M2_plus_drift_and_start': np.hstack([X0, D, TD])}
+    cmd = bool(params.get('command'))              # COMMAND-01: the starter's location in his first 20 pitches against his norm
+    if cmd:
+        ut_ = np.where(T['stand_r'] == 1, T['px'].astype(np.float64), -T['px'].astype(np.float64)); zt_ = T['pz'].astype(np.float64)
+        e_ = np.maximum(np.maximum(np.abs(ut_) - ZONE_HALF, zt_ - ZONE_TOP), ZONE_BOT - zt_)
+        okloc = np.isfinite(e_); inz = okloc & (e_ <= 0); waste = okloc & (e_ > 0.5)
+        cz = np.r_[0.0, np.cumsum(inz.astype(float))]; cw = np.r_[0.0, np.cumsum(waste.astype(float))]; cn = np.r_[0.0, np.cumsum(okloc.astype(float))]
+        fr = first_row[gidx[idx]]; late = pos[idx] >= 20
+        f20 = np.where(late, fr + 20, fr)
+        n20 = cn[f20] - cn[fr]; z20 = (cz[f20] - cz[fr]) / np.maximum(n20, 1); w20 = (cw[f20] - cw[fr]) / np.maximum(n20, 1)
+        nz_, sz_ = _prior_by_day(T['pitcher'].astype(np.int64), T['day'].astype(np.int64), inz.astype(float), okloc)
+        nw_, sw2_ = _prior_by_day(T['pitcher'].astype(np.int64), T['day'].astype(np.int64), waste.astype(float), okloc)
+        normz = np.where(nz_[idx] >= 300, sz_[idx] / np.maximum(nz_[idx], 1), np.nan); normw = np.where(nw_[idx] >= 300, sw2_[idx] / np.maximum(nw_[idx], 1), np.nan)
+        have_c = late & (n20 >= 15) & np.isfinite(normz) & np.isfinite(normw)
+        zdev = np.where(have_c, z20 - normz, np.nan); wdev = np.where(have_c, w20 - normw, np.nan)
+        CM = np.column_stack([np.where(have_c, zdev, 0.0) * 10, np.where(have_c, wdev, 0.0) * 10, have_c.astype(float)])
+        designs['M3_plus_command'] = np.hstack([X0, D, TD, CM])
+        res['command_rows'] = {'plate_appearances_with_command': int(have_c.sum()), 'zone_dev_sd_points': round(float(np.nanstd(zdev) * 100), 2),
+                               'waste_dev_sd_points': round(float(np.nanstd(wdev) * 100), 2)}
     tr = np.isin(P['season'], (2023, 2024))
     tests = {'2025': P['season'] == 2025, '2026_through_july': P['season'] == 2026}
     from sklearn.linear_model import LogisticRegression
@@ -5444,11 +5462,13 @@ def fatigue(T: dict, params: dict, stage) -> dict:
             'drift': [round(v * 1000, 3) for v in clustered_ci(ll['M0_count_tto_rates'] - ll['M1_plus_drift'], g)],
             'start_vs_norm': [round(v * 1000, 3) for v in clustered_ci(ll['M1_plus_drift'] - ll['M2_plus_drift_and_start'], g)],
             'plate_appearances': int(tm.sum())}
+        if cmd:
+            res['test_logloss_gain_nats_per_1000_pa'][tname]['command'] = [round(v * 1000, 3) for v in clustered_ci(ll['M2_plus_drift_and_start'] - ll['M3_plus_command'], g)]
     # run value per plate appearance on the same features (least squares), coefficients with game-clustered intervals
     rv = LW7[y7]
     names = [f'pc{i}' for i in range(pc.shape[1])] + ['tto2', 'tto3plus'] + [f'b{c}' for c in range(7)] + [f'p{c}' for c in range(7)] + ['platoon',
-             'drift_v', 'drift_z', 'drift_spin100', 'drift_ext', 'has_drift', 'start_vs_norm_v', 'has_start']
-    X = designs['M2_plus_drift_and_start']
+             'drift_v', 'drift_z', 'drift_spin100', 'drift_ext', 'has_drift', 'start_vs_norm_v', 'has_start'] + (['zone_rate_dev_per_10pts', 'waste_rate_dev_per_10pts', 'has_command'] if cmd else [])
+    X = designs['M3_plus_command'] if cmd else designs['M2_plus_drift_and_start']
     def ols(rows):
         A = np.column_stack([np.ones(rows.sum()), X[rows]]); return np.linalg.lstsq(A, rv[rows], rcond=None)[0][1:]
     allr = tr | tests['2025'] | tests['2026_through_july']
@@ -5460,7 +5480,7 @@ def fatigue(T: dict, params: dict, stage) -> dict:
         sel = np.repeat(rows_all, w)
         A = np.column_stack([np.ones(len(sel)), X[sel]]); draws.append(np.linalg.lstsq(A, rv[sel], rcond=None)[0][1:])
     draws = np.asarray(draws)
-    keep_n = ('tto2', 'tto3plus', 'drift_v', 'drift_z', 'drift_spin100', 'drift_ext', 'start_vs_norm_v')
+    keep_n = ('tto2', 'tto3plus', 'drift_v', 'drift_z', 'drift_spin100', 'drift_ext', 'start_vs_norm_v') + (('zone_rate_dev_per_10pts', 'waste_rate_dev_per_10pts') if cmd else ())
     res['run_value_per_pa'] = {nm: [round(float(beta[names.index(nm)]), 5), round(float(np.percentile(draws[:, names.index(nm)], 2.5)), 5),
                                     round(float(np.percentile(draws[:, names.index(nm)], 97.5)), 5)] for nm in keep_n}
     # how much of the times-through-the-order penalty the measured drift accounts for
