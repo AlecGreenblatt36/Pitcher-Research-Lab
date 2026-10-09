@@ -2392,6 +2392,13 @@ def matchup_swing(T: dict, params: dict, stage) -> dict:
     tau = float(params.get('tau', 0.26))
     xp, zp = projected(T, F, None, 'straight', tau)
     reps = {'true': (T['px'].astype(np.float64), T['pz'].astype(np.float64)), 'percept': (xp, zp)}
+    zrel = bool(params.get('zone_relative'))       # MATCHUP-08: heights on each batter's own zone (training seasons' zone numbers)
+    if zrel:
+        top_b, bot_b, zsum = batter_zones(T, np.isin(T['season'], seasons[:-1]))
+        res['batter_zones'] = zsum
+        hgt = np.clip(top_b - bot_b, 1.2, 2.8)
+        zn_ = lambda z_: 1.5 + 2.0 * (z_ - bot_b) / hgt          # the batter's zone mapped onto the fixed 1.5 to 3.5 ft
+        reps = {'percept': (xp, zp), 'percept_zone': (xp, zn_(zp))}
     C = np.hstack([control_block(T, swing_propensity(T)), pitcher_propensity(T)[:, None].astype(np.float32)])
     stage('features')
     test_season = seasons[-1]
@@ -2453,14 +2460,19 @@ def matchup_swing(T: dict, params: dict, stage) -> dict:
                      'test_logloss_league': round(float(logloss_vec(p_league, yt).mean()), 5), 'test_logloss_hitter_maps': round(float(logloss_vec(p_hit, yt).mean()), 5),
                      'test_share_with_hitter_map': round(float(covered.mean()), 4)}
         stage('representation ' + name)
-    lt, ht = [logloss_vec(p, yt) for p in preds['true']]
-    lp, hp = [logloss_vec(p, yt) for p in preds['percept']]
     cc = lambda d: [round(v * 1000, 3) for v in clustered_ci(d, games)]
     res['representations'] = out
-    res['gain_nats_per_1000_decisions'] = {'percept_over_true_league': cc(lt - lp), 'percept_over_true_hitter_maps': cc(ht - hp),
-                                           'hitter_maps_over_league_true': cc(lt - ht), 'hitter_maps_over_league_percept': cc(lp - hp)}
+    lp, hp = [logloss_vec(p, yt) for p in preds['percept']]
+    if zrel:
+        lz, hz = [logloss_vec(p, yt) for p in preds['percept_zone']]
+        res['gain_nats_per_1000_decisions'] = {'zone_over_fixed_league': cc(lp - lz), 'zone_over_fixed_hitter_maps': cc(hp - hz),
+                                               'hitter_maps_over_league_fixed': cc(lp - hp), 'hitter_maps_over_league_zone': cc(lz - hz)}
+    else:
+        lt, ht = [logloss_vec(p, yt) for p in preds['true']]
+        res['gain_nats_per_1000_decisions'] = {'percept_over_true_league': cc(lt - lp), 'percept_over_true_hitter_maps': cc(ht - hp),
+                                               'hitter_maps_over_league_true': cc(lt - ht), 'hitter_maps_over_league_percept': cc(lp - hp)}
     # matchups: chases by hitter-pitcher pair on pitches outside the zone, observed against the league-plus-additive model
-    xt, zt = reps['true']
+    xt, zt = T['px'].astype(np.float64), T['pz'].astype(np.float64)
     u = np.where(T['stand_r'] == 1, xt, -xt)
     outside = ((np.abs(u) > ZONE_HALF) | (zt > ZONE_TOP) | (zt < ZONE_BOT))[te]
     pair = T['batter'][te].astype(np.int64) * 1_000_000 + T['pitcher'][te].astype(np.int64)
