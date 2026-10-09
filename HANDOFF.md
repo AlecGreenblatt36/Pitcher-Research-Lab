@@ -33,7 +33,7 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
-### In flight (updated 6:00 a.m. Eastern October 9)
+### In flight (updated 8:30 a.m. Eastern October 9)
 
 - Recorded since 3:45 a.m.: COMMAND-01 failed (early-start zone and waste rates add nothing beyond velocity);
   FRAMING-01 passed (the challenge system cut the spread of catcher framing to 0.67 of 2025's); PRESSURE-01 (hitters
@@ -42,6 +42,24 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   (no), so it is not repeated.
 - Next research: COMMAND-02, execution scatter measured from consecutive same-type pitches (a same-intent mixture),
   which tests the 0.6 ft command assumption behind VALUE-08F's 32 runs and gives a per-pitcher realizable edge.
+- CLV-03 done (ledger): with open-time lineups the line still moved toward our taught number 67.9% (2025) and
+  72.6% (2026); lineups explain 0.5 to 3 points. Proposed public wording sent to Alec (needs approval).
+- DISP-02 done (ledger): the centered day-form shock fixed the run spread (team-run SD toward actual in both seasons,
+  mean total level) and P(over) pooled -0.00038 [-0.00074, -0.00005], but the pooled win Brier upper end is +0.00041
+  (bound +0.0002), so day form stays off. A totals-only use would need its own registration.
+- COMMAND-02 done (ledger): repeated aims do not identify command (reliability 0.08 to 0.11); the plain location
+  spread per pitch type predicts next-season walks beyond walk, zone and chase rates (+0.111 [0.037, 0.186] x1e-4).
+- WARMUP-01 done (ledger): hitters do not warm up (-0.0030 runs per earlier plate appearance against fresh
+  relievers), familiarity with a pitcher adds nothing measurable, the pitcher's pitches thrown carry the decline
+  (+0.026 per 100); a substitute's first plate appearance -0.014. Out of sample +0.31 nats per 1,000 plate
+  appearances over the simulator's times-through terms, but LOAD-01's size check puts the game-level lever near
+  0.03 runs, below the replay floor: deferred. Proposed to Alec: a plate-appearance gate for small layers (own-stack
+  log loss across seasons plus a do-no-harm replay).
+- EXPLOIT-03 done (ledger): no aiming at hitters' own chase spots in the 2023-2025 postseasons (+0.04 points).
+  EXPLOIT-03F runs once after the World Series: push tools/discovery_params.json with {"experiment": "exploit",
+  "postseason": true, "post_seasons": [2026], "pool": "postseason", "seasons": [2023, 2024, 2025, 2026],
+  "game_types": ["R", "F", "D", "L", "W"], "final_eval": true, "frozen_commit": "c5e52f18..."} and again with
+  "pool": "regular" (frozen at c5e52f18, the registering commit).
 - CLV-03 done (ledger): with open-time lineups the line still moved toward our taught number 67.9% (2025) and
   72.6% (2026); lineups explain 0.5 to 3 points. Proposed public wording sent to Alec (needs approval).
 - DISP-02 done (ledger): the centered day-form shock fixed the run spread (team-run SD toward actual in both seasons,
