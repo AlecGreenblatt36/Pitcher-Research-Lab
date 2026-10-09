@@ -111,9 +111,11 @@ def main():
         from research_lab.pa_model.pipeline import run_benchmark
         # Training window from tools/fit_model_params.json (default: the frozen 2023-2024 protocol). A retrained model
         # (train 2023-2025, validate on 2026, no test season yet) reports its metrics on 2026's final block (RETRAIN-01).
+        # TOTALS-07: the park counter's prior (plate appearances) can be set from the settings; the default is the frozen 1,000.
+        priors = {k: float(settings[k]) for k in ('park_prior_pa', 'player_prior_pa', 'split_prior_pa', 'recent_prior_pa') if settings.get(k) is not None}
         config = PAConfig(train_years=tuple(settings.get('train_years') or (2023, 2024)), validation_years=tuple(settings.get('validation_years') or (2025,)),
-                          test_years=tuple(settings.get('test_years') or (2026,)), evaluation_mode='locked_final')
-        receipt['config'] = {'train_years': list(config.train_years), 'validation_years': list(config.validation_years), 'test_years': list(config.test_years)}
+                          test_years=tuple(settings.get('test_years') or (2026,)), evaluation_mode='locked_final', **priors)
+        receipt['config'] = {'train_years': list(config.train_years), 'validation_years': list(config.validation_years), 'test_years': list(config.test_years), **priors}
         stage('load plate appearances')
         pa = pd.read_csv(pa_path, low_memory=False)
         pa['date_key'] = pa['date_key'].astype(str)
