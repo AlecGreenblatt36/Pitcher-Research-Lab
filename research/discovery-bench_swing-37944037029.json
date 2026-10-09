@@ -1,0 +1,118 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "bench_swing",
+ "run_id": "37944037029",
+ "params": {
+  "experiment": "bench_swing",
+  "target": "whiff",
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "final_eval": true,
+  "frozen_commit": "35f8adec871c03db1e4faab8ff6b006d5f63d515"
+ },
+ "started_at": "2026-10-09T14:25:42.235613+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 9.5
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 18.7
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 28.0
+  },
+  {
+   "stage": "features",
+   "at_seconds": 43.6
+  },
+  {
+   "stage": "maps true",
+   "at_seconds": 119.2
+  },
+  {
+   "stage": "maps percept",
+   "at_seconds": 194.5
+  },
+  {
+   "stage": "boosting G0",
+   "at_seconds": 224.4
+  },
+  {
+   "stage": "boosting G1",
+   "at_seconds": 252.9
+  },
+  {
+   "stage": "boosting G2",
+   "at_seconds": 282.2
+  }
+ ],
+ "final_eval": {
+  "frozen_commit": "35f8adec871c03db1e4faab8ff6b006d5f63d515",
+  "untouched_rows": 228549
+ },
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 713382
+ },
+ "results": {
+  "target": "whiff",
+  "gbm_iterations": {
+   "G0": 400,
+   "G1": 400,
+   "G2": 400
+  },
+  "test_decisions": 108384,
+  "logloss": {
+   "G0_boosting": 0.417991,
+   "G1_boosting_plus_heat_map": 0.409773,
+   "G2_G1_plus_decision_moment": 0.409977,
+   "league_true": 0.434347,
+   "heat_map_true": 0.426276,
+   "league_decision_moment": 0.466224,
+   "ours_decision_moment": 0.461846
+  },
+  "gain_nats_per_1000_decisions": {
+   "ours_over_G1": [
+    -52.073,
+    -54.012,
+    -50.312
+   ],
+   "ours_over_G0": [
+    -43.855,
+    -45.824,
+    -41.934
+   ],
+   "G2_over_G1": [
+    -0.205,
+    -0.476,
+    0.078
+   ],
+   "G1_over_G0": [
+    8.219,
+    7.399,
+    9.139
+   ],
+   "ours_over_heat_map_logistic": [
+    -35.57,
+    -37.088,
+    -34.11
+   ]
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T14:30:24.530064+00:00",
+ "seconds": 282.3
+}
