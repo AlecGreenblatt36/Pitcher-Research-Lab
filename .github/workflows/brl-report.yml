@@ -1,6 +1,11 @@
 name: BRL matchup report
 on:
   workflow_dispatch:
+    inputs:
+      daily:
+        description: "Build yesterday's and today's reports as the scheduled run would"
+        type: boolean
+        default: true
   schedule:
     - cron: '20 13 * * *'
     - cron: '35 20 * * *'
@@ -31,5 +36,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           BRL_PA_PACKAGE_KEY: ${{ secrets.BRL_PA_PACKAGE_KEY }}
-          BRL_REPORT_DAILY: ${{ github.event_name == 'schedule' && '1' || '' }}
+          BRL_REPORT_DAILY: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.daily == 'true')) && '1' || '' }}
         run: python tools/brl_report.py
