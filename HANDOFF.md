@@ -33,25 +33,20 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
-### In flight (updated 7:30 p.m. Eastern)
+### In flight (updated 8:15 p.m. Eastern)
 
-- BULLPEN-02 (fitted reliever choice + fitted reliever exits, registered in commit ff98b25f): replays 37857987864 (2026)
-  and 37858023424 (2025), tags v2-prod-trans-ctx-pen-1000-YYYY, against v2-prod-trans-ctx-1000-YYYY. Decision on both
-  seasons pooled (scratch trans/pooled_eval.py) plus trans/staff_split.py; the rows now carry team_pitchers_sim_mean
-  (pitchers used per team, simulated) and team_actual.pitchers.
-- LEASH-01 (starter leash, commit 5705abb2): replays 37854594794 (2026) and 37854634286 (2025), tags
-  v2-prod-trans-ctx-leash-1000-YYYY. Read with trans/starter_leash.py and harness/starter_eval.py.
-- RUNS-02 (shape by bases and outs, commit 010617ec): replays 37856958529 (2026) and 37856998314 (2025), tags
-  v2-prod-trans-ctx-bs-1000-YYYY.
-- RELIEF-03 (team hook offsets on the fitted exits, commit ab6d82a2): replays 37860073667 (2026) and 37860108046
-  (2025), tags v2-prod-trans-ctx-penh-1000-YYYY, judged against BULLPEN-02's replays.
-- LEASH-01 2026 read (not yet recorded): starters' batters faced +0.21 to +0.02, RMSE 4.41 to 3.87, batters-faced CRPS
-  2.274 to 2.046, strikeout CRPS 1.235 to 1.209, every group within its predicted bound; win Brier +0.0003 (-0.0001,
-  +0.0007), so the per-season win bound fails in 2026. Waiting for 2025.
-- Read and recorded today: TRANS-02 (plays real, off until the run level is understood), BULLPEN-01 (better win Brier in
-  both seasons, -0.0004 each, pooled interval upper end +0.0002, but the registered per-season bound was not met; retested
-  in BULLPEN-02), RUNS-01 (no calibration miss by base state for hits; the shape by bases and outs is consistent across
-  seasons), RUN-03 (no change needed), DISC-08 (challenge scarcity; private page version 10).
+Replays queued or running (evaluate with scratch trans/pooled_eval.py NEW26:REF26 NEW25:REF25, trans/staff_split.py,
+trans/team_rates.py, trans/starter_leash.py and harness/starter_eval.py; references are v2-prod-trans-ctx-1000-YYYY):
+- BULLPEN-02 (choice + exits): 37857987864 (2026), 37858023424 (2025), tags v2-prod-trans-ctx-pen-1000-YYYY.
+- RELIEF-03 (team hooks on top): 37860073667 (2026), 37860108046 (2025), tags v2-prod-trans-ctx-penh-1000-YYYY, judged
+  against BULLPEN-02.
+- RUNS-02 2025: 37856998314 (2026 read: mean total +0.07, walks unchanged, win Brier +0.00007, squared error +0.020).
+- PROD-02 (the package; registered in commit 41e65cb5): P1 37863329907 (2026) and 37863360862 (2025), P2 (+ shape)
+  37863398520 and 37863432413; tags v2-prod2-p1-1000-YYYY and v2-prod2-p2-1000-YYYY. This is the test that decides what
+  goes live; the decision rule is in its ledger row.
+
+Recorded today: TRANS-02, BULLPEN-01, LEASH-01 (all not switched on under their own rules; retested in PROD-02), RUNS-01,
+RUN-03, DISC-08, POST-02 (postseason exit offset, acts only with the fitted exits).
 
 ### What the bullpen work found (RELIEF-02)
 
@@ -75,7 +70,7 @@ far and part of why simulated bullpens struck out fewer batters and allowed more
 ### Working notes
 
 Tests: `cd /tmp && PYTHONPATH="<repo>/brl_engine/runtime:<repo>" python3 -m pytest -c /dev/null --rootdir=<repo>
---import-mode=importlib <repo>/brl_engine/tests <repo>/brl_live_tests -q -p no:cacheprovider` (303 passed, 1 skipped).
+--import-mode=importlib <repo>/brl_engine/tests <repo>/brl_live_tests -q -p no:cacheprovider` (306 passed, 1 skipped).
 Lanes start on a push to their diag branch with a params file: diag/replay (tools/replay_params.json), diag/research,
 diag/fit-model, diag/discovery, diag/transitions, diag/challenges. Receipts land under research/ on brl-live-data.
 Scratch analysis scripts live in the sandbox only (re-create from the ledger rows if lost).
