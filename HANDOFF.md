@@ -45,7 +45,35 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
-### In flight (updated 9:35 a.m. Eastern October 9; earlier stamps in this section ran ahead of the clock)
+### In flight (updated 1:30 p.m. Eastern October 9; earlier stamps in this section ran ahead of the clock)
+
+- Afternoon of October 9, after the outside audit (AUDIT-01): the run-value estimator got its stress test. tools/brl_synth.py
+  builds synthetic seasons with known truth (eight world kinds); the discovery lane runs them as experiment 'value_synth'
+  (no sealed data). VALUE-17 (registered) found, in one smoke world, that the headline aiming figure (regression coefficient
+  times fitted gain) overstated the true value of its own choices by 1.5x at zero scatter and 1.9x at 0.6 ft; the per-point
+  value varies across pitches and the chosen spots carry less of it. VALUE-18 (registered): structural pricing, each aim
+  priced by the engine's components (whiff, called strike, foul, contact value, count values) times the hitter's own part
+  scaled by its out-of-sample calibration on the test season's swings; in the smoke worlds it priced its own choices within
+  a few percent and chose spots worth about twice the old method's; null world near zero with calibration 0.00. Real 2025
+  development run: calibration 0.95 outside; regression figure -25.7 per 6,200 (pitch estimand), structural -43.3. Lane runs
+  in flight: ten worlds per kind for VALUE-17 (both estimands) and for VALUE-18 (structural on); receipts
+  research/discovery-value_synth-<run>.json. Decision rules are in the ledger rows: if they hold, VALUE-18F (frozen, scored
+  once on the untouched months) replaces the stated 32 runs; the Report tab's aim plan should then choose cells by
+  structural value (tools/brl_report.py pair(): needs a ball-in-play value grid and the whiff model at scattered points).
+  value2_study options added: estimand 'pitch' (telescoping realized value, pre-action controls), pool_from_train,
+  reprice_boundary (side), reprice_bands (six distance bands), reprice_structural (PAModels.blocks_at and
+  swing_minus_take), aim_hook and diag_hook (synthetic worlds only).
+- TOTALS-04 (diagnostic, tools/totals_diag.py on the PROD-03 replays): means right overall, by team, by half and by inning;
+  home-away independence holds; the team-run shape is 8 to 10% narrow; a negative binomial on the simulator's own mean
+  matches CRPS and beats the histogram's log score by 0.047 nats per team-game (Monte Carlo bin noise); park extremes
+  missed (Colorado, Sacramento under; Kansas City, Angels over). Next: TOTALS-05 (smooth the published distributions),
+  TOTALS-06 (park adjustment), both to be registered before any change.
+- ENG-01: research/registry.json is generated from the ledger by tools/registry.py; the discovery workflow refuses an
+  experiment run whose commit message names an ID without a ledger row (registered or diagnostic). Still open from the
+  audit: Actions pinned by commit (the tag SHAs could not be verified from this session), a locked environment, LICENSE
+  and CITATION.cff (license choice is Alec's), a smaller discovery module, a reproduction package.
+- PLAN-01b (registered) has been running since 12:14 p.m. Eastern; read it when it lands (research/discovery-plan-<run>.json)
+  and apply its rule (noise placebo within 0.1 either way, or the planner is set aside pending off-policy evaluation).
 
 - Alec, 9:40 a.m. October 9: the product is for coaches, past games must be evaluable with only information up to each
   game, and it must be made genuinely better than anything that exists; he does not want to wait weeks. Built the same
