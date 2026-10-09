@@ -2984,6 +2984,128 @@ def engine_pa(T: dict, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- DISCIPLINE-01: decision-moment discipline as a projection input
+def discipline_study(T: dict, params: dict, stage) -> dict:
+    """Do a hitter's decision-moment swing map and true-crossing whiff map, read on one standard set of pitches (so the
+    pitches he happened to be thrown drop out), project his next season's strikeouts and walks better than his own
+    rates and raw plate-discipline numbers (chase rate, zone-swing rate, whiffs per swing)? Each source season's maps
+    and league models are fitted on that season only; targets are the next season's plate appearances. Trained on
+    2023 to 2024, scored on 2024 to 2025 and 2025 to 2026 (through July); intervals clustered by hitter."""
+    res = {}
+    seasons = sorted(int(v) for v in np.unique(T['season']))
+    F = rebuild(T)
+    keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
+    Tk = take(T, keep); Fk = {k: v[keep] for k, v in F.items()}
+    swing = ((Tk['call'] == 1) | (Tk['call'] == 2)).astype(np.float64); whiff = (Tk['call'] == 2).astype(np.float64)
+    xp, zp = projected(Tk, Fk, None, 'straight', 0.26)
+    xt, zt = Tk['px'].astype(np.float64), Tk['pz'].astype(np.float64)
+    u_t = np.where(Tk['stand_r'] == 1, xt, -xt)
+    outside = (np.abs(u_t) > ZONE_HALF) | (zt > ZONE_TOP) | (zt < ZONE_BOT)
+    prop_s = swing_propensity(Tk); prop_p = pitcher_propensity(Tk)
+    Ls = location_block(xp, zp, Tk['stand_r'], Tk['strikes']); Cs = control_block(Tk, prop_s)
+    Xs = np.hstack([Ls, Cs, prop_p[:, None].astype(np.float32)]); i_prop_s = Ls.shape[1] + 32
+    Bs = hitter_basis(xp, zp, Tk['stand_r'], Tk['strikes'])
+    tw = dict(Tk); tw['call'] = np.where(whiff == 1, 1, np.where(swing == 1, 0, 3)); prop_w = swing_propensity(tw, 200.0)
+    grp = np.zeros((len(swing), 7), np.float32); grp[np.arange(len(swing)), np.clip(Tk['group'], 0, 6)] = 1
+    Lw = location_block(xt, zt, Tk['stand_r'], Tk['strikes'])
+    Xw = np.hstack([Lw, grp, hats(Tk['v0'].astype(np.float64), V_KNOTS), (Tk['strikes'] == 2)[:, None].astype(np.float32), prop_w[:, None].astype(np.float32),
+                    (Tk['stand_r'] == Tk['throw_r'])[:, None].astype(np.float32)]); i_prop_w = Lw.shape[1] + 7 + len(V_KNOTS) + 1
+    fam = np.column_stack([np.isin(Tk['group'], (0, 1, 2)), np.isin(Tk['group'], (3, 4)), np.isin(Tk['group'], (5,))]).astype(np.float64)
+    Bw = np.hstack([hitter_basis(xt, zt, Tk['stand_r'], Tk['strikes']), fam, hats(zt, (1.0, 2.0, 3.0, 4.0)).astype(np.float64)])
+    rng = np.random.default_rng(int(params.get('seed', 11)))
+    stage('features')
+    lg = lambda r: np.log(r / (1 - r))
+    feats = {}
+    for s_ in seasons[:-1]:
+        rows = Tk['season'] == s_
+        if rows.sum() < 100000:
+            continue
+        idx = np.flatnonzero(rows); idx = rng.choice(idx, min(len(idx), int(params.get('league_n', 400000))), replace=False)
+        m_s = fit_logistic(Xs[idx], swing[idx])
+        maps_s = _hitter_maps(Bs, swing, m_s.decision_function(Xs), _groups(Tk['batter'], rows), 10.0, int(params.get('min_pitches', 600)))
+        sw_rows = rows & (swing == 1)
+        idx = np.flatnonzero(sw_rows); idx = rng.choice(idx, min(len(idx), int(params.get('league_n', 400000))), replace=False)
+        m_w = fit_logistic(Xw[idx], whiff[idx])
+        maps_w = _hitter_maps(Bw, whiff, m_w.decision_function(Xw), _groups(Tk['batter'], sw_rows), 30.0, 250)
+        ref = rng.choice(np.flatnonzero(rows), min(int(rows.sum()), int(params.get('reference_n', 40000))), replace=False)
+        ref_side = {side: ref[Tk['stand_r'][ref] == side] for side in (0, 1)}
+        # league logits on the reference pitches with the propensity column at zero; a hitter's own propensity enters
+        # through its coefficient (the models are linear in it)
+        base_s, base_w = {}, {}
+        for side, R in ref_side.items():
+            Xr = Xs[R].astype(np.float64).copy(); Xr[:, i_prop_s] = 0.0; base_s[side] = m_s.decision_function(Xr)
+            Xq = Xw[R].astype(np.float64).copy(); Xq[:, i_prop_w] = 0.0; base_w[side] = m_w.decision_function(Xq)
+        c_s, c_w = float(m_s.coef_[0][i_prop_s]), float(m_w.coef_[0][i_prop_w])
+        lg_sw = float(swing[rows].mean()); lg_wh = float(whiff[rows & (swing == 1)].mean())
+        gr = _groups(Tk['batter'], rows)
+        out = {}
+        for h, r in gr.items():
+            if h not in maps_s or h not in maps_w:
+                continue
+            side = int(np.round(Tk['stand_r'][r].mean()))
+            R = ref_side[side]
+            n_ = len(r); ps = (swing[r].sum() + 300 * lg_sw) / (n_ + 300)
+            pw = (whiff[r].sum() + 200 * lg_wh) / (swing[r].sum() + 200)
+            p_sw = 1 / (1 + np.exp(-(base_s[side] + c_s * lg(ps) + Bs[R] @ maps_s[h])))
+            p_wh = 1 / (1 + np.exp(-(base_w[side] + c_w * lg(pw) + Bw[R] @ maps_w[h])))
+            o = outside[R]
+            out[h] = {'map_chase': float(p_sw[o].mean()), 'map_zswing': float(p_sw[~o].mean()), 'map_whiff': float((p_sw * p_wh).sum() / p_sw.sum()),
+                      'raw_chase': float((swing[r][outside[r]].sum() + 30 * 0.29) / (outside[r].sum() + 30)), 'raw_zswing': float((swing[r][~outside[r]].sum() + 30 * 0.66) / ((~outside[r]).sum() + 30)),
+                      'raw_whiff': float((whiff[r].sum() + 50 * 0.24) / (swing[r].sum() + 50)), 'pitches': n_}
+        feats[s_] = out
+        stage(f'season {s_}: {len(out)} hitters')
+    # plate appearances of the next season, with the source season's rates
+    P = take(T, (T['pitch_no'] == 0) & (T['out7'] >= 0))
+    K = (P['out7'] == 1).astype(float); BB = (P['out7'] == 2).astype(float)
+    rate = {}
+    for s_ in seasons:
+        m = P['season'] == s_
+        hb = P['batter'][m]; uh, ih = np.unique(hb, return_inverse=True)
+        nk = np.bincount(ih, weights=K[m]); nb = np.bincount(ih, weights=BB[m]); npa = np.bincount(ih)
+        rate[s_] = {int(h): ((nk[i] + 100 * K[m].mean()) / (npa[i] + 100), (nb[i] + 100 * BB[m].mean()) / (npa[i] + 100), int(npa[i])) for i, h in enumerate(uh)}
+    names_base = ['k_rate', 'bb_rate', 'raw_chase', 'raw_zswing', 'raw_whiff', 'log_pa']
+    names_map = ['map_chase', 'map_zswing', 'map_whiff']
+    blocks = {}
+    for s_ in sorted(feats):
+        t_ = s_ + 1
+        if t_ not in seasons:
+            continue
+        m = P['season'] == t_
+        rows = []
+        for j in np.flatnonzero(m):
+            h = int(P['batter'][j]); f = feats[s_].get(h); rr = rate[s_].get(h)
+            if f is None or rr is None:
+                continue
+            rows.append((j, [lg(rr[0]), lg(rr[1]), lg(f['raw_chase']), lg(f['raw_zswing']), lg(f['raw_whiff']), np.log(rr[2])],
+                         [lg(f['map_chase']), lg(f['map_zswing']), lg(f['map_whiff'])]))
+        if rows:
+            J = np.asarray([r_[0] for r_ in rows]); XB = np.asarray([r_[1] for r_ in rows]); XM = np.asarray([r_[2] for r_ in rows])
+            blocks[(s_, t_)] = (J, XB, XM)
+    res['pairs'] = {f'{a}-{b}': int(len(v[0])) for (a, b), v in blocks.items()}
+    keys = sorted(blocks)
+    if len(keys) < 2:
+        res['error'] = 'need a training pair and a test pair'; return res
+    train = keys[0]; tests = keys[1:]
+    from sklearn.linear_model import LogisticRegression
+    out = {}
+    for name, y in (('strikeout', K), ('walk', BB)):
+        J, XB, XM = blocks[train]
+        m0 = LogisticRegression(C=1e4, max_iter=500).fit(XB, y[J]); m1 = LogisticRegression(C=1e4, max_iter=500).fit(np.hstack([XB, XM]), y[J])
+        o = {'coefs_map_terms': dict(zip(names_map, [round(float(c), 4) for c in m1.coef_[0][-3:]]))}
+        for tk in tests:
+            Jt, XBt, XMt = blocks[tk]; yt = y[Jt]
+            l0 = logloss_vec(m0.predict_proba(XBt)[:, 1], yt); l1 = logloss_vec(m1.predict_proba(np.hstack([XBt, XMt]))[:, 1], yt)
+            o[f'gain_nats_per_1000_pa_{tk[0]}_{tk[1]}'] = [round(v * 1000, 3) for v in clustered_ci(l0 - l1, P['batter'][Jt])]
+        out[name] = o
+    res['outcomes'] = out
+    # how the map measures relate to the raw ones (training pair)
+    J, XB, XM = blocks[train]
+    res['corr_map_raw'] = {'chase': round(float(np.corrcoef(XB[:, 2], XM[:, 0])[0, 1]), 3), 'zswing': round(float(np.corrcoef(XB[:, 3], XM[:, 1])[0, 1]), 3),
+                           'whiff': round(float(np.corrcoef(XB[:, 4], XM[:, 2])[0, 1]), 3)}
+    stage('projections')
+    return res
+
+
 # ---------------------------------------------------------------- matchup tables for the simulator
 def matchup_pairs(T: dict, train_seasons, arsenal_season: int, target_pairs, params: dict, stage) -> dict:
     """{(batter, pitcher): (chase points, zone-swing points)} for the target pairs: hitter maps and the league map at
@@ -3672,6 +3794,8 @@ def main():
             receipt['results'] = matchup_whiff(T, params, stage)
         elif experiment == 'engine_pa':
             receipt['results'] = engine_pa(T, params, stage)
+        elif experiment == 'discipline':
+            receipt['results'] = discipline_study(T, params, stage)
         elif experiment == 'steer':
             receipt['results'] = steer_profile(T, params, stage)
         elif experiment == 'matchup_final':
