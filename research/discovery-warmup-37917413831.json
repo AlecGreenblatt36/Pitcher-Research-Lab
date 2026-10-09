@@ -1,0 +1,341 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "warmup",
+ "run_id": "37917413831",
+ "params": {
+  "experiment": "warmup",
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "reps": 150
+ },
+ "started_at": "2026-10-09T10:24:59.989780+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 10.2
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 20.5
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 30.3
+  },
+  {
+   "stage": "load plate-appearance states",
+   "at_seconds": 40.5
+  },
+  {
+   "stage": "exposure",
+   "at_seconds": 47.6
+  },
+  {
+   "stage": "rates",
+   "at_seconds": 48.7
+  },
+  {
+   "stage": "S1 joint",
+   "at_seconds": 128.9
+  },
+  {
+   "stage": "S2 relievers",
+   "at_seconds": 143.1
+  },
+  {
+   "stage": "simulator terms",
+   "at_seconds": 167.9
+  },
+  {
+   "stage": "S4 out of sample",
+   "at_seconds": 198.7
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 484833
+ },
+ "results": {
+  "state_matched_share": 1.0,
+  "rows": {
+   "plate_appearances": 671176,
+   "reliever_share": 0.419,
+   "substitute_first_pa": 18987,
+   "mean_pitches_per_pa": 3.898,
+   "k_shares": [
+    0.268,
+    0.247,
+    0.231,
+    0.192,
+    0.063
+   ]
+  },
+  "S1_joint_run_value": {
+   "k1": [
+    0.00034,
+    -0.00453,
+    0.0053
+   ],
+   "k2": [
+    -0.00509,
+    -0.009,
+    -0.0014
+   ],
+   "k3": [
+    -0.0095,
+    -0.01347,
+    -0.0057
+   ],
+   "k4plus": [
+    -0.00918,
+    -0.01414,
+    -0.00422
+   ],
+   "F1": [
+    -9e-05,
+    -0.00579,
+    0.00706
+   ],
+   "F2plus": [
+    0.00254,
+    -0.007,
+    0.01121
+   ],
+   "per_100_pitches_thrown": [
+    0.02591,
+    0.0152,
+    0.03772
+   ],
+   "sub_first": [
+    -0.01432,
+    -0.01966,
+    -0.00762
+   ],
+   "extra_pitches_per10": [
+    0.00063,
+    -0.00379,
+    0.00494
+   ],
+   "rows_used": 668598
+  },
+  "S1_with_inning_secondary": {
+   "k1": [
+    -0.01274,
+    -0.01763,
+    -0.00489
+   ],
+   "k2": [
+    -0.02395,
+    -0.03033,
+    -0.01714
+   ],
+   "k3": [
+    -0.03292,
+    -0.0406,
+    -0.02619
+   ],
+   "k4plus": [
+    -0.03723,
+    -0.04388,
+    -0.02688
+   ],
+   "F1": [
+    0.00487,
+    -0.00123,
+    0.01154
+   ],
+   "F2plus": [
+    0.00773,
+    0.00267,
+    0.01814
+   ],
+   "per_100_pitches_thrown": [
+    0.01467,
+    0.0013,
+    0.02146
+   ],
+   "sub_first": [
+    -0.03617,
+    -0.04551,
+    -0.02612
+   ],
+   "extra_pitches_per10": [
+    0.00094,
+    -0.00269,
+    0.00386
+   ],
+   "rows_used": 668598
+  },
+  "S1_linear_secondary": {
+   "per_earlier_pa": [
+    -0.00324,
+    -0.00395,
+    -0.0022
+   ],
+   "per_earlier_meeting": [
+    0.00162,
+    -0.00207,
+    0.00465
+   ],
+   "per_100_pitches_thrown": [
+    0.0274,
+    0.02061,
+    0.03853
+   ],
+   "sub_first": [
+    -0.01563,
+    -0.02127,
+    -0.00844
+   ],
+   "extra_pitches_per10": [
+    0.00068,
+    -0.00309,
+    0.00494
+   ],
+   "rows_used": 668598
+  },
+  "reliever_meetings_by_k": [
+   2158,
+   8831,
+   70539,
+   121597,
+   38732
+  ],
+  "S2_relievers_first_meeting": {
+   "k1": [
+    0.00962,
+    -0.00972,
+    0.02834
+   ],
+   "k2": [
+    0.00127,
+    -0.01801,
+    0.01862
+   ],
+   "k3": [
+    -0.00131,
+    -0.01978,
+    0.01418
+   ],
+   "k4plus": [
+    -0.00278,
+    -0.0225,
+    0.01407
+   ],
+   "per_100_pitches_thrown": [
+    -0.00879,
+    -0.03163,
+    0.01042
+   ],
+   "sub_first": [
+    -0.00907,
+    -0.03082,
+    0.00765
+   ],
+   "extra_pitches_per10": [
+    0.00159,
+    -0.00355,
+    0.00673
+   ],
+   "rows_used": 263599,
+   "plate_appearances": 266137
+  },
+  "S2_linear_secondary": {
+   "per_earlier_pa": [
+    -0.00299,
+    -0.00501,
+    -0.00133
+   ],
+   "per_100_pitches_thrown": [
+    -0.00706,
+    -0.02913,
+    0.01652
+   ],
+   "sub_first": [
+    -0.01711,
+    -0.0249,
+    -0.00951
+   ],
+   "extra_pitches_per10": [
+    0.0016,
+    -0.00386,
+    0.00568
+   ],
+   "rows_used": 263599
+  },
+  "S2_raw_run_value_by_k": [
+   -0.0232,
+   -0.0009,
+   -0.0104,
+   -0.0033,
+   0.0149
+  ],
+  "S1_simulator_terms_only": {
+   "starter_tto2": [
+    0.00815,
+    0.00464,
+    0.01163
+   ],
+   "starter_tto3": [
+    0.01135,
+    0.00619,
+    0.01471
+   ],
+   "starter_tto4plus": [
+    0.0033,
+    -0.01578,
+    0.02465
+   ],
+   "rows_used": 668598
+  },
+  "S4_logloss_gain_nats_per_1000": {
+   "2025": {
+    "plate_appearances": 181924,
+    "gain": [
+     0.22,
+     0.082,
+     0.373
+    ],
+    "relievers_only": [
+     0.467,
+     0.196,
+     0.767
+    ]
+   },
+   "2026_through_july": {
+    "plate_appearances": 124337,
+    "gain": [
+     0.439,
+     0.282,
+     0.604
+    ],
+    "relievers_only": [
+     0.793,
+     0.435,
+     1.145
+    ]
+   },
+   "pooled": {
+    "plate_appearances": 306261,
+    "gain": [
+     0.309,
+     0.208,
+     0.423
+    ]
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T10:28:18.682310+00:00",
+ "seconds": 198.7
+}
