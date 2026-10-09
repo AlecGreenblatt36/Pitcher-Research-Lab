@@ -1,0 +1,276 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "matchup_swing",
+ "run_id": "37934729243",
+ "params": {
+  "experiment": "matchup_swing",
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "train": [
+   2023,
+   2024,
+   2025
+  ],
+  "test": 2026,
+  "body_relative": true,
+  "position_seasons": [
+   2025
+  ],
+  "min_swings": 150,
+  "grid_lo": -3.0
+ },
+ "started_at": "2026-10-09T13:08:47.256000+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 9.6
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 19.3
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 28.6
+  },
+  {
+   "stage": "load savant 2025",
+   "at_seconds": 38.1
+  },
+  {
+   "stage": "positions 463",
+   "at_seconds": 46.3
+  },
+  {
+   "stage": "features",
+   "at_seconds": 49.2
+  },
+  {
+   "stage": "representation percept",
+   "at_seconds": 89.9
+  },
+  {
+   "stage": "representation percept_body_0.25",
+   "at_seconds": 129.0
+  },
+  {
+   "stage": "representation percept_body_0.5",
+   "at_seconds": 172.1
+  },
+  {
+   "stage": "representation percept_body_1",
+   "at_seconds": 215.6
+  },
+  {
+   "stage": "pairs",
+   "at_seconds": 230.5
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 484833
+ },
+ "position_check": {
+  "grid_ft": [
+   -3.0,
+   4.0
+  ],
+  "by_season": {
+   "2025": {
+    "swings": 318247,
+    "convention": {
+     "R": {
+      "median_x_ball_minus_ix_ft": -3.051,
+      "median_x_ball_plus_ix_ft": 3.156,
+      "sign_used": 1.0
+     },
+     "L": {
+      "median_x_ball_minus_ix_ft": -3.143,
+      "median_x_ball_plus_ix_ft": 2.984,
+      "sign_used": -1.0
+     }
+    },
+    "hitters": 463,
+    "edge_share": 0.002,
+    "off_plate_in_percentiles": [
+     23.55,
+     26.19,
+     27.79,
+     29.23,
+     31.5
+    ],
+    "depth_in_percentiles": [
+     19.4,
+     26.0,
+     30.2,
+     34.4,
+     41.0
+    ],
+    "split_half_r": {
+     "off_plate": 0.992,
+     "depth": 0.694
+    },
+    "split_half_hitters": 471
+   }
+  }
+ },
+ "results": {
+  "positions": {
+   "hitters_with_position": 463,
+   "mean_off_plate_in": 27.76,
+   "decisions_with_position_share": 0.8416,
+   "weights": [
+    0.25,
+    0.5,
+    1.0
+   ]
+  },
+  "representations": {
+   "percept": {
+    "shrinkage_chosen": 10.0,
+    "validation_logloss": {
+     "3.0": 0.45518,
+     "10.0": 0.45491,
+     "30.0": 0.45564,
+     "100.0": 0.45837,
+     "300.0": 0.46212
+    },
+    "validation_league_logloss": 0.468191,
+    "test_logloss_league": 0.47257,
+    "test_logloss_hitter_maps": 0.46004,
+    "test_share_with_hitter_map": 0.8844
+   },
+   "percept_body_0.25": {
+    "shrinkage_chosen": 10.0,
+    "validation_logloss": {
+     "3.0": 0.45512,
+     "10.0": 0.45484,
+     "30.0": 0.45559,
+     "100.0": 0.45838,
+     "300.0": 0.46221
+    },
+    "validation_league_logloss": 0.468383,
+    "test_logloss_league": 0.47277,
+    "test_logloss_hitter_maps": 0.46005,
+    "test_share_with_hitter_map": 0.8844
+   },
+   "percept_body_0.5": {
+    "shrinkage_chosen": 10.0,
+    "validation_logloss": {
+     "3.0": 0.45531,
+     "10.0": 0.4551,
+     "30.0": 0.45602,
+     "100.0": 0.45919,
+     "300.0": 0.46348
+    },
+    "validation_league_logloss": 0.470456,
+    "test_logloss_league": 0.47458,
+    "test_logloss_hitter_maps": 0.46018,
+    "test_share_with_hitter_map": 0.8844
+   },
+   "percept_body_1": {
+    "shrinkage_chosen": 3.0,
+    "validation_logloss": {
+     "3.0": 0.45631,
+     "10.0": 0.45639,
+     "30.0": 0.45796,
+     "100.0": 0.4625,
+     "300.0": 0.46855
+    },
+    "validation_league_logloss": 0.478947,
+    "test_logloss_league": 0.48199,
+    "test_logloss_hitter_maps": 0.46115,
+    "test_share_with_hitter_map": 0.8844
+   }
+  },
+  "body_weight_validation_league_logloss": {
+   "percept_body_0.25": 0.468383,
+   "percept_body_0.5": 0.470456,
+   "percept_body_1": 0.478947,
+   "percept": 0.468191
+  },
+  "body_weight_chosen": "percept_body_0.25",
+  "gain_nats_per_1000_decisions": {
+   "chosen": {
+    "body_over_plate_league": [
+     -0.203,
+     -0.361,
+     -0.063
+    ],
+    "body_over_plate_hitter_maps": [
+     -0.009,
+     -0.09,
+     0.052
+    ]
+   },
+   "by_weight": {
+    "percept_body_0.25": {
+     "body_over_plate_league": [
+      -0.203,
+      -0.361,
+      -0.063
+     ],
+     "body_over_plate_hitter_maps": [
+      -0.009,
+      -0.09,
+      0.052
+     ]
+    },
+    "percept_body_0.5": {
+     "body_over_plate_league": [
+      -2.011,
+      -2.328,
+      -1.732
+     ],
+     "body_over_plate_hitter_maps": [
+      -0.133,
+      -0.247,
+      -0.029
+     ]
+    },
+    "percept_body_1": {
+     "body_over_plate_league": [
+      -9.417,
+      -9.986,
+      -8.873
+     ],
+     "body_over_plate_hitter_maps": [
+      -1.11,
+      -1.314,
+      -0.918
+     ]
+    }
+   },
+   "hitter_maps_over_league_plate": [
+    12.526,
+    11.985,
+    13.128
+   ]
+  },
+  "pairs_outside_zone": {
+   "pairs": 2633,
+   "pitches": 32230,
+   "sd_observed_minus_additive": 0.1364,
+   "sd_predicted_pair_effect": 0.0344,
+   "corr": 0.2811,
+   "slope_observed_on_predicted": [
+    1.122,
+    0.962,
+    1.262
+   ]
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T13:12:37.780972+00:00",
+ "seconds": 230.5
+}
