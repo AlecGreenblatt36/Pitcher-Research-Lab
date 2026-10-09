@@ -3982,6 +3982,20 @@ def value2_study(T: dict, params: dict, stage) -> dict:
     outside = e > 0
     y = LW7[T['out7'][ix].astype(int)]
     first = (T['pitch_no'] == 0) & (T['out7'] >= 0)
+    pitch_estimand = params.get('estimand') == 'pitch'   # VALUE-17: each pitch's realized value (the next count state's value or the terminal
+    if pitch_estimand:                                      # outcome, minus the current state's), with only pre-action history as a control
+        pak_all = T['game'].astype(np.int64) * 1000 + T['ab'].astype(np.int64)
+        ordr = np.lexsort((T['pitch_no'], pak_all)); pak_o = pak_all[ordr]
+        ci_all = np.clip(T['balls'], 0, 3) * 3 + np.clip(T['strikes'], 0, 2)
+        fin_all = np.where(T['out7'] >= 0, LW7[np.clip(T['out7'], 0, 6)], np.nan)
+        cv = np.zeros(12)
+        for c_ in range(12):
+            mc = tr & (ci_all == c_) & np.isfinite(fin_all); cv[c_] = float(fin_all[mc].mean()) if mc.any() else 0.0
+        same_next = np.r_[pak_o[1:] == pak_o[:-1], False]
+        nxt_val = np.where(same_next, cv[np.r_[ci_all[ordr][1:], 0]], fin_all[ordr]) - cv[ci_all[ordr]]
+        realized_all = np.empty(len(T['game'])); realized_all[ordr] = nxt_val
+        y = realized_all[ix]
+        res['estimand'] = {'kind': 'pitch (telescoping realized value)', 'count_values': {f'{c_ // 3}-{c_ % 3}': round(float(cv[c_]), 4) for c_ in range(12)}}
     rv_all = LW7[np.clip(T['out7'], 0, 6).astype(int)]
     def prior_rv(key):
         nn, ss = _prior_by_day(np.r_[key[first], key[ix]].astype(np.int64), np.r_[T['day'][first], T['day'][ix]].astype(np.int64),
@@ -3998,6 +4012,8 @@ def value2_study(T: dict, params: dict, stage) -> dict:
     Xd = np.column_stack([np.ones(len(ix)), cnt, grp, p_l, np.log(p_l / (1 - p_l)), outside, hats(e, (-0.8, -0.4, -0.15, 0.0, 0.15, 0.4, 0.8, 1.5)), rv_b, rv_p,
                           (T['stand_r'][ix] == T['throw_r'][ix]).astype(float)] + ([Dmean * outside, Dmean * ~outside] if specific else []) + [D * outside, D * ~outside])
     b = np.linalg.lstsq(Xd, y, rcond=None)[0]; b_out, b_in = float(b[-2]), float(b[-1])
+    if params.get('diag_hook') is not None:                 # VALUE-17 (synthetic worlds): the regression's pieces, for pricing against the generator's truth
+        params['diag_hook'](ix=ix, D=D, outside=outside, y=y, Xd=Xd, b=b)
     # game bootstrap of the two coefficients (the gains below are nearly fixed, so the value's interval follows these)
     ug, gi = np.unique(T['game'][ix], return_inverse=True); p_ = Xd.shape[1]
     XtX = np.zeros((len(ug), p_, p_))
@@ -4095,7 +4111,15 @@ def value2_study(T: dict, params: dict, stage) -> dict:
         # the pitcher's spots, so their deviations are correlated; holding the plate appearance's other pitches fixed
         # gives the per-pitch effect the aiming multiplies by pitches per plate appearance
         pa_i = np.unique(T['game'][ix].astype(np.int64) * 1000 + T['ab'][ix].astype(np.int64), return_inverse=True)[1]
-        loo = lambda v: np.bincount(pa_i, weights=v)[pa_i] - v
+        if pitch_estimand:
+            # pre-action history only: the sum over the plate appearance's earlier pitches (never a later one)
+            o_ix = np.lexsort((T['pitch_no'][ix], pa_i)); pa_s = pa_i[o_ix]
+            def loo(v):
+                vs = v[o_ix]; cs_ = np.cumsum(vs); startv = np.r_[0.0, cs_[:-1]]
+                firstpos = np.flatnonzero(np.r_[True, pa_s[1:] != pa_s[:-1]]); base_ = np.repeat(startv[firstpos], np.diff(np.r_[firstpos, len(pa_s)]))
+                outv = np.empty(len(v)); outv[o_ix] = (startv - base_); return outv
+        else:
+            loo = lambda v: np.bincount(pa_i, weights=v)[pa_i] - v
         vo = D * outside; s1 = np.bincount(pa_i, weights=vo); s2 = np.bincount(pa_i, weights=vo * vo); no = np.bincount(pa_i, weights=outside.astype(float))
         mu_o, var_o = float(D[outside].mean()), float(D[outside].var())
         chk['within_pa_correlation_outside'] = round(float(((s1 ** 2 - s2).sum() / max((no * (no - 1)).sum(), 1.0) - mu_o ** 2) / var_o), 4)
@@ -4154,6 +4178,26 @@ def value2_study(T: dict, params: dict, stage) -> dict:
             ch['weights_check_outside'] = round(float(sum(LW7[k_] * ch[nm_]['outside_per_point'] for k_, nm_ in enumerate(OUT7))), 7)
             chk['channels'] = ch
         res['coefficient_checks'] = chk
+    bands_rp = bool(params.get('reprice_bands'))             # VALUE-17: the run value per point by where the pitch crosses (six distance bands), for pricing aims
+    BAND_EDGES_IN = (-2.0, 0.0, 1.0, 2.0, 4.0)               # inches from the zone edge, positive outside: deep inside, near inside, 0-1, 1-2, 2-4, 4+ outside
+    band_of = lambda e_ft: np.searchsorted(np.asarray(BAND_EDGES_IN), e_ft * 12.0, side='right')
+    if bands_rp:
+        bnd = band_of(e); nb6 = len(BAND_EDGES_IN) + 1
+        Xb6 = np.column_stack([Xd[:, :-2]] + [D * (bnd == k_) for k_ in range(nb6)]); pb6 = Xb6.shape[1]
+        bb6 = np.linalg.lstsq(Xb6, y, rcond=None)[0][-nb6:]
+        XtX6 = np.zeros((len(ug), pb6, pb6))
+        for a_ in range(pb6):
+            for c_ in range(a_, pb6):
+                v_ = np.bincount(gi, weights=Xb6[:, a_] * Xb6[:, c_], minlength=len(ug)); XtX6[:, a_, c_] = v_; XtX6[:, c_, a_] = v_
+        Xty6 = np.column_stack([np.bincount(gi, weights=Xb6[:, a_] * y, minlength=len(ug)) for a_ in range(pb6)])
+        rb6 = np.random.default_rng(19); dr6 = []
+        for _ in range(int(params.get('reps', 200))):
+            w_ = np.bincount(rb6.integers(0, len(ug), len(ug)), minlength=len(ug)).astype(float)
+            dr6.append(np.linalg.solve(np.tensordot(w_, XtX6, 1) + 1e-9 * np.eye(pb6), w_ @ Xty6)[-nb6:])
+        dr6 = np.asarray(dr6)
+        band_names = ['inside_2in_plus', 'inside_0_2in', 'outside_0_1in', 'outside_1_2in', 'outside_2_4in', 'outside_4in_plus']
+        res['coefficients_by_band'] = {band_names[k_]: {'runs_per_point': round(float(bb6[k_]), 6), 'interval': [round(float(np.percentile(dr6[:, k_], q)), 6) for q in (2.5, 97.5)],
+                                                        'pitches': int((bnd == k_).sum())} for k_ in range(nb6)}
     stage('coefficients')
     sigmas = [float(v) for v in params.get('sigmas', (0.0, 0.3, 0.6, 0.9))]
     K = 16
@@ -4168,28 +4212,61 @@ def value2_study(T: dict, params: dict, stage) -> dict:
     within_type = bool(params.get('within_type'))            # VALUE-04: aim only among the same pitch group's spots
     pgroup = np.clip(T['group'][ix], 0, 6)
     type_levels = range(7) if within_type else (None,)
+    pool_train = bool(params.get('pool_from_train'))         # VALUE-17: the aim menu is the pitcher's training-season spots, never the evaluation period's
+    reprice = bool(params.get('reprice_boundary'))           # VALUE-17: a scattered pitch is priced on the side of the zone it actually crosses
+    aim_hook = params.get('aim_hook')                        # VALUE-17 (synthetic worlds): called with every aim choice so the generator can price it with its truth
+    if pool_train:
+        gp_tr = _groups(T['pitcher'], tr)
+        xt_all, zt_all = T['px'].astype(np.float64), T['pz'].astype(np.float64)
+        u_all = np.where(T['stand_r'] == 1, xt_all, -xt_all)
+        outside_all = np.maximum(np.maximum(np.abs(u_all) - ZONE_HALF, zt_all - ZONE_TOP), ZONE_BOT - zt_all) > 0
+        cg_all = np.where(T['strikes'] == 2, 2, np.where(T['balls'] > T['strikes'], 1, 0)); pg_all = np.clip(T['group'], 0, 6)
+    acc_runs = {}; acc_expo = {}
     for pid, rr in gp.items():
         hs_here = np.unique(T['batter'][ix[rr]])
         for sd in (0, 1):
             for c3 in (0, 1, 2):
               for tg in type_levels:
                 for zn, zmask in (('outside', outside), ('inside', ~outside)):
-                    pool = rr[(stand[rr] == sd) & (cg[rr] == c3) & zmask[rr] & ((pgroup[rr] == tg) if tg is not None else True)]
-                    if len(pool) < 30:
-                        continue
-                    if len(pool) > 300:
-                        pool = rng.choice(pool, 300, replace=False)
-                    third = np.searchsorted(np.percentile(p_l[pool], [33.3, 66.7]), p_l[pool])
-                    lb0 = league_loc(LB[ix[pool]], Bh[ix[pool]], T['group'][ix[pool]])
+                    if pool_train:
+                        rtr = gp_tr.get(int(pid))
+                        if rtr is None:
+                            continue
+                        pool_rows = rtr[(T['stand_r'][rtr] == sd) & (cg_all[rtr] == c3) & (outside_all[rtr] == (zn == 'outside')) & ((pg_all[rtr] == tg) if tg is not None else True)]
+                        if len(pool_rows) < 30:
+                            continue
+                        if len(pool_rows) > 300:
+                            pool_rows = rng.choice(pool_rows, 300, replace=False)
+                        pool = None; prow = pool_rows
+                    else:
+                        pool = rr[(stand[rr] == sd) & (cg[rr] == c3) & zmask[rr] & ((pgroup[rr] == tg) if tg is not None else True)]
+                        if len(pool) < 30:
+                            continue
+                        if len(pool) > 300:
+                            pool = rng.choice(pool, 300, replace=False)
+                        prow = ix[pool]
+                    p_pool = sig(off[prow])
+                    third = np.searchsorted(np.percentile(p_pool, [33.3, 66.7]), p_pool)
+                    lb0 = league_loc(LB[prow], Bh[prow], T['group'][prow])
                     mats = {}
                     for sg in sigmas:
-                        xj = (xp[ix[pool]][:, None] + sg * jit[None, :, 0]).ravel(); zj = (zp[ix[pool]][:, None] + sg * jit[None, :, 1]).ravel()
-                        sj = np.repeat(np.full(len(pool), sd), K); kj = np.repeat(strikes[pool], K); gj = np.repeat(T['group'][ix[pool]], K)
+                        xj = (xp[prow][:, None] + sg * jit[None, :, 0]).ravel(); zj = (zp[prow][:, None] + sg * jit[None, :, 1]).ravel()
+                        sj = np.repeat(np.full(len(prow), sd), K); kj = np.repeat(T['strikes'][prow], K); gj = np.repeat(T['group'][prow], K)
                         Bj = hitter_basis(xj, zj, sj, kj)
-                        offj = np.repeat(off[ix[pool]] - lb0, K) + league_loc(location_block(xj, zj, sj, kj), Bj, gj)
+                        offj = np.repeat(off[prow] - lb0, K) + league_loc(location_block(xj, zj, sj, kj), Bj, gj)
                         if fam:
                             Bj = family_basis(Bj, gj)
-                        mats[sg] = (offj, Bj)
+                        xtj = ztj = coef_side = coef_band = band_j = None
+                        if reprice or bands_rp or aim_hook is not None:
+                            # the scattered pitch's true crossing moves with the same scatter; where it crosses sets its coefficient
+                            xtj = (T['px'][prow].astype(np.float64)[:, None] + sg * jit[None, :, 0]).ravel(); ztj = (T['pz'][prow].astype(np.float64)[:, None] + sg * jit[None, :, 1]).ravel()
+                            uj = np.where(sd == 1, xtj, -xtj)
+                            e_j = np.maximum(np.maximum(np.abs(uj) - ZONE_HALF, ztj - ZONE_TOP), ZONE_BOT - ztj)
+                            if reprice:
+                                coef_side = np.where(e_j > 0, b_out, b_in)
+                            if bands_rp:
+                                band_j = band_of(e_j); coef_band = bb6[band_j]
+                        mats[sg] = (offj, Bj, coef_side, coef_band, band_j, xtj, ztj)
                     for h in hs_here:
                         if int(h) not in maps or hit_side.get(int(h)) != sd:
                             continue
@@ -4198,21 +4275,46 @@ def value2_study(T: dict, params: dict, stage) -> dict:
                             continue
                         mh = maps[int(h)]
                         for sg in sigmas:
-                            offj, Bj = mats[sg]
+                            offj, Bj, coef_side, coef_band, band_j, xtj, ztj = mats[sg]
                             base_j = sig(offj + Bj @ mbar[int(h)]) if specific else sig(offj)
-                            dj = ((sig(offj + Bj @ mh) - base_j) * 100).reshape(len(pool), K).mean(1)
-                            parts = []
+                            dev_jk = (sig(offj + Bj @ mh) - base_j) * 100
+                            dj = dev_jk.reshape(len(prow), K).mean(1)
+                            # every pricing picks its own best third (lower is better for the pitcher): points by the own part itself, the
+                            # repriced variants by the run value of the scattered pitch
+                            vals = {'points': -dj if zn == 'outside' else dj}
+                            if coef_side is not None:
+                                vals['side'] = (dev_jk * coef_side).reshape(len(prow), K).mean(1)
+                            if coef_band is not None:
+                                vals['bands'] = (dev_jk * coef_band).reshape(len(prow), K).mean(1)
+                                expo = np.stack([(dev_jk * (band_j == k_)).reshape(len(prow), K).mean(1) for k_ in range(nb6)], 1)   # points by band, per aim
+                            parts = {nm_: [] for nm_ in vals}; chosen = {nm_: np.zeros(len(prow), bool) for nm_ in vals}; graded = np.zeros(len(prow), bool)
+                            expo_parts = []
                             for t3 in range(3):
-                                dd_ = dj[third == t3]
-                                if len(dd_) >= 3:
-                                    k3 = max(1, len(dd_) // 3)
-                                    srt = np.sort(dd_)
-                                    best = srt[::-1][:k3].mean() if zn == 'outside' else srt[:k3].mean()
-                                    parts.append(float(best - dd_.mean()))
-                            if parts:
-                                acc[(zn, sg)][0] += n_here * float(np.mean(parts)); acc[(zn, sg)][1] += n_here
+                                sel3 = third == t3
+                                if int(sel3.sum()) >= 3:
+                                    k3 = max(1, int(sel3.sum()) // 3); i3 = np.flatnonzero(sel3); graded[i3] = True
+                                    for nm_, v_ in vals.items():
+                                        o3 = np.argsort(v_[i3]); pick = i3[o3[:k3]]; chosen[nm_][pick] = True
+                                        if nm_ == 'points':
+                                            parts[nm_].append(float(dj[pick].mean() - dj[i3].mean()))
+                                        else:
+                                            parts[nm_].append(float(v_[pick].mean() - v_[i3].mean()))
+                                    if coef_band is not None:
+                                        pick_b = np.flatnonzero(chosen['bands'] & sel3)
+                                        expo_parts.append(expo[pick_b].mean(0) - expo[i3].mean(0))
+                            if parts['points'] and aim_hook is not None:
+                                aim_hook(sg=sg, zone=zn, hitter=int(h), pitcher=int(pid), rows=prow, K=K, x_true=xtj, z_true=ztj,
+                                         balls=np.repeat(T['balls'][prow], K), strikes=np.repeat(T['strikes'][prow], K), group=np.repeat(T['group'][prow], K),
+                                         chosen=chosen, graded=graded, third=third, weight=n_here, dev=dj, coef=b_out if zn == 'outside' else b_in)
+                            if parts['points']:
+                                acc[(zn, sg)][0] += n_here * float(np.mean(parts['points'])); acc[(zn, sg)][1] += n_here
                                 for bk in (('count', c3), ('type', tg)):
-                                    a_ = acc_b.setdefault((zn, sg) + bk, [0.0, 0.0]); a_[0] += n_here * float(np.mean(parts)); a_[1] += n_here
+                                    a_ = acc_b.setdefault((zn, sg) + bk, [0.0, 0.0]); a_[0] += n_here * float(np.mean(parts['points'])); a_[1] += n_here
+                            for nm_ in ('side', 'bands'):
+                                if parts.get(nm_):
+                                    a_ = acc_runs.setdefault((nm_, zn, sg), [0.0, 0.0]); a_[0] += n_here * float(np.mean(parts[nm_])); a_[1] += n_here
+                            if expo_parts:
+                                a_ = acc_expo.setdefault((zn, sg), np.zeros(nb6)); a_ += n_here * np.mean(expo_parts, 0)
     out = {}
     for sg in sigmas:
         go = acc[('outside', sg)][0] / max(acc[('outside', sg)][1], 1); gi_ = acc[('inside', sg)][0] / max(acc[('inside', sg)][1], 1)
@@ -4226,6 +4328,29 @@ def value2_study(T: dict, params: dict, stage) -> dict:
                         'runs_per_6200_inside_only': round(b_in * gi_ * res['coefficients']['inside_pitches_per_pa'] * 6200, 1),
                         'runs_per_6200_both': round(per_pa * 6200, 1)}
     res['by_command_sd_ft'] = out
+    if reprice:
+        rp_ = {}
+        for sg in sigmas:
+            ao = acc_runs.get(('side', 'outside', sg), [0.0, 0.0]); ai = acc_runs.get(('side', 'inside', sg), [0.0, 0.0])
+            gr_o = ao[0] / max(ao[1], 1); gr_i = ai[0] / max(ai[1], 1)
+            rp_[str(sg)] = {'runs_per_outside_pitch': round(gr_o, 6), 'runs_per_inside_pitch': round(gr_i, 6),
+                            'runs_per_6200_outside_only': round(gr_o * res['coefficients']['outside_pitches_per_pa'] * 6200, 1),
+                            'runs_per_6200_outside_only_interval': [round(float(np.percentile(draws[:, 0] / b_out * gr_o * res['coefficients']['outside_pitches_per_pa'] * 6200, q)), 1) for q in (2.5, 97.5)] if b_out != 0 else None}
+        res['repriced_by_side'] = rp_
+        res['repriced_note'] = 'each scattered pitch priced with the coefficient of the side of the zone it crosses (VALUE-17); the interval scales the outside coefficient draws only'
+    if bands_rp:
+        rb_ = {}
+        for sg in sigmas:
+            ao = acc_runs.get(('bands', 'outside', sg), [0.0, 0.0]); ai = acc_runs.get(('bands', 'inside', sg), [0.0, 0.0])
+            gr_o = ao[0] / max(ao[1], 1); gr_i = ai[0] / max(ai[1], 1)
+            ex_o = acc_expo.get(('outside', sg), np.zeros(nb6)) / max(ao[1], 1)
+            dr_runs = dr6 @ ex_o * res['coefficients']['outside_pitches_per_pa'] * 6200       # the selection held fixed, the band coefficients resampled by game
+            rb_[str(sg)] = {'runs_per_outside_pitch': round(gr_o, 6), 'runs_per_inside_pitch': round(gr_i, 6),
+                            'runs_per_6200_outside_only': round(gr_o * res['coefficients']['outside_pitches_per_pa'] * 6200, 1),
+                            'runs_per_6200_outside_only_interval': [round(float(np.percentile(dr_runs, q)), 1) for q in (2.5, 97.5)],
+                            'chosen_points_by_band_outside': {band_names[k_]: round(float(ex_o[k_]), 3) for k_ in range(nb6)}}
+        res['repriced_by_band'] = rb_
+        res['repriced_by_band_note'] = 'each scattered pitch priced with the run value per point of the distance band it crosses in (VALUE-17); the interval resamples the band coefficients by game with the chosen spots fixed'
     if 'coefficient_checks' in res:
         for nm, v in res['coefficient_checks'].items():
             if isinstance(v, dict) and 'outside' in v:
@@ -7751,6 +7876,13 @@ def main():
             if run_study is None and hasattr(mx, study + '_study'):
                 run_study = getattr(mx, study + '_study')
             receipt['results'] = run_study(sv, cols, params, stage)
+            raise StopIteration
+        if experiment == 'value_synth':
+            # VALUE-17: synthetic worlds with known truth; no sealed data is read (the run is public and reproducible)
+            import importlib.util
+            spec = importlib.util.spec_from_file_location('brl_synth', ROOT / 'tools' / 'brl_synth.py')
+            sy = importlib.util.module_from_spec(spec); spec.loader.exec_module(sy)
+            receipt['results'] = sy.main(params, stage)['results']
             raise StopIteration
         if experiment in ('challenges', 'scarcity'):
             stage('fetch the 2026 play-by-play')
