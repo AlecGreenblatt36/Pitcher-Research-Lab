@@ -1,5 +1,30 @@
 # BRL experiment and operations ledger
 
+## Evidence rules, from October 8, 2026, 10:45 p.m. Eastern (after an outside review)
+
+1. **Development evidence and untouched evidence are kept apart.** The 2023 to 2026 regular seasons have all been used
+   to choose settings, so their replays are development evidence for the system as a whole, including 2026 (the player
+   model's coefficients never saw 2026, but the settings around it were picked on it). Untouched evidence is only what
+   was not yet played when a version was fixed: the live forecasts saved before first pitch, from the 2026 postseason on.
+   Every version is identified by the code commit in force at a game's first pitch, and its untouched record counts only
+   games after that commit. The version in force at this rule's writing is the commit that adds it.
+2. **Only forward-in-time results decide.** A replay of an earlier season with tables fitted on a later one (2025 with
+   2026 fits) shows whether a setting carries over between seasons; it is reported as that and does not count toward
+   adopting anything registered after this rule. Rules already registered (PROD-03, LIVE-05, DISP-01, RUNS-03) are
+   applied as written, with this caveat stated in their results.
+3. **A decision states which gate it passed.** A change adopted on a point estimate whose interval includes zero is
+   adopted as a product call and says so; it is never described as passing a stricter gate. Before a rule is written,
+   the noise of each criterion is computed (game sampling and simulation noise), and thresholds sit outside it.
+4. **Words match measures.** "Better than a coin flip" is the Brier skill score (how much smaller the win-chance error
+   is than always saying 50-50), not the share of winners picked; both are reported. The line-movement result (CLV-02)
+   compares a forecast that includes posted lineups with an opening line that usually does not, so it shows the market
+   catching up to information our number had, not an early edge; a test with only what was known at the open is CLV-03.
+   Pitches shown in simulated games are borrowed from real at-bats that ended the same way and decide nothing.
+5. **Data definitions across seasons are checked before seasons are pooled.** From 2026, plate_x and plate_z are measured
+   at the middle of the plate (front of the plate through 2025) and sz_top and sz_bot are the ABS zone (Statcast CSV
+   documentation). Any feature or test that compares pitch location or zone membership across that boundary is audited
+   (ZONE-01) before it is trusted.
+
 ## Checkpoint, October 8, 2026, 6 a.m. Eastern
 
 Production simulator (pa-2026-v2-physics with ADJUST in brl_live/boxscore.py): context offsets, run environment (ENV-03),

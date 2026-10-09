@@ -25,6 +25,84 @@ from .probability import PAProbabilityProvider, normalize_probabilities
 from .transitions import apply_outcome
 
 
+_NORMAL = None
+
+
+class _Slot:
+    """The random numbers of one kind for one plate appearance of one team (paired streams): a few fixed uniforms and,
+    past them, a generator seeded from the slot itself, so a slot gives the same numbers whatever was drawn elsewhere.
+    Implements the parts of numpy's Generator the engine and its plug-ins use (random, choice, normal)."""
+    __slots__ = ("u", "i", "seed", "_g")
+
+    def __init__(self, u, seed) -> None:
+        self.u = u
+        self.i = 0
+        self.seed = seed
+        self._g = None
+
+    def _next(self) -> float:
+        if self.i < len(self.u):
+            v = float(self.u[self.i])
+            self.i += 1
+            return v
+        if self._g is None:
+            self._g = np.random.default_rng(self.seed)
+        return float(self._g.random())
+
+    def random(self, size=None):
+        if size is None:
+            return self._next()
+        n = int(np.prod(size))
+        return np.asarray([self._next() for _ in range(n)], dtype=float).reshape(size)
+
+    def choice(self, a, size=None, replace=True, p=None):
+        if size is not None:
+            raise NotImplementedError("paired streams draw one choice at a time")
+        n = int(a) if isinstance(a, (int, np.integer)) else len(a)
+        u = self._next()
+        if p is None:
+            k = min(int(u * n), n - 1)
+        else:
+            c = np.cumsum(np.asarray(p, dtype=float))
+            k = min(int(np.searchsorted(c, u * c[-1], side="right")), n - 1)
+        return k if isinstance(a, (int, np.integer)) else a[k]
+
+    def normal(self, loc=0.0, scale=1.0, size=None):
+        global _NORMAL
+        if size is not None:
+            raise NotImplementedError("paired streams draw one normal at a time")
+        if _NORMAL is None:
+            from statistics import NormalDist
+            _NORMAL = NormalDist()
+        u = min(max(self._next(), 1e-12), 1.0 - 1e-12)
+        return float(loc) + float(scale) * _NORMAL.inv_cdf(u)
+
+
+class _PairedStreams:
+    """Random numbers tied to each team's plate appearance number: the n-th plate appearance of a team draws its outcome,
+    the base running after it, the steal and running-play steps and the manager's decisions from numbers fixed by
+    (seed, team, n, kind). Two simulators that differ in one part (who pitches, a running play) keep drawing the same
+    numbers everywhere else, so a paired comparison of the two carries far less simulation noise. Statistically the
+    games are the same as with one stream; only the pairing changes."""
+    KINDS = ("outcome", "transition", "steal", "running", "manager")
+    WIDTH = (1, 4, 3, 3, 6)
+
+    def __init__(self, seed: int) -> None:
+        self.seed = int(seed)
+        self.edges = np.cumsum((0,) + self.WIDTH)
+        self.gen = {side: np.random.default_rng([self.seed, j]) for j, side in enumerate(("away", "home"))}
+        self.rows: dict[str, np.ndarray] = {}
+
+    def slot(self, kind: str, side: str, n: int) -> _Slot:
+        rows = self.rows.get(side)
+        while rows is None or n >= len(rows):
+            more = self.gen[side].random((64, int(self.edges[-1])))
+            rows = more if rows is None else np.vstack([rows, more])
+            self.rows[side] = rows
+        k = self.KINDS.index(kind)
+        return _Slot(rows[n, self.edges[k]:self.edges[k + 1]], [self.seed, 2 + (side == "home"), int(n), k])
+
+
 @dataclass
 class _TeamRuntime:
     profile: TeamProfile
@@ -84,8 +162,12 @@ class GameSimulator:
         steals=None,
         transitions=None,
         running_events=None,
+        paired_streams: bool = False,
     ) -> None:
         self.provider = provider
+        # Paired streams (_PairedStreams): every draw tied to a team's plate appearance number, for research
+        # comparisons between simulators; False keeps the single stream and draws exactly the same numbers as before.
+        self.paired_streams = bool(paired_streams)
         # Optional base-running model (brl_live.running.StealModel): runner speeds and stolen-base attempts. When it
         # is None the engine draws exactly the same random numbers as before.
         self.steals = steals
@@ -108,6 +190,8 @@ class GameSimulator:
         record_events: bool | None = None,
     ) -> GameResult:
         rng = np.random.default_rng(seed)
+        streams = _PairedStreams(seed) if self.paired_streams else None
+        team_pa = {"away": 0, "home": 0}
         should_record = self.config.record_events if record_events is None else record_events
         if self.steals is not None:
             matchup = self.steals.with_speeds(matchup)
@@ -183,7 +267,17 @@ class GameSimulator:
             probability_vector = np.asarray(
                 [probabilities[label] for label in OUTCOME_LABELS], dtype=float
             )
-            outcome = str(rng.choice(OUTCOME_LABELS, p=probability_vector))
+            pa_number = team_pa[batting_side]
+            team_pa[batting_side] += 1
+            if streams is None:
+                outcome = str(rng.choice(OUTCOME_LABELS, p=probability_vector))
+                draw_transition = draw_steal = draw_running = draw_manager = rng
+            else:
+                outcome = str(streams.slot("outcome", batting_side, pa_number).choice(OUTCOME_LABELS, p=probability_vector))
+                draw_transition = streams.slot("transition", batting_side, pa_number)
+                draw_steal = streams.slot("steal", batting_side, pa_number)
+                draw_running = streams.slot("running", batting_side, pa_number)
+                draw_manager = streams.slot("manager", batting_side, pa_number)
             outcome_counts[outcome] += 1
 
             outs_before = state.outs
@@ -196,7 +290,7 @@ class GameSimulator:
                 outs_before=outs_before,
                 batting_team_baserunning=batting.profile.baserunning,
                 fielding_team_defense=fielding.profile.defense,
-                rng=rng,
+                rng=draw_transition,
             )
 
             scored_runners = list(transition.scored_runners)
@@ -270,10 +364,10 @@ class GameSimulator:
                 break
 
             if self.steals is not None and state.outs < 3:
-                self._steal_step(state, batting_side, batting, fielding, lines, rng, should_record, events)
+                self._steal_step(state, batting_side, batting, fielding, lines, draw_steal, should_record, events)
 
             if self.running_events is not None and state.outs < 3:
-                if self._running_event_step(state, batting_side, batting, fielding, lines, inning_runs, rng, should_record, events):
+                if self._running_event_step(state, batting_side, batting, fielding, lines, inning_runs, draw_running, should_record, events):
                     state.complete = True
                     self._close_active_lines(lines, state.inning, state.half)
                     break
@@ -286,7 +380,7 @@ class GameSimulator:
                     state,
                     lines,
                     inning_ended=True,
-                    rng=rng,
+                    rng=draw_manager,
                 )
                 state.bases = [None, None, None]
                 state.outs = 0
@@ -321,7 +415,7 @@ class GameSimulator:
                     state,
                     lines,
                     inning_ended=False,
-                    rng=rng,
+                    rng=draw_manager,
                 )
 
         winner: TeamSide | str

@@ -119,7 +119,7 @@ def bats_lookup(h: pd.DataFrame, cutoff: str) -> dict:
 
 def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates: list, *, model_path: Path, model_sha256: str,
                  history_path: Path, hazard_path: Path, n_sims: int, physics_table=None, offsets=None, rest=False, environment=None,
-                 team_offsets=None, age_layer=None, steals=None, win_states=False, starter_lines=False, role_offsets=None, real_pa_check=False, transitions=None, hitter_lines=False, running_events=None, reliever_choice=None, leash=None, base_state=None, relief_exit=None, relief_hooks=None, day_form=0.0, log=print) -> list[dict]:
+                 team_offsets=None, age_layer=None, steals=None, win_states=False, starter_lines=False, role_offsets=None, real_pa_check=False, transitions=None, hitter_lines=False, running_events=None, reliever_choice=None, leash=None, base_state=None, relief_exit=None, relief_hooks=None, day_form=0.0, paired_streams=False, log=print) -> list[dict]:
     """Simulate every game on the given dates; one record per game (win counts, run histograms, starter outs).
 
     environment: optional {game_pk: seven log-multipliers} (brl_live/environment.py); games without an entry are unadjusted.
@@ -146,6 +146,9 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
     relief_exit: optional fitted reliever exits (research_lab.game_sim.relief_exit.ReliefExit).
     relief_hooks: optional team hook offsets for the fitted exits (brl_replay.relief_decisions.HookOffsets), prior dates.
     day_form: sd of a per-team, per-world shock on reaching base (brl_live.provider_adjust.DayForm); 0 is off.
+    paired_streams: tie every random draw to a team's plate appearance number (engine paired streams), so replays of two
+        settings with the same seeds stay paired and their comparison carries far less simulation noise; both replays of a
+        comparison must use the same choice.
     base_state: optional base-state offsets (brl_live.provider_adjust.load_base_state): the stack shaped by bases and outs,
         applied after the team offsets.
     leash: optional (research_lab.game_sim.starter_leash.Leash, AppearanceIndex of regular-season appearances): each
@@ -338,7 +341,8 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
             if steals is not None:
                 from brl_live.running import steal_model
                 steal = steal_model(int(str(date)[:4]) - 1, **{k: float(v) for k, v in steals.items() if k in ('per_pa', 'third')})
-            sim = GameSimulator(provider, manager_policy=policy, steals=steal, transitions=transitions, running_events=running_events)
+            sim = GameSimulator(provider, manager_policy=policy, steals=steal, transitions=transitions, running_events=running_events,
+                                paired_streams=bool(paired_streams))
             rng = np.random.default_rng(int(g.game_pk))
             seeds = rng.integers(0, np.iinfo(np.int32).max, size=n_sims, dtype=np.int64)
             hw = ties = 0

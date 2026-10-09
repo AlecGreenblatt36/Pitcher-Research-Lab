@@ -1176,7 +1176,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (!rows.length) return "";
     rows.sort(function (a, b) { return Math.abs(b.gap) - Math.abs(a.gap); });
     var side = function (f, p) { var s = p >= .5 ? "home" : "away"; return esc(f[s].abbr) + " " + pct(s === "home" ? p : 1 - p); };
-    var h = '<section class="sec edges"><h2>Our number against the market</h2><p class="lede">Our model never sees the betting line. When the two differ by 2.5 points or more, the line has moved toward our number about 7 times in 10 (2025 and 2026 regular seasons).</p><ul class="edge-list">';
+    var h = '<section class="sec edges"><h2>Our number against the market</h2><p class="lede">Our model never sees the betting line. In replays of the 2025 and 2026 regular seasons, when the two differed by 2.5 points or more, the line moved toward our number about 7 times in 10 by first pitch. Our number already includes the posted lineups, which most opening lines do not, so this is not proof that we know something before the market.</p><ul class="edge-list">';
     rows.forEach(function (r) {
       var big = Math.abs(r.gap) >= 0.025, fav = r.gap >= 0 ? "home" : "away", pts = Math.round(Math.abs(r.moved) * 100);
       var lean = big ? 'Our model leans <b class="' + fav + '-c">' + esc(r.f[fav].abbr) + " by " + Math.round(Math.abs(r.gap) * 100) + "</b> points. " +
@@ -1454,6 +1454,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (real) html += '<div class="seg" role="group" aria-label="Which plays"><button data-playside="actual" aria-pressed="' + (pside === "actual") + '">' + (real._live ? "Live" : "Actual") + '</button><button data-playside="proj" aria-pressed="' + (pside !== "actual") + '">Projected</button></div>';
       html += playsTab(f, pside === "actual" && real ? real : s);
       if (pside === "actual" && real) html += '<p class="note">The real game from the official play-by-play' + (real._live ? ", through the last completed plate appearance at the last check" : "") + ".</p>";
+      else html += '<p class="note">The simulator decides each plate appearance\'s result first. The pitches shown with it are borrowed from a real at-bat that ended the same way: they show what such an at-bat looks like, and they do not decide the result.</p>';
     }
     else if (tab === "odds") html += oddsTab(f, box);
     else if (tab === "matchups") html += matchupsTab(f, box);
@@ -2121,7 +2122,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (taught && pmk != null) {
       var gap = po - pmk, side = gap >= 0 ? "home" : "away", pts = Math.round(Math.abs(gap) * 100), wt = weightsText();
       h += '<p class="note">' + (pts < 2 ? "Our model and the market agree on this game." + (wt ? " The headline is " + wt + "." : "") :
-        "Our model is " + pts + " points higher on the " + esc(nickname(f[side].name)) + " than the market. When our model has differed from the opening line, the line has moved toward our number about 7 times in 10 (2025 and 2026)." +
+        "Our model is " + pts + " points higher on the " + esc(nickname(f[side].name)) + " than the market. In 2025 and 2026 replays, when our model differed from the opening line, the line moved toward our number about 7 times in 10, partly because our number already includes lineups the opening line did not have." +
         (wt ? " By first pitch the market is slightly sharper, so the headline is " + wt + "." : "")) + "</p>";
     }
     h += "</section>";
@@ -2227,13 +2228,13 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var rp = rec.replay || {}, years = Object.keys(rp).sort().reverse();
     if (!years.length) return "";
     var rowsR = [["headline", "Headline"], ["ours", "Our model"], ["market", "Market at the close"], ["market_open", "Market at the open"], ["simulator", "Simulator"], ["team", "Team model"]];
-    var h = '<section class="sec"><h2>Full seasons, replayed</h2><p class="lede">Every regular-season game re-run with only what was known before it, scored the same way: how much better than a coin flip, and how often each method\'s favorite won.</p><div class="seasons">';
+    var h = '<section class="sec"><h2>Full seasons, replayed</h2><p class="lede">Every regular-season game re-run with only what was known before it, scored two ways: how much smaller the error of its win chances is than always saying 50-50 (the Brier score), and how often its favorite won.</p><div class="seasons">';
     years.forEach(function (y) {
       h += '<div class="tbl-wrap"><table class="box"><thead><tr><th scope="col">' + esc(y) + " <small>" + Number(rp[y].games).toLocaleString() + ' games</small></th><th scope="col">vs coin</th><th scope="col">Favorite won</th></tr></thead><tbody>';
       rowsR.forEach(function (r) {
         var x = rp[y][r[0]] || {};
         if (x.better_than_coin_pct == null) return;
-        h += "<tr" + (r[0] === "headline" ? ' class="you"' : "") + "><td>" + r[1] + "</td><td>+" + x.better_than_coin_pct.toFixed(1) + "%</td><td>" + x.picks_right_pct.toFixed(0) + "%</td></tr>";
+        h += "<tr" + (r[0] === "headline" ? ' class="you"' : "") + "><td>" + r[1] + "</td><td>" + (x.better_than_coin_pct >= 0 ? "+" : "") + x.better_than_coin_pct.toFixed(1) + "%</td><td>" + x.picks_right_pct.toFixed(0) + "%</td></tr>";
       });
       h += "</tbody></table></div>";
     });
@@ -2243,27 +2244,27 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var rec = D.record || {}, n = rec.n_scored || 0;
     var h = '<div class="wrap"><div class="page-head"><h1>Track record</h1><p>Every forecast is saved before first pitch and scored after the final.</p></div>';
     if (!n) {
-      h += '<div class="empty-state"><h2 class="team-h">No games scored yet</h2><p>The first scores post after tonight\'s finals. Each game adds to the ladder below: how much better than a coin flip each method picks winners.</p></div>' + replaySeasons(rec) + "</div>";
+      h += '<div class="empty-state"><h2 class="team-h">No games scored yet</h2><p>The first scores post after tonight\'s finals. Each game adds to the ladder below: how much smaller each method\'s win-chance error is than always saying 50-50.</p></div>' + replaySeasons(rec) + "</div>";
       app.innerHTML = h; return;
     }
     var games = rec.games || [], right = games.filter(function (g) { return (g.p_blend >= .5) === g.home_won; }).length;
     var hl = (rec.ladder || []).filter(function (r) { return r.key === "blend"; })[0] || {}, mk = (rec.ladder || []).filter(function (r) { return r.key === "market"; })[0] || {};
     h += '<div class="board-stats"><div><b class="num">' + n + "</b><span>" + (n === 1 ? "game scored" : "games scored") + '</span></div><div><b class="num">' + right + "-" + (n - right) + "</b><span>headline picks</span></div>" +
-      '<div><b class="num">' + (hl.better_than_coin_pct != null ? (hl.better_than_coin_pct >= 0 ? "+" : "") + hl.better_than_coin_pct.toFixed(1) + "%" : "") + "</b><span>better than a coin</span></div>" +
+      '<div><b class="num">' + (hl.better_than_coin_pct != null ? (hl.better_than_coin_pct >= 0 ? "+" : "") + hl.better_than_coin_pct.toFixed(1) + "%" : "") + "</b><span>less error than 50-50</span></div>" +
       (mk.better_than_coin_pct != null && mk.n ? '<div><b class="num">' + (mk.better_than_coin_pct >= 0 ? "+" : "") + mk.better_than_coin_pct.toFixed(1) + "%</b><span>market, same games</span></div>" : "") + "</div>";
     var rows = (rec.ladder || []).filter(function (r) { return r.better_than_coin_pct != null; });
     var max = Math.max(1, Math.max.apply(null, rows.map(function (r) { return Math.abs(r.better_than_coin_pct); })));
-    h += '<div class="record-cols"><div><section class="sec"><h2>Better than a coin flip</h2><p class="lede">Win chance accuracy over ' + n + " scored " + (n === 1 ? "game" : "games") + '. Small samples swing a lot; judge after a few hundred.</p><ol class="ladder">';
+    h += '<div class="record-cols"><div><section class="sec"><h2>Error against a coin flip</h2><p class="lede">How much smaller each method\'s win-chance error (Brier score) is than always saying 50-50, over ' + n + " scored " + (n === 1 ? "game" : "games") + '. This is not the share of winners picked (that is the record above). Small samples swing a lot; judge after a few hundred.</p><ol class="ladder">';
     rows.forEach(function (r) {
       var v = r.better_than_coin_pct, w = (Math.abs(v) / max * 50).toFixed(1);
       h += "<li" + (r.key === "blend" ? ' class="you"' : "") + "><span>" + esc(r.name) + '</span><span class="bar"><i class="' + (v >= 0 ? "pos" : "neg") + '" style="width:' + w + '%"></i></span><span class="v num">' + (v >= 0 ? "+" : "") + v.toFixed(1) + "%</span></li>";
     });
-    h += '</ol><p class="note">Right of the line is better than a coin flip. From October 8 the headline combines our model with the market\'s pregame line; before that it averaged the simulator and the team model. Our model never sees the market, and every part is scored on its own.</p></section>';
+    h += '</ol><p class="note">Right of the line means less error than a coin flip. From October 8 the headline combines our model with the market\'s pregame line; before that it averaged the simulator and the team model. Our model never sees the market, and every part is scored on its own.</p></section>';
     var dg = rec.disagreements, lm = rec.line_moves;
     if ((dg && dg.n) || (lm && lm.n)) {
       h += '<section class="sec"><h2>Our model and the market</h2>';
       if (lm && lm.n) h += '<p class="lede">Line movement: in ' + lm.n + (lm.n === 1 ? " game" : " games") + " where our final pregame number differed from the first line we saw, the line moved toward our number " +
-        lm.toward_ours + (lm.toward_ours === 1 ? " time" : " times") + " by first pitch. On the 2025 and 2026 regular seasons it did so about 7 times in 10.</p>";
+        lm.toward_ours + (lm.toward_ours === 1 ? " time" : " times") + " by first pitch. In replays of the 2025 and 2026 regular seasons it did so about 7 times in 10. Our final number includes the posted lineups, which the first line usually does not, so this shows the market catching up to information our number had, not an early edge.</p>";
       if (dg && dg.n) h += '<p class="lede">Games where our model and the market\'s pregame line were ' + Math.round(dg.threshold * 100) + " or more points apart: " + dg.n + (dg.n === 1 ? " game" : " games") +
         ". Our side won " + dg.our_side_won + ". Closer to the result on average: " + (dg.ours_brier < dg.market_brier ? "our model" : dg.ours_brier > dg.market_brier ? "the market" : "neither") + ".</p>";
       h += "</section>";
@@ -2301,8 +2302,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       h += "<h2>What the model knows about each player</h2><p>Each plate appearance is scored by a seven-outcome model fitted on 2023 and 2024, tuned on 2025 and tested on the whole 2026 season before it was used. Beyond a player's results (and his splits, recent form, park and age), it reads the official pitch physics of every prior game: for hitters, exit velocity, launch angle, hard-hit and barrel rates, the expected run value of the way they hit the ball, swing, whiff, chase and in-zone contact rates, and how the last 30 days differ from their norm; for pitchers, fastball velocity and how the last outing compared with it, spin and movement, whiff, chase, zone and called-strike-plus-whiff rates, contact quality and ground-ball share allowed, and the same 30-day form. On the 2026 holdout this cut the model's error against the results-only version with the whole season held out.</p>";
     }
     h += "<h2>The headline number</h2><p>The win chance on each card is the best number we can give before first pitch. It starts from our own model, which combines the simulator with a team-strength model (runs scored and allowed, home field, recent form, and the starting pitchers: each starter's strikeout, walk and home-run rates against his team's usual rotation, weighted by how deep he usually goes). The weights were taught by the betting market: instead of fitting them to wins and losses, which are noisy, they were fitted to the market's closing lines on 4,140 regular-season games from 2025 and 2026, a far more precise target, then checked on real results from a season the fit never saw. Our model never sees a line when it makes a forecast.</p>";
-    h += "<p>Once the market's pregame line is posted, the headline combines the two on the log-odds scale, " + (weightsText() || "60% market, 40% our model") + ". The market's line is the average of up to eight sportsbooks when they can be read (DraftKings alone otherwise). Checked the same way, that mix was more accurate than the closing line alone in both 2025 and 2026, by a small margin. Before a line is posted the headline is our model alone. The Odds tab shows every part and the Record page scores each one separately, including the games where our model and the market disagree.</p>";
-    h += "<p>Why it matters for scouting: when our model has differed from the opening line, the line has moved toward our number by first pitch about 7 times in 10 (2025 and 2026, each season checked with a model taught on the other). Our model reads lineups, starters and form that the opening line has not priced yet.</p>";
+    h += "<p>Once the market's pregame line is posted, the headline combines the two on the log-odds scale, " + (weightsText() || "60% market, 40% our model") + ". The market's line is the average of up to eight sportsbooks when they can be read (DraftKings alone otherwise). In replays of 2025 and 2026, which were also used to choose the mix, it came out slightly more accurate than the closing line alone; the margin is within the noise of two seasons, so the real test is the games played from here on. Before a line is posted the headline is our model alone. The Odds tab shows every part and the Record page scores each one separately, including the games where our model and the market disagree.</p>";
+    h += "<p>What line movement does and does not show: when our model has differed from the opening line, the line has moved toward our number by first pitch about 7 times in 10 (replays of 2025 and 2026, each season checked with a model taught on the other). Our number already includes lineups, starters and form that the opening line had not priced, so this shows the market catching up to information our model had. It does not show that we knew something the market could not have known when it opened.</p>";
     h += "<p>Changes to the recipe take effect from a stated time and never rewrite a game that has started. Through October 7, 2026 the headline was a plain average of the simulator and the team model.</p>";
     var adj = {};
     Object.keys(D.box_scores || {}).forEach(function (id) { var b = D.box_scores[id]; if (b.date === D.date && b.adjustments) b.adjustments.forEach(function (a) { adj[a] = 1; }); });
