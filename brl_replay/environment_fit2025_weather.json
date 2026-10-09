@@ -1,0 +1,1557 @@
+{
+ "schema": "brl.environment.v1",
+ "name": "env-v1-fit2025-weather",
+ "labels": [
+  "BIP_OUT",
+  "K",
+  "BB_HBP",
+  "1B",
+  "2B_3B",
+  "HR",
+  "OTHER_REACH"
+ ],
+ "features": [
+  "temp10",
+  "wind_out",
+  "wind_in",
+  "wind_out_wrigley",
+  "wind_in_wrigley",
+  "closed",
+  "day"
+ ],
+ "definitions": {
+  "temp10": "(temperature F - 72) / 10, open air only",
+  "wind_out": "wind mph / 10 when blowing out (Out To LF/CF/RF), open air",
+  "wind_in": "wind mph / 10 when blowing in (In From LF/CF/RF), open air",
+  "wind_out_wrigley": "wind_out at Wrigley Field (added to wind_out)",
+  "wind_in_wrigley": "wind_in at Wrigley Field (added to wind_in)",
+  "closed": "roof closed or dome (condition Dome or Roof Closed)",
+  "day": "day game"
+ },
+ "coef": {
+  "temp10": [
+   0.00122,
+   -0.00767,
+   -0.02049,
+   0.00463,
+   0.01022,
+   0.07445,
+   -0.03106
+  ],
+  "wind_out": [
+   -0.00532,
+   0.00021,
+   -0.01637,
+   0.01628,
+   0.00044,
+   0.03075,
+   0.04303
+  ],
+  "wind_in": [
+   -0.01194,
+   0.00426,
+   0.00162,
+   0.04336,
+   0.00576,
+   -0.07073,
+   -0.07979
+  ],
+  "wind_out_wrigley": [
+   -0.04128,
+   -0.01545,
+   -0.04955,
+   -0.0154,
+   0.16667,
+   0.42428,
+   0.03267
+  ],
+  "wind_in_wrigley": [
+   0.0494,
+   0.02219,
+   -0.06912,
+   -0.08068,
+   -0.11739,
+   -0.35309,
+   0.23561
+  ],
+  "closed": [
+   0.0104,
+   0.02393,
+   -0.01959,
+   -0.0274,
+   -0.03473,
+   -0.0452,
+   -0.0902
+  ],
+  "day": [
+   -0.00823,
+   0.0175,
+   0.03455,
+   0.00429,
+   -0.0507,
+   -0.08216,
+   0.0536
+  ]
+ },
+ "venue": {},
+ "center": [
+  -0.00417,
+  0.00981,
+  0.00077,
+  0.00799,
+  -0.02163,
+  -0.03005,
+  0.00397
+ ],
+ "climate": {
+  "American Family Field": {
+   "3": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 1
+   },
+   "4": {
+    "temp_f": 65.0,
+    "closed_share": 0.969,
+    "games": 64
+   },
+   "5": {
+    "temp_f": 70.6,
+    "closed_share": 0.703,
+    "games": 64
+   },
+   "6": {
+    "temp_f": 77.9,
+    "closed_share": 0.288,
+    "games": 73
+   },
+   "7": {
+    "temp_f": 79.0,
+    "closed_share": 0.224,
+    "games": 58
+   },
+   "8": {
+    "temp_f": 77.6,
+    "closed_share": 0.2,
+    "games": 65
+   },
+   "9": {
+    "temp_f": 75.4,
+    "closed_share": 0.351,
+    "games": 74
+   },
+   "10": {
+    "temp_f": 79.0,
+    "closed_share": 0.667,
+    "games": 6
+   }
+  },
+  "Angel Stadium": {
+   "4": {
+    "temp_f": 70.0,
+    "closed_share": 0.0,
+    "games": 61
+   },
+   "5": {
+    "temp_f": 68.9,
+    "closed_share": 0.0,
+    "games": 75
+   },
+   "6": {
+    "temp_f": 74.5,
+    "closed_share": 0.0,
+    "games": 73
+   },
+   "7": {
+    "temp_f": 79.0,
+    "closed_share": 0.0,
+    "games": 62
+   },
+   "8": {
+    "temp_f": 81.4,
+    "closed_share": 0.0,
+    "games": 63
+   },
+   "9": {
+    "temp_f": 78.4,
+    "closed_share": 0.0,
+    "games": 68
+   },
+   "10": {
+    "temp_f": 71.3,
+    "closed_share": 0.0,
+    "games": 3
+   }
+  },
+  "BB&T Ballpark": {
+   "8": {
+    "temp_f": 77.0,
+    "closed_share": 0.0,
+    "games": 1
+   }
+  },
+  "Bristol Motor Speedway": {
+   "8": {
+    "temp_f": 68.0,
+    "closed_share": 0.0,
+    "games": 1
+   }
+  },
+  "Busch Stadium": {
+   "3": {
+    "temp_f": 65.4,
+    "closed_share": 0.0,
+    "games": 5
+   },
+   "4": {
+    "temp_f": 64.6,
+    "closed_share": 0.0,
+    "games": 60
+   },
+   "5": {
+    "temp_f": 75.0,
+    "closed_share": 0.0,
+    "games": 69
+   },
+   "6": {
+    "temp_f": 83.6,
+    "closed_share": 0.0,
+    "games": 71
+   },
+   "7": {
+    "temp_f": 86.0,
+    "closed_share": 0.0,
+    "games": 55
+   },
+   "8": {
+    "temp_f": 84.0,
+    "closed_share": 0.0,
+    "games": 72
+   },
+   "9": {
+    "temp_f": 80.2,
+    "closed_share": 0.0,
+    "games": 64
+   },
+   "10": {
+    "temp_f": 75.8,
+    "closed_share": 0.0,
+    "games": 6
+   }
+  },
+  "Chase Field": {
+   "3": {
+    "temp_f": 79.8,
+    "closed_share": 0.25,
+    "games": 8
+   },
+   "4": {
+    "temp_f": 84.8,
+    "closed_share": 0.259,
+    "games": 58
+   },
+   "5": {
+    "temp_f": 92.0,
+    "closed_share": 0.506,
+    "games": 77
+   },
+   "6": {
+    "temp_f": 96.8,
+    "closed_share": 0.937,
+    "games": 63
+   },
+   "7": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 65
+   },
+   "8": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 62
+   },
+   "9": {
+    "temp_f": 95.6,
+    "closed_share": 0.897,
+    "games": 68
+   },
+   "10": {
+    "temp_f": 90.0,
+    "closed_share": 0.5,
+    "games": 4
+   }
+  },
+  "Citi Field": {
+   "3": {
+    "temp_f": 54.7,
+    "closed_share": 0.0,
+    "games": 3
+   },
+   "4": {
+    "temp_f": 59.6,
+    "closed_share": 0.0,
+    "games": 62
+   },
+   "5": {
+    "temp_f": 66.7,
+    "closed_share": 0.0,
+    "games": 71
+   },
+   "6": {
+    "temp_f": 76.0,
+    "closed_share": 0.0,
+    "games": 61
+   },
+   "7": {
+    "temp_f": 82.0,
+    "closed_share": 0.0,
+    "games": 65
+   },
+   "8": {
+    "temp_f": 80.4,
+    "closed_share": 0.0,
+    "games": 73
+   },
+   "9": {
+    "temp_f": 73.5,
+    "closed_share": 0.0,
+    "games": 64
+   },
+   "10": {
+    "temp_f": 61.5,
+    "closed_share": 0.0,
+    "games": 4
+   }
+  },
+  "Citizens Bank Park": {
+   "3": {
+    "temp_f": 63.2,
+    "closed_share": 0.0,
+    "games": 4
+   },
+   "4": {
+    "temp_f": 62.6,
+    "closed_share": 0.0,
+    "games": 66
+   },
+   "5": {
+    "temp_f": 73.1,
+    "closed_share": 0.0,
+    "games": 67
+   },
+   "6": {
+    "temp_f": 80.4,
+    "closed_share": 0.0,
+    "games": 64
+   },
+   "7": {
+    "temp_f": 84.5,
+    "closed_share": 0.0,
+    "games": 62
+   },
+   "8": {
+    "temp_f": 82.9,
+    "closed_share": 0.0,
+    "games": 79
+   },
+   "9": {
+    "temp_f": 74.3,
+    "closed_share": 0.0,
+    "games": 62
+   }
+  },
+  "Comerica Park": {
+   "4": {
+    "temp_f": 57.2,
+    "closed_share": 0.0,
+    "games": 70
+   },
+   "5": {
+    "temp_f": 69.8,
+    "closed_share": 0.0,
+    "games": 74
+   },
+   "6": {
+    "temp_f": 77.8,
+    "closed_share": 0.0,
+    "games": 63
+   },
+   "7": {
+    "temp_f": 80.9,
+    "closed_share": 0.0,
+    "games": 61
+   },
+   "8": {
+    "temp_f": 79.2,
+    "closed_share": 0.0,
+    "games": 71
+   },
+   "9": {
+    "temp_f": 72.8,
+    "closed_share": 0.0,
+    "games": 63
+   },
+   "10": {
+    "temp_f": 68.3,
+    "closed_share": 0.0,
+    "games": 3
+   }
+  },
+  "Coors Field": {
+   "4": {
+    "temp_f": 60.9,
+    "closed_share": 0.0,
+    "games": 68
+   },
+   "5": {
+    "temp_f": 65.3,
+    "closed_share": 0.0,
+    "games": 69
+   },
+   "6": {
+    "temp_f": 80.7,
+    "closed_share": 0.0,
+    "games": 68
+   },
+   "7": {
+    "temp_f": 85.1,
+    "closed_share": 0.0,
+    "games": 61
+   },
+   "8": {
+    "temp_f": 84.4,
+    "closed_share": 0.0,
+    "games": 66
+   },
+   "9": {
+    "temp_f": 77.9,
+    "closed_share": 0.0,
+    "games": 70
+   },
+   "10": {
+    "temp_f": 79.0,
+    "closed_share": 0.0,
+    "games": 1
+   }
+  },
+  "Daikin Park": {
+   "3": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 4
+   },
+   "4": {
+    "temp_f": 73.0,
+    "closed_share": 0.929,
+    "games": 14
+   },
+   "5": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 15
+   },
+   "6": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 13
+   },
+   "7": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 13
+   },
+   "8": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 12
+   },
+   "9": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 10
+   }
+  },
+  "Dodger Stadium": {
+   "3": {
+    "temp_f": 59.6,
+    "closed_share": 0.0,
+    "games": 10
+   },
+   "4": {
+    "temp_f": 63.4,
+    "closed_share": 0.0,
+    "games": 61
+   },
+   "5": {
+    "temp_f": 67.6,
+    "closed_share": 0.0,
+    "games": 64
+   },
+   "6": {
+    "temp_f": 72.6,
+    "closed_share": 0.0,
+    "games": 62
+   },
+   "7": {
+    "temp_f": 77.1,
+    "closed_share": 0.0,
+    "games": 64
+   },
+   "8": {
+    "temp_f": 78.1,
+    "closed_share": 0.0,
+    "games": 75
+   },
+   "9": {
+    "temp_f": 76.4,
+    "closed_share": 0.0,
+    "games": 60
+   },
+   "10": {
+    "temp_f": 76.8,
+    "closed_share": 0.0,
+    "games": 8
+   }
+  },
+  "Estadio Alfredo Harp Helu": {
+   "4": {
+    "temp_f": 80.5,
+    "closed_share": 0.0,
+    "games": 4
+   }
+  },
+  "Fenway Park": {
+   "3": {
+    "temp_f": 38.0,
+    "closed_share": 0.0,
+    "games": 1
+   },
+   "4": {
+    "temp_f": 54.6,
+    "closed_share": 0.0,
+    "games": 66
+   },
+   "5": {
+    "temp_f": 65.1,
+    "closed_share": 0.0,
+    "games": 75
+   },
+   "6": {
+    "temp_f": 72.2,
+    "closed_share": 0.0,
+    "games": 66
+   },
+   "7": {
+    "temp_f": 79.5,
+    "closed_share": 0.0,
+    "games": 64
+   },
+   "8": {
+    "temp_f": 77.1,
+    "closed_share": 0.0,
+    "games": 67
+   },
+   "9": {
+    "temp_f": 71.0,
+    "closed_share": 0.0,
+    "games": 63
+   },
+   "10": {
+    "temp_f": 55.3,
+    "closed_share": 0.0,
+    "games": 3
+   }
+  },
+  "Field of Dreams": {
+   "8": {
+    "temp_f": 79.5,
+    "closed_share": 0.0,
+    "games": 2
+   }
+  },
+  "George M. Steinbrenner Field": {
+   "3": {
+    "temp_f": 81.8,
+    "closed_share": 0.0,
+    "games": 4
+   },
+   "4": {
+    "temp_f": 79.6,
+    "closed_share": 0.0,
+    "games": 17
+   },
+   "5": {
+    "temp_f": 86.2,
+    "closed_share": 0.0,
+    "games": 16
+   },
+   "6": {
+    "temp_f": 84.7,
+    "closed_share": 0.0,
+    "games": 14
+   },
+   "7": {
+    "temp_f": 87.4,
+    "closed_share": 0.0,
+    "games": 8
+   },
+   "8": {
+    "temp_f": 88.2,
+    "closed_share": 0.0,
+    "games": 8
+   },
+   "9": {
+    "temp_f": 85.4,
+    "closed_share": 0.0,
+    "games": 14
+   }
+  },
+  "Globe Life Field": {
+   "3": {
+    "temp_f": 69.0,
+    "closed_share": 0.875,
+    "games": 8
+   },
+   "4": {
+    "temp_f": 74.8,
+    "closed_share": 0.627,
+    "games": 67
+   },
+   "5": {
+    "temp_f": 79.5,
+    "closed_share": 0.776,
+    "games": 58
+   },
+   "6": {
+    "temp_f": 86.0,
+    "closed_share": 0.986,
+    "games": 69
+   },
+   "7": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 56
+   },
+   "8": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 77
+   },
+   "9": {
+    "temp_f": 84.9,
+    "closed_share": 0.857,
+    "games": 63
+   },
+   "10": {
+    "temp_f": 83.4,
+    "closed_share": 0.286,
+    "games": 7
+   }
+  },
+  "Gocheok Sky Dome": {
+   "3": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 2
+   }
+  },
+  "Great American Ball Park": {
+   "3": {
+    "temp_f": 62.5,
+    "closed_share": 0.0,
+    "games": 8
+   },
+   "4": {
+    "temp_f": 63.4,
+    "closed_share": 0.0,
+    "games": 61
+   },
+   "5": {
+    "temp_f": 73.9,
+    "closed_share": 0.0,
+    "games": 67
+   },
+   "6": {
+    "temp_f": 81.1,
+    "closed_share": 0.0,
+    "games": 69
+   },
+   "7": {
+    "temp_f": 84.0,
+    "closed_share": 0.0,
+    "games": 72
+   },
+   "8": {
+    "temp_f": 82.6,
+    "closed_share": 0.0,
+    "games": 58
+   },
+   "9": {
+    "temp_f": 78.5,
+    "closed_share": 0.0,
+    "games": 65
+   },
+   "10": {
+    "temp_f": 69.7,
+    "closed_share": 0.0,
+    "games": 3
+   }
+  },
+  "Guaranteed Rate Field": {
+   "3": {
+    "temp_f": 52.7,
+    "closed_share": 0.0,
+    "games": 3
+   },
+   "4": {
+    "temp_f": 57.3,
+    "closed_share": 0.0,
+    "games": 52
+   },
+   "5": {
+    "temp_f": 66.1,
+    "closed_share": 0.0,
+    "games": 59
+   },
+   "6": {
+    "temp_f": 77.1,
+    "closed_share": 0.0,
+    "games": 54
+   },
+   "7": {
+    "temp_f": 78.7,
+    "closed_share": 0.0,
+    "games": 46
+   },
+   "8": {
+    "temp_f": 79.7,
+    "closed_share": 0.0,
+    "games": 56
+   },
+   "9": {
+    "temp_f": 73.6,
+    "closed_share": 0.0,
+    "games": 46
+   },
+   "10": {
+    "temp_f": 70.4,
+    "closed_share": 0.0,
+    "games": 7
+   }
+  },
+  "Journey Bank Ballpark": {
+   "8": {
+    "temp_f": 73.0,
+    "closed_share": 0.0,
+    "games": 2
+   }
+  },
+  "Kauffman Stadium": {
+   "3": {
+    "temp_f": 66.4,
+    "closed_share": 0.0,
+    "games": 7
+   },
+   "4": {
+    "temp_f": 62.0,
+    "closed_share": 0.0,
+    "games": 65
+   },
+   "5": {
+    "temp_f": 72.6,
+    "closed_share": 0.0,
+    "games": 68
+   },
+   "6": {
+    "temp_f": 84.3,
+    "closed_share": 0.0,
+    "games": 69
+   },
+   "7": {
+    "temp_f": 85.6,
+    "closed_share": 0.0,
+    "games": 64
+   },
+   "8": {
+    "temp_f": 85.2,
+    "closed_share": 0.0,
+    "games": 64
+   },
+   "9": {
+    "temp_f": 79.7,
+    "closed_share": 0.0,
+    "games": 64
+   },
+   "10": {
+    "temp_f": 76.8,
+    "closed_share": 0.0,
+    "games": 4
+   }
+  },
+  "London Stadium": {
+   "6": {
+    "temp_f": 73.8,
+    "closed_share": 0.0,
+    "games": 4
+   }
+  },
+  "Minute Maid Park": {
+   "3": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 6
+   },
+   "4": {
+    "temp_f": 77.2,
+    "closed_share": 0.886,
+    "games": 44
+   },
+   "5": {
+    "temp_f": 78.6,
+    "closed_share": 0.914,
+    "games": 58
+   },
+   "6": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 50
+   },
+   "7": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 53
+   },
+   "8": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 51
+   },
+   "9": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 54
+   },
+   "10": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 8
+   }
+  },
+  "Muncy Bank Ballpark": {
+   "8": {
+    "temp_f": 74.5,
+    "closed_share": 0.0,
+    "games": 2
+   }
+  },
+  "Nationals Park": {
+   "3": {
+    "temp_f": 65.5,
+    "closed_share": 0.0,
+    "games": 4
+   },
+   "4": {
+    "temp_f": 64.3,
+    "closed_share": 0.0,
+    "games": 66
+   },
+   "5": {
+    "temp_f": 71.1,
+    "closed_share": 0.0,
+    "games": 67
+   },
+   "6": {
+    "temp_f": 80.5,
+    "closed_share": 0.0,
+    "games": 64
+   },
+   "7": {
+    "temp_f": 85.2,
+    "closed_share": 0.0,
+    "games": 65
+   },
+   "8": {
+    "temp_f": 81.7,
+    "closed_share": 0.0,
+    "games": 71
+   },
+   "9": {
+    "temp_f": 77.3,
+    "closed_share": 0.0,
+    "games": 62
+   },
+   "10": {
+    "temp_f": 69.6,
+    "closed_share": 0.0,
+    "games": 5
+   }
+  },
+  "Oakland Coliseum": {
+   "3": {
+    "temp_f": 55.8,
+    "closed_share": 0.0,
+    "games": 5
+   },
+   "4": {
+    "temp_f": 60.6,
+    "closed_share": 0.0,
+    "games": 49
+   },
+   "5": {
+    "temp_f": 65.6,
+    "closed_share": 0.0,
+    "games": 66
+   },
+   "6": {
+    "temp_f": 68.6,
+    "closed_share": 0.0,
+    "games": 44
+   },
+   "7": {
+    "temp_f": 72.3,
+    "closed_share": 0.0,
+    "games": 47
+   },
+   "8": {
+    "temp_f": 72.3,
+    "closed_share": 0.0,
+    "games": 55
+   },
+   "9": {
+    "temp_f": 71.5,
+    "closed_share": 0.0,
+    "games": 54
+   },
+   "10": {
+    "temp_f": 66.3,
+    "closed_share": 0.0,
+    "games": 3
+   }
+  },
+  "Oracle Park": {
+   "4": {
+    "temp_f": 59.1,
+    "closed_share": 0.0,
+    "games": 66
+   },
+   "5": {
+    "temp_f": 61.5,
+    "closed_share": 0.0,
+    "games": 64
+   },
+   "6": {
+    "temp_f": 63.9,
+    "closed_share": 0.0,
+    "games": 73
+   },
+   "7": {
+    "temp_f": 63.0,
+    "closed_share": 0.0,
+    "games": 64
+   },
+   "8": {
+    "temp_f": 66.2,
+    "closed_share": 0.0,
+    "games": 68
+   },
+   "9": {
+    "temp_f": 65.5,
+    "closed_share": 0.0,
+    "games": 64
+   },
+   "10": {
+    "temp_f": 68.7,
+    "closed_share": 0.0,
+    "games": 6
+   }
+  },
+  "Oriole Park at Camden Yards": {
+   "3": {
+    "temp_f": 67.2,
+    "closed_share": 0.0,
+    "games": 4
+   },
+   "4": {
+    "temp_f": 67.8,
+    "closed_share": 0.0,
+    "games": 63
+   },
+   "5": {
+    "temp_f": 72.4,
+    "closed_share": 0.0,
+    "games": 72
+   },
+   "6": {
+    "temp_f": 81.8,
+    "closed_share": 0.0,
+    "games": 66
+   },
+   "7": {
+    "temp_f": 86.2,
+    "closed_share": 0.0,
+    "games": 60
+   },
+   "8": {
+    "temp_f": 82.6,
+    "closed_share": 0.0,
+    "games": 65
+   },
+   "9": {
+    "temp_f": 75.7,
+    "closed_share": 0.0,
+    "games": 70
+   },
+   "10": {
+    "temp_f": 62.0,
+    "closed_share": 0.0,
+    "games": 4
+   }
+  },
+  "PNC Park": {
+   "4": {
+    "temp_f": 60.2,
+    "closed_share": 0.0,
+    "games": 61
+   },
+   "5": {
+    "temp_f": 68.9,
+    "closed_share": 0.0,
+    "games": 70
+   },
+   "6": {
+    "temp_f": 77.9,
+    "closed_share": 0.0,
+    "games": 69
+   },
+   "7": {
+    "temp_f": 80.9,
+    "closed_share": 0.0,
+    "games": 62
+   },
+   "8": {
+    "temp_f": 81.2,
+    "closed_share": 0.0,
+    "games": 71
+   },
+   "9": {
+    "temp_f": 73.3,
+    "closed_share": 0.0,
+    "games": 65
+   },
+   "10": {
+    "temp_f": 68.6,
+    "closed_share": 0.0,
+    "games": 7
+   }
+  },
+  "Petco Park": {
+   "3": {
+    "temp_f": 60.2,
+    "closed_share": 0.0,
+    "games": 11
+   },
+   "4": {
+    "temp_f": 64.2,
+    "closed_share": 0.0,
+    "games": 62
+   },
+   "5": {
+    "temp_f": 64.0,
+    "closed_share": 0.0,
+    "games": 63
+   },
+   "6": {
+    "temp_f": 68.5,
+    "closed_share": 0.0,
+    "games": 70
+   },
+   "7": {
+    "temp_f": 72.2,
+    "closed_share": 0.0,
+    "games": 59
+   },
+   "8": {
+    "temp_f": 74.5,
+    "closed_share": 0.0,
+    "games": 68
+   },
+   "9": {
+    "temp_f": 74.4,
+    "closed_share": 0.0,
+    "games": 64
+   },
+   "10": {
+    "temp_f": 69.2,
+    "closed_share": 0.0,
+    "games": 5
+   }
+  },
+  "Progressive Field": {
+   "4": {
+    "temp_f": 54.8,
+    "closed_share": 0.0,
+    "games": 60
+   },
+   "5": {
+    "temp_f": 66.2,
+    "closed_share": 0.0,
+    "games": 65
+   },
+   "6": {
+    "temp_f": 75.0,
+    "closed_share": 0.0,
+    "games": 64
+   },
+   "7": {
+    "temp_f": 78.3,
+    "closed_share": 0.0,
+    "games": 62
+   },
+   "8": {
+    "temp_f": 77.9,
+    "closed_share": 0.0,
+    "games": 76
+   },
+   "9": {
+    "temp_f": 73.4,
+    "closed_share": 0.0,
+    "games": 72
+   },
+   "10": {
+    "temp_f": 61.8,
+    "closed_share": 0.0,
+    "games": 5
+   }
+  },
+  "Rate Field": {
+   "3": {
+    "temp_f": 59.0,
+    "closed_share": 0.0,
+    "games": 4
+   },
+   "4": {
+    "temp_f": 54.8,
+    "closed_share": 0.0,
+    "games": 10
+   },
+   "5": {
+    "temp_f": 55.5,
+    "closed_share": 0.0,
+    "games": 13
+   },
+   "6": {
+    "temp_f": 78.5,
+    "closed_share": 0.0,
+    "games": 16
+   },
+   "7": {
+    "temp_f": 81.3,
+    "closed_share": 0.0,
+    "games": 13
+   },
+   "8": {
+    "temp_f": 76.8,
+    "closed_share": 0.0,
+    "games": 16
+   },
+   "9": {
+    "temp_f": 75.4,
+    "closed_share": 0.0,
+    "games": 9
+   }
+  },
+  "Rickwood Field": {
+   "6": {
+    "temp_f": 90.0,
+    "closed_share": 0.0,
+    "games": 1
+   }
+  },
+  "Rogers Centre": {
+   "3": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 5
+   },
+   "4": {
+    "temp_f": 61.6,
+    "closed_share": 0.896,
+    "games": 48
+   },
+   "5": {
+    "temp_f": 65.8,
+    "closed_share": 0.54,
+    "games": 50
+   },
+   "6": {
+    "temp_f": 70.4,
+    "closed_share": 0.345,
+    "games": 58
+   },
+   "7": {
+    "temp_f": 74.6,
+    "closed_share": 0.091,
+    "games": 55
+   },
+   "8": {
+    "temp_f": 75.2,
+    "closed_share": 0.197,
+    "games": 71
+   },
+   "9": {
+    "temp_f": 68.7,
+    "closed_share": 0.197,
+    "games": 66
+   },
+   "10": {
+    "temp_f": 69.2,
+    "closed_share": 0.333,
+    "games": 6
+   }
+  },
+  "Sahlen Field": {
+   "6": {
+    "temp_f": 73.4,
+    "closed_share": 0.0,
+    "games": 14
+   },
+   "7": {
+    "temp_f": 73.9,
+    "closed_share": 0.0,
+    "games": 10
+   }
+  },
+  "Sutter Health Park": {
+   "3": {
+    "temp_f": 52.0,
+    "closed_share": 0.0,
+    "games": 1
+   },
+   "4": {
+    "temp_f": 65.5,
+    "closed_share": 0.0,
+    "games": 14
+   },
+   "5": {
+    "temp_f": 80.6,
+    "closed_share": 0.0,
+    "games": 13
+   },
+   "6": {
+    "temp_f": 82.2,
+    "closed_share": 0.0,
+    "games": 14
+   },
+   "7": {
+    "temp_f": 87.4,
+    "closed_share": 0.0,
+    "games": 12
+   },
+   "8": {
+    "temp_f": 86.0,
+    "closed_share": 0.0,
+    "games": 15
+   },
+   "9": {
+    "temp_f": 77.9,
+    "closed_share": 0.0,
+    "games": 12
+   }
+  },
+  "T-Mobile Park": {
+   "3": {
+    "temp_f": 54.8,
+    "closed_share": 0.545,
+    "games": 11
+   },
+   "4": {
+    "temp_f": 55.5,
+    "closed_share": 0.274,
+    "games": 62
+   },
+   "5": {
+    "temp_f": 62.4,
+    "closed_share": 0.203,
+    "games": 69
+   },
+   "6": {
+    "temp_f": 67.3,
+    "closed_share": 0.153,
+    "games": 59
+   },
+   "7": {
+    "temp_f": 73.2,
+    "closed_share": 0.015,
+    "games": 67
+   },
+   "8": {
+    "temp_f": 72.6,
+    "closed_share": 0.044,
+    "games": 68
+   },
+   "9": {
+    "temp_f": 66.2,
+    "closed_share": 0.203,
+    "games": 59
+   },
+   "10": {
+    "temp_f": 60.9,
+    "closed_share": 0.1,
+    "games": 10
+   }
+  },
+  "TD Ballpark": {
+   "4": {
+    "temp_f": 79.2,
+    "closed_share": 0.0,
+    "games": 10
+   },
+   "5": {
+    "temp_f": 84.2,
+    "closed_share": 0.0,
+    "games": 12
+   }
+  },
+  "Target Field": {
+   "4": {
+    "temp_f": 52.1,
+    "closed_share": 0.0,
+    "games": 67
+   },
+   "5": {
+    "temp_f": 68.6,
+    "closed_share": 0.0,
+    "games": 75
+   },
+   "6": {
+    "temp_f": 79.4,
+    "closed_share": 0.0,
+    "games": 61
+   },
+   "7": {
+    "temp_f": 80.8,
+    "closed_share": 0.0,
+    "games": 61
+   },
+   "8": {
+    "temp_f": 79.3,
+    "closed_share": 0.0,
+    "games": 78
+   },
+   "9": {
+    "temp_f": 72.3,
+    "closed_share": 0.0,
+    "games": 63
+   }
+  },
+  "Tokyo Dome": {
+   "3": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 2
+   }
+  },
+  "Tropicana Field": {
+   "3": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 5
+   },
+   "4": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 58
+   },
+   "5": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 60
+   },
+   "6": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 50
+   },
+   "7": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 47
+   },
+   "8": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 49
+   },
+   "9": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 55
+   }
+  },
+  "Truist Park": {
+   "4": {
+    "temp_f": 70.2,
+    "closed_share": 0.0,
+    "games": 69
+   },
+   "5": {
+    "temp_f": 75.0,
+    "closed_share": 0.0,
+    "games": 74
+   },
+   "6": {
+    "temp_f": 83.2,
+    "closed_share": 0.0,
+    "games": 65
+   },
+   "7": {
+    "temp_f": 84.5,
+    "closed_share": 0.0,
+    "games": 64
+   },
+   "8": {
+    "temp_f": 82.7,
+    "closed_share": 0.0,
+    "games": 60
+   },
+   "9": {
+    "temp_f": 78.7,
+    "closed_share": 0.0,
+    "games": 67
+   },
+   "10": {
+    "temp_f": 74.0,
+    "closed_share": 0.0,
+    "games": 6
+   }
+  },
+  "Wrigley Field": {
+   "3": {
+    "temp_f": 42.0,
+    "closed_share": 0.0,
+    "games": 1
+   },
+   "4": {
+    "temp_f": 52.8,
+    "closed_share": 0.0,
+    "games": 68
+   },
+   "5": {
+    "temp_f": 64.5,
+    "closed_share": 0.0,
+    "games": 71
+   },
+   "6": {
+    "temp_f": 76.3,
+    "closed_share": 0.0,
+    "games": 60
+   },
+   "7": {
+    "temp_f": 78.4,
+    "closed_share": 0.0,
+    "games": 62
+   },
+   "8": {
+    "temp_f": 77.8,
+    "closed_share": 0.0,
+    "games": 67
+   },
+   "9": {
+    "temp_f": 72.7,
+    "closed_share": 0.0,
+    "games": 72
+   },
+   "10": {
+    "temp_f": 63.5,
+    "closed_share": 0.0,
+    "games": 2
+   }
+  },
+  "Yankee Stadium": {
+   "3": {
+    "temp_f": 52.2,
+    "closed_share": 0.0,
+    "games": 4
+   },
+   "4": {
+    "temp_f": 57.4,
+    "closed_share": 0.0,
+    "games": 65
+   },
+   "5": {
+    "temp_f": 68.0,
+    "closed_share": 0.0,
+    "games": 68
+   },
+   "6": {
+    "temp_f": 76.8,
+    "closed_share": 0.0,
+    "games": 73
+   },
+   "7": {
+    "temp_f": 82.0,
+    "closed_share": 0.0,
+    "games": 58
+   },
+   "8": {
+    "temp_f": 78.4,
+    "closed_share": 0.0,
+    "games": 67
+   },
+   "9": {
+    "temp_f": 73.0,
+    "closed_share": 0.0,
+    "games": 65
+   },
+   "10": {
+    "temp_f": 66.0,
+    "closed_share": 0.0,
+    "games": 5
+   }
+  },
+  "loanDepot park": {
+   "3": {
+    "temp_f": 76.3,
+    "closed_share": 0.455,
+    "games": 11
+   },
+   "4": {
+    "temp_f": 79.1,
+    "closed_share": 0.576,
+    "games": 59
+   },
+   "5": {
+    "temp_f": 82.4,
+    "closed_share": 0.921,
+    "games": 63
+   },
+   "6": {
+    "temp_f": 83.0,
+    "closed_share": 0.984,
+    "games": 63
+   },
+   "7": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 65
+   },
+   "8": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 75
+   },
+   "9": {
+    "temp_f": null,
+    "closed_share": 1.0,
+    "games": 63
+   },
+   "10": {
+    "temp_f": 80.0,
+    "closed_share": 0.833,
+    "games": 6
+   }
+  }
+ },
+ "fitted_on": "out-of-sample predictions of the locked plate-appearance model on 2025 regular-season plate appearances (182,926), Poisson per outcome class with the model probability as offset; venue effects shrunk (ridge 1600); centered so the average plate appearance of the fit is unchanged; TOTALS-08: the venue residual removed (its two seasons' values were uncorrelated, a one-season noise of 0.17 runs per game), the center recomputed on the same rows",
+ "pa": 182926
+}

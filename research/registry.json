@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 234,
- "rows": 237,
+ "experiments": 235,
+ "rows": 238,
  "records": {
   "ACC-01": [
    {
@@ -3612,7 +3612,26 @@
     "id": "TOTALS-07",
     "columns": {
      "ID": "TOTALS-07",
-     "Attempt": "Does the simulator's park feature chase one-season noise (TOTALS-06)? The PA model refitted exactly as pa-2026-v2-physics (train 2023-2024, validation 2025, test 2026, the same physics parameters) with park_prior_pa 6,000 instead of 1,000 (tools/fit_model_params.json, name pa-2026-v5-parkprior; the fit tool reads the prior from its settings), then both seasons replayed with the PROD-03 recipe (1,000 worlds, paired streams against v2-prod3-1000-2025 and -2026), scored on the mean total's squared error, the cross-season correlation of park mean residuals, the P(over) Brier and the win Brier. **Registered in the commit that added this row, before the fit and the replays.** Prediction: the cross-season correlation of park residuals moves from -0.46 to above -0.2; the mean total's squared error improves by 0.03 to 0.10 runs squared in each season; the win Brier moves by less than 0.0002 pooled; the PA model's own held-out log loss (the fit receipt's locked-final block) changes by less than 0.001 nats. Gate: adopt as the production PA model if the pooled squared-error improvement's interval excludes zero with neither season worse, the pooled win Brier is not worse than +0.0002, and the fit's held-out log loss is not worse by more than 0.0005; the taught headline is then refitted on the new replays (a new headline version) before the switch.",
+     "Attempt": "Does the simulator's park feature chase one-season noise (TOTALS-06)? The PA model refitted exactly as pa-2026-v2-physics (train 2023-2024, validation 2025, test 2026, the same physics parameters) with park_prior_pa 6,000 instead of 1,000 (tools/fit_model_params.json, name pa-2026-v5-parkprior; the fit tool reads the prior from its settings), then both seasons replayed with the PROD-03 recipe (1,000 worlds, paired streams against v2-prod3-1000-2025 and -2026), scored on the mean total's squared error, the cross-season correlation of park mean residuals, the P(over) Brier and the win Brier. **Registered in the commit that added this row, before the fit and the replays.** Prediction: the cross-season correlation of park residuals moves from -0.46 to above -0.2; the mean total's squared error improves by 0.03 to 0.10 runs squared in each season; the win Brier moves by less than 0.0002 pooled; the PA model's own held-out log loss (the fit receipt's locked-final block) changes by less than 0.001 nats. Gate: adopt as the production PA model if the pooled squared-error improvement's interval excludes zero with neither season worse, the pooled win Brier is not worse than +0.0002, and the fit's held-out log loss is not worse by more than 0.0005; the taught headline is then refitted on the new replays (a new headline version) before the switch. **Results (fit run 37998079379; replays 37999075249 and 37999145650, tools/replay_compare.py): the prediction failed and the gate is not met.** The refit's held-out log loss is unchanged (1.45843 against 1.45840 nats; the empirical-Bayes baseline's tuned park weight rose from 0.51 to 0.68 to compensate for the shrunken feature). Against the production replays, paired by game: mean-total squared error worse by 0.030 [-0.019, +0.076] in 2025 and 0.055 [-0.010, +0.118] in 2026, pooled +0.043 [+0.002, +0.082]; the cross-season correlation of park residuals moved only from -0.45 to -0.38 (predicted above -0.2); win Brier +0.00003 and +0.00028, pooled +0.00015 [-0.00005, +0.00036]; P(over) Brier +0.0003 and +0.0005. **Not adopted; the PA model's park feature is not the source of the reversal.** The source was found in the replay recipe itself: the run-environment table (ENV-02) carries a shrunk venue residual (ridge 1,600) fitted on one season and applied to the other, and the two seasons' venue terms are uncorrelated (-0.02 across 29 venues) with a spread of 0.17 runs per game, so each replay inherits the other season's venue noise and the park residuals reverse by construction; the PA-level log loss that chose ridge 1,600 (ENV-01) is nearly indifferent to the venue term (+0.00005 nats, scratch harness/env_ridge_scan.py), while at the run level it is noise. That is TOTALS-08.",
+     "Disposition and evidence": "failed; the reversal is the environment table's venue term"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [
+     "37998079379",
+     "37999075249",
+     "37999145650"
+    ],
+    "frozen_commits": [],
+    "status": "failed; the reversal is the environment table's venue term"
+   }
+  ],
+  "TOTALS-08": [
+   {
+    "id": "TOTALS-08",
+    "columns": {
+     "ID": "TOTALS-08",
+     "Attempt": "The run-environment table without its venue residual (TOTALS-07's finding): the production replays repeated with the same tables minus the venue term, the center recomputed on the fit rows (brl_replay/environment_fit2025_weather.json for the 2026 replay, environment_fit2026_weather.json for 2025; the production candidate brl_replay/environment_weather.json is env-v2 fitted on both seasons without venues), PROD-03 recipe otherwise unchanged, 1,000 worlds, scored against v2-prod3-1000 by tools/replay_compare.py. **Registered in the commit that added this row, before the replays.** Prediction: the mean total's squared error improves by 0.02 to 0.06 runs squared in each season (the venue noise's variance is about 0.028); the cross-season correlation of park residuals rises from -0.45 to above -0.15; the win Brier moves by less than 0.0002 pooled; the P(over) Brier improves by up to 0.0005. Gate: the weather-only table replaces brl_live/environment.json (ADJUST['environment'] stays on) if the pooled squared-error improvement's interval excludes zero with neither season worse and the pooled win Brier is not worse than +0.0002; the taught headline is refitted on the new replays before the switch.",
      "Disposition and evidence": "pending",
      "Delta corrected Brier, 2026": "registered"
     },
