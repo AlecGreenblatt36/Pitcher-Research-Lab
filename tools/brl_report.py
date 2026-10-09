@@ -322,6 +322,10 @@ class Fitted:
         out = {'chase_points': round(chase, 2), 'k_points': round((hit[0] - A['league'][0]) * 100 * K_SCALE, 2), 'bb_points': round((hit[1] - A['league'][1]) * 100 * BB_SCALE, 2),
                'arsenal_pitches': int(len(A['r']))}
         T = self.T; rp = self.gp[p][(T['stand_r'][self.gp[p]] == sd) & self.outside[self.gp[p]]]
+        # how much the numbers rest on: the hitter's training pitches behind his map, the pitcher's pitches to this side (the audit's insufficient-evidence state)
+        n_h = int(len(self.gb_tr.get(h, ()))); n_ps = int((T['stand_r'][self.gp[p]] == sd).sum())
+        out['evidence'] = {'hitter_pitches': n_h, 'pitcher_pitches_to_side': n_ps, 'whiff_map': bool(h in self.maps_w),
+                           'level': 'thin' if (n_h < 700 or n_ps < 150) else 'ok'}
         if len(rp) < 40:
             return out
         tot = 0.0; wsum = 0.0; tot_runs = 0.0; cells = {f_: np.zeros(len(GU) * len(GZ)) for f_, *_ in FAMILIES}

@@ -2226,6 +2226,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (pr2) {
         var hc = players[ids[0]] && players[ids[0]].hitter, pc = players[ids[1]] && players[ids[1]].pitcher;
         h += '<section class="sec wide" id="rp-detail-' + pk + '"><h3>' + esc(nm(ids[0])) + " against " + esc(nm(ids[1])) + "</h3>";
+        if (pr2.evidence) h += '<p class="note">' + (pr2.evidence.level === "thin" ? "Thin evidence: " : "Evidence: ") + "the hitter's map rests on " + Number(pr2.evidence.hitter_pitches).toLocaleString() + " earlier pitches" + (pr2.evidence.whiff_map ? " (with a whiff map)" : " (no whiff map yet)") + ", the pitcher's spots on " + Number(pr2.evidence.pitcher_pitches_to_side).toLocaleString() + " pitches to this side." + (pr2.evidence.level === "thin" ? " Read the numbers as leanings, not measurements." : "") + "</p>";
         h += '<ul class="compare"><li><span>Extra chases per 100 outside pitches from his own map</span><b>' + RP_METRICS.chase.fmt(pr2.chase_points) + "</b></li>" +
           "<li><span>Strikeout chance against the league pairing</span><b>" + RP_METRICS.k.fmt(pr2.k_points) + " pts</b></li><li><span>Walk chance</span><b>" + RP_METRICS.bb.fmt(pr2.bb_points) + " pts</b></li>" +
           (pr2.aim ? "<li><span>" + (pr2.aim.pricing === "structural" ? "Aiming at the spots that cost him most (chases, or strikes he takes), typical command" : "Aiming outside pitches at his spots, typical command") + "</span><b>" + (-pr2.aim.runs_per_100_pa).toFixed(2) + " runs saved per 100 PA</b></li>" : "") + "</ul>";
