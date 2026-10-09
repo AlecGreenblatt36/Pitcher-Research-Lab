@@ -47,6 +47,13 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 
 ### In flight (updated 9:35 a.m. Eastern October 9; earlier stamps in this section ran ahead of the clock)
 
+- Alec, 9:40 a.m. October 9: the product is for coaches, past games must be evaluable with only information up to each
+  game, and it must be made genuinely better than anything that exists; he does not want to wait weeks. Built the same
+  morning: the matchup report (REPORT-01): tools/brl_report.py, workflow brl-report (scheduled 9:20 and 16:35 Eastern;
+  a push to diag/report with tools/report_params.json runs a backfill: {"dates": [...], "asof": "YYYY-MM-01"}), one
+  document per game on the data branch under public/reports/<date>/, read by the site's Report tab (template.html,
+  REPORTS base URL on raw.githubusercontent.com). 2026 backfill running month by month (September, August, October,
+  July first); 2025 next (needs the 2024 table as the previous season; it exists). Phone check passed with the tab.
 - Alec, 8:56 a.m. October 9: the goal is to beat every model that exists. Where we stand (ledger rows):
   WHERE-01 (diagnostic): in the PROD-03 production replays our own number is level with the closing line (Brier pooled
   0.24245 against 0.24289; 2026 simulator alone 0.24274 against 0.24325) and a results logistic on both leans on ours
