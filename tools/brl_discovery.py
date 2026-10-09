@@ -3439,12 +3439,16 @@ def value2_study(T: dict, params: dict, stage) -> dict:
     hit_side = {h: int(np.round(stand[rr].mean())) for h, rr in gb.items()}
     acc = {(zn, sg): [0.0, 0.0] for zn in ('outside', 'inside') for sg in sigmas}
     gp = _groups(pit, np.ones(len(ix), bool))
+    within_type = bool(params.get('within_type'))            # VALUE-04: aim only among the same pitch group's spots
+    pgroup = np.clip(T['group'][ix], 0, 6)
+    type_levels = range(7) if within_type else (None,)
     for pid, rr in gp.items():
         hs_here = np.unique(T['batter'][ix[rr]])
         for sd in (0, 1):
             for c3 in (0, 1, 2):
+              for tg in type_levels:
                 for zn, zmask in (('outside', outside), ('inside', ~outside)):
-                    pool = rr[(stand[rr] == sd) & (cg[rr] == c3) & zmask[rr]]
+                    pool = rr[(stand[rr] == sd) & (cg[rr] == c3) & zmask[rr] & ((pgroup[rr] == tg) if tg is not None else True)]
                     if len(pool) < 30:
                         continue
                     if len(pool) > 300:
@@ -3460,7 +3464,7 @@ def value2_study(T: dict, params: dict, stage) -> dict:
                     for h in hs_here:
                         if int(h) not in maps or hit_side.get(int(h)) != sd:
                             continue
-                        n_here = int(np.sum((T['batter'][ix[rr]] == h) & (stand[rr] == sd) & (cg[rr] == c3) & zmask[rr]))
+                        n_here = int(np.sum((T['batter'][ix[rr]] == h) & (stand[rr] == sd) & (cg[rr] == c3) & zmask[rr] & ((pgroup[rr] == tg) if tg is not None else True)))
                         if n_here == 0:
                             continue
                         mh = maps[int(h)]
