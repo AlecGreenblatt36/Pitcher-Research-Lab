@@ -1,0 +1,204 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "value2",
+ "run_id": "37893198355",
+ "params": {
+  "experiment": "value2",
+  "seasons": [
+   2023,
+   2024,
+   2025
+  ],
+  "sigmas": [
+   0.6
+  ],
+  "within_type": true,
+  "checks": true,
+  "within_spot": true,
+  "specific": true,
+  "placebo_draws": 0,
+  "reps": 100
+ },
+ "started_at": "2026-10-09T06:23:00.142870+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 10.7
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 20.5
+  },
+  {
+   "stage": "maps 604",
+   "at_seconds": 52.9
+  },
+  {
+   "stage": "coefficients",
+   "at_seconds": 92.0
+  },
+  {
+   "stage": "aiming with scatter",
+   "at_seconds": 143.9
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985
+ },
+ "results": {
+  "coefficients": {
+   "test_season": 2025,
+   "test_pitches": 617627,
+   "runs_per_point_outside": -0.000554,
+   "runs_per_point_inside": 0.000773,
+   "outside_pitches_per_pa": 1.932,
+   "inside_pitches_per_pa": 1.97,
+   "deviation": "own map minus the same-side mean map",
+   "shared_part_outside": -0.001833,
+   "shared_part_inside": 0.001194,
+   "sd_points_shared_outside": 2.468,
+   "sd_points_own_part_outside": 7.319
+  },
+  "coefficient_checks": {
+   "own_map": {
+    "outside": -0.000554,
+    "inside": 0.000773,
+    "outside_interval": [
+     -0.000799,
+     -0.000326
+    ],
+    "inside_interval": [
+     0.000566,
+     0.001039
+    ],
+    "sd_points_outside": 7.319,
+    "runs_per_6200_outside_at_0.6": -19.4,
+    "runs_per_6200_outside_interval_at_0.6": [
+     -28.0,
+     -11.4
+    ]
+   },
+   "placebo_other_hitter": {
+    "outside": -7.7e-05,
+    "inside": 9e-06,
+    "outside_interval": [
+     -0.000302,
+     0.000115
+    ],
+    "inside_interval": [
+     -0.000177,
+     0.000223
+    ],
+    "sd_points_outside": 7.083,
+    "outside_more_reassignments": [],
+    "runs_per_6200_outside_at_0.6": -2.7,
+    "runs_per_6200_outside_interval_at_0.6": [
+     -10.6,
+     4.0
+    ]
+   },
+   "within_hitter_group_and_zone_side": {
+    "outside": -0.000387,
+    "inside": 0.000711,
+    "outside_interval": [
+     -0.000608,
+     -0.000202
+    ],
+    "inside_interval": [
+     0.000445,
+     0.000916
+    ],
+    "sd_points_outside": 6.66,
+    "runs_per_6200_outside_at_0.6": -13.6,
+    "runs_per_6200_outside_interval_at_0.6": [
+     -21.3,
+     -7.1
+    ]
+   },
+   "within_pa_correlation_outside": 0.1693,
+   "own_map_holding_pa_others": {
+    "outside": -0.000492,
+    "inside": 0.000734,
+    "outside_interval": [
+     -0.000658,
+     -0.000349
+    ],
+    "inside_interval": [
+     0.000551,
+     0.000948
+    ],
+    "others_outside": -0.000315,
+    "others_inside": 0.000415,
+    "runs_per_6200_outside_at_0.6": -17.2,
+    "runs_per_6200_outside_interval_at_0.6": [
+     -23.1,
+     -12.2
+    ]
+   },
+   "within_hitter_holding_pa_others": {
+    "outside": -0.000385,
+    "inside": 0.000699,
+    "outside_interval": [
+     -0.000586,
+     -0.000201
+    ],
+    "inside_interval": [
+     0.000494,
+     0.000907
+    ],
+    "others_outside": -0.000268,
+    "others_inside": 0.000429,
+    "runs_per_6200_outside_at_0.6": -13.5,
+    "runs_per_6200_outside_interval_at_0.6": [
+     -20.5,
+     -7.0
+    ]
+   },
+   "within_spot": {
+    "outside": -0.000551,
+    "inside": 0.000841,
+    "outside_interval": [
+     -0.000765,
+     -0.000366
+    ],
+    "inside_interval": [
+     0.000582,
+     0.001071
+    ],
+    "cells": 19693,
+    "pitches_in_cells_with_two_or_more": 614157,
+    "runs_per_6200_outside_at_0.6": -19.3,
+    "runs_per_6200_outside_interval_at_0.6": [
+     -26.8,
+     -12.8
+    ]
+   }
+  },
+  "by_command_sd_ft": {
+   "0.6": {
+    "outside_gain_points": 2.926,
+    "inside_gain_points": -2.859,
+    "runs_per_6200_outside_only_interval": [
+     -28.0,
+     -11.4
+    ],
+    "runs_per_6200_both_interval": [
+     -58.0,
+     -35.4
+    ],
+    "runs_per_6200_outside_only": -19.4,
+    "runs_per_6200_inside_only": -27.0,
+    "runs_per_6200_both": -46.4
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T06:25:24.070461+00:00",
+ "seconds": 143.9
+}
