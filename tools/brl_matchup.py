@@ -651,3 +651,198 @@ def contact_final_study(sv, cols: dict, params: dict, stage) -> dict:
                                   'rates_model': round(float(p1[qi == k].mean()), 4), 'frozen_model': round(float(pt[qi == k].mean()), 4)} for k in range(5)]
     stage('scored')
     return res
+
+
+# ---------------------------------------------------------------- TIMING-02: carried timing within each pitcher's pitch type
+def _demean(v: np.ndarray, gi: np.ndarray, cnt: np.ndarray) -> np.ndarray:
+    return v - (np.bincount(gi, weights=v, minlength=len(cnt)) / np.maximum(cnt, 1))[gi]
+
+
+def _hitter_slopes(hit, x, r, s2, min_n=100):
+    """Shrunk per-hitter slopes of residuals r on x (deviations from the pooled slope), the shrinkage set by the
+    between-hitter variance of raw slopes beyond their sampling variance."""
+    uh, ih = np.unique(hit, return_inverse=True)
+    sxx = np.bincount(ih, weights=x * x, minlength=len(uh)); sxr = np.bincount(ih, weights=x * r, minlength=len(uh)); nn = np.bincount(ih, minlength=len(uh))
+    big = (nn >= min_n) & (sxx > 0)
+    if big.sum() < 20:
+        return {}, None, None
+    raw = sxr[big] / sxx[big]; se2 = s2 / sxx[big]
+    tau2 = max(float(np.var(raw) - np.mean(se2)), 1e-6)
+    lam = s2 / tau2
+    return {int(h): float(sxr[i] / (sxx[i] + lam)) for i, h in enumerate(uh)}, float(np.sqrt(tau2)), float(lam)
+
+
+def timing2_study(sv, cols: dict, params: dict, stage) -> dict:
+    """TIMING-02. TIMING-01 measured carried timing against the speed change with the pitch's own flight time entering
+    linearly beside its type; a pitcher-level effect on contact depth (a pitcher's pitches share his speed level) or a
+    hitter's own way of following pitch speed can then be read as carried timing. Here (a) carried timing is measured
+    within one pitcher's one pitch type in one season (fixed effects; the flight times centered within it): the same
+    pitch preceded by different pitches, after a take, a foul or a miss, and two pitches back; (b) two hitter traits
+    from 2025 contact swings, each a shrunk slope: speed-follow, how far his contact moves out front per 10 ms of
+    slower flight across one pitcher's pitches (0 for perfect re-timing, 6.7 inches for none), and carried, his own
+    after-swing slope on the previous pitch within pitcher-types; their reliability across the halves of 2025; (c) their
+    value for misses in 2026 through July on top of a flexible whiff model that sees the speed change."""
+    res = {}
+    cols = guard(cols, params)
+    desc = label(cols, 'description')
+    swing = np.isin(desc, WHIFF + CONTACT); whiff = np.isin(desc, WHIFF); contact = np.isin(desc, CONTACT)
+    batter = cols['batter'].astype(np.int64); day = cols['day'].astype(np.int64)
+    G = geometry(sv, cols); year = G['year']
+    ft = flight_time(sv, cols) * 1000.0
+    p1, p2 = _previous(cols, 1), _previous(cols, 2)
+    has1, has2 = p1 >= 0, p2 >= 0
+    f1 = np.where(has1, ft[np.maximum(p1, 0)], np.nan); f2 = np.where(has2, ft[np.maximum(p2, 0)], np.nan)
+    sw1 = np.where(has1, swing[np.maximum(p1, 0)], False); wh1 = np.where(has1, whiff[np.maximum(p1, 0)], False)
+    sw2 = np.where(has2, swing[np.maximum(p2, 0)], False)
+    ptype = label(cols, 'pitch_type'); grp = np.asarray([GROUPS.get(t, 6) for t in ptype])
+    tcode = np.unique(ptype, return_inverse=True)[1]
+    stand_r = label(cols, 'stand') == 'R'; throw_r = label(cols, 'p_throws') == 'R'
+    u = np.where(stand_r, G['x'], -G['x']); z = G['z']
+    iy = cols['intercept_ball_minus_batter_pos_y_inches'].astype(np.float64)
+    train_year, test_year = int(params.get('train_year', 2025)), int(params.get('test_year', 2026))
+    ci = contact & np.isfinite(iy)
+    n_y, s_y, q_y = prior_stats(batter, day, iy, ci)
+    lm = float(np.nanmean(iy[ci & (year == train_year)])); lv = float(np.nanvar(iy[ci & (year == train_year)]))
+    mu_y = (s_y + 50 * lm) / (n_y + 50)
+    with np.errstate(invalid='ignore', divide='ignore'):
+        var_h = np.where(n_y > 1, (q_y - s_y * s_y / np.maximum(n_y, 1)) / np.maximum(n_y - 1, 1), lv)
+    sig_y = np.sqrt((np.maximum(n_y - 1, 0) * var_h + 50 * lv) / (np.maximum(n_y - 1, 0) + 50))
+    pkey = cols['pitcher'].astype(np.int64) * 100 + (year - 2000)                       # pitcher-season
+    gkey = pkey * 1000 + tcode.astype(np.int64)                                          # pitcher-season-type
+    def center(v, key, rows):
+        ug, gi = np.unique(key[rows], return_inverse=True); cnt = np.bincount(gi)
+        out = np.full(len(v), np.nan); out[rows] = _demean(v[rows], gi, cnt); return out
+    base_ok = ci & np.isfinite(ft) & np.isfinite(u) & np.isfinite(z) & (n_y >= 20)
+    ok = base_ok & has1 & np.isfinite(f1)
+    ftc = center(ft, gkey, base_ok) / 10.0                                               # own flight, within pitcher-type
+    f1c = center(np.where(ok, f1, 0.0), gkey, ok) / 10.0                                 # previous flight, within pitcher-type
+    stage('sequence and priors')
+    U10 = float(params.get('u_ft_s', 56.0)) * 12.0 * 0.01
+
+    def within(rows, key, cols_):
+        ug, gi = np.unique(key[rows], return_inverse=True); cnt = np.bincount(gi)
+        keep = cnt[gi] >= 2
+        names = list(cols_)
+        X = np.column_stack([_demean(np.asarray(cols_[k], dtype=np.float64), gi, cnt) for k in names])[keep]
+        y = _demean(iy[rows] - mu_y[rows], gi, cnt)[keep]
+        return names, X, y, keep
+
+    def controls(r):
+        return {'side': u[r], 'side_abs': np.abs(u[r]), 'height': z[r] - 2.5, 'height_sq': (z[r] - 2.5) ** 2, 'balls': cols['balls'][r].astype(float),
+                'strikes': cols['strikes'][r].astype(float), 'platoon': (stand_r == throw_r)[r].astype(float)}
+    depth = {}
+    for yr in (train_year, test_year):
+        r = ok & (year == yr)
+        if r.sum() < 5000:
+            continue
+        c_ = {'own_flight': ftc[r], 'prev_flight': f1c[r], 'prev_flight_x_swung': f1c[r] * sw1[r], 'prev_flight_x_missed': f1c[r] * wh1[r],
+              'prev_swung': sw1[r].astype(float), 'prev_missed': wh1[r].astype(float), **controls(r)}
+        names, X, y, keep = within(r, gkey, c_)
+        b, lo, hi = _ols(X, y, cols['game_pk'][r][keep]); j = {n_: k for k, n_ in enumerate(names)}
+        ci_ = lambda n_: [round(float(b[j[n_]]), 4), round(float(lo[j[n_]]), 4), round(float(hi[j[n_]]), 4)]
+        r2 = r & has2 & np.isfinite(f2)
+        f2c = center(np.where(r2, f2, 0.0), gkey, r2) / 10.0
+        c2 = {'own_flight': ftc[r2], 'prev_flight': f1c[r2], 'prev_flight_x_swung': f1c[r2] * sw1[r2], 'two_back': f2c[r2], 'two_back_x_swung': f2c[r2] * sw2[r2],
+              'prev_swung': sw1[r2].astype(float), 'two_back_swung': sw2[r2].astype(float), **controls(r2)}
+        names2, X2, y2, keep2 = within(r2, gkey, c2)
+        b2, lo2, hi2 = _ols(X2, y2, cols['game_pk'][r2][keep2]); j2 = {n_: k for k, n_ in enumerate(names2)}
+        ci2 = lambda n_: [round(float(b2[j2[n_]]), 4), round(float(lo2[j2[n_]]), 4), round(float(hi2[j2[n_]]), 4)]
+        # speed-follow, pooled: within pitcher-season (across his pitch types), own flight centered there
+        rs = base_ok & (year == yr)
+        cs_ = {'own_flight_pitcher': center(ft, pkey, rs)[rs] / 10.0, **controls(rs)}
+        names3, X3, y3, keep3 = within(rs, pkey, cs_)
+        b3, lo3, hi3 = _ols(X3, y3, cols['game_pk'][rs][keep3])
+        depth[yr] = {'contacts': int(keep.sum()), 'pitcher_types': int(len(np.unique(gkey[r]))),
+                     'own_flight_within_type_in_per_10ms': ci_('own_flight'),
+                     'prev_flight_after_take': ci_('prev_flight'), 'prev_flight_extra_after_swing': ci_('prev_flight_x_swung'),
+                     'prev_flight_extra_after_miss': ci_('prev_flight_x_missed'),
+                     'carried_share_after_take': round(float(-b[j['prev_flight']] / U10), 4),
+                     'carried_share_after_foul': round(float(-(b[j['prev_flight']] + b[j['prev_flight_x_swung']]) / U10), 4),
+                     'carried_share_after_miss': round(float(-(b[j['prev_flight']] + b[j['prev_flight_x_swung']] + b[j['prev_flight_x_missed']]) / U10), 4),
+                     'two_back': {'contacts': int(keep2.sum()), 'prev_after_take': ci2('prev_flight'), 'prev_extra_after_swing': ci2('prev_flight_x_swung'),
+                                  'two_back_after_take': ci2('two_back'), 'two_back_extra_after_swing': ci2('two_back_x_swung')},
+                     'speed_follow_within_pitcher': {'contacts': int(keep3.sum()), 'in_per_10ms': [round(float(b3[0]), 4), round(float(lo3[0]), 4), round(float(hi3[0]), 4)],
+                                                     'share_not_retimed': round(float(b3[0] / U10), 4)}}
+        stage(f'depth {yr}')
+    res['contact_depth'] = depth
+    if train_year not in depth:
+        res['error'] = 'too few contact swings'; return res
+    # hitter traits on 2025
+    rel, traits = {}, {}
+    rs = base_ok & (year == train_year)
+    cs_ = {'own_flight_pitcher': center(ft, pkey, rs)[rs] / 10.0, **controls(rs)}
+    names3, X3, y3, keep3 = within(rs, pkey, cs_)
+    b3 = np.linalg.lstsq(X3, y3, rcond=None)[0]; res3 = y3 - X3 @ b3
+    r = ok & (year == train_year)
+    c_ = {'own_flight': ftc[r], 'prev_flight': f1c[r], 'prev_flight_x_swung': f1c[r] * sw1[r], 'prev_swung': sw1[r].astype(float), **controls(r)}
+    names, X, y, keep = within(r, gkey, c_)
+    b = np.linalg.lstsq(X, y, rcond=None)[0]; resid = y - X @ b
+    for nm, hit, x, rr, dd in (('speed_follow', batter[rs][keep3], X3[:, 0], res3, day[rs][keep3]),
+                               ('carried', batter[r][keep], (f1c[r] * sw1[r])[keep], resid, day[r][keep])):
+        s2 = float(np.var(rr)); half = dd >= date(train_year, 7, 1).toordinal()
+        full, sd, lam = _hitter_slopes(hit, x, rr, s2)
+        a_, _, _ = _hitter_slopes(hit[~half], x[~half], rr[~half], s2, 60)
+        b_, _, _ = _hitter_slopes(hit[half], x[half], rr[half], s2, 60)
+        common = [h for h in a_ if h in b_]
+        rel[nm] = {'between_hitter_sd_in_per_10ms': round(sd, 4) if sd else None, 'lambda': round(lam, 1) if lam else None, 'hitters': len(full),
+                   'hitters_both_halves': len(common),
+                   'corr_halves': round(float(np.corrcoef([a_[h] for h in common], [b_[h] for h in common])[0, 1]), 3) if len(common) > 20 else None}
+        traits[nm] = full
+    res['hitter_traits'] = rel
+    stage('hitter traits')
+    if not traits['speed_follow'] or not traits['carried']:
+        res['error'] = 'traits not estimable'; return res
+    sw_ok = swing & has1 & np.isfinite(f1) & np.isfinite(ft) & np.isfinite(u) & np.isfinite(z) & np.isfinite(cols['release_speed']) & (n_y >= 20)
+    n_w, s_w, _ = prior_stats(batter, day, whiff.astype(float), swing)
+    lw = float(whiff[swing & (year == train_year)].mean()); wr = (s_w + 200 * lw) / (n_w + 200)
+    dt1 = ft - f1
+    prev_grp = np.where(has1, grp[np.maximum(p1, 0)], -1)
+    allp = np.isfinite(ft)
+    slow = center(ft, pkey, allp) / 10.0                                                   # this pitch's flight against the pitcher's average
+    X_pitch = np.column_stack([cols['release_speed'], cols['pfx_x'] * np.where(throw_r, 1, -1), cols['pfx_z'], u, z, G['vaa'], G['haa'] * np.where(stand_r, 1, -1),
+                               cols['release_spin_rate'], cols['release_extension'], cols['release_pos_z'], cols['balls'], cols['strikes'], grp,
+                               (stand_r == throw_r).astype(float), ft, slow, dt1, np.abs(dt1), prev_grp, sw1.astype(float), np.log(wr / (1 - wr))])
+    t_sf = np.asarray([traits['speed_follow'].get(int(h_), np.nan) for h_ in batter]); t_car = np.asarray([traits['carried'].get(int(h_), np.nan) for h_ in batter])
+    tr = sw_ok & (year == train_year) & np.isfinite(t_sf) & np.isfinite(t_car) & np.isfinite(slow)
+    te = sw_ok & (year == test_year) & np.isfinite(t_sf) & np.isfinite(t_car) & np.isfinite(slow)
+    res['swings'] = {'train': int(tr.sum()), 'test': int(te.sum())}
+    if tr.sum() < 20000 or te.sum() < 5000:
+        res['error'] = 'too few swings'; return res
+    from sklearn.ensemble import HistGradientBoostingClassifier
+    yv = whiff.astype(float)
+    hp = dict(max_iter=int(params.get('gbm_iter', 300)), learning_rate=0.08, max_leaf_nodes=48, min_samples_leaf=200, l2_regularization=1.0, random_state=11)
+    oof = np.full(len(yv), np.nan); par = cols['game_pk'] % 2 == 0
+    for side in (True, False):
+        fr, pr = tr & (par == side), tr & (par != side)
+        oof[pr] = HistGradientBoostingClassifier(**hp).fit(X_pitch[fr], yv[fr]).predict_proba(X_pitch[pr])[:, 1]
+    p_te = HistGradientBoostingClassifier(**hp).fit(X_pitch[tr], yv[tr]).predict_proba(X_pitch[te])[:, 1]
+    lo_tr = np.log(np.clip(oof[tr], 1e-6, 1 - 1e-6) / np.clip(1 - oof[tr], 1e-6, 1)); lo_te = np.log(np.clip(p_te, 1e-6, 1 - 1e-6) / np.clip(1 - p_te, 1e-6, 1))
+    stage('whiff base')
+    adt = np.abs(dt1) / 10.0
+    terms = {'speed_follow': t_sf, 'speed_follow_x_slow': t_sf * slow, 'speed_follow_x_speed_change': t_sf * adt,
+             'carried': t_car, 'carried_x_speed_change_after_swing': t_car * adt * sw1}
+    yt = yv[te]; games = cols['game_pk'][te]; base_ll = logloss(p_te, yt)
+    tg = np.unique(cols['game_pk'][tr]); gi_ = np.searchsorted(tg, cols['game_pk'][tr])
+    out = {}
+    for name, cl in (('speed_follow', ['speed_follow', 'speed_follow_x_slow', 'speed_follow_x_speed_change']),
+                     ('carried', ['carried', 'carried_x_speed_change_after_swing']),
+                     ('both', ['speed_follow', 'speed_follow_x_slow', 'speed_follow_x_speed_change', 'carried', 'carried_x_speed_change_after_swing'])):
+        Ttr = np.column_stack([terms[k][tr] for k in cl]); Tte = np.column_stack([terms[k][te] for k in cl])
+        bb = offset_fit(lo_tr, Ttr, yv[tr])
+        pt = 1 / (1 + np.exp(-(lo_te + bb[0] + Tte @ bb[1:])))
+        rng = np.random.default_rng(5); bsd = []
+        for _ in range(int(params.get('reps', 60))):
+            w = np.bincount(rng.integers(0, len(tg), len(tg)), minlength=len(tg))[gi_]; sel = np.repeat(np.arange(int(tr.sum())), w)
+            bsd.append(offset_fit(lo_tr[sel], Ttr[sel], yv[tr][sel], iters=20)[1:])
+        bsd = np.asarray(bsd)
+        out[name] = {'coefs': {k: [round(float(bb[1 + q]), 4), round(float(np.percentile(bsd[:, q], 2.5)), 4), round(float(np.percentile(bsd[:, q], 97.5)), 4)] for q, k in enumerate(cl)},
+                     'gain_nats_per_1000_swings': clustered(base_ll - logloss(pt, yt), games)}
+    res['whiffs'] = out
+    res['trait_sd_on_test_swings'] = {'speed_follow': round(float(np.std(t_sf[te])), 4), 'carried': round(float(np.std(t_car[te])), 4),
+                                      'corr': round(float(np.corrcoef(t_sf[te], t_car[te])[0, 1]), 3)}
+    # observed misses on slow pitches (at least 25 ms slower than the pitcher's average) by speed-follow thirds
+    q = np.nanpercentile(t_sf[te], [33.3, 66.7]); sl = slow[te] >= 2.5
+    res['slow_pitches_by_speed_follow'] = {nm: {'swings': int((m & sl).sum()), 'observed': round(float(yt[m & sl].mean()), 4), 'base_model': round(float(p_te[m & sl].mean()), 4)}
+                                           for nm, m in (('follows_most', t_sf[te] >= q[1]), ('follows_least', t_sf[te] <= q[0]))}
+    stage('whiffs')
+    return res
