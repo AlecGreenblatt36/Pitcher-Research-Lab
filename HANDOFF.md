@@ -33,25 +33,31 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
-### In flight (updated 8:15 p.m. Eastern)
+### In flight (updated 10:30 p.m. Eastern)
 
-Replays queued or running (evaluate with scratch trans/pooled_eval.py NEW26:REF26 NEW25:REF25, trans/staff_split.py,
-trans/team_rates.py, trans/starter_leash.py and harness/starter_eval.py; references are v2-prod-trans-ctx-1000-YYYY):
-- BULLPEN-02 (choice + exits): 37857987864 (2026), 37858023424 (2025), tags v2-prod-trans-ctx-pen-1000-YYYY.
-- RELIEF-03 (team hooks on top): 37860073667 (2026), 37860108046 (2025), tags v2-prod-trans-ctx-penh-1000-YYYY, judged
-  against BULLPEN-02.
-- RUNS-02 2025: 37856998314 (2026 read: mean total +0.07, walks unchanged, win Brier +0.00007, squared error +0.020).
-- PROD-02 (the package; registered in commit 41e65cb5): P1 37863329907 (2026) and 37863360862 (2025), P2 (+ shape)
-  37863398520 and 37863432413; tags v2-prod2-p1-1000-YYYY and v2-prod2-p2-1000-YYYY. This is the test that decides what
-  goes live; the decision rule is in its ledger row.
+PROD-02 failed (ledger): the package with the running plays made win chances better (pooled -0.00033) but total runs
+worse in both seasons (squared error +0.063 and +0.067), the plays' own miss. The plays stay off until the source of
+the simulator's extra runs is found (RUNS-03). Who bats is ruled out: substitutes hit about as well as the starters
+they replace (scratch trans/who_bats.py, effect -0.003 to -0.012 runs a game).
 
-Also queued: DISP-01 (day-form shock for game-to-game spread, registered in commit 80be5e5e): 37864772513 (2026) and
-37864803481 (2025), tags v2-prod-trans-ctx-df-1000-YYYY. One-shot evaluation of a package: scratch trans/package_eval.sh
-PREFIX (e.g. v2-prod2-p1-1000), plus harness/taught_small.py S1 TAG25 TAG26 for the taught headline refit.
+Replays queued or running (references are v2-prod-trans-ctx-1000-YYYY; one-shot package evaluation: scratch
+trans/package_eval.sh PREFIX; totals detail trans/total_decomp.py NEW REF; headline refit harness/taught_small.py S1
+TAG25 TAG26). The account's runner token cannot cancel runs, so everything queued runs:
+- PROD-03 (bullpen choice, exits, hooks and the starter leash, no plays; do-no-harm rule in its row): tags
+  v2-prod3-1000-2026 and v2-prod3-1000-2025. This is the test that decides what goes live next.
+- LIVE-05 (in-game win chance with the PROD-03 package, 2026): v2-prod-trans-ctx-ws-1000-2026 (reference) and
+  v2-prod3-ws-1000-2026; score with harness/ingame_eval2.py style cross-fit, paired by game.
+- DISP-01 (day-form shock): 37864772513 (2026) and 37864803481 (2025), tags v2-prod-trans-ctx-df-1000-YYYY.
+- RUNS-03 (simulated runs by inning against real): 37869327258, tag v2-prod-trans-ctx-inn-1000-2026; scratch
+  trans/runs_by_inning.py.
+- PROD-02 P2 (shape inside the package; cannot pass, recorded for the shape only): 37863398520, 37863432413.
 
-Recorded today: TRANS-02, BULLPEN-01, BULLPEN-02 (pooled bound missed by 0.000004), LEASH-01, RUNS-02 (none switched on
-under their own rules; all retested in PROD-02), RUNS-01, RUN-03, DISC-08, POST-02 (postseason exit offset, acts only
-with the fitted exits).
+If PROD-03 passes: ADJUST reliever_choice, relief_exit, relief_hooks, leash on (the postseason exit offset +0.4 then
+acts in Wild Card, Division and League series games); refit the taught headline on the PROD-03 replays and add a new
+version with a future effective time if the weights move; check the next live run's boxes and the phone check.
+
+Recorded today: TRANS-02, BULLPEN-01, BULLPEN-02 (pooled bound missed by 0.000004), LEASH-01, RUNS-02, RELIEF-03
+(passes, on with the package), PROD-02 (fails on totals), RUNS-01, RUN-03, DISC-08, POST-02 (postseason exit offset).
 
 Private pages: Decision Horizon (discovery, version 10) and Going to the Pen (bullpen management measured,
 https://claude.ai/artifact/KyCZ1uYHxQmSEribmxwuQA; source in the scratchpad pen_page/).
