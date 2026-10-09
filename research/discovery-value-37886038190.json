@@ -1,0 +1,114 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "value",
+ "run_id": "37886038190",
+ "params": {
+  "experiment": "value",
+  "final_eval": true,
+  "frozen_commit": "63623e0f",
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ]
+ },
+ "started_at": "2026-10-09T04:54:47.224475+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 11.0
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 22.3
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 33.4
+  },
+  {
+   "stage": "maps 711",
+   "at_seconds": 69.2
+  },
+  {
+   "stage": "regression own_map",
+   "at_seconds": 71.1
+  },
+  {
+   "stage": "regression placebo_other_hitter",
+   "at_seconds": 72.2
+  },
+  {
+   "stage": "aiming",
+   "at_seconds": 77.2
+  }
+ ],
+ "final_eval": {
+  "frozen_commit": "63623e0f",
+  "untouched_rows": 228549
+ },
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 713382
+ },
+ "results": {
+  "plate_appearance_run_value": {
+   "own_map": {
+    "runs_per_point_outside": [
+     -0.000946,
+     -0.00122,
+     -0.000608
+    ],
+    "runs_per_point_inside": [
+     0.000384,
+     2.5e-05,
+     0.000843
+    ]
+   },
+   "placebo_other_hitter": {
+    "runs_per_point_outside": [
+     -0.000186,
+     -0.000535,
+     0.000173
+    ],
+    "runs_per_point_inside": [
+     -0.000132,
+     -0.000501,
+     0.000167
+    ]
+   }
+  },
+  "rows": {
+   "test_pitches": 184318,
+   "test_season": 2026,
+   "outside_share": 0.4791,
+   "d_sd_points_outside": 8.063,
+   "d_sd_points_inside": 7.453,
+   "outside_pitches_per_pa": 1.876
+  },
+  "aiming": {
+   "best_third_minus_average_points": 6.251,
+   "runs_per_plate_appearance": [
+    -0.01109,
+    -0.01431,
+    -0.00713
+   ],
+   "runs_per_6200_plate_appearances": [
+    -68.8,
+    -88.7,
+    -44.2
+   ],
+   "note": "hitter run values (negative = runs saved by the pitcher); aiming every outside pitch at the best third of the pitcher's own outside locations for that hitter, within thirds of the league swing chance so the location stays as good in general, the effect of each pitch on its plate appearance as measured above"
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T04:56:04.484044+00:00",
+ "seconds": 77.3
+}
