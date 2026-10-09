@@ -1,0 +1,84 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "feed_vs_savant",
+ "run_id": "37878183381",
+ "params": {
+  "experiment": "feed_vs_savant",
+  "seasons": [
+   2025,
+   2026
+  ]
+ },
+ "started_at": "2026-10-09T03:41:47.450284+00:00",
+ "stages": [
+  {
+   "stage": "load 2025",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "compared 2025",
+   "at_seconds": 13.5
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 13.5
+  },
+  {
+   "stage": "compared 2026",
+   "at_seconds": 27.4
+  }
+ ],
+ "results": {
+  "2025": {
+   "matched": 708985,
+   "feed_pitches": 708985,
+   "savant_pitches": 712528,
+   "feed_minus_savant_plate_z_in": 0.003,
+   "feed_minus_front_z_in": 0.003,
+   "feed_minus_middle_z_in": 0.949,
+   "abs_feed_minus_savant_plate_z_p90_in": 0.055,
+   "feed_minus_savant_plate_x_in": 0.0,
+   "savant_plate_reference": {
+    "front": {
+     "release_height_offset_in": -0.003,
+     "sd_in": 0.043,
+     "release_side_offset_in": -0.0,
+     "n": 709823
+    },
+    "middle": {
+     "release_height_offset_in": 0.944,
+     "sd_in": 0.301,
+     "release_side_offset_in": -0.128,
+     "n": 709823
+    }
+   }
+  },
+  "2026": {
+   "matched": 484833,
+   "feed_pitches": 484833,
+   "savant_pitches": 487063,
+   "feed_minus_savant_plate_z_in": 0.939,
+   "feed_minus_front_z_in": 0.003,
+   "feed_minus_middle_z_in": 0.939,
+   "abs_feed_minus_savant_plate_z_p90_in": 1.36,
+   "feed_minus_savant_plate_x_in": -0.11,
+   "savant_plate_reference": {
+    "front": {
+     "release_height_offset_in": -0.94,
+     "sd_in": 0.299,
+     "release_side_offset_in": 0.11,
+     "n": 484665
+    },
+    "middle": {
+     "release_height_offset_in": -0.003,
+     "sd_in": 0.043,
+     "release_side_offset_in": -0.0,
+     "n": 484665
+    }
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T03:42:14.817729+00:00",
+ "seconds": 27.4
+}
