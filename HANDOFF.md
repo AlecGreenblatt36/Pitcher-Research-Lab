@@ -33,7 +33,7 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
-### In flight (updated 10:30 p.m. Eastern)
+### In flight (updated 10:30 p.m. Eastern; see the matchup section below for 12:30 a.m. October 9)
 
 PROD-02 failed (ledger): the package with the running plays made win chances better (pooled -0.00033) but total runs
 worse in both seasons (squared error +0.063 and +0.067), the plays' own miss. The plays stay off until the source of
@@ -69,18 +69,36 @@ advantage), keep the product running, keep an untouched evaluation. Plan, mechan
 discovery/MATCHUP_PROGRAM.md. Untouched set for the program: 2026 pitches from August 1 and the 2026 postseason
 (dropped in code; one scoring per frozen candidate). Evidence rules for everything: top of LEDGER.md.
 
-Results so far (ledger rows): MATCHUP-01 holds (hitter swing maps at the decision moment beat standard hitter heat maps
-by 36.5 nats per 1,000 decisions on 2025; matchup chase deviations calibrated, slope 0.98). FATIGUE-01: velocity drift
-and slow starts cost runs; the times-through-the-order penalty is not velocity fatigue. SEQ-01: pitch-type surprise
-adds nothing (ruled out). ZONE-01 inconclusive (confounded); ZONE-02 measures the 2026 plate reference directly.
-DISP-01 failed its pooled bound by 0.00005 (not on). METHOD-01: paired streams cut replay comparison noise 71 to 84%.
+Credited on the untouched set (frozen code, one scoring each; ledger rows):
+- MATCHUP-01F: hitter swing maps read at the decision moment (gravity-only projection 260 ms out) beat the standard
+  hitter heat map on the true crossing by 40.2 nats per 1,000 decisions [38.5, 41.8] on every 2026 decision from
+  August 1 (development 36.5); pair chase slope 0.95 [0.66, 1.19] (820 pairs). Frozen commit 45576a52.
+- CONTACT-03: the contact window (spread of a hitter's contact depth, Savant bat tracking, earlier swings) predicts
+  misses beyond his whiff rate: +0.16 nats per 1,000 swings [0.05, 0.27], coefficient -0.86 per 10 inches; the
+  flexible swing-geometry model +1.07. Frozen commit 618cc7f3. Reading: contact depth is only seen on contact, so its
+  spread is the hitter's window, not timing error (the M1 equation's assumption was wrong in sign).
 
-Queued or running (discovery lane, experiments in tools/brl_discovery.py and tools/brl_matchup.py, receipts
-research/discovery-<experiment>-<run>.json): MATCHUP-02 (matchups to strikeouts and walks), EXPOSURE-01 (pitch-type
-familiarity), CONTACT-01 (swing plane against pitch plane, Savant 2025-2026 in private/savant/), MATCHUP-03 (whiff
-maps), ZONE-02, DRIFT-01. Built and off until tested: brl_live.provider_adjust.MatchupAdjust, experiment
-matchup_table (sealed pair tables, private/matchup/), replay param matchup. Every experiment was checked on synthetic
-planted and null worlds before it ran (scripts in the scratchpad matchup/).
+Development results since (October 8 night): MATCHUP-03 hitter whiff maps +6.5 on the true crossing (misses follow
+where the ball arrives, swing decisions follow the decision moment: two clocks); STEER-01 falsifier triggered (one
+map cannot locate a steering limit); ENGINE-01 pitch-by-pitch engine: pair strikeout and walk effects real
+(+0.023 and +0.065 per point) but about 0.4 points of rate, no simulator layer, scouting view; MATCHUP-02 chasing
+lowers walks; DRIFT-01 failed (maps are no early warning); ZONE-02 the feed stayed at the front of the plate in 2026
+(only Savant moved), pool feed seasons as reported; TIMING-01/02 sequence effects in contact depth (within
+pitcher-type: after a taken slower pitch contact comes earlier, +0.10 inches per 10 ms; after a missed slower pitch
+later; 23% of a flight-time difference between one pitcher's pitches is not re-timed; hitter speed-follow reliable,
+halves 0.54); TIMING-03 (cell fixed effects) running. Earlier: FATIGUE-01, SEQ-01, EXPOSURE-01 ruled out as TTO
+sources; METHOD-01 paired streams.
+
+Product: PROD-03 (fitted reliever choice and exits, team hooks, starter leash) passed its do-no-harm rule on both
+seasons; switching ADJUST is waiting for Alec's approval (the session's permission check blocks production changes
+without it). With it goes taught-v5 (intercept 0.0395, simulator 0.561, team model 0.524, refit on the PROD-03
+replays by harness/taught_small.py). LIVE-05 (in-game, W26R done, W26P running) decides whether it stays on in-game.
+
+Experiments live in tools/brl_discovery.py (feed) and tools/brl_matchup.py (Savant; params experiment "contact" with
+"study": contact, decompose, timing, timing2, timing3, contact_final). Every experiment was checked on synthetic
+planted and null worlds before it ran (scripts in the scratchpad matchup/). Built and off: MatchupAdjust,
+matchup_table, replay param matchup (ENGINE-01 says no layer). CI skips pushes that only touch LEDGER.md, HANDOFF.md,
+discovery/** or tools/discovery_params.json.
 
 Runner capacity: the account runs about 20 jobs at once; replays (8 shards), discovery jobs, CI and the live slate
 share it. Keep research light while games are on (live slate runs every 15 minutes). CI no longer runs on diag/**.
