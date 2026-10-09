@@ -97,6 +97,9 @@ Credited (frozen code, scored once on the untouched months, August 1 to Septembe
   inputs (it beats our logistic model by 23 nats); the hitter-specific maps read at the decision moment still add
   about 3 nats per 1,000 decisions beyond boosting with the heat map, in 2025 and in 2026 through July, and +3.6
   [3.2, 4.2] on the untouched months (BENCH-01F, credited). The best swing model is boosting with both maps as inputs.
+  For misses the same test credits each hitter's whiff map on the true crossing at +8.2 nats per 1,000 swings beyond
+  boosting with his whiff rate (BENCH-02F), with the decision moment adding nothing to misses: the two clocks hold
+  against a flexible baseline. The program's swing and miss models are boosting with the maps as inputs.
 - **Misses and contact follow where the ball arrives** (MATCHUP-03, CONTACT-03, DAMAGE-01F). The spread of a hitter's
   contact depth from bat tracking is his contact window (contact depth is only seen on contact, so the spread is the
   range of timing he survives, not his timing error) and predicts misses beyond his whiff rate; damage on contact is
