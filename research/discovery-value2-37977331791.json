@@ -1,0 +1,371 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "value2",
+ "run_id": "37977331791",
+ "params": {
+  "experiment": "value2",
+  "seasons": [
+   2023,
+   2024,
+   2025
+  ],
+  "sigmas": [
+   0.6
+  ],
+  "within_type": true,
+  "specific": true,
+  "checks": true,
+  "reps": 150,
+  "estimand": "pitch",
+  "pool_from_train": true,
+  "reprice_boundary": true,
+  "reprice_bands": true,
+  "reprice_structural": true,
+  "placebo_draws": 5
+ },
+ "started_at": "2026-10-09T19:01:35.742880+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 8.2
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 16.3
+  },
+  {
+   "stage": "maps 604",
+   "at_seconds": 46.7
+  },
+  {
+   "stage": "swing model, 604 maps",
+   "at_seconds": 130.2
+  },
+  {
+   "stage": "models fitted",
+   "at_seconds": 172.0
+  },
+  {
+   "stage": "coefficients",
+   "at_seconds": 174.9
+  },
+  {
+   "stage": "aiming with scatter",
+   "at_seconds": 364.7
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985
+ },
+ "results": {
+  "count_values": {
+   "0-0": -0.0002,
+   "0-1": -0.0419,
+   "0-2": -0.0992,
+   "1-0": 0.0346,
+   "1-1": -0.0164,
+   "1-2": -0.0788,
+   "2-0": 0.092,
+   "2-1": 0.0315,
+   "2-2": -0.0419,
+   "3-0": 0.1967,
+   "3-1": 0.1317,
+   "3-2": 0.0487
+  },
+  "estimand": {
+   "kind": "pitch (telescoping realized value)"
+  },
+  "coefficients": {
+   "test_season": 2025,
+   "test_pitches": 617627,
+   "runs_per_point_outside": -0.00073,
+   "runs_per_point_inside": 0.000737,
+   "outside_pitches_per_pa": 1.932,
+   "inside_pitches_per_pa": 1.97,
+   "deviation": "own map minus the same-side mean map",
+   "shared_part_outside": -0.001829,
+   "shared_part_inside": 0.000473,
+   "sd_points_shared_outside": 2.468,
+   "sd_points_own_part_outside": 7.319
+  },
+  "coefficient_checks": {
+   "own_map": {
+    "outside": -0.00073,
+    "inside": 0.000737,
+    "outside_interval": [
+     -0.000817,
+     -0.000656
+    ],
+    "inside_interval": [
+     0.000617,
+     0.000863
+    ],
+    "sd_points_outside": 7.319,
+    "runs_per_6200_outside_at_0.6": -25.7,
+    "runs_per_6200_outside_interval_at_0.6": [
+     -28.7,
+     -23.1
+    ]
+   },
+   "placebo_other_hitter": {
+    "outside": 5.3e-05,
+    "inside": -1.9e-05,
+    "outside_interval": [
+     -3.4e-05,
+     0.000119
+    ],
+    "inside_interval": [
+     -0.000153,
+     0.000112
+    ],
+    "sd_points_outside": 7.083,
+    "outside_more_reassignments": [
+     -7.8e-05,
+     7.5e-05,
+     5.6e-05,
+     7.6e-05,
+     6.6e-05
+    ],
+    "outside_interval_reassignments": [
+     -7.8e-05,
+     7.6e-05
+    ],
+    "reassignments": 6,
+    "runs_per_6200_outside_at_0.6": 1.9,
+    "runs_per_6200_outside_interval_at_0.6": [
+     -1.2,
+     4.2
+    ]
+   },
+   "within_hitter_group_and_zone_side": {
+    "outside": -0.000682,
+    "inside": 0.000688,
+    "outside_interval": [
+     -0.000768,
+     -0.000601
+    ],
+    "inside_interval": [
+     0.000551,
+     0.000826
+    ],
+    "sd_points_outside": 6.66,
+    "runs_per_6200_outside_at_0.6": -24.0,
+    "runs_per_6200_outside_interval_at_0.6": [
+     -27.0,
+     -21.1
+    ]
+   },
+   "within_pa_correlation_outside": 0.1693,
+   "own_map_holding_pa_others": {
+    "outside": -0.00075,
+    "inside": 0.000723,
+    "outside_interval": [
+     -0.000832,
+     -0.000659
+    ],
+    "inside_interval": [
+     0.000593,
+     0.000839
+    ],
+    "others_outside": 0.000112,
+    "others_inside": 1.3e-05,
+    "runs_per_6200_outside_at_0.6": -26.4,
+    "runs_per_6200_outside_interval_at_0.6": [
+     -29.2,
+     -23.2
+    ]
+   },
+   "within_hitter_holding_pa_others": {
+    "outside": -0.000695,
+    "inside": 0.000678,
+    "outside_interval": [
+     -0.000793,
+     -0.000601
+    ],
+    "inside_interval": [
+     0.00053,
+     0.000819
+    ],
+    "others_outside": 0.00015,
+    "others_inside": 4e-06,
+    "runs_per_6200_outside_at_0.6": -24.4,
+    "runs_per_6200_outside_interval_at_0.6": [
+     -27.9,
+     -21.1
+    ]
+   }
+  },
+  "coefficients_by_band": {
+   "inside_2in_plus": {
+    "runs_per_point": 0.000969,
+    "interval": [
+     0.00082,
+     0.001123
+    ],
+    "pitches": 232138
+   },
+   "inside_0_2in": {
+    "runs_per_point": 0.00028,
+    "interval": [
+     5.1e-05,
+     0.000466
+    ],
+    "pitches": 77729
+   },
+   "outside_0_1in": {
+    "runs_per_point": -0.000168,
+    "interval": [
+     -0.000408,
+     8.5e-05
+    ],
+    "pitches": 37721
+   },
+   "outside_1_2in": {
+    "runs_per_point": -0.000422,
+    "interval": [
+     -0.000676,
+     -0.000191
+    ],
+    "pitches": 33080
+   },
+   "outside_2_4in": {
+    "runs_per_point": -0.000575,
+    "interval": [
+     -0.000715,
+     -0.000413
+    ],
+    "pitches": 62476
+   },
+   "outside_4in_plus": {
+    "runs_per_point": -0.001055,
+    "interval": [
+     -0.001139,
+     -0.000962
+    ],
+    "pitches": 174483
+   }
+  },
+  "own_part_calibration": {
+   "outside": {
+    "slope": 0.9534,
+    "interval": [
+     0.9316,
+     0.9724
+    ]
+   },
+   "inside": {
+    "slope": 0.8202,
+    "interval": [
+     0.7962,
+     0.8449
+    ]
+   },
+   "note": "test-season swing residual (actual minus the league with the shared shape) regressed on the own part in probability units; 1 means a fitted point is a real point"
+  },
+  "structural_at_test_pitches": {
+   "mean_tau_outside": -0.001157,
+   "mean_tau_inside": 0.000705,
+   "sd_tau_outside": 0.00088,
+   "implied_runs_per_point_outside": -0.001155,
+   "implied_runs_per_point_inside": 0.000391,
+   "regression_runs_per_point_outside": -0.00073,
+   "regression_runs_per_point_inside": 0.000737
+  },
+  "structural_calibration": {
+   "slope_realized_on_expected": 0.9464,
+   "mean_expected": -0.00551,
+   "mean_realized": 0.00025,
+   "slope_outside": 0.9261,
+   "slope_inside": 0.9811,
+   "slope_swing_value_on_swings": 1.0929,
+   "mean_swing_value_minus_realized_on_swings": -0.00382,
+   "slope_take_value_on_takes": 0.9909,
+   "mean_take_value_minus_realized_on_takes": -0.00212,
+   "outside_swings": {
+    "mean_swing_value_minus_realized": 0.00188,
+    "n": 87367
+   },
+   "outside_takes": {
+    "mean_take_value_minus_realized": -0.00214,
+    "n": 218404
+   },
+   "swing_minus_take_structural_outside_mean": -0.11567
+  },
+  "by_command_sd_ft": {
+   "0.6": {
+    "outside_gain_points": 2.934,
+    "inside_gain_points": -2.863,
+    "runs_per_6200_outside_only_interval": [
+     -28.7,
+     -23.1
+    ],
+    "runs_per_6200_both_interval": [
+     -56.9,
+     -46.3
+    ],
+    "runs_per_6200_outside_only": -25.7,
+    "runs_per_6200_inside_only": -25.8,
+    "runs_per_6200_both": -51.4
+   }
+  },
+  "repriced_by_side": {
+   "0.6": {
+    "runs_per_outside_pitch": -0.001798,
+    "runs_per_inside_pitch": -0.001487,
+    "runs_per_6200_outside_only": -21.5,
+    "runs_per_6200_outside_only_interval": [
+     -24.1,
+     -19.3
+    ]
+   }
+  },
+  "repriced_note": "each scattered pitch priced with the coefficient of the side of the zone it crosses (VALUE-17); the interval scales the outside coefficient draws only",
+  "repriced_by_band": {
+   "0.6": {
+    "runs_per_outside_pitch": -0.00216,
+    "runs_per_inside_pitch": -0.001595,
+    "runs_per_6200_outside_only": -25.9,
+    "runs_per_6200_outside_only_interval": [
+     -27.8,
+     -23.9
+    ],
+    "chosen_points_by_band_outside": {
+     "inside_2in_plus": -0.092,
+     "inside_0_2in": 0.008,
+     "outside_0_1in": 0.09,
+     "outside_1_2in": 0.141,
+     "outside_2_4in": 0.367,
+     "outside_4in_plus": 1.695
+    }
+   }
+  },
+  "repriced_by_band_note": "each scattered pitch priced with the run value per point of the distance band it crosses in (VALUE-17); the interval resamples the band coefficients by game with the chosen spots fixed",
+  "repriced_structural": {
+   "0.6": {
+    "runs_per_outside_pitch": -0.003614,
+    "runs_per_inside_pitch": -0.001775,
+    "runs_per_6200_outside_only": -43.3,
+    "runs_per_6200_inside_only": -21.7,
+    "runs_per_6200_outside_only_interval_by_hitter": [
+     -45.0,
+     -41.3
+    ],
+    "runs_per_6200_outside_only_interval": [
+     -45.3,
+     -41.0
+    ],
+    "hitters": 476
+   }
+  },
+  "repriced_structural_note": "each scattered aim priced by the engine: the hitter's own swing part, scaled by its out-of-sample calibration on the test season's swings, times (value if swing minus value if take) from the whiff, called-strike, foul and contact models with the hitter's and pitcher's terms and the training count values (VALUE-18); the interval resamples hitters and the calibration slope by game"
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T19:07:40.450621+00:00",
+ "seconds": 364.7
+}
