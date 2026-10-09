@@ -1,0 +1,149 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "matchup_swing",
+ "run_id": "37923262346",
+ "params": {
+  "experiment": "matchup_swing",
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "train": [
+   2023,
+   2024,
+   2025
+  ],
+  "test": 2026,
+  "zone_relative": true
+ },
+ "started_at": "2026-10-09T11:22:16.534875+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 8.2
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 16.4
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 24.5
+  },
+  {
+   "stage": "features",
+   "at_seconds": 34.4
+  },
+  {
+   "stage": "representation percept",
+   "at_seconds": 66.3
+  },
+  {
+   "stage": "representation percept_zone",
+   "at_seconds": 95.5
+  },
+  {
+   "stage": "pairs",
+   "at_seconds": 107.9
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 484833
+ },
+ "results": {
+  "batter_zones": {
+   "top": {
+    "league_ft": 3.57,
+    "batters": 752,
+    "batter_p10_p50_p90": [
+     3.443,
+     3.561,
+     3.648
+    ]
+   },
+   "bot": {
+    "league_ft": 1.54,
+    "batters": 807,
+    "batter_p10_p50_p90": [
+     1.478,
+     1.54,
+     1.615
+    ]
+   }
+  },
+  "representations": {
+   "percept": {
+    "shrinkage_chosen": 10.0,
+    "validation_logloss": {
+     "3.0": 0.45518,
+     "10.0": 0.45491,
+     "30.0": 0.45564,
+     "100.0": 0.45837,
+     "300.0": 0.46212
+    },
+    "test_logloss_league": 0.47258,
+    "test_logloss_hitter_maps": 0.46005,
+    "test_share_with_hitter_map": 0.8844
+   },
+   "percept_zone": {
+    "shrinkage_chosen": 10.0,
+    "validation_logloss": {
+     "3.0": 0.45508,
+     "10.0": 0.45474,
+     "30.0": 0.45533,
+     "100.0": 0.45779,
+     "300.0": 0.46127
+    },
+    "test_logloss_league": 0.47158,
+    "test_logloss_hitter_maps": 0.46002,
+    "test_share_with_hitter_map": 0.8844
+   }
+  },
+  "gain_nats_per_1000_decisions": {
+   "zone_over_fixed_league": [
+    0.993,
+    0.786,
+    1.208
+   ],
+   "zone_over_fixed_hitter_maps": [
+    0.026,
+    -0.06,
+    0.129
+   ],
+   "hitter_maps_over_league_fixed": [
+    12.527,
+    11.986,
+    13.128
+   ],
+   "hitter_maps_over_league_zone": [
+    11.56,
+    11.065,
+    12.102
+   ]
+  },
+  "pairs_outside_zone": {
+   "pairs": 2633,
+   "pitches": 32230,
+   "sd_observed_minus_additive": 0.1364,
+   "sd_predicted_pair_effect": 0.0344,
+   "corr": 0.281,
+   "slope_observed_on_predicted": [
+    1.124,
+    0.987,
+    1.28
+   ]
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T11:24:04.488672+00:00",
+ "seconds": 108.0
+}
