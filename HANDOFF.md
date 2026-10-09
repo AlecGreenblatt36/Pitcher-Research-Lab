@@ -33,7 +33,17 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
-### In flight (updated 10:30 p.m. Eastern; see the matchup section below for 12:30 a.m. October 9)
+### In flight (updated 3:45 a.m. Eastern October 9)
+
+- CLV-03 replays (line movement with open-time lineups): tags clv3-proj-500-2026, clv3-act-500-2026,
+  clv3-proj-500-2025, clv3-act-500-2025 (runs 37899877774, 37899904754, 37899932178, 37899958040; 8 shards each).
+  When done: git fetch origin brl-live-data, then python3 S1/harness/clv3.py S1 (S1 = the older scratchpad with
+  harness/). Record under CLV-03; any public wording change is a production change and needs Alec's approval.
+- VALUE-14 (outcome channels of the own-part edge; runs 37900252781 and 37900274732): record in the ledger.
+- FWD-01 runs after the World Series (instructions in the matchup section).
+- Awaiting Alec: the PROD-03 switch (taught-v5 with it) and publishing the Matchup Physics page.
+
+Earlier (10:30 p.m. October 8):
 
 PROD-02 failed (ledger): the package with the running plays made win chances better (pooled -0.00033) but total runs
 worse in both seasons (squared error +0.063 and +0.067), the plays' own miss. The plays stay off until the source of
