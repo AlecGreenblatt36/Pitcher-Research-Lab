@@ -2484,6 +2484,77 @@ def matchup_swing(T: dict, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- MATCHUP-01, scored once on the untouched set
+def harmonize_2026(T: dict) -> dict:
+    """2026 feed locations measured at the middle of the plate, moved to the front (the earlier seasons' reference):
+    each pitch's height and side minus what its flight does over the 8.5 inches between the two."""
+    T = dict(T)
+    F = rebuild(T)
+    m = (T['season'] == 2026) & F['ok']
+    vy = (T['v1'].astype(np.float64)) * FT_PER_MPH
+    dt = (YPLATE - 8.5 / 12.0) / vy
+    vz = F['vz0'] + F['az'] * F['tf']; vx = F['vx0'] + F['ax'] * F['tf']
+    T['pz'] = np.where(m, T['pz'] - vz * dt, T['pz']).astype(np.float32)
+    T['px'] = np.where(m, T['px'] - vx * dt, T['px']).astype(np.float32)
+    return T
+
+
+def matchup_final(T: dict, params: dict, stage) -> dict:
+    """The frozen MATCHUP-01 model (league and hitter maps at the decision moment, shrinkage 10, tau 0.26) fitted on
+    2023-2025 and scored once on the 2026 pitches from August 1 (the program's untouched set)."""
+    if not params.get('final_eval') or not params.get('frozen_commit'):
+        raise ValueError('matchup_final runs only as the registered final evaluation of a frozen commit')
+    if params.get('harmonize_2026'):
+        T = harmonize_2026(T)
+    test_from = date(2026, 8, 1).toordinal()
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | ((T['season'] == 2026) & (T['day'] >= test_from)))
+    F = rebuild(T)
+    keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['strikes'] >= 0) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
+    T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
+    swing = ((T['call'] == 1) | (T['call'] == 2)).astype(np.float64)
+    xp, zp = projected(T, F, None, 'straight', 0.26)
+    C = np.hstack([control_block(T, swing_propensity(T)), pitcher_propensity(T)[:, None].astype(np.float32)])
+    tr = T['season'] <= 2025; te = T['season'] == 2026
+    rng = np.random.default_rng(11)
+    preds = {}
+    for name, (x, z) in (('true', (T['px'].astype(np.float64), T['pz'].astype(np.float64))), ('percept', (xp, zp))):
+        X = np.hstack([location_block(x, z, T['stand_r'], T['strikes']), C])
+        idx = np.flatnonzero(tr); idx = rng.choice(idx, min(len(idx), 600000), replace=False)
+        off = fit_logistic(X[idx], swing[idx]).decision_function(X)
+        Bm = hitter_basis(x, z, T['stand_r'], T['strikes'])
+        lo = off.copy(); cov = np.zeros(len(off), bool)
+        ge = _groups(T['batter'], te)
+        for h, b in _hitter_maps(Bm, swing, off, _groups(T['batter'], tr), 10.0, 300).items():
+            if h in ge:
+                e = ge[h]; lo[e] += Bm[e] @ b; cov[e] = True
+        preds[name] = (1 / (1 + np.exp(-off[te])), 1 / (1 + np.exp(-lo[te])), float(cov[te].mean()))
+        stage('final ' + name)
+    yt = swing[te]; g = T['game'][te]
+    lt, ht = logloss_vec(preds['true'][0], yt), logloss_vec(preds['true'][1], yt)
+    lp, hp = logloss_vec(preds['percept'][0], yt), logloss_vec(preds['percept'][1], yt)
+    cc = lambda d: [round(v * 1000, 3) for v in clustered_ci(d, g)]
+    res = {'test_decisions': int(te.sum()), 'covered': round(preds['percept'][2], 4),
+           'gain_nats_per_1000_decisions': {'percept_over_true_league': cc(lt - lp), 'percept_over_true_hitter_maps': cc(ht - hp),
+                                            'hitter_maps_over_league_true': cc(lt - ht), 'hitter_maps_over_league_percept': cc(lp - hp)}}
+    xt, zt = T['px'][te], T['pz'][te]
+    u = np.where(T['stand_r'][te] == 1, xt, -xt)
+    outside = (np.abs(u) > ZONE_HALF) | (zt > ZONE_TOP) | (zt < ZONE_BOT)
+    pair = T['batter'][te].astype(np.int64) * 1_000_000 + T['pitcher'][te].astype(np.int64)
+    pl, ph = preds['percept'][0], preds['percept'][1]
+    rows = []
+    for k in np.unique(pair[outside]):
+        sel = outside & (pair == k)
+        if sel.sum() >= 10:
+            rows.append((sel.sum(), yt[sel].mean(), pl[sel].mean(), ph[sel].mean()))
+    if rows:
+        R = np.asarray(rows, float); w = R[:, 0]; resid = R[:, 1] - R[:, 2]; pred = R[:, 3] - R[:, 2]
+        bs = []
+        for _ in range(300):
+            j = rng.integers(0, len(R), len(R)); bs.append(np.sum(w[j] * pred[j] * resid[j]) / max(np.sum(w[j] * pred[j] ** 2), 1e-12))
+        res['pairs_outside_zone'] = {'pairs': int(len(R)), 'slope': [round(float(np.sum(w * pred * resid) / np.sum(w * pred * pred)), 3), round(float(np.percentile(bs, 2.5)), 3), round(float(np.percentile(bs, 97.5)), 3)]}
+    return res
+
+
 # ---------------------------------------------------------------- MATCHUP-03: hitters' whiff maps at the decision moment
 def _hitter_maps(Bm, y, off, groups_fit, lam, min_n):
     return {h: _ridge_offset(Bm[r], y[r], off[r], lam) for h, r in groups_fit.items() if len(r) >= min_n}
@@ -3317,6 +3388,11 @@ def main():
                 raise ValueError('study schema mismatch')
             tables.append(pitch_table(doc, int(year))); del doc, raw
         T = concat(tables); del tables
+        untouched = (T['season'] == 2026) & (T['day'] >= date(2026, 8, 1).toordinal())
+        if params.get('final_eval'):
+            receipt['final_eval'] = {'frozen_commit': params.get('frozen_commit'), 'untouched_rows': int(untouched.sum())}
+        else:
+            T = take(T, ~untouched)                       # the matchup program's untouched set never enters development runs
         receipt['seasons_rows'] = {int(s): int((T['season'] == s).sum()) for s in np.unique(T['season'])}
         if experiment == 'horizon':
             receipt['results'] = horizon(T, params, stage)
@@ -3360,6 +3436,8 @@ def main():
             receipt['results'] = exposure_study(T, params, stage)
         elif experiment == 'matchup_whiff':
             receipt['results'] = matchup_whiff(T, params, stage)
+        elif experiment == 'matchup_final':
+            receipt['results'] = matchup_final(T, params, stage)
         elif experiment == 'drift':
             receipt['results'] = drift_study(T, params, stage)
         elif experiment == 'matchup_table':
