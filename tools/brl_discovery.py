@@ -4222,8 +4222,8 @@ def value2_study(T: dict, params: dict, stage) -> dict:
         res['own_part_calibration']['note'] = 'test-season swing residual (actual minus the league with the shared shape) regressed on the own part in probability units; 1 means a fitted point is a real point'
         PM = PAModels(T, tr, np.random.default_rng(23), {'league_n': int(params.get('league_n', 500000)), 'min_pitches': 300}, stage)
         xoff_all, zoff_all = xp - T['px'].astype(np.float64), zp - T['pz'].astype(np.float64)   # decision-moment projection minus crossing, per pitch
-        if params.get('diag_hook') is not None:
-            # the structural per-point value at the test pitches themselves (for the synthetic worlds' comparison with the generator's)
+        if True:
+            # the structural per-point value at the test pitches themselves (its mean beside the regression's coefficient; the synthetic worlds compare it with the generator's)
             blk_t = PM.blocks_at(xp[ix], zp[ix], T['px'][ix].astype(np.float64), T['pz'][ix].astype(np.float64), T['stand_r'][ix], T['throw_r'][ix], T['group'][ix],
                                  T['v0'][ix].astype(np.float64), T['balls'][ix], T['strikes'][ix])
             tau_t = np.zeros(len(ix))
@@ -4232,9 +4232,16 @@ def value2_study(T: dict, params: dict, stage) -> dict:
                 pids = T['pitcher'][ix[rr]]
                 ps_ = np.array([PM.p_scalar.get(int(q), (0.0, PM.lg_bip))[0] for q in pids]); pb_ = np.array([PM.p_scalar.get(int(q), (0.0, PM.lg_bip))[1] for q in pids])
                 tau_t[rr] = 0.01 * PM.swing_minus_take(sub, int(h), (ps_, pb_), T['balls'][ix[rr]], T['strikes'][ix[rr]], cv)
-            params['diag_hook'](ix=ix, D=D, outside=outside, y=y, Xd=Xd, b=b, tau_struct=tau_t)
+            if params.get('diag_hook') is not None:
+                params['diag_hook'](ix=ix, D=D, outside=outside, y=y, Xd=Xd, b=b, tau_struct=tau_t)
+            # the structural value regressed the regression's way: the test pitches' structural own-part value (calibrated) on the fitted part with the
+            # same controls gives the per-point coefficient the structure implies, beside the realized-outcome regression's
+            v_struct = D * tau_t * np.where(outside, lam['outside'], lam['inside'])
+            bs_ = np.linalg.lstsq(Xd, v_struct, rcond=None)[0]
             res['structural_at_test_pitches'] = {'mean_tau_outside': round(float(tau_t[outside].mean()), 6), 'mean_tau_inside': round(float(tau_t[~outside].mean()), 6),
-                                                 'sd_tau_outside': round(float(tau_t[outside].std()), 6)}
+                                                 'sd_tau_outside': round(float(tau_t[outside].std()), 6),
+                                                 'implied_runs_per_point_outside': round(float(bs_[-2]), 6), 'implied_runs_per_point_inside': round(float(bs_[-1]), 6),
+                                                 'regression_runs_per_point_outside': round(b_out, 6), 'regression_runs_per_point_inside': round(b_in, 6)}
     stage('coefficients')
     sigmas = [float(v) for v in params.get('sigmas', (0.0, 0.3, 0.6, 0.9))]
     K = 16
