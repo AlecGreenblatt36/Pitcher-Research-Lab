@@ -282,6 +282,7 @@ def run_reps(kind: str, reps: int, seed0: int, params: dict, stage):
             pp = {'sigmas': sigmas, 'within_type': True, 'checks': True, 'specific': True, 'reps': int(params.get('boot_reps', 60)),
                   'estimand': est, 'pool_from_train': bool(params.get('pool_from_train', True)), 'reprice_boundary': bool(params.get('reprice_boundary', True)),
                   'reprice_bands': bool(params.get('reprice_bands', True)), 'reprice_structural': bool(params.get('reprice_structural', False)) and est == ests[-1],
+                  'map_draws': int(params.get('map_draws', 0)),
                   'placebo_draws': int(params.get('placebo_draws', 2)), 'aim_hook': pricer, 'diag_hook': pricer.regression_pieces}
             res = D.value2_study(T, pp, lambda s: None)
             c = res['coefficient_checks']; co = res['coefficients']
@@ -297,6 +298,7 @@ def run_reps(kind: str, reps: int, seed0: int, params: dict, stage):
                         'runs_6200_repriced': (res.get('repriced_by_side') or {}).get(str(sigmas[-1]), {}).get('runs_per_6200_outside_only'),
                         'runs_6200_structural': (res.get('repriced_structural') or {}).get(str(sigmas[-1]), {}).get('runs_per_6200_outside_only'),
                         'runs_6200_structural_inside': (res.get('repriced_structural') or {}).get(str(sigmas[-1]), {}).get('runs_per_6200_inside_only'),
+                        'structural_map_draws': (res.get('repriced_structural') or {}).get(str(sigmas[-1]), {}).get('map_draws'),
                         'runs_6200_points_inside': res['by_command_sd_ft'][str(sigmas[-1])]['runs_per_6200_inside_only'],
                         'runs_6200_structural_interval': (res.get('repriced_structural') or {}).get(str(sigmas[-1]), {}).get('runs_per_6200_outside_only_interval'),
                         'own_part_calibration': res.get('own_part_calibration'),
@@ -356,6 +358,13 @@ def summarize(rows: list, ests=('pa', 'pitch')) -> dict:
                 lo = np.array([r[est][ikey][0] if r[est].get(ikey) else np.nan for r in rows], float); hi = np.array([r[est][ikey][1] if r[est].get(ikey) else np.nan for r in rows], float)
                 d_['interval_covers_true'] = round(float(np.nanmean((lo <= tp) & (tp <= hi))), 3); d_['interval_excludes_zero'] = round(float(np.nanmean((lo > 0) | (hi < 0))), 3)
             blk[nm] = d_
+        md_ = [r[est].get('structural_map_draws') for r in rows]
+        if any(md_):
+            tp_s = np.array([r[est]['truth_policy_outside'].get('true_runs_per_6200_structural', np.nan) for r in rows], float)
+            lo_m = np.array([m['runs_per_6200_outside_only_interval_with_maps'][0] if m else np.nan for m in md_], float); hi_m = np.array([m['runs_per_6200_outside_only_interval_with_maps'][1] if m else np.nan for m in md_], float)
+            blk['structural']['interval_with_maps_covers_true'] = round(float(np.nanmean((lo_m <= tp_s) & (tp_s <= hi_m))), 3)
+            blk['structural']['sd_from_maps_mean'] = round(float(np.nanmean([m['sd_from_maps'] for m in md_ if m])), 1)
+            blk['structural']['sd_from_hitters_mean'] = round(float(np.nanmean([m['sd_from_hitters_and_calibration'] for m in md_ if m])), 1)
         summ[f'{est}_runs_6200'] = blk
         # the inside part (VALUE-18I): the structural estimate against the truth of its inside choices
         pin = [r[est]['truth_policy_inside'] for r in rows]

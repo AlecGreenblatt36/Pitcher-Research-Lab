@@ -4226,6 +4226,41 @@ def value2_study(T: dict, params: dict, stage) -> dict:
         res['own_part_calibration']['note'] = 'test-season swing residual (actual minus the league with the shared shape) regressed on the own part in probability units; 1 means a fitted point is a real point'
         PM = PAModels(T, tr, np.random.default_rng(23), {'league_n': int(params.get('league_n', 500000)), 'min_pitches': 300}, stage)
         xoff_all, zoff_all = xp - T['px'].astype(np.float64), zp - T['pz'].astype(np.float64)   # decision-moment projection minus crossing, per pitch
+        # VALUE-18J: the maps' own noise in the interval. Maps refitted on training games resampled with replacement (the league model and the
+        # engine held fixed), each draw with its own shared shape and calibration; the structural figure is recomputed per draw in the aiming loop
+        map_draws = []
+        n_draws = int(params.get('map_draws', 0))
+        if n_draws > 0:
+            rd = np.random.default_rng(37)
+            if not specific:
+                ub_, bi_ = np.unique(T['batter'][tr], return_inverse=True)
+                side_of = dict(zip(ub_.tolist(), np.round(np.bincount(bi_, weights=T['stand_r'][tr]) / np.bincount(bi_)).astype(int).tolist()))
+            tr_idx = np.flatnonzero(tr); g_tr = T['game'][tr_idx]
+            ug_tr, g_inv = np.unique(g_tr, return_inverse=True)
+            order_g = np.argsort(g_inv, kind='stable'); starts = np.searchsorted(g_inv[order_g], np.arange(len(ug_tr) + 1))
+            rows_by_game = [tr_idx[order_g[starts[i_]:starts[i_ + 1]]] for i_ in range(len(ug_tr))]
+            shrink_ = float(params.get('shrinkage', FAMILY_SHRINKAGE['location_by_family'] if fam else 10.0))
+            for d_ in range(n_draws):
+                pick = rd.integers(0, len(ug_tr), len(ug_tr))
+                idx_d = np.concatenate([rows_by_game[i_] for i_ in pick])
+                o_ = np.argsort(T['batter'][idx_d], kind='stable'); idx_d = idx_d[o_]; kb = T['batter'][idx_d]
+                cut = np.flatnonzero(np.diff(kb)) + 1
+                groups_d = {int(kb[a_]): idx_d[a_:b_] for a_, b_ in zip(np.r_[0, cut], np.r_[cut, len(idx_d)])}
+                maps_d = {h_: _ridge_offset(Bm[r_], swing[r_], off[r_], shrink_) for h_, r_ in groups_d.items() if len(r_) >= 300 and h_ in maps}
+                Ssum_d = {0: 0.0, 1: 0.0}; Nn_d = {0: 0, 1: 0}
+                for h_, m_ in maps_d.items():
+                    Ssum_d[side_of[h_]] = Ssum_d[side_of[h_]] + m_; Nn_d[side_of[h_]] += 1
+                mbar_d = {h_: (Ssum_d[side_of[h_]] - m_) / max(Nn_d[side_of[h_]] - 1, 1) for h_, m_ in maps_d.items()}
+                D_d = np.zeros(len(ix)); base_d = np.zeros(len(ix)); have_d = np.zeros(len(ix), bool)
+                for h_, rr_ in gb.items():
+                    if h_ in maps_d:
+                        base_d[rr_] = sig(off[ix[rr_]] + Bm[ix[rr_]] @ mbar_d[h_]); D_d[rr_] = (sig(off[ix[rr_]] + Bm[ix[rr_]] @ maps_d[h_]) - base_d[rr_]) * 100; have_d[rr_] = True
+                lam_d = {}
+                for zn_, m_ in (('outside', outside), ('inside', ~outside)):
+                    mm_ = m_ & have_d; x_ = D_d[mm_] / 100.0; r_ = swing[ix][mm_] - base_d[mm_]
+                    lam_d[zn_] = float(np.dot(x_, r_) / max(np.dot(x_, x_), 1e-12))
+                map_draws.append((maps_d, mbar_d, lam_d))
+            stage(f'map draws {n_draws}')
         if True:
             # the structural per-point value at the test pitches themselves (its mean beside the regression's coefficient; the synthetic worlds compare it with the generator's)
             blk_t = PM.blocks_at(xp[ix], zp[ix], T['px'][ix].astype(np.float64), T['pz'][ix].astype(np.float64), T['stand_r'][ix], T['throw_r'][ix], T['group'][ix],
@@ -4289,7 +4324,7 @@ def value2_study(T: dict, params: dict, stage) -> dict:
         u_all = np.where(T['stand_r'] == 1, xt_all, -xt_all)
         outside_all = np.maximum(np.maximum(np.abs(u_all) - ZONE_HALF, zt_all - ZONE_TOP), ZONE_BOT - zt_all) > 0
         cg_all = np.where(T['strikes'] == 2, 2, np.where(T['balls'] > T['strikes'], 1, 0)); pg_all = np.clip(T['group'], 0, 6)
-    acc_runs = {}; acc_expo = {}; acc_expo_s = {}; acc_hit = {}
+    acc_runs = {}; acc_expo = {}; acc_expo_s = {}; acc_hit = {}; acc_draw = {}
     for pid, rr in gp.items():
         hs_here = np.unique(T['batter'][ix[rr]])
         for sd in (0, 1):
@@ -4363,6 +4398,19 @@ def value2_study(T: dict, params: dict, stage) -> dict:
                                 tau_j = 0.01 * PM.swing_minus_take(blk_s, int(h), PM.p_scalar.get(int(pid), (0.0, PM.lg_bip)), np.repeat(T['balls'][prow], K), kj, cv)
                                 lam_j = np.where(e_j_s > 0, lam['outside'], lam['inside'])
                                 vals['structural'] = (dev_jk * lam_j * tau_j).reshape(len(prow), K).mean(1)
+                                for d_, (maps_d, mbar_d, lam_d) in enumerate(map_draws):
+                                    if int(h) not in maps_d:
+                                        continue
+                                    dev_d = (sig(offj + Bj @ maps_d[int(h)]) - sig(offj + Bj @ mbar_d[int(h)])) * 100
+                                    v_d = (dev_d * np.where(e_j_s > 0, lam_d['outside'], lam_d['inside']) * tau_j).reshape(len(prow), K).mean(1)
+                                    parts_d = []
+                                    for t3 in range(3):
+                                        sel3 = third == t3
+                                        if int(sel3.sum()) >= 3:
+                                            k3 = max(1, int(sel3.sum()) // 3); i3 = np.flatnonzero(sel3); pick = i3[np.argsort(v_d[i3])[:k3]]
+                                            parts_d.append(float(v_d[pick].mean() - v_d[i3].mean()))
+                                    if parts_d:
+                                        a_ = acc_draw.setdefault((d_, zn, sg), [0.0, 0.0]); a_[0] += n_here * float(np.mean(parts_d)); a_[1] += n_here
                             parts = {nm_: [] for nm_ in vals}; chosen = {nm_: np.zeros(len(prow), bool) for nm_ in vals}; graded = np.zeros(len(prow), bool)
                             expo_parts = []; expo_parts_s = []
                             for t3 in range(3):
@@ -4455,6 +4503,19 @@ def value2_study(T: dict, params: dict, stage) -> dict:
                             'runs_per_6200_outside_only': round(gr_o * res['coefficients']['outside_pitches_per_pa'] * 6200, 1),
                             'runs_per_6200_inside_only': round(gr_i * res['coefficients']['inside_pitches_per_pa'] * 6200, 1),
                             'runs_per_6200_outside_only_interval_by_hitter': hint, 'runs_per_6200_outside_only_interval': hint2, 'hitters': int(len(hv))}
+            if map_draws:
+                figs = [acc_draw[(d_, 'outside', sg)][0] / max(acc_draw[(d_, 'outside', sg)][1], 1) * res['coefficients']['outside_pitches_per_pa'] * 6200
+                        for d_ in range(len(map_draws)) if (d_, 'outside', sg) in acc_draw]
+                figs_in = [acc_draw[(d_, 'inside', sg)][0] / max(acc_draw[(d_, 'inside', sg)][1], 1) * res['coefficients']['inside_pitches_per_pa'] * 6200
+                           for d_ in range(len(map_draws)) if (d_, 'inside', sg) in acc_draw]
+                pt_ = gr_o * res['coefficients']['outside_pitches_per_pa'] * 6200
+                sd_maps = float(np.std(figs, ddof=1)) if len(figs) > 1 else 0.0
+                sd_hit = float(np.std(dr_h * ld)) if len(hv) else 0.0
+                sd_all = float(np.sqrt(sd_maps ** 2 + sd_hit ** 2))
+                rs_[str(sg)]['map_draws'] = {'draws': int(len(figs)), 'outside_figures': [round(float(v_), 1) for v_ in figs], 'inside_figures': [round(float(v_), 1) for v_ in figs_in],
+                                             'sd_from_maps': round(sd_maps, 1), 'sd_from_hitters_and_calibration': round(sd_hit, 1),
+                                             'runs_per_6200_outside_only_interval_with_maps': [round(pt_ - 1.96 * sd_all, 1), round(pt_ + 1.96 * sd_all, 1)],
+                                             'calibration_outside_by_draw': [round(md[2]['outside'], 3) for md in map_draws]}
             if bands_rp and ('outside', sg) in acc_expo_s:
                 # VALUE-19: the same structural choices priced by the realized-outcome regression by band (outcome-anchored value of the structural choice)
                 ao_s = acc_runs.get(('structural', 'outside', sg), [0.0, 0.0])
