@@ -3983,19 +3983,20 @@ def value2_study(T: dict, params: dict, stage) -> dict:
     y = LW7[T['out7'][ix].astype(int)]
     first = (T['pitch_no'] == 0) & (T['out7'] >= 0)
     pitch_estimand = params.get('estimand') == 'pitch'   # VALUE-17: each pitch's realized value (the next count state's value or the terminal
-    if pitch_estimand:                                      # outcome, minus the current state's), with only pre-action history as a control
+    ci_all = np.clip(T['balls'], 0, 3) * 3 + np.clip(T['strikes'], 0, 2)   # outcome, minus the current state's), with only pre-action history as a control
+    fin_all = np.where(T['out7'] >= 0, LW7[np.clip(T['out7'], 0, 6)], np.nan)
+    cv = np.zeros(12)                                       # count values from the training rows (mean plate-appearance value by count)
+    for c_ in range(12):
+        mc = tr & (ci_all == c_) & np.isfinite(fin_all); cv[c_] = float(fin_all[mc].mean()) if mc.any() else 0.0
+    res['count_values'] = {f'{c_ // 3}-{c_ % 3}': round(float(cv[c_]), 4) for c_ in range(12)}
+    if pitch_estimand:
         pak_all = T['game'].astype(np.int64) * 1000 + T['ab'].astype(np.int64)
         ordr = np.lexsort((T['pitch_no'], pak_all)); pak_o = pak_all[ordr]
-        ci_all = np.clip(T['balls'], 0, 3) * 3 + np.clip(T['strikes'], 0, 2)
-        fin_all = np.where(T['out7'] >= 0, LW7[np.clip(T['out7'], 0, 6)], np.nan)
-        cv = np.zeros(12)
-        for c_ in range(12):
-            mc = tr & (ci_all == c_) & np.isfinite(fin_all); cv[c_] = float(fin_all[mc].mean()) if mc.any() else 0.0
         same_next = np.r_[pak_o[1:] == pak_o[:-1], False]
         nxt_val = np.where(same_next, cv[np.r_[ci_all[ordr][1:], 0]], fin_all[ordr]) - cv[ci_all[ordr]]
         realized_all = np.empty(len(T['game'])); realized_all[ordr] = nxt_val
         y = realized_all[ix]
-        res['estimand'] = {'kind': 'pitch (telescoping realized value)', 'count_values': {f'{c_ // 3}-{c_ % 3}': round(float(cv[c_]), 4) for c_ in range(12)}}
+        res['estimand'] = {'kind': 'pitch (telescoping realized value)'}
     rv_all = LW7[np.clip(T['out7'], 0, 6).astype(int)]
     def prior_rv(key):
         nn, ss = _prior_by_day(np.r_[key[first], key[ix]].astype(np.int64), np.r_[T['day'][first], T['day'][ix]].astype(np.int64),
@@ -4012,7 +4013,7 @@ def value2_study(T: dict, params: dict, stage) -> dict:
     Xd = np.column_stack([np.ones(len(ix)), cnt, grp, p_l, np.log(p_l / (1 - p_l)), outside, hats(e, (-0.8, -0.4, -0.15, 0.0, 0.15, 0.4, 0.8, 1.5)), rv_b, rv_p,
                           (T['stand_r'][ix] == T['throw_r'][ix]).astype(float)] + ([Dmean * outside, Dmean * ~outside] if specific else []) + [D * outside, D * ~outside])
     b = np.linalg.lstsq(Xd, y, rcond=None)[0]; b_out, b_in = float(b[-2]), float(b[-1])
-    if params.get('diag_hook') is not None:                 # VALUE-17 (synthetic worlds): the regression's pieces, for pricing against the generator's truth
+    if params.get('diag_hook') is not None and not params.get('reprice_structural'):   # VALUE-17 (synthetic worlds): the regression's pieces, for pricing against the generator's truth
         params['diag_hook'](ix=ix, D=D, outside=outside, y=y, Xd=Xd, b=b)
     # game bootstrap of the two coefficients (the gains below are nearly fixed, so the value's interval follows these)
     ug, gi = np.unique(T['game'][ix], return_inverse=True); p_ = Xd.shape[1]
@@ -4198,6 +4199,42 @@ def value2_study(T: dict, params: dict, stage) -> dict:
         band_names = ['inside_2in_plus', 'inside_0_2in', 'outside_0_1in', 'outside_1_2in', 'outside_2_4in', 'outside_4in_plus']
         res['coefficients_by_band'] = {band_names[k_]: {'runs_per_point': round(float(bb6[k_]), 6), 'interval': [round(float(np.percentile(dr6[:, k_], q)), 6) for q in (2.5, 97.5)],
                                                         'pitches': int((bnd == k_).sum())} for k_ in range(nb6)}
+    structural = bool(params.get('reprice_structural'))     # VALUE-18: each scattered aim priced by the engine's own components, not a regression coefficient
+    PM = None
+    if structural:
+        # calibration of the own part on the test season's swings, out of sample for the maps: how much of a fitted point shows up in
+        # the hitter's actual swings (near 1 when the maps are real, near 0 when they are noise); by side of the zone, game bootstrap
+        base_sw = np.zeros(len(ix))
+        for h, rr in gb.items():
+            base_sw[rr] = sig(off[ix[rr]] + Bm[ix[rr]] @ mbar[h]) if specific else p_l[rr]
+        r_sw = swing[ix] - base_sw; x_sw = D / 100.0
+        lam = {}; lam_draws = {}
+        rl = np.random.default_rng(31)
+        for zn_, m_ in (('outside', outside), ('inside', ~outside)):
+            sxy = np.bincount(gi, weights=(x_sw * r_sw) * m_, minlength=len(ug)); sxx = np.bincount(gi, weights=(x_sw * x_sw) * m_, minlength=len(ug))
+            lam[zn_] = float(sxy.sum() / max(sxx.sum(), 1e-12))
+            dl = []
+            for _ in range(int(params.get('reps', 200))):
+                w_ = np.bincount(rl.integers(0, len(ug), len(ug)), minlength=len(ug)).astype(float)
+                dl.append(float((w_ @ sxy) / max(w_ @ sxx, 1e-12)))
+            lam_draws[zn_] = np.asarray(dl)
+        res['own_part_calibration'] = {zn_: {'slope': round(lam[zn_], 4), 'interval': [round(float(np.percentile(lam_draws[zn_], q)), 4) for q in (2.5, 97.5)]} for zn_ in lam}
+        res['own_part_calibration']['note'] = 'test-season swing residual (actual minus the league with the shared shape) regressed on the own part in probability units; 1 means a fitted point is a real point'
+        PM = PAModels(T, tr, np.random.default_rng(23), {'league_n': int(params.get('league_n', 500000)), 'min_pitches': 300}, stage)
+        xoff_all, zoff_all = xp - T['px'].astype(np.float64), zp - T['pz'].astype(np.float64)   # decision-moment projection minus crossing, per pitch
+        if params.get('diag_hook') is not None:
+            # the structural per-point value at the test pitches themselves (for the synthetic worlds' comparison with the generator's)
+            blk_t = PM.blocks_at(xp[ix], zp[ix], T['px'][ix].astype(np.float64), T['pz'][ix].astype(np.float64), T['stand_r'][ix], T['throw_r'][ix], T['group'][ix],
+                                 T['v0'][ix].astype(np.float64), T['balls'][ix], T['strikes'][ix])
+            tau_t = np.zeros(len(ix))
+            for h, rr in gb.items():
+                sub = {k_: (v_[rr] if isinstance(v_, np.ndarray) and len(v_) == len(ix) else v_) for k_, v_ in blk_t.items()}
+                pids = T['pitcher'][ix[rr]]
+                ps_ = np.array([PM.p_scalar.get(int(q), (0.0, PM.lg_bip))[0] for q in pids]); pb_ = np.array([PM.p_scalar.get(int(q), (0.0, PM.lg_bip))[1] for q in pids])
+                tau_t[rr] = 0.01 * PM.swing_minus_take(sub, int(h), (ps_, pb_), T['balls'][ix[rr]], T['strikes'][ix[rr]], cv)
+            params['diag_hook'](ix=ix, D=D, outside=outside, y=y, Xd=Xd, b=b, tau_struct=tau_t)
+            res['structural_at_test_pitches'] = {'mean_tau_outside': round(float(tau_t[outside].mean()), 6), 'mean_tau_inside': round(float(tau_t[~outside].mean()), 6),
+                                                 'sd_tau_outside': round(float(tau_t[outside].std()), 6)}
     stage('coefficients')
     sigmas = [float(v) for v in params.get('sigmas', (0.0, 0.3, 0.6, 0.9))]
     K = 16
@@ -4221,7 +4258,7 @@ def value2_study(T: dict, params: dict, stage) -> dict:
         u_all = np.where(T['stand_r'] == 1, xt_all, -xt_all)
         outside_all = np.maximum(np.maximum(np.abs(u_all) - ZONE_HALF, zt_all - ZONE_TOP), ZONE_BOT - zt_all) > 0
         cg_all = np.where(T['strikes'] == 2, 2, np.where(T['balls'] > T['strikes'], 1, 0)); pg_all = np.clip(T['group'], 0, 6)
-    acc_runs = {}; acc_expo = {}
+    acc_runs = {}; acc_expo = {}; acc_hit = {}
     for pid, rr in gp.items():
         hs_here = np.unique(T['batter'][ix[rr]])
         for sd in (0, 1):
@@ -4257,7 +4294,7 @@ def value2_study(T: dict, params: dict, stage) -> dict:
                         if fam:
                             Bj = family_basis(Bj, gj)
                         xtj = ztj = coef_side = coef_band = band_j = None
-                        if reprice or bands_rp or aim_hook is not None:
+                        if reprice or bands_rp or structural or aim_hook is not None:
                             # the scattered pitch's true crossing moves with the same scatter; where it crosses sets its coefficient
                             xtj = (T['px'][prow].astype(np.float64)[:, None] + sg * jit[None, :, 0]).ravel(); ztj = (T['pz'][prow].astype(np.float64)[:, None] + sg * jit[None, :, 1]).ravel()
                             uj = np.where(sd == 1, xtj, -xtj)
@@ -4266,7 +4303,11 @@ def value2_study(T: dict, params: dict, stage) -> dict:
                                 coef_side = np.where(e_j > 0, b_out, b_in)
                             if bands_rp:
                                 band_j = band_of(e_j); coef_band = bb6[band_j]
-                        mats[sg] = (offj, Bj, coef_side, coef_band, band_j, xtj, ztj)
+                        blk_s = None
+                        if structural:
+                            blk_s = PM.blocks_at(xtj + np.repeat(xoff_all[prow], K), ztj + np.repeat(zoff_all[prow], K), xtj, ztj, np.full(len(xtj), sd), np.repeat(T['throw_r'][prow], K),
+                                                 gj, np.repeat(T['v0'][prow].astype(np.float64), K), np.repeat(T['balls'][prow], K), kj)
+                        mats[sg] = (offj, Bj, coef_side, coef_band, band_j, xtj, ztj, blk_s, e_j if (reprice or bands_rp or structural or aim_hook is not None) else None)
                     for h in hs_here:
                         if int(h) not in maps or hit_side.get(int(h)) != sd:
                             continue
@@ -4275,7 +4316,7 @@ def value2_study(T: dict, params: dict, stage) -> dict:
                             continue
                         mh = maps[int(h)]
                         for sg in sigmas:
-                            offj, Bj, coef_side, coef_band, band_j, xtj, ztj = mats[sg]
+                            offj, Bj, coef_side, coef_band, band_j, xtj, ztj, blk_s, e_j_s = mats[sg]
                             base_j = sig(offj + Bj @ mbar[int(h)]) if specific else sig(offj)
                             dev_jk = (sig(offj + Bj @ mh) - base_j) * 100
                             dj = dev_jk.reshape(len(prow), K).mean(1)
@@ -4287,6 +4328,10 @@ def value2_study(T: dict, params: dict, stage) -> dict:
                             if coef_band is not None:
                                 vals['bands'] = (dev_jk * coef_band).reshape(len(prow), K).mean(1)
                                 expo = np.stack([(dev_jk * (band_j == k_)).reshape(len(prow), K).mean(1) for k_ in range(nb6)], 1)   # points by band, per aim
+                            if blk_s is not None:
+                                tau_j = 0.01 * PM.swing_minus_take(blk_s, int(h), PM.p_scalar.get(int(pid), (0.0, PM.lg_bip)), np.repeat(T['balls'][prow], K), kj, cv)
+                                lam_j = np.where(e_j_s > 0, lam['outside'], lam['inside'])
+                                vals['structural'] = (dev_jk * lam_j * tau_j).reshape(len(prow), K).mean(1)
                             parts = {nm_: [] for nm_ in vals}; chosen = {nm_: np.zeros(len(prow), bool) for nm_ in vals}; graded = np.zeros(len(prow), bool)
                             expo_parts = []
                             for t3 in range(3):
@@ -4310,9 +4355,11 @@ def value2_study(T: dict, params: dict, stage) -> dict:
                                 acc[(zn, sg)][0] += n_here * float(np.mean(parts['points'])); acc[(zn, sg)][1] += n_here
                                 for bk in (('count', c3), ('type', tg)):
                                     a_ = acc_b.setdefault((zn, sg) + bk, [0.0, 0.0]); a_[0] += n_here * float(np.mean(parts['points'])); a_[1] += n_here
-                            for nm_ in ('side', 'bands'):
+                            for nm_ in ('side', 'bands', 'structural'):
                                 if parts.get(nm_):
                                     a_ = acc_runs.setdefault((nm_, zn, sg), [0.0, 0.0]); a_[0] += n_here * float(np.mean(parts[nm_])); a_[1] += n_here
+                                    if nm_ == 'structural':
+                                        hc = acc_hit.setdefault((zn, sg), {}); c_h = hc.setdefault(int(h), [0.0, 0.0]); c_h[0] += n_here * float(np.mean(parts[nm_])); c_h[1] += n_here
                             if expo_parts:
                                 a_ = acc_expo.setdefault((zn, sg), np.zeros(nb6)); a_ += n_here * np.mean(expo_parts, 0)
     out = {}
@@ -4351,6 +4398,31 @@ def value2_study(T: dict, params: dict, stage) -> dict:
                             'chosen_points_by_band_outside': {band_names[k_]: round(float(ex_o[k_]), 3) for k_ in range(nb6)}}
         res['repriced_by_band'] = rb_
         res['repriced_by_band_note'] = 'each scattered pitch priced with the run value per point of the distance band it crosses in (VALUE-17); the interval resamples the band coefficients by game with the chosen spots fixed'
+    if structural:
+        rs_ = {}; rh = np.random.default_rng(29)
+        for sg in sigmas:
+            ao = acc_runs.get(('structural', 'outside', sg), [0.0, 0.0]); ai = acc_runs.get(('structural', 'inside', sg), [0.0, 0.0])
+            gr_o = ao[0] / max(ao[1], 1); gr_i = ai[0] / max(ai[1], 1)
+            hc = acc_hit.get(('outside', sg), {}); hv = np.array([v_ for v_ in hc.values()]) if hc else np.zeros((0, 2))
+            if len(hv):
+                dr_h = []
+                for _ in range(400):
+                    pick = rh.integers(0, len(hv), len(hv)); dr_h.append(hv[pick, 0].sum() / max(hv[pick, 1].sum(), 1.0))
+                dr_h = np.asarray(dr_h) * res['coefficients']['outside_pitches_per_pa'] * 6200
+                hint = [round(float(np.percentile(dr_h, q)), 1) for q in (2.5, 97.5)]
+                # with the calibration's own uncertainty (its game draws scale the figure; the two sources taken as independent)
+                ld = lam_draws['outside'][rh.integers(0, len(lam_draws['outside']), len(dr_h))] / (lam['outside'] if lam['outside'] != 0 else 1.0)
+                hint2 = [round(float(np.percentile(dr_h * ld, q)), 1) for q in (2.5, 97.5)]
+            else:
+                hint = hint2 = None
+            rs_[str(sg)] = {'runs_per_outside_pitch': round(gr_o, 6), 'runs_per_inside_pitch': round(gr_i, 6),
+                            'runs_per_6200_outside_only': round(gr_o * res['coefficients']['outside_pitches_per_pa'] * 6200, 1),
+                            'runs_per_6200_inside_only': round(gr_i * res['coefficients']['inside_pitches_per_pa'] * 6200, 1),
+                            'runs_per_6200_outside_only_interval_by_hitter': hint, 'runs_per_6200_outside_only_interval': hint2, 'hitters': int(len(hv))}
+        res['repriced_structural'] = rs_
+        res['repriced_structural_note'] = ('each scattered aim priced by the engine: the hitter\'s own swing part, scaled by its out-of-sample calibration on the test season\'s swings, times '
+                                           '(value if swing minus value if take) from the whiff, called-strike, foul and contact models with the hitter\'s and pitcher\'s terms and the training count '
+                                           'values (VALUE-18); the interval resamples hitters and the calibration slope by game')
     if 'coefficient_checks' in res:
         for nm, v in res['coefficient_checks'].items():
             if isinstance(v, dict) and 'outside' in v:
@@ -7301,28 +7373,46 @@ class PAModels:
 
     def _blocks(self, r: np.ndarray, b: int, k: int):
         """Model logits for rows r evaluated as if at count (b, k), with the hitter-level scalars taken out (added per hitter)."""
-        T = self.T; n = len(r); stand = T['stand_r'][r]; throw = T['throw_r'][r]; grp_ = T['group'][r]; v0 = T['v0'][r].astype(np.float64)
-        strikes = np.full(n, k, np.int64); balls = np.full(n, b, np.int64)
+        T = self.T; n = len(r)
+        return self.blocks_at(self.xp[r], self.zp[r], self.xt[r], self.zt[r], T['stand_r'][r], T['throw_r'][r], T['group'][r], T['v0'][r].astype(np.float64),
+                              np.full(n, b, np.int64), np.full(n, k, np.int64))
+
+    def blocks_at(self, xp, zp, xt, zt, stand, throw, grp_, v0, balls, strikes):
+        """The same for any pitches given by their decision-moment projection, true crossing, side, hand, group, speed and count arrays
+        (VALUE-18 prices scattered aims this way)."""
+        n = len(xt); strikes = np.asarray(strikes, np.int64); balls = np.asarray(balls, np.int64)
         tt = {'balls': balls, 'strikes': strikes, 'group': grp_, 'v0': v0, 'stand_r': stand, 'throw_r': throw}
-        Ls = location_block(self.xp[r], self.zp[r], stand, strikes); Bh0 = hitter_basis(self.xp[r], self.zp[r], stand, strikes)
+        Ls = location_block(xp, zp, stand, strikes); Bh0 = hitter_basis(xp, zp, stand, strikes)
         brk = np.isin(grp_, (3, 4))[:, None]; ofs = (grp_ == 5)[:, None]
         Xs = np.hstack([Ls, (Bh0[:, :-1] * brk).astype(np.float32), (Bh0[:, :-1] * ofs).astype(np.float32), control_block(tt, np.zeros(n)), np.zeros((n, 1), np.float32)])
         lo_s = self.m_s.decision_function(Xs).astype(np.float64)
         Bs = family_basis(Bh0, grp_)
         grp = np.zeros((n, 7), np.float32); grp[np.arange(n), np.clip(grp_, 0, 6)] = 1
-        Lw = location_block(self.xt[r], self.zt[r], stand, strikes)
+        Lw = location_block(xt, zt, stand, strikes)
         plat = (stand == throw)[:, None].astype(np.float32)
         Xw = np.hstack([Lw, grp, hats(v0, V_KNOTS), (strikes == 2)[:, None].astype(np.float32), np.zeros((n, 1), np.float32), plat])
         lo_w = self.m_w.decision_function(Xw).astype(np.float64)
         fam3 = np.column_stack([np.isin(grp_, (0, 1, 2)), np.isin(grp_, (3, 4)), np.isin(grp_, (5,))]).astype(np.float64)
-        Bw = np.hstack([hitter_basis(self.xt[r], self.zt[r], stand, strikes), fam3, hats(self.zt[r], (1.0, 2.0, 3.0, 4.0)).astype(np.float64)])
+        Bw = np.hstack([hitter_basis(xt, zt, stand, strikes), fam3, hats(zt, (1.0, 2.0, 3.0, 4.0)).astype(np.float64)])
         p_c = self.m_c.predict_proba(np.hstack([Lw, plat]))[:, 1]
         p_f = self.m_f.predict_proba(Xw)[:, 1]
-        cnt = np.zeros((n, 12), np.float32); cnt[:, b * 3 + k] = 1
+        cnt = np.zeros((n, 12), np.float32); cnt[np.arange(n), np.clip(balls, 0, 3) * 3 + np.clip(strikes, 0, 2)] = 1
         Xb = np.hstack([np.ones((n, 1), np.float32), Lw, grp, hats(v0, V_KNOTS), cnt, plat, np.zeros((n, 2), np.float32)])
         v_b = Xb.astype(np.float64) @ self.beta_b
         fam = np.where(np.isin(grp_, (0, 1, 2)), 0, np.where(np.isin(grp_, (3, 4)), 1, 2))
         return {'lo_s': lo_s, 'Bs': Bs, 'lo_w': lo_w, 'Bw': Bw, 'c': p_c, 'f': p_f, 'v': v_b, 'fam': fam}
+
+    def swing_minus_take(self, blk: dict, h: int | None, p_scalar, balls, strikes, cv: np.ndarray):
+        """VALUE-18: the value of the plate appearance if the hitter swings minus if he takes, at these pitches, for hitter h against a
+        pitcher with these scalars, under the count values cv (12, by balls*3+strikes): the structural run value of one unit of swing chance."""
+        _, p_w, p_c, p_f, v, _ = self.probs(blk, h, p_scalar)
+        balls = np.asarray(balls, np.int64); strikes = np.asarray(strikes, np.int64)
+        v_strike = np.where(strikes == 2, LW7[1], cv[np.clip(balls * 3 + strikes + 1, 0, 11)])
+        v_foul = np.where(strikes == 2, cv[np.clip(balls * 3 + 2, 0, 11)], cv[np.clip(balls * 3 + strikes + 1, 0, 11)])
+        v_ball = np.where(balls == 3, LW7[2], cv[np.clip((balls + 1) * 3 + strikes, 0, 11)])
+        v_swing = p_w * v_strike + (1 - p_w) * (p_f * v_foul + (1 - p_f) * v)
+        v_take = p_c * v_strike + (1 - p_c) * v_ball
+        return v_swing - v_take
 
     def pool(self, p: int, sd: int, max_per_group: int = 120):
         """The pitcher's own pitches to a side (training rows), a sample per count group with the group's weight."""

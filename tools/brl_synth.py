@@ -178,6 +178,7 @@ def world(kind: str, n_pa: int = 200000, seed: int = 5, H: int = 240, P: int = 1
     wts = ((p_sw - p_swl) * 100) ** 2
     G['val_true'] = ((p_sw - p_swl) * tau * 100)[order]     # the hitter-specific part of each pitch's expected value, aligned with the table's rows
     G['dev_true'] = ((p_sw - p_swl) * 100)[order]
+    G['tau_true'] = tau[order]
     truth = {}
     for zn, m in (('outside', (ssn == 2025) & (inz_r == 0)), ('inside', (ssn == 2025) & (inz_r == 1))):
         truth[f'runs_per_point_{zn}'] = round(float(tau[m].mean()), 6)
@@ -201,11 +202,18 @@ class TruthPricer:
     does it; and the same gain had the pitcher chosen by the truth itself (the oracle)."""
 
     def __init__(self, G: dict):
-        self.G = G; self.acc = {}; self.pairs = {}; self.diag = {}
+        self.G = G; self.acc = {}; self.pairs = {}; self.diag = {}; self.structural = {}
 
-    def regression_pieces(self, ix, D, outside, y, Xd, b):
+    def regression_pieces(self, ix, D, outside, y, Xd, b, tau_struct=None):
         # the same regression with the generator's hitter-specific truth as the outcome: the coefficient a perfect outcome would give
         vt = self.G['val_true'][ix]
+        if tau_struct is not None:
+            # the engine's structural per-point value against the generator's at the test pitches
+            tt = self.G['tau_true'][ix]
+            self.structural = {'mean_structural_outside': round(float(tau_struct[outside].mean()), 6), 'mean_true_outside': round(float(tt[outside].mean()), 6),
+                               'mean_structural_inside': round(float(tau_struct[~outside].mean()), 6), 'mean_true_inside': round(float(tt[~outside].mean()), 6),
+                               'corr_outside': round(float(np.corrcoef(tau_struct[outside], tt[outside])[0, 1]), 4) if tt[outside].std() > 0 else None,
+                               'slope_true_on_structural_outside': round(float(np.polyfit(tau_struct[outside], tt[outside], 1)[0]), 4) if tau_struct[outside].std() > 0 else None}
         bt = np.linalg.lstsq(Xd, vt, rcond=None)[0]
         # and the truth regressed on the fitted part alone (no controls), outside and inside
         sl = lambda m: float(np.dot(D[m] - D[m].mean(), vt[m] - vt[m].mean()) / max(np.dot(D[m] - D[m].mean(), D[m] - D[m].mean()), 1e-12))
@@ -249,7 +257,7 @@ class TruthPricer:
             return {}
         w = a_['weight']
         out = {'oracle_runs_per_pitch': round(a_['oracle'] / w, 6), 'oracle_runs_per_6200': round(a_['oracle'] / w * pitches_per_pa * 6200, 1)}
-        for nm in ('points', 'side', 'bands'):
+        for nm in ('points', 'side', 'bands', 'structural'):
             if nm in a_:
                 out[f'true_runs_per_pitch_{nm}'] = round(a_[nm] / w, 6); out[f'true_runs_per_6200_{nm}'] = round(a_[nm] / w * pitches_per_pa * 6200, 1)
         pr_ = self.pairs.get((sg, zone))
@@ -273,7 +281,7 @@ def run_reps(kind: str, reps: int, seed0: int, params: dict, stage):
             sigmas = tuple(float(v) for v in params.get('sigmas', (0.6,)))
             pp = {'sigmas': sigmas, 'within_type': True, 'checks': True, 'specific': True, 'reps': int(params.get('boot_reps', 60)),
                   'estimand': est, 'pool_from_train': bool(params.get('pool_from_train', True)), 'reprice_boundary': bool(params.get('reprice_boundary', True)),
-                  'reprice_bands': bool(params.get('reprice_bands', True)),
+                  'reprice_bands': bool(params.get('reprice_bands', True)), 'reprice_structural': bool(params.get('reprice_structural', False)) and est == ests[-1],
                   'placebo_draws': int(params.get('placebo_draws', 2)), 'aim_hook': pricer, 'diag_hook': pricer.regression_pieces}
             res = D.value2_study(T, pp, lambda s: None)
             c = res['coefficient_checks']; co = res['coefficients']
@@ -287,6 +295,10 @@ def run_reps(kind: str, reps: int, seed0: int, params: dict, stage):
                         'sd_points_own_part_outside': c['own_map'].get('sd_points_outside'),
                         'test_pitches': co['test_pitches'], 'outside_pitches_per_pa': co['outside_pitches_per_pa'],
                         'runs_6200_repriced': (res.get('repriced_by_side') or {}).get(str(sigmas[-1]), {}).get('runs_per_6200_outside_only'),
+                        'runs_6200_structural': (res.get('repriced_structural') or {}).get(str(sigmas[-1]), {}).get('runs_per_6200_outside_only'),
+                        'runs_6200_structural_interval': (res.get('repriced_structural') or {}).get(str(sigmas[-1]), {}).get('runs_per_6200_outside_only_interval'),
+                        'own_part_calibration': res.get('own_part_calibration'),
+                        'structural_vs_truth': pricer.structural,
                         'runs_6200_bands': (res.get('repriced_by_band') or {}).get(str(sigmas[-1]), {}).get('runs_per_6200_outside_only'),
                         'runs_6200_bands_interval': (res.get('repriced_by_band') or {}).get(str(sigmas[-1]), {}).get('runs_per_6200_outside_only_interval'),
                         'coefficients_by_band': res.get('coefficients_by_band'),
@@ -298,13 +310,14 @@ def run_reps(kind: str, reps: int, seed0: int, params: dict, stage):
                         'by_sigma': {str(sg): {'runs_6200_points': res['by_command_sd_ft'][str(sg)]['runs_per_6200_outside_only'],
                                                'runs_6200_repriced': (res.get('repriced_by_side') or {}).get(str(sg), {}).get('runs_per_6200_outside_only'),
                                                'runs_6200_bands': (res.get('repriced_by_band') or {}).get(str(sg), {}).get('runs_per_6200_outside_only'),
+                                               'runs_6200_structural': (res.get('repriced_structural') or {}).get(str(sg), {}).get('runs_per_6200_outside_only'),
                                                'truth_policy_outside': pricer.result(str(sg), 'outside', co['outside_pitches_per_pa'])} for sg in sigmas},
                         'regression_against_truth': pricer.diag,
                         'seconds': round(time.time() - t1, 1)}
         out.append(row)
         stage(f'{kind} rep {r} ({round(time.time() - t0)} s): truth {truth["runs_per_point_outside"]:.6f} ' + ' '.join(
-            f'{e_} own {row[e_]["own"]} within {row[e_]["within"]} runs {row[e_]["runs_6200_points"]}/{row[e_]["runs_6200_repriced"]}/{row[e_]["runs_6200_bands"]} '
-            f'true {row[e_]["truth_policy_outside"].get("true_runs_per_6200_points")}/{row[e_]["truth_policy_outside"].get("true_runs_per_6200_side")}/{row[e_]["truth_policy_outside"].get("true_runs_per_6200_bands")}' for e_ in ests))
+            f'{e_} own {row[e_]["own"]} within {row[e_]["within"]} runs {row[e_]["runs_6200_points"]}/{row[e_]["runs_6200_repriced"]}/{row[e_]["runs_6200_bands"]}/{row[e_]["runs_6200_structural"]} '
+            f'true {row[e_]["truth_policy_outside"].get("true_runs_per_6200_points")}/{row[e_]["truth_policy_outside"].get("true_runs_per_6200_side")}/{row[e_]["truth_policy_outside"].get("true_runs_per_6200_bands")}/{row[e_]["truth_policy_outside"].get("true_runs_per_6200_structural")}' for e_ in ests))
     return out
 
 
@@ -330,7 +343,8 @@ def summarize(rows: list, ests=('pa', 'pitch')) -> dict:
         pol = [r[est]['truth_policy_outside'] for r in rows]
         orc = np.array([q.get('oracle_runs_per_6200', np.nan) for q in pol], float)
         blk = {'oracle_mean': round(float(np.nanmean(orc)), 1)}
-        for nm, key, ikey in (('points', 'runs_6200_points', 'runs_6200_points_interval'), ('side', 'runs_6200_repriced', None), ('bands', 'runs_6200_bands', 'runs_6200_bands_interval')):
+        for nm, key, ikey in (('points', 'runs_6200_points', 'runs_6200_points_interval'), ('side', 'runs_6200_repriced', None), ('bands', 'runs_6200_bands', 'runs_6200_bands_interval'),
+                              ('structural', 'runs_6200_structural', 'runs_6200_structural_interval')):
             est_v = np.array([r[est].get(key) if r[est].get(key) is not None else np.nan for r in rows], float)
             tp = np.array([q.get(f'true_runs_per_6200_{nm}', np.nan) for q in pol], float)
             d_ = {'estimate_mean': round(float(np.nanmean(est_v)), 1), 'true_value_of_choices_mean': round(float(np.nanmean(tp)), 1),
