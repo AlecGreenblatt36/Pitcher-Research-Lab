@@ -112,7 +112,7 @@ def _worker(dates: list) -> list:
                         win_states=s.get('win_states') or False, starter_lines=bool(s.get('starter_lines')), role_offsets=s.get('role_offsets'), real_pa_check=bool(s.get('real_pa_check')),
                         transitions=s.get('transitions'), hitter_lines=bool(s.get('hitter_lines')), running_events=s.get('running_events'),
                         reliever_choice=s.get('reliever_choice'), leash=s.get('leash'), base_state=s.get('base_state'), relief_exit=s.get('relief_exit'), relief_hooks=s.get('relief_hooks'), day_form=s.get('day_form') or 0.0,
-                        paired_streams=bool(s.get('paired_streams')), log=lambda m: print(m, flush=True))
+                        paired_streams=bool(s.get('paired_streams')), matchup=s.get('matchup'), log=lambda m: print(m, flush=True))
 
 
 def logit(p):
@@ -321,6 +321,15 @@ def main():
             regular = h[h['game_type'] == 'R'] if 'game_type' in h.columns else h
             leash = (Leash(json.loads((ROOT / str(params['leash'])).read_text())), AppearanceIndex.from_frame(appearances(regular)))
             receipt['leash'] = {'path': params['leash'], 'name': leash[0].name, 'terms': leash[0].terms}
+        matchup = None
+        if params.get('matchup'):
+            from cloud.security import unseal, key_bytes
+            mspec = params['matchup']
+            raw = read_blob(repo, token, f"private/matchup/table-{int(mspec['season'])}.enc", branch)
+            mdoc = json.loads(gzip.decompress(unseal(raw, key_bytes(key_hex), f"matchup-table-{int(mspec['season'])}")))
+            matchup = {'table': {(str(b_), str(p_)): (c_, z_) for b_, p_, c_, z_ in mdoc['pairs']}, 'coefs': mspec['coefs']}
+            receipt['matchup'] = {'season': int(mspec['season']), 'pairs': len(matchup['table']), 'coefs': mspec['coefs'],
+                                  'train_seasons': mdoc.get('train_seasons'), 'arsenal_season': mdoc.get('arsenal_season')}
         steals = None
         if params.get('steals'):
             steals = {k: float(v) for k, v in dict(params['steals']).items() if k in ('per_pa', 'third')}
@@ -329,7 +338,7 @@ def main():
                        n_sims=n_sims, physics_table=physics_table, offsets=offsets, rest=use_rest, environment=environment, team_offsets=team_offsets,
                        age_layer=age_layer, steals=steals, win_states=(params.get('win_states') if params.get('win_states') == 'split' else bool(params.get('win_states'))), starter_lines=bool(params.get('starter_lines')), role_offsets=role_offsets, real_pa_check=bool(params.get('real_pa_check')), transitions=transitions,
                        hitter_lines=bool(params.get('hitter_lines')), running_events=running_events, reliever_choice=reliever_choice, leash=leash, base_state=base_state, relief_exit=relief_exit, relief_hooks=relief_hooks,
-                       day_form=float(params.get('day_form') or 0.0), paired_streams=bool(params.get('streams')))
+                       day_form=float(params.get('day_form') or 0.0), paired_streams=bool(params.get('streams')), matchup=matchup)
         if params.get('streams'):
             receipt['paired_streams'] = True
         if params.get('day_form'):

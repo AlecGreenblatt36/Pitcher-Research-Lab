@@ -174,6 +174,44 @@ class DayForm:
         return getattr(self.inner, item)
 
 
+class MatchupAdjust:
+    """Decision-moment matchups (MATCHUP-01, MATCHUP-02): a hitter's own swing map at the moment he commits, run over
+    the pitcher's arsenal as it looks at that moment, gives the pair's extra chase rate and extra in-zone swing rate
+    beyond both players' averages (points). The strikeout and walk chances move by fitted log-odds per point; the other
+    outcomes keep their proportions.
+
+    table: {(batter id, pitcher id): (chase points, zone-swing points)} from earlier seasons only;
+    coefs: {'K': (per chase point, per zone-swing point), 'BB': (...)}. Pairs not in the table are left alone."""
+    K, BB = SIM_LABELS.index('strikeout'), SIM_LABELS.index('bb_hbp')
+
+    def __init__(self, inner, table: dict, coefs: dict):
+        self.inner = inner
+        self.table = {(str(b), str(p)): (float(c), float(z)) for (b, p), (c, z) in table.items()}
+        self.ck = tuple(float(x) for x in coefs['K']); self.cb = tuple(float(x) for x in coefs['BB'])
+        self.name = getattr(inner, 'name', 'provider')
+        self.validation_status = getattr(inner, 'validation_status', '')
+
+    def probabilities(self, ctx):
+        base = self.inner.probabilities(ctx)
+        d = self.table.get((str(ctx.batter.player_id), str(ctx.pitcher.player_id)))
+        if d is None:
+            return base
+        p = np.array([base[k] for k in SIM_LABELS], dtype=float)
+        def shift(q, lo):
+            q = min(max(q, 1e-9), 1 - 1e-9); z = np.log(q / (1 - q)) + lo
+            return 1.0 / (1.0 + np.exp(-z))
+        k_new = shift(p[self.K], self.ck[0] * d[0] + self.ck[1] * d[1])
+        b_new = shift(p[self.BB], self.cb[0] * d[0] + self.cb[1] * d[1])
+        rest = 1.0 - p[self.K] - p[self.BB]
+        scale = (1.0 - k_new - b_new) / rest if rest > 0 else 1.0
+        p = p * scale; p[self.K] = k_new; p[self.BB] = b_new
+        p /= p.sum()
+        return dict(zip(SIM_LABELS, map(float, p)))
+
+    def __getattr__(self, item):
+        return getattr(self.inner, item)
+
+
 class TeamAdjust:
     """Multiplies each plate appearance's probabilities by the batting team's and the fielding team's offsets
     (brl_live/team_offsets.py). set_teams() takes {'away': log-multipliers while the away team bats, 'home': ...}."""

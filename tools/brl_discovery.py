@@ -2683,6 +2683,65 @@ def matchup_pa(T: dict, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- matchup tables for the simulator
+def matchup_pairs(T: dict, train_seasons, arsenal_season: int, target_pairs, params: dict, stage) -> dict:
+    """{(batter, pitcher): (chase points, zone-swing points)} for the target pairs: hitter maps and the league map at
+    the decision moment fitted on train_seasons, each pitcher's arsenal from arsenal_season (to the hitter's side when
+    he threw at least 100 pitches to it). Nothing from the target season is used."""
+    use = np.isin(T['season'], tuple(train_seasons) + (arsenal_season,))
+    Tk = take(T, use)
+    F = rebuild(Tk)
+    keep = F['ok'] & (Tk['group'] >= 0) & (Tk['call'] <= 2) & (Tk['balls'] >= 0) & (Tk['strikes'] >= 0) & ~((Tk['bunt_pa'] == 1) & (Tk['last_in_pa'] == 1))
+    Tk = take(Tk, keep); F = {k: v[keep] for k, v in F.items()}
+    swing = ((Tk['call'] == 1) | (Tk['call'] == 2)).astype(np.float64)
+    xp, zp = projected(Tk, F, None, 'straight', float(params.get('tau', 0.26)))
+    C = np.hstack([control_block(Tk, swing_propensity(Tk)), pitcher_propensity(Tk)[:, None].astype(np.float32)])
+    X = np.hstack([location_block(xp, zp, Tk['stand_r'], Tk['strikes']), C])
+    tr = np.isin(Tk['season'], tuple(train_seasons))
+    rng = np.random.default_rng(int(params.get('seed', 11)))
+    idx = np.flatnonzero(tr); idx = rng.choice(idx, min(len(idx), int(params.get('league_n', 600000))), replace=False)
+    off = fit_logistic(X[idx], swing[idx]).decision_function(X)
+    Bm = hitter_basis(xp, zp, Tk['stand_r'], Tk['strikes'])
+    maps = _hitter_maps(Bm, swing, off, _groups(Tk['batter'], tr), float(params.get('lam', 10.0)), int(params.get('min_pitches', 300)))
+    stage(f'maps {len(maps)}')
+    u_true = np.where(Tk['stand_r'] == 1, Tk['px'], -Tk['px'])
+    outside = (np.abs(u_true) > ZONE_HALF) | (Tk['pz'] > ZONE_TOP) | (Tk['pz'] < ZONE_BOT)
+    ars = {}
+    for pid, r in _groups(Tk['pitcher'], Tk['season'] == arsenal_season).items():
+        if len(r) >= int(params.get('min_arsenal', 300)):
+            ars[pid] = r if len(r) <= 1500 else rng.choice(r, 1500, replace=False)
+    stage(f'arsenals {len(ars)}')
+    out = {}
+    for (b, p_, stand) in target_pairs:
+        if b not in maps or p_ not in ars:
+            continue
+        r = ars[p_]
+        side = Tk['stand_r'][r] == stand
+        if side.sum() >= 100:
+            r = r[side]
+        dev = Bm[r] @ maps[b]
+        pl = 1 / (1 + np.exp(-off[r])); ph = 1 / (1 + np.exp(-(off[r] + dev)))
+        o = outside[r]
+        out[(b, p_)] = (round(float((ph - pl)[o].mean()) * 100, 3) if o.any() else 0.0, round(float((ph - pl)[~o].mean()) * 100, 3) if (~o).any() else 0.0)
+    stage(f'pairs {len(out)}')
+    return out
+
+
+def matchup_table(T: dict, params: dict, stage, store) -> dict:
+    """Pair table for one target season (for replays): pairs that met in that season, from earlier seasons only."""
+    target = int(params.get('target', 2025))
+    prior = [int(s) for s in params.get('train', [s for s in (2023, 2024, 2025) if s < target])]
+    pa = (T['season'] == target) & (T['pitch_no'] == 0)
+    trip = np.unique(np.column_stack([T['batter'][pa], T['pitcher'][pa], T['stand_r'][pa]]), axis=0)
+    pairs = matchup_pairs(T, prior, target - 1, [(int(a), int(b), int(c)) for a, b, c in trip], params, stage)
+    doc = {'schema': 'brl.matchup-table.v1', 'target_season': target, 'train_seasons': prior, 'arsenal_season': target - 1,
+           'units': 'points of swing rate (hitter map minus league), outside and inside the zone', 'pairs': [[b, p_, c, z] for (b, p_), (c, z) in pairs.items()]}
+    path = store(target, doc)
+    vals = np.asarray([v for v in pairs.values()]) if pairs else np.zeros((0, 2))
+    return {'target_season': target, 'pairs_met': int(len(trip)), 'pairs_with_values': len(pairs), 'path': path,
+            'chase_sd_points': round(float(vals[:, 0].std()), 3) if len(vals) else None, 'zone_swing_sd_points': round(float(vals[:, 1].std()), 3) if len(vals) else None}
+
+
 # ---------------------------------------------------------------- FATIGUE-01: the pitcher's state inside the game
 LW7 = np.array([-0.26, -0.28, 0.32, 0.47, 0.78, 1.40, 0.45])
 
@@ -3176,6 +3235,15 @@ def main():
             receipt['results'] = exposure_study(T, params, stage)
         elif experiment == 'matchup_whiff':
             receipt['results'] = matchup_whiff(T, params, stage)
+        elif experiment == 'matchup_table':
+            from cloud.security import seal
+
+            def store(target, doc):
+                path = f'private/matchup/table-{int(target)}.enc'
+                put_bytes(repo, token, path, seal(gzip.compress(json.dumps(doc).encode()), key, f'matchup-table-{int(target)}'), branch,
+                          f'BRL: decision-moment matchup table for {int(target)}')
+                return path
+            receipt['results'] = matchup_table(T, params, stage, store)
         receipt['status'] = 'completed'
     except StopIteration:
         receipt['status'] = 'completed'
