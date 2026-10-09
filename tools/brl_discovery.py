@@ -2656,6 +2656,67 @@ def matchup_family(T: dict, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- MAPS-01: are a hitter's own chase spots a trait?
+def map_stability_study(T: dict, params: dict, stage) -> dict:
+    """How much of a hitter's own part (MATCHUP-05F's family map minus the same-side mean map) carries from one season
+    to the next. League with its family part fitted on 2023-2025; hitter maps (shrinkage 10, at least 300 pitches in
+    each period) fitted separately on 2023-2024 and on 2025, and on the odd and even games of 2025 (split halves).
+    Each own part read on a standard grid (7 by 7 cells from the scouting view, times the three families, first pitch);
+    per hitter, the correlation between periods across those 147 points; the split-half correlation within 2025 bounds
+    what any map from one season's pitches can repeat; their ratio is the trait share."""
+    res = {}
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+    F = rebuild(T)
+    keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['strikes'] >= 0) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
+    T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
+    swing = ((T['call'] == 1) | (T['call'] == 2)).astype(np.float64)
+    xp, zp = projected(T, F, None, 'straight', 0.26); del F
+    Bh = hitter_basis(xp, zp, T['stand_r'], T['strikes'])
+    X = np.hstack([location_block(xp, zp, T['stand_r'], T['strikes']), (Bh[:, :-1] * np.isin(T['group'], (3, 4))[:, None]).astype(np.float32),
+                   (Bh[:, :-1] * (T['group'] == 5)[:, None]).astype(np.float32), control_block(T, swing_propensity(T)), pitcher_propensity(T)[:, None].astype(np.float32)])
+    rng = np.random.default_rng(11)
+    idx = rng.choice(len(swing), min(len(swing), 600000), replace=False)
+    off = fit_logistic(X[idx], swing[idx]).decision_function(X); del X
+    Bm = family_basis(Bh, T['group']); del Bh
+    stage('league')
+    gu = np.array([-1.25, -0.83, -0.42, 0.0, 0.42, 0.83, 1.25]); gz = np.array([1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0])
+    UU, ZZ = np.meshgrid(gu, gz); uu, zz = UU.ravel(), ZZ.ravel()
+    Bg = hitter_basis(uu, zz, np.ones(len(uu), np.int64), np.zeros(len(uu), np.int64))
+    G = np.vstack([family_basis(Bg, np.full(len(uu), g, np.int64)) for g in (0, 3, 5)])
+    outside_g = np.tile((np.abs(uu) > ZONE_HALF) | (zz > ZONE_TOP) | (zz < ZONE_BOT), 3)
+    side_all = {}
+    for h, r in _groups(T['batter'], np.ones(len(swing), bool)).items():
+        side_all[h] = int(np.round(T['stand_r'][r].mean()))
+    def own_grids(rows):
+        maps = _hitter_maps(Bm, swing, off, _groups(T['batter'], rows), 10.0, 300)
+        Ss = {0: 0.0, 1: 0.0}; Nn = {0: 0, 1: 0}
+        for h, m in maps.items():
+            Ss[side_all[h]] = Ss[side_all[h]] + m; Nn[side_all[h]] += 1
+        return {h: G @ (m - (Ss[side_all[h]] - m) / max(Nn[side_all[h]] - 1, 1)) for h, m in maps.items()}
+    A = own_grids(np.isin(T['season'], (2023, 2024))); B = own_grids(T['season'] == 2025)
+    odd = (T['season'] == 2025) & (T['game'] % 2 == 1); even = (T['season'] == 2025) & (T['game'] % 2 == 0)
+    O = own_grids(odd); E = own_grids(even)
+    stage('maps')
+    def corr(P, Q, mask=None):
+        out = []
+        for h in set(P) & set(Q):
+            p_, q_ = (P[h], Q[h]) if mask is None else (P[h][mask], Q[h][mask])
+            if np.std(p_) > 0 and np.std(q_) > 0:
+                out.append(float(np.corrcoef(p_, q_)[0, 1]))
+        return np.asarray(out)
+    for nm, P, Q in (('seasons_2023_24_vs_2025', A, B), ('split_halves_2025', O, E)):
+        for part, mask in (('all_cells', None), ('outside_cells', outside_g)):
+            c = corr(P, Q, mask)
+            res.setdefault(nm, {})[part] = {'hitters': int(len(c)), 'median': round(float(np.median(c)), 3), 'quartiles': [round(float(np.percentile(c, 25)), 3), round(float(np.percentile(c, 75)), 3)],
+                                            'mean': round(float(c.mean()), 3)}
+    for part in ('all_cells', 'outside_cells'):
+        sh = res['split_halves_2025'][part]['median']
+        # split halves use half a season each; Spearman-Brown to a full season before the ratio
+        full = 2 * sh / (1 + sh) if sh > -1 else float('nan')
+        res.setdefault('trait_share', {})[part] = round(float(res['seasons_2023_24_vs_2025'][part]['median'] / full), 3) if full > 0 else None
+    return res
+
+
 # ---------------------------------------------------------------- MATCHUP-01, scored once on the untouched set
 def harmonize_2026(T: dict) -> dict:
     """2026 feed locations measured at the middle of the plate, moved to the front (the earlier seasons' reference):
@@ -5729,6 +5790,8 @@ def main():
             receipt['results'] = abs_study(T, params, stage)
         elif experiment == 'abs2':
             receipt['results'] = abs2_study(T, params, stage)
+        elif experiment == 'map_stability':
+            receipt['results'] = map_stability_study(T, params, stage)
         elif experiment == 'scout':
             receipt['results'] = scout_export(T, params, stage)
         elif experiment == 'value':
