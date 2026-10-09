@@ -95,6 +95,13 @@ Credited on the untouched set (frozen code, one scoring each; ledger rows):
   (location maps; family maps 29 [18, 42]). Frozen 02b266a2. In-zone values are not stated (their placebo fails).
   The edge grew in 2026: 2025 about 14 runs [7, 20], 2026 through July 22 [15, 28] (VALUE-11), August onward 32;
   map training length is not the reason (VALUE-10). EXPLOIT-01 (pitchers do not aim at hitter maps) stands.
+- FWD-01 (registered, frozen 065e3dc6, run after the World Series): push tools/discovery_params.json with
+  {"experiment": "matchup_final", "seasons": [2023, 2024, 2025, 2026], "final_eval": true, "frozen_commit": "065e3dc6...",
+  "forward_from": "2026-10-09", "game_types": ["R", "F", "D", "L", "W"]} and the same with "experiment": "family" and
+  "league_family": true. The feed pitch table holds regular-season games unless game_types says otherwise, so every
+  credited untouched scoring so far used August 1 to September 27 only; the whole 2026 postseason is untouched.
+- ABS-01: the 2026 challenge system cut called strikes on takes 0 to 1 inch off the side edge from 49% to 35%;
+  chasing outside costs about 10% more than in 2025 (part of why the chase-spot value grew).
 - Scouting page rebuilt from SCOUT-02 (research/discovery-scout-37894222125.json): family swing maps against the
   average hitter, aim spots per pitch family, VALUE-08F value; build with matchup_page/build.py scout2_receipt.json
   (the old SCOUT-01 page's run figures are superseded). Sent to Alec as a file at about 3 a.m.; publishing still needs
