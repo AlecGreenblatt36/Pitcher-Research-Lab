@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 233,
- "rows": 236,
+ "experiments": 234,
+ "rows": 237,
  "records": {
   "ACC-01": [
    {
@@ -3621,6 +3621,22 @@
     "runs": [],
     "frozen_commits": [],
     "status": "registered"
+   }
+  ],
+  "UMP-01": [
+   {
+    "id": "UMP-01",
+    "columns": {
+     "ID": "UMP-01",
+     "Attempt": "The plate umpire's zone, as an input the report does not yet use (diagnostic, descriptive): which umpire worked the plate comes from the public box score per game (tools/brl_umpires.py, cached on the data branch as research/umpires-<season>.json, public facts); on the sealed pitch table, taken pitches within 0.35 ft of the zone's edges are scored against a league called-strike rate by location cell and hitter side, and each umpire's offset by edge region (low, high, inside, outside) is the shrunk log-odds surprise of his calls (400 taken pitches of prior weight), read as strikes per 100 edge takes. Persistence between odd and even dates within a season and across 2025 and 2026 (correlation across umpires and the noise-corrected spread), the regions where umpires differ most, and the widest and tightest zones of the latest season. 2025 and 2026 regular seasons; August 2026 on stays out as the program's untouched set",
+     "Disposition and evidence": "Diagnostic, no prediction (what is known publicly: umpire zones differ by a few strikes per 100 edge calls and persist). What it decides: if the all-edges offset persists across seasons with correlation at least 0.5 and a true spread of at least 2 strikes per 100 edge takes, UMP-02 registers an umpire-aware pricing of strike spots (the called-strike piece of the engine shifted by the day's umpire) with a prediction before its run; otherwise the umpire stays a note on the report. Receipts: research/discovery-umpires-<run>.json",
+     "Delta corrected Brier, 2026": "diagnostic, registered"
+    },
+    "registered_before_run": false,
+    "diagnostic": true,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "diagnostic, registered"
    }
   ],
   "REPORT-01": [

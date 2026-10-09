@@ -8106,6 +8106,27 @@ def main():
             sy = importlib.util.module_from_spec(spec); spec.loader.exec_module(sy)
             receipt['results'] = sy.main(params, stage)['results']
             raise StopIteration
+        if experiment == 'umpires':
+            # UMP-01: the plate umpire's zone (public officials per game, cached on the data branch; offsets and persistence are the only outputs)
+            import importlib.util
+            spec = importlib.util.spec_from_file_location('brl_umpires', ROOT / 'tools' / 'brl_umpires.py')
+            um = importlib.util.module_from_spec(spec); spec.loader.exec_module(um)
+            tables_ = []; ump_tables = {}
+            for year in params.get('seasons', (2025, 2026)):
+                stage(f'load {year}')
+                raw = read_blob(repo, token, study_path(int(year)), branch)
+                if raw is None:
+                    continue
+                doc = json.loads(gzip.decompress(unseal(raw, key, study_purpose(int(year)))))
+                Ty = pitch_table(doc, int(year)); del doc, raw
+                if int(year) == 2026:
+                    Ty = take(Ty, Ty['day'] < date(2026, 8, 1).toordinal())
+                ump_tables[int(year)] = um.load_or_build(repo, token, branch, int(year), np.unique(Ty['game']).tolist(), stage, read_blob, put_bytes, int(params.get('workers', 6)))
+                tables_.append(Ty)
+            T = concat(tables_); del tables_
+            receipt['seasons_rows'] = {int(s): int((T['season'] == s).sum()) for s in np.unique(T['season'])}
+            receipt['results'] = um.study(T, ump_tables, params, stage)
+            raise StopIteration
         if experiment in ('challenges', 'scarcity'):
             stage('fetch the 2026 play-by-play')
             cdoc = challenge_study(int(params.get('season', 2026)), int(params.get('workers', 6)))
