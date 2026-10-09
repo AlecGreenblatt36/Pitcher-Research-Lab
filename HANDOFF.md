@@ -81,13 +81,22 @@ Credited on the untouched set (frozen code, one scoring each; ledger rows):
   per 10 ms [0.101, 0.192]; after a miss later, -0.239 [-0.317, -0.146] (within pitcher-types, cell fixed effects).
   Frozen commit 8795ff00.
 
-Also from the night: EXPLOIT-01 pitchers do not aim at a hitter's own chase zones (-0.09 points), so the maps'
-information is unexploited and the realized map deviation is a natural experiment; VALUE-01 (running) prices it in
-runs. DISCIPLINE-01 failed (maps do not improve next-season strikeout or walk projections, -0.37 and -0.49). LIVE-05:
-the bullpen package is no worse in game (-0.00012 [-0.00042, +0.00020]), so it stands once switched on.
+- VALUE-01F and VALUE-02F: a hitter's own decision-moment chase map costs him runs when pitches land in it
+  (-0.00095 runs per point outside [-0.0012, -0.0006], placebo nil; inside +0.00038). Aiming each outside pitch at
+  the best third of the pitcher's own spots for that hitter: perfect placement about -69 runs per team-season
+  [-89, -44]; with typical command (0.6 ft scatter per axis) about -43 [-57, -26], with strikes too about -60
+  [-85, -43]. Frozen commits 63623e0f and 61549d73. Nobody collects it (EXPLOIT-01: targeting -0.09 points).
 
-Private scouting page: scratchpad matchup_page/ (template.html, build.py; data from receipt
-research/discovery-scout-37884968211.json, SCOUT-01), sent to Alec as a file; publishing it as an artifact was
+Development results around it: VALUE-03 nets ADAPT-01's tightening (hitters chase a little less everywhere after
+seeing more tempting pitches than chance, -0.065 log-odds per extra one; they do not learn their spots): 86 percent
+kept (about -37 outside on the credited value). VALUE-04 (running): the edge within each pitch type. DAMAGE-01: damage
+maps on the true crossing help on 2025 (+0.21 per 1,000 balls in play) but DAMAGE-01F did not confirm them (+0.04, CI
+includes 0); damage following the true crossing over the decision moment held (1.15 [0.95, 1.33]). DISCIPLINE-01
+failed (maps do not improve season projections). LIVE-05: the bullpen package is no worse in game, so it stands once
+switched on.
+
+Private scouting page: scratchpad matchup_page/ (template.html, build.py, shot.js; data from the SCOUT-01 receipt
+with aim spots, research/discovery-scout-37888261167.json), sent to Alec as a file; publishing it as an artifact was
 blocked by the session's permission check (publishing new work needs Alec's approval). Never commit it to the
 public repo (per-player summaries with names).
 
