@@ -2509,7 +2509,10 @@ def matchup_family(T: dict, params: dict, stage) -> dict:
     final = bool(params.get('final_eval'))
     if final and not params.get('frozen_commit'):
         raise ValueError('the family maps are scored on the untouched months only as the registered evaluation of a frozen commit')
-    if final:
+    fwd = params.get('forward_from')                # FWD-01: everything before this date trains, everything from it on is scored
+    if final and fwd:
+        T = take(T, np.isin(T['season'], (2023, 2024, 2025, 2026)))
+    elif final:
         T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | ((T['season'] == 2026) & (T['day'] >= date(2026, 8, 1).toordinal())))
     else:
         T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
@@ -2525,7 +2528,10 @@ def matchup_family(T: dict, params: dict, stage) -> dict:
         X = np.hstack([LBk, (Bh0 * np.isin(T['group'], (3, 4))[:, None]).astype(np.float32), (Bh0 * (T['group'] == 5)[:, None]).astype(np.float32), Ck]); del Bh0
     else:
         X = np.hstack([LBk, Ck])
-    if final:
+    if final and fwd:
+        d0 = date.fromisoformat(str(fwd)).toordinal()
+        tr = T['day'] < d0; te = T['day'] >= d0
+    elif final:
         tr = T['season'] <= 2025; te = T['season'] == 2026
     else:
         tr = np.isin(T['season'], (2023, 2024)); te = T['season'] == 2025
@@ -2612,14 +2618,21 @@ def matchup_final(T: dict, params: dict, stage) -> dict:
     if params.get('harmonize_2026'):
         T = harmonize_2026(T)
     test_from = date(2026, 8, 1).toordinal()
-    T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | ((T['season'] == 2026) & (T['day'] >= test_from)))
+    fwd = params.get('forward_from')                 # FWD-01: everything before this date trains, everything from it on is scored
+    if fwd:
+        T = take(T, np.isin(T['season'], (2023, 2024, 2025, 2026)))
+    else:
+        T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | ((T['season'] == 2026) & (T['day'] >= test_from)))
     F = rebuild(T)
     keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['strikes'] >= 0) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
     T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
     swing = ((T['call'] == 1) | (T['call'] == 2)).astype(np.float64)
     xp, zp = projected(T, F, None, 'straight', 0.26)
     C = np.hstack([control_block(T, swing_propensity(T)), pitcher_propensity(T)[:, None].astype(np.float32)])
-    tr = T['season'] <= 2025; te = T['season'] == 2026
+    if fwd:
+        d0 = date.fromisoformat(str(fwd)).toordinal(); tr = T['day'] < d0; te = T['day'] >= d0
+    else:
+        tr = T['season'] <= 2025; te = T['season'] == 2026
     rng = np.random.default_rng(11)
     preds = {}
     for name, (x, z) in (('true', (T['px'].astype(np.float64), T['pz'].astype(np.float64))), ('percept', (xp, zp))):
