@@ -5029,12 +5029,28 @@ def swingmap_study(T: dict, S: dict, params: dict, stage) -> dict:
         stage(f'maps {ssn}: {len(maps)}')
     bat, check = _bat_intrinsic(S, seasons, int(params.get('min_swings', 150)))
     res['attack_direction_orientation'] = check
+    if params.get('zones'):
+        # ZONEMAP-01: each hitter-season's strike zone from Savant (median top and bottom over the pitches he saw)
+        yr = np.asarray([date.fromordinal(int(d_)).year for d_ in S['day']])
+        top_, bot_ = S['sz_top'].astype(np.float64), S['sz_bot'].astype(np.float64); bat_ = S['batter'].astype(np.int64)
+        for ssn in seasons:
+            mz = (yr == ssn) & np.isfinite(top_) & np.isfinite(bot_)
+            for b_, rr in _groups(bat_, mz).items():
+                if len(rr) >= 300 and (int(b_), int(ssn)) in bat:
+                    bat[(int(b_), int(ssn))]['zone_mid'] = float(np.median((top_[rr] + bot_[rr]) / 2.0))
+                    bat[(int(b_), int(ssn))]['zone_height'] = float(np.median(top_[rr] - bot_[rr]))
+                    bat[(int(b_), int(ssn))]['zone_top'] = float(np.median(top_[rr]))
+                    bat[(int(b_), int(ssn))]['zone_bottom'] = float(np.median(bot_[rr]))
+        stage('zones')
     stage(f'bat measures {len(bat)}')
     keys = sorted(set(feats) & set(bat))
     res['hitter_seasons'] = {str(s): int(sum(1 for k in keys if k[1] == s)) for s in seasons}
     pairs_ = [('attack_angle', 'high_minus_low'), ('swing_path_tilt', 'high_minus_low'), ('attack_direction_pull', 'away_minus_inside'),
               ('contact_depth_in', 'away_minus_inside'), ('bat_speed', 'outside_level'), ('swing_length', 'outside_level'),
               ('attack_angle', 'outside_level'), ('contact_depth_in', 'high_minus_low')]
+    if params.get('zones'):
+        pairs_ = [('zone_mid', 'high_minus_low'), ('zone_top', 'high_minus_low'), ('zone_bottom', 'high_minus_low'), ('zone_height', 'high_minus_low'),
+                  ('zone_height', 'outside_level'), ('zone_mid', 'away_minus_inside')] + pairs_
 
     def corr_ci(x, y, reps=2000):
         x, y = np.asarray(x, float), np.asarray(y, float); ok_ = np.isfinite(x) & np.isfinite(y); x, y = x[ok_], y[ok_]
