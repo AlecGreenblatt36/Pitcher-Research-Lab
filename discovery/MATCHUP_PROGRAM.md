@@ -95,8 +95,8 @@ Credited (frozen code, scored once on the untouched months, August 1 to Septembe
   That gain was measured against the standard heat map inside a logistic model. Against a gradient-boosted learner
   given the same pitch inputs (BENCH-01), most of it belongs to the league part, which boosting learns from the raw
   inputs (it beats our logistic model by 23 nats); the hitter-specific maps read at the decision moment still add
-  about 3 nats per 1,000 decisions beyond boosting with the heat map, in 2025 and in 2026 through July (BENCH-01F
-  scores it once on the untouched months). The best swing model is boosting with both maps as inputs.
+  about 3 nats per 1,000 decisions beyond boosting with the heat map, in 2025 and in 2026 through July, and +3.6
+  [3.2, 4.2] on the untouched months (BENCH-01F, credited). The best swing model is boosting with both maps as inputs.
 - **Misses and contact follow where the ball arrives** (MATCHUP-03, CONTACT-03, DAMAGE-01F). The spread of a hitter's
   contact depth from bat tracking is his contact window (contact depth is only seen on contact, so the spread is the
   range of timing he survives, not his timing error) and predicts misses beyond his whiff rate; damage on contact is
