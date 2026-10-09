@@ -3362,7 +3362,13 @@ def value2_study(T: dict, params: dict, stage) -> dict:
     appearance. Sigma 0, 0.3, 0.6 and 0.9 ft. A pitch that scatters across the zone edge keeps the coefficient of where
     it was aimed (a simplification). Development data only (2025)."""
     res = {}
-    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+    final = bool(params.get('final_eval'))
+    if final and not params.get('frozen_commit'):
+        raise ValueError('the final value scoring runs only as the registered evaluation of a frozen commit')
+    if final:      # VALUE-02F: maps from 2023-2025, scored on the 2026 pitches from August 1 (second look at the untouched months)
+        T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | ((T['season'] == 2026) & (T['day'] >= date(2026, 8, 1).toordinal())))
+    else:
+        T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
     F = rebuild(T)
     keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
     T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
@@ -3370,14 +3376,15 @@ def value2_study(T: dict, params: dict, stage) -> dict:
     xp, zp = projected(T, F, None, 'straight', 0.26)
     LB = location_block(xp, zp, T['stand_r'], T['strikes']); nL = LB.shape[1]
     X = np.hstack([LB, control_block(T, swing_propensity(T)), pitcher_propensity(T)[:, None].astype(np.float32)])
-    tr = np.isin(T['season'], (2023, 2024))
+    tr = np.isin(T['season'], (2023, 2024, 2025)) if final else np.isin(T['season'], (2023, 2024))
+    test_season = 2026 if final else 2025
     rng = np.random.default_rng(11)
     idx = np.flatnonzero(tr); idx = rng.choice(idx, min(len(idx), 600000), replace=False)
     league = fit_logistic(X[idx], swing[idx]); off = league.decision_function(X); wL = league.coef_[0][:nL].astype(np.float64)
     Bm = hitter_basis(xp, zp, T['stand_r'], T['strikes'])
     maps = _hitter_maps(Bm, swing, off, _groups(T['batter'], tr), 10.0, 300)
     stage(f'maps {len(maps)}')
-    te = (T['season'] == 2025) & (T['out7'] >= 0) & np.isin(T['batter'], np.asarray(list(maps), dtype=np.int64))
+    te = (T['season'] == test_season) & (T['out7'] >= 0) & np.isin(T['batter'], np.asarray(list(maps), dtype=np.int64))
     ix = np.flatnonzero(te)
     sig = lambda v: 1 / (1 + np.exp(-v))
     p_l = sig(off[ix])
@@ -3407,8 +3414,20 @@ def value2_study(T: dict, params: dict, stage) -> dict:
     Xd = np.column_stack([np.ones(len(ix)), cnt, grp, p_l, np.log(p_l / (1 - p_l)), outside, hats(e, (-0.8, -0.4, -0.15, 0.0, 0.15, 0.4, 0.8, 1.5)), rv_b, rv_p,
                           (T['stand_r'][ix] == T['throw_r'][ix]).astype(float), D * outside, D * ~outside])
     b = np.linalg.lstsq(Xd, y, rcond=None)[0]; b_out, b_in = float(b[-2]), float(b[-1])
+    # game bootstrap of the two coefficients (the gains below are nearly fixed, so the value's interval follows these)
+    ug, gi = np.unique(T['game'][ix], return_inverse=True); p_ = Xd.shape[1]
+    XtX = np.zeros((len(ug), p_, p_))
+    for a_ in range(p_):
+        for c_ in range(a_, p_):
+            v_ = np.bincount(gi, weights=Xd[:, a_] * Xd[:, c_], minlength=len(ug)); XtX[:, a_, c_] = v_; XtX[:, c_, a_] = v_
+    Xty = np.column_stack([np.bincount(gi, weights=Xd[:, a_] * y, minlength=len(ug)) for a_ in range(p_)])
+    draws = []
+    for _ in range(int(params.get('reps', 200))):
+        w_ = np.bincount(rng.integers(0, len(ug), len(ug)), minlength=len(ug)).astype(float)
+        draws.append(np.linalg.solve(np.tensordot(w_, XtX, 1) + 1e-9 * np.eye(p_), w_ @ Xty)[-2:])
+    draws = np.asarray(draws)
     n_pa = max(int((T['pitch_no'][ix] == 0).sum()), 1)
-    res['coefficients'] = {'runs_per_point_outside': round(b_out, 6), 'runs_per_point_inside': round(b_in, 6),
+    res['coefficients'] = {'test_season': test_season, 'test_pitches': int(len(ix)), 'runs_per_point_outside': round(b_out, 6), 'runs_per_point_inside': round(b_in, 6),
                            'outside_pitches_per_pa': round(float(outside.sum() / n_pa), 3), 'inside_pitches_per_pa': round(float((~outside).sum() / n_pa), 3)}
     stage('coefficients')
     sigmas = [float(v) for v in params.get('sigmas', (0.0, 0.3, 0.6, 0.9))]
@@ -3462,7 +3481,11 @@ def value2_study(T: dict, params: dict, stage) -> dict:
     for sg in sigmas:
         go = acc[('outside', sg)][0] / max(acc[('outside', sg)][1], 1); gi_ = acc[('inside', sg)][0] / max(acc[('inside', sg)][1], 1)
         per_pa = b_out * go * res['coefficients']['outside_pitches_per_pa'] + b_in * gi_ * res['coefficients']['inside_pitches_per_pa']
+        both_draws = (draws[:, 0] * go * res['coefficients']['outside_pitches_per_pa'] + draws[:, 1] * gi_ * res['coefficients']['inside_pitches_per_pa']) * 6200
+        out_draws = draws[:, 0] * go * res['coefficients']['outside_pitches_per_pa'] * 6200
         out[str(sg)] = {'outside_gain_points': round(go, 3), 'inside_gain_points': round(gi_, 3),
+                        'runs_per_6200_outside_only_interval': [round(float(np.percentile(out_draws, 2.5)), 1), round(float(np.percentile(out_draws, 97.5)), 1)],
+                        'runs_per_6200_both_interval': [round(float(np.percentile(both_draws, 2.5)), 1), round(float(np.percentile(both_draws, 97.5)), 1)],
                         'runs_per_6200_outside_only': round(b_out * go * res['coefficients']['outside_pitches_per_pa'] * 6200, 1),
                         'runs_per_6200_inside_only': round(b_in * gi_ * res['coefficients']['inside_pitches_per_pa'] * 6200, 1),
                         'runs_per_6200_both': round(per_pa * 6200, 1)}
