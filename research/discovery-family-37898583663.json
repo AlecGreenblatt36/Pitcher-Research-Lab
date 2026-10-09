@@ -1,0 +1,203 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "family",
+ "run_id": "37898583663",
+ "params": {
+  "experiment": "family",
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "final_eval": true,
+  "frozen_commit": "f7dba1630a8b4ec9b9a4752850ae3575b192c5ef",
+  "league_family": true,
+  "by_release": true,
+  "separation": "speed",
+  "sliders_only": true
+ },
+ "started_at": "2026-10-09T07:22:08.621866+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 7.1
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 14.4
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 21.1
+  },
+  {
+   "stage": "league",
+   "at_seconds": 77.1
+  },
+  {
+   "stage": "maps location",
+   "at_seconds": 79.4
+  },
+  {
+   "stage": "maps location_by_family",
+   "at_seconds": 82.2
+  }
+ ],
+ "final_eval": {
+  "frozen_commit": "f7dba1630a8b4ec9b9a4752850ae3575b192c5ef",
+  "untouched_rows": 228549
+ },
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 713382
+ },
+ "results": {
+  "test_decisions": 226679,
+  "maps": {
+   "location": {
+    "shrinkage": 10.0,
+    "validation": {},
+    "covered": 0.8131,
+    "test_logloss": 0.45254
+   },
+   "location_by_family": {
+    "shrinkage": 10.0,
+    "validation": {},
+    "covered": 0.8131,
+    "test_logloss": 0.45038
+   }
+  },
+  "gain_nats_per_1000_decisions": {
+   "location_over_league": [
+    11.202,
+    10.482,
+    11.9
+   ],
+   "family_over_location": [
+    2.157,
+    1.779,
+    2.518
+   ],
+   "family_over_league": [
+    13.36,
+    12.522,
+    14.126
+   ],
+   "league_family_over_plain_league": [
+    4.692,
+    4.297,
+    5.105
+   ]
+  },
+  "family_over_location_by_subset": {
+   "fastball_outside": {
+    "decisions": 53114,
+    "gain": [
+     2.099,
+     1.636,
+     2.568
+    ]
+   },
+   "breaking_outside": {
+    "decisions": 35082,
+    "gain": [
+     3.942,
+     2.77,
+     4.997
+    ]
+   },
+   "offspeed_outside": {
+    "decisions": 20160,
+    "gain": [
+     1.432,
+     0.163,
+     2.574
+    ]
+   },
+   "all_inside": {
+    "decisions": 118259,
+    "gain": [
+     1.781,
+     1.322,
+     2.234
+    ]
+   }
+  },
+  "by_release_separation": {
+   "pitchers_measured": 868,
+   "cuts": [
+    4.857,
+    6.826
+   ],
+   "tight_release": {
+    "decisions": 71877,
+    "family_over_location": [
+     2.235,
+     1.719,
+     2.857
+    ],
+    "family_over_location_breaking_outside": [
+     4.619,
+     2.78,
+     6.473
+    ],
+    "league_family_over_plain": [
+     4.424,
+     3.549,
+     5.187
+    ]
+   },
+   "middle": {
+    "decisions": 57964,
+    "family_over_location": [
+     2.526,
+     1.82,
+     3.209
+    ],
+    "family_over_location_breaking_outside": [
+     3.277,
+     1.45,
+     5.408
+    ],
+    "league_family_over_plain": [
+     4.565,
+     3.642,
+     5.467
+    ]
+   },
+   "separated_release": {
+    "decisions": 43599,
+    "family_over_location": [
+     2.04,
+     1.237,
+     2.735
+    ],
+    "family_over_location_breaking_outside": [
+     2.186,
+     -0.288,
+     4.6
+    ],
+    "league_family_over_plain": [
+     6.036,
+     5.06,
+     6.946
+    ]
+   },
+   "separated_minus_tight_family_gain": [
+    -0.195,
+    -1.15,
+    0.829
+   ]
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T07:23:31.194832+00:00",
+ "seconds": 82.6
+}
