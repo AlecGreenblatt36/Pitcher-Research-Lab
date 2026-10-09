@@ -4614,6 +4614,93 @@ def adapt_study(T: dict, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- SERIES-01: does the own-spot edge fade as a hitter keeps facing a pitcher?
+def series_study(T: dict, params: dict, stage) -> dict:
+    """In a series the same hitters face the same pitchers again. ADAPT-01 found no learning of own spots within a game;
+    this asks across games. MATCHUP-05F's representation fitted on 2023-2024 (league with its family part, family maps,
+    shrinkage 10) and each hitter's own part (his map minus the same-side mean map). Every 2025 pitch outside the zone
+    to a hitter with a map: his swing, with the full map's prediction as offset, on the plate appearances he had
+    against this pitcher in earlier games of 2025 (capped at 10), its product with the own part at this pitch (log
+    odds; negative means the own part's pull fades with familiarity), the plate appearances against him earlier in this
+    game, and the pitch number. Game-bootstrap intervals; and the observed swing at his high own spots against the map,
+    by earlier meetings."""
+    res = {}
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+    F = rebuild(T)
+    keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
+    T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
+    swing = ((T['call'] == 1) | (T['call'] == 2)).astype(np.float64)
+    xp, zp = projected(T, F, None, 'straight', 0.26); del F
+    Bh = hitter_basis(xp, zp, T['stand_r'], T['strikes'])
+    X = np.hstack([location_block(xp, zp, T['stand_r'], T['strikes']), (Bh[:, :-1] * np.isin(T['group'], (3, 4))[:, None]).astype(np.float32),
+                   (Bh[:, :-1] * (T['group'] == 5)[:, None]).astype(np.float32), control_block(T, swing_propensity(T)), pitcher_propensity(T)[:, None].astype(np.float32)])
+    tr = np.isin(T['season'], (2023, 2024))
+    rng = np.random.default_rng(11)
+    idx = np.flatnonzero(tr); idx = rng.choice(idx, min(len(idx), 600000), replace=False)
+    off = fit_logistic(X[idx], swing[idx]).decision_function(X); del X
+    Bm = family_basis(Bh, T['group']); del Bh
+    maps = _hitter_maps(Bm, swing, off, _groups(T['batter'], tr), 10.0, 300)
+    ub_, bi_ = np.unique(T['batter'][tr], return_inverse=True)
+    side_of = dict(zip(ub_.tolist(), np.round(np.bincount(bi_, weights=T['stand_r'][tr]) / np.bincount(bi_)).astype(int).tolist()))
+    Ss = {0: 0.0, 1: 0.0}; Nn = {0: 0, 1: 0}
+    for h, m in maps.items():
+        Ss[side_of[h]] = Ss[side_of[h]] + m; Nn[side_of[h]] += 1
+    mbar = {h: (Ss[side_of[h]] - m) / max(Nn[side_of[h]] - 1, 1) for h, m in maps.items()}
+    stage(f'maps {len(maps)}')
+    te = (T['season'] == 2025) & np.isin(T['batter'], np.asarray(list(maps), dtype=np.int64))
+    ix = np.flatnonzero(te)
+    sig = lambda v: 1 / (1 + np.exp(-v))
+    lo_map = np.zeros(len(ix)); own = np.zeros(len(ix))
+    for h, rr in _groups(T['batter'][ix], np.ones(len(ix), bool)).items():
+        a = ix[rr]; full = Bm[a] @ maps[h]; lo_map[rr] = off[a] + full; own[rr] = Bm[a] @ (maps[h] - mbar[h])
+    xt, zt = T['px'][ix], T['pz'][ix]
+    u_t = np.where(T['stand_r'][ix] == 1, xt, -xt)
+    outside = (np.abs(u_t) > ZONE_HALF) | (zt > ZONE_TOP) | (zt < ZONE_BOT)
+    # plate appearances of this hitter against this pitcher in earlier games of the season, and earlier in this game
+    first = T['pitch_no'][ix] == 0
+    pair = T['batter'][ix].astype(np.int64) * 10_000_000 + T['pitcher'][ix].astype(np.int64)
+    o = np.lexsort((T['pitch_no'][ix], T['ab'][ix], T['game'][ix], T['day'][ix], pair))
+    pr, gm, fp = pair[o], T['game'][ix][o], first[o]
+    newpair = np.ones(len(o), bool); newpair[1:] = pr[1:] != pr[:-1]
+    newgame = newpair.copy(); newgame[1:] |= gm[1:] != gm[:-1]
+    c = np.cumsum(fp.astype(float))
+    pair_start = np.maximum.accumulate(np.where(newpair, np.arange(len(o)), 0)); game_start = np.maximum.accumulate(np.where(newgame, np.arange(len(o)), 0))
+    before_pair = np.where(pair_start > 0, c[pair_start - 1], 0.0); before_game = np.where(game_start > 0, c[game_start - 1], 0.0)
+    earlier_games = np.empty(len(o)); earlier_games[o] = before_game - before_pair
+    same_game = np.empty(len(o)); same_game[o] = (c - fp.astype(float)) - before_game
+    m = outside
+    k = np.minimum(earlier_games[m], 10.0)
+    Z = np.column_stack([np.ones(m.sum()), k, own[m] * k, own[m], np.minimum(same_game[m], 3), np.minimum(T['pitch_no'][ix][m], 6)])
+    names = ['intercept', 'earlier_meetings', 'own_part_x_earlier_meetings', 'own_part_extra', 'earlier_this_game', 'pitch_number']
+    yy = swing[ix][m]; base = lo_map[m]
+    def fit(Zs, ys, bs):
+        bcoef = np.zeros(Zs.shape[1])
+        for _ in range(30):
+            p_ = sig(bs + Zs @ bcoef); W = p_ * (1 - p_)
+            step = np.linalg.solve((Zs * W[:, None]).T @ Zs + 1e-6 * np.eye(Zs.shape[1]), Zs.T @ (ys - p_)); bcoef += step
+            if np.max(np.abs(step)) < 1e-9:
+                break
+        return bcoef
+    bfull = fit(Z, yy, base)
+    games = T['game'][ix][m]; ug, gi = np.unique(games, return_inverse=True); draws = []
+    for _ in range(int(params.get('reps', 60))):
+        w = np.bincount(rng.integers(0, len(ug), len(ug)), minlength=len(ug))[gi]; sel = np.repeat(np.arange(len(yy)), w)
+        draws.append(fit(Z[sel], yy[sel], base[sel]))
+    draws = np.asarray(draws)
+    res['coefficients'] = {n_: [round(float(bfull[j]), 4), round(float(np.percentile(draws[:, j], 2.5)), 4), round(float(np.percentile(draws[:, j], 97.5)), 4)] for j, n_ in enumerate(names)}
+    res['own_part_sd_logodds'] = round(float(own[m].std()), 3)
+    thr = float(np.percentile(own[m], 80)); hi = own[m] >= thr
+    tab = []
+    for lo_, hi_, lab in ((0, 0, '0'), (1, 3, '1-3'), (4, 9, '4-9'), (10, 99, '10+')):
+        sel = hi & (earlier_games[m] >= lo_) & (earlier_games[m] <= hi_)
+        if sel.sum() > 200:
+            tab.append({'earlier_meetings': lab, 'pitches': int(sel.sum()), 'observed_swing': round(float(yy[sel].mean()), 4), 'map_predicted': round(float(sig(base[sel]).mean()), 4)})
+    res['high_own_spots_by_meetings'] = tab
+    res['rows'] = {'outside_pitches': int(m.sum()), 'with_earlier_meetings': int((earlier_games[m] > 0).sum()), 'mean_earlier_meetings': round(float(earlier_games[m].mean()), 2)}
+    stage('series')
+    return res
+
+
 # ---------------------------------------------------------------- DAMAGE-01: where a hitter does damage, and which clock it follows
 def damage_study(T: dict, params: dict, stage) -> dict:
     """The third part of the matchup engine: damage on contact. Each ball in play's expected run value from its launch
@@ -5792,6 +5879,8 @@ def main():
             receipt['results'] = abs2_study(T, params, stage)
         elif experiment == 'map_stability':
             receipt['results'] = map_stability_study(T, params, stage)
+        elif experiment == 'series':
+            receipt['results'] = series_study(T, params, stage)
         elif experiment == 'scout':
             receipt['results'] = scout_export(T, params, stage)
         elif experiment == 'value':
