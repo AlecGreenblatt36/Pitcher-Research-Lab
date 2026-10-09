@@ -3886,6 +3886,81 @@ def value2_study(T: dict, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- ABS-01: did 2026 raise the price of a chase?
+def abs_study(T: dict, params: dict, stage) -> dict:
+    """VALUE-11 found a hitter's own chase spots worth 1.65 times as much in 2026 (through July) as in 2025. Candidate
+    mechanism: with the 2026 ball-strike challenge system a taken pitch outside the zone is called a ball more
+    reliably, so a chase gives up more against a take. Measured on 2025 and 2026 through July (development data):
+    the called-strike chance of taken pitches by distance outside (and inside) the zone edge, by season; and the
+    plate appearance's run value for a swing against a take on pitches outside the zone, holding the count, the
+    distance band, the pitch group, both players' earlier run values and platoon, by season, with the difference's
+    game-bootstrap interval."""
+    res = {}
+    T = take(T, np.isin(T['season'], (2025, 2026)))
+    F = rebuild(T)
+    keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
+    T = take(T, keep); del F
+    swing = ((T['call'] == 1) | (T['call'] == 2)); take_ = T['call'] == 0; cs = T['cs'] == 1
+    xt, zt = T['px'].astype(np.float64), T['pz'].astype(np.float64)
+    u_t = np.where(T['stand_r'] == 1, xt, -xt)
+    e = np.maximum(np.maximum(np.abs(u_t) - ZONE_HALF, zt - ZONE_TOP), ZONE_BOT - zt)
+    edges = np.array([-4, -2, -1, 0, 1, 2, 4, 8, 99]) / 12.0
+    band = np.searchsorted(edges, e)                 # 0: deeper than 4 in inside ... 8: beyond 8 in outside
+    names = ['inside_4in_plus', 'inside_2_4in', 'inside_1_2in', 'inside_0_1in', 'outside_0_1in', 'outside_1_2in', 'outside_2_4in', 'outside_4_8in', 'outside_8in_plus']
+    cso = {}
+    for ssn in (2025, 2026):
+        m = (T['season'] == ssn) & take_
+        cso[ssn] = {names[b]: {'called_strike': round(float(cs[m & (band == b)].mean()), 4), 'takes': int((m & (band == b)).sum())} for b in range(len(names)) if (m & (band == b)).sum() > 100}
+    res['called_strike_on_takes'] = cso
+    # the side edges only (heights 2.0 to 3.0 ft, where the plate's width is the edge in both seasons and the 2026 zone's batter-specific top and bottom do not enter)
+    mid = (zt >= 2.0) & (zt <= 3.0)
+    es = np.abs(u_t) - ZONE_HALF; band_s = np.searchsorted(edges, es)
+    res['called_strike_on_takes_side_edges'] = {ssn: {names[b]: {'called_strike': round(float(cs[(T['season'] == ssn) & take_ & mid & (band_s == b)].mean()), 4),
+                                                                   'takes': int(((T['season'] == ssn) & take_ & mid & (band_s == b)).sum())}
+                                                        for b in range(len(names)) if ((T['season'] == ssn) & take_ & mid & (band_s == b)).sum() > 100} for ssn in (2025, 2026)}
+    stage('called strikes')
+    out = (e > 0) & (T['out7'] >= 0)
+    y = LW7[np.clip(T['out7'], 0, 6).astype(int)]
+    first = (T['pitch_no'] == 0) & (T['out7'] >= 0)
+    rv_all = y
+    ix = np.flatnonzero(out)
+    def prior_rv(key):
+        nn, ss = _prior_by_day(np.r_[key[first], key[ix]].astype(np.int64), np.r_[T['day'][first], T['day'][ix]].astype(np.int64),
+                               np.r_[rv_all[first], np.zeros(len(ix))], np.r_[np.ones(int(first.sum()), bool), np.zeros(len(ix), bool)])
+        nn, ss = nn[int(first.sum()):], ss[int(first.sum()):]
+        lg_ = float(rv_all[first].mean()); return (ss + 200 * lg_) / (nn + 200)
+    rv_b, rv_p = prior_rv(T['batter']), prior_rv(T['pitcher'])
+    cc = np.clip(T['balls'][ix], 0, 3) * 3 + np.clip(T['strikes'][ix], 0, 2)
+    s26 = (T['season'][ix] == 2026).astype(float); sw = swing[ix].astype(float)
+    cols = [np.ones(len(ix)), s26]
+    for k in range(1, 12):
+        cols += [(cc == k).astype(float), (cc == k) * s26]
+    for b in range(5, 9):
+        cols += [(band[ix] == b).astype(float), (band[ix] == b) * s26]
+    for g in range(1, 7):
+        cols.append((np.clip(T['group'][ix], 0, 6) == g).astype(float))
+    cols += [rv_b, rv_p, (T['stand_r'][ix] == T['throw_r'][ix]).astype(float), sw, sw * s26]
+    X = np.column_stack(cols); yy = y[ix]
+    bb = np.linalg.lstsq(X, yy, rcond=None)[0]
+    ug, gi = np.unique(T['game'][ix], return_inverse=True); pk = X.shape[1]
+    XtX = np.zeros((len(ug), pk, pk))
+    for a_ in range(pk):
+        for c_ in range(a_, pk):
+            v_ = np.bincount(gi, weights=X[:, a_] * X[:, c_], minlength=len(ug)); XtX[:, a_, c_] = v_; XtX[:, c_, a_] = v_
+    Xty = np.column_stack([np.bincount(gi, weights=X[:, a_] * yy, minlength=len(ug)) for a_ in range(pk)])
+    rng = np.random.default_rng(5); dr = []
+    for _ in range(int(params.get('reps', 200))):
+        w_ = np.bincount(rng.integers(0, len(ug), len(ug)), minlength=len(ug)).astype(float)
+        dr.append(np.linalg.solve(np.tensordot(w_, XtX, 1) + 1e-9 * np.eye(pk), w_ @ Xty)[-2:])
+    dr = np.asarray(dr)
+    q = lambda v: [round(float(np.percentile(v, 2.5)), 5), round(float(np.percentile(v, 97.5)), 5)]
+    res['swing_vs_take_outside'] = {'pitches': int(len(ix)), 'runs_2025': round(float(bb[-2]), 5), 'runs_2025_interval': q(dr[:, 0]),
+                                    'runs_2026': round(float(bb[-2] + bb[-1]), 5), 'runs_2026_interval': q(dr[:, 0] + dr[:, 1]),
+                                    'change_2026': round(float(bb[-1]), 5), 'change_2026_interval': q(dr[:, 1])}
+    stage('swing against take')
+    return res
+
+
 # ---------------------------------------------------------------- VALUE-12: a hitter's own whiff holes, priced
 def value_whiff_study(T: dict, params: dict, stage) -> dict:
     """VALUE-08's design for the whiff map on the true crossing (MATCHUP-03's representation: league whiff model on
@@ -5480,6 +5555,8 @@ def main():
             receipt['results'] = exploit2_study(T, params, stage)
         elif experiment == 'value_whiff':
             receipt['results'] = value_whiff_study(T, params, stage)
+        elif experiment == 'abs':
+            receipt['results'] = abs_study(T, params, stage)
         elif experiment == 'scout':
             receipt['results'] = scout_export(T, params, stage)
         elif experiment == 'value':
