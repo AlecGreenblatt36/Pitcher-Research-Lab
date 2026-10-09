@@ -366,6 +366,14 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .rp-grid i.strike::after { content: ""; position: absolute; inset: 28%; border-radius: 2px; background: var(--ink); }
 .rp-grid i.strike.weak::after { background: transparent; border: 2px solid var(--ink); box-sizing: border-box; }
 .rp-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+.pl-search { width: 100%; max-width: 420px; min-height: 44px; font: inherit; font-size: 16px; padding: 8px 12px; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); color: var(--ink); margin: 6px 0 14px; }
+.pl-list { list-style: none; margin: 0 0 20px; padding: 0; }
+.pl-list li { border-top: 1px solid var(--rule-soft); }
+.pl-list a { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 48px; padding: 8px 4px; text-decoration: none; color: inherit; }
+.pl-list a:hover { background: var(--hover); }
+.pl-list .who { min-width: 0; } .pl-list .who small { color: var(--muted); margin-left: 6px; }
+.pl-list b { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pl-list .good { color: var(--good); } .pl-list .bad { color: var(--bad); }
 .rp-card { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 12px; min-width: 0; }
 .rp-card h4 { margin: 0 0 6px; font-size: 16px; }
 .rp-card h4 small { font-weight: 400; color: var(--muted); font-size: 13px; }
@@ -504,6 +512,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     <nav class="nav" aria-label="Main">
       <a href="#/" data-nav="games">Games</a>
       <a href="#/record" data-nav="record">Record</a>
+      <a href="#/players" data-nav="players">Players</a>
       <a href="#/how" data-nav="how">How it works</a>
     </nav>
   </div>
@@ -989,6 +998,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     document.querySelectorAll("[data-nav]").forEach(function (a) { a.removeAttribute("aria-current"); });
     if (h[0] === "game" && h[1]) { withGame(h[1], function () { withWE(function () { renderGame(h[1], h[2] || "summary"); }); }); mark("games"); }
     else if (h[0] === "record") { renderRecord(); mark("record"); }
+    else if (h[0] === "players") { renderPlayers(decodeURIComponent(h[1] || "")); mark("players"); }
+    else if (h[0] === "player" && h[1] && h[2]) { renderPlayer(h[1], h[2]); mark("players"); }
     else if (h[0] === "how") { renderHow(); mark("how"); }
     else if (h[0] === "past" && /^\d{4}-\d{2}-\d{2}$/.test(h[1] || "") && h[2]) {
       withSeason(seasonYear(h[1]), function () { withWE(function () { renderPastGame(h[1], h[2], h[3] || "summary"); }); }); mark("games");
@@ -2151,7 +2162,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   function rpWords(c) {
     var u = c[0], z = c[1];
     var side = u < -0.83 ? "in off the plate" : u < -0.3 ? "inside edge" : u <= 0.3 ? "middle" : u <= 0.83 ? "outside edge" : "away off the plate";
-    var ht = z < 1.5 ? "below the zone" : z < 2.0 ? "low" : z <= 3.0 ? "mid-height" : z <= 3.5 ? "high" : "above the zone";
+    var ht = z < 1.5 ? "below the zone" : z < 1.75 ? "at the knees" : z < 2.25 ? "low" : z < 2.75 ? "mid-height" : z < 3.25 ? "high" : z < 3.75 ? "at the letters" : "above the zone";
     return ht + ", " + side + (c[2] === "take" ? " (he lets it go)" : c[2] === "chase" ? " (he chases)" : c[2] === "weak" ? " (he swings to little effect)" : "");
   }
   function reportTab(f, pk) {
@@ -2447,6 +2458,76 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     });
     return h + '</div><p class="note">Replay numbers, not live forecasts. Our model\'s weights were fitted to closing lines from these seasons and checked on the season each fit did not see. Games without a closing line (most Athletics games of 2025, and 2025 after August 16) are left out.</p></section>';
   }
+  /* ---------- Players: league-wide cards from the matchup report's fitted pieces (public/reports/players/) ---------- */
+  var PLAYERS = null, PLAYER_SHARDS = {};
+  function withPlayers(then) {
+    if (PLAYERS) { then(); return; }
+    app.innerHTML = '<div class="wrap"><p class="empty">Loading the player cards\u2026</p></div>';
+    fetch(REPORTS + "players/index.json", { cache: "no-store" }).then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function (idx) { PLAYERS = idx; then(); }, function () { app.innerHTML = '<div class="wrap"><div class="page-head"><h1>Players</h1></div><p class="empty">The player cards have not been built yet. They are rebuilt each day with the matchup reports.</p></div>'; });
+  }
+  function fmtCost(v) { return v == null ? "\u2013" : (v >= 0 ? "+" : "") + v.toFixed(1); }
+  function renderPlayers(q) {
+    withPlayers(function () {
+      var P = PLAYERS, query = (q || "").trim().toLowerCase();
+      var h = '<div class="wrap"><div class="page-head"><h1>Players</h1><p>Every hitter with a swing map and every pitcher with 150 pitches, as of ' + esc(dateLabel(P.asof)) + '. The same fitted pieces the game reports use.</p></div>';
+      h += '<input class="pl-search" type="search" placeholder="Search by name or team" value="' + esc(q || "") + '" aria-label="Search players" id="pl-search">';
+      var hit = Object.keys(P.hitters).map(function (id) { var x = P.hitters[id]; x.id = id; return x; }), pit = Object.keys(P.pitchers).map(function (id) { var x = P.pitchers[id]; x.id = id; return x; });
+      var match = function (x) { return !query || (x.name + " " + x.team).toLowerCase().indexOf(query) >= 0; };
+      hit = hit.filter(match); pit = pit.filter(match);
+      if (!query) { hit.sort(function (a, b) { return (a.own_cost == null ? 1e9 : a.own_cost) - (b.own_cost == null ? 1e9 : b.own_cost); }); pit.sort(function (a, b) { return (b.looks_in_ends_out || 0) - (a.looks_in_ends_out || 0); }); }
+      else { hit.sort(function (a, b) { return a.name.localeCompare(b.name); }); pit.sort(function (a, b) { return a.name.localeCompare(b.name); }); }
+      var lim = query ? 200 : 40;
+      h += '<section class="sec"><h2>Hitters</h2><p class="lede">' + (query ? hit.length + " match" : "The 40 whose own swing decisions cost them most, against the average hitter their side on the pitches they saw") + '. The number is runs per 600 plate appearances; negative is a cost.</p><ul class="pl-list">';
+      hit.slice(0, lim).forEach(function (x) { h += '<li><a href="#/player/h/' + x.id + '"><span class="who">' + esc(x.name) + '<small>' + esc(x.team) + (x.team ? ", " : "") + "bats " + esc(x.side) + "</small></span><b class=\"" + (x.own_cost != null && x.own_cost < 0 ? "bad" : "good") + '">' + fmtCost(x.own_cost) + "</b></a></li>"; });
+      h += "</ul></section>";
+      h += '<section class="sec"><h2>Pitchers</h2><p class="lede">' + (query ? pit.length + " match" : "The 40 whose pitches most often look like strikes at the decision moment and end out of the zone") + (P.league && P.league.looks_in_ends_out != null ? " (league " + pct(P.league.looks_in_ends_out) + ")" : "") + '.</p><ul class="pl-list">';
+      pit.slice(0, lim).forEach(function (x) { h += '<li><a href="#/player/p/' + x.id + '"><span class="who">' + esc(x.name) + '<small>' + esc(x.team) + (x.team ? ", " : "") + "throws " + esc(x.throws) + "</small></span><b>" + (x.looks_in_ends_out != null ? pct(x.looks_in_ends_out) : "\u2013") + "</b></a></li>"; });
+      h += "</ul></section></div>";
+      app.innerHTML = h;
+      var inp = document.getElementById("pl-search");
+      if (inp) { inp.addEventListener("change", function () { location.hash = "#/players/" + encodeURIComponent(inp.value.trim()); }); inp.addEventListener("keydown", function (e) { if (e.key === "Enter") { location.hash = "#/players/" + encodeURIComponent(inp.value.trim()); } }); if (query) inp.focus(); }
+    });
+  }
+  function renderPlayer(kind, id) {
+    withPlayers(function () {
+      var P = PLAYERS, shard = (kind === "h" ? "h-" : "p-") + (Number(id) % (P.shards || 16));
+      var show = function (doc) {
+        var x = doc.players[id];
+        if (!x) { app.innerHTML = '<div class="wrap"><div class="page-head"><h1>Players</h1></div><p class="empty">No card for this player.</p></div>'; return; }
+        var h = '<div class="wrap"><div class="page-head"><h1>' + esc(x.name) + '</h1><p>' + esc(x.team) + (x.team ? ", " : "") + (x.kind === "hitter" ? "bats " + esc(x.side) : "throws " + esc(x.throws)) + ", " + Number(x.pitches).toLocaleString() + " pitches behind the card, as of " + esc(dateLabel(doc.asof)) + '. <a href="#/players">All players</a></p></div>';
+        if (x.kind === "hitter") {
+          var oc = x.own_cost;
+          if (oc) h += '<p class="note">His swing decisions against the average hitter his side, on the pitches he actually saw: <b>' + fmtCost(oc.runs_per_600_pa) + " runs per 600 plate appearances</b> (" + fmtCost(oc.outside_runs_per_600_pa) + " outside the zone, " + fmtCost(oc.inside_runs_per_600_pa) + " inside)" +
+            (oc.cells && oc.cells.length ? ". Where it costs him most: " + esc(oc.cells.map(function (c) { return rpWords([c[0], c[1], c[3]]) + " (" + c[2].toFixed(1) + ")"; }).join("; ")) : "") + ". A development target from the same pricing the game reports use, not a prediction.</p>";
+          h += '<p class="note">His own chase map by pitch family, read where the pitch appears to be headed about 260 ms before the plate: gold is where he swings more than the average hitter his side, blue less. Chase rate ' + (x.chase_rate != null ? pct(x.chase_rate) : "\u2013") + " (league " + (doc.league && doc.league.chase_rate != null ? pct(doc.league.chase_rate) : "\u2013") + "), whiff rate " + (x.whiff_rate != null ? pct(x.whiff_rate) : "\u2013") + (doc.league && doc.league.whiff_rate != null ? " (league " + pct(doc.league.whiff_rate) + ")" : "") + (x.zone_top_ft != null ? "; his zone from the official calls, top " + x.zone_top_ft + " ft, bottom " + x.zone_bottom_ft + " ft" : "") + ".</p>";
+          h += '<div class="rp-cards">';
+          ["fastball", "breaking", "offspeed"].forEach(function (fam) {
+            var own = x.own_chase && x.own_chase[fam]; if (!own) return;
+            var costCells = (oc && oc.cells || []).filter(function (c) { return c[3] === "chase" || c[3] === "take" || c[3] === "weak"; }).map(function (c) { return [c[0], c[1], c[3] === "chase" ? "chase" : "take"]; });
+            h += '<div class="rp-card"><h4>' + fam.charAt(0).toUpperCase() + fam.slice(1) + "</h4>" + rpGrid(doc, own.grid, null, fam + " own chase map", 0.8) +
+              (own.top && own.top.length ? '<div class="lbl">Chases most: ' + esc(own.top.map(function (c) { return rpWords([c[0], c[1]]) + " (+" + c[2].toFixed(1) + ")"; }).join("; ")) + "</div>" : '<div class="lbl">No spot where he chases more than the average hitter his side.</div>') + "</div>";
+          });
+          if (x.whiff_grid) h += '<div class="rp-card"><h4>Where he misses</h4><div class="lbl">His whiff map on the true crossing, against the league</div>' + rpGrid(doc, x.whiff_grid, null, "whiff map", 0.5) + "</div>";
+          h += "</div>";
+        } else {
+          var mix = x.mix || {};
+          h += '<ul class="compare">';
+          ["fastball", "breaking", "offspeed"].forEach(function (fam) { if (mix[fam]) h += "<li><span>" + fam.charAt(0).toUpperCase() + fam.slice(1) + "</span><b>" + pct(mix[fam].share) + " of his pitches, " + mix[fam].speed + " mph</b></li>"; });
+          h += "<li><span>Pitches that look like strikes at the decision moment and end out of the zone" + (doc.league && doc.league.looks_in_ends_out != null ? " (league " + pct(doc.league.looks_in_ends_out) + ")" : "") + "</span><b>" + (x.looks_in_ends_out != null ? pct(x.looks_in_ends_out) : "\u2013") + "</b></li>";
+          h += "<li><span>Hitters chase his outside pitches" + (doc.league && doc.league.chase_rate != null ? " (league " + pct(doc.league.chase_rate) + ")" : "") + "</span><b>" + (x.chase_rate_against != null ? pct(x.chase_rate_against) : "\u2013") + "</b></li></ul>";
+          h += '<p class="note">Open any of his games for the plan against each hitter he faces: the Report tab on a game page.</p>';
+        }
+        h += "</div>";
+        app.innerHTML = h;
+      };
+      if (PLAYER_SHARDS[shard]) { show(PLAYER_SHARDS[shard]); return; }
+      app.innerHTML = '<div class="wrap"><p class="empty">Loading the card\u2026</p></div>';
+      fetch(REPORTS + "players/" + shard + ".json", { cache: "no-store" }).then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+        .then(function (doc) { PLAYER_SHARDS[shard] = doc; show(doc); }, function () { app.innerHTML = '<div class="wrap"><div class="page-head"><h1>Players</h1></div><p class="empty">Could not load this card.</p></div>'; });
+    });
+  }
+
   function renderRecord() {
     var rec = D.record || {}, n = rec.n_scored || 0;
     var h = '<div class="wrap"><div class="page-head"><h1>Track record</h1><p>Every forecast is saved before first pitch and scored after the final.</p></div>';

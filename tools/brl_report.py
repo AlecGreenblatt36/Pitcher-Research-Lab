@@ -145,6 +145,21 @@ def famof(g: int) -> str:
     return 'fastball' if g in (0, 1, 2, 6) else ('breaking' if g in (3, 4) else 'offspeed')
 
 
+def clean(o):
+    """JSON-safe: NaN and infinities become null (a browser's JSON parser rejects NaN, and one bad number would break a whole day's page)."""
+    if isinstance(o, dict):
+        return {k: clean(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [clean(v) for v in o]
+    if isinstance(o, (float, np.floating)):
+        return None if not np.isfinite(o) else float(o)
+    if isinstance(o, np.integer):
+        return int(o)
+    if isinstance(o, np.bool_):
+        return bool(o)
+    return o
+
+
 class Fitted:
     """Everything fitted on the pitches before the as-of date: league models, hitter maps, pools of pitcher spots."""
 
@@ -619,18 +634,65 @@ def recent_players(T: dict, game_pks_by_team: dict, team_games: dict) -> tuple[d
     return hitters, relievers
 
 
-def names_for(ids: set) -> dict:
+def names_for(ids: set, teams: bool = False) -> dict:
+    """Names (and, when asked, current team abbreviations) from the public MLB people endpoint, a hundred ids a call."""
     out = {}
     ids = sorted(int(i) for i in ids if i)
     for i in range(0, len(ids), 100):
         chunk = ids[i:i + 100]
         try:
-            doc = mlb('https://statsapi.mlb.com/api/v1/people?personIds=' + ','.join(str(v) for v in chunk))
+            doc = mlb('https://statsapi.mlb.com/api/v1/people?personIds=' + ','.join(str(v) for v in chunk) + ('&hydrate=currentTeam' if teams else ''))
             for pers in doc.get('people', []):
-                out[int(pers['id'])] = pers.get('fullName') or str(pers['id'])
+                nm = pers.get('fullName') or str(pers['id'])
+                if teams:
+                    ct = pers.get('currentTeam') or {}
+                    out[int(pers['id'])] = {'name': nm, 'team': ct.get('abbreviation') or ct.get('name') or ''}
+                else:
+                    out[int(pers['id'])] = nm
         except Exception:
             pass
     return out
+
+
+PLAYER_SHARDS = 16
+
+
+def build_players(fit: Fitted, asof: str, stage) -> tuple[dict, dict]:
+    """League-wide player cards as of a date (every hitter with a map, every pitcher with 150 pitches): an index for search
+    and sharded documents (public/reports/players/h-<n>.json, p-<n>.json), the same cards the game reports carry."""
+    hitters = {}; pitchers = {}
+    for h in sorted(fit.maps_s):
+        card = fit.hitter_card(int(h))
+        if card:
+            hitters[int(h)] = card
+    for p, r in fit.gp.items():
+        if len(r) >= 150:
+            card = fit.pitcher_card(int(p))
+            if card:
+                pitchers[int(p)] = card
+    stage(f'player cards {len(hitters)} hitters, {len(pitchers)} pitchers')
+    who = names_for(set(hitters) | set(pitchers), teams=True)
+    grid = {'side_ft': GU.tolist(), 'height_ft': GZ.tolist()}
+    index = {'schema': 'brl.players.v1', 'asof': asof, 'built_at': datetime.now(timezone.utc).isoformat(), 'shards': PLAYER_SHARDS, 'grid': grid, 'league': fit.league,
+             'hitters': {}, 'pitchers': {}}
+    shards = {}
+    for h, card in hitters.items():
+        w = who.get(h, {}); oc = card.get('own_cost') or {}
+        index['hitters'][str(h)] = {'name': w.get('name') or str(h), 'team': w.get('team') or '', 'side': card['side'], 'pitches': card['pitches'],
+                                    'chase_rate': card.get('chase_rate'), 'whiff_rate': card.get('whiff_rate'), 'own_cost': oc.get('runs_per_600_pa'),
+                                    'own_cost_outside': oc.get('outside_runs_per_600_pa'), 'own_cost_inside': oc.get('inside_runs_per_600_pa')}
+        doc = dict(card); doc.update({'id': h, 'name': w.get('name') or str(h), 'team': w.get('team') or '', 'kind': 'hitter'})
+        shards.setdefault(f'h-{h % PLAYER_SHARDS}', {})[str(h)] = doc
+    for p, card in pitchers.items():
+        w = who.get(p, {})
+        index['pitchers'][str(p)] = {'name': w.get('name') or str(p), 'team': w.get('team') or '', 'throws': card['throws'], 'pitches': card['pitches'],
+                                     'chase_rate_against': card.get('chase_rate_against'), 'looks_in_ends_out': card.get('looks_in_ends_out'),
+                                     'mix': {f_: v_['share'] for f_, v_ in (card.get('mix') or {}).items()}}
+        doc = dict(card); doc.update({'id': p, 'name': w.get('name') or str(p), 'team': w.get('team') or '', 'kind': 'pitcher'})
+        shards.setdefault(f'p-{p % PLAYER_SHARDS}', {})[str(p)] = doc
+    for k in shards:
+        shards[k] = {'schema': 'brl.players.v1', 'asof': asof, 'grid': grid, 'league': fit.league, 'players': shards[k]}
+    return index, shards
 
 
 def build_report(fit: Fitted, T_all: dict, day: str, asof: str, stage, max_relievers=4) -> dict:
@@ -807,22 +869,32 @@ def main():
             summary['games'] = {}
             for pk, entry in rep['games'].items():
                 doc = dict(entry); doc.update({'schema': SCHEMA, 'date': day, 'asof': a, 'game_pk': int(pk), 'grid': rep['grid'], 'training_pitches': fit_n(fits[a]), 'league': fits[a].league})
-                text = json.dumps(doc, separators=(',', ':')); total += len(text)
+                text = json.dumps(clean(doc), separators=(',', ':')); total += len(text)
                 if params.get('publish', True):
                     put(repo, token, f'public/reports/{day}/{pk}.json', text, branch, f'BRL report {day} game {pk} (as of {a})')
                 summary['games'][pk] = {'teams': {sd: {'id': entry['teams'][sd]['id'], 'name': entry['teams'][sd]['name'], 'abbr': entry['teams'][sd]['abbr']} for sd in ('away', 'home')},
                                         'status': entry['status'], 'final': entry['final'], 'start': entry['start'], 'grade': entry.get('grade'),
                                         'pairs': sum(len(se['pairs']) for se in entry['sides'].values())}
             if params.get('publish', True):
-                put(repo, token, f'public/reports/{day}/index.json', json.dumps(summary, separators=(',', ':')), branch, f'BRL report {day} summary (as of {a})')
+                put(repo, token, f'public/reports/{day}/index.json', json.dumps(clean(summary), separators=(',', ':')), branch, f'BRL report {day} summary (as of {a})')
             receipt['reports'][day] = {'games': len(rep['games']), 'bytes': total, 'asof': a, 'graded': sum(1 for g in rep['games'].values() if g.get('grade'))}
             stage(f'report {day}')
+        if params.get('players') or os.environ.get('BRL_REPORT_DAILY'):
+            # league-wide player cards as of the latest report date (the same fitted pieces the day's reports used)
+            a_last = sorted(fits)[-1] if fits else None
+            if a_last is not None:
+                pidx, pshards = build_players(fits[a_last], a_last, stage)
+                if params.get('publish', True):
+                    for k, shard in sorted(pshards.items()):
+                        put(repo, token, f'public/reports/players/{k}.json', json.dumps(clean(shard), separators=(',', ':')), branch, f'BRL player cards {k} (as of {a_last})')
+                    put(repo, token, 'public/reports/players/index.json', json.dumps(clean(pidx), separators=(',', ':')), branch, f'BRL player index (as of {a_last})')
+                receipt['players'] = {'hitters': len(pidx['hitters']), 'pitchers': len(pidx['pitchers']), 'asof': a_last, 'shards': len(pshards)}
         if params.get('publish', True):
             stage('index')
             idx, days = rebuild_index(repo, token, branch)
             put(repo, token, 'public/reports/index.json', json.dumps(idx, separators=(',', ':'), sort_keys=True), branch, 'BRL reports index')
             rec = record_from(days)
-            put(repo, token, 'public/reports/record.json', json.dumps(rec, separators=(',', ':')), branch, 'BRL reports record')
+            put(repo, token, 'public/reports/record.json', json.dumps(clean(rec), separators=(',', ':')), branch, 'BRL reports record')
             receipt['record'] = {k: rec[k] for k in ('games', 'dates', 'first_date', 'last_date', 'chases', 'chases_expected_league', 'chases_expected_map', 'in_recommended', 'usual_expected', 'outside_pitches')}
         receipt['status'] = 'completed'
     except Exception as exc:
