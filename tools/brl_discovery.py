@@ -112,7 +112,7 @@ def put_text(repo, token, path, text, branch, message):
 # ---------------------------------------------------------------- pitch table
 SUBTYPES = ('FF', 'FA', 'SI', 'FC', 'SL', 'ST', 'SV', 'CU', 'KC', 'CS', 'CH', 'FS', 'FO', 'SC', 'KN', 'EP')
 FIELDS = ('season', 'day', 'game', 'pitcher', 'batter', 'stand_r', 'throw_r', 'inning', 'group', 'sub', 'balls', 'strikes', 'call',
-          'v0', 'v1', 'spin', 'pfx_x', 'pfx_z', 'px', 'pz', 'x0', 'z0', 'ext', 'last_in_pa', 'bunt_pa', 'ab', 'pitch_no', 'la', 'ls', 'cs', 'zone', 'out7', 'half')
+          'v0', 'v1', 'spin', 'pfx_x', 'pfx_z', 'px', 'pz', 'x0', 'z0', 'ext', 'last_in_pa', 'bunt_pa', 'ab', 'pitch_no', 'la', 'ls', 'cs', 'zone', 'out7', 'half', 'post')
 OUT7 = ('BIP_OUT', 'K', 'BB_HBP', '1B', '2B_3B', 'HR', 'OTHER_REACH')
 CALLS = {'take': 0, 'swing_contact': 1, 'whiff': 2, 'other': 3}
 
@@ -156,6 +156,7 @@ def pitch_table(doc: dict, season: int, game_types=('R',)) -> dict:
                 o_ = str(row.get('o') or '')
                 cols['out7'].append(OUT7.index(o_) if o_ in OUT7 else -1)
                 cols['half'].append(0 if str(row.get('half') or 'top') == 'top' else 1)
+                cols['post'].append(0 if game.get('game_type') == 'R' else 1)
     out = {}
     for k, v in cols.items():
         out[k] = np.asarray(v, dtype=np.float32 if k in ('v0', 'v1', 'spin', 'pfx_x', 'pfx_z', 'px', 'pz', 'x0', 'z0', 'ext', 'la', 'ls') else np.int64)
@@ -2516,7 +2517,8 @@ def matchup_family(T: dict, params: dict, stage) -> dict:
     elif final:
         T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | ((T['season'] == 2026) & (T['day'] >= date(2026, 8, 1).toordinal())))
     else:
-        T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+        post_seasons = tuple(int(x) for x in params.get('post_seasons', (2023, 2024, 2025)))
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | (post_mode & (T['season'] >= 2023) & (T['season'] <= max(post_seasons))))
     F = rebuild(T)
     keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['strikes'] >= 0) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
     T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
@@ -2665,7 +2667,8 @@ def map_stability_study(T: dict, params: dict, stage) -> dict:
     per hitter, the correlation between periods across those 147 points; the split-half correlation within 2025 bounds
     what any map from one season's pitches can repeat; their ratio is the trait share."""
     res = {}
-    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+    post_seasons = tuple(int(x) for x in params.get('post_seasons', (2023, 2024, 2025)))
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | (post_mode & (T['season'] >= 2023) & (T['season'] <= max(post_seasons))))
     F = rebuild(T)
     keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['strikes'] >= 0) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
     T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
@@ -2932,7 +2935,8 @@ def matchup_pa(T: dict, params: dict, stage) -> dict:
     strikeouts and walks beyond both players' earlier strikeout and walk rates? Coefficients and out-of-sample log loss
     by game-parity cross-fitting within 2025."""
     res = {}
-    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+    post_seasons = tuple(int(x) for x in params.get('post_seasons', (2023, 2024, 2025)))
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | (post_mode & (T['season'] >= 2023) & (T['season'] <= max(post_seasons))))
     F = rebuild(T)
     keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['strikes'] >= 0) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
     Tk = take(T, keep); Fk = {k: v[keep] for k, v in F.items()}
@@ -3068,7 +3072,11 @@ def engine_pa(T: dict, params: dict, stage) -> dict:
     chances, with the hitter's maps and with the league maps plus his additive terms. Does the difference (the matchup
     the engine sees) predict the pair's 2025 strikeouts and walks beyond both players' rates?"""
     res = {}
-    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+    post_mode = bool(params.get('postseason'))          # EXPLOIT-03: maps from the 2023-2025 regular seasons, targeting in those postseasons
+    if 'post' not in T:
+        T = dict(T); T['post'] = np.zeros(len(T['season']), np.int64)
+    post_seasons = tuple(int(x) for x in params.get('post_seasons', (2023, 2024, 2025)))
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | (post_mode & (T['season'] >= 2023) & (T['season'] <= max(post_seasons))))
     F = rebuild(T)
     keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
     Tk = take(T, keep); Fk = {k: v[keep] for k, v in F.items()}
@@ -3362,7 +3370,11 @@ def exploit_study(T: dict, params: dict, stage) -> dict:
     Also: whether the targeting grows with how distinct the hitter's map is, and whether targeted pitches got the extra
     chases the map predicts."""
     res = {}
-    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+    post_mode = bool(params.get('postseason'))          # EXPLOIT-03: maps from the 2023-2025 regular seasons, targeting in those postseasons
+    if 'post' not in T:
+        T = dict(T); T['post'] = np.zeros(len(T['season']), np.int64)
+    post_seasons = tuple(int(x) for x in params.get('post_seasons', (2023, 2024, 2025)))
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | (post_mode & (T['season'] >= 2023) & (T['season'] <= max(post_seasons))))
     F = rebuild(T)
     keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
     T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
@@ -3370,7 +3382,12 @@ def exploit_study(T: dict, params: dict, stage) -> dict:
     xp, zp = projected(T, F, None, 'straight', 0.26)
     Lb = location_block(xp, zp, T['stand_r'], T['strikes']); prop = swing_propensity(T)
     X = np.hstack([Lb, control_block(T, prop), pitcher_propensity(T)[:, None].astype(np.float32)]); i_prop = Lb.shape[1] + 32
-    tr = np.isin(T['season'], (2023, 2024)); te = T['season'] == 2025
+    if post_mode:
+        tr = T['post'] == 0; te = (T['post'] == 1) & np.isin(T['season'], post_seasons)
+        res['postseason_pitches'] = {str(y): int((te & (T['season'] == y)).sum()) for y in post_seasons}
+        res['regular_season_pitches_for_maps'] = int(tr.sum())
+    else:
+        tr = np.isin(T['season'], (2023, 2024)) & (T['post'] == 0); te = (T['season'] == 2025) & (T['post'] == 0)
     rng = np.random.default_rng(11)
     idx = np.flatnonzero(tr); idx = rng.choice(idx, min(len(idx), 600000), replace=False)
     league = fit_logistic(X[idx], swing[idx]); off = league.decision_function(X); c_prop = float(league.coef_[0][i_prop])
@@ -3383,12 +3400,18 @@ def exploit_study(T: dict, params: dict, stage) -> dict:
     p_l = 1 / (1 + np.exp(-off))
     # each 2025 pitcher's pitches by side and count group (sampled), for the counterfactual
     pool = {}
-    for pid, r in _groups(T['pitcher'], te).items():
-        for side in (0, 1):
-            for cg in (0, 1, 2):
-                rr = r[(T['stand_r'][r] == side) & (cgrp[r] == cg)]
-                if len(rr) >= 30:
-                    pool[(pid, side, cg)] = rr if len(rr) <= 600 else rng.choice(rr, 600, replace=False)
+    pool_src = te
+    if post_mode and params.get('pool') == 'regular':          # his regular-season pitches of that year to other hitters
+        pool_src = (T['post'] == 0)
+    pool_season = bool(post_mode)
+    for pid, r in _groups(T['pitcher'], pool_src).items():
+        for ssn in (post_seasons if pool_season else (None,)):
+            r_s = r if ssn is None else r[T['season'][r] == ssn]
+            for side in (0, 1):
+                for cg in (0, 1, 2):
+                    rr = r_s[(T['stand_r'][r_s] == side) & (cgrp[r_s] == cg)]
+                    if len(rr) >= 30:
+                        pool[(pid, side, cg) if ssn is None else (pid, ssn, side, cg)] = rr if len(rr) <= 600 else rng.choice(rr, 600, replace=False)
     rows = []
     bat_te = _groups(T['batter'], te)
     for h, r in bat_te.items():
@@ -3397,12 +3420,14 @@ def exploit_study(T: dict, params: dict, stage) -> dict:
         mh = maps[h]
         pr = T['pitcher'][r]
         for pid in np.unique(pr):
-            rp = r[pr == pid]
+          rp_all = r[pr == pid]
+          for ssn in (np.unique(T['season'][rp_all]) if pool_season else (None,)):
+            rp = rp_all if ssn is None else rp_all[T['season'][rp_all] == ssn]
             side = int(T['stand_r'][rp[0]])
             for zone_name, zmask in (('outside', outside), ('inside', ~outside)):
                 for cg in (0, 1, 2):
                     a = rp[zmask[rp] & (cgrp[rp] == cg)]
-                    key = (int(pid), side, cg)
+                    key = (int(pid), side, cg) if ssn is None else (int(pid), int(ssn), side, cg)
                     if len(a) == 0 or key not in pool:
                         continue
                     b = pool[key]; b = b[zmask[b] & (T['batter'][b] != h)]
@@ -3461,7 +3486,11 @@ def exploit2_study(T: dict, params: dict, stage) -> dict:
     means more pitches where he chases more; inside negative means more where he takes more. Headroom: the best of the
     same pool. Bootstrap over hitters."""
     res = {}
-    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+    post_mode = bool(params.get('postseason'))          # EXPLOIT-03: maps from the 2023-2025 regular seasons, targeting in those postseasons
+    if 'post' not in T:
+        T = dict(T); T['post'] = np.zeros(len(T['season']), np.int64)
+    post_seasons = tuple(int(x) for x in params.get('post_seasons', (2023, 2024, 2025)))
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | (post_mode & (T['season'] >= 2023) & (T['season'] <= max(post_seasons))))
     F = rebuild(T)
     keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
     T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
@@ -3507,12 +3536,18 @@ def exploit2_study(T: dict, params: dict, stage) -> dict:
     outside = (np.abs(u_t) > ZONE_HALF) | (zt > ZONE_TOP) | (zt < ZONE_BOT)
     cgrp = np.where(T['strikes'] == 2, 2, np.where(T['balls'] > T['strikes'], 1, 0))
     pool = {}
-    for pid, r in _groups(T['pitcher'], te).items():
-        for side in (0, 1):
-            for cg in (0, 1, 2):
-                rr = r[(T['stand_r'][r] == side) & (cgrp[r] == cg)]
-                if len(rr) >= 30:
-                    pool[(pid, side, cg)] = rr if len(rr) <= 600 else rng.choice(rr, 600, replace=False)
+    pool_src = te
+    if post_mode and params.get('pool') == 'regular':          # his regular-season pitches of that year to other hitters
+        pool_src = (T['post'] == 0)
+    pool_season = bool(post_mode)
+    for pid, r in _groups(T['pitcher'], pool_src).items():
+        for ssn in (post_seasons if pool_season else (None,)):
+            r_s = r if ssn is None else r[T['season'][r] == ssn]
+            for side in (0, 1):
+                for cg in (0, 1, 2):
+                    rr = r_s[(T['stand_r'][r_s] == side) & (cgrp[r_s] == cg)]
+                    if len(rr) >= 30:
+                        pool[(pid, side, cg) if ssn is None else (pid, ssn, side, cg)] = rr if len(rr) <= 600 else rng.choice(rr, 600, replace=False)
     sig = lambda v: 1 / (1 + np.exp(-v))
     bat_te = _groups(T['batter'], te)
     for kind, (Bm, off, prop, c_prop, maps, mbar) in kinds.items():
@@ -3578,7 +3613,8 @@ def value_study(T: dict, params: dict, stage) -> dict:
     if final:      # VALUE-01F: maps from 2023-2025, scored on the 2026 pitches from August 1 (the untouched set)
         T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | ((T['season'] == 2026) & (T['day'] >= date(2026, 8, 1).toordinal())))
     else:
-        T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+        post_seasons = tuple(int(x) for x in params.get('post_seasons', (2023, 2024, 2025)))
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | (post_mode & (T['season'] >= 2023) & (T['season'] <= max(post_seasons))))
     F = rebuild(T)
     keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
     T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
@@ -4280,7 +4316,8 @@ def pressure_study(T: dict, H, params: dict, stage) -> dict:
     game-bootstrap intervals."""
     res = {}
     import pandas as pd
-    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+    post_seasons = tuple(int(x) for x in params.get('post_seasons', (2023, 2024, 2025)))
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | (post_mode & (T['season'] >= 2023) & (T['season'] <= max(post_seasons))))
     F = rebuild(T)
     keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
     T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
@@ -4896,7 +4933,8 @@ def value_whiff_study(T: dict, params: dict, stage) -> dict:
     if final:
         T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | ((T['season'] == 2026) & (T['day'] >= date(2026, 8, 1).toordinal())))
     else:
-        T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+        post_seasons = tuple(int(x) for x in params.get('post_seasons', (2023, 2024, 2025)))
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | (post_mode & (T['season'] >= 2023) & (T['season'] <= max(post_seasons))))
     F = rebuild(T)
     keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
     T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
@@ -5084,7 +5122,8 @@ def value3_study(T: dict, params: dict, stage) -> dict:
     tightening capped at three extra high spots (ADAPT-01's data rarely go beyond). Development data (2025)."""
     res = {}
     sgm = float(params.get('sigma', 0.6)); tighten = float(params.get('tighten', 0.065))
-    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+    post_seasons = tuple(int(x) for x in params.get('post_seasons', (2023, 2024, 2025)))
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | (post_mode & (T['season'] >= 2023) & (T['season'] <= max(post_seasons))))
     F = rebuild(T)
     keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
     T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
@@ -5212,7 +5251,11 @@ def adapt_study(T: dict, params: dict, stage) -> dict:
     spots shrink after he has been shown them?), holding fixed the outside pitches seen so far, times through the
     order and the pitch number of the plate appearance. Game-bootstrap intervals."""
     res = {}
-    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+    post_mode = bool(params.get('postseason'))          # EXPLOIT-03: maps from the 2023-2025 regular seasons, targeting in those postseasons
+    if 'post' not in T:
+        T = dict(T); T['post'] = np.zeros(len(T['season']), np.int64)
+    post_seasons = tuple(int(x) for x in params.get('post_seasons', (2023, 2024, 2025)))
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | (post_mode & (T['season'] >= 2023) & (T['season'] <= max(post_seasons))))
     F = rebuild(T)
     keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
     T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
@@ -5310,7 +5353,11 @@ def series_study(T: dict, params: dict, stage) -> dict:
     game, and the pitch number. Game-bootstrap intervals; and the observed swing at his high own spots against the map,
     by earlier meetings."""
     res = {}
-    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+    post_mode = bool(params.get('postseason'))          # EXPLOIT-03: maps from the 2023-2025 regular seasons, targeting in those postseasons
+    if 'post' not in T:
+        T = dict(T); T['post'] = np.zeros(len(T['season']), np.int64)
+    post_seasons = tuple(int(x) for x in params.get('post_seasons', (2023, 2024, 2025)))
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | (post_mode & (T['season'] >= 2023) & (T['season'] <= max(post_seasons))))
     F = rebuild(T)
     keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
     T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
@@ -5928,7 +5975,8 @@ def drift_study(T: dict, params: dict, stage) -> dict:
     window, against his earlier windows, predict his strikeouts and walks in the next window beyond his recent and
     earlier strikeout and walk rates, and better than the raw chase rate's change? Train 2023-2024, score 2025."""
     res = {}
-    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+    post_seasons = tuple(int(x) for x in params.get('post_seasons', (2023, 2024, 2025)))
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | (post_mode & (T['season'] >= 2023) & (T['season'] <= max(post_seasons))))
     F = rebuild(T)
     keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['strikes'] >= 0)
     Tk = take(T, keep); F = {k: v[keep] for k, v in F.items()}
