@@ -2484,6 +2484,89 @@ def matchup_swing(T: dict, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- MATCHUP-03: hitters' whiff maps at the decision moment
+def _hitter_maps(Bm, y, off, groups_fit, lam, min_n):
+    return {h: _ridge_offset(Bm[r], y[r], off[r], lam) for h, r in groups_fit.items() if len(r) >= min_n}
+
+
+def _groups(keyarr, rows):
+    idx = np.flatnonzero(rows)
+    if not len(idx):
+        return {}
+    o = np.argsort(keyarr[idx], kind='stable'); idx = idx[o]; k = keyarr[idx]
+    cut = np.flatnonzero(np.diff(k)) + 1
+    return {int(keyarr[g[0]]): g for g in (idx[a:b] for a, b in zip(np.r_[0, cut], np.r_[cut, len(idx)]))}
+
+
+def matchup_whiff(T: dict, params: dict, stage) -> dict:
+    """MATCHUP-01 for misses: on swings, each hitter's own whiff function over where the pitch appeared to be headed at
+    the decision moment and the movement he could not see after it (true crossing minus that projection), against the
+    league whiff model with additive hitter and pitcher terms (earlier whiff rates, shrunk). Train 2023-2024 (shrinkage
+    on the second half of 2024), score 2025, paired by game; the same on the true crossing for comparison."""
+    res = {}
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+    F = rebuild(T)
+    keep = F['ok'] & (T['group'] >= 0) & ((T['call'] == 1) | (T['call'] == 2)) & (T['strikes'] >= 0) & (T['bunt_pa'] == 0)
+    T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
+    y = (T['call'] == 2).astype(np.float64)
+    tau = float(params.get('tau', 0.26))
+    xp, zp = projected(T, F, None, 'straight', tau)
+    xt, zt = T['px'].astype(np.float64), T['pz'].astype(np.float64)
+    sgn = np.where(T['stand_r'] == 1, 1.0, -1.0)
+    du, dz = (xt - xp) * sgn, zt - zp                                    # movement after the decision moment (ft)
+    tt = dict(T); tt['call'] = np.where(y == 1, 1, 0)                    # whiff habit: earlier whiff rate on swings
+    prop_b = swing_propensity(tt, 200.0)
+    tp = dict(tt); tp['batter'] = T['pitcher']; prop_p = swing_propensity(tp, 400.0)
+    grp = np.zeros((len(y), 7), np.float32); grp[np.arange(len(y)), np.clip(T['group'], 0, 6)] = 1
+    vel = hats(T['v0'].astype(np.float64), V_KNOTS)
+    C = np.hstack([grp, vel, (T['strikes'] == 2)[:, None], prop_b[:, None], prop_p[:, None], (T['stand_r'] == T['throw_r'])[:, None]]).astype(np.float32)
+    late = np.hstack([hats(dz, (-1.5, -1.0, -0.6, -0.3, 0.0, 0.3)), hats(du, (-1.0, -0.5, 0.0, 0.5, 1.0))]).astype(np.float32)
+    seasons = (2023, 2024, 2025)
+    tr = np.isin(T['season'], seasons[:-1]); te = T['season'] == seasons[-1]
+    mid = date(seasons[-2], 7, 1).toordinal()
+    fit_a = tr & ~((T['season'] == seasons[-2]) & (T['day'] >= mid)); val = tr & (T['season'] == seasons[-2]) & (T['day'] >= mid)
+    rng = np.random.default_rng(int(params.get('seed', 11)))
+    lams = [float(v) for v in params.get('lams', (3.0, 10.0, 30.0, 100.0))]
+    min_n = int(params.get('min_swings', 250))
+    out, preds = {}, {}
+    fam = np.column_stack([np.isin(T['group'], (0, 1, 2)), np.isin(T['group'], (3, 4)), np.isin(T['group'], (5,))]).astype(np.float64)
+    for name, (x, z) in (('true', (xt, zt)), ('percept', (xp, zp))):
+        X = np.hstack([location_block(x, z, T['stand_r'], T['strikes']), C] + ([late] if name == 'percept' else []))
+        def league(rows):
+            idx = np.flatnonzero(rows); idx = rng.choice(idx, min(len(idx), int(params.get('league_n', 600000))), replace=False) if len(idx) > int(params.get('league_n', 600000)) else idx
+            return fit_logistic(X[idx], y[idx]).decision_function(X)
+        off_a, off = league(fit_a), league(tr)
+        hb = hitter_basis(x, z, T['stand_r'], T['strikes'])
+        Bm = np.hstack([hb, fam] + ([hats(dz, (-1.5, -0.8, -0.3, 0.2)).astype(np.float64)] if name == 'percept' else [hats(zt, (1.0, 2.0, 3.0, 4.0)).astype(np.float64)]))
+        bat = T['batter']
+        ga, gv, gt, ge = _groups(bat, fit_a), _groups(bat, val), _groups(bat, tr), _groups(bat, te)
+        val_ll = {}
+        for lam in lams:
+            lo = off_a.copy()
+            for h, b in _hitter_maps(Bm, y, off_a, ga, lam, min_n).items():
+                if h in gv:
+                    v = gv[h]; lo[v] += Bm[v] @ b
+            val_ll[lam] = float(logloss_vec(1 / (1 + np.exp(-lo[val])), y[val]).mean())
+        best = min(val_ll, key=val_ll.get)
+        lo = off.copy(); cov = np.zeros(len(y), bool)
+        for h, b in _hitter_maps(Bm, y, off, gt, best, min_n).items():
+            if h in ge:
+                e = ge[h]; lo[e] += Bm[e] @ b; cov[e] = True
+        pl, ph = 1 / (1 + np.exp(-off[te])), 1 / (1 + np.exp(-lo[te]))
+        preds[name] = (pl, ph)
+        out[name] = {'shrinkage': best, 'validation': {str(k): round(v, 5) for k, v in val_ll.items()}, 'covered': round(float(cov[te].mean()), 4),
+                     'test_logloss_league': round(float(logloss_vec(pl, y[te]).mean()), 5), 'test_logloss_hitter': round(float(logloss_vec(ph, y[te]).mean()), 5)}
+        stage('whiff ' + name)
+    yt = y[te]; g = T['game'][te]
+    lt, ht = [logloss_vec(p, yt) for p in preds['true']]; lp, hp = [logloss_vec(p, yt) for p in preds['percept']]
+    cc = lambda d: [round(v * 1000, 3) for v in clustered_ci(d, g)]
+    res['representations'] = out
+    res['test_swings'] = int(te.sum()); res['test_whiff_rate'] = round(float(yt.mean()), 4)
+    res['gain_nats_per_1000_swings'] = {'percept_over_true_league': cc(lt - lp), 'percept_over_true_hitter': cc(ht - hp),
+                                        'hitter_over_league_true': cc(lt - ht), 'hitter_over_league_percept': cc(lp - hp)}
+    return res
+
+
 # ---------------------------------------------------------------- MATCHUP-02: do decision-moment matchups move plate-appearance outcomes
 def matchup_pa(T: dict, params: dict, stage) -> dict:
     """Hitter maps and the league map at the decision moment as in MATCHUP-01 (fitted on 2023-2024, shrinkage 10). For
@@ -3091,6 +3174,8 @@ def main():
             receipt['results'] = matchup_pa(T, params, stage)
         elif experiment == 'exposure':
             receipt['results'] = exposure_study(T, params, stage)
+        elif experiment == 'matchup_whiff':
+            receipt['results'] = matchup_whiff(T, params, stage)
         receipt['status'] = 'completed'
     except StopIteration:
         receipt['status'] = 'completed'
