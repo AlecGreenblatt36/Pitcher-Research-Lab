@@ -366,7 +366,9 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .rp-grid i.strike::after { content: ""; position: absolute; inset: 28%; border-radius: 2px; background: var(--ink); }
 .rp-grid i.strike.weak::after { background: transparent; border: 2px solid var(--ink); box-sizing: border-box; }
 .rp-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
-.pl-search { width: 100%; max-width: 420px; min-height: 44px; font: inherit; font-size: 16px; padding: 8px 12px; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); color: var(--ink); margin: 6px 0 14px; }
+.pl-tools { display: flex; flex-wrap: wrap; gap: 10px; margin: 6px 0 14px; }
+.pl-search { flex: 1 1 220px; max-width: 420px; min-height: 44px; font: inherit; font-size: 16px; padding: 8px 12px; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); color: var(--ink); min-width: 0; }
+.pl-team { flex: 0 1 220px; min-height: 44px; font: inherit; font-size: 16px; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); color: var(--ink); min-width: 0; }
 .pl-list { list-style: none; margin: 0 0 20px; padding: 0; }
 .pl-list li { border-top: 1px solid var(--rule-soft); }
 .pl-list a { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 48px; padding: 8px 4px; text-decoration: none; color: inherit; }
@@ -2580,26 +2582,36 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       .then(function (idx) { PLAYERS = idx; then(); }, function () { app.innerHTML = '<div class="wrap"><div class="page-head"><h1>Players</h1></div><p class="empty">The player cards have not been built yet. They are rebuilt each day with the matchup reports.</p></div>'; });
   }
   function fmtCost(v) { return v == null ? "\u2013" : (v >= 0 ? "+" : "") + v.toFixed(1); }
+  var MLB_CLUBS = ["Arizona Diamondbacks", "Athletics", "Atlanta Braves", "Baltimore Orioles", "Boston Red Sox", "Chicago Cubs", "Chicago White Sox", "Cincinnati Reds", "Cleveland Guardians", "Colorado Rockies", "Detroit Tigers", "Houston Astros", "Kansas City Royals", "Los Angeles Angels", "Los Angeles Dodgers", "Miami Marlins", "Milwaukee Brewers", "Minnesota Twins", "New York Mets", "New York Yankees", "Philadelphia Phillies", "Pittsburgh Pirates", "San Diego Padres", "San Francisco Giants", "Seattle Mariners", "St. Louis Cardinals", "Tampa Bay Rays", "Texas Rangers", "Toronto Blue Jays", "Washington Nationals"];
   function renderPlayers(q) {
     withPlayers(function () {
       var P = PLAYERS, query = (q || "").trim().toLowerCase();
       var h = '<div class="wrap"><div class="page-head"><h1>Players</h1><p>Every hitter with a swing map and every pitcher with 150 pitches, as of ' + esc(dateLabel(P.asof)) + '. The same fitted pieces the game reports use.</p></div>';
-      h += '<input class="pl-search" type="search" placeholder="Search by name or team" value="' + esc(q || "") + '" aria-label="Search players" id="pl-search">';
+      h += '<div class="pl-tools"><input class="pl-search" type="search" placeholder="Search by name or team" value="' + esc(q || "") + '" aria-label="Search players" id="pl-search">';
       var hit = Object.keys(P.hitters).map(function (id) { var x = P.hitters[id]; x.id = id; return x; }), pit = Object.keys(P.pitchers).map(function (id) { var x = P.pitchers[id]; x.id = id; return x; });
+      /* a team picker: the thirty clubs that have players on the cards (a player MLB lists with a winter or minor-league club today is found by search) */
+      var teamCount = {};
+      hit.concat(pit).forEach(function (x) { if (x.team) teamCount[x.team] = (teamCount[x.team] || 0) + 1; });
+      var teams = MLB_CLUBS.filter(function (k) { return teamCount[k]; });
+      if (teams.length) h += '<select class="pl-team" id="pl-team" aria-label="Pick a team"><option value="">All teams</option>' + teams.map(function (k) { return '<option value="' + esc(k) + '"' + (query === k.toLowerCase() ? " selected" : "") + ">" + esc(k) + "</option>"; }).join("") + "</select>";
+      h += "</div>";
       var match = function (x) { return !query || (x.name + " " + x.team).toLowerCase().indexOf(query) >= 0; };
       hit = hit.filter(match); pit = pit.filter(match);
-      if (!query) { hit.sort(function (a, b) { return (a.own_cost == null ? 1e9 : a.own_cost) - (b.own_cost == null ? 1e9 : b.own_cost); }); pit.sort(function (a, b) { return (b.looks_in_ends_out || 0) - (a.looks_in_ends_out || 0); }); }
+      var isClub = MLB_CLUBS.some(function (k) { return k.toLowerCase() === query; });
+      if (!query || isClub) { hit.sort(function (a, b) { return (a.own_cost == null ? 1e9 : a.own_cost) - (b.own_cost == null ? 1e9 : b.own_cost); }); pit.sort(function (a, b) { return (b.looks_in_ends_out || 0) - (a.looks_in_ends_out || 0); }); }
       else { hit.sort(function (a, b) { return a.name.localeCompare(b.name); }); pit.sort(function (a, b) { return a.name.localeCompare(b.name); }); }
       var lim = query ? 200 : 40;
-      h += '<section class="sec"><h2>Hitters</h2><p class="lede">' + (query ? hit.length + " match" : "The 40 whose own swing decisions cost them most, against the average hitter their side on the pitches they saw") + '. The number is runs per 600 plate appearances; negative is a cost.</p><ul class="pl-list">';
+      h += '<section class="sec"><h2>Hitters</h2><p class="lede">' + (isClub ? hit.length + " on the cards, the costliest swing decisions first" : query ? hit.length + " match" : "The 40 whose own swing decisions cost them most, against the average hitter their side on the pitches they saw") + '. The number is runs per 600 plate appearances; negative is a cost.</p><ul class="pl-list">';
       hit.slice(0, lim).forEach(function (x) { h += '<li><a href="#/player/h/' + x.id + '"><span class="who">' + esc(x.name) + '<small>' + esc(x.team) + (x.team ? ", " : "") + "bats " + esc(x.side) + "</small></span><b class=\"" + (x.own_cost != null && x.own_cost < 0 ? "bad" : "good") + '">' + fmtCost(x.own_cost) + "</b></a></li>"; });
       h += "</ul></section>";
-      h += '<section class="sec"><h2>Pitchers</h2><p class="lede">' + (query ? pit.length + " match" : "The 40 whose pitches most often look like strikes at the decision moment and end out of the zone") + (P.league && P.league.looks_in_ends_out != null ? " (league " + pct(P.league.looks_in_ends_out) + ")" : "") + '.</p><ul class="pl-list">';
+      h += '<section class="sec"><h2>Pitchers</h2><p class="lede">' + (isClub ? pit.length + " on the cards, by how often a pitch looks like a strike at the decision moment and ends out of the zone" : query ? pit.length + " match" : "The 40 whose pitches most often look like strikes at the decision moment and end out of the zone") + (P.league && P.league.looks_in_ends_out != null ? " (league " + pct(P.league.looks_in_ends_out) + ")" : "") + '.</p><ul class="pl-list">';
       pit.slice(0, lim).forEach(function (x) { h += '<li><a href="#/player/p/' + x.id + '"><span class="who">' + esc(x.name) + '<small>' + esc(x.team) + (x.team ? ", " : "") + "throws " + esc(x.throws) + "</small></span><b>" + (x.looks_in_ends_out != null ? pct(x.looks_in_ends_out) : "\u2013") + "</b></a></li>"; });
       h += "</ul></section></div>";
       app.innerHTML = h;
       var inp = document.getElementById("pl-search");
-      if (inp) { inp.addEventListener("change", function () { location.hash = "#/players/" + encodeURIComponent(inp.value.trim()); }); inp.addEventListener("keydown", function (e) { if (e.key === "Enter") { location.hash = "#/players/" + encodeURIComponent(inp.value.trim()); } }); if (query) inp.focus(); }
+      var selT = document.getElementById("pl-team");
+      if (inp) { inp.addEventListener("change", function () { location.hash = "#/players/" + encodeURIComponent(inp.value.trim()); }); inp.addEventListener("keydown", function (e) { if (e.key === "Enter") { location.hash = "#/players/" + encodeURIComponent(inp.value.trim()); } }); if (query && !(selT && selT.value)) inp.focus(); }
+      if (selT) selT.addEventListener("change", function () { location.hash = "#/players/" + encodeURIComponent(selT.value); });
     });
   }
   function renderPlayer(kind, id) {
