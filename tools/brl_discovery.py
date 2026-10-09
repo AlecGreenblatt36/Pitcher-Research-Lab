@@ -4134,11 +4134,25 @@ def scout_export(T: dict, params: dict, stage) -> dict:
         idx = np.flatnonzero(rows); return rng.choice(idx, min(len(idx), n), replace=False) if len(idx) > n else idx
     prop_s = swing_propensity(Tk); prop_p = pitcher_propensity(Tk)
     Ls = location_block(xp, zp, Tk['stand_r'], Tk['strikes'])
-    Xs = np.hstack([Ls, control_block(Tk, prop_s), prop_p[:, None].astype(np.float32)]); i_ps = Ls.shape[1] + 32
+    famv = bool(params.get('family'))             # SCOUT-02: MATCHUP-05F's representation (league family part, hitter family maps)
+    Bh0 = hitter_basis(xp, zp, Tk['stand_r'], Tk['strikes']); nh = Bh0.shape[1] - 1
+    lf_parts = [(Bh0[:, :-1] * np.isin(Tk['group'], (3, 4))[:, None]).astype(np.float32), (Bh0[:, :-1] * (Tk['group'] == 5)[:, None]).astype(np.float32)] if famv else []
+    Xs = np.hstack([Ls] + lf_parts + [control_block(Tk, prop_s), prop_p[:, None].astype(np.float32)]); i_ps = Ls.shape[1] + (2 * nh if famv else 0) + 32
+    del lf_parts
     allr = np.ones(len(swing), bool)
     i = sample(allr); m_s = fit_logistic(Xs[i], swing[i]); off_s = m_s.decision_function(Xs)
-    Bs = hitter_basis(xp, zp, Tk['stand_r'], Tk['strikes'])
+    Bs = family_basis(Bh0, Tk['group']) if famv else Bh0
     maps_s = _hitter_maps(Bs, swing, off_s, _groups(Tk['batter'], allr), 10.0, int(params.get('min_pitches', 500)))
+    mbar = {}
+    if famv:
+        # each hitter's same-side mean map over the other hitters with maps (VALUE-08's shared part)
+        gb0 = _groups(Tk['batter'], allr)
+        side0 = {h: int(np.round(Tk['stand_r'][gb0[h]].mean())) for h in maps_s}
+        Ssum = {0: 0.0, 1: 0.0}; Nn = {0: 0, 1: 0}
+        for h, m in maps_s.items():
+            Ssum[side0[h]] = Ssum[side0[h]] + m; Nn[side0[h]] += 1
+        mbar = {h: (Ssum[side0[h]] - m) / max(Nn[side0[h]] - 1, 1) for h, m in maps_s.items()}
+        mbar_side = {sd: Ssum[sd] / max(Nn[sd], 1) for sd in (0, 1)}
     tw = dict(Tk); tw['call'] = np.where(whiff == 1, 1, np.where(swing == 1, 0, 3)); prop_w = swing_propensity(tw, 200.0)
     grp = np.zeros((len(swing), 7), np.float32); grp[np.arange(len(swing)), np.clip(Tk['group'], 0, 6)] = 1
     Lw = location_block(xt, zt, Tk['stand_r'], Tk['strikes'])
@@ -4166,9 +4180,23 @@ def scout_export(T: dict, params: dict, stage) -> dict:
     Xg = np.hstack([location_block(uu, zz, g_t['stand_r'], g_t['strikes']), control_block(g_t, np.full(len(uu), lg_ps)), np.full((len(uu), 1), lg_pp, np.float32)])
     Xgw = np.hstack([location_block(uu, zz, g_t['stand_r'], g_t['strikes']), np.tile(np.eye(7, dtype=np.float32)[0], (len(uu), 1)), hats(np.full(len(uu), 94.0), V_KNOTS),
                      np.zeros((len(uu), 1), np.float32), np.full((len(uu), 1), lg_pw, np.float32), np.ones((len(uu), 1), np.float32)])
+    if famv:
+        # by family: first pitch to a right-handed hitter from a right-hander, typical speeds; the average hitter adds the mean map
+        famgrid = {}
+        for fname, gcode, spd in (('fastball', 0, 94.0), ('breaking', 3, 85.0), ('offspeed', 5, 86.0)):
+            gt_f = dict(g_t); gt_f['group'] = np.full(len(uu), gcode, np.int64); gt_f['v0'] = np.full(len(uu), spd)
+            Bgf = family_basis(Bg, gt_f['group'])
+            Xgf = np.hstack([location_block(uu, zz, gt_f['stand_r'], gt_f['strikes']), (Bg[:, :-1] * (gcode in (3, 4))).astype(np.float32), (Bg[:, :-1] * (gcode == 5)).astype(np.float32),
+                             control_block(gt_f, np.full(len(uu), lg_ps)), np.full((len(uu), 1), lg_pp, np.float32)])
+            lo_l = m_s.decision_function(Xgf).astype(np.float64)
+            famgrid[fname] = {'league_swing': [round(float(v), 4) for v in 1 / (1 + np.exp(-lo_l))],
+                              'average_hitter_swing': [round(float(v), 4) for v in 1 / (1 + np.exp(-(lo_l + Bgf @ mbar_side[1])))]}
+        Xg = np.hstack([location_block(uu, zz, g_t['stand_r'], g_t['strikes']), np.zeros((len(uu), 2 * nh), np.float32), control_block(g_t, np.full(len(uu), lg_ps)), np.full((len(uu), 1), lg_pp, np.float32)])
     res['grid'] = {'side_ft': gu.tolist(), 'height_ft': gz.tolist(), 'league_swing': [round(float(v), 4) for v in 1 / (1 + np.exp(-m_s.decision_function(Xg).astype(np.float64)))],
                    'league_whiff': [round(float(v), 4) for v in 1 / (1 + np.exp(-m_w.decision_function(Xgw).astype(np.float64)))],
                    'context': 'first pitch, four-seamer at 94 mph, right-handed hitter and pitcher, league-average swing and miss levels'}
+    if famv:
+        res['grid']['by_family'] = famgrid
     # standard reference pitches by side for the hitter summaries
     ref = rng.choice(len(swing), min(len(swing), 40000), replace=False)
     ref_side = {sd: ref[Tk['stand_r'][ref] == sd] for sd in (0, 1)}
@@ -4199,8 +4227,17 @@ def scout_export(T: dict, params: dict, stage) -> dict:
         p_sw = 1 / (1 + np.exp(-(base_s[sd] + c_s * lgt(ps) + Bs[R] @ maps_s[h])))
         p_wh = 1 / (1 + np.exp(-(base_w[sd] + c_w * lgt(pw) + Bw[R] @ maps_w[h])))
         o = outside[R]
-        dg = Bg @ maps_s[h]; dw = Bgw @ maps_w[h]
         out_cells = [k for k in range(len(uu)) if (abs(uu[k]) > ZONE_HALF or zz[k] > ZONE_TOP or zz[k] < ZONE_BOT)]
+        dw = Bgw @ maps_w[h]
+        if famv:
+            own = {}
+            for fname, gcode in (('fastball', 0), ('breaking', 3), ('offspeed', 5)):
+                dgf = family_basis(Bg, np.full(len(uu), gcode, np.int64)) @ (maps_s[h] - mbar[h])
+                own[fname] = {'own_dev_grid': [round(float(v), 3) for v in dgf],
+                              'top_chase_cells': [[float(uu[k]), float(zz[k]), round(float(dgf[k]), 3)] for k in sorted(out_cells, key=lambda k: -dgf[k])[:3]]}
+            dg = family_basis(Bg, np.zeros(len(uu), np.int64)) @ maps_s[h]
+        else:
+            dg = Bg @ maps_s[h]
         top = sorted(out_cells, key=lambda k: -dg[k])[:3]
         hitters[int(h)] = {'side': 'R' if sd == 1 else 'L', 'pitches': int(len(r)), 'swings': int(swing[r].sum()),
                            'map_chase': round(float(p_sw[o].mean()), 4), 'map_zone_swing': round(float(p_sw[~o].mean()), 4),
@@ -4210,6 +4247,8 @@ def scout_export(T: dict, params: dict, stage) -> dict:
                            'raw_whiff': round(float(whiff[r].sum() / max(swing[r].sum(), 1)), 4),
                            'swing_dev_grid': [round(float(v), 3) for v in dg], 'whiff_dev_grid': [round(float(v), 3) for v in dw],
                            'top_chase_cells': [[float(uu[k]), float(zz[k]), round(float(dg[k]), 3)] for k in top]}
+        if famv:
+            hitters[int(h)]['own_by_family'] = own
     res['hitters'] = hitters
     stage(f'hitters {len(hitters)}')
     # pitchers: arsenal by family and side, from 2025 and 2026 through July
@@ -4279,13 +4318,84 @@ def scout_export(T: dict, params: dict, stage) -> dict:
                 return ea[ia], eb[ib], v - mu - ea[ia] - eb[ib]
             hk, pk, rk = two_way(Rr[:, 2] * 100, hid, pid); hb_, pb_, rb = two_way(Rr[:, 3] * 100, hid, pid)
             res['pairs'] = [{'hitter': r_[0], 'pitcher': r_[1], 'team': r_[2], 'opponent': r_[3], 'arsenal_pitches': r_[10],
-                             'chase_points': round(r_[4] * 100 * 0.95, 2), 'zone_swing_points': round(r_[5] * 100, 2),
+                             'chase_points': round(r_[4] * 100 * (1.0 if famv else 0.95), 2), 'zone_swing_points': round(r_[5] * 100, 2),
                              'k_points': round((r_[6] * 100) * 0.40, 2), 'bb_points': round((r_[7] * 100) * 0.53, 2),
                              'k_pair_points': round(float(rk[j]) * 0.40, 2), 'bb_pair_points': round(float(rb[j]) * 0.53, 2),
                              'league_chain_k': round(r_[8], 4), 'league_chain_bb': round(r_[9], 4)} for j, r_ in enumerate(rows)]
-            res['pair_scale_note'] = 'chase times 0.95 (MATCHUP-01F slope); strikeout and walk changes times 0.40 and 0.53 (ENGINE-01 coefficients over calibrated); pair parts after removing hitter and pitcher parts over these pairs'
+            res['pair_scale_note'] = (('chase from family maps against the league with its family part, unscaled (MATCHUP-05F; no pair calibration measured for family maps yet)' if famv else 'chase times 0.95 (MATCHUP-01F slope)')
+                                      + '; strikeout and walk changes times 0.40 and 0.53 (ENGINE-01 coefficients over calibrated); pair parts after removing hitter and pitcher parts over these pairs')
         stage(f'pairs {len(rows)}')
-        if params.get('aim') and rows:
+        if params.get('aim') and rows and famv:
+            # SCOUT-02 aiming (VALUE-08F): outside the zone only, by the hitter's own part (his map minus the same-side mean map),
+            # among the pitcher's own spots of the same pitch group to that side and count group, under 0.6 ft of command
+            # scatter, best third within thirds of the league's swing chance; runs per 100 plate appearances from VALUE-08F's
+            # primary coefficient for family maps; aim cells by family where the aimed pitches arrive
+            nL = Ls.shape[1]; cf_ = m_s.coef_[0].astype(np.float64); wL = cf_[:nL]; wB = cf_[nL:nL + nh]; wO = cf_[nL + nh:nL + 2 * nh]
+            def league_loc(LBm, Bh_m, g):
+                return LBm.astype(np.float64) @ wL + np.isin(g, (3, 4)) * (Bh_m[:, :-1] @ wB) + (g == 5) * (Bh_m[:, :-1] @ wO)
+            b_out, n_out = -0.000657, 1.876
+            K = 16; jit = np.random.default_rng(3).standard_normal((K, 2)); jit = (jit - jit.mean(0)) / jit.std(0); sgm = float(params.get('sigma', 0.6))
+            cgrp = np.where(Tk['strikes'] == 2, 2, np.where(Tk['balls'] > Tk['strikes'], 1, 0))
+            gu_ = np.asarray(res['grid']['side_ft']); gz_ = np.asarray(res['grid']['height_ft'])
+            famof = lambda g: 'fastball' if g in (0, 1, 2, 6) else ('breaking' if g in (3, 4) else 'offspeed')
+            pools = {}
+            def pool_for(p_, sd, c3, tg):
+                key = (p_, sd, c3, tg)
+                if key in pools:
+                    return pools[key]
+                r = gp[p_]; r = r[(Tk['stand_r'][r] == sd) & (cgrp[r] == c3) & outside[r] & (np.clip(Tk['group'][r], 0, 6) == tg)]
+                if len(r) < 15:
+                    pools[key] = None; return None
+                n_all = len(r)
+                if len(r) > 250:
+                    r = rng.choice(r, 250, replace=False)
+                pl_ = sig(off_s[r]); third = np.searchsorted(np.percentile(pl_, [33.3, 66.7]), pl_)
+                lb0 = league_loc(Ls[r], Bh0[r], Tk['group'][r])
+                xj = (xp[r][:, None] + sgm * jit[None, :, 0]).ravel(); zj = (zp[r][:, None] + sgm * jit[None, :, 1]).ravel()
+                sj = np.repeat(np.full(len(r), sd), K); kj = np.repeat(Tk['strikes'][r], K); gj = np.repeat(Tk['group'][r], K)
+                Bj0 = hitter_basis(xj, zj, sj, kj)
+                offj = np.repeat(off_s[r] - lb0, K) + league_loc(location_block(xj, zj, sj, kj), Bj0, gj)
+                uu_ = np.where(sd == 1, xt[r], -xt[r])
+                cell = np.argmin(np.abs(uu_[:, None] - gu_[None, :]), 1) + len(gu_) * np.argmin(np.abs(zt[r][:, None] - gz_[None, :]), 1)
+                pools[key] = (offj, family_basis(Bj0, gj), third, cell, len(r), n_all)
+                return pools[key]
+            aim = []
+            for pr_ in res['pairs']:
+                h, p_ = int(pr_['hitter']), int(pr_['pitcher'])
+                if h not in maps_s or p_ not in gp:
+                    continue
+                sd = int(np.round(Tk['stand_r'][gb[h]].mean())) if h in gb else 1
+                rp = gp[p_][(Tk['stand_r'][gp[p_]] == sd) & outside[gp[p_]]]
+                if len(rp) < 40:
+                    continue
+                tot = 0.0; wsum = 0.0; cells = {f_: np.zeros(len(gu_) * len(gz_)) for f_ in ('fastball', 'breaking', 'offspeed')}
+                for c3 in (0, 1, 2):
+                    for tg in range(7):
+                        P_ = pool_for(p_, sd, c3, tg)
+                        if P_ is None:
+                            continue
+                        offj, Bj, third, cell, npool, n_all = P_
+                        dj = ((sig(offj + Bj @ maps_s[h]) - sig(offj + Bj @ mbar[h])) * 100).reshape(npool, K).mean(1)
+                        gains = []
+                        for t3 in range(3):
+                            sel = np.flatnonzero(third == t3)
+                            if len(sel) >= 3:
+                                k3 = max(1, len(sel) // 3)
+                                best = sel[np.argsort(dj[sel])[::-1][:k3]]
+                                gains.append(float(dj[best].mean() - dj[sel].mean()))
+                                np.add.at(cells[famof(tg)], cell[best], n_all / len(rp))
+                        if gains:
+                            tot += n_all * float(np.mean(gains)); wsum += n_all
+                if wsum > 0:
+                    g_ = tot / wsum
+                    aim.append({'hitter': h, 'pitcher': p_, 'runs_per_100_pa': round(float(b_out * g_ * n_out) * 100, 2), 'gain_points': round(g_, 2),
+                                'aim_cells': {f_: [[float(gu_[k % len(gu_)]), float(gz_[k // len(gu_)])] for k in np.argsort(c_)[::-1][:3] if c_[k] > 0] for f_, c_ in cells.items()}})
+            res['aim'] = aim
+            res['aim_note'] = ('runs per 100 plate appearances saved by aiming outside pitches (negative = fewer runs for the hitter) at 0.6 ft of command scatter, '
+                               'by the hitter\'s own part of his family map, within each pitch group, coefficient from VALUE-08F (family maps, -0.000657 per point); '
+                               'cells are where the aimed pitches arrive (true crossing), by family; in-zone aiming is not stated (its placebo failed)')
+            stage(f'aim {len(aim)}')
+        elif params.get('aim') and rows:
             # where each pitcher should aim against each hitter he may face (VALUE-02F): among his own spots to that side
             # and count group, the best third for this hitter under 0.6 ft of command scatter (outside: highest extra
             # chase; in the zone: lowest extra swing), within thirds of the league's swing chance; runs per 100 plate
