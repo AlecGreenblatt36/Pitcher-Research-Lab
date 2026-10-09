@@ -1,0 +1,132 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "family",
+ "run_id": "37891547233",
+ "params": {
+  "experiment": "family",
+  "seasons": [
+   2023,
+   2024,
+   2025
+  ],
+  "league_family": true
+ },
+ "started_at": "2026-10-09T06:03:39.506909+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 10.0
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 19.8
+  },
+  {
+   "stage": "league",
+   "at_seconds": 104.8
+  },
+  {
+   "stage": "maps location",
+   "at_seconds": 109.2
+  },
+  {
+   "stage": "maps location_by_family",
+   "at_seconds": 117.2
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985
+ },
+ "results": {
+  "test_decisions": 704092,
+  "maps": {
+   "location": {
+    "shrinkage": 10.0,
+    "validation": {
+     "3.0": 0.44716,
+     "10.0": 0.44682,
+     "30.0": 0.44777,
+     "100.0": 0.45078
+    },
+    "covered": 0.8772,
+    "test_logloss": 0.45242
+   },
+   "location_by_family": {
+    "shrinkage": 10.0,
+    "validation": {
+     "3.0": 0.44495,
+     "10.0": 0.44425,
+     "30.0": 0.44564,
+     "100.0": 0.44929
+    },
+    "covered": 0.8772,
+    "test_logloss": 0.44987
+   }
+  },
+  "gain_nats_per_1000_decisions": {
+   "location_over_league": [
+    11.683,
+    11.251,
+    12.095
+   ],
+   "family_over_location": [
+    2.549,
+    2.349,
+    2.747
+   ],
+   "family_over_league": [
+    14.232,
+    13.739,
+    14.693
+   ],
+   "league_family_over_plain_league": [
+    4.797,
+    4.554,
+    5.067
+   ]
+  },
+  "family_over_location_by_subset": {
+   "fastball_outside": {
+    "decisions": 169115,
+    "gain": [
+     2.153,
+     1.888,
+     2.401
+    ]
+   },
+   "breaking_outside": {
+    "decisions": 119687,
+    "gain": [
+     3.881,
+     3.32,
+     4.453
+    ]
+   },
+   "offspeed_outside": {
+    "decisions": 58968,
+    "gain": [
+     0.519,
+     -0.262,
+     1.251
+    ]
+   },
+   "all_inside": {
+    "decisions": 356022,
+    "gain": [
+     2.63,
+     2.355,
+     2.874
+    ]
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T06:05:36.929590+00:00",
+ "seconds": 117.4
+}
