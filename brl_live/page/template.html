@@ -2200,6 +2200,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var bins = R.bins || {}, parts = [];
       ["under -2", "-2 to 0", "0 to 2", "over 2"].forEach(function (k2) { var bn = bins[k2]; if (bn && bn.outside >= 200) parts.push(k2 + ': ' + (100 * bn.chases / bn.outside).toFixed(1) + '% chased, league ' + (100 * bn.league / bn.outside).toFixed(1) + '%, map ' + (100 * bn.map / bn.outside).toFixed(1) + '%'); });
       if (parts.length) h += ' By the extra chases the map predicted for the pair: ' + esc(parts.join('; ')) + '.';
+      var bpz = R.by_pricing || {}, bparts = [];
+      [["structural", "spots chosen by expected runs (from October 9, 2026)"], ["regression", "spots chosen by chase points (earlier reports)"]].forEach(function (q) { var b = bpz[q[0]]; if (b && b.outside_pitches >= 200) bparts.push(q[1] + ': ' + (100 * b.in_recommended / b.outside_pitches).toFixed(1) + '% of outside pitches in the recommended spots against ' + (100 * b.usual_expected / b.outside_pitches).toFixed(1) + '% usual, ' + Number(b.games).toLocaleString() + ' games'); });
+      if (bparts.length > 1) h += ' By how the spots were chosen: ' + esc(bparts.join('; ')) + '.';
       h += '</p>';
     }
     h += '<div class="seg" role="group" aria-label="Which number">' + Object.keys(RP_METRICS).map(function (k2) {

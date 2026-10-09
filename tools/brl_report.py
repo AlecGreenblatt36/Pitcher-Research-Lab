@@ -62,9 +62,10 @@ def record_from(days: dict) -> dict:
     map predicted for the pair, and staffs' aiming against their usual rates."""
     rec = {'schema': 'brl.report-record.v1', 'built_at': datetime.now(timezone.utc).isoformat(), 'games': 0, 'dates': 0, 'first_date': None, 'last_date': None,
            'outside_pitches': 0, 'in_recommended': 0, 'usual_expected': 0.0, 'chases': 0, 'chases_expected_league': 0.0, 'chases_expected_map': 0.0,
-           'bins': {k: {'pairs': 0, 'outside': 0, 'chases': 0, 'league': 0.0, 'map': 0.0} for k in BINS}, 'by_month': {}}
+           'bins': {k: {'pairs': 0, 'outside': 0, 'chases': 0, 'league': 0.0, 'map': 0.0} for k in BINS}, 'by_month': {}, 'by_pricing': {}}
     for day in sorted(days):
         doc = days[day]; used = False
+        pricing = doc.get('pricing') or 'regression'      # how the day's aim plans were chosen (VALUE-18: structural from October 9, 2026)
         for g in (doc.get('games') or {}).values():
             gr = g.get('grade')
             if not gr or not gr.get('pairs'):
@@ -72,6 +73,10 @@ def record_from(days: dict) -> dict:
             used = True; rec['games'] += 1
             for k in ('outside_pitches', 'in_recommended', 'usual_expected', 'chases', 'chases_expected_league', 'chases_expected_map'):
                 rec[k] += gr.get(k, 0)
+            bp = rec['by_pricing'].setdefault(pricing, {'games': 0, 'outside_pitches': 0, 'in_recommended': 0, 'usual_expected': 0.0})
+            bp['games'] += 1
+            for k in ('outside_pitches', 'in_recommended', 'usual_expected'):
+                bp[k] += gr.get(k, 0)
             mo = rec['by_month'].setdefault(day[:7], {'games': 0, 'outside_pitches': 0, 'in_recommended': 0, 'usual_expected': 0.0, 'chases': 0, 'chases_expected_league': 0.0, 'chases_expected_map': 0.0})
             mo['games'] += 1
             for k in ('outside_pitches', 'in_recommended', 'usual_expected', 'chases', 'chases_expected_league', 'chases_expected_map'):
@@ -85,6 +90,8 @@ def record_from(days: dict) -> dict:
     for d_ in [rec] + list(rec['by_month'].values()):
         for k in ('usual_expected', 'chases_expected_league', 'chases_expected_map'):
             d_[k] = round(d_[k], 1)
+    for d_ in rec['by_pricing'].values():
+        d_['usual_expected'] = round(d_['usual_expected'], 1)
     for bn in rec['bins'].values():
         bn['league'] = round(bn['league'], 1); bn['map'] = round(bn['map'], 1)
     return rec
@@ -530,7 +537,7 @@ def build_report(fit: Fitted, T_all: dict, day: str, asof: str, stage, max_relie
     """The date's report: a summary document and one document per game (each with the players it needs)."""
     games = schedule(day)
     rep = {'schema': SCHEMA, 'date': day, 'asof': asof, 'built_at': datetime.now(timezone.utc).isoformat(), 'training_pitches': fit.n_train,
-           'grid': {'side_ft': GU.tolist(), 'height_ft': GZ.tolist()}, 'games': {}, 'players': {}}
+           'grid': {'side_ft': GU.tolist(), 'height_ft': GZ.tolist()}, 'games': {}, 'players': {}, 'pricing': 'structural' if fit.PM is not None else 'regression'}
     if not games:
         return rep
     # recent games per team (last 14 days before the report date) from the public schedule
