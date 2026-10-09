@@ -176,6 +176,10 @@ class Fitted:
         fam = np.column_stack([np.isin(T['group'], (0, 1, 2)), np.isin(T['group'], (3, 4)), np.isin(T['group'], (5,))]).astype(np.float64)
         self.Bw = np.hstack([D.hitter_basis(self.xt, self.zt, T['stand_r'], T['strikes']), fam, D.hats(self.zt, (1.0, 2.0, 3.0, 4.0)).astype(np.float64)])
         self.maps_w = D._hitter_maps(self.Bw, whiff, self.off_w, D._groups(T['batter'], sw_tr), 30.0, min_swings)
+        Wsum = {0: 0.0, 1: 0.0}; Wn = {0: 0, 1: 0}
+        for h, m in self.maps_w.items():
+            sd_ = self.side.get(h, 1); Wsum[sd_] = Wsum[sd_] + m; Wn[sd_] += 1
+        self.mbar_w = {h: (Wsum[self.side.get(h, 1)] - m) / max(Wn[self.side.get(h, 1)] - 1, 1) for h, m in self.maps_w.items()}
         # called strikes on takes and fouls on contact (league), for the count chain
         Xc = np.hstack([Lw, (T['stand_r'] == T['throw_r'])[:, None].astype(np.float32)])
         tk = tr & (T['call'] == 0); idx = np.flatnonzero(tk); idx = rng.choice(idx, min(len(idx), 400000), replace=False)
@@ -190,6 +194,12 @@ class Fitted:
         self.zone = {}
         for h, r in gb_tr.items():
             self.zone[h] = (float(top_b[r[0]]), float(bot_b[r[0]]))
+        # league reference rates on the training rows, for the cards
+        u_p = np.where(T['stand_r'] == 1, self.xp, -self.xp)
+        looks_in = ~((np.abs(u_p) > D.ZONE_HALF) | (self.zp > D.ZONE_TOP) | (self.zp < D.ZONE_BOT))
+        self.looks_in_ends_out = looks_in & self.outside
+        self.league = {'chase_rate': round(float(swing[tr & self.outside].mean()), 3), 'whiff_rate': round(float(whiff[tr & (swing == 1)].sum() / max((tr & (swing == 1)).sum(), 1)), 3),
+                       'looks_in_ends_out': round(float(self.looks_in_ends_out[tr].mean()), 3)}
         # the pitcher's training pitches
         self.gp = D._groups(T['pitcher'], tr)
         self.cgrp = np.where(T['strikes'] == 2, 2, np.where(T['balls'] > T['strikes'], 1, 0))
@@ -236,7 +246,8 @@ class Fitted:
             if mm.any():
                 mix[fname] = {'share': round(float(mm.mean()), 3), 'speed': round(float(np.nanmean(T['v0'][r][mm])), 1)}
         return {'throws': 'R' if T['throw_r'][r][0] == 1 else 'L', 'pitches': int(len(r)), 'mix': mix,
-                'chase_rate_against': round(float(self.swing[r][self.outside[r]].mean()), 3) if self.outside[r].any() else None}
+                'chase_rate_against': round(float(self.swing[r][self.outside[r]].mean()), 3) if self.outside[r].any() else None,
+                'looks_in_ends_out': round(float(self.looks_in_ends_out[r].mean()), 3)}
 
     def _chain(self, ps_, pw_, pcs_, pfo_, ci_):
         use_c = np.bincount(ci_, minlength=12) >= 15; ki = ci_ % 3
@@ -295,7 +306,9 @@ class Fitted:
         if len(rp) < 40:
             return out
         tot = 0.0; wsum = 0.0; cells = {f_: np.zeros(len(GU) * len(GZ)) for f_, *_ in FAMILIES}
-        for c3 in (0, 1, 2):
+        by_count = {}
+        for c3, cname in ((0, 'even_or_ahead'), (1, 'behind'), (2, 'two_strikes')):
+            ct = 0.0; cw = 0.0; ccells = {f_: np.zeros(len(GU) * len(GZ)) for f_, *_ in FAMILIES}
             for tg in range(7):
                 P_ = self._pool(p, sd, c3, tg)
                 if P_ is None:
@@ -308,13 +321,36 @@ class Fitted:
                     if len(sel) >= 3:
                         k3 = max(1, len(sel) // 3); best = sel[np.argsort(dj[sel])[::-1][:k3]]
                         gains.append(float(dj[best].mean() - dj[sel].mean()))
-                        np.add.at(cells[famof(tg)], cell[best], n_all / len(rp))
+                        np.add.at(cells[famof(tg)], cell[best], n_all / len(rp)); np.add.at(ccells[famof(tg)], cell[best], n_all)
                 if gains:
-                    tot += n_all * float(np.mean(gains)); wsum += n_all
+                    tot += n_all * float(np.mean(gains)); wsum += n_all; ct += n_all * float(np.mean(gains)); cw += n_all
+            if cw > 0:
+                by_count[cname] = {'gain_points': round(ct / cw, 2), 'pitches': int(cw),
+                                   'cells': {f_: [[float(GU[k % len(GU)]), float(GZ[k // len(GU)])] for k in np.argsort(c_)[::-1][:3] if c_[k] > 0] for f_, c_ in ccells.items()}}
         if wsum > 0:
             g_ = tot / wsum
             out['aim'] = {'runs_per_100_pa': round(float(B_OUT_FAMILY * g_ * N_OUT) * 100, 2), 'gain_points': round(g_, 2),
-                          'cells': {f_: [[float(GU[k % len(GU)]), float(GZ[k // len(GU)])] for k in np.argsort(c_)[::-1][:3] if c_[k] > 0] for f_, c_ in cells.items()}}
+                          'cells': {f_: [[float(GU[k % len(GU)]), float(GZ[k // len(GU)])] for k in np.argsort(c_)[::-1][:3] if c_[k] > 0] for f_, c_ in cells.items()},
+                          'by_count': by_count}
+        # miss spots (unpriced): among the pitcher's two-strike pitches to this side, where this hitter's own whiff map
+        # (his map minus the same-side mean) says he misses most, by family
+        if wmap is not None and h in self.mbar_w:
+            r2 = self.gp[p][(T['stand_r'][self.gp[p]] == sd) & (T['strikes'][self.gp[p]] == 2)]
+            if len(r2) >= 40:
+                dev = self.Bw[r2] @ (wmap - self.mbar_w[h])
+                uu_ = np.where(sd == 1, self.xt[r2], -self.xt[r2])
+                cell2 = np.argmin(np.abs(uu_[:, None] - GU[None, :]), 1) + len(GU) * np.argmin(np.abs(self.zt[r2][:, None] - GZ[None, :]), 1)
+                miss = {}
+                for fname, groups, _, _ in FAMILIES:
+                    mm = np.flatnonzero(np.isin(T['group'][r2], groups))
+                    if len(mm) < 12:
+                        continue
+                    k3 = max(1, len(mm) // 3); best = mm[np.argsort(dev[mm])[::-1][:k3]]
+                    acc = np.bincount(cell2[best], minlength=len(GU) * len(GZ))
+                    miss[fname] = {'cells': [[float(GU[k % len(GU)]), float(GZ[k // len(GU)])] for k in np.argsort(acc)[::-1][:3] if acc[k] > 0],
+                                   'own_whiff_points': round(float((sig(self.off_w[r2[best]] + self.Bw[r2[best]] @ wmap) - sig(self.off_w[r2[best]] + self.Bw[r2[best]] @ self.mbar_w[h])).mean()) * 100, 1)}
+                if miss:
+                    out['miss_spots'] = miss
         return out
 
     def grade(self, game: int, h: int, p: int, aim_cells: dict | None) -> dict | None:
@@ -588,7 +624,7 @@ def main():
             summary = {k: v for k, v in rep.items() if k != 'games'}
             summary['games'] = {}
             for pk, entry in rep['games'].items():
-                doc = dict(entry); doc.update({'schema': SCHEMA, 'date': day, 'asof': a, 'game_pk': int(pk), 'grid': rep['grid'], 'training_pitches': fit_n(fits[a])})
+                doc = dict(entry); doc.update({'schema': SCHEMA, 'date': day, 'asof': a, 'game_pk': int(pk), 'grid': rep['grid'], 'training_pitches': fit_n(fits[a]), 'league': fits[a].league})
                 text = json.dumps(doc, separators=(',', ':')); total += len(text)
                 if params.get('publish', True):
                     put(repo, token, f'public/reports/{day}/{pk}.json', text, branch, f'BRL report {day} game {pk} (as of {a})')
