@@ -85,6 +85,10 @@ def record_from(days: dict) -> dict:
                 if k in rec['bins']:
                     for kk in ('pairs', 'outside', 'chases', 'league', 'map'):
                         rec['bins'][k][kk] += bn.get(kk, 0)
+            for gk, gv in (gr.get('by_group') or {}).items():
+                g_ = rec.setdefault('by_group', {}).setdefault(gk, {'outside': 0, 'chases': 0, 'league': 0.0, 'map': 0.0})
+                for kk in ('outside', 'chases', 'league', 'map'):
+                    g_[kk] += gv.get(kk, 0)
         if used:
             rec['dates'] += 1; rec['first_date'] = rec['first_date'] or day; rec['last_date'] = day
     for d_ in [rec] + list(rec['by_month'].values()):
@@ -92,6 +96,8 @@ def record_from(days: dict) -> dict:
             d_[k] = round(d_[k], 1)
     for d_ in rec['by_pricing'].values():
         d_['usual_expected'] = round(d_['usual_expected'], 1)
+    for g_ in (rec.get('by_group') or {}).values():
+        g_['league'] = round(g_['league'], 1); g_['map'] = round(g_['map'], 1)
     for bn in rec['bins'].values():
         bn['league'] = round(bn['league'], 1); bn['map'] = round(bn['map'], 1)
     return rec
@@ -442,6 +448,16 @@ class Fitted:
         if len(o) and h in self.maps_s:
             pl = sig(self.off_s[o]); ph = sig(self.off_s[o] + self.Bs[o] @ self.maps_s[h])
             out['chases'] = int(self.swing[o].sum()); out['chases_expected_league'] = round(float(pl.sum()), 2); out['chases_expected_map'] = round(float(ph.sum()), 2)
+            # the same by count group, pitch family and batter side (conditional calibration, accumulated in the record)
+            side_lab = 'R' if T['stand_r'][o][0] == 1 else 'L'
+            sub = {}
+            cg_o = self.cgrp[o]; fam_o = np.array([famof(int(g)) for g in T['group'][o]])
+            for name, keys, labels in (('count', cg_o, {0: 'even_or_ahead', 1: 'behind', 2: 'two_strikes'}), ('family', fam_o, None)):
+                for kv in np.unique(keys):
+                    m = keys == kv; lab = labels[int(kv)] if labels else str(kv)
+                    sub[f'{name}:{lab}'] = {'outside': int(m.sum()), 'chases': int(self.swing[o][m].sum()), 'league': round(float(pl[m].sum()), 2), 'map': round(float(ph[m].sum()), 2)}
+            sub[f'side:{side_lab}'] = {'outside': int(len(o)), 'chases': out['chases'], 'league': out['chases_expected_league'], 'map': out['chases_expected_map']}
+            out['by_group'] = sub
         if len(o) and aim_cells:
             sd = self.side.get(h, 1); uu_ = np.where(sd == 1, self.xt[o], -self.xt[o])
             cell = np.argmin(np.abs(uu_[:, None] - GU[None, :]), 1) + len(GU) * np.argmin(np.abs(self.zt[o][:, None] - GZ[None, :]), 1)
@@ -630,10 +646,16 @@ def build_report(fit: Fitted, T_all: dict, day: str, asof: str, stage, max_relie
                         tot['in_recommended'] += gr['in_recommended_cells']; tot['usual_expected'] += gr['usual_share_in_cells'] * gr['outside']
                     bn = tot['bins'][bin_of(pr['chase_points'])]
                     bn['pairs'] += 1; bn['outside'] += gr['outside']; bn['chases'] += gr['chases']; bn['league'] += gr['chases_expected_league']; bn['map'] += gr['chases_expected_map']
+                    for gk, gv in (gr.get('by_group') or {}).items():
+                        g_ = tot.setdefault('by_group', {}).setdefault(gk, {'outside': 0, 'chases': 0, 'league': 0.0, 'map': 0.0})
+                        for kk in ('outside', 'chases', 'league', 'map'):
+                            g_[kk] += gv[kk]
             for k in ('usual_expected', 'chases_expected_league', 'chases_expected_map'):
                 tot[k] = round(tot[k], 2)
             for bn in tot['bins'].values():
                 bn['league'] = round(bn['league'], 2); bn['map'] = round(bn['map'], 2)
+            for g_ in (tot.get('by_group') or {}).values():
+                g_['league'] = round(g_['league'], 2); g_['map'] = round(g_['map'], 2)
             entry['grade'] = tot
         entry['players'] = {}
         ids = set()
