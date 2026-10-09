@@ -846,3 +846,140 @@ def timing2_study(sv, cols: dict, params: dict, stage) -> dict:
                                            for nm, m in (('follows_most', t_sf[te] >= q[1]), ('follows_least', t_sf[te] <= q[0]))}
     stage('whiffs')
     return res
+
+
+# ---------------------------------------------------------------- TIMING-03: the sequence effects with fuller controls
+def timing3_study(sv, cols: dict, params: dict, stage) -> dict:
+    """TIMING-03 (development). TIMING-02 found contact met earlier after a slower pitch was taken (hitters expecting the
+    other speed) and later after a slower pitch was missed (the swing's timing persisting). Here, within pitcher-type-
+    seasons as before, with the count as twelve categories, the pitch number, the previous pitch's location (side,
+    height, in or out of the zone) and its outcome in four kinds (taken for a ball, taken for a strike, fouled, missed),
+    each with its own slope on the previous pitch's flight time; then the same with the previous pitch's type family
+    (fastball, breaking, offspeed) added, to see whether the speed or the type is what hitters key on; and alternations
+    (previous pitch of another family) against repeats. Misses: speed-follow (TIMING-02) against the contact window
+    (CONTACT-03), alone and together, on 2026 through July; the full-season slope 'speed_follow' computed as in TIMING-02."""
+    res = {}
+    cols = guard(cols, params)
+    desc = label(cols, 'description')
+    swing = np.isin(desc, WHIFF + CONTACT); whiff = np.isin(desc, WHIFF); contact = np.isin(desc, CONTACT)
+    batter = cols['batter'].astype(np.int64); day = cols['day'].astype(np.int64)
+    G = geometry(sv, cols); year = G['year']
+    ft = flight_time(sv, cols) * 1000.0
+    p1 = _previous(cols, 1); has1 = p1 >= 0; q1 = np.maximum(p1, 0)
+    f1 = np.where(has1, ft[q1], np.nan)
+    called = desc == 'called_strike'; ball = np.isin(desc, ('ball', 'blocked_ball'))
+    k_ball, k_cs, k_foul, k_miss = (has1 & ball[q1]), (has1 & called[q1]), (has1 & contact[q1]), (has1 & whiff[q1])
+    ptype = label(cols, 'pitch_type'); grp = np.asarray([GROUPS.get(t, 6) for t in ptype])
+    fam = np.where(grp <= 2, 0, np.where(grp <= 4, 1, np.where(grp == 5, 2, 3)))
+    fam1 = np.where(has1, fam[q1], -1)
+    tcode = np.unique(ptype, return_inverse=True)[1]
+    stand_r = label(cols, 'stand') == 'R'; throw_r = label(cols, 'p_throws') == 'R'
+    u = np.where(stand_r, G['x'], -G['x']); z = G['z']
+    u1 = np.where(has1, u[q1], np.nan); z1 = np.where(has1, z[q1], np.nan)
+    inz1 = (np.abs(u1) <= 0.83) & (z1 >= 1.5) & (z1 <= 3.5)
+    iy = cols['intercept_ball_minus_batter_pos_y_inches'].astype(np.float64)
+    train_year, test_year = int(params.get('train_year', 2025)), int(params.get('test_year', 2026))
+    ci = contact & np.isfinite(iy)
+    n_y, s_y, q_y = prior_stats(batter, day, iy, ci)
+    lm = float(np.nanmean(iy[ci & (year == train_year)])); lv = float(np.nanvar(iy[ci & (year == train_year)]))
+    mu_y = (s_y + 50 * lm) / (n_y + 50)
+    with np.errstate(invalid='ignore', divide='ignore'):
+        var_h = np.where(n_y > 1, (q_y - s_y * s_y / np.maximum(n_y, 1)) / np.maximum(n_y - 1, 1), lv)
+    sig_y = np.sqrt((np.maximum(n_y - 1, 0) * var_h + 50 * lv) / (np.maximum(n_y - 1, 0) + 50))
+    pkey = cols['pitcher'].astype(np.int64) * 100 + (year - 2000); gkey = pkey * 1000 + tcode.astype(np.int64)
+    def center(v, key, rows):
+        ug, gi = np.unique(key[rows], return_inverse=True); cnt = np.bincount(gi)
+        out = np.full(len(v), np.nan); out[rows] = _demean(v[rows], gi, cnt); return out
+    base_ok = ci & np.isfinite(ft) & np.isfinite(u) & np.isfinite(z) & (n_y >= 20)
+    ok = base_ok & has1 & np.isfinite(f1) & np.isfinite(u1) & np.isfinite(z1) & (k_ball | k_cs | k_foul | k_miss)
+    ftc = center(ft, gkey, base_ok) / 10.0
+    f1c = center(np.where(ok, f1, 0.0), gkey, ok) / 10.0
+    cnt_code = np.clip(cols['balls'], 0, 3) * 3 + np.clip(cols['strikes'], 0, 2)
+    pno = np.clip(cols['pitch_number'], 1, 8).astype(float)
+    stage('sequence and priors')
+
+    kind = np.where(k_ball, 0, np.where(k_cs, 1, np.where(k_foul, 2, 3)))
+
+    def within(rows, cell, cols_):
+        # fixed effects for every cell (pitcher-type-season by the previous pitch's outcome kind, and more when asked):
+        # the previous pitch's flight is compared only among pitches of the same type, same pitcher and season, after
+        # the same kind of previous outcome
+        ug, gi = np.unique(cell[rows], return_inverse=True); cnt = np.bincount(gi); keep = cnt[gi] >= 2
+        names = list(cols_)
+        X = np.column_stack([_demean(np.asarray(cols_[k], dtype=np.float64), gi, cnt) for k in names])[keep]
+        return names, X, _demean(iy[rows] - mu_y[rows], gi, cnt)[keep], keep
+
+    def design(r):
+        c_ = {'own_flight': ftc[r]}
+        for q, nm in enumerate(('after_ball', 'after_called_strike', 'after_foul', 'after_miss')):
+            c_['prev_flight_' + nm] = np.where(kind[r] == q, f1[r] / 10.0, 0.0)
+        for cc in range(1, 12):
+            c_[f'count_{cc}'] = (cnt_code[r] == cc).astype(float)
+        c_.update({'pitch_no': pno[r], 'prev_side': u1[r], 'prev_height': z1[r] - 2.5, 'prev_in_zone': inz1[r].astype(float),
+                   'side': u[r], 'side_abs': np.abs(u[r]), 'height': z[r] - 2.5, 'height_sq': (z[r] - 2.5) ** 2, 'platoon': (stand_r == throw_r)[r].astype(float)})
+        return c_
+    keys = ['prev_flight_after_ball', 'prev_flight_after_called_strike', 'prev_flight_after_foul', 'prev_flight_after_miss', 'own_flight']
+    cell_kind = gkey * 10 + kind
+    cell_fam = cell_kind * 10 + (fam1 + 1)
+    depth = {}
+    for yr in (train_year, test_year):
+        r0 = ok & (year == yr)
+        if r0.sum() < 5000:
+            continue
+        out = {}
+        for vname, rows, cell in (('full_controls', r0, cell_kind), ('within_previous_family', r0, cell_fam),
+                                  ('alternations', r0 & (fam1 != fam), cell_kind), ('repeats', r0 & (fam1 == fam), cell_kind)):
+            names, X, y, keep = within(rows, cell, design(rows))
+            b, lo, hi = _ols(X, y, cols['game_pk'][rows][keep]); j = {n_: q for q, n_ in enumerate(names)}
+            out[vname] = {'contacts': int(keep.sum()), **{k: [round(float(b[j[k]]), 4), round(float(lo[j[k]]), 4), round(float(hi[j[k]]), 4)] for k in keys}}
+        depth[yr] = out
+        stage(f'depth {yr}')
+    res['contact_depth'] = depth
+    # speed-follow (as TIMING-02) against the contact window, on misses
+    rs = base_ok & (year == train_year)
+    ug, gi = np.unique(pkey[rs], return_inverse=True); cnt = np.bincount(gi); keep = cnt[gi] >= 2
+    xo = _demean(center(ft, pkey, rs)[rs] / 10.0, gi, cnt)
+    C = np.column_stack([_demean(v, gi, cnt) for v in (u[rs], np.abs(u[rs]), z[rs] - 2.5, (z[rs] - 2.5) ** 2, cols['balls'][rs].astype(float), cols['strikes'][rs].astype(float),
+                                                       (stand_r == throw_r)[rs].astype(float))])
+    X3 = np.column_stack([xo, C])[keep]; y3 = _demean(iy[rs] - mu_y[rs], gi, cnt)[keep]
+    b3 = np.linalg.lstsq(X3, y3, rcond=None)[0]; r3 = y3 - X3 @ b3
+    sf, sd, lam = _hitter_slopes(batter[rs][keep], X3[:, 0], r3, float(np.var(r3)))
+    t_sf = np.asarray([sf.get(int(h_), np.nan) for h_ in batter])
+    sw_ok = swing & np.isfinite(ft) & np.isfinite(u) & np.isfinite(z) & np.isfinite(cols['release_speed']) & (n_y >= 30) & np.isfinite(t_sf)
+    n_w, s_w, _ = prior_stats(batter, day, whiff.astype(float), swing)
+    lw = float(whiff[swing & (year == train_year)].mean()); wr = (s_w + 200 * lw) / (n_w + 200)
+    bs_ = cols['bat_speed']; okb = swing & np.isfinite(bs_)
+    n_b, s_b, _ = prior_stats(batter, day, bs_, okb); bat_speed = (s_b + 50 * float(np.nanmean(bs_[okb & (year == train_year)]))) / (n_b + 50)
+    X_pitch = np.column_stack([cols['release_speed'], cols['pfx_x'] * np.where(throw_r, 1, -1), cols['pfx_z'], u, z, G['vaa'], G['haa'] * np.where(stand_r, 1, -1),
+                               cols['release_spin_rate'], cols['release_extension'], cols['release_pos_z'], cols['balls'], cols['strikes'], grp,
+                               (stand_r == throw_r).astype(float), cols['arm_angle'], np.log(wr / (1 - wr)), bat_speed])
+    tr = sw_ok & (year == train_year); te = sw_ok & (year == test_year)
+    res['swings'] = {'train': int(tr.sum()), 'test': int(te.sum()), 'corr_speed_follow_window': round(float(np.corrcoef(t_sf[te], sig_y[te])[0, 1]), 3) if te.any() else None}
+    if tr.sum() < 20000 or te.sum() < 5000:
+        res['error'] = 'too few swings'; return res
+    from sklearn.ensemble import HistGradientBoostingClassifier
+    yv = whiff.astype(float)
+    hp = dict(max_iter=int(params.get('gbm_iter', 300)), learning_rate=0.08, max_leaf_nodes=48, min_samples_leaf=200, l2_regularization=1.0, random_state=11)
+    oof = np.full(len(yv), np.nan); par = cols['game_pk'] % 2 == 0
+    for side in (True, False):
+        fr, pr = tr & (par == side), tr & (par != side)
+        oof[pr] = HistGradientBoostingClassifier(**hp).fit(X_pitch[fr], yv[fr]).predict_proba(X_pitch[pr])[:, 1]
+    p_te = HistGradientBoostingClassifier(**hp).fit(X_pitch[tr], yv[tr]).predict_proba(X_pitch[te])[:, 1]
+    lo_tr = np.log(np.clip(oof[tr], 1e-6, 1 - 1e-6) / np.clip(1 - oof[tr], 1e-6, 1)); lo_te = np.log(np.clip(p_te, 1e-6, 1 - 1e-6) / np.clip(1 - p_te, 1e-6, 1))
+    terms = {'speed_follow': t_sf, 'window': (sig_y - math.sqrt(lv)) / 10.0}
+    yt = yv[te]; games = cols['game_pk'][te]; base_ll = logloss(p_te, yt)
+    tg = np.unique(cols['game_pk'][tr]); gi_ = np.searchsorted(tg, cols['game_pk'][tr])
+    wh_out = {}
+    for name, cl in (('window', ['window']), ('speed_follow', ['speed_follow']), ('both', ['window', 'speed_follow'])):
+        Ttr = np.column_stack([terms[k][tr] for k in cl]); Tte = np.column_stack([terms[k][te] for k in cl])
+        bb = offset_fit(lo_tr, Ttr, yv[tr]); pt = 1 / (1 + np.exp(-(lo_te + bb[0] + Tte @ bb[1:])))
+        rng = np.random.default_rng(5); bsd = []
+        for _ in range(int(params.get('reps', 60))):
+            w = np.bincount(rng.integers(0, len(tg), len(tg)), minlength=len(tg))[gi_]; sel = np.repeat(np.arange(int(tr.sum())), w)
+            bsd.append(offset_fit(lo_tr[sel], Ttr[sel], yv[tr][sel], iters=20)[1:])
+        bsd = np.asarray(bsd)
+        wh_out[name] = {'coefs': {k: [round(float(bb[1 + q]), 4), round(float(np.percentile(bsd[:, q], 2.5)), 4), round(float(np.percentile(bsd[:, q], 97.5)), 4)] for q, k in enumerate(cl)},
+                        'gain_nats_per_1000_swings': clustered(base_ll - logloss(pt, yt), games)}
+    res['whiffs'] = wh_out
+    stage('whiffs')
+    return res
