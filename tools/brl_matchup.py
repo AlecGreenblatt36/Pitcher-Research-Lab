@@ -572,3 +572,82 @@ def timing_study(sv, cols: dict, params: dict, stage) -> dict:
                                      for nm, m in (('high_carryover', hi_c), ('low_carryover', lo_c))}
     stage('whiffs')
     return res
+
+
+# ---------------------------------------------------------------- CONTACT-03: the frozen swing-geometry miss model, scored once
+def contact_final_study(sv, cols: dict, params: dict, stage) -> dict:
+    """CONTACT-03. CONTACT-02's frozen recipe: the rates model (gradient boosting on the pitch and the hitter's whiff rate
+    and bat speed) plus one term, the hitter's contact-depth spread from earlier contact swings (shrunk, k = 50), its
+    coefficient fitted on the rates model's cross-fitted logits. Refitted on all development swings (2025 and 2026
+    before August 1) and scored once on every swing from August 1, 2026 (the program's untouched set). Also reported:
+    the flexible model with the usual attack angle and the spread (CONTACT-01's G2) on the same swings."""
+    if not params.get('final_eval') or not params.get('frozen_commit'):
+        raise ValueError('contact_final runs only as the registered final evaluation of a frozen commit')
+    res = {}
+    desc = label(cols, 'description')
+    G = geometry(sv, cols)
+    swing = np.isin(desc, WHIFF + CONTACT); whiff = np.isin(desc, WHIFF); contact = np.isin(desc, CONTACT)
+    batter = cols['batter'].astype(np.int64); day = cols['day'].astype(np.int64)
+    dev = day < UNTOUCHED_FROM; unt = ~dev
+    aa = cols['attack_angle']; iy = cols['intercept_ball_minus_batter_pos_y_inches']
+    has_aa = np.isfinite(aa) & swing
+    zc = G['z'] - 2.5
+    rows_aa = has_aa & dev & np.isfinite(zc)
+    slope = float(np.polyfit(zc[rows_aa], aa[rows_aa], 1)[0])
+    aa_adj = aa - slope * zc
+    n_a, s_a, _ = prior_stats(batter, day, aa_adj, has_aa & np.isfinite(zc))
+    mu_aa = (s_a + 50 * float(np.nanmean(aa_adj[rows_aa]))) / (n_a + 50)
+    ci = contact & np.isfinite(iy)
+    n_y, s_y, q_y = prior_stats(batter, day, iy, ci)
+    lv = float(np.nanvar(iy[ci & dev]))
+    with np.errstate(invalid='ignore', divide='ignore'):
+        var_h = np.where(n_y > 1, (q_y - s_y * s_y / np.maximum(n_y, 1)) / np.maximum(n_y - 1, 1), lv)
+    sig_y = np.sqrt((np.maximum(n_y - 1, 0) * var_h + 50 * lv) / (np.maximum(n_y - 1, 0) + 50))
+    n_w, s_w, _ = prior_stats(batter, day, whiff.astype(float), swing)
+    lw = float(whiff[swing & dev].mean()); wr = (s_w + 200 * lw) / (n_w + 200)
+    bs = cols['bat_speed']; okb = swing & np.isfinite(bs)
+    n_b, s_b, _ = prior_stats(batter, day, bs, okb)
+    bat_speed = (s_b + 50 * float(np.nanmean(bs[okb & dev]))) / (n_b + 50)
+    stage('hitter priors')
+    stand_r = label(cols, 'stand') == 'R'; throw_r = label(cols, 'p_throws') == 'R'
+    u = np.where(stand_r, G['x'], -G['x']); v = cols['release_speed'].astype(np.float64)
+    X_pitch = np.column_stack([v, cols['pfx_x'] * np.where(throw_r, 1, -1), cols['pfx_z'], u, G['z'], G['vaa'], G['haa'] * np.where(stand_r, 1, -1),
+                               cols['release_spin_rate'], cols['release_extension'], cols['release_pos_z'], cols['balls'], cols['strikes'],
+                               np.asarray([GROUPS.get(t, 6) for t in label(cols, 'pitch_type')]), (stand_r == throw_r).astype(float), cols['arm_angle']])
+    X_rate = np.column_stack([np.log(wr / (1 - wr)), bat_speed])
+    ok = swing & np.isfinite(sig_y) & np.isfinite(G['z']) & np.isfinite(v) & (n_y >= 30)
+    tr, te = ok & dev, ok & unt
+    res['rows'] = {'development_swings': int(tr.sum()), 'untouched_swings': int(te.sum()), 'untouched_whiff_rate': round(float(whiff[te].mean()), 4) if te.any() else None,
+                   'untouched_days': [str(date.fromordinal(int(day[te].min()))), str(date.fromordinal(int(day[te].max())))] if te.any() else None}
+    if tr.sum() < 20000 or te.sum() < 5000:
+        res['error'] = 'too few swings'; return res
+    from sklearn.ensemble import HistGradientBoostingClassifier
+    y = whiff.astype(float)
+    hp = dict(max_iter=300, learning_rate=0.08, max_leaf_nodes=48, min_samples_leaf=200, l2_regularization=1.0, random_state=11)
+    XB = np.column_stack([X_pitch, X_rate]); XG = np.column_stack([X_pitch, X_rate, mu_aa, sig_y])
+    p1 = HistGradientBoostingClassifier(**hp).fit(XB[tr], y[tr]).predict_proba(XB[te])[:, 1]
+    p2 = HistGradientBoostingClassifier(**hp).fit(XG[tr], y[tr]).predict_proba(XG[te])[:, 1]
+    stage('flexible')
+    oof = np.full(len(y), np.nan); par = cols['game_pk'] % 2 == 0
+    for side in (True, False):
+        fr, pr = tr & (par == side), tr & (par != side)
+        oof[pr] = HistGradientBoostingClassifier(**hp).fit(XB[fr], y[fr]).predict_proba(XB[pr])[:, 1]
+    lo_tr = np.log(np.clip(oof[tr], 1e-6, 1 - 1e-6) / np.clip(1 - oof[tr], 1e-6, 1)); lo_te = np.log(np.clip(p1, 1e-6, 1 - 1e-6) / np.clip(1 - p1, 1e-6, 1))
+    term_tr = (sig_y[tr] / 10.0)[:, None]; term_te = (sig_y[te] / 10.0)[:, None]
+    b = offset_fit(lo_tr, term_tr, y[tr])
+    tg = np.unique(cols['game_pk'][tr]); gi = np.searchsorted(tg, cols['game_pk'][tr]); rng = np.random.default_rng(5); bsd = []
+    for _ in range(int(params.get('reps', 60))):
+        w = np.bincount(rng.integers(0, len(tg), len(tg)), minlength=len(tg))[gi]; sel = np.repeat(np.arange(int(tr.sum())), w)
+        bsd.append(offset_fit(lo_tr[sel], term_tr[sel], y[tr][sel], iters=20)[1])
+    pt = 1 / (1 + np.exp(-(lo_te + b[0] + term_te @ b[1:])))
+    yt = y[te]; games = cols['game_pk'][te]
+    l1, l2, lt = logloss(p1, yt), logloss(p2, yt), logloss(pt, yt)
+    res['frozen_term'] = {'coef_per_10_in': [round(float(b[1]), 4), round(float(np.percentile(bsd, 2.5)), 4), round(float(np.percentile(bsd, 97.5)), 4)],
+                          'gain_over_rates_nats_per_1000_swings': clustered(l1 - lt, games)}
+    res['flexible_geometry_gain_nats_per_1000_swings'] = clustered(l1 - l2, games)
+    res['test_logloss_per_swing'] = {'rates': round(float(l1.mean()), 5), 'rates_plus_spread': round(float(lt.mean()), 5), 'flexible_geometry': round(float(l2.mean()), 5)}
+    qs = np.percentile(sig_y[te], [20, 40, 60, 80]); qi = np.searchsorted(qs, sig_y[te])
+    res['by_spread_quintile'] = [{'spread_in': round(float(sig_y[te][qi == k].mean()), 3), 'swings': int((qi == k).sum()), 'observed': round(float(yt[qi == k].mean()), 4),
+                                  'rates_model': round(float(p1[qi == k].mean()), 4), 'frozen_model': round(float(pt[qi == k].mean()), 4)} for k in range(5)]
+    stage('scored')
+    return res
