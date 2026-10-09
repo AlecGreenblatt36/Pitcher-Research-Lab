@@ -2814,6 +2814,78 @@ def surprise_study(T: dict, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- EXPOSURE-01: does a hitter learn a pitch type within the game
+def exposure_study(T: dict, params: dict, stage) -> dict:
+    """Times through the order, pitch by pitch: for each pitch, how many pitches of the same type this hitter has already
+    seen from this pitcher in the game (same-type exposure), how many of any type (total exposure), and how many of
+    the same type from other pitchers earlier in the game (other-pitcher exposure, the control: learning a pitcher's
+    pitch should not transfer fully). Whiffs on swings, chases and launch speed on balls in play, beyond the pitch's
+    physics, location, count, pitch count and times through the order. Train 2023-2024, score 2025."""
+    res = {}
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)) & (T['group'] >= 0) & (T['group'] <= 5) & (T['call'] <= 2) & (T['balls'] >= 0))
+    order = np.lexsort((T['pitch_no'], T['ab'], T['game']))
+    T = take(T, order)
+    n = len(T['game'])
+    g = np.unique(T['game'], return_inverse=True)[1].astype(np.int64); b = np.unique(T['batter'], return_inverse=True)[1].astype(np.int64)
+    p = np.unique(T['pitcher'], return_inverse=True)[1].astype(np.int64); grp = T['group'].astype(np.int64)
+    NB, NP = int(b.max()) + 1, int(p.max()) + 1
+    def running(key):
+        o = np.lexsort((np.arange(n), key)); k = key[o]
+        st = np.r_[True, k[1:] != k[:-1]]; idx = np.arange(n) - np.flatnonzero(st)[np.cumsum(st) - 1]
+        out = np.empty(n); out[o] = idx; return out
+    pa_key = (g * NB + b) * NP + p                                        # this batter against this pitcher in this game
+    same = running(pa_key * 8 + grp)
+    total = running(pa_key)
+    any_same = running((g * NB + b) * 8 + grp)                            # same type from anyone in the game
+    other_same = any_same - same
+    # times through the order against this pitcher: plate appearances started before this one
+    first = T['pitch_no'] == 0
+    pa_count = running(np.where(first, pa_key, -1 - np.arange(n)))
+    tto = np.zeros(n); fi = np.flatnonzero(first); tto[fi] = pa_count[fi]
+    # carry the plate appearance's count to its later pitches
+    pa_id = np.cumsum(first) - 1
+    tto = tto[np.flatnonzero(first)][np.maximum(pa_id, 0)]
+    pc = running(g * NP + p)                                              # pitcher's pitch count in the game
+    swing = (T['call'] == 1) | (T['call'] == 2); whiff = T['call'] == 2
+    u = np.where(T['stand_r'] == 1, T['px'], -T['px'])
+    outside = (np.abs(u) > ZONE_HALF) | (T['pz'] > ZONE_TOP) | (T['pz'] < ZONE_BOT)
+    bip = np.isfinite(T['ls'])
+    prop = swing_propensity(T)
+    X0 = np.column_stack([T['v0'], T['pfx_x'] * np.where(T['throw_r'] == 1, 1, -1), T['pfx_z'], u, T['pz'], T['spin'], T['z0'], T['ext'],
+                          T['balls'], T['strikes'], grp, (T['stand_r'] == T['throw_r']), prop, pc, np.minimum(tto, 3), total])
+    X1 = np.column_stack([X0, same, other_same])
+    res['exposure'] = {'same_type_mean': round(float(same.mean()), 3), 'same_type_p90': float(np.percentile(same, 90)), 'other_pitcher_same_type_mean': round(float(other_same.mean()), 3)}
+    from sklearn.ensemble import HistGradientBoostingClassifier, HistGradientBoostingRegressor
+    hp = dict(max_iter=int(params.get('gbm_iter', 300)), learning_rate=0.08, max_leaf_nodes=48, min_samples_leaf=300, l2_regularization=1.0, random_state=11)
+    tr = np.isin(T['season'], (2023, 2024)); te = T['season'] == 2025
+    rng = np.random.default_rng(11)
+    out = {}
+    for name, rows, y in (('whiff_on_swing', swing, whiff), ('chase', outside, swing)):
+        a = np.flatnonzero(tr & rows); a = rng.choice(a, min(len(a), int(params.get('train_n', 1200000))), replace=False)
+        t_ = te & rows; yy = y.astype(float)
+        m0 = HistGradientBoostingClassifier(**hp).fit(X0[a], yy[a]); m1 = HistGradientBoostingClassifier(**hp).fit(X1[a], yy[a])
+        p0, p1 = m0.predict_proba(X0[t_])[:, 1], m1.predict_proba(X1[t_])[:, 1]
+        # the exposure effect read as the change in prediction when same-type exposure is raised by 3, other features held
+        Xs = X1[t_].copy(); Xs[:, -2] += 3; ps = m1.predict_proba(Xs)[:, 1]
+        Xo = X1[t_].copy(); Xo[:, -1] += 3; po = m1.predict_proba(Xo)[:, 1]
+        out[name] = {'test_rows': int(t_.sum()), 'gain_nats_per_1000': [round(v * 1000, 3) for v in clustered_ci(logloss_vec(p0, yy[t_]) - logloss_vec(p1, yy[t_]), T['game'][t_])],
+                     'effect_of_3_more_same_type_from_this_pitcher_points': round(float((ps - p1).mean() * 100), 3),
+                     'effect_of_3_more_same_type_from_other_pitchers_points': round(float((po - p1).mean() * 100), 3),
+                     'by_same_type_exposure': [{'seen': k, 'observed': round(float(yy[t_][np.minimum(same[t_], 9) == k].mean()), 4) if np.any(np.minimum(same[t_], 9) == k) else None,
+                                                'predicted_without': round(float(p0[np.minimum(same[t_], 9) == k].mean()), 4) if np.any(np.minimum(same[t_], 9) == k) else None,
+                                                'rows': int(np.sum(np.minimum(same[t_], 9) == k))} for k in (0, 1, 2, 3, 5, 7, 9)]}
+        stage('exposure ' + name)
+    a = np.flatnonzero(tr & bip); t_ = te & bip
+    r0 = HistGradientBoostingRegressor(**hp).fit(X0[a], T['ls'][a]); r1 = HistGradientBoostingRegressor(**hp).fit(X1[a], T['ls'][a])
+    e0 = (r0.predict(X0[t_]) - T['ls'][t_]) ** 2; e1 = (r1.predict(X1[t_]) - T['ls'][t_]) ** 2
+    Xs = X1[t_].copy(); Xs[:, -2] += 3
+    out['launch_speed_on_contact'] = {'test_rows': int(t_.sum()), 'mse_reduction': [round(v, 4) for v in clustered_ci(e0 - e1, T['game'][t_])],
+                                      'effect_of_3_more_same_type_mph': round(float((r1.predict(Xs) - r1.predict(X1[t_])).mean()), 3)}
+    res['models'] = out
+    stage('exposure contact')
+    return res
+
+
 # ---------------------------------------------------------------- ZONE-01: pitch location across the 2026 definition change
 YMID = 8.5 / 12.0          # the middle of the plate, Statcast's reference for plate_x and plate_z from 2026
 
@@ -3008,6 +3080,8 @@ def main():
             receipt['results'] = surprise_study(T, params, stage)
         elif experiment == 'matchup_pa':
             receipt['results'] = matchup_pa(T, params, stage)
+        elif experiment == 'exposure':
+            receipt['results'] = exposure_study(T, params, stage)
         receipt['status'] = 'completed'
     except StopIteration:
         receipt['status'] = 'completed'
