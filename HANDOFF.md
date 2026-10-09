@@ -52,8 +52,6 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   chase about 2.6 points more than their maps say with runners in scoring position, +0.19 log-odds [0.17, 0.22], and
   their own chase spots keep their pull). BATSPEED-01 (earlier) already answered the bat-speed early-warning question
   (no), so it is not repeated.
-- Next research: COMMAND-02, execution scatter measured from consecutive same-type pitches (a same-intent mixture),
-  which tests the 0.6 ft command assumption behind VALUE-08F's 32 runs and gives a per-pitcher realizable edge.
 - SCOUT-03 exported (product): the private scouting page now uses maps fitted on 2025 and the whole 2026 regular
   season (scratch matchup_page/build.py matchup_page/scout3_receipt.json).
 - SWINGMAP-01 failed: hitters' own chase spots are not where their bat goes (attack angle, direction and their
@@ -64,7 +62,8 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   VALUE-15: re-priced on batter zones the edge keeps 85 to 94% (about a tenth is zone height); 32 runs stand with
   that note. The private page says so.
 - CLV-03 done (ledger): with open-time lineups the line still moved toward our taught number 67.9% (2025) and
-  72.6% (2026); lineups explain 0.5 to 3 points. Proposed public wording sent to Alec (needs approval).
+  72.6% (2026); lineups explain 0.5 to 3 points. New public wording ready as scratch clv03_wording.patch
+  (git apply, run the tests, push); the permission check stopped the push, so it waits for Alec's explicit approval.
 - DISP-02 done (ledger): the centered day-form shock fixed the run spread (team-run SD toward actual in both seasons,
   mean total level) and P(over) pooled -0.00038 [-0.00074, -0.00005], but the pooled win Brier upper end is +0.00041
   (bound +0.0002), so day form stays off. A totals-only use would need its own registration.
@@ -81,15 +80,6 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   "postseason": true, "post_seasons": [2026], "pool": "postseason", "seasons": [2023, 2024, 2025, 2026],
   "game_types": ["R", "F", "D", "L", "W"], "final_eval": true, "frozen_commit": "c5e52f18..."} and again with
   "pool": "regular" (frozen at c5e52f18, the registering commit).
-- CLV-03 done (ledger): with open-time lineups the line still moved toward our taught number 67.9% (2025) and
-  72.6% (2026); lineups explain 0.5 to 3 points. Proposed public wording sent to Alec (needs approval).
-- DISP-02 done (ledger): the centered day-form shock fixed the run spread (team-run SD toward actual in both seasons,
-  mean total level) and P(over) pooled -0.00038 [-0.00074, -0.00005], but the pooled win Brier upper end is +0.00041
-  (bound +0.0002), so day form stays off. A totals-only use would need its own registration.
-- COMMAND-02 done (ledger): repeated aims do not identify command (reliability 0.08 to 0.11); the plain location
-  spread per pitch type predicts next-season walks beyond walk, zone and chase rates (+0.111 [0.037, 0.186] x1e-4).
-- Next: WARMUP-01 (whose decline the times-through penalty is: hitter warm-up, pair familiarity or pitcher load;
-  relievers' first meetings and substitutes batting twice separate them).
 - Recorded overnight: VALUE-14 (edge works through walks and outs in play), MAPS-01 (trait share 0.86), SERIES-01 (no
   fading over meetings), ABS-01, PERCEPT-01/02F (failed), MATCHUP-06/07 (failed), ENGINE-02 (no larger pair effect).
 - FWD-01 runs after the World Series (instructions in the matchup section).
