@@ -22,9 +22,13 @@ October 7 checkpoint below still describes the machinery (lanes, privacy, schedu
   offsets centered on the league (TEAM-05, CENTER-01); steals and runner speed (RUN-01, RUN-02); postseason starter usage
   x0.91; base running after each outcome from every 2023-2026 play (TRANS-01, brl_live/transitions.json);
   running plays between plate appearances built but off (TRANS-02, replays running, see below).
-- Headline win chance: taught-v4 from October 8, 14:00 UTC (HEADLINE-04): 60% market line, 40% our model, our model =
-  0.039 + 0.543 x simulator log-odds + 0.545 x team-model log-odds. Versions live in brl_live/headline_params.json with
-  effective times; never edit a version already in force.
+- From October 9, about 8 a.m. Eastern (PROD-03, Alec's approval): the fitted reliever choice, relief exits with team
+  hooks and the starter leash are on (reliever_choice, relief_exit, relief_hooks, leash in ADJUST); the postseason exit
+  offset +0.4 acts in Wild Card, Division and League series games.
+- Headline win chance: taught-v5 for games with a first pitch after October 9, 12:30 UTC (taught-v4 before it, from
+  October 8, 14:00 UTC): 60% market line, 40% our model, our model = 0.0395 + 0.561 x simulator log-odds + 0.524 x
+  team-model log-odds, refitted on the PROD-03 replays. Versions live in brl_live/headline_params.json with effective
+  times; never edit a version already in force.
 - In-game win chance: the game's simulated table averaged with the league table on the log-odds scale (LIVE-04).
 - Hitter chances on the page keep each lineup slot's hits with the starter's share of that slot's plate appearances
   (PLAYER-02, STARTER_SHARE in boxscore.py).
@@ -89,7 +93,8 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 - Recorded overnight: VALUE-14 (edge works through walks and outs in play), MAPS-01 (trait share 0.86), SERIES-01 (no
   fading over meetings), ABS-01, PERCEPT-01/02F (failed), MATCHUP-06/07 (failed), ENGINE-02 (no larger pair effect).
 - FWD-01 runs after the World Series (instructions in the matchup section).
-- Awaiting Alec: the PROD-03 switch (taught-v5 with it) and publishing the Matchup Physics page.
+- PROD-03 and taught-v5 went live at about 8 a.m. Eastern October 9 (Alec: "Stop asking for permission you have it").
+  Awaiting Alec only for publishing new pages (the Matchup Physics page).
 
 Earlier (10:30 p.m. October 8):
 
@@ -190,8 +195,7 @@ halves 0.54); TIMING-03 (cell fixed effects) running. Earlier: FATIGUE-01, SEQ-0
 sources; METHOD-01 paired streams.
 
 Product: PROD-03 (fitted reliever choice and exits, team hooks, starter leash) passed its do-no-harm rule on both
-seasons; switching ADJUST is waiting for Alec's approval (the session's permission check blocks production changes
-without it). With it goes taught-v5 (intercept 0.0395, simulator 0.561, team model 0.524, refit on the PROD-03
+seasons and is on in ADJUST from October 9, about 8 a.m. Eastern. With it went taught-v5 (intercept 0.0395, simulator 0.561, team model 0.524, refit on the PROD-03
 replays by harness/taught_small.py). LIVE-05 (in-game, W26R done, W26P running) decides whether it stays on in-game.
 
 Experiments live in tools/brl_discovery.py (feed) and tools/brl_matchup.py (Savant; params experiment "contact" with

@@ -357,10 +357,13 @@ class BoxAccumulator:
 # leash: in regular-season games each starter's expected batters faced is moved for short rest (openers), a relief
 # outing before the start, the first two starts back from a layoff of 20 days or more, March and September (LEASH-01;
 # research_lab.game_sim.starter_leash, table brl_live/leash.json from tools/brl_leash.py). Off until its replays are read.
+# PROD-03 (LEDGER.md) switched reliever_choice, relief_exit, relief_hooks and leash on together on October 9, 2026: the
+# package passed its do-no-harm replays in 2025 and 2026 (win Brier better in both, totals within bounds), and goes live
+# under Alec's standing rule for proven improvements. The headline version taught-v5 was fitted on those replays.
 ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         'postseason_exp_scale':{'F':0.91,'D':0.91,'L':0.91,'W':1.0},
         'environment':True,'team_offsets':True,'steals':True,'transitions':True,'running_events':False,
-        'reliever_choice':False,'leash':False,'base_state':False,'relief_exit':False,'relief_hooks':False,
+        'reliever_choice':True,'leash':True,'base_state':False,'relief_exit':True,'relief_hooks':True,
         'postseason_exit_offset':{'F':0.4,'D':0.4,'L':0.4,'W':0.0},'day_form_sigma':0.0}
 
 TRANSITIONS_PATH=Path(__file__).resolve().parent/'transitions.json'

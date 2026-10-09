@@ -127,7 +127,7 @@ def test_manager_for_attaches_a_copy():
     base = ManagerPolicy()
     m, label = manager_for(base, dict(ADJUST, reliever_choice=True))
     assert m is not base and isinstance(m.reliever_choice, RelieverChoice) and base.reliever_choice is None and label
-    m, label = manager_for(base, dict(ADJUST, reliever_choice=False))
+    m, label = manager_for(base, dict(ADJUST, reliever_choice=False, relief_exit=False))
     assert m is base and label is None
 
 

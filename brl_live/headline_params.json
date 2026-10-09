@@ -70,6 +70,32 @@
     "fitted_on": "fixed weights, unchanged from taught-v3",
     "checked": "2025: 0.24149 against the closing line's 0.24235 (-0.00086 [-0.00165, -0.00009]); 2026: 0.24313 against 0.24326 (-0.00013 [-0.00068, +0.00040]); paired by date, each season's model taught on the other season"
    }
+  },
+  {
+   "name": "taught-v5",
+   "effective_from": "2026-10-09T12:30:00+00:00",
+   "kind": "taught",
+   "note": "taught-v4's two inputs refitted on simulations with the PROD-03 settings (fitted reliever choice, relief exits with team hooks and the starter leash), which go live with it (PROD-03 in LEDGER.md).",
+   "ours": {
+    "features": [
+     "x_sim",
+     "x_team"
+    ],
+    "intercept": 0.03945,
+    "coef": [
+     0.56092,
+     0.52416
+    ],
+    "fitted_on": "least squares on the market's closing log-odds (vig removed), 4,140 regular-season games: 2025 through August 16 and 2026; simulator at 1,000 worlds per game with the PROD-03 settings (v2-prod3-1000-2025 and -2026), all inputs from prior dates",
+    "checked": "taught on 2025 and scored on 2026: market log-odds R squared 0.823; taught on 2026 and scored on 2025: R squared 0.741; the weights agree between seasons (0.582 and 0.534 taught on 2025, 0.552 and 0.504 taught on 2026)"
+   },
+   "headline": {
+    "intercept": 0.0,
+    "market": 0.6,
+    "ours": 0.4,
+    "fitted_on": "fixed weights, unchanged from taught-v3",
+    "checked": "2025: 0.24146 against the closing line's 0.24235 (-0.00089 [-0.00166, -0.00014]); 2026: 0.24294 against 0.24326 (-0.00032 [-0.00084, +0.00022]); paired by date, each season's model taught on the other season"
+   }
   }
  ]
 }
