@@ -358,6 +358,21 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .mu .mu-who { position: sticky; left: 0; z-index: 1; background: var(--surface); text-align: left; font-family: var(--body); font-size: 15px; font-weight: 700; padding-left: 12px; }
 .mu .mu-who .spot { display: inline-block; width: 18px; color: var(--muted); font-weight: 400; }
 .mu .mu-who small { color: var(--muted); font-weight: 400; }
+.rp-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; width: 100%; max-width: 230px; aspect-ratio: 1; }
+.rp-grid i { display: block; border-radius: 3px; background: var(--surface); border: 1px solid transparent; position: relative; }
+.rp-grid i.z { border-color: var(--ink); }
+.rp-grid i.aim::after { content: ""; position: absolute; inset: 25%; border-radius: 50%; background: var(--ink); }
+.rp-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+.rp-card { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 12px; min-width: 0; }
+.rp-card h4 { margin: 0 0 6px; font-size: 16px; }
+.rp-card h4 small { font-weight: 400; color: var(--muted); font-size: 13px; }
+.rp-card .lbl { font-size: 13px; color: var(--muted); margin: 6px 0 4px; }
+.rp-grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 10px 0; }
+.rp-grade div { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 10px 12px; }
+.rp-grade b { display: block; font-size: 22px; }
+.rp-grade span { font-size: 13px; color: var(--muted); }
+.mu td.rp-sel { outline: 3px solid var(--ink); outline-offset: -3px; }
+.mu td.rp-cell { cursor: pointer; }
 
 /* Odds */
 .winbar { display: flex; height: 48px; border-radius: 6px; overflow: hidden; }
@@ -498,7 +513,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   var DATA_URL = "predictions.json";
   var D = null;
   var app = document.getElementById("app");
-  var state = { variant: {}, boxSide: {}, playSide: {}, muMetric: "obp" };
+  var state = { variant: {}, boxSide: {}, playSide: {}, muMetric: "obp", rpMetric: "aim", rpPair: {} };
+  var REPORTS = "https://raw.githubusercontent.com/AlecGreenblatt36/Pitcher-Research-Lab/brl-live-data/public/reports/";
+  var RP = {};
 
   /* ---------- small helpers ---------- */
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
@@ -1441,6 +1458,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
 
     var tabs = [["summary", "Summary"], ["box", "Box score"], ["plays", "Plays"], ["odds", "Odds"]];
     if (box && box.matchups && box.matchups.away && !box.matchups.error) tabs.push(["matchups", "Matchups"]);
+    tabs.push(["report", "Report"]);
     html += '<nav class="tabs"><div class="wrap" role="tablist">' + tabs.map(function (t) {
       return '<button class="tab" role="tab" data-tab="' + t[0] + '" aria-selected="' + (t[0] === tab) + '">' + t[1] + "</button>";
     }).join("") + "</div></nav>";
@@ -1458,10 +1476,12 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     }
     else if (tab === "odds") html += oddsTab(f, box);
     else if (tab === "matchups") html += matchupsTab(f, box);
+    else if (tab === "report") html += reportTab(f, pk);
     else html += summaryTab(f, s, box, actual, actualBox, v, real, lv);
     html += "</div></div></div>";
     app.innerHTML = html;
     if (!keep) window.scrollTo(0, 0);
+    if (tab === "report") loadReport(f, pk);
 
     app.querySelectorAll("[data-variant]").forEach(function (b) {
       b.addEventListener("click", function () { state.variant[pk] = b.getAttribute("data-variant"); renderGame(pk, tab); });
@@ -2095,6 +2115,116 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       });
       h += "</tbody></table></div></section>";
     });
+    return h;
+  }
+  var RP_METRICS = {
+    aim: { label: "Runs saved", unit: "per 100 plate appearances by aiming outside pitches at his spots", f: function (p) { return p.aim ? -p.aim.runs_per_100_pa : null; }, good: 1, scale: 1.0, fmt: function (v) { return v.toFixed(1); } },
+    chase: { label: "Extra chases", unit: "per 100 outside pitches from his own map against this arsenal", f: function (p) { return p.chase_points; }, good: 1, scale: 2.5, fmt: function (v) { return (v > 0 ? "+" : "") + v.toFixed(1); } },
+    k: { label: "Strikeouts", unit: "points of strikeout chance against the league pairing", f: function (p) { return p.k_points; }, good: 1, scale: 1.5, fmt: function (v) { return (v > 0 ? "+" : "") + v.toFixed(1); } },
+    bb: { label: "Walks", unit: "points of walk chance against the league pairing", f: function (p) { return p.bb_points; }, good: -1, scale: 1.5, fmt: function (v) { return (v > 0 ? "+" : "") + v.toFixed(1); } }
+  };
+  function rpCell(v, m, key, sel) {
+    if (v == null) return '<td class="rp-cell" data-rp="' + key + '">–</td>';
+    var edge = m.good * v / m.scale, a = Math.min(0.55, Math.abs(edge) * 0.35);
+    var bg = edge >= 0 ? "rgba(46,125,154," + a.toFixed(3) + ")" : "rgba(240,178,58," + a.toFixed(3) + ")";
+    return '<td class="rp-cell' + (sel ? " rp-sel" : "") + '" data-rp="' + key + '" style="background:' + bg + '">' + m.fmt(v) + "</td>";
+  }
+  function rpGrid(doc, grid, aim, label, scale) {
+    var gu = doc.grid.side_ft, gz = doc.grid.height_ft, h = '<div class="rp-grid" role="img" aria-label="' + esc(label) + '">';
+    for (var r = gz.length - 1; r >= 0; r--) for (var c = 0; c < gu.length; c++) {
+      var k = r * gu.length + c, v = grid ? grid[k] : 0, a = Math.min(0.85, Math.abs(v) / scale);
+      var bg = v >= 0 ? "rgba(240,178,58," + a.toFixed(3) + ")" : "rgba(46,125,154," + a.toFixed(3) + ")";
+      var inz = Math.abs(gu[c]) <= 0.83 && gz[r] >= 1.5 && gz[r] <= 3.5;
+      var isAim = (aim || []).some(function (p) { return Math.abs(p[0] - gu[c]) < 0.01 && Math.abs(p[1] - gz[r]) < 0.01; });
+      h += '<i class="' + (inz ? "z" : "") + (isAim ? " aim" : "") + '" style="background:' + bg + '" title="' + esc(gu[c] + " ft, " + gz[r] + " ft: " + (v > 0 ? "+" : "") + v) + '"></i>';
+    }
+    return h + "</div>";
+  }
+  function reportTab(f, pk) {
+    return '<div id="rp-' + pk + '"><p class="empty">Loading the matchup report…</p></div>';
+  }
+  function loadReport(f, pk) {
+    var host = document.getElementById("rp-" + pk);
+    if (!host) return;
+    var day = f.date || D.date;
+    var render = function (doc) { host.innerHTML = reportHtml(f, pk, doc); wireReport(f, pk); };
+    if (RP[pk]) return render(RP[pk]);
+    fetch(REPORTS + day + "/" + pk + ".json", { cache: "no-store" }).then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function (doc) { RP[pk] = doc; render(doc); })
+      .catch(function () { host.innerHTML = '<p class="empty">No matchup report for this game yet. Reports are built each morning from pitches thrown before that day, and finished games are graded.</p>'; });
+  }
+  function wireReport(f, pk) {
+    var host = document.getElementById("rp-" + pk);
+    if (!host) return;
+    host.querySelectorAll("[data-rpmetric]").forEach(function (b) { b.addEventListener("click", function () { state.rpMetric = b.getAttribute("data-rpmetric"); loadReport(f, pk); }); });
+    host.querySelectorAll("[data-rp]").forEach(function (td) {
+      td.addEventListener("click", function () {
+        state.rpPair[pk] = td.getAttribute("data-rp"); loadReport(f, pk);
+        var d = document.getElementById("rp-detail-" + pk); if (d) d.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
+    });
+  }
+  function reportHtml(f, pk, doc) {
+    var key = RP_METRICS[state.rpMetric] ? state.rpMetric : "aim", m = RP_METRICS[key];
+    var players = doc.players || {}, nm = function (id) { var p = players[String(id)]; return p && p.name ? p.name : String(id); };
+    var h = '<section class="sec wide"><h2>Matchup report</h2><p class="lede">Each hitter against the pitchers he faces, from where he chases pitches that appear headed off the plate 260 ms before they arrive, read against this pitcher\'s own pitches. Built from ' +
+      Number(doc.training_pitches).toLocaleString() + " pitches thrown before " + esc(doc.asof) + "; nothing from this game or later. Blue favors the pitcher.</p>";
+    if (doc.grade && doc.grade.pairs) {
+      var g = doc.grade;
+      h += "<h3>How the report held up</h3><div class=\"rp-grade\">" +
+        "<div><b>" + g.in_recommended + " of " + g.outside_pitches + "</b><span>outside pitches landed in the recommended spots; the pitchers' usual rate would give " + Math.round(g.usual_expected) + "</span></div>" +
+        "<div><b>" + g.chases + "</b><span>chases by these hitters; the league rates expected " + g.chases_expected_league.toFixed(1) + ", their own maps " + g.chases_expected_map.toFixed(1) + "</span></div></div>";
+    }
+    h += '<div class="seg" role="group" aria-label="Which number">' + Object.keys(RP_METRICS).map(function (k2) {
+      return '<button data-rpmetric="' + k2 + '" aria-pressed="' + (k2 === key) + '">' + RP_METRICS[k2].label + "</button>";
+    }).join("") + '</div><p class="note">' + esc(m.label + ": " + m.unit) + ". Tap a cell for the plan.</p></section>";
+    var sel = state.rpPair[pk];
+    ["away", "home"].forEach(function (side) {
+      var se = doc.sides && doc.sides[side], other = side === "away" ? "home" : "away";
+      if (!se || !se.hitters.length || !se.pitchers.length) return;
+      h += '<section class="sec wide"><h3 class="team-h ' + side + '-c">' + esc(nickname(doc.teams[side].name)) + " hitters against the " + esc(nickname(doc.teams[other].name)) + ' staff</h3><p class="note">Lineup from ' + esc(se.lineup_source) + ".</p>";
+      h += '<div class="mu-wrap"><table class="mu num"><thead><tr><th scope="col" class="mu-who">Hitter</th>';
+      se.pitchers.forEach(function (pt) { h += '<th scope="col"><span>' + esc(lastName(nm(pt.id))) + "</span><small>" + (pt.role === "starter" ? "Starter" : "Reliever") + "</small></th>"; });
+      h += "</tr></thead><tbody>";
+      se.hitters.forEach(function (hid, i) {
+        var card = players[String(hid)] && players[String(hid)].hitter;
+        h += '<tr><th scope="row" class="mu-who"><span class="spot">' + (i + 1) + "</span>" + esc(lastName(nm(hid))) + (card ? " <small>" + esc(card.side) + "</small>" : "") + "</th>";
+        se.pitchers.forEach(function (pt) { var k2 = hid + ":" + pt.id, pr = se.pairs[k2]; h += rpCell(pr ? m.f(pr) : null, m, side + "|" + k2, sel === side + "|" + k2); });
+        h += "</tr>";
+      });
+      h += "</tbody></table></div></section>";
+    });
+    if (sel) {
+      var parts = sel.split("|"), se2 = doc.sides[parts[0]], pr2 = se2 && se2.pairs[parts[1]], ids = parts[1].split(":");
+      if (pr2) {
+        var hc = players[ids[0]] && players[ids[0]].hitter, pc = players[ids[1]] && players[ids[1]].pitcher;
+        h += '<section class="sec wide" id="rp-detail-' + pk + '"><h3>' + esc(nm(ids[0])) + " against " + esc(nm(ids[1])) + "</h3>";
+        h += '<ul class="compare"><li><span>Extra chases per 100 outside pitches from his own map</span><b>' + RP_METRICS.chase.fmt(pr2.chase_points) + "</b></li>" +
+          "<li><span>Strikeout chance against the league pairing</span><b>" + RP_METRICS.k.fmt(pr2.k_points) + " pts</b></li><li><span>Walk chance</span><b>" + RP_METRICS.bb.fmt(pr2.bb_points) + " pts</b></li>" +
+          (pr2.aim ? "<li><span>Aiming outside pitches at his spots, typical command</span><b>" + (-pr2.aim.runs_per_100_pa).toFixed(1) + " runs saved per 100 PA</b></li>" : "") + "</ul>";
+        if (pr2.aim && hc) {
+          h += '<p class="note">Where to put outside pitches (dots), on his own chase map for that pitch family: gold is where he chases more than the average hitter his side, blue less. The box is the strike zone, seen from the catcher with the hitter\'s side on the left.</p><div class="rp-cards">';
+          ["fastball", "breaking", "offspeed"].forEach(function (fam) {
+            var own = hc.own_chase && hc.own_chase[fam], mix = pc && pc.mix && pc.mix[fam];
+            if (!own) return;
+            h += '<div class="rp-card"><h4>' + fam.charAt(0).toUpperCase() + fam.slice(1) + (mix ? " <small>" + pct(mix.share) + " of his pitches, " + mix.speed + " mph</small>" : "") + "</h4>" + rpGrid(doc, own.grid, pr2.aim.cells[fam], fam + " aim plan", 8) + "</div>";
+          });
+          h += "</div>";
+        }
+        if (hc && hc.whiff_grid) h += '<div class="rp-cards" style="margin-top:14px"><div class="rp-card"><h4>Where he misses</h4><div class="lbl">His whiff map on the true crossing, against the league</div>' + rpGrid(doc, hc.whiff_grid, null, "whiff map", 1.0) + "</div>" +
+          (hc.zone_top_ft != null ? '<div class="rp-card"><h4>His zone</h4><div class="lbl">Top ' + hc.zone_top_ft + " ft, bottom " + hc.zone_bottom_ft + ' ft (from the official zone calls)</div><div class="lbl">Chase rate ' + (hc.chase_rate != null ? pct(hc.chase_rate) : "–") + ", whiff rate " + (hc.whiff_rate != null ? pct(hc.whiff_rate) : "–") + " on " + Number(hc.pitches).toLocaleString() + " pitches</div></div>" : "") + "</div>";
+        if (pr2.grade) {
+          var gr = pr2.grade;
+          h += '<h4 style="margin-top:14px">In this game</h4><ul class="compare"><li><span>Pitches, outside the zone</span><b>' + gr.pitches + ", " + gr.outside + "</b></li>";
+          if (gr.in_recommended_cells != null) h += "<li><span>Outside pitches in the recommended spots (his usual share " + (gr.usual_share_in_cells != null ? pct(gr.usual_share_in_cells) : "unknown") + ")</span><b>" + gr.in_recommended_cells + "</b></li>";
+          if (gr.chases != null) h += "<li><span>Chases; the league expected " + gr.chases_expected_league.toFixed(1) + ", his map " + gr.chases_expected_map.toFixed(1) + "</span><b>" + gr.chases + "</b></li>";
+          if (gr.results) h += "<li><span>Plate appearances</span><b>" + esc(gr.results.map(function (r) { return ({ BIP_OUT: "out", K: "K", BB_HBP: "BB", "1B": "1B", "2B_3B": "XBH", HR: "HR", OTHER_REACH: "reach" })[r] || r; }).join(", ")) + "</b></li>";
+          h += "</ul>";
+        }
+        h += "</section>";
+      }
+    }
+    h += '<section class="sec"><p class="note">Method: swing decisions are read where the pitch appears to be headed 260 ms before the plate (credited on untouched 2026 data: +40 nats per 1,000 decisions over the standard heat map in the same model, +3.6 beyond a boosted model given the same inputs). The run value rests on the finding that pitchers do not aim at these spots, so where a pitch lands on a hitter\'s map is chance (about 32 runs a team-season on untouched months). Strikeout and walk changes come from the count-by-count chain at its measured calibration. Every number here is a model output; the ledger in the repository carries the tests.</p></section>';
     return h;
   }
   function oddsTab(f, box) {
