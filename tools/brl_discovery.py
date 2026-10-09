@@ -3015,9 +3015,18 @@ def main():
             spec = importlib.util.spec_from_file_location('brl_matchup', ROOT / 'tools' / 'brl_matchup.py')
             mx = importlib.util.module_from_spec(spec); spec.loader.exec_module(mx)
             sv = savant_module(); got = []
+            receipt['savant'] = {}
             for year in params.get('seasons', (2024, 2025, 2026)):
                 stage(f'load savant {year}')
-                got.extend(load_savant(repo, token, branch, key, int(year)))
+                parts = load_savant(repo, token, branch, key, int(year))
+                if parts:
+                    one = mx.merge(parts)
+                    if int(year) == 2026:                     # the program's untouched set stays out of every summary
+                        keep_ = one['day'] < mx.UNTOUCHED_FROM
+                        one = {k: (v[keep_] if not k.endswith('__vocab') else v) for k, v in one.items()}
+                    receipt['savant'][int(year)] = {'coverage': sv.coverage(one), 'plate_reference': sv.reference_check(one)}
+                    del one
+                got.extend(parts)
             cols = mx.merge(got); del got
             receipt['rows'] = int(len(cols['day']))
             receipt['results'] = mx.contact_study(sv, cols, params, stage)
