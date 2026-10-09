@@ -1,0 +1,142 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "fatigue",
+ "run_id": "37876528060",
+ "params": {
+  "experiment": "fatigue",
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "reps": 150
+ },
+ "started_at": "2026-10-09T02:55:52.824582+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 9.2
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 18.2
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 27.0
+  },
+  {
+   "stage": "drift",
+   "at_seconds": 39.1
+  },
+  {
+   "stage": "rates",
+   "at_seconds": 39.9
+  },
+  {
+   "stage": "multinomial fits",
+   "at_seconds": 63.1
+  },
+  {
+   "stage": "run value",
+   "at_seconds": 108.7
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 713382
+ },
+ "results": {
+  "rows": {
+   "plate_appearances": 390863,
+   "with_drift": 213613,
+   "with_start_vs_norm": 279204,
+   "drift_v_sd": 0.858,
+   "drift_v_mean": -0.267,
+   "start_vs_norm_sd": 1.01
+  },
+  "test_logloss_gain_nats_per_1000_pa": {
+   "2025": {
+    "drift": [
+     -0.047,
+     -0.146,
+     0.038
+    ],
+    "start_vs_norm": [
+     0.294,
+     0.162,
+     0.425
+    ],
+    "plate_appearances": 106448
+   },
+   "2026_through_july": {
+    "drift": [
+     -0.118,
+     -0.24,
+     0.02
+    ],
+    "start_vs_norm": [
+     0.422,
+     0.238,
+     0.6
+    ],
+    "plate_appearances": 71220
+   }
+  },
+  "run_value_per_pa": {
+   "tto2": [
+    0.02963,
+    0.02296,
+    0.03463
+   ],
+   "tto3plus": [
+    0.05202,
+    0.04341,
+    0.06083
+   ],
+   "drift_v": [
+    -0.00676,
+    -0.00896,
+    -0.00456
+   ],
+   "drift_z": [
+    -0.00926,
+    -0.03707,
+    0.01745
+   ],
+   "drift_spin100": [
+    -0.00183,
+    -0.00352,
+    -0.00018
+   ],
+   "drift_ext": [
+    0.00074,
+    -0.00989,
+    0.01508
+   ],
+   "start_vs_norm_v": [
+    -0.00364,
+    -0.00516,
+    -0.002
+   ]
+  },
+  "tto_without_drift": {
+   "tto2": 0.03006,
+   "tto3plus": 0.05278
+  },
+  "tto_with_drift": {
+   "tto2": 0.02963,
+   "tto3plus": 0.05202
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T02:57:41.486564+00:00",
+ "seconds": 108.7
+}
