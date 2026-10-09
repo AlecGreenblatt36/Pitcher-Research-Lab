@@ -2147,7 +2147,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var u = c[0], z = c[1];
     var side = u < -0.83 ? "in off the plate" : u < -0.3 ? "inside edge" : u <= 0.3 ? "middle" : u <= 0.83 ? "outside edge" : "away off the plate";
     var ht = z < 1.5 ? "below the zone" : z < 2.0 ? "low" : z <= 3.0 ? "mid-height" : z <= 3.5 ? "high" : "above the zone";
-    return ht + ", " + side;
+    return ht + ", " + side + (c[2] === "take" ? " (strikes he takes)" : c[2] === "chase" ? " (he chases)" : "");
   }
   function reportTab(f, pk) {
     return '<div id="rp-' + pk + '"><p class="empty">Loading the matchup report…</p></div>';
@@ -2232,7 +2232,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         if (pr2.evidence) h += '<p class="note">' + (pr2.evidence.level === "thin" ? "Thin evidence: " : "Evidence: ") + "the hitter's map rests on " + Number(pr2.evidence.hitter_pitches).toLocaleString() + " earlier pitches" + (pr2.evidence.whiff_map ? " (with a whiff map)" : " (no whiff map yet)") + ", the pitcher's spots on " + Number(pr2.evidence.pitcher_pitches_to_side).toLocaleString() + " pitches to this side." + (pr2.evidence.level === "thin" ? " Read the numbers as leanings, not measurements." : "") + "</p>";
         h += '<ul class="compare"><li><span>Extra chases per 100 outside pitches from his own map</span><b>' + RP_METRICS.chase.fmt(pr2.chase_points) + "</b></li>" +
           "<li><span>Strikeout chance against the league pairing</span><b>" + RP_METRICS.k.fmt(pr2.k_points) + " pts</b></li><li><span>Walk chance</span><b>" + RP_METRICS.bb.fmt(pr2.bb_points) + " pts</b></li>" +
-          (pr2.aim ? "<li><span>" + (pr2.aim.pricing === "structural" ? "Aiming at the spots that cost him most (chases, or strikes he takes), typical command" : "Aiming outside pitches at his spots, typical command") + "</span><b>" + (-pr2.aim.runs_per_100_pa).toFixed(2) + " runs saved per 100 PA</b></li>" : "") + "</ul>";
+          (pr2.aim ? "<li><span>" + (pr2.aim.pricing === "structural" ? "Runs saved per 100 PA by aiming at his costliest spots (chases, or strikes he takes), typical command" : "Runs saved per 100 PA by aiming outside pitches at his spots, typical command") + "</span><b>" + (-pr2.aim.runs_per_100_pa).toFixed(2) + "</b></li>" : "") + "</ul>";
         if (pc && pc.looks_in_ends_out != null && doc.league) h += '<p class="note">' + esc(lastName(nm(ids[1]))) + ": " + pct(pc.looks_in_ends_out) + " of his pitches look like strikes at the decision moment and end out of the zone (league " + pct(doc.league.looks_in_ends_out) + "); hitters chase " + pct(pc.chase_rate_against) + " of his outside pitches (league " + pct(doc.league.chase_rate) + ").</p>";
         if (pr2.aim && hc) {
           var counts = [["all", "All counts"], ["even_or_ahead", "Even or ahead"], ["behind", "Behind"], ["two_strikes", "Two strikes"]], bc = pr2.aim.by_count || {};
