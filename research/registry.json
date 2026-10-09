@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 227,
- "rows": 230,
+ "experiments": 228,
+ "rows": 231,
  "records": {
   "ACC-01": [
    {
@@ -3497,6 +3497,22 @@
     ],
     "frozen_commits": [],
     "status": "held: structural -43.5 [-46.6, -40.7]; stated as 30 to 45 with the outcome regression beside it"
+   }
+  ],
+  "VALUE-19": [
+   {
+    "id": "VALUE-19",
+    "columns": {
+     "ID": "VALUE-19",
+     "Attempt": "Is the engine's structure calibrated against what happened? VALUE-18F's structural per-point value ran 38% above the realized-outcome regression's on the later-period months. Check (diagnostic, descriptive): on the test pitches, the realized telescoping value regressed on the structure's expected value of the same pitch (the hitter's swing chance times the swing value plus the take chance times the take value, each relative to the current count), overall, outside and inside the zone; the swing value against realized values on actual swings and the take value on actual takes, with their mean gaps outside the zone; the placebo's interval now read across reassignments. Development 2025 (maps 2023-2024) and the later-period months (maps 2023-2025). Synthetic reference (effect world, where the structure is true by construction): slope 0.94 overall, 0.90 outside, 0.86 for the swing value on swings, 1.01 for the take value on takes",
+     "Disposition and evidence": "Reading set in advance (no numeric prediction; diagnostic): a slope near the synthetic reference means the structure prices pitches as outcomes do and the 30 to 45 range stands; a slope well below it (under 0.75 outside) means the structure is overconfident and VALUE-20 registers an outcome-calibrated structural pricing (the structural value scaled by the measured slope) before the stated range changes. Receipts: research/discovery-value2-<run>.json",
+     "Delta corrected Brier, 2026": "diagnostic, registered"
+    },
+    "registered_before_run": false,
+    "diagnostic": true,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "diagnostic, registered"
    }
   ],
   "TOTALS-04": [

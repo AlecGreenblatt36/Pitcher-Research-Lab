@@ -4108,6 +4108,10 @@ def value2_study(T: dict, params: dict, stage) -> dict:
                        'sd_points_outside': round(float(dd[outside].std()), 3)}
         chk['own_map']['sd_points_outside'] = round(float(D[outside].std()), 3)
         chk['placebo_other_hitter']['outside_more_reassignments'] = extra
+        # VALUE-17: the game interval of one reassignment is too narrow for the pitch estimand; the spread across reassignments is the placebo's interval
+        allp = [chk['placebo_other_hitter']['outside']] + list(extra)
+        chk['placebo_other_hitter']['outside_interval_reassignments'] = [round(float(min(allp)), 6), round(float(max(allp)), 6)]
+        chk['placebo_other_hitter']['reassignments'] = int(len(allp))
         # (3) one pitch's coefficient may count its neighbors: pitches in one plate appearance share the hitter's map and
         # the pitcher's spots, so their deviations are correlated; holding the plate appearance's other pitches fixed
         # gives the per-pitch effect the aiming multiplies by pitches per plate appearance
@@ -4242,6 +4246,26 @@ def value2_study(T: dict, params: dict, stage) -> dict:
                                                  'sd_tau_outside': round(float(tau_t[outside].std()), 6),
                                                  'implied_runs_per_point_outside': round(float(bs_[-2]), 6), 'implied_runs_per_point_inside': round(float(bs_[-1]), 6),
                                                  'regression_runs_per_point_outside': round(b_out, 6), 'regression_runs_per_point_inside': round(b_in, 6)}
+            if pitch_estimand:
+                # VALUE-19: is the structure calibrated against what happened? The realized telescoping value regressed on the structure's expected value
+                # of the same pitch (slope 1 means the engine's pieces price a pitch as the outcomes do), overall and for the swing and take parts
+                ev_t = np.zeros(len(ix)); vs_t = np.zeros(len(ix)); vt_t = np.zeros(len(ix)); ps_t = np.zeros(len(ix))
+                for h, rr in gb.items():
+                    sub = {k_: (v_[rr] if isinstance(v_, np.ndarray) and len(v_) == len(ix) else v_) for k_, v_ in blk_t.items()}
+                    pids = T['pitcher'][ix[rr]]
+                    ps_ = np.array([PM.p_scalar.get(int(q), (0.0, PM.lg_bip))[0] for q in pids]); pb_ = np.array([PM.p_scalar.get(int(q), (0.0, PM.lg_bip))[1] for q in pids])
+                    ev_t[rr], vs_t[rr], vt_t[rr], ps_t[rr] = PM.expected_value(sub, int(h), (ps_, pb_), T['balls'][ix[rr]], T['strikes'][ix[rr]], cv)
+                sl = lambda x_, y_: float(np.dot(x_ - x_.mean(), y_ - y_.mean()) / max(np.dot(x_ - x_.mean(), x_ - x_.mean()), 1e-12))
+                cal = {'slope_realized_on_expected': round(sl(ev_t, y), 4), 'mean_expected': round(float(ev_t.mean()), 5), 'mean_realized': round(float(y.mean()), 5),
+                       'slope_outside': round(sl(ev_t[outside], y[outside]), 4), 'slope_inside': round(sl(ev_t[~outside], y[~outside]), 4)}
+                sw_t = swing[ix] == 1
+                # the swing value against realized values on actual swings, the take value on actual takes (each conditional on the decision)
+                cal['slope_swing_value_on_swings'] = round(sl(vs_t[sw_t], y[sw_t]), 4); cal['mean_swing_value_minus_realized_on_swings'] = round(float((vs_t[sw_t] - y[sw_t]).mean()), 5)
+                cal['slope_take_value_on_takes'] = round(sl(vt_t[~sw_t], y[~sw_t]), 4); cal['mean_take_value_minus_realized_on_takes'] = round(float((vt_t[~sw_t] - y[~sw_t]).mean()), 5)
+                cal['outside_swings'] = {'mean_swing_value_minus_realized': round(float((vs_t[sw_t & outside] - y[sw_t & outside]).mean()), 5), 'n': int((sw_t & outside).sum())}
+                cal['outside_takes'] = {'mean_take_value_minus_realized': round(float((vt_t[~sw_t & outside] - y[~sw_t & outside]).mean()), 5), 'n': int((~sw_t & outside).sum())}
+                cal['swing_minus_take_structural_outside_mean'] = round(float((vs_t - vt_t)[outside].mean()), 5)
+                res['structural_calibration'] = cal
     stage('coefficients')
     sigmas = [float(v) for v in params.get('sigmas', (0.0, 0.3, 0.6, 0.9))]
     K = 16
@@ -7420,6 +7444,19 @@ class PAModels:
         v_swing = p_w * v_strike + (1 - p_w) * (p_f * v_foul + (1 - p_f) * v)
         v_take = p_c * v_strike + (1 - p_c) * v_ball
         return v_swing - v_take
+
+    def expected_value(self, blk: dict, h: int | None, p_scalar, balls, strikes, cv: np.ndarray):
+        """The structural expectation of a pitch's realized (telescoping) value: swing chance times the swing value plus take chance times the take
+        value, each relative to the current count's value; (expected value, swing value, take value, swing chance)."""
+        p_s, p_w, p_c, p_f, v, _ = self.probs(blk, h, p_scalar)
+        balls = np.asarray(balls, np.int64); strikes = np.asarray(strikes, np.int64)
+        v_strike = np.where(strikes == 2, LW7[1], cv[np.clip(balls * 3 + strikes + 1, 0, 11)])
+        v_foul = np.where(strikes == 2, cv[np.clip(balls * 3 + 2, 0, 11)], cv[np.clip(balls * 3 + strikes + 1, 0, 11)])
+        v_ball = np.where(balls == 3, LW7[2], cv[np.clip((balls + 1) * 3 + strikes, 0, 11)])
+        v_now = cv[np.clip(balls * 3 + strikes, 0, 11)]
+        v_swing = p_w * v_strike + (1 - p_w) * (p_f * v_foul + (1 - p_f) * v) - v_now
+        v_take = p_c * v_strike + (1 - p_c) * v_ball - v_now
+        return p_s * v_swing + (1 - p_s) * v_take, v_swing, v_take, p_s
 
     def pool(self, p: int, sd: int, max_per_group: int = 120):
         """The pitcher's own pitches to a side (training rows), a sample per count group with the group's weight."""
