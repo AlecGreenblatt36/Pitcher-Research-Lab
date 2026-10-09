@@ -1,0 +1,110 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "discipline",
+ "run_id": "37883784534",
+ "params": {
+  "experiment": "discipline",
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ]
+ },
+ "started_at": "2026-10-09T04:25:35.115672+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 9.9
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 19.7
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 29.5
+  },
+  {
+   "stage": "features",
+   "at_seconds": 46.8
+  },
+  {
+   "stage": "season 2023: 393 hitters",
+   "at_seconds": 72.7
+  },
+  {
+   "stage": "season 2024: 400 hitters",
+   "at_seconds": 98.5
+  },
+  {
+   "stage": "season 2025: 388 hitters",
+   "at_seconds": 126.8
+  },
+  {
+   "stage": "projections",
+   "at_seconds": 134.8
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 484833
+ },
+ "results": {
+  "pairs": {
+   "2023-2024": 140410,
+   "2024-2025": 142170,
+   "2025-2026": 97881
+  },
+  "outcomes": {
+   "strikeout": {
+    "coefs_map_terms": {
+     "map_chase": -0.0725,
+     "map_zswing": -0.1338,
+     "map_whiff": 0.4398
+    },
+    "gain_nats_per_1000_pa_2024_2025": [
+     -0.373,
+     -0.566,
+     -0.183
+    ],
+    "gain_nats_per_1000_pa_2025_2026": [
+     -0.491,
+     -0.737,
+     -0.274
+    ]
+   },
+   "walk": {
+    "coefs_map_terms": {
+     "map_chase": 0.1788,
+     "map_zswing": -0.105,
+     "map_whiff": -0.0301
+    },
+    "gain_nats_per_1000_pa_2024_2025": [
+     -0.026,
+     -0.06,
+     0.012
+    ],
+    "gain_nats_per_1000_pa_2025_2026": [
+     -0.018,
+     -0.066,
+     0.034
+    ]
+   }
+  },
+  "corr_map_raw": {
+   "chase": 0.923,
+   "zswing": 0.897,
+   "whiff": 0.981
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T04:27:49.984525+00:00",
+ "seconds": 134.9
+}
