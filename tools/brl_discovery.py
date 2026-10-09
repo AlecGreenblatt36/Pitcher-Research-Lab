@@ -4349,6 +4349,347 @@ def pressure_study(T: dict, H, params: dict, stage) -> dict:
 
 
 # ---------------------------------------------------------------- VALUE-12: a hitter's own whiff holes, priced
+# ---------------------------------------------------------------- COMMAND-02: execution scatter from repeated intent
+def _repeat_em(D: np.ndarray, iters: int = 400, floor: float = 0.06, init_s: float = 0.3, init_pi: float = 0.3):
+    """Location change between consecutive pitches of one type (feet, 2 columns) as a two-part mixture: a same-intent
+    part N(0, diag(2 sx^2, 2 sz^2)), where only execution differs, and a changed-intent part N(mu, S). EM from a narrow
+    start. Returns sx, sz, the same-intent share and each pair's posterior same-intent probability."""
+    n = len(D)
+    a = b = 2.0 * init_s ** 2; pi = init_pi; fl = 2.0 * floor ** 2
+    mu = D.mean(0); S = np.cov(D.T) + np.eye(2) * 1e-3
+    r = np.full(n, pi)
+    for _ in range(iters):
+        fn = np.exp(-0.5 * (D[:, 0] ** 2 / a + D[:, 1] ** 2 / b)) / (2.0 * np.pi * np.sqrt(a * b))
+        Si = np.linalg.inv(S); dd = D - mu
+        q = dd[:, 0] ** 2 * Si[0, 0] + 2.0 * dd[:, 0] * dd[:, 1] * Si[0, 1] + dd[:, 1] ** 2 * Si[1, 1]
+        fb = np.exp(-0.5 * q) / (2.0 * np.pi * np.sqrt(max(np.linalg.det(S), 1e-12)))
+        num = pi * fn; r = num / (num + (1.0 - pi) * fb + 1e-300)
+        sr = float(r.sum()); w = 1.0 - r; sb = float(w.sum())
+        pi_new = sr / n
+        a = max(float((r * D[:, 0] ** 2).sum()) / max(sr, 1e-9), fl); b = max(float((r * D[:, 1] ** 2).sum()) / max(sr, 1e-9), fl)
+        mu = (w[:, None] * D).sum(0) / max(sb, 1e-9); dd = D - mu
+        S = np.array([[(w * dd[:, 0] ** 2).sum(), (w * dd[:, 0] * dd[:, 1]).sum()], [(w * dd[:, 0] * dd[:, 1]).sum(), (w * dd[:, 1] ** 2).sum()]]) / max(sb, 1e-9) + np.eye(2) * 1e-3
+        done = abs(pi_new - pi) < 1e-7
+        pi = pi_new
+        if done:
+            break
+    if a > S[0, 0] and b > S[1, 1]:                   # the parts swapped: no narrow same-intent part found
+        return np.nan, np.nan, np.nan, r
+    return float(np.sqrt(a / 2.0)), float(np.sqrt(b / 2.0)), float(pi), r
+
+
+def _gmm_xctrl(L: np.ndarray, kmax: int = 4, iters: int = 80, seed: int = 0) -> float:
+    """The closest published measure (xCTRL, arXiv 2508.19184): a Gaussian mixture of one pitcher's locations for one
+    pitch type and batter side, components chosen by BIC (1 to kmax), and the mean over pitches of the distance to each
+    component's center weighted by the pitch's posterior. Feet."""
+    n = len(L); rng = np.random.default_rng(seed); best = (np.inf, None)
+    for K in range(1, kmax + 1):
+        c = [L[rng.integers(n)]]
+        for _ in range(1, K):                            # k-means++ start
+            d2 = np.min(((L[:, None, :] - np.asarray(c)[None, :, :]) ** 2).sum(-1), 1)
+            c.append(L[rng.choice(n, p=d2 / d2.sum())] if d2.sum() > 0 else L[rng.integers(n)])
+        mus = np.asarray(c, dtype=np.float64); covs = np.repeat((np.cov(L.T) + np.eye(2) * 1e-3)[None], K, 0); ws = np.full(K, 1.0 / K)
+        for _ in range(iters):
+            dens = np.empty((n, K))
+            for k in range(K):
+                Si = np.linalg.inv(covs[k]); dd = L - mus[k]
+                q = dd[:, 0] ** 2 * Si[0, 0] + 2.0 * dd[:, 0] * dd[:, 1] * Si[0, 1] + dd[:, 1] ** 2 * Si[1, 1]
+                dens[:, k] = ws[k] * np.exp(-0.5 * q) / (2.0 * np.pi * np.sqrt(max(np.linalg.det(covs[k]), 1e-12)))
+            tot = dens.sum(1) + 1e-300; R = dens / tot[:, None]; nk = R.sum(0) + 1e-9
+            ws = nk / n; mus = (R.T @ L) / nk[:, None]
+            for k in range(K):
+                dd = L - mus[k]
+                covs[k] = (R[:, k, None, None] * np.einsum('ij,ik->ijk', dd, dd)).sum(0) / nk[k] + np.eye(2) * 1e-3
+        ll = float(np.log(tot).sum()); bic = -2.0 * ll + (6 * K - 1) * np.log(n)
+        if bic < best[0]:
+            dist = np.sqrt(((L[:, None, :] - mus[None, :, :]) ** 2).sum(-1))
+            best = (bic, float((R * dist).sum(1).mean()))
+    return best[1]
+
+
+def _group_rows(key: np.ndarray, sel: np.ndarray):
+    """Yield (key, row indices) for each key among the selected rows (one sort, no per-key scans)."""
+    rows = np.flatnonzero(sel)
+    if not len(rows):
+        return
+    ks, inv = np.unique(key[rows], return_inverse=True)
+    order = np.argsort(inv, kind='stable'); cnt = np.bincount(inv); starts = np.r_[0, np.cumsum(cnt)[:-1]]
+    for j, k in enumerate(ks):
+        yield int(k), rows[order[starts[j]:starts[j] + cnt[j]]]
+
+
+def command2_study(T: dict, params: dict, stage) -> dict:
+    """COMMAND-02. Command is the scatter of a pitch around where it was aimed; the aim is not in public data. When a
+    pitcher throws the same pitch type twice in a row, sometimes he aims at the same spot again; then the change in
+    location between the two pitches is pure execution (variance 2 sigma^2 per axis, the pitcher's lasting miss
+    direction cancels). The change over all consecutive same-type pairs is a mixture of that narrow same-intent part
+    and a broad changed-intent part; its narrow width is an execution-scatter estimate (an upper bound: re-aiming a
+    little differently counts as scatter). Per pitcher, season and pitch group (at least min_pairs pairs), against the
+    raw location spread, an xCTRL-style mixture distance and the spread of 3-0 and 3-1 fastballs; reliability (game
+    halves, seasons), whether the narrow part is larger after two-strike fouls (count unchanged, the same aim most
+    likely), and whether each measure predicts next season's walks and hit batters beyond walk and zone rates, and the
+    other half's walks within a season."""
+    res = {}
+    min_pairs = int(params.get('min_pairs', 80)); rng = np.random.default_rng(7)
+    ok = (T['group'] >= 0) & (T['group'] <= 5) & np.isfinite(T['px']) & np.isfinite(T['pz']) & (T['call'] != 3) & (T['bunt_pa'] == 0)
+    pak = T['game'].astype(np.int64) * 1000 + T['ab'].astype(np.int64)
+    order = np.lexsort((T['pitch_no'], pak)); o1, o2 = order[:-1], order[1:]
+    pair = (pak[o1] == pak[o2]) & (T['pitch_no'][o2] == T['pitch_no'][o1] + 1) & ok[o1] & ok[o2] & (T['group'][o1] == T['group'][o2]) & (T['pitcher'][o1] == T['pitcher'][o2])
+    i1, i2 = o1[pair], o2[pair]
+    D = np.column_stack([T['px'][i2].astype(np.float64) - T['px'][i1], T['pz'][i2].astype(np.float64) - T['pz'][i1]])
+    same_count = (T['balls'][i1] == T['balls'][i2]) & (T['strikes'][i1] == T['strikes'][i2])
+    p_pit, p_ssn, p_grp = T['pitcher'][i1].astype(np.int64), T['season'][i1].astype(np.int64), T['group'][i1].astype(np.int64)
+    p_half = (T['game'][i1].astype(np.int64) % 2)
+    res['pairs'] = {'all': int(len(i1)), 'count_unchanged': int(same_count.sum()), 'share_of_pitches_in_a_pair': round(float(len(i1) / max(ok.sum(), 1)), 3)}
+    stage('pairs')
+
+    def fit_cells(sel):
+        key = (p_pit * 10000 + p_ssn) * 10 + p_grp
+        out = {}; post = np.full(len(D), np.nan)
+        for k, rows in _group_rows(key, sel):
+            if len(rows) < min_pairs:
+                continue
+            sx, sz, pi, r = _repeat_em(D[rows])
+            if np.isfinite(sx):
+                out[k] = (sx, sz, pi, int(len(rows))); post[rows] = r
+        return out, post
+    cells, post = fit_cells(np.ones(len(D), bool))
+    stage(f'repeat mixtures ({len(cells)} cells)')
+    halves = {h: fit_cells(p_half == h)[0] for h in (0, 1)}
+    stage('half-season mixtures')
+    grp_names = {0: 'four_seam', 1: 'sinker', 2: 'cutter', 3: 'slider', 4: 'curveball', 5: 'changeup_splitter'}
+    sig = lambda v: float(np.sqrt((v[0] ** 2 + v[1] ** 2) / 2.0))
+    res['scatter_ft'] = {}
+    for g, name in grp_names.items():
+        v = [(c[0], c[1], c[2]) for k, c in cells.items() if k % 10 == g]
+        if len(v) < 10:
+            continue
+        a = np.asarray(v)
+        res['scatter_ft'][name] = {'cells': len(v), 'median_sigma': round(float(np.median(np.sqrt((a[:, 0] ** 2 + a[:, 1] ** 2) / 2))), 3),
+                                   'quartiles_sigma': [round(float(np.percentile(np.sqrt((a[:, 0] ** 2 + a[:, 1] ** 2) / 2), q)), 3) for q in (25, 75)],
+                                   'median_sigma_x': round(float(np.median(a[:, 0])), 3), 'median_sigma_z': round(float(np.median(a[:, 1])), 3),
+                                   'median_same_intent_share': round(float(np.median(a[:, 2])), 3)}
+    # same-intent reading: the posterior same-intent probability after a two-strike foul (count unchanged) against other pairs
+    fitted = np.isfinite(post)
+    keyc = ((p_pit * 10000 + p_ssn) * 10 + p_grp)
+    foul1 = (T['call'][i1] == 1) & (T['last_in_pa'][i1] == 0)       # the first pitch fouled off: the same selection on both sides
+    a_ = fitted & same_count & foul1; b_ = fitted & ~same_count & foul1
+
+    def cell_means(sel):
+        u, iv = np.unique(keyc[sel], return_inverse=True)
+        return u, np.bincount(iv, weights=post[sel]) / np.bincount(iv)
+    ua, ma_all = cell_means(a_); ub, mb_all = cell_means(b_)
+    both, ia, ib = np.intersect1d(ua, ub, return_indices=True)
+    if len(both) > 20:
+        ma, mb = ma_all[ia], mb_all[ib]
+        dlt = ma - mb; bs = [dlt[rng.integers(0, len(dlt), len(dlt))].mean() for _ in range(1000)]
+        res['same_intent_after_two_strike_foul'] = {'comparison': 'pairs after a two-strike foul (count unchanged) against pairs after a foul with fewer strikes', 'cells': int(len(dlt)), 'mean_posterior_count_unchanged': round(float(ma.mean()), 4),
+                                                     'mean_posterior_after_earlier_fouls': round(float(mb.mean()), 4),
+                                                     'difference': [round(float(dlt.mean()), 4), round(float(np.percentile(bs, 2.5)), 4), round(float(np.percentile(bs, 97.5)), 4)]}
+    stage('same-intent check')
+
+    # other measures per pitcher, season, group (and side for the location ones)
+    base_ok = ok & (T['group'] <= 5)
+    blob = {}; xct = {}
+    ck = ((T['pitcher'].astype(np.int64) * 10000 + T['season'].astype(np.int64)) * 10 + T['group'].astype(np.int64)) * 2 + T['stand_r'].astype(np.int64)
+    xmax = int(params.get('xctrl_cells', 6000)); n_x = 0
+    for k, rows in _group_rows(ck, base_ok):
+        if len(rows) < 60:
+            continue
+        L = np.column_stack([T['px'][rows], T['pz'][rows]]).astype(np.float64)
+        cell = k // 2
+        blob.setdefault(cell, []).append((float(np.sqrt((L[:, 0].var() + L[:, 1].var()) / 2.0)), len(rows)))
+        if len(rows) >= 250 and n_x < xmax:
+            xct.setdefault(cell, []).append((_gmm_xctrl(L), len(rows))); n_x += 1
+    stage(f'location spread and xCTRL-style cells ({n_x})')
+    blob = {k: (sum(s * n for s, n in v) / sum(n for _, n in v), sum(n for _, n in v)) for k, v in blob.items()}
+    xct = {k: (sum(s * n for s, n in v) / sum(n for _, n in v), sum(n for _, n in v)) for k, v in xct.items()}
+    # must-strike spread: four-seamers and sinkers at 3-0 and 3-1, per pitcher, season and side
+    ms_ok = ok & np.isin(T['group'], (0, 1)) & (T['balls'] == 3) & (T['strikes'] <= 1)
+    mk = (T['pitcher'].astype(np.int64) * 10000 + T['season'].astype(np.int64)) * 2 + T['stand_r'].astype(np.int64)
+    must = {}
+    for k, rows in _group_rows(mk, ms_ok):
+        if len(rows) < 12:
+            continue
+        L = np.column_stack([T['px'][rows], T['pz'][rows]]).astype(np.float64)
+        must.setdefault(k // 2, []).append((float(np.sqrt((L[:, 0].var() + L[:, 1].var()) / 2.0)), int(len(rows))))
+    must = {k: (sum(s * n for s, n in v) / sum(n for _, n in v), sum(n for _, n in v)) for k, v in must.items()}
+    stage('must-strike spread')
+
+    def index(cellmap, value_of):
+        """Pitcher-season index: each group's value over that group's league median, weighted by count."""
+        med = {}
+        for g in range(6):
+            v = [value_of(c) for k, c in cellmap.items() if k % 10 == g]
+            if len(v) >= 10:
+                med[g] = float(np.median(v))
+        acc = {}
+        for k, c in cellmap.items():
+            g = k % 10
+            if g not in med:
+                continue
+            ps = k // 10; n_ = c[-1]
+            s0, n0 = acc.get(ps, (0.0, 0))
+            acc[ps] = (s0 + n_ * value_of(c) / med[g], n0 + n_)
+        return {ps: s / n for ps, (s, n) in acc.items()}
+    idx = {'repeat_scatter': index(cells, sig), 'location_spread': index(blob, lambda c: c[0]), 'xctrl_style': index(xct, lambda c: c[0])}
+    idx_half = {h: index(halves[h], sig) for h in (0, 1)}
+    med_ms = float(np.median([v[0] for v in must.values()])) if must else np.nan
+    idx['must_strike_spread'] = {ps: v[0] / med_ms for ps, v in must.items()}
+
+    # outcomes per pitcher-season and per half
+    last = (T['last_in_pa'] == 1) & (T['out7'] >= 0)
+    psk = T['pitcher'].astype(np.int64) * 10000 + T['season'].astype(np.int64)
+    halfk = psk * 2 + (T['game'].astype(np.int64) % 2)
+    inz = (T['zone'] >= 1) & (T['zone'] <= 9); zk = T['zone'] >= 1
+
+    def tally(key, sel):
+        u, iv = np.unique(key[sel], return_inverse=True)
+        return dict(zip(u.tolist(), np.bincount(iv).tolist()))
+    outz = (T['zone'] >= 11); chase_ = outz & ok & ((T['call'] == 1) | (T['call'] == 2))
+    PA = tally(psk, last); BB = tally(psk, last & (T['out7'] == 2)); Z = tally(psk, zk & ok); ZI = tally(psk, zk & ok & inz)
+    OZ = tally(psk, outz & ok); CH = tally(psk, chase_)
+    PAh = tally(halfk, last); BBh = tally(halfk, last & (T['out7'] == 2)); Zh = tally(halfk, zk & ok); ZIh = tally(halfk, zk & ok & inz)
+    OZh = tally(halfk, outz & ok); CHh = tally(halfk, chase_)
+    lw = np.where(last, np.asarray([-0.26, -0.28, 0.32, 0.47, 0.78, 1.40, 0.45])[np.clip(T['out7'], 0, 6)], 0.0)
+    u_, iv_ = np.unique(psk[last], return_inverse=True); RV = dict(zip(u_.tolist(), np.bincount(iv_, weights=lw[last]).tolist()))
+    lg_bb = sum(BB.values()) / max(sum(PA.values()), 1)
+    res['league_walk_rate'] = round(lg_bb, 4)
+
+    # reliability
+    rel = {}
+    common = sorted(set(idx_half[0]) & set(idx_half[1]))
+    if len(common) > 30:
+        x = np.array([idx_half[0][k] for k in common]); y = np.array([idx_half[1][k] for k in common]); r_ = float(np.corrcoef(x, y)[0, 1])
+        rel['repeat_scatter_game_halves'] = {'pitcher_seasons': len(common), 'correlation': round(r_, 3), 'spearman_brown': round(2 * r_ / (1 + r_), 3)}
+    for name, d in idx.items():
+        pr = [(d[ps], d[ps + 1]) for ps in d if ps + 1 in d]
+        if len(pr) > 30:
+            a = np.asarray(pr); rel[f'{name}_season_to_season'] = {'pairs': len(pr), 'correlation': round(float(np.corrcoef(a[:, 0], a[:, 1])[0, 1]), 3)}
+    names = list(idx)
+    for i_, a_n in enumerate(names):
+        for b_n in names[i_ + 1:]:
+            cm = sorted(set(idx[a_n]) & set(idx[b_n]))
+            if len(cm) > 30:
+                rel[f'corr_{a_n}_vs_{b_n}'] = round(float(np.corrcoef([idx[a_n][k] for k in cm], [idx[b_n][k] for k in cm])[0, 1]), 3)
+    res['reliability'] = rel
+    stage('reliability')
+
+    # prediction 1: next season's walks and hit batters per plate appearance
+    kbb = 150.0; min_pa = int(params.get('min_pa', 150))
+
+    target = 'walks'
+
+    def design(ps, nxt, measure):
+        pa0, pa1 = PA.get(ps, 0), PA.get(nxt, 0)
+        if pa0 < min_pa or pa1 < min_pa or Z.get(ps, 0) < 200:
+            return None
+        bb0 = (BB.get(ps, 0) + kbb * lg_bb) / (pa0 + kbb)
+        row = [1.0, bb0, ZI.get(ps, 0) / Z[ps], CH.get(ps, 0) / max(OZ.get(ps, 0), 1)] + ([measure[ps]] if measure is not None else [])
+        return row, (BB.get(nxt, 0) / pa1 if target == 'walks' else RV.get(nxt, 0.0) / pa1), pa1
+
+    def predictive(measure, common_set=None):
+        out = {}
+        data = {}
+        for ps in (measure if measure is not None else PA):
+            ssn = ps % 10000
+            if common_set is not None and ps not in common_set:
+                continue
+            r0 = design(ps, ps + 1, None); r1 = design(ps, ps + 1, measure)
+            if r0 is None or r1 is None:
+                continue
+            data.setdefault(ssn, []).append((r0[0], r1[0], r1[1], r1[2], ps // 10000))
+        tr = data.get(2023, []); te = data.get(2024, []) + data.get(2025, [])
+        if len(tr) < 60 or len(te) < 60:
+            return {'error': 'too few pitchers', 'train': len(tr), 'test': len(te)}
+        def arr(rows):
+            return (np.array([r[0] for r in rows]), np.array([r[1] for r in rows]), np.array([r[2] for r in rows]), np.array([r[3] for r in rows], float), np.array([r[4] for r in rows]))
+        X0, X1, y, w, pid = arr(tr); Z0, Z1, yt, wt, pidt = arr(te)
+        def wls(X, y, w):
+            return np.linalg.solve((X * w[:, None]).T @ X + np.eye(X.shape[1]) * 1e-9, (X * w[:, None]).T @ y)
+        b0 = wls(X0, y, w); b1 = wls(X1, y, w)
+        e0 = wt * (yt - Z0 @ b0) ** 2; e1 = wt * (yt - Z1 @ b1) ** 2
+        red = (e0 - e1) / wt.sum() * 1e4                  # squared error reduction, (walk rate points)^2 x 1e4 / PA
+        up = np.unique(pidt); gi = np.searchsorted(up, pidt); bsr = []; bsc = []
+        for _ in range(1000):
+            wb = np.bincount(rng.integers(0, len(up), len(up)), minlength=len(up))[gi].astype(float)
+            bsr.append(float((wb * (e0 - e1)).sum() / max((wb * wt).sum(), 1e-9) * 1e4))
+        upt = np.unique(pid); git = np.searchsorted(upt, pid)
+        for _ in range(300):
+            wb = np.bincount(rng.integers(0, len(upt), len(upt)), minlength=len(upt))[git].astype(float)
+            bsc.append(float(wls(X1, y, w * wb)[-1]))
+        out = {'train_pitchers': int(len(y)), 'test_pitcher_seasons': int(len(yt)),
+               'coefficient_per_unit_index': [round(float(b1[-1]), 4), round(float(np.percentile(bsc, 2.5)), 4), round(float(np.percentile(bsc, 97.5)), 4)],
+               'squared_error_reduction_x1e4': [round(float(red.sum()), 4), round(float(np.percentile(bsr, 2.5)), 4), round(float(np.percentile(bsr, 97.5)), 4)],
+               'test_r2_base': round(float(1 - e0.sum() / (wt * (yt - np.average(yt, weights=wt)) ** 2).sum()), 4),
+               'test_r2_with': round(float(1 - e1.sum() / (wt * (yt - np.average(yt, weights=wt)) ** 2).sum()), 4)}
+        return out
+    res['next_season_walks'] = {name: predictive(d) for name, d in idx.items()}
+    target = 'runs'
+    res['next_season_run_value_secondary'] = {name: predictive(d) for name, d in idx.items() if name in ('repeat_scatter', 'location_spread')}
+    target = 'walks'
+    common_set = set(idx['repeat_scatter']) & set(idx['location_spread']) & set(idx['xctrl_style'])
+    res['next_season_walks_common_pitchers'] = {name: predictive(d, common_set) for name, d in idx.items() if name != 'must_strike_spread'}
+    # the repeat index beyond the location spread: the spread enters the base
+    both_ = {ps: v for ps, v in idx['repeat_scatter'].items() if ps in idx['location_spread']}
+    if both_:
+        bx = {}
+        for ps in both_:
+            bx[ps] = (idx['location_spread'][ps], idx['repeat_scatter'][ps])
+        rows = []
+        for ps, (ls_, rs_) in bx.items():
+            r0 = design(ps, ps + 1, None)
+            if r0 is None:
+                continue
+            rows.append((r0[0] + [ls_], r0[0] + [ls_, rs_], r0[1], r0[2], ps // 10000, ps % 10000))
+        tr = [r for r in rows if r[5] == 2023]; te = [r for r in rows if r[5] in (2024, 2025)]
+        if len(tr) >= 60 and len(te) >= 60:
+            def arr2(rr):
+                return np.array([r[0] for r in rr]), np.array([r[1] for r in rr]), np.array([r[2] for r in rr]), np.array([r[3] for r in rr], float), np.array([r[4] for r in rr])
+            X0, X1, y, w, pid = arr2(tr); Z0, Z1, yt, wt, pidt = arr2(te)
+            b0 = np.linalg.solve((X0 * w[:, None]).T @ X0, (X0 * w[:, None]).T @ y); b1 = np.linalg.solve((X1 * w[:, None]).T @ X1, (X1 * w[:, None]).T @ y)
+            e0 = wt * (yt - Z0 @ b0) ** 2; e1 = wt * (yt - Z1 @ b1) ** 2
+            up = np.unique(pidt); gi = np.searchsorted(up, pidt); bsr = []
+            for _ in range(1000):
+                wb = np.bincount(rng.integers(0, len(up), len(up)), minlength=len(up))[gi].astype(float)
+                bsr.append(float((wb * (e0 - e1)).sum() / max((wb * wt).sum(), 1e-9) * 1e4))
+            res['next_season_walks_repeat_beyond_spread'] = {'test_pitcher_seasons': int(len(yt)), 'coefficient': round(float(b1[-1]), 4),
+                                                             'squared_error_reduction_x1e4': [round(float((e0 - e1).sum() / wt.sum() * 1e4), 4), round(float(np.percentile(bsr, 2.5)), 4), round(float(np.percentile(bsr, 97.5)), 4)]}
+    stage('next-season walks')
+
+    # prediction 2: within a season, one half's repeat scatter and the other half's walks
+    rows = []
+    for h in (0, 1):
+        for ps, v in idx_half[h].items():
+            a_k, b_k = ps * 2 + h, ps * 2 + (1 - h)
+            if PAh.get(a_k, 0) < 80 or PAh.get(b_k, 0) < 80 or Zh.get(a_k, 0) < 150:
+                continue
+            bb0 = (BBh.get(a_k, 0) + kbb * lg_bb) / (PAh[a_k] + kbb)
+            rows.append(([1.0, bb0, ZIh.get(a_k, 0) / Zh[a_k], CHh.get(a_k, 0) / max(OZh.get(a_k, 0), 1)], v, BBh.get(b_k, 0) / PAh[b_k], PAh[b_k], ps // 10000, ps % 10000))
+    tr = [r for r in rows if r[5] in (2023, 2024)]; te = [r for r in rows if r[5] in (2025, 2026)]
+    if len(tr) >= 60 and len(te) >= 60:
+        X0 = np.array([r[0] for r in tr]); X1 = np.column_stack([X0, [r[1] for r in tr]]); y = np.array([r[2] for r in tr]); w = np.array([r[3] for r in tr], float)
+        Z0 = np.array([r[0] for r in te]); Z1 = np.column_stack([Z0, [r[1] for r in te]]); yt = np.array([r[2] for r in te]); wt = np.array([r[3] for r in te], float)
+        pidt = np.array([r[4] for r in te])
+        b0 = np.linalg.solve((X0 * w[:, None]).T @ X0, (X0 * w[:, None]).T @ y); b1 = np.linalg.solve((X1 * w[:, None]).T @ X1, (X1 * w[:, None]).T @ y)
+        e0 = wt * (yt - Z0 @ b0) ** 2; e1 = wt * (yt - Z1 @ b1) ** 2
+        up = np.unique(pidt); gi = np.searchsorted(up, pidt); bsr = []
+        for _ in range(1000):
+            wb = np.bincount(rng.integers(0, len(up), len(up)), minlength=len(up))[gi].astype(float)
+            bsr.append(float((wb * (e0 - e1)).sum() / max((wb * wt).sum(), 1e-9) * 1e4))
+        res['other_half_walks'] = {'train_rows': int(len(y)), 'test_rows': int(len(yt)), 'coefficient': round(float(b1[-1]), 4),
+                                   'squared_error_reduction_x1e4': [round(float((e0 - e1).sum() / wt.sum() * 1e4), 4), round(float(np.percentile(bsr, 2.5)), 4), round(float(np.percentile(bsr, 97.5)), 4)]}
+    stage('other-half walks')
+    if params.get('export'):
+        ex = {}
+        for k, c in cells.items():
+            ps = k // 10
+            ex.setdefault(str(ps), {})[str(k % 10)] = [round(c[0], 3), round(c[1], 3), round(c[2], 3), c[3]]
+        res['export'] = {'by_pitcher_season': ex, 'index': {str(ps): round(v, 3) for ps, v in idx['repeat_scatter'].items()},
+                         'note': 'key pitcher*10000+season; group: [sigma_x ft, sigma_z ft, same-intent share, pairs]'}
+    return res
+
+
 def value_whiff_study(T: dict, params: dict, stage) -> dict:
     """VALUE-08's design for the whiff map on the true crossing (MATCHUP-03's representation: league whiff model on
     swings, hitter maps on location, family and height bands, shrinkage 30, at least 250 swings). Each pitch's whiff
@@ -6068,6 +6409,8 @@ def main():
             if not params.get('final_eval'):
                 H = H[H['date_key'].astype(str).str[:10] < '2026-08-01']
             receipt['results'] = framing_study(T, H, params, stage); del H
+        elif experiment == 'command2':
+            receipt['results'] = command2_study(T, params, stage)
         elif experiment == 'scout':
             receipt['results'] = scout_export(T, params, stage)
         elif experiment == 'value':

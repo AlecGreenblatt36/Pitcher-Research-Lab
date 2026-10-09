@@ -33,8 +33,15 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
-### In flight (updated 3:45 a.m. Eastern October 9)
+### In flight (updated 5:00 a.m. Eastern October 9)
 
+- Recorded since 3:45 a.m.: COMMAND-01 failed (early-start zone and waste rates add nothing beyond velocity);
+  FRAMING-01 passed (the challenge system cut the spread of catcher framing to 0.67 of 2025's); PRESSURE-01 (hitters
+  chase about 2.6 points more than their maps say with runners in scoring position, +0.19 log-odds [0.17, 0.22], and
+  their own chase spots keep their pull). BATSPEED-01 (earlier) already answered the bat-speed early-warning question
+  (no), so it is not repeated.
+- Next research: COMMAND-02, execution scatter measured from consecutive same-type pitches (a same-intent mixture),
+  which tests the 0.6 ft command assumption behind VALUE-08F's 32 runs and gives a per-pitcher realizable edge.
 - CLV-03 done (ledger): with open-time lineups the line still moved toward our taught number 67.9% (2025) and
   72.6% (2026); lineups explain 0.5 to 3 points. Proposed public wording sent to Alec (needs approval).
 - DISP-02 replays (centered day-form shock with paired streams): tags disp2-ref-1000-2026, disp2-df-1000-2026,
