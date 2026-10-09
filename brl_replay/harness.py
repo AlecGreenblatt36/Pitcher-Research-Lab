@@ -199,6 +199,15 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                                       (bool(r.runner_1b), bool(r.runner_2b), bool(r.runner_3b)), int(r.home_score) - int(r.away_score))
                                      for r in grp.itertuples(index=False)]
     act_lines, per_k = {}, {}
+    act_innings = {}
+    if starter_lines:
+        # the batting side's score before its first plate appearance of each inning (runs by inning follow with the final)
+        want_i = set(int(x) for x in games[games["date"].isin(dates)]["game_pk"])
+        si_ = h.loc[h["game_pk"].isin(want_i), ["game_pk", "at_bat_number", "inning", "inning_topbot", "bat_score"]].sort_values(["game_pk", "at_bat_number"])
+        side_i = np.where(si_["inning_topbot"].astype(str).str.lower().str.startswith("top"), "away", "home")
+        for (gpk_, side_), gg in si_.groupby([si_["game_pk"].to_numpy(), side_i]):
+            firsts = gg.groupby("inning")["bat_score"].first()
+            act_innings.setdefault(int(gpk_), {})[str(side_)] = [[int(i_), int(v_)] for i_, v_ in firsts.items()]
     if starter_lines:
         want_g = set(int(x) for x in games[games["date"].isin(dates)]["game_pk"])
         sub = h.loc[h["game_pk"].isin(want_g), ["game_pk", "pitcher", "outcome", "inning_topbot"]]
@@ -339,6 +348,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
             tot = {side: np.zeros(4) for side in ("away", "home")} if starter_lines else None   # team pitching: K, BF, BB+HBP, hits
             npit = {side: 0 for side in ("away", "home")}                                         # pitchers used, summed over worlds
             nhr = {side: 0 for side in ("away", "home")}                                          # home runs allowed, summed over worlds
+            inn_sum = {side: np.zeros(10) for side in ("away", "home")}                           # runs by inning 1-9 and extras, summed
             wt = WinTable() if win_states else None
             halves = (WinTable(), WinTable()) if win_states == "split" else None
             hl = None
@@ -369,6 +379,10 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                         for m_, f_ in (("k", "strikeouts"), ("bf", "batters_faced"), ("h", "hits_allowed"), ("bb", "walks_hbp"), ("outs", "outs_recorded")):
                             arr = sl[side][m_]; arr[min(int(line[f_]), len(arr) - 1)] += 1
                 if tot is not None:
+                    for side_r, by_inn in (r.inning_runs or {}).items():
+                        if side_r in inn_sum:
+                            for inn_r, runs_r in by_inn.items():
+                                inn_sum[side_r][min(int(inn_r), 10) - 1] += runs_r
                     for ln in r.pitcher_lines.values():
                         sd_ = ln.get("team_side")
                         if sd_ in tot:
@@ -483,6 +497,8 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                                     "team_sim_mean": [round(float(v_ / n_sims), 3) for v_ in tot[side]], "team_actual": act_lines.get((int(g.game_pk), side)),
                                     "team_pitchers_sim_mean": round(npit[side] / n_sims, 3), "team_hr_sim_mean": round(nhr[side] / n_sims, 3)}
                 records[-1]["starters"] = st_out
+                records[-1]["innings"] = {"sim_mean": {sd_: [round(float(v_) / n_sims, 4) for v_ in inn_sum[sd_]] for sd_ in ("away", "home")},
+                                          "actual_first_scores": act_innings.get(int(g.game_pk))}
             if wt is not None:
                 tb = wt.table()
                 tabs = [h_.table() for h_ in halves] if halves is not None else []
