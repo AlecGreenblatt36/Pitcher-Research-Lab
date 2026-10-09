@@ -262,6 +262,29 @@ class Fitted:
             card['whiff_grid'] = [round(float(v), 2) for v in dw]
         if h in self.zone:
             card['zone_top_ft'], card['zone_bottom_ft'] = round(self.zone[h][0], 2), round(self.zone[h][1], 2)
+        if self.PM is not None and r is not None and len(r) >= 300:
+            # VALUE-18 from the hitter's side: what his own swing tendencies cost him on the pitches he actually saw, against the average
+            # hitter his side at the same pitches (his calibrated own part times the value of a swing against a take), per 600 plate
+            # appearances, and the cells where it costs him most (outside the zone: chases; inside: strikes he lets go or swings at to little effect)
+            T = self.T
+            blk = self.PM.blocks_at(self.xp[r], self.zp[r], self.xt[r], self.zt[r], T['stand_r'][r], T['throw_r'][r], T['group'][r], T['v0'][r].astype(np.float64), T['balls'][r], T['strikes'][r])
+            pids = T['pitcher'][r]
+            ps_ = np.array([self.PM.p_scalar.get(int(q), (0.0, self.PM.lg_bip))[0] for q in pids]); pb_ = np.array([self.PM.p_scalar.get(int(q), (0.0, self.PM.lg_bip))[1] for q in pids])
+            tau = 0.01 * self.PM.swing_minus_take(blk, h, (ps_, pb_), T['balls'][r], T['strikes'][r], self.cv)
+            dev = (sig(self.off_s[r] + self.Bs[r] @ self.maps_s[h]) - sig(self.off_s[r] + self.Bs[r] @ self.mbar[h])) * 100
+            lam_r = np.where(self.outside[r], OWN_PART_CALIBRATION['outside'], OWN_PART_CALIBRATION['inside'])
+            cost = dev * lam_r * tau                   # runs per pitch, negative = the hitter loses against the average hitter his side
+            n_pa = max(int((T['pitch_no'][r] == 0).sum()), 1)
+            uu_ = np.where(sd == 1, self.xt[r], -self.xt[r])
+            cell = np.argmin(np.abs(uu_[:, None] - GU[None, :]), 1) + len(GU) * np.argmin(np.abs(self.zt[r][:, None] - GZ[None, :]), 1)
+            by_cell = np.bincount(cell, weights=cost, minlength=len(GU) * len(GZ)) / n_pa * 600
+            worst = [k for k in np.argsort(by_cell)[:4] if by_cell[k] < -0.05]
+            card['own_cost'] = {'runs_per_600_pa': round(float(cost.sum() / n_pa * 600), 2),
+                                'outside_runs_per_600_pa': round(float(cost[self.outside[r]].sum() / n_pa * 600), 2),
+                                'inside_runs_per_600_pa': round(float(cost[~self.outside[r]].sum() / n_pa * 600), 2),
+                                'cells': [[float(GU[k % len(GU)]), float(GZ[k // len(GU)]), round(float(by_cell[k]), 2),
+                                           ('chase' if (abs(GU[k % len(GU)]) > D.ZONE_HALF or GZ[k // len(GU)] > D.ZONE_TOP or GZ[k // len(GU)] < D.ZONE_BOT) else 'take' if dev[cell == k].mean() < 0 else 'weak')] for k in worst],
+                                'pitches': int(len(r))}
         return card
 
     def pitcher_card(self, p: int) -> dict | None:

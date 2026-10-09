@@ -2282,6 +2282,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         }
         if (hc && hc.whiff_grid) h += '<div class="rp-cards" style="margin-top:14px"><div class="rp-card"><h4>Where he misses</h4><div class="lbl">His whiff map on the true crossing, against the league</div>' + rpGrid(doc, hc.whiff_grid, null, "whiff map", 0.5) + "</div>" +
           (hc.zone_top_ft != null ? '<div class="rp-card"><h4>His zone</h4><div class="lbl">Top ' + hc.zone_top_ft + " ft, bottom " + hc.zone_bottom_ft + ' ft (from the official zone calls)</div><div class="lbl">Chase rate ' + (hc.chase_rate != null ? pct(hc.chase_rate) : "–") + ", whiff rate " + (hc.whiff_rate != null ? pct(hc.whiff_rate) : "–") + " on " + Number(hc.pitches).toLocaleString() + " pitches</div></div>" : "") + "</div>";
+        if (hc && hc.own_cost) {
+          var oc = hc.own_cost, v_ = oc.runs_per_600_pa;
+          h += '<p class="note">His swing decisions against the average hitter his side, on the pitches he actually saw: ' + (v_ >= 0 ? "+" : "") + v_.toFixed(1) + " runs per 600 plate appearances (" + (oc.outside_runs_per_600_pa >= 0 ? "+" : "") + oc.outside_runs_per_600_pa.toFixed(1) + " outside the zone, " + (oc.inside_runs_per_600_pa >= 0 ? "+" : "") + oc.inside_runs_per_600_pa.toFixed(1) + " inside)" +
+            (oc.cells && oc.cells.length ? ". Where it costs him most: " + esc(oc.cells.map(function (c) { return rpWords(c.slice(0, 2).concat([c[3]])) + " (" + c[2].toFixed(1) + ")"; }).join("; ")) : "") + ". Same pricing as the plan, read from his side; a development target, not a prediction.</p>";
+        }
         if (pr2.grade) {
           var gr = pr2.grade;
           h += '<h4 style="margin-top:14px">In this game</h4><ul class="compare"><li><span>Pitches, outside the zone</span><b>' + gr.pitches + ", " + gr.outside + "</b></li>";
