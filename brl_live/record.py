@@ -155,7 +155,7 @@ def build_record(ledger: dict) -> dict:
         return (sum(vals) / len(vals)) if vals else None
 
     rows = [('coin', 'Coin flip'), ('home', 'Always pick the home team'), ('market', 'Betting market'), ('team', 'Team model'),
-            ('sim', 'Simulator'), ('ours', 'Our model (independent)'), ('blend', 'Headline')]
+            ('sim', 'Simulator (results only)'), ('ours', 'Our model (taught on past closing lines)'), ('blend', 'Headline (with the market line)')]
     ladder = []
     for key, name in rows:
         b = mean(key, 'brier')

@@ -1,3 +1,21 @@
+# Baseball Research Lab and Pitcher Research Lab
+
+This repository holds two things.
+
+**Baseball Research Lab (BRL)** is an MLB forecasting and scouting system that runs in GitHub Actions on sealed data
+and publishes model outputs only: win chances, box-score distributions, in-game win chances, a public track record,
+and a matchup report for every game (each hitter against the pitchers he will face, built from pitches thrown before
+that day and graded after the game). Site: https://alecgreenblatt36.github.io/Pitcher-Research-Lab/. The evidence is
+in LEDGER.md (every experiment with its registered prediction, result and decision, including the failed ones),
+METHODS.md (what the system is and what the evidence does and does not show) and discovery/MATCHUP_PROGRAM.md (the
+pitch-level research program). Operating state: HANDOFF.md. Code: brl_engine/ (engine and runtime), brl_live/ (the
+live site), tools/ (research lanes and the report builder).
+
+**Pitcher Research Lab** is the original local application for studying how a pitcher's tracked profile moves over
+time, described below.
+
+---
+
 # Pitcher Research Lab
 
 [![CI](https://github.com/AlecGreenblatt36/Pitcher-Research-Lab/actions/workflows/ci.yml/badge.svg)](https://github.com/AlecGreenblatt36/Pitcher-Research-Lab/actions/workflows/ci.yml)

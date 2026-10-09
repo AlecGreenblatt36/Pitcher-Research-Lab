@@ -1,4 +1,98 @@
-# Baseball Research Lab — methods and evidence boundaries
+# Baseball Research Lab: methods and evidence boundaries (current)
+
+This file describes the system as it runs now. The experiment ledger (LEDGER.md) is the record of evidence: every
+experiment with its registered prediction, result and decision, including the failed ones. The matchup research
+program is described in discovery/MATCHUP_PROGRAM.md. HANDOFF.md carries the operating state. Where this file and
+the ledger disagree, the ledger is right and this file is stale.
+
+## What is published
+
+A static site (predictions, box-score distributions, in-game win chances, a track record, and a matchup report for
+every game). Only model outputs, per-player summaries and public box-score facts are published. Plate-appearance
+and pitch data stay sealed on the runner.
+
+## The forecast and its three streams
+
+- The simulator: a seven-outcome plate-appearance model (logistic, with pitch-physics features; fitted on 2023-2024,
+  tuned on 2025, tested on 2026 before use) played 10,000 times per game with fitted layers (context offsets, run
+  environment, team offsets, base running, reliever choice, relief exits with team hooks, starter leash). It is
+  trained on results only and never sees a betting line.
+- Our model: a fixed combination of the simulator's and a team model's log-odds. Its weights were taught by the
+  market's closing lines of past seasons (least squares on the closing log-odds). It never sees the line of the game
+  it forecasts. It is not a market-free forecast: its weights carry past market information.
+- The headline: our model combined with the market's pregame line (60% line, 40% ours on the log-odds scale) when
+  a line has been captured. It uses the current line.
+
+The track record scores each stream separately on the same games (Brier score and log loss, against a coin and
+against always picking the home team), with the market's own pregame line beside them.
+
+## What the replays say, and what they do not
+
+Full replays of the 2025 and 2026 regular seasons (1,000 worlds per game, each season with tables fitted on the
+other season) are development evidence: the settings were chosen on them. On those replays our model's Brier score
+is about level with the closing line (pooled 0.24245 against 0.24289, paired difference -0.00044 with an interval
+from -0.00165 to +0.00072). That interval includes zero; it supports similar development-replay performance, not
+equivalence and not prospective parity. The forward record from October 9, 2026 (FWD-02 in the ledger) is what will
+decide.
+
+Line movement: in those replays, when our model and the opening line differed, the line moved toward our number
+about 7 times in 10 by first pitch, and 68% (2025) and 73% (2026) of the time when the replay used only the previous
+game's lineup and the probable starters (assumed known at the open; the opening line's time is the source's). From
+October 2026 the record keeps actual opening snapshots as captured, with the full denominator and signed magnitude.
+
+Totals: the simulator's total-run distributions are close to calibrated (middle-half coverage 0.48), but its
+over/under chances are no better than a coin and the market's are only slightly better. From October 10, 2026 the
+page's expected total is a taught combination (0.32 x simulator mean + 0.78 x market line - 0.543), which beat the
+line on squared error in 2026 replays (-0.27, interval excluding zero) and was within noise in 2025 (-0.12). No over
+chance of our own is stated. The totals error is being diagnosed as a distribution problem (first five innings
+against full games, team runs against combined runs, tails, extras, park and weather subsets) before any feature is
+added.
+
+## The matchup research program
+
+The pitch-level work represents each pitch where it appears to be headed about 260 ms before the plate (a gravity-
+only projection). That is an effective decision horizon under this model, not a claim about what hitters perceive.
+Credited results are listed in discovery/MATCHUP_PROGRAM.md with their ledger rows. The decision-relevant result is
+that each hitter's swing map read at that moment adds about 3.6 nats per 1,000 decisions to a gradient-boosted
+model given the same pitch inputs and the standard heat map (BENCH-01F), and each hitter's whiff map on the true
+crossing adds about 8.2 nats per 1,000 swings to a boosted miss model (BENCH-02F). The larger +40 figure compares
+representations inside one logistic model and is the easier comparison.
+
+Evidence labels. Development: 2023 to 2025 and 2026 through July. Later-period validation with adaptive reuse:
+August 1 to September 27, 2026. These months were set aside as untouched, but the pricing of the aiming edge was
+corrected there (VALUE-01F and VALUE-02F were withdrawn and VALUE-08F replaced them on the same months), and earlier
+horizon work inspected 2026, so a new registration cannot restore them as untouched. Forward confirmation: the 2026
+postseason and 2027, scored under predeclared rules.
+
+The aiming value (about 32 runs per team-season) is estimated policy potential, not observed runs saved. It depends
+on identification (pitchers do not aim at hitter-specific spots on average, which does not by itself establish that
+exposure to the map is as good as random), an assumed 0.6 ft of command scatter per axis, menus of spots taken from
+the evaluation period, limited hitter adaptation, and an interval that does not propagate every source of
+uncertainty. An adversarial stress test of the estimator (pre-action controls only, repricing scattered pitches at
+their realized locations, menus from earlier data, false-positive rate and interval coverage across many synthetic
+repetitions) is registered before the figure is used again.
+
+## The matchup report
+
+Each game's report is built from pitches thrown before its as-of date and states that date. Backfilled reports are
+retrospective reconstructions: the maps use only earlier pitches, but the method was chosen in October 2026. The
+grade keeps three things apart: prediction quality (chases against the league's and the maps' expectations),
+location alignment (pitches in the recommended cells against the pitcher's usual rate, which is not evidence of
+intent) and policy value (not measured by a grade). Intent logging and randomized plan comparisons are the evidence
+that would settle the last link; they need a team.
+
+## Privacy, storage and publication
+
+Raw source responses, player history, pitch tables and model files stay encrypted on the data branch; the key is an
+Actions secret. Research lanes write metrics-only receipts. The public site's files are an allowlist (index.html,
+predictions.json, .nojekyll, days/*.json); the matchup reports are model outputs on the public data branch.
+
+## Superseded methods (October 6, 2026)
+
+The text below described the system before the October 7 to 9 work (market comparison, taught headline, matchup
+program). It is kept for the record; its statement that no market comparison had been executed is no longer true.
+
+### Methods as of October 6, 2026
 
 ## Purpose and current product
 
