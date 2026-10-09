@@ -33,7 +33,7 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
-### In flight (updated 5:00 a.m. Eastern October 9)
+### In flight (updated 6:00 a.m. Eastern October 9)
 
 - Recorded since 3:45 a.m.: COMMAND-01 failed (early-start zone and waste rates add nothing beyond velocity);
   FRAMING-01 passed (the challenge system cut the spread of catcher framing to 0.67 of 2025's); PRESSURE-01 (hitters
@@ -44,11 +44,13 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   which tests the 0.6 ft command assumption behind VALUE-08F's 32 runs and gives a per-pitcher realizable edge.
 - CLV-03 done (ledger): with open-time lineups the line still moved toward our taught number 67.9% (2025) and
   72.6% (2026); lineups explain 0.5 to 3 points. Proposed public wording sent to Alec (needs approval).
-- DISP-02 replays (centered day-form shock with paired streams): tags disp2-ref-1000-2026, disp2-df-1000-2026,
-  disp2-ref-1000-2025, disp2-df-1000-2025 (runs 37902607182, 37902636013, 37902663425, 37902690574). Score with
-  scratch trans/package_eval.sh disp2-df-1000 disp2-ref-1000 and trans/over_pooled.py
-  disp2-df-1000-2026:disp2-ref-1000-2026 disp2-df-1000-2025:disp2-ref-1000-2025; decision rule in the DISP-02 row
-  (switching it on is a production change: propose to Alec).
+- DISP-02 done (ledger): the centered day-form shock fixed the run spread (team-run SD toward actual in both seasons,
+  mean total level) and P(over) pooled -0.00038 [-0.00074, -0.00005], but the pooled win Brier upper end is +0.00041
+  (bound +0.0002), so day form stays off. A totals-only use would need its own registration.
+- COMMAND-02 done (ledger): repeated aims do not identify command (reliability 0.08 to 0.11); the plain location
+  spread per pitch type predicts next-season walks beyond walk, zone and chase rates (+0.111 [0.037, 0.186] x1e-4).
+- Next: WARMUP-01 (whose decline the times-through penalty is: hitter warm-up, pair familiarity or pitcher load;
+  relievers' first meetings and substitutes batting twice separate them).
 - Recorded overnight: VALUE-14 (edge works through walks and outs in play), MAPS-01 (trait share 0.86), SERIES-01 (no
   fading over meetings), ABS-01, PERCEPT-01/02F (failed), MATCHUP-06/07 (failed), ENGINE-02 (no larger pair effect).
 - FWD-01 runs after the World Series (instructions in the matchup section).
