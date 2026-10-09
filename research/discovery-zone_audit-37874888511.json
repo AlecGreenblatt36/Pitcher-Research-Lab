@@ -1,0 +1,332 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "zone_audit",
+ "run_id": "37874888511",
+ "params": {
+  "experiment": "zone_audit",
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "min_pitches": 50,
+  "reps": 300,
+  "seed": 11
+ },
+ "started_at": "2026-10-09T02:39:44.435093+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 9.4
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 18.5
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 27.7
+  },
+  {
+   "stage": "paired location change",
+   "at_seconds": 37.6
+  },
+  {
+   "stage": "zone field",
+   "at_seconds": 37.9
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 713382
+ },
+ "results": {
+  "predicted_drop_in": {
+   "four-seam": -0.702,
+   "sinker": -0.872,
+   "cutter": -0.925,
+   "slider/sweeper": -1.141,
+   "curveball": -1.437,
+   "changeup/splitter": -1.109
+  },
+  "same_pitcher_and_type": {
+   "2023_to_2024": {
+    "pairs": 1057,
+    "pitches": 318915,
+    "predicted_from_season": 2025,
+    "mean_change_in": 0.189,
+    "by_group": {
+     "four-seam": {
+      "pairs": 288,
+      "change_in": 0.244,
+      "predicted_in": -0.694
+     },
+     "sinker": {
+      "pairs": 169,
+      "change_in": 0.297,
+      "predicted_in": -0.874
+     },
+     "cutter": {
+      "pairs": 77,
+      "change_in": 0.627,
+      "predicted_in": -0.903
+     },
+     "slider/sweeper": {
+      "pairs": 245,
+      "change_in": 0.18,
+      "predicted_in": -1.137
+     },
+     "curveball": {
+      "pairs": 102,
+      "change_in": 0.186,
+      "predicted_in": -1.435
+     },
+     "changeup/splitter": {
+      "pairs": 175,
+      "change_in": -0.332,
+      "predicted_in": -1.119
+     }
+    },
+    "slope_on_predicted_drop": [
+     0.539,
+     0.004,
+     0.977
+    ]
+   },
+   "2024_to_2025": {
+    "pairs": 1057,
+    "pitches": 299068,
+    "predicted_from_season": 2023,
+    "mean_change_in": 0.338,
+    "by_group": {
+     "four-seam": {
+      "pairs": 288,
+      "change_in": 0.191,
+      "predicted_in": -0.699
+     },
+     "sinker": {
+      "pairs": 169,
+      "change_in": 0.38,
+      "predicted_in": -0.871
+     },
+     "cutter": {
+      "pairs": 77,
+      "change_in": 0.89,
+      "predicted_in": -0.938
+     },
+     "slider/sweeper": {
+      "pairs": 245,
+      "change_in": 0.407,
+      "predicted_in": -1.147
+     },
+     "curveball": {
+      "pairs": 102,
+      "change_in": 0.212,
+      "predicted_in": -1.446
+     },
+     "changeup/splitter": {
+      "pairs": 175,
+      "change_in": 0.401,
+      "predicted_in": -1.108
+     }
+    },
+    "slope_on_predicted_drop": [
+     -0.378,
+     -0.881,
+     0.172
+    ]
+   },
+   "2025_to_2026": {
+    "pairs": 1095,
+    "pitches": 310824,
+    "predicted_from_season": 2024,
+    "mean_change_in": 0.15,
+    "by_group": {
+     "four-seam": {
+      "pairs": 282,
+      "change_in": -0.1,
+      "predicted_in": -0.691
+     },
+     "sinker": {
+      "pairs": 175,
+      "change_in": 0.203,
+      "predicted_in": -0.868
+     },
+     "cutter": {
+      "pairs": 80,
+      "change_in": 0.208,
+      "predicted_in": -0.932
+     },
+     "slider/sweeper": {
+      "pairs": 277,
+      "change_in": 0.283,
+      "predicted_in": -1.143
+     },
+     "curveball": {
+      "pairs": 105,
+      "change_in": 0.504,
+      "predicted_in": -1.439
+     },
+     "changeup/splitter": {
+      "pairs": 175,
+      "change_in": 0.276,
+      "predicted_in": -1.112
+     }
+    },
+    "slope_on_predicted_drop": [
+     -0.843,
+     -1.306,
+     -0.426
+    ]
+   }
+  },
+  "zone_field_and_calls": {
+   "2023": {
+    "pitches_with_zone": 716731,
+    "zone_missing_share": 0.0004,
+    "in_zone_share": 0.4729,
+    "called_strike_in_zone_1_9": 0.8968,
+    "called_strike_outside_11_14": 0.071,
+    "mean_pz_ft": 2.2817,
+    "called_strike_by_height_middle_third": {
+     "1.2-1.4ft": {
+      "taken": 7696,
+      "called_strike": 0.1037
+     },
+     "1.4-1.6ft": {
+      "taken": 7943,
+      "called_strike": 0.5216
+     },
+     "1.6-1.8ft": {
+      "taken": 9015,
+      "called_strike": 0.905
+     },
+     "3.2-3.4ft": {
+      "taken": 5117,
+      "called_strike": 0.8292
+     },
+     "3.4-3.6ft": {
+      "taken": 5223,
+      "called_strike": 0.4044
+     },
+     "3.6-3.8ft": {
+      "taken": 4765,
+      "called_strike": 0.0663
+     }
+    }
+   },
+   "2024": {
+    "pitches_with_zone": 708140,
+    "zone_missing_share": 0.0004,
+    "in_zone_share": 0.4787,
+    "called_strike_in_zone_1_9": 0.8947,
+    "called_strike_outside_11_14": 0.0729,
+    "mean_pz_ft": 2.3039,
+    "called_strike_by_height_middle_third": {
+     "1.2-1.4ft": {
+      "taken": 7426,
+      "called_strike": 0.0871
+     },
+     "1.4-1.6ft": {
+      "taken": 7294,
+      "called_strike": 0.5001
+     },
+     "1.6-1.8ft": {
+      "taken": 8584,
+      "called_strike": 0.8933
+     },
+     "3.2-3.4ft": {
+      "taken": 4997,
+      "called_strike": 0.8745
+     },
+     "3.4-3.6ft": {
+      "taken": 5023,
+      "called_strike": 0.4862
+     },
+     "3.6-3.8ft": {
+      "taken": 4590,
+      "called_strike": 0.0991
+     }
+    }
+   },
+   "2025": {
+    "pitches_with_zone": 708810,
+    "zone_missing_share": 0.0002,
+    "in_zone_share": 0.5058,
+    "called_strike_in_zone_1_9": 0.8758,
+    "called_strike_outside_11_14": 0.0457,
+    "mean_pz_ft": 2.3246,
+    "called_strike_by_height_middle_third": {
+     "1.2-1.4ft": {
+      "taken": 7312,
+      "called_strike": 0.0732
+     },
+     "1.4-1.6ft": {
+      "taken": 7339,
+      "called_strike": 0.4472
+     },
+     "1.6-1.8ft": {
+      "taken": 8776,
+      "called_strike": 0.8704
+     },
+     "3.2-3.4ft": {
+      "taken": 5311,
+      "called_strike": 0.8676
+     },
+     "3.4-3.6ft": {
+      "taken": 5338,
+      "called_strike": 0.4545
+     },
+     "3.6-3.8ft": {
+      "taken": 4840,
+      "called_strike": 0.089
+     }
+    }
+   },
+   "2026": {
+    "pitches_with_zone": 713013,
+    "zone_missing_share": 0.0005,
+    "in_zone_share": 0.4752,
+    "called_strike_in_zone_1_9": 0.9307,
+    "called_strike_outside_11_14": 0.041,
+    "mean_pz_ft": 2.3359,
+    "called_strike_by_height_middle_third": {
+     "1.2-1.4ft": {
+      "taken": 7544,
+      "called_strike": 0.0187
+     },
+     "1.4-1.6ft": {
+      "taken": 7720,
+      "called_strike": 0.2531
+     },
+     "1.6-1.8ft": {
+      "taken": 9193,
+      "called_strike": 0.8531
+     },
+     "3.2-3.4ft": {
+      "taken": 5878,
+      "called_strike": 0.8319
+     },
+     "3.4-3.6ft": {
+      "taken": 5433,
+      "called_strike": 0.3343
+     },
+     "3.6-3.8ft": {
+      "taken": 5089,
+      "called_strike": 0.0385
+     }
+    }
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T02:40:22.351596+00:00",
+ "seconds": 37.9
+}
