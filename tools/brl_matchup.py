@@ -269,3 +269,119 @@ def contact_study(sv, cols: dict, params: dict, stage) -> dict:
                                        'theta_sd_deg': round(float(np.std(th_r)), 3)}
     stage('contact study')
     return res
+
+
+def contact_decompose(sv, cols: dict, params: dict, stage) -> dict:
+    """CONTACT-02: which part of a hitter's swing geometry carries the miss information CONTACT-01 found (1.04 nats per
+    1,000 swings in the flexible model). Parametric interaction terms on top of the rates model's cross-fitted logits,
+    all together and each one left out; and the flexible model with more geometry (the hitter's own attack-angle
+    spread, swing path tilt, attack direction). Terms: timing spread (sigma_y) alone, with speed, and with the late
+    change in approach angle (the plane the hitter sees at his steering limit against the plane the ball arrives on);
+    usual attack angle with height, with approach angle, with vertical movement; the plane formula F; attack-angle
+    spread alone and with height."""
+    res = {}
+    cols = guard(cols, params)
+    desc = label(cols, 'description')
+    G = geometry(sv, cols)
+    swing = np.isin(desc, WHIFF + CONTACT); whiff = np.isin(desc, WHIFF); contact = np.isin(desc, CONTACT)
+    batter = cols['batter'].astype(np.int64); day = cols['day'].astype(np.int64)
+    aa = cols['attack_angle']; iy = cols['intercept_ball_minus_batter_pos_y_inches']
+    has_aa = np.isfinite(aa) & swing
+    test_year = int(params.get('test_year', 2026))
+    train_rows = has_aa & (G['year'] < test_year) & np.isfinite(G['z'])
+    zc = G['z'] - 2.5
+    slope = float(np.polyfit(zc[train_rows], aa[train_rows], 1)[0])
+    aa_adj = aa - slope * zc
+    n_a, s_a, q_a = prior_stats(batter, day, aa_adj, has_aa & np.isfinite(zc))
+    league_aa = float(np.nanmean(aa_adj[train_rows])); la_var = float(np.nanvar(aa_adj[train_rows]))
+    mu_aa = (s_a + 50 * league_aa) / (n_a + 50)
+    with np.errstate(invalid='ignore', divide='ignore'):
+        v_aa = np.where(n_a > 1, (q_a - s_a * s_a / np.maximum(n_a, 1)) / np.maximum(n_a - 1, 1), la_var)
+    aa_sd = np.sqrt((np.maximum(n_a - 1, 0) * v_aa + 50 * la_var) / (np.maximum(n_a - 1, 0) + 50))
+    ci = contact & np.isfinite(iy)
+    n_y, s_y, q_y = prior_stats(batter, day, iy, ci)
+    lv = float(np.nanvar(iy[ci & (G['year'] < test_year)]))
+    with np.errstate(invalid='ignore', divide='ignore'):
+        var_h = np.where(n_y > 1, (q_y - s_y * s_y / np.maximum(n_y, 1)) / np.maximum(n_y - 1, 1), lv)
+    sig_y = np.sqrt((np.maximum(n_y - 1, 0) * var_h + 50 * lv) / (np.maximum(n_y - 1, 0) + 50))
+    def prior_mean(v, k=50.0):
+        ok_ = swing & np.isfinite(v)
+        nn, ss, _ = prior_stats(batter, day, v, ok_)
+        lg = float(np.nanmean(v[ok_ & (G['year'] < test_year)]))
+        return (ss + k * lg) / (nn + k)
+    stand_r = label(cols, 'stand') == 'R'; throw_r = label(cols, 'p_throws') == 'R'
+    tilt_h = prior_mean(cols['swing_path_tilt'])
+    dir_h = prior_mean(np.where(stand_r, 1.0, -1.0) * cols['attack_direction'])
+    n_w, s_w, _ = prior_stats(batter, day, whiff.astype(float), swing)
+    lw = float(whiff[swing & (G['year'] < test_year)].mean()); wr = (s_w + 200 * lw) / (n_w + 200)
+    bat_speed = prior_mean(cols['bat_speed'])
+    stage('hitter priors')
+    # late change in approach angle: the ball's vertical speed at the plate against a gravity-only flight from the steering limit
+    c = {k: cols[k].astype(np.float64) for k in ('vx0', 'vy0', 'vz0', 'ax', 'ay', 'az', 'plate_x', 'plate_z')}
+    _, _, _, vel = sv.at({**c, '_x50': np.zeros(len(day)), '_z50': np.zeros(len(day))}, sv.FRONT)
+    dvaa = {t: np.degrees(((cols['az'].astype(np.float64) + 32.174) * t) / np.abs(vel['vy'])) for t in (0.11, 0.26)}
+    theta = (mu_aa + slope * zc) - np.abs(G['vaa'])
+    F = np.abs(np.sin(np.radians(theta))) * sig_y
+    v = cols['release_speed'].astype(np.float64)
+    terms = {'sigma_y': sig_y / 10, 'sigma_y_x_speed': sig_y / 10 * (v - 90) / 5, 'sigma_y_x_late_plane': sig_y / 10 * np.abs(dvaa[0.11]),
+             'aa_x_height': mu_aa / 10 * zc, 'aa_x_vaa': mu_aa / 10 * (G['vaa'] + 6), 'aa_x_ivb': mu_aa / 10 * cols['pfx_z'] / 10,
+             'F': F, 'aa_spread': aa_sd / 10, 'aa_spread_x_height': aa_sd / 10 * zc}
+    u = np.where(stand_r, G['x'], -G['x'])
+    X_pitch = np.column_stack([v, cols['pfx_x'] * np.where(throw_r, 1, -1), cols['pfx_z'], u, G['z'], G['vaa'], G['haa'] * np.where(stand_r, 1, -1),
+                               cols['release_spin_rate'], cols['release_extension'], cols['release_pos_z'], cols['balls'], cols['strikes'],
+                               np.asarray([GROUPS.get(t, 6) for t in label(cols, 'pitch_type')]), (stand_r == throw_r).astype(float), cols['arm_angle']])
+    X_rate = np.column_stack([np.log(wr / (1 - wr)), bat_speed])
+    ok = swing & np.isfinite(F) & np.isfinite(G['z']) & np.isfinite(v) & np.all(np.isfinite(np.column_stack(list(terms.values()))), axis=1)
+    tr = ok & (G['year'] < test_year) & (n_y >= 30); te = ok & (G['year'] == test_year) & (n_y >= 30)
+    from sklearn.ensemble import HistGradientBoostingClassifier
+    y = whiff.astype(float)
+    hp = dict(max_iter=int(params.get('gbm_iter', 300)), learning_rate=0.08, max_leaf_nodes=48, min_samples_leaf=200, l2_regularization=1.0, random_state=11)
+    designs = {'G1': np.column_stack([X_pitch, X_rate]), 'G2': np.column_stack([X_pitch, X_rate, mu_aa, sig_y]),
+               'G2_plus': np.column_stack([X_pitch, X_rate, mu_aa, sig_y, aa_sd, tilt_h, dir_h])}
+    preds = {k: HistGradientBoostingClassifier(**hp).fit(X[tr], y[tr]).predict_proba(X[te])[:, 1] for k, X in designs.items()}
+    stage('flexible')
+    yt = y[te]; games = cols['game_pk'][te]
+    ll = {k: logloss(p_, yt) for k, p_ in preds.items()}
+    res['flexible_gain_nats_per_1000'] = {'G2_over_G1': clustered(ll['G1'] - ll['G2'], games), 'G2plus_over_G2': clustered(ll['G2'] - ll['G2_plus'], games)}
+    # training noise: the same comparisons refitted on bootstrap resamples of training games with feature subsampling
+    tg = np.unique(cols['game_pk'][tr]); gi = np.searchsorted(tg, cols['game_pk'][tr]); tri = np.flatnonzero(tr)
+    reps = {'G2_over_G1': [], 'G2plus_over_G2': []}
+    for k in range(int(params.get('refits', 3))):
+        rng = np.random.default_rng(100 + k)
+        w = np.bincount(rng.integers(0, len(tg), len(tg)), minlength=len(tg))[gi]
+        rows = np.repeat(tri, w)
+        hk = dict(hp, random_state=100 + k, max_features=0.85)
+        lk = {d: logloss(HistGradientBoostingClassifier(**hk).fit(X[rows], y[rows]).predict_proba(X[te])[:, 1], yt).mean() for d, X in designs.items()}
+        reps['G2_over_G1'].append((lk['G1'] - lk['G2']) * 1000); reps['G2plus_over_G2'].append((lk['G2'] - lk['G2_plus']) * 1000)
+        stage(f'refit {k}')
+    res['flexible_gain_refits'] = {k: {'values': [round(v, 3) for v in vs], 'mean': round(float(np.mean(vs)), 3), 'sd': round(float(np.std(vs, ddof=1)), 3) if len(vs) > 1 else None}
+                                   for k, vs in reps.items()}
+    # parametric terms on the rates model's cross-fitted logits
+    XB = designs['G1']; oof = np.full(len(y), np.nan); par = cols['game_pk'] % 2 == 0
+    for side in (True, False):
+        fr, pr = tr & (par == side), tr & (par != side)
+        oof[pr] = HistGradientBoostingClassifier(**hp).fit(XB[fr], y[fr]).predict_proba(XB[pr])[:, 1]
+    lo_tr = np.log(np.clip(oof[tr], 1e-6, 1 - 1e-6) / np.clip(1 - oof[tr], 1e-6, 1))
+    p1 = preds['G1']; lo_te = np.log(p1 / (1 - p1))
+    names = list(terms)
+    Ttr = np.column_stack([terms[k][tr] for k in names]); Tte = np.column_stack([terms[k][te] for k in names])
+    def gain(cols_idx):
+        b = offset_fit(lo_tr, Ttr[:, cols_idx], y[tr])
+        pt = 1 / (1 + np.exp(-(lo_te + b[0] + Tte[:, cols_idx] @ b[1:])))
+        return ll['G1'] - logloss(pt, yt), b
+    g_all, b_all = gain(list(range(len(names))))
+    res['parametric_all'] = {'gain': clustered(g_all, games), 'share_of_G2_gain': round(float(g_all.mean() / (ll['G1'] - ll['G2']).mean()), 3),
+                             'coefs': {n_: round(float(c_), 4) for n_, c_ in zip(names, b_all[1:])}}
+    drops = {}
+    for j, n_ in enumerate(names):
+        g_j, _ = gain([k for k in range(len(names)) if k != j])
+        drops[n_] = round(float((g_all - g_j).mean()) * 1000, 3)
+    res['drop_one_loss_nats_per_1000'] = dict(sorted(drops.items(), key=lambda kv: -kv[1]))
+    singles = {}
+    for j, n_ in enumerate(names):
+        g_j, b_j = gain([j])
+        singles[n_] = {'gain': round(float(g_j.mean()) * 1000, 3), 'coef': round(float(b_j[1]), 4)}
+    res['single_term'] = singles
+    res['rows'] = {'train': int(tr.sum()), 'test': int(te.sum()), 'late_plane_change_deg_sd': round(float(np.nanstd(dvaa[0.11][te])), 3)}
+    stage('parametric')
+    return res

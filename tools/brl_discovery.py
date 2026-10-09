@@ -3367,7 +3367,7 @@ def main():
                 got.extend(parts)
             cols = mx.merge(got); del got
             receipt['rows'] = int(len(cols['day']))
-            receipt['results'] = mx.contact_study(sv, cols, params, stage)
+            receipt['results'] = (mx.contact_decompose if params.get('decompose') else mx.contact_study)(sv, cols, params, stage)
             raise StopIteration
         if experiment in ('challenges', 'scarcity'):
             stage('fetch the 2026 play-by-play')
