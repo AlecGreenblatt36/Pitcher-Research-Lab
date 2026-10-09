@@ -93,8 +93,12 @@ Credited on the untouched set (frozen code, one scoring each; ledger rows):
   each outside pitch at the best third of the pitcher's own spots of that pitch type for this hitter, at typical
   command (0.6 ft), by the hitter's own part: **about 32 runs per team-season [21, 44]** on the untouched months
   (location maps; family maps 29 [18, 42]). Frozen 02b266a2. In-zone values are not stated (their placebo fails).
-  Development gave a smaller value (13.5 [7.2, 20.0]) with maps from two seasons instead of three; VALUE-10 checks
-  whether map training length explains it. EXPLOIT-01 (pitchers do not aim at hitter maps) stands.
+  The edge grew in 2026: 2025 about 14 runs [7, 20], 2026 through July 22 [15, 28] (VALUE-11), August onward 32;
+  map training length is not the reason (VALUE-10). EXPLOIT-01 (pitchers do not aim at hitter maps) stands.
+- Scouting page rebuilt from SCOUT-02 (research/discovery-scout-37894222125.json): family swing maps against the
+  average hitter, aim spots per pitch family, VALUE-08F value; build with matchup_page/build.py scout2_receipt.json
+  (the old SCOUT-01 page's run figures are superseded). Sent to Alec as a file at about 3 a.m.; publishing still needs
+  his approval.
 
 Development results around it (their run figures inherit the VALUE-07 withdrawal): VALUE-05 the outside edge sits most where the pitcher is behind in the count (39% of it on 18% of the pitches), two strikes carry their share. VALUE-03 nets ADAPT-01's tightening (hitters chase a little less everywhere after
 seeing more tempting pitches than chance, -0.065 log-odds per extra one; they do not learn their spots): 86 percent
