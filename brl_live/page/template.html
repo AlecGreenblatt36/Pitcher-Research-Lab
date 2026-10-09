@@ -2143,9 +2143,16 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   function reportTab(f, pk) {
     return '<div id="rp-' + pk + '"><p class="empty">Loading the matchup report…</p></div>';
   }
+  var RP_RECORD = null;
+  function loadRecord(f, pk) {
+    if (RP_RECORD !== null) return;
+    RP_RECORD = false;
+    fetch(REPORTS + "record.json", { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : false; }).then(function (rec) { RP_RECORD = rec || false; if (rec && RP[pk]) loadReport(f, pk); }, function () { RP_RECORD = false; });
+  }
   function loadReport(f, pk) {
     var host = document.getElementById("rp-" + pk);
     if (!host) return;
+    loadRecord(f, pk);
     var day = f.date || D.date;
     var render = function (doc) { host.innerHTML = reportHtml(f, pk, doc); wireReport(f, pk); };
     if (RP[pk]) return render(RP[pk]);
@@ -2174,6 +2181,15 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       h += "<h3>How the report held up</h3><div class=\"rp-grade\">" +
         "<div><b>" + g.in_recommended + " of " + g.outside_pitches + "</b><span>outside pitches landed in the recommended spots; the pitchers' usual rate would give " + Math.round(g.usual_expected) + "</span></div>" +
         "<div><b>" + g.chases + "</b><span>chases by these hitters; the league rates expected " + g.chases_expected_league.toFixed(1) + ", their own maps " + g.chases_expected_map.toFixed(1) + "</span></div></div>";
+    }
+    if (RP_RECORD && RP_RECORD.games) {
+      var R = RP_RECORD, adh = R.outside_pitches ? (100 * R.in_recommended / R.outside_pitches).toFixed(1) : null, usu = R.outside_pitches ? (100 * R.usual_expected / R.outside_pitches).toFixed(1) : null;
+      h += '<h3>The record so far</h3><p class="note">Across ' + Number(R.games).toLocaleString() + ' graded games (' + esc(R.first_date) + ' to ' + esc(R.last_date) + '), each reported before it was played: hitters chased ' + Number(R.chases).toLocaleString() + ' times where the league rates expected ' + Number(Math.round(R.chases_expected_league)).toLocaleString() + ' and their own maps ' + Number(Math.round(R.chases_expected_map)).toLocaleString() + '. ' +
+        (adh != null ? 'Staffs put ' + adh + '% of outside pitches in the recommended spots against ' + usu + '% at their usual rates.' : '');
+      var bins = R.bins || {}, parts = [];
+      ["under -2", "-2 to 0", "0 to 2", "over 2"].forEach(function (k2) { var bn = bins[k2]; if (bn && bn.outside >= 200) parts.push(k2 + ': ' + (100 * bn.chases / bn.outside).toFixed(1) + '% chased, league ' + (100 * bn.league / bn.outside).toFixed(1) + '%, map ' + (100 * bn.map / bn.outside).toFixed(1) + '%'); });
+      if (parts.length) h += ' By the extra chases the map predicted for the pair: ' + esc(parts.join('; ')) + '.';
+      h += '</p>';
     }
     h += '<div class="seg" role="group" aria-label="Which number">' + Object.keys(RP_METRICS).map(function (k2) {
       return '<button data-rpmetric="' + k2 + '" aria-pressed="' + (k2 === key) + '">' + RP_METRICS[k2].label + "</button>";
@@ -2435,6 +2451,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     h += "<p>Once the market's pregame line is posted, the headline combines the two on the log-odds scale, " + (weightsText() || "60% market, 40% our model") + ". The market's line is the average of up to eight sportsbooks when they can be read (DraftKings alone otherwise). In replays of 2025 and 2026, which were also used to choose the mix, it came out slightly more accurate than the closing line alone; the margin is within the noise of two seasons, so the real test is the games played from here on. Before a line is posted the headline is our model alone. The Odds tab shows every part and the Record page scores each one separately, including the games where our model and the market disagree.</p>";
     h += "<p>What line movement does and does not show: when our model has differed from the opening line, the line has moved toward our number by first pitch about 7 times in 10 (replays of 2025 and 2026, each season checked with a model taught on the other). Our final number includes the posted lineups, which the opening line had not priced, so the replays were run again with only what was known at the open (the previous game's lineup and the probable starters): the line still moved toward our number 68% of the time in 2025 and 73% in 2026. The posted lineups explain only a few points of the figure. Line movement is not profit; we do not claim that betting on our number pays.</p>";
     h += "<p>Changes to the recipe take effect from a stated time and never rewrite a game that has started. Through October 7, 2026 the headline was a plain average of the simulator and the team model.</p>";
+    h += "<h2>The matchup report</h2><p>Every game has a Report tab: each hitter against the pitchers he will face, built only from pitches thrown before that day. The idea behind it is that a hitter decides to swing on where the pitch appears to be headed about 260 milliseconds before it reaches the plate, not on where it ends up; his swing map read at that moment predicts his swings and takes about 8% better than the usual heat map, and it predicts how much he will chase against a specific pitcher's arsenal. Pitchers, it turns out, do not aim at these spots, so where a pitch lands on a hitter's map is close to chance, and that lets the report put a run value on aiming at them: about 32 runs over a team's season at typical command on the untouched months of 2026 (tested on data the models never saw). The report names the spots for each pitch family, the extra chases, and the strikeout and walk changes against the league pairing.</p>"
+      + "<p>Finished games are graded on the Report tab: how many outside pitches actually went to the recommended spots against the pitcher's usual rate, and how the hitters' chases compared with what the league rates and their own maps expected. Past games can be opened the same way, each report built with the maps as they stood before that month began, so a coach can judge the report against what happened without hindsight. The research behind it, with every test and its result, is in the repository's ledger.</p>";
     var adj = {};
     Object.keys(D.box_scores || {}).forEach(function (id) { var b = D.box_scores[id]; if (b.date === D.date && b.adjustments) b.adjustments.forEach(function (a) { adj[a] = 1; }); });
     if (Object.keys(adj).length) {
