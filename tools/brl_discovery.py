@@ -57,6 +57,53 @@ def read_blob(repo, token, path, branch):
     return base64.b64decode(''.join(blob['content'].split()))
 
 
+def put_bytes(repo, token, path, raw, branch, message):
+    url = f'https://api.github.com/repos/{repo}/contents/{path}'
+    for attempt in range(6):
+        payload = {'message': message, 'content': base64.b64encode(raw).decode(), 'branch': branch}
+        try:
+            payload['sha'] = api(url + '?ref=' + branch, token)['sha']
+        except HTTPError as exc:
+            if exc.code != 404:
+                raise
+        try:
+            return api(url, token, 'PUT', payload)
+        except HTTPError as exc:
+            if exc.code != 409 or attempt == 5:
+                raise
+            time.sleep(3 + 3 * attempt)
+
+
+def savant_module():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('brl_savant', ROOT / 'tools' / 'brl_savant.py')
+    sv = importlib.util.module_from_spec(spec); spec.loader.exec_module(sv)
+    return sv
+
+
+def load_savant(repo, token, branch, key, year: int, parts=('a', 'b')) -> dict | None:
+    """The sealed Savant pitches of a season (the parts asked for), concatenated; None if not stored."""
+    from cloud.security import unseal
+    sv = savant_module(); got = []
+    for part in parts:
+        raw = read_blob(repo, token, sv.path(year, part), branch)
+        if raw is not None:
+            got.append(sv.from_bytes(unseal(raw, key, sv.purpose(year, part))))
+    if not got:
+        return None
+    out = {}
+    for k in got[0]:
+        if k.endswith('__vocab'):
+            continue
+        if k + '__vocab' in got[0]:
+            vocab = np.unique(np.concatenate([g[k + '__vocab'] for g in got]))
+            out[k] = np.concatenate([np.searchsorted(vocab, g[k + '__vocab'][g[k]]) for g in got]).astype(np.int16)
+            out[k + '__vocab'] = vocab
+        else:
+            out[k] = np.concatenate([g[k] for g in got])
+    return out
+
+
 def put_text(repo, token, path, text, branch, message):
     url = f'https://api.github.com/repos/{repo}/contents/{path}'
     for attempt in range(6):
@@ -2416,6 +2463,24 @@ def main():
     def stage(name):
         receipt['stages'].append({'stage': name, 'at_seconds': round(time.time() - t0, 1)}); print(name, round(time.time() - t0), 's', flush=True)
     try:
+        if experiment == 'savant_pull':
+            from cloud.security import seal
+            sv = savant_module(); results = {}
+            for year in params.get('seasons', (2024, 2025, 2026)):
+                year = int(year); start, end = sv.SEASONS[year]
+                stage(f'savant {year}')
+                cols, notes = sv.pull(year, start, end, 'R', int(params.get('workers', 3)), log=lambda m: print(m, flush=True))
+                notes['errors'] = notes['errors'][:20]
+                if cols is None:
+                    results[year] = {'notes': notes}; continue
+                results[year] = {'notes': notes, 'coverage': sv.coverage(cols), 'plate_reference': sv.reference_check(cols), 'stored': {}}
+                for part, sub in sv.split_parts(cols, year).items():
+                    sealed = seal(sv.to_bytes(sub), key, sv.purpose(year, part))
+                    put_bytes(repo, token, sv.path(year, part), sealed, branch, f'BRL: Savant pitches {year} part {part}')
+                    results[year]['stored'][part] = {'path': sv.path(year, part), 'bytes': len(sealed), 'rows': int(len(sub['day']))}
+                del cols
+            receipt['results'] = results
+            raise StopIteration
         if experiment in ('challenges', 'scarcity'):
             stage('fetch the 2026 play-by-play')
             cdoc = challenge_study(int(params.get('season', 2026)), int(params.get('workers', 6)))
