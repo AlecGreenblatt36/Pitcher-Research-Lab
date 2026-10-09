@@ -1,0 +1,128 @@
+{
+ "schema": "brl.report-receipt.v1",
+ "run_id": "37990717545",
+ "params": {
+  "dates": [
+   "2026-10-08",
+   "2026-10-09"
+  ],
+  "publish": true
+ },
+ "started_at": "2026-10-09T21:01:32.020363+00:00",
+ "stages": [
+  {
+   "stage": "load 2025",
+   "at_seconds": 9.0
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 18.0
+  },
+  {
+   "stage": "league swing model",
+   "at_seconds": 47.3
+  },
+  {
+   "stage": "hitter swing maps 616",
+   "at_seconds": 49.4
+  },
+  {
+   "stage": "whiff maps 580",
+   "at_seconds": 87.6
+  },
+  {
+   "stage": "swing model, 616 maps",
+   "at_seconds": 114.9
+  },
+  {
+   "stage": "models fitted",
+   "at_seconds": 151.6
+  },
+  {
+   "stage": "fitted",
+   "at_seconds": 151.7
+  },
+  {
+   "stage": "recent players",
+   "at_seconds": 152.5
+  },
+  {
+   "stage": "game 849832",
+   "at_seconds": 157.6
+  },
+  {
+   "stage": "report 2026-10-08",
+   "at_seconds": 160.3
+  },
+  {
+   "stage": "league swing model",
+   "at_seconds": 185.7
+  },
+  {
+   "stage": "hitter swing maps 616",
+   "at_seconds": 187.7
+  },
+  {
+   "stage": "whiff maps 580",
+   "at_seconds": 225.0
+  },
+  {
+   "stage": "swing model, 616 maps",
+   "at_seconds": 253.7
+  },
+  {
+   "stage": "models fitted",
+   "at_seconds": 285.8
+  },
+  {
+   "stage": "fitted",
+   "at_seconds": 285.9
+  },
+  {
+   "stage": "report 2026-10-09",
+   "at_seconds": 287.3
+  },
+  {
+   "stage": "index",
+   "at_seconds": 287.3
+  }
+ ],
+ "reports": {
+  "2026-10-08": {
+   "games": 1,
+   "bytes": 472638,
+   "asof": "2026-10-08",
+   "graded": 1
+  },
+  "2026-10-09": {
+   "games": 0,
+   "bytes": 0,
+   "asof": "2026-10-09",
+   "graded": 0
+  }
+ },
+ "environment": {
+  "python": "3.12.15",
+  "commit": "f6858f01eae9ad89e422a83ee5e054dd182a3375",
+  "numpy": "2.5.3",
+  "scipy": "1.18.1",
+  "scikit-learn": "1.9.1",
+  "pandas": "3.0.6",
+  "cryptography": "46.0.4"
+ },
+ "record": {
+  "games": 4991,
+  "dates": 401,
+  "first_date": "2025-03-27",
+  "last_date": "2026-10-08",
+  "chases": 152037,
+  "chases_expected_league": 169054.8,
+  "chases_expected_map": 167364.7,
+  "in_recommended": 98226,
+  "usual_expected": 116071.4,
+  "outside_pitches": 534748
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T21:07:16.334400+00:00",
+ "seconds": 344.3
+}
