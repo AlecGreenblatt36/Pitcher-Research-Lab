@@ -2949,9 +2949,13 @@ def engine_pa(T: dict, params: dict, stage) -> dict:
         idx = np.flatnonzero(rows); return rng.choice(idx, min(len(idx), n), replace=False) if len(idx) > n else idx
     # swing: league + hitter maps at the decision moment
     Cs = np.hstack([control_block(Tk, swing_propensity(Tk)), pitcher_propensity(Tk)[:, None].astype(np.float32)])
-    Xs = np.hstack([location_block(xp, zp, Tk['stand_r'], Tk['strikes']), Cs])
-    i = sample(tr); off_s = fit_logistic(Xs[i], swing[i]).decision_function(Xs)
+    famv = bool(params.get('family'))       # ENGINE-02: MATCHUP-05F's swing representation (league family part, hitter family maps)
     Bs = hitter_basis(xp, zp, Tk['stand_r'], Tk['strikes'])
+    lf_parts = [(Bs[:, :-1] * np.isin(Tk['group'], (3, 4))[:, None]).astype(np.float32), (Bs[:, :-1] * (Tk['group'] == 5)[:, None]).astype(np.float32)] if famv else []
+    Xs = np.hstack([location_block(xp, zp, Tk['stand_r'], Tk['strikes'])] + lf_parts + [Cs]); del lf_parts
+    i = sample(tr); off_s = fit_logistic(Xs[i], swing[i]).decision_function(Xs); del Xs
+    if famv:
+        Bs = family_basis(Bs, Tk['group'])
     maps_s = _hitter_maps(Bs, swing, off_s, _groups(Tk['batter'], tr), 10.0, 300)
     stage(f'swing maps {len(maps_s)}')
     # whiff: league + hitter maps on the true crossing, on swings
@@ -3681,15 +3685,16 @@ def value2_study(T: dict, params: dict, stage) -> dict:
         # hitter's pitches read through another hitter's map of the same side, must show nothing; (2) only the variation
         # the aiming uses, the deviation minus its mean for this hitter, pitch group and side of the zone edge, must keep it
         rc = np.random.default_rng(5)
-        def boot(Xm, reps=200):
-            pk = Xm.shape[1]; XtX_ = np.zeros((len(ug), pk, pk))
+        def boot(Xm, reps=200, clus=None):
+            cid = gi if clus is None else clus; ncl = int(cid.max()) + 1
+            pk = Xm.shape[1]; XtX_ = np.zeros((ncl, pk, pk))
             for a_ in range(pk):
                 for c_ in range(a_, pk):
-                    v_ = np.bincount(gi, weights=Xm[:, a_] * Xm[:, c_], minlength=len(ug)); XtX_[:, a_, c_] = v_; XtX_[:, c_, a_] = v_
-            Xty_ = np.column_stack([np.bincount(gi, weights=Xm[:, a_] * y, minlength=len(ug)) for a_ in range(pk)])
+                    v_ = np.bincount(cid, weights=Xm[:, a_] * Xm[:, c_], minlength=ncl); XtX_[:, a_, c_] = v_; XtX_[:, c_, a_] = v_
+            Xty_ = np.column_stack([np.bincount(cid, weights=Xm[:, a_] * y, minlength=ncl) for a_ in range(pk)])
             dr = []
             for _ in range(reps):
-                w_ = np.bincount(rc.integers(0, len(ug), len(ug)), minlength=len(ug)).astype(float)
+                w_ = np.bincount(rc.integers(0, ncl, ncl), minlength=ncl).astype(float)
                 dr.append(np.linalg.solve(np.tensordot(w_, XtX_, 1) + 1e-9 * np.eye(pk), w_ @ Xty_)[-2:])
             dr = np.asarray(dr)
             return [[round(float(np.percentile(dr[:, j], q)), 6) for q in (2.5, 97.5)] for j in (0, 1)]
@@ -3744,6 +3749,12 @@ def value2_study(T: dict, params: dict, stage) -> dict:
             ci_ = boot(Xk)
             chk[nm] = {'outside': round(float(bk_[-2]), 6), 'inside': round(float(bk_[-1]), 6), 'outside_interval': ci_[0], 'inside_interval': ci_[1],
                        'others_outside': round(float(bk_[-4]), 6), 'others_inside': round(float(bk_[-3]), 6)}
+            if params.get('cluster_checks'):
+                # intervals resampling hitters and pitchers instead of games (a hitter's map and a pitcher's habits span many games)
+                for cl in ('batter', 'pitcher'):
+                    cidx = np.unique(T[cl][ix], return_inverse=True)[1]
+                    cc_ = boot(Xk, clus=cidx)
+                    chk[nm][f'outside_interval_by_{cl}'] = cc_[0]; chk[nm][f'inside_interval_by_{cl}'] = cc_[1]
         if params.get('within_spot'):
             # (4) different hitters at the same spot: every column demeaned within cells of where the pitch crossed (0.2 ft
             # squares, by batter side, count group and pitch group), so no location effect shared by hitters can carry it
@@ -3872,6 +3883,200 @@ def value2_study(T: dict, params: dict, stage) -> dict:
                                                                                 'runs_per_6200': round(coef * (sm / nn_) * per_pa * 6200, 1)}
         res['breakdown'] = bd
     stage('aiming with scatter')
+    return res
+
+
+# ---------------------------------------------------------------- VALUE-12: a hitter's own whiff holes, priced
+def value_whiff_study(T: dict, params: dict, stage) -> dict:
+    """VALUE-08's design for the whiff map on the true crossing (MATCHUP-03's representation: league whiff model on
+    swings, hitter maps on location, family and height bands, shrinkage 30, at least 250 swings). Each pitch's whiff
+    deviation (his extra chance of missing if he swings, in points) is split into the shared part (the same-side mean
+    map of the other hitters) and his own part; the chase deviation's two parts (MATCHUP-05F's swing representation)
+    are held in the regression, so the whiff coefficient is net of chasing. Checks: placebo (another same-side hitter's
+    whiff map net of the same mean map), within hitter, pitch group and zone side, the plate appearance's other pitches
+    held fixed, the same spot. Aiming: among the pitcher's own spots of the same pitch group to that side, count group
+    and side of the zone edge, with 0.6 ft of command scatter around where the ball arrives, the best third for this
+    hitter by his own whiff part within thirds of the league's whiff chance, against all of them; value from the
+    primary coefficient (within hitter, neighbor-held) times the gain and pitches per plate appearance."""
+    res = {}
+    final = bool(params.get('final_eval'))
+    if final and not params.get('frozen_commit'):
+        raise ValueError('the final whiff value scoring runs only as the registered evaluation of a frozen commit')
+    if final:
+        T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | ((T['season'] == 2026) & (T['day'] >= date(2026, 8, 1).toordinal())))
+    else:
+        T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+    F = rebuild(T)
+    keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
+    T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
+    swing = ((T['call'] == 1) | (T['call'] == 2)).astype(np.float64); whiff = (T['call'] == 2).astype(np.float64)
+    xp, zp = projected(T, F, None, 'straight', 0.26); del F
+    xt, zt = T['px'].astype(np.float64), T['pz'].astype(np.float64)
+    tr = np.isin(T['season'], (2023, 2024, 2025)) if final else np.isin(T['season'], (2023, 2024))
+    test_season = 2026 if final else 2025
+    rng = np.random.default_rng(11)
+    sig = lambda v: 1 / (1 + np.exp(-v))
+    def sample(rows, n=600000):
+        idx = np.flatnonzero(rows); return rng.choice(idx, min(len(idx), n), replace=False) if len(idx) > n else idx
+    ub_, bi_ = np.unique(T['batter'][tr], return_inverse=True)
+    side_of = dict(zip(ub_.tolist(), np.round(np.bincount(bi_, weights=T['stand_r'][tr]) / np.bincount(bi_)).astype(int).tolist()))
+    def own_maps(Bm, y, off, rows, lam, min_n):
+        maps = _hitter_maps(Bm, y, off, _groups(T['batter'], rows), lam, min_n)
+        Ss = {0: 0.0, 1: 0.0}; Nn = {0: 0, 1: 0}
+        for h, m in maps.items():
+            Ss[side_of[h]] = Ss[side_of[h]] + m; Nn[side_of[h]] += 1
+        return maps, {h: (Ss[side_of[h]] - m) / max(Nn[side_of[h]] - 1, 1) for h, m in maps.items()}
+    # chases: MATCHUP-05F's representation (held in the regression)
+    prop_s = swing_propensity(T)
+    Ls = location_block(xp, zp, T['stand_r'], T['strikes']); Bh = hitter_basis(xp, zp, T['stand_r'], T['strikes'])
+    Xs = np.hstack([Ls, (Bh[:, :-1] * np.isin(T['group'], (3, 4))[:, None]).astype(np.float32), (Bh[:, :-1] * (T['group'] == 5)[:, None]).astype(np.float32),
+                    control_block(T, prop_s), pitcher_propensity(T)[:, None].astype(np.float32)]); del Ls
+    i = sample(tr); off_s = fit_logistic(Xs[i], swing[i]).decision_function(Xs); del Xs
+    Bs = family_basis(Bh, T['group']); del Bh
+    maps_s, mbar_s = own_maps(Bs, swing, off_s, tr, 10.0, 300)
+    # whiffs: MATCHUP-03's representation on the true crossing
+    tw = dict(T); tw['call'] = np.where(whiff == 1, 1, np.where(swing == 1, 0, 3)); prop_w = swing_propensity(tw, 200.0); del tw
+    grp7 = np.zeros((len(swing), 7), np.float32); grp7[np.arange(len(swing)), np.clip(T['group'], 0, 6)] = 1
+    Lw = location_block(xt, zt, T['stand_r'], T['strikes']); nLw = Lw.shape[1]
+    Xw = np.hstack([Lw, grp7, hats(T['v0'].astype(np.float64), V_KNOTS), (T['strikes'] == 2)[:, None].astype(np.float32), prop_w[:, None].astype(np.float32),
+                    (T['stand_r'] == T['throw_r'])[:, None].astype(np.float32)])
+    i = sample(tr & (swing == 1)); m_w = fit_logistic(Xw[i], whiff[i]); off_w = m_w.decision_function(Xw); wLw = m_w.coef_[0][:nLw].astype(np.float64); del Xw, grp7
+    famc = np.column_stack([np.isin(T['group'], (0, 1, 2)), np.isin(T['group'], (3, 4)), np.isin(T['group'], (5,))]).astype(np.float64)
+    hz4 = (1.0, 2.0, 3.0, 4.0)
+    Bw = np.hstack([hitter_basis(xt, zt, T['stand_r'], T['strikes']), famc, hats(zt, hz4).astype(np.float64)])
+    maps_w, mbar_w = own_maps(Bw, whiff, off_w, tr & (swing == 1), 30.0, 250)
+    stage(f'maps {len(maps_s)} swing, {len(maps_w)} whiff')
+    have = np.asarray(sorted(set(maps_s) & set(maps_w)), dtype=np.int64)
+    te = (T['season'] == test_season) & (T['out7'] >= 0) & np.isin(T['batter'], have)
+    ix = np.flatnonzero(te)
+    p_l = sig(off_s[ix]); p_lw = sig(off_w[ix])
+    DC = np.zeros(len(ix)); DCm = np.zeros(len(ix)); DW = np.zeros(len(ix)); DWm = np.zeros(len(ix))
+    gb = _groups(T['batter'][ix], np.ones(len(ix), bool))
+    for h, rr in gb.items():
+        a = ix[rr]
+        ms_ = sig(off_s[a] + Bs[a] @ mbar_s[h]); mw_ = sig(off_w[a] + Bw[a] @ mbar_w[h])
+        DCm[rr] = (ms_ - p_l[rr]) * 100; DC[rr] = (sig(off_s[a] + Bs[a] @ maps_s[h]) - ms_) * 100
+        DWm[rr] = (mw_ - p_lw[rr]) * 100; DW[rr] = (sig(off_w[a] + Bw[a] @ maps_w[h]) - mw_) * 100
+    u_t = np.where(T['stand_r'][ix] == 1, xt[ix], -xt[ix]); zt_ = zt[ix]
+    e = np.maximum(np.maximum(np.abs(u_t) - ZONE_HALF, zt_ - ZONE_TOP), ZONE_BOT - zt_)
+    outside = e > 0
+    y = LW7[T['out7'][ix].astype(int)]
+    first = (T['pitch_no'] == 0) & (T['out7'] >= 0)
+    rv_all = LW7[np.clip(T['out7'], 0, 6).astype(int)]
+    def prior_rv(key):
+        nn, ss = _prior_by_day(np.r_[key[first], key[ix]].astype(np.int64), np.r_[T['day'][first], T['day'][ix]].astype(np.int64),
+                               np.r_[rv_all[first], np.zeros(len(ix))], np.r_[np.ones(int(first.sum()), bool), np.zeros(len(ix), bool)])
+        nn, ss = nn[int(first.sum()):], ss[int(first.sum()):]
+        lg_ = float(rv_all[first].mean()); return (ss + 200 * lg_) / (nn + 200)
+    rv_b, rv_p = prior_rv(T['batter']), prior_rv(T['pitcher'])
+    cnt = np.zeros((len(ix), 11)); cc = np.clip(T['balls'][ix], 0, 3) * 3 + np.clip(T['strikes'][ix], 0, 2)
+    for k in range(1, 12):
+        cnt[:, k - 1] = cc == k
+    gdum = np.zeros((len(ix), 6)); g_ = np.clip(T['group'][ix], 0, 6)
+    for k in range(1, 7):
+        gdum[:, k - 1] = g_ == k
+    base = np.column_stack([np.ones(len(ix)), cnt, gdum, p_l, np.log(p_l / (1 - p_l)), p_lw, np.log(p_lw / (1 - p_lw)), outside, hats(e, (-0.8, -0.4, -0.15, 0.0, 0.15, 0.4, 0.8, 1.5)),
+                            rv_b, rv_p, (T['stand_r'][ix] == T['throw_r'][ix]).astype(float), DCm * outside, DCm * ~outside, DC * outside, DC * ~outside, DWm * outside, DWm * ~outside])
+    ug, gi = np.unique(T['game'][ix], return_inverse=True)
+    rc = np.random.default_rng(5)
+    def fit(Xm, reps=None):
+        bb = np.linalg.lstsq(Xm, y, rcond=None)[0]
+        pk = Xm.shape[1]; XtX_ = np.zeros((len(ug), pk, pk))
+        for a_ in range(pk):
+            for c_ in range(a_, pk):
+                v_ = np.bincount(gi, weights=Xm[:, a_] * Xm[:, c_], minlength=len(ug)); XtX_[:, a_, c_] = v_; XtX_[:, c_, a_] = v_
+        Xty_ = np.column_stack([np.bincount(gi, weights=Xm[:, a_] * y, minlength=len(ug)) for a_ in range(pk)])
+        dr = []
+        for _ in range(int(reps or params.get('reps', 200))):
+            w_ = np.bincount(rc.integers(0, len(ug), len(ug)), minlength=len(ug)).astype(float)
+            dr.append(np.linalg.solve(np.tensordot(w_, XtX_, 1) + 1e-9 * np.eye(pk), w_ @ Xty_)[-2:])
+        dr = np.asarray(dr)
+        return bb, [[round(float(np.percentile(dr[:, j], q)), 6) for q in (2.5, 97.5)] for j in (0, 1)]
+    n_pa = max(int((T['pitch_no'][ix] == 0).sum()), 1)
+    per_pa = {'outside': float(outside.sum() / n_pa), 'inside': float((~outside).sum() / n_pa)}
+    chk = {}
+    bb, ci = fit(np.column_stack([base, DW * outside, DW * ~outside]))
+    chk['own_part'] = {'outside': round(float(bb[-2]), 6), 'inside': round(float(bb[-1]), 6), 'outside_interval': ci[0], 'inside_interval': ci[1],
+                       'chase_own_part_outside': round(float(bb[-6]), 6), 'shared_whiff_outside': round(float(bb[-4]), 6), 'sd_points_outside': round(float(DW[outside].std()), 3),
+                       'sd_points_inside': round(float(DW[~outside].std()), 3), 'sd_shared_outside': round(float(DWm[outside].std()), 3)}
+    by_side = {}
+    for h, rr in gb.items():
+        by_side.setdefault(side_of.get(h, int(np.round(T['stand_r'][ix[rr]].mean()))), []).append(h)
+    perm = {}
+    for hs in by_side.values():
+        sh = list(hs); rc.shuffle(sh); perm.update({h: sh[(k + 1) % len(sh)] for k, h in enumerate(hs)})
+    Dp = np.zeros(len(ix))
+    for h, rr in gb.items():
+        a = ix[rr]; Dp[rr] = (sig(off_w[a] + Bw[a] @ maps_w[perm[h]]) - sig(off_w[a] + Bw[a] @ mbar_w[h])) * 100
+    bb, ci = fit(np.column_stack([base, Dp * outside, Dp * ~outside]))
+    chk['placebo_other_hitter'] = {'outside': round(float(bb[-2]), 6), 'inside': round(float(bb[-1]), 6), 'outside_interval': ci[0], 'inside_interval': ci[1]}
+    _, ki = np.unique((T['batter'][ix].astype(np.int64) * 10 + np.clip(T['group'][ix], 0, 6)) * 2 + outside, return_inverse=True)
+    Dw_ = DW - (np.bincount(ki, weights=DW) / np.bincount(ki))[ki]
+    pa_i = np.unique(T['game'][ix].astype(np.int64) * 1000 + T['ab'][ix].astype(np.int64), return_inverse=True)[1]
+    loo = lambda v: np.bincount(pa_i, weights=v)[pa_i] - v
+    for nm, dd in (('neighbor_held', DW), ('within_hitter_neighbor_held', Dw_)):
+        bb, ci = fit(np.column_stack([base, loo(dd * outside), loo(dd * ~outside), dd * outside, dd * ~outside]))
+        chk[nm] = {'outside': round(float(bb[-2]), 6), 'inside': round(float(bb[-1]), 6), 'outside_interval': ci[0], 'inside_interval': ci[1]}
+    cgp = np.where(T['strikes'][ix] == 2, 2, np.where(T['balls'][ix] > T['strikes'][ix], 1, 0))
+    cx = np.clip(np.floor((u_t + 2.5) / 0.2), 0, 25).astype(np.int64); cz = np.clip(np.floor(zt_ / 0.2), 0, 30).astype(np.int64)
+    cell = ((((T['stand_r'][ix].astype(np.int64) * 3 + cgp) * 7 + np.clip(T['group'][ix], 0, 6)) * 26 + cx) * 31 + cz)
+    _, ci_ = np.unique(cell, return_inverse=True); nc = np.bincount(ci_).astype(float)
+    dm = lambda v: v - (np.bincount(ci_, weights=v) / nc)[ci_]
+    Xsp = np.column_stack([dm(c) for c in np.column_stack([base[:, 1:], DW * outside, DW * ~outside]).T])
+    bb = np.linalg.lstsq(Xsp, dm(y), rcond=None)[0]
+    chk['same_spot'] = {'outside': round(float(bb[-2]), 6), 'inside': round(float(bb[-1]), 6)}
+    res['coefficient_checks'] = chk
+    res['test'] = {'season': test_season, 'pitches': int(len(ix)), 'outside_pitches_per_pa': round(per_pa['outside'], 3), 'inside_pitches_per_pa': round(per_pa['inside'], 3)}
+    stage('coefficients')
+    # aiming by the own whiff part, within pitch group, scatter around where the ball arrives
+    sgm = float(params.get('sigma', 0.6)); K = 16
+    jit = np.random.default_rng(3).standard_normal((K, 2)); jit = (jit - jit.mean(0)) / jit.std(0)
+    pit = T['pitcher'][ix]; stand = T['stand_r'][ix]; strikes = T['strikes'][ix]; pg = np.clip(T['group'][ix], 0, 6)
+    acc = {'outside': [0.0, 0.0], 'inside': [0.0, 0.0]}
+    for pid, rr in _groups(pit, np.ones(len(ix), bool)).items():
+        hs_here = np.unique(T['batter'][ix[rr]])
+        for sd in (0, 1):
+            for c3 in (0, 1, 2):
+                for tg in range(7):
+                    for zn, zmask in (('outside', outside), ('inside', ~outside)):
+                        sel_ = (stand[rr] == sd) & (cgp[rr] == c3) & zmask[rr] & (pg[rr] == tg)
+                        pool = rr[sel_]
+                        if len(pool) < 30:
+                            continue
+                        if len(pool) > 300:
+                            pool = rng.choice(pool, 300, replace=False)
+                        a = ix[pool]
+                        third = np.searchsorted(np.percentile(p_lw[pool], [33.3, 66.7]), p_lw[pool])
+                        xj = (xt[a][:, None] + sgm * jit[None, :, 0]).ravel(); zj = (zt[a][:, None] + sgm * jit[None, :, 1]).ravel()
+                        sj = np.repeat(np.full(len(a), sd), K); kj = np.repeat(strikes[pool], K)
+                        offj = np.repeat(off_w[a] - Lw[a].astype(np.float64) @ wLw, K) + location_block(xj, zj, sj, kj).astype(np.float64) @ wLw
+                        Bj = np.hstack([hitter_basis(xj, zj, sj, kj), np.repeat(famc[a], K, axis=0), hats(zj, hz4).astype(np.float64)])
+                        bat_rr = T['batter'][ix[rr]][sel_]
+                        for h in hs_here:
+                            h = int(h)
+                            if h not in maps_w or side_of.get(h) is None:
+                                continue
+                            n_here = int(np.sum(bat_rr == h))
+                            if n_here == 0:
+                                continue
+                            dj = ((sig(offj + Bj @ maps_w[h]) - sig(offj + Bj @ mbar_w[h])) * 100).reshape(len(a), K).mean(1)
+                            parts = []
+                            for t3 in range(3):
+                                d3 = dj[third == t3]
+                                if len(d3) >= 3:
+                                    k3 = max(1, len(d3) // 3); parts.append(float(np.sort(d3)[::-1][:k3].mean() - d3.mean()))
+                            if parts:
+                                acc[zn][0] += n_here * float(np.mean(parts)); acc[zn][1] += n_here
+    aim = {}
+    for zn in ('outside', 'inside'):
+        g_ = acc[zn][0] / max(acc[zn][1], 1)
+        aim[zn] = {'gain_points': round(g_, 3)}
+        for nm in ('own_part', 'within_hitter_neighbor_held'):
+            c = chk[nm]
+            aim[zn]['runs_per_6200_' + nm] = round(c[zn] * g_ * per_pa[zn] * 6200, 1)
+            aim[zn]['runs_per_6200_' + nm + '_interval'] = [round(v * g_ * per_pa[zn] * 6200, 1) for v in c[zn + '_interval']]
+    res['aiming'] = aim
+    stage('aiming')
     return res
 
 
@@ -5273,6 +5478,8 @@ def main():
             receipt['results'] = exploit_study(T, params, stage)
         elif experiment == 'exploit2':
             receipt['results'] = exploit2_study(T, params, stage)
+        elif experiment == 'value_whiff':
+            receipt['results'] = value_whiff_study(T, params, stage)
         elif experiment == 'scout':
             receipt['results'] = scout_export(T, params, stage)
         elif experiment == 'value':
