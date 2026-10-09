@@ -1,0 +1,674 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "seq2",
+ "run_id": "37950526747",
+ "params": {
+  "experiment": "seq2",
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "train": [
+   2023,
+   2024
+  ],
+  "tests": [
+   2025,
+   2026
+  ],
+  "reps": 30
+ },
+ "started_at": "2026-10-09T15:17:02.892918+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 7.4
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 14.8
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 22.6
+  },
+  {
+   "stage": "features: 1032505 swings with a previous pitch, train 563368",
+   "at_seconds": 33.2
+  },
+  {
+   "stage": "coefficients",
+   "at_seconds": 545.4
+  },
+  {
+   "stage": "test 2025",
+   "at_seconds": 545.7
+  },
+  {
+   "stage": "test 2026",
+   "at_seconds": 545.8
+  },
+  {
+   "stage": "boosting",
+   "at_seconds": 563.1
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 484833
+ },
+ "results": {
+  "sequence_coefficients_logodds": {
+   "ball_x_repeat": [
+    0.1055,
+    0.0874,
+    0.128
+   ],
+   "ball_x_speed_change_per10": [
+    -0.1477,
+    -0.1707,
+    -0.1281
+   ],
+   "called_strike_x_repeat": [
+    0.1032,
+    0.0723,
+    0.129
+   ],
+   "called_strike_x_speed_change_per10": [
+    -0.0398,
+    -0.0767,
+    -0.0159
+   ],
+   "foul_x_repeat": [
+    -0.0117,
+    -0.0249,
+    0.0241
+   ],
+   "foul_x_speed_change_per10": [
+    -0.0448,
+    -0.0748,
+    -0.023
+   ],
+   "miss_x_repeat": [
+    0.2088,
+    0.157,
+    0.2566
+   ],
+   "miss_x_speed_change_per10": [
+    -0.1237,
+    -0.1746,
+    -0.0931
+   ]
+  },
+  "called_strike_minus_ball_repeat": [
+   -0.0023,
+   -0.0466,
+   0.0223
+  ],
+  "called_strike_minus_foul_repeat": [
+   0.1149,
+   0.0673,
+   0.1452
+  ],
+  "test": {
+   "2025": {
+    "swings": 279178,
+    "gain_nats_per_1000_swings": [
+     0.445,
+     0.352,
+     0.551
+    ],
+    "after_called_strike": {
+     "repeat_minus_change_observed_minus_predicted": 0.0118,
+     "swings_repeat": 27036,
+     "swings_change": 27922,
+     "bins": [
+      {
+       "bin": 0,
+       "kind": "repeat",
+       "n": 8134,
+       "observed": 0.0717,
+       "predicted_no_sequence": 0.0686
+      },
+      {
+       "bin": 0,
+       "kind": "change",
+       "n": 5606,
+       "observed": 0.0721,
+       "predicted_no_sequence": 0.0723
+      },
+      {
+       "bin": 1,
+       "kind": "repeat",
+       "n": 6966,
+       "observed": 0.1344,
+       "predicted_no_sequence": 0.1301
+      },
+      {
+       "bin": 1,
+       "kind": "change",
+       "n": 6773,
+       "observed": 0.1254,
+       "predicted_no_sequence": 0.1317
+      },
+      {
+       "bin": 2,
+       "kind": "repeat",
+       "n": 6320,
+       "observed": 0.2217,
+       "predicted_no_sequence": 0.2178
+      },
+      {
+       "bin": 2,
+       "kind": "change",
+       "n": 7419,
+       "observed": 0.2119,
+       "predicted_no_sequence": 0.2182
+      },
+      {
+       "bin": 3,
+       "kind": "repeat",
+       "n": 5616,
+       "observed": 0.5205,
+       "predicted_no_sequence": 0.5083
+      },
+      {
+       "bin": 3,
+       "kind": "change",
+       "n": 8124,
+       "observed": 0.5209,
+       "predicted_no_sequence": 0.5315
+      }
+     ]
+    },
+    "after_ball": {
+     "repeat_minus_change_observed_minus_predicted": 0.0208,
+     "swings_repeat": 57503,
+     "swings_change": 66100,
+     "bins": [
+      {
+       "bin": 0,
+       "kind": "repeat",
+       "n": 14817,
+       "observed": 0.0744,
+       "predicted_no_sequence": 0.0698
+      },
+      {
+       "bin": 0,
+       "kind": "change",
+       "n": 16084,
+       "observed": 0.0652,
+       "predicted_no_sequence": 0.0704
+      },
+      {
+       "bin": 1,
+       "kind": "repeat",
+       "n": 14419,
+       "observed": 0.1347,
+       "predicted_no_sequence": 0.1272
+      },
+      {
+       "bin": 1,
+       "kind": "change",
+       "n": 16482,
+       "observed": 0.1172,
+       "predicted_no_sequence": 0.127
+      },
+      {
+       "bin": 2,
+       "kind": "repeat",
+       "n": 14498,
+       "observed": 0.2142,
+       "predicted_no_sequence": 0.2044
+      },
+      {
+       "bin": 2,
+       "kind": "change",
+       "n": 16402,
+       "observed": 0.1939,
+       "predicted_no_sequence": 0.2043
+      },
+      {
+       "bin": 3,
+       "kind": "repeat",
+       "n": 13769,
+       "observed": 0.5058,
+       "predicted_no_sequence": 0.4743
+      },
+      {
+       "bin": 3,
+       "kind": "change",
+       "n": 17132,
+       "observed": 0.4715,
+       "predicted_no_sequence": 0.4769
+      }
+     ]
+    },
+    "after_foul": {
+     "repeat_minus_change_observed_minus_predicted": -0.0012,
+     "swings_repeat": 33336,
+     "swings_change": 41172,
+     "bins": [
+      {
+       "bin": 0,
+       "kind": "repeat",
+       "n": 9461,
+       "observed": 0.0653,
+       "predicted_no_sequence": 0.0638
+      },
+      {
+       "bin": 0,
+       "kind": "change",
+       "n": 9166,
+       "observed": 0.0693,
+       "predicted_no_sequence": 0.0666
+      },
+      {
+       "bin": 1,
+       "kind": "repeat",
+       "n": 8479,
+       "observed": 0.1214,
+       "predicted_no_sequence": 0.1187
+      },
+      {
+       "bin": 1,
+       "kind": "change",
+       "n": 10148,
+       "observed": 0.1141,
+       "predicted_no_sequence": 0.1194
+      },
+      {
+       "bin": 2,
+       "kind": "repeat",
+       "n": 7950,
+       "observed": 0.1947,
+       "predicted_no_sequence": 0.1966
+      },
+      {
+       "bin": 2,
+       "kind": "change",
+       "n": 10677,
+       "observed": 0.1947,
+       "predicted_no_sequence": 0.1975
+      },
+      {
+       "bin": 3,
+       "kind": "repeat",
+       "n": 7446,
+       "observed": 0.4624,
+       "predicted_no_sequence": 0.4594
+      },
+      {
+       "bin": 3,
+       "kind": "change",
+       "n": 11181,
+       "observed": 0.4943,
+       "predicted_no_sequence": 0.4796
+      }
+     ]
+    },
+    "after_miss": {
+     "repeat_minus_change_observed_minus_predicted": 0.0295,
+     "swings_repeat": 15811,
+     "swings_change": 10298,
+     "bins": [
+      {
+       "bin": 0,
+       "kind": "repeat",
+       "n": 3700,
+       "observed": 0.1146,
+       "predicted_no_sequence": 0.099
+      },
+      {
+       "bin": 0,
+       "kind": "change",
+       "n": 2828,
+       "observed": 0.0849,
+       "predicted_no_sequence": 0.0972
+      },
+      {
+       "bin": 1,
+       "kind": "repeat",
+       "n": 3924,
+       "observed": 0.1906,
+       "predicted_no_sequence": 0.1757
+      },
+      {
+       "bin": 1,
+       "kind": "change",
+       "n": 2603,
+       "observed": 0.1594,
+       "predicted_no_sequence": 0.175
+      },
+      {
+       "bin": 2,
+       "kind": "repeat",
+       "n": 4076,
+       "observed": 0.2878,
+       "predicted_no_sequence": 0.2832
+      },
+      {
+       "bin": 2,
+       "kind": "change",
+       "n": 2451,
+       "observed": 0.2587,
+       "predicted_no_sequence": 0.2834
+      },
+      {
+       "bin": 3,
+       "kind": "repeat",
+       "n": 4111,
+       "observed": 0.6135,
+       "predicted_no_sequence": 0.5984
+      },
+      {
+       "bin": 3,
+       "kind": "change",
+       "n": 2416,
+       "observed": 0.5749,
+       "predicted_no_sequence": 0.5914
+      }
+     ]
+    }
+   },
+   "2026": {
+    "swings": 189959,
+    "gain_nats_per_1000_swings": [
+     0.437,
+     0.328,
+     0.551
+    ],
+    "after_called_strike": {
+     "repeat_minus_change_observed_minus_predicted": 0.0157,
+     "swings_repeat": 18253,
+     "swings_change": 19182,
+     "bins": [
+      {
+       "bin": 0,
+       "kind": "repeat",
+       "n": 5593,
+       "observed": 0.0717,
+       "predicted_no_sequence": 0.0673
+      },
+      {
+       "bin": 0,
+       "kind": "change",
+       "n": 3766,
+       "observed": 0.0751,
+       "predicted_no_sequence": 0.0713
+      },
+      {
+       "bin": 1,
+       "kind": "repeat",
+       "n": 4704,
+       "observed": 0.1422,
+       "predicted_no_sequence": 0.1276
+      },
+      {
+       "bin": 1,
+       "kind": "change",
+       "n": 4655,
+       "observed": 0.1218,
+       "predicted_no_sequence": 0.1286
+      },
+      {
+       "bin": 2,
+       "kind": "repeat",
+       "n": 4279,
+       "observed": 0.2218,
+       "predicted_no_sequence": 0.2114
+      },
+      {
+       "bin": 2,
+       "kind": "change",
+       "n": 5079,
+       "observed": 0.2057,
+       "predicted_no_sequence": 0.2141
+      },
+      {
+       "bin": 3,
+       "kind": "repeat",
+       "n": 3677,
+       "observed": 0.532,
+       "predicted_no_sequence": 0.4922
+      },
+      {
+       "bin": 3,
+       "kind": "change",
+       "n": 5682,
+       "observed": 0.5248,
+       "predicted_no_sequence": 0.515
+      }
+     ]
+    },
+    "after_ball": {
+     "repeat_minus_change_observed_minus_predicted": 0.0165,
+     "swings_repeat": 38109,
+     "swings_change": 45584,
+     "bins": [
+      {
+       "bin": 0,
+       "kind": "repeat",
+       "n": 9867,
+       "observed": 0.0683,
+       "predicted_no_sequence": 0.0684
+      },
+      {
+       "bin": 0,
+       "kind": "change",
+       "n": 11057,
+       "observed": 0.0648,
+       "predicted_no_sequence": 0.0694
+      },
+      {
+       "bin": 1,
+       "kind": "repeat",
+       "n": 9513,
+       "observed": 0.1358,
+       "predicted_no_sequence": 0.124
+      },
+      {
+       "bin": 1,
+       "kind": "change",
+       "n": 11410,
+       "observed": 0.1133,
+       "predicted_no_sequence": 0.1239
+      },
+      {
+       "bin": 2,
+       "kind": "repeat",
+       "n": 9558,
+       "observed": 0.2108,
+       "predicted_no_sequence": 0.1959
+      },
+      {
+       "bin": 2,
+       "kind": "change",
+       "n": 11365,
+       "observed": 0.1982,
+       "predicted_no_sequence": 0.1968
+      },
+      {
+       "bin": 3,
+       "kind": "repeat",
+       "n": 9171,
+       "observed": 0.497,
+       "predicted_no_sequence": 0.455
+      },
+      {
+       "bin": 3,
+       "kind": "change",
+       "n": 11752,
+       "observed": 0.47,
+       "predicted_no_sequence": 0.4557
+      }
+     ]
+    },
+    "after_foul": {
+     "repeat_minus_change_observed_minus_predicted": -0.001,
+     "swings_repeat": 22217,
+     "swings_change": 28971,
+     "bins": [
+      {
+       "bin": 0,
+       "kind": "repeat",
+       "n": 6537,
+       "observed": 0.063,
+       "predicted_no_sequence": 0.0637
+      },
+      {
+       "bin": 0,
+       "kind": "change",
+       "n": 6260,
+       "observed": 0.0679,
+       "predicted_no_sequence": 0.066
+      },
+      {
+       "bin": 1,
+       "kind": "repeat",
+       "n": 5588,
+       "observed": 0.1204,
+       "predicted_no_sequence": 0.117
+      },
+      {
+       "bin": 1,
+       "kind": "change",
+       "n": 7209,
+       "observed": 0.1124,
+       "predicted_no_sequence": 0.1179
+      },
+      {
+       "bin": 2,
+       "kind": "repeat",
+       "n": 5233,
+       "observed": 0.194,
+       "predicted_no_sequence": 0.1904
+      },
+      {
+       "bin": 2,
+       "kind": "change",
+       "n": 7564,
+       "observed": 0.1861,
+       "predicted_no_sequence": 0.1914
+      },
+      {
+       "bin": 3,
+       "kind": "repeat",
+       "n": 4859,
+       "observed": 0.4569,
+       "predicted_no_sequence": 0.4416
+      },
+      {
+       "bin": 3,
+       "kind": "change",
+       "n": 7938,
+       "observed": 0.4906,
+       "predicted_no_sequence": 0.4609
+      }
+     ]
+    },
+    "after_miss": {
+     "repeat_minus_change_observed_minus_predicted": 0.0351,
+     "swings_repeat": 10563,
+     "swings_change": 7080,
+     "bins": [
+      {
+       "bin": 0,
+       "kind": "repeat",
+       "n": 2558,
+       "observed": 0.111,
+       "predicted_no_sequence": 0.097
+      },
+      {
+       "bin": 0,
+       "kind": "change",
+       "n": 1853,
+       "observed": 0.0934,
+       "predicted_no_sequence": 0.0953
+      },
+      {
+       "bin": 1,
+       "kind": "repeat",
+       "n": 2600,
+       "observed": 0.1988,
+       "predicted_no_sequence": 0.1712
+      },
+      {
+       "bin": 1,
+       "kind": "change",
+       "n": 1811,
+       "observed": 0.1518,
+       "predicted_no_sequence": 0.17
+      },
+      {
+       "bin": 2,
+       "kind": "repeat",
+       "n": 2653,
+       "observed": 0.2861,
+       "predicted_no_sequence": 0.2766
+      },
+      {
+       "bin": 2,
+       "kind": "change",
+       "n": 1757,
+       "observed": 0.251,
+       "predicted_no_sequence": 0.2782
+      },
+      {
+       "bin": 3,
+       "kind": "repeat",
+       "n": 2752,
+       "observed": 0.6185,
+       "predicted_no_sequence": 0.5918
+      },
+      {
+       "bin": 3,
+       "kind": "change",
+       "n": 1659,
+       "observed": 0.5618,
+       "predicted_no_sequence": 0.5774
+      }
+     ]
+    }
+   }
+  },
+  "launch_speed_coefficients_mph": {
+   "ball_x_repeat": -0.7,
+   "ball_x_speed_change_per10": 0.196,
+   "called_strike_x_repeat": -0.741,
+   "called_strike_x_speed_change_per10": 0.179,
+   "foul_x_repeat": -0.085,
+   "foul_x_speed_change_per10": 0.313,
+   "miss_x_repeat": -0.475,
+   "miss_x_speed_change_per10": 0.63
+  },
+  "launch_speed_balls_in_play_train": 206438,
+  "boosting": {
+   "2025": {
+    "sequence_terms_gain_nats_per_1000_swings": [
+     0.827,
+     0.595,
+     1.04
+    ]
+   },
+   "2026": {
+    "sequence_terms_gain_nats_per_1000_swings": [
+     0.849,
+     0.575,
+     1.112
+    ]
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T15:26:26.072487+00:00",
+ "seconds": 563.2
+}
