@@ -141,6 +141,39 @@ class BaseStateAdjust:
         return getattr(self.inner, item)
 
 
+GOOD_FOR_OFFENSE = np.array([l not in ('bip_out', 'strikeout') for l in SIM_LABELS])
+
+
+class DayForm:
+    """A day-form shock per batting team and world (DISP-01): in each simulated world each team's chances of reaching base
+    (walk, single, extra-base hit, home run, other reach) are multiplied by exp(e), e ~ N(-sigma^2/2, sigma^2) drawn once
+    per team per world, and the seven probabilities renormalized. Real team runs vary more from game to game than a
+    simulator with fixed rates gives (team-run SD 3.21 against 3.12 in 2026, 3.25 against 3.11 in 2025: starters' stuff,
+    lineups' days, conditions). new_world(seed) must be called before each world."""
+    def __init__(self, inner, sigma: float):
+        self.inner, self.sigma = inner, float(sigma)
+        self.e = {'away': 0.0, 'home': 0.0}
+        self.name = getattr(inner, 'name', 'provider')
+        self.validation_status = getattr(inner, 'validation_status', '')
+
+    def new_world(self, seed: int):
+        r = np.random.default_rng(np.random.SeedSequence([int(seed) & 0x7FFFFFFF, 0x44415946]))
+        self.e = {s: float(r.normal(0.0, self.sigma) - 0.5 * self.sigma ** 2) for s in ('away', 'home')}
+
+    def probabilities(self, ctx):
+        base = self.inner.probabilities(ctx)
+        e = self.e.get('home' if ctx.batting_side == 'home' else 'away', 0.0)
+        if not e:
+            return base
+        p = np.array([base[k] for k in SIM_LABELS], dtype=float)
+        p[GOOD_FOR_OFFENSE] *= np.exp(e)
+        p /= p.sum()
+        return dict(zip(SIM_LABELS, map(float, p)))
+
+    def __getattr__(self, item):
+        return getattr(self.inner, item)
+
+
 class TeamAdjust:
     """Multiplies each plate appearance's probabilities by the batting team's and the fielding team's offsets
     (brl_live/team_offsets.py). set_teams() takes {'away': log-multipliers while the away team bats, 'home': ...}."""

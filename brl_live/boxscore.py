@@ -345,6 +345,8 @@ class BoxAccumulator:
 # relief_exit: when a reliever comes out, from logistic hazards fitted on every real relief decision point (RELIEF-02;
 # research_lab.game_sim.relief_exit.ReliefExit, table brl_live/relief_exit.json from tools/brl_relief_exit.py). Off until
 # its replays are read; off, the hand-set rule decides (it pulls relievers mid-inning far more often than managers do).
+# day_form_sigma: a per-team, per-world shock on reaching base (DISP-01; brl_live.provider_adjust.DayForm) so team runs
+# vary from game to game as much as real ones do. 0 is off.
 # postseason_exit_offset: with relief_exit, log-odds added to the exit hazard in postseason games (POST-02): postseason
 # managers use 4.2 relievers a team-game against 3.3 in the regular season (POST-01); with the starter scale and the
 # fitted exits the engine gives 3.8, and +0.4 gives 4.15. The World Series keeps the regular hazard, as its starters do.
@@ -359,7 +361,7 @@ ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         'postseason_exp_scale':{'F':0.91,'D':0.91,'L':0.91,'W':1.0},
         'environment':True,'team_offsets':True,'steals':True,'transitions':True,'running_events':False,
         'reliever_choice':False,'leash':False,'base_state':False,'relief_exit':False,'relief_hooks':False,
-        'postseason_exit_offset':{'F':0.4,'D':0.4,'L':0.4,'W':0.0}}
+        'postseason_exit_offset':{'F':0.4,'D':0.4,'L':0.4,'W':0.0},'day_form_sigma':0.0}
 
 TRANSITIONS_PATH=Path(__file__).resolve().parent/'transitions.json'
 RUNNING_EVENTS_PATH=Path(__file__).resolve().parent/'running_events.json'
@@ -493,12 +495,19 @@ def adjusted_provider(provider,full_history,date,settings=ADJUST,environment=Non
         rt=load_role_table()
         provider=RoleAdjust(provider,role_multipliers(rt,date))
         label.append('starter and reliever levels through '+str(rt.get('estimated_through')))
+    sg=float(settings.get('day_form_sigma') or 0.0)
+    if sg>0:
+        from .provider_adjust import DayForm
+        provider=DayForm(provider,sg);label.append('day form (sd %.2f per team and world)'%sg)
+        hook=provider.new_world
     c=float(settings.get('talent_noise_c') or 0.0)
     if c>0:
         if full_history is None:raise Blocked('Talent noise needs the assembled PA history')
         counts_for,league=history_talent_inputs(full_history,date)
         provider=TalentNoise(provider,c,float(settings.get('player_prior_pa',180.0)),league,counts_for)
-        hook=provider.new_world;label.append('per-world talent noise c=%g'%c)
+        prev=hook;tn=provider.new_world
+        hook=(lambda seed,_a=prev,_b=tn:(_a(seed),_b(seed))) if prev else tn
+        label.append('per-world talent noise c=%g'%c)
     return provider,hook,label
 
 def run_box_worlds(engine,matchup,history,date,seeds,full_history=None,settings=ADJUST,environment=None,teams=None):

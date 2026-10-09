@@ -119,7 +119,7 @@ def bats_lookup(h: pd.DataFrame, cutoff: str) -> dict:
 
 def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates: list, *, model_path: Path, model_sha256: str,
                  history_path: Path, hazard_path: Path, n_sims: int, physics_table=None, offsets=None, rest=False, environment=None,
-                 team_offsets=None, age_layer=None, steals=None, win_states=False, starter_lines=False, role_offsets=None, real_pa_check=False, transitions=None, hitter_lines=False, running_events=None, reliever_choice=None, leash=None, base_state=None, relief_exit=None, relief_hooks=None, log=print) -> list[dict]:
+                 team_offsets=None, age_layer=None, steals=None, win_states=False, starter_lines=False, role_offsets=None, real_pa_check=False, transitions=None, hitter_lines=False, running_events=None, reliever_choice=None, leash=None, base_state=None, relief_exit=None, relief_hooks=None, day_form=0.0, log=print) -> list[dict]:
     """Simulate every game on the given dates; one record per game (win counts, run histograms, starter outs).
 
     environment: optional {game_pk: seven log-multipliers} (brl_live/environment.py); games without an entry are unadjusted.
@@ -145,6 +145,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
     reliever_choice: optional fitted choice of the entering reliever (research_lab.game_sim.reliever_choice.RelieverChoice).
     relief_exit: optional fitted reliever exits (research_lab.game_sim.relief_exit.ReliefExit).
     relief_hooks: optional team hook offsets for the fitted exits (brl_replay.relief_decisions.HookOffsets), prior dates.
+    day_form: sd of a per-team, per-world shock on reaching base (brl_live.provider_adjust.DayForm); 0 is off.
     base_state: optional base-state offsets (brl_live.provider_adjust.load_base_state): the stack shaped by bases and outs,
         applied after the team offsets.
     leash: optional (research_lab.game_sim.starter_leash.Leash, AppearanceIndex of regular-season appearances): each
@@ -169,6 +170,10 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
     if base_state is not None:
         from brl_live.provider_adjust import BaseStateAdjust
         provider = BaseStateAdjust(provider, base_state); chain.append(('base_state', provider))
+    dform = None
+    if day_form:
+        from brl_live.provider_adjust import DayForm
+        dform = provider = DayForm(provider, float(day_form)); chain.append(('day_form', provider))
     radj = None
     if role_offsets is not None:
         radj = provider = RoleAdjust(provider); chain.append(('role', radj))
@@ -341,6 +346,8 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                 hl = {(side, str(b.player_id)): {"any": np.zeros(4), "sum": np.zeros(3), "h_hist": np.zeros(6, int)}
                       for side in ("away", "home") for b in teams[side].lineup}
             for si, s in enumerate(seeds):
+                if dform is not None:
+                    dform.new_world(int(s))
                 r = sim.simulate(matchup, int(s), record_events=bool(win_states) or bool(hitter_lines))
                 if wt is not None:
                     box = {"score": {"home": r.home_score, "away": r.away_score},
