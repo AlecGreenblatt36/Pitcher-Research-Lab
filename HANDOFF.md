@@ -62,8 +62,8 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   VALUE-15: re-priced on batter zones the edge keeps 85 to 94% (about a tenth is zone height); 32 runs stand with
   that note. The private page says so.
 - CLV-03 done (ledger): with open-time lineups the line still moved toward our taught number 67.9% (2025) and
-  72.6% (2026); lineups explain 0.5 to 3 points. New public wording ready as scratch clv03_wording.patch
-  (git apply, run the tests, push); the permission check stopped the push, so it waits for Alec's explicit approval.
+  72.6% (2026); lineups explain 0.5 to 3 points. The public page states these open-time figures from October 9,
+  about 9 a.m. Eastern.
 - DISP-02 done (ledger): the centered day-form shock fixed the run spread (team-run SD toward actual in both seasons,
   mean total level) and P(over) pooled -0.00038 [-0.00074, -0.00005], but the pooled win Brier upper end is +0.00041
   (bound +0.0002), so day form stays off. A totals-only use would need its own registration.
@@ -87,7 +87,7 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   The first live runs on the new code (37926945664, 37927992799) succeeded and the phone check passed at 12:09 UTC
   (390 and 1440 px, no errors); October 9 has no games, so the first forecasts with the package come on the next game
   day: check their boxes (pitchers per team, starters' batters faced) then. Awaiting Alec only for publishing new
-  pages (the Matchup Physics page) and the CLV-03 public wording.
+  pages (the Matchup Physics page).
 
 Earlier (10:30 p.m. October 8):
 
