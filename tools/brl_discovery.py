@@ -2772,7 +2772,12 @@ def matchup_final(T: dict, params: dict, stage) -> dict:
         tr = T['season'] <= 2025; te = T['season'] == 2026
     rng = np.random.default_rng(11)
     preds = {}
-    for name, (x, z) in (('true', (T['px'].astype(np.float64), T['pz'].astype(np.float64))), ('percept', (xp, zp))):
+    reps_f = (('true', (T['px'].astype(np.float64), T['pz'].astype(np.float64))), ('percept', (xp, zp)))
+    zrel = bool(params.get('zone_relative'))              # MATCHUP-08F: batter zones (training rows' zone numbers) against the fixed zone
+    if zrel:
+        top_b, bot_b, _zs = batter_zones(T, tr); hgt = np.clip(top_b - bot_b, 1.2, 2.8)
+        reps_f = (('percept', (xp, zp)), ('percept_zone', (xp, 1.5 + 2.0 * (zp - bot_b) / hgt)))
+    for name, (x, z) in reps_f:
         X = np.hstack([location_block(x, z, T['stand_r'], T['strikes']), C])
         idx = np.flatnonzero(tr); idx = rng.choice(idx, min(len(idx), 600000), replace=False)
         off = fit_logistic(X[idx], swing[idx]).decision_function(X)
@@ -2785,12 +2790,18 @@ def matchup_final(T: dict, params: dict, stage) -> dict:
         preds[name] = (1 / (1 + np.exp(-off[te])), 1 / (1 + np.exp(-lo[te])), float(cov[te].mean()))
         stage('final ' + name)
     yt = swing[te]; g = T['game'][te]
-    lt, ht = logloss_vec(preds['true'][0], yt), logloss_vec(preds['true'][1], yt)
     lp, hp = logloss_vec(preds['percept'][0], yt), logloss_vec(preds['percept'][1], yt)
     cc = lambda d: [round(v * 1000, 3) for v in clustered_ci(d, g)]
-    res = {'test_decisions': int(te.sum()), 'covered': round(preds['percept'][2], 4),
-           'gain_nats_per_1000_decisions': {'percept_over_true_league': cc(lt - lp), 'percept_over_true_hitter_maps': cc(ht - hp),
-                                            'hitter_maps_over_league_true': cc(lt - ht), 'hitter_maps_over_league_percept': cc(lp - hp)}}
+    if zrel:
+        lz, hz = logloss_vec(preds['percept_zone'][0], yt), logloss_vec(preds['percept_zone'][1], yt)
+        res = {'test_decisions': int(te.sum()), 'covered': round(preds['percept'][2], 4),
+               'gain_nats_per_1000_decisions': {'zone_over_fixed_league': cc(lp - lz), 'zone_over_fixed_hitter_maps': cc(hp - hz),
+                                                'hitter_maps_over_league_fixed': cc(lp - hp), 'hitter_maps_over_league_zone': cc(lz - hz)}}
+    else:
+        lt, ht = logloss_vec(preds['true'][0], yt), logloss_vec(preds['true'][1], yt)
+        res = {'test_decisions': int(te.sum()), 'covered': round(preds['percept'][2], 4),
+               'gain_nats_per_1000_decisions': {'percept_over_true_league': cc(lt - lp), 'percept_over_true_hitter_maps': cc(ht - hp),
+                                                'hitter_maps_over_league_true': cc(lt - ht), 'hitter_maps_over_league_percept': cc(lp - hp)}}
     xt, zt = T['px'][te], T['pz'][te]
     u = np.where(T['stand_r'][te] == 1, xt, -xt)
     outside = (np.abs(u) > ZONE_HALF) | (zt > ZONE_TOP) | (zt < ZONE_BOT)
@@ -3779,6 +3790,12 @@ def value2_study(T: dict, params: dict, stage) -> dict:
     T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
     swing = ((T['call'] == 1) | (T['call'] == 2)).astype(np.float64)
     xp, zp = projected(T, F, None, 'straight', 0.26)
+    if params.get('zone_relative'):                       # VALUE-15: every height on each batter's own zone (MATCHUP-08)
+        tr_z = np.isin(T['season'], (2023, 2024, 2025)) if final else np.isin(T['season'], tuple(int(v) for v in params.get('map_seasons', (2023, 2024))))
+        top_b, bot_b, zsum = batter_zones(T, tr_z); hgt = np.clip(top_b - bot_b, 1.2, 2.8)
+        zn_ = lambda z_: 1.5 + 2.0 * (z_ - bot_b) / hgt
+        zp = zn_(zp); T = dict(T); T['pz'] = zn_(T['pz'].astype(np.float64)).astype(np.float32)
+        res['batter_zones'] = zsum
     LB = location_block(xp, zp, T['stand_r'], T['strikes']); nL = LB.shape[1]
     Bh = hitter_basis(xp, zp, T['stand_r'], T['strikes']); nh = Bh.shape[1] - 1
     lf = bool(params.get('league_family'))                # VALUE-07: the league model gets the maps' family-by-location part
