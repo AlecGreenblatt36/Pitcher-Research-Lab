@@ -1,0 +1,169 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "surprise",
+ "run_id": "37876755436",
+ "params": {
+  "experiment": "surprise",
+  "seasons": [
+   2023,
+   2024,
+   2025
+  ],
+  "gbm_iter": 300,
+  "train_n": 1200000,
+  "k_usage": 60
+ },
+ "started_at": "2026-10-09T02:58:28.924513+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 9.4
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 18.4
+  },
+  {
+   "stage": "usage priors",
+   "at_seconds": 30.0
+  },
+  {
+   "stage": "surprise swing",
+   "at_seconds": 85.8
+  },
+  {
+   "stage": "surprise whiff_on_swing",
+   "at_seconds": 112.2
+  },
+  {
+   "stage": "surprise called_strike_on_take",
+   "at_seconds": 134.7
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985
+ },
+ "results": {
+  "surprise": {
+   "mean_bits": 1.928,
+   "sd_bits": 0.905,
+   "entropy_mean_bits": 2.056
+  },
+  "models": {
+   "swing": {
+    "test_rows": 705553,
+    "gain_nats_per_1000": [
+     -0.291,
+     -0.426,
+     -0.16
+    ],
+    "by_surprise_quintile": [
+     {
+      "surprise_bits": 0.913,
+      "observed": 0.4731,
+      "predicted_without": 0.477
+     },
+     {
+      "surprise_bits": 1.342,
+      "observed": 0.4925,
+      "predicted_without": 0.4993
+     },
+     {
+      "surprise_bits": 1.7,
+      "observed": 0.4888,
+      "predicted_without": 0.4979
+     },
+     {
+      "surprise_bits": 2.213,
+      "observed": 0.4704,
+      "predicted_without": 0.4804
+     },
+     {
+      "surprise_bits": 3.421,
+      "observed": 0.4663,
+      "predicted_without": 0.4796
+     }
+    ]
+   },
+   "whiff_on_swing": {
+    "test_rows": 337416,
+    "gain_nats_per_1000": [
+     -0.439,
+     -0.647,
+     -0.226
+    ],
+    "by_surprise_quintile": [
+     {
+      "surprise_bits": 0.918,
+      "observed": 0.2149,
+      "predicted_without": 0.2224
+     },
+     {
+      "surprise_bits": 1.343,
+      "observed": 0.2277,
+      "predicted_without": 0.2319
+     },
+     {
+      "surprise_bits": 1.686,
+      "observed": 0.2338,
+      "predicted_without": 0.2366
+     },
+     {
+      "surprise_bits": 2.19,
+      "observed": 0.2445,
+      "predicted_without": 0.2432
+     },
+     {
+      "surprise_bits": 3.397,
+      "observed": 0.235,
+      "predicted_without": 0.2349
+     }
+    ]
+   },
+   "called_strike_on_take": {
+    "test_rows": 368137,
+    "gain_nats_per_1000": [
+     -0.877,
+     -1.033,
+     -0.715
+    ],
+    "by_surprise_quintile": [
+     {
+      "surprise_bits": 0.909,
+      "observed": 0.3666,
+      "predicted_without": 0.3787
+     },
+     {
+      "surprise_bits": 1.342,
+      "observed": 0.3055,
+      "predicted_without": 0.3173
+     },
+     {
+      "surprise_bits": 1.714,
+      "observed": 0.2976,
+      "predicted_without": 0.3119
+     },
+     {
+      "surprise_bits": 2.234,
+      "observed": 0.3014,
+      "predicted_without": 0.3147
+     },
+     {
+      "surprise_bits": 3.443,
+      "observed": 0.2955,
+      "predicted_without": 0.3105
+     }
+    ]
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T03:00:43.639726+00:00",
+ "seconds": 134.7
+}
