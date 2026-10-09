@@ -1,0 +1,176 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "exposure",
+ "run_id": "37877474263",
+ "params": {
+  "experiment": "exposure",
+  "seasons": [
+   2023,
+   2024,
+   2025
+  ],
+  "gbm_iter": 300,
+  "train_n": 1200000
+ },
+ "started_at": "2026-10-09T03:16:57.150369+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 8.8
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 16.5
+  },
+  {
+   "stage": "exposure whiff_on_swing",
+   "at_seconds": 56.8
+  },
+  {
+   "stage": "exposure chase",
+   "at_seconds": 90.2
+  },
+  {
+   "stage": "exposure contact",
+   "at_seconds": 95.2
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985
+ },
+ "results": {
+  "exposure": {
+   "same_type_mean": 1.322,
+   "same_type_p90": 3.0,
+   "other_pitcher_same_type_mean": 0.938
+  },
+  "models": {
+   "whiff_on_swing": {
+    "test_rows": 336846,
+    "gain_nats_per_1000": [
+     -0.063,
+     -0.233,
+     0.105
+    ],
+    "effect_of_3_more_same_type_from_this_pitcher_points": -0.741,
+    "effect_of_3_more_same_type_from_other_pitchers_points": -0.626,
+    "by_same_type_exposure": [
+     {
+      "seen": 0,
+      "observed": 0.2534,
+      "predicted_without": 0.2554,
+      "rows": 117975
+     },
+     {
+      "seen": 1,
+      "observed": 0.2386,
+      "predicted_without": 0.2388,
+      "rows": 91217
+     },
+     {
+      "seen": 2,
+      "observed": 0.2215,
+      "predicted_without": 0.2234,
+      "rows": 56768
+     },
+     {
+      "seen": 3,
+      "observed": 0.2016,
+      "predicted_without": 0.2082,
+      "rows": 32533
+     },
+     {
+      "seen": 5,
+      "observed": 0.187,
+      "predicted_without": 0.1903,
+      "rows": 9492
+     },
+     {
+      "seen": 7,
+      "observed": 0.1592,
+      "predicted_without": 0.1765,
+      "rows": 2770
+     },
+     {
+      "seen": 9,
+      "observed": 0.1661,
+      "predicted_without": 0.1649,
+      "rows": 1475
+     }
+    ]
+   },
+   "chase": {
+    "test_rows": 347997,
+    "gain_nats_per_1000": [
+     -0.079,
+     -0.256,
+     0.1
+    ],
+    "effect_of_3_more_same_type_from_this_pitcher_points": 0.961,
+    "effect_of_3_more_same_type_from_other_pitchers_points": 0.631,
+    "by_same_type_exposure": [
+     {
+      "seen": 0,
+      "observed": 0.2378,
+      "predicted_without": 0.2491,
+      "rows": 145356
+     },
+     {
+      "seen": 1,
+      "observed": 0.3047,
+      "predicted_without": 0.3131,
+      "rows": 91287
+     },
+     {
+      "seen": 2,
+      "observed": 0.3326,
+      "predicted_without": 0.3367,
+      "rows": 52373
+     },
+     {
+      "seen": 3,
+      "observed": 0.3329,
+      "predicted_without": 0.3409,
+      "rows": 28263
+     },
+     {
+      "seen": 5,
+      "observed": 0.3332,
+      "predicted_without": 0.3372,
+      "rows": 7647
+     },
+     {
+      "seen": 7,
+      "observed": 0.3324,
+      "predicted_without": 0.3425,
+      "rows": 2052
+     },
+     {
+      "seen": 9,
+      "observed": 0.3631,
+      "predicted_without": 0.3729,
+      "rows": 986
+     }
+    ]
+   },
+   "launch_speed_on_contact": {
+    "test_rows": 124100,
+    "mse_reduction": [
+     0.1869,
+     0.102,
+     0.27
+    ],
+    "effect_of_3_more_same_type_mph": 0.199
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T03:18:32.357799+00:00",
+ "seconds": 95.2
+}
