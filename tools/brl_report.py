@@ -313,7 +313,8 @@ class Fitted:
             lam_j = np.where(e_j > 0, OWN_PART_CALIBRATION['outside'], OWN_PART_CALIBRATION['inside'])
             bj_ = np.repeat(T['balls'][r], K)
             blk = self.PM.blocks_at(xj, zj, xtj, ztj, sj, np.repeat(T['throw_r'][r], K), gj, np.repeat(T['v0'][r].astype(np.float64), K), bj_, kj)
-            struct = (blk, bj_, kj, lam_j, e_j > 0)
+            land = np.argmin(np.abs(uj[:, None] - GU[None, :]), 1) + len(GU) * np.argmin(np.abs(ztj[:, None] - GZ[None, :]), 1)   # where each scattered pitch lands
+            struct = (blk, bj_, kj, lam_j, e_j > 0, land)
         self.pools[key] = (offj, D.family_basis(Bj0, gj), third, cell, len(r), n_all, struct)
         return self.pools[key]
 
@@ -338,6 +339,7 @@ class Fitted:
         tot = 0.0; wsum = 0.0; tot_runs = 0.0; cells = {f_: np.zeros(len(GU) * len(GZ)) for f_, *_ in FAMILIES}
         # where each chosen spot's value comes from: the scattered pitches that stay outside (his extra chases) or land inside (strikes he takes)
         v_out = {f_: np.zeros(len(GU) * len(GZ)) for f_, *_ in FAMILIES}; v_in = {f_: np.zeros(len(GU) * len(GZ)) for f_, *_ in FAMILIES}
+        land_n = {f_: np.zeros(len(GU) * len(GZ)) for f_, *_ in FAMILIES}; land_v = {f_: np.zeros(len(GU) * len(GZ)) for f_, *_ in FAMILIES}
         by_count = {}
 
         def labeled(c_, vo_, vi_):
@@ -356,7 +358,7 @@ class Fitted:
                 if struct is not None:
                     # VALUE-18: the structural value of each aim, runs per pitch (negative is good for the pitcher): the calibrated own part
                     # times the value if the hitter swings minus if he takes, averaged over the scatter
-                    blk, bj_, kj, lam_j, out_j = struct
+                    blk, bj_, kj, lam_j, out_j, land = struct
                     tau_j = 0.01 * self.PM.swing_minus_take(blk, h, p_scalar, bj_, kj, self.cv)
                     vjk = dev_jk * lam_j * tau_j
                     vj = vjk.reshape(npool, self.K).mean(1)
@@ -372,6 +374,9 @@ class Fitted:
                             gains_runs.append(float(vj[best].mean() - vj[sel].mean()))
                             np.add.at(v_out[famof(tg)], cell[best], n_all * vo_j[best]); np.add.at(v_in[famof(tg)], cell[best], n_all * vi_j[best])
                             np.add.at(cv_out[famof(tg)], cell[best], n_all * vo_j[best]); np.add.at(cv_in[famof(tg)], cell[best], n_all * vi_j[best])
+                            # the landing cloud of the chosen aims: where the scattered pitches land and what each landing cell costs
+                            pts = (best[:, None] * self.K + np.arange(self.K)[None, :]).ravel()
+                            np.add.at(land_n[famof(tg)], land[pts], n_all / len(pts)); np.add.at(land_v[famof(tg)], land[pts], n_all * vjk[pts] / len(pts))
                         np.add.at(cells[famof(tg)], cell[best], n_all / len(rp)); np.add.at(ccells[famof(tg)], cell[best], n_all)
                 if gains:
                     tot += n_all * float(np.mean(gains)); wsum += n_all; ct += n_all * float(np.mean(gains)); cw += n_all
@@ -390,6 +395,21 @@ class Fitted:
                           'by_count': by_count, 'pricing': 'structural' if self.PM is not None else 'regression'}
             if self.PM is not None:
                 out['aim']['runs_per_100_pa_regression'] = round(float(B_OUT_FAMILY * g_ * N_OUT) * 100, 2)
+                # the dangerous miss, by family: among where the chosen aims' scattered pitches land, the cell that gives the hitter the most
+                # (its share of landings and its cost per 100 plate appearances), and the landing cloud itself (share by cell)
+                dm = {}
+                for f_ in land_n:
+                    tot_f = float(land_n[f_].sum())
+                    if tot_f <= 0:
+                        continue
+                    k_ = int(np.argmax(land_v[f_]))
+                    if land_v[f_][k_] <= 0:
+                        continue
+                    dm[f_] = {'cell': [float(GU[k_ % len(GU)]), float(GZ[k_ // len(GU)])], 'share': round(float(land_n[f_][k_] / tot_f), 3),
+                              'runs_per_100_pa': round(float(land_v[f_][k_] / tot_f * N_OUT) * 100, 2),
+                              'cloud': [round(float(v_ / tot_f), 3) for v_ in land_n[f_]]}
+                if dm:
+                    out['aim']['dangerous_miss'] = dm
         # miss spots (unpriced): among the pitcher's two-strike pitches to this side, where this hitter's own whiff map
         # (his map minus the same-side mean) says he misses most, by family
         if wmap is not None and h in self.mbar_w:
