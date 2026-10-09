@@ -3880,6 +3880,26 @@ def value2_study(T: dict, params: dict, stage) -> dict:
     if specific:
         res['coefficients'].update({'deviation': 'own map minus the same-side mean map', 'shared_part_outside': round(float(b[-4]), 6), 'shared_part_inside': round(float(b[-3]), 6),
                                     'sd_points_shared_outside': round(float(Dmean[outside].std()), 3), 'sd_points_own_part_outside': round(float(D[outside].std()), 3)})
+    if params.get('bands'):
+        # VALUE-16: the outside run value per point by how far outside the zone the pitch crossed (inches), same regression
+        e_in = e * 12.0; bands_ = [(0.0, 1.0), (1.0, 2.0), (2.0, 4.0), (4.0, 99.0)]
+        Bc = [D * outside * ((e_in >= lo_) & (e_in < hi_)) for lo_, hi_ in bands_]
+        Xb = np.column_stack([Xd[:, :-2], D * ~outside] + Bc); pb = Xb.shape[1]; nb = len(bands_)
+        bb = np.linalg.lstsq(Xb, y, rcond=None)[0][-nb:]
+        XtXb = np.zeros((len(ug), pb, pb))
+        for a_ in range(pb):
+            for c_ in range(a_, pb):
+                v_ = np.bincount(gi, weights=Xb[:, a_] * Xb[:, c_], minlength=len(ug)); XtXb[:, a_, c_] = v_; XtXb[:, c_, a_] = v_
+        Xtyb = np.column_stack([np.bincount(gi, weights=Xb[:, a_] * y, minlength=len(ug)) for a_ in range(pb)])
+        rb_ = np.random.default_rng(17); dr_ = []
+        for _ in range(int(params.get('reps', 200))):
+            w_ = np.bincount(rb_.integers(0, len(ug), len(ug)), minlength=len(ug)).astype(float)
+            dr_.append(np.linalg.solve(np.tensordot(w_, XtXb, 1) + 1e-9 * np.eye(pb), w_ @ Xtyb)[-nb:])
+        dr_ = np.asarray(dr_)
+        res['bands'] = {f'{lo_:g}_to_{hi_:g}_in': {'pitches': int((outside & (e_in >= lo_) & (e_in < hi_)).sum()),
+                                                   'own_part_sd_points': round(float(D[outside & (e_in >= lo_) & (e_in < hi_)].std()), 3),
+                                                   'runs_per_point': [round(float(bb[k_]), 6), round(float(np.percentile(dr_[:, k_], 2.5)), 6), round(float(np.percentile(dr_[:, k_], 97.5)), 6)]}
+                        for k_, (lo_, hi_) in enumerate(bands_)}
     if params.get('checks'):
         # attempts to break the coefficient (own random stream, so the aiming below is unchanged): (1) placebo, each
         # hitter's pitches read through another hitter's map of the same side, must show nothing; (2) only the variation
