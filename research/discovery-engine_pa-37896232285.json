@@ -1,0 +1,279 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "engine_pa",
+ "run_id": "37896232285",
+ "params": {
+  "experiment": "engine_pa",
+  "seasons": [
+   2023,
+   2024,
+   2025
+  ],
+  "reps": 100,
+  "family": true
+ },
+ "started_at": "2026-10-09T06:57:10.319183+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 8.3
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 16.7
+  },
+  {
+   "stage": "swing maps 604",
+   "at_seconds": 60.9
+  },
+  {
+   "stage": "whiff maps 536",
+   "at_seconds": 83.8
+  },
+  {
+   "stage": "called strikes and fouls",
+   "at_seconds": 112.9
+  },
+  {
+   "stage": "pairs 50727",
+   "at_seconds": 113.2
+  },
+  {
+   "stage": "chains",
+   "at_seconds": 128.3
+  },
+  {
+   "stage": "outcome strikeout",
+   "at_seconds": 223.5
+  },
+  {
+   "stage": "outcome walk",
+   "at_seconds": 326.6
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985
+ },
+ "results": {
+  "rows": {
+   "plate_appearances": 182484,
+   "with_engine": 111535,
+   "pairs": 50727,
+   "engine_k_dev_sd_points": 2.171,
+   "engine_bb_dev_sd_points": 1.123,
+   "chain_level_check": {
+    "league_chain_k": 0.2381,
+    "observed_k": 0.222,
+    "league_chain_bb": 0.0769,
+    "observed_bb": 0.0899
+   }
+  },
+  "outcomes": {
+   "strikeout": {
+    "sd_points": {
+     "raw": 2.171,
+     "hitter_part": 1.789,
+     "pitcher_part": 0.645,
+     "pair_part": 1.067,
+     "pair_chain": 0.241,
+     "pair_shape": 1.044
+    },
+    "gain_nats_per_1000_pa": {
+     "pair_over_levels": [
+      0.013,
+      -0.044,
+      0.069
+     ],
+     "shape_over_levels_and_chain": [
+      0.007,
+      -0.045,
+      0.058
+     ],
+     "levels_over_rates": [
+      0.011,
+      -0.055,
+      0.077
+     ],
+     "raw_over_rates": [
+      0.055,
+      -0.011,
+      0.115
+     ]
+    },
+    "coef_per_point": {
+     "hitter_part": [
+      0.0081,
+      -0.0027,
+      0.0182
+     ],
+     "pitcher_part": [
+      0.0293,
+      0.0059,
+      0.0494
+     ],
+     "pair_part": [
+      0.019,
+      0.0039,
+      0.0305
+     ]
+    },
+    "coef_split_per_point": {
+     "pair_chain": [
+      0.0476,
+      -0.0112,
+      0.1073
+     ],
+     "pair_shape": [
+      0.0176,
+      0.0062,
+      0.0284
+     ]
+    },
+    "coef_raw_per_point": [
+     0.0143,
+     0.0077,
+     0.0213
+    ],
+    "by_pair_quintile": [
+     {
+      "pair_points": -1.443,
+      "observed": 0.2213,
+      "levels_model": 0.2249,
+      "pa": 22307
+     },
+     {
+      "pair_points": -0.511,
+      "observed": 0.219,
+      "levels_model": 0.2215,
+      "pa": 22315
+     },
+     {
+      "pair_points": -0.014,
+      "observed": 0.2144,
+      "levels_model": 0.2184,
+      "pa": 22299
+     },
+     {
+      "pair_points": 0.488,
+      "observed": 0.2258,
+      "levels_model": 0.2192,
+      "pa": 22310
+     },
+     {
+      "pair_points": 1.48,
+      "observed": 0.2295,
+      "levels_model": 0.226,
+      "pa": 22304
+     }
+    ]
+   },
+   "walk": {
+    "sd_points": {
+     "raw": 1.123,
+     "hitter_part": 0.821,
+     "pitcher_part": 0.213,
+     "pair_part": 0.737,
+     "pair_chain": 0.206,
+     "pair_shape": 0.717
+    },
+    "gain_nats_per_1000_pa": {
+     "pair_over_levels": [
+      0.063,
+      -0.019,
+      0.132
+     ],
+     "shape_over_levels_and_chain": [
+      0.076,
+      -0.003,
+      0.149
+     ],
+     "levels_over_rates": [
+      0.011,
+      -0.035,
+      0.064
+     ],
+     "raw_over_rates": [
+      0.086,
+      -0.001,
+      0.159
+     ]
+    },
+    "coef_per_point": {
+     "hitter_part": [
+      0.0321,
+      0.0069,
+      0.0574
+     ],
+     "pitcher_part": [
+      -0.0515,
+      -0.159,
+      0.0343
+     ],
+     "pair_part": [
+      0.0602,
+      0.0371,
+      0.0878
+     ]
+    },
+    "coef_split_per_point": {
+     "pair_chain": [
+      0.028,
+      -0.0754,
+      0.118
+     ],
+     "pair_shape": [
+      0.0631,
+      0.0409,
+      0.0847
+     ]
+    },
+    "coef_raw_per_point": [
+     0.0428,
+     0.0246,
+     0.0673
+    ],
+    "by_pair_quintile": [
+     {
+      "pair_points": -0.976,
+      "observed": 0.0904,
+      "levels_model": 0.094,
+      "pa": 22308
+     },
+     {
+      "pair_points": -0.326,
+      "observed": 0.0871,
+      "levels_model": 0.0882,
+      "pa": 22308
+     },
+     {
+      "pair_points": -0.007,
+      "observed": 0.0862,
+      "levels_model": 0.0873,
+      "pa": 22307
+     },
+     {
+      "pair_points": 0.305,
+      "observed": 0.0857,
+      "levels_model": 0.0864,
+      "pa": 22306
+     },
+     {
+      "pair_points": 1.004,
+      "observed": 0.1,
+      "levels_model": 0.0934,
+      "pa": 22306
+     }
+    ]
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T07:02:36.990793+00:00",
+ "seconds": 326.7
+}
