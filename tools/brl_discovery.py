@@ -2593,6 +2593,44 @@ def matchup_family(T: dict, params: dict, stage) -> dict:
                   ('offspeed_outside', outside & (T['group'][te] == 5)), ('all_inside', ~outside)):
         res.setdefault('family_over_location_by_subset', {})[nm] = {'decisions': int(m.sum()),
                                                                    'gain': [round(v * 1000, 3) for v in clustered_ci((ll_a - ll_b)[m], games[m])] if m.sum() > 1000 else None}
+    if params.get('by_release'):
+        # PERCEPT-01: can hitters answer pitch families differently only when they can tell them apart early? Each
+        # pitcher's separation between his fastballs (groups 0-2) and breaking balls (3-4) at release (x0, z0 at 50 ft
+        # and extension), in units of his own within-family scatter (training pitches, at least 60 of each); the
+        # family part's gain by thirds of that separation, and the difference between the outer thirds
+        rel = {}
+        trp = _groups(T['pitcher'], tr)
+        fbm = np.isin(T['group'], (0, 1, 2)); brm = np.isin(T['group'], (3, 4))
+        for pid, r in trp.items():
+            a = r[fbm[r]]; b = r[brm[r]]
+            if len(a) < 60 or len(b) < 60:
+                continue
+            A = np.column_stack([T['x0'][a], T['z0'][a], T['ext'][a]]).astype(np.float64); Bq = np.column_stack([T['x0'][b], T['z0'][b], T['ext'][b]]).astype(np.float64)
+            ok_a = np.isfinite(A).all(1); ok_b = np.isfinite(Bq).all(1)
+            if ok_a.sum() < 60 or ok_b.sum() < 60:
+                continue
+            A, Bq = A[ok_a], Bq[ok_b]
+            sd = np.sqrt((A.var(0) * len(A) + Bq.var(0) * len(Bq)) / (len(A) + len(Bq))) + 1e-6
+            rel[int(pid)] = float(np.sqrt(np.sum(((A.mean(0) - Bq.mean(0)) / sd) ** 2)))
+        pt = T['pitcher'][te]
+        d_ = np.array([rel.get(int(p_), np.nan) for p_ in pt])
+        ok = np.isfinite(d_)
+        cut = np.nanpercentile(np.array(list(rel.values())), [33.3, 66.7]) if rel else [0, 0]
+        third = np.searchsorted(cut, d_)
+        bres = {'pitchers_measured': len(rel), 'cuts': [round(float(c), 3) for c in cut]}
+        for t3, nm in ((0, 'tight_release'), (1, 'middle'), (2, 'separated_release')):
+            m = ok & (third == t3)
+            if m.sum() < 1000:
+                continue
+            g_ = {'decisions': int(m.sum()), 'family_over_location': [round(v * 1000, 3) for v in clustered_ci((ll_a - ll_b)[m], games[m])],
+                  'family_over_location_breaking_outside': [round(v * 1000, 3) for v in clustered_ci((ll_a - ll_b)[m & outside & np.isin(T['group'][te], (3, 4))], games[m & outside & np.isin(T['group'][te], (3, 4))])]}
+            if lf:
+                g_['league_family_over_plain'] = [round(v * 1000, 3) for v in clustered_ci((logloss_vec(1 / (1 + np.exp(-off_plain[te])), yt) - ll_l)[m], games[m])]
+            bres[nm] = g_
+        lo_, hi_ = ok & (third == 0), ok & (third == 2)
+        dd = np.where(hi_, ll_a - ll_b, 0.0) / max(hi_.mean(), 1e-9) - np.where(lo_, ll_a - ll_b, 0.0) / max(lo_.mean(), 1e-9)
+        bres['separated_minus_tight_family_gain'] = [round(v * 1000, 3) for v in clustered_ci(dd, games)]
+        res['by_release_separation'] = bres
     return res
 
 
