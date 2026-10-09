@@ -1,0 +1,137 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "value2",
+ "run_id": "37925411935",
+ "params": {
+  "experiment": "value2",
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "sigmas": [
+   0.6
+  ],
+  "within_type": true,
+  "specific": true,
+  "reps": 150,
+  "bands": true,
+  "test_season": 2026,
+  "map_seasons": [
+   2023,
+   2024,
+   2025
+  ]
+ },
+ "started_at": "2026-10-09T11:43:01.076509+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 9.1
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 18.1
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 28.0
+  },
+  {
+   "stage": "maps 711",
+   "at_seconds": 60.8
+  },
+  {
+   "stage": "coefficients",
+   "at_seconds": 70.6
+  },
+  {
+   "stage": "aiming with scatter",
+   "at_seconds": 87.3
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 484833
+ },
+ "results": {
+  "coefficients": {
+   "test_season": 2026,
+   "test_pitches": 425080,
+   "runs_per_point_outside": -0.000581,
+   "runs_per_point_inside": 0.00043,
+   "outside_pitches_per_pa": 1.864,
+   "inside_pitches_per_pa": 2.04,
+   "deviation": "own map minus the same-side mean map",
+   "shared_part_outside": -0.001678,
+   "shared_part_inside": 0.000834,
+   "sd_points_shared_outside": 2.677,
+   "sd_points_own_part_outside": 7.54
+  },
+  "bands": {
+   "0_to_1_in": {
+    "pitches": 24317,
+    "own_part_sd_points": 7.956,
+    "runs_per_point": [
+     -0.000839,
+     -0.001283,
+     -0.000228
+    ]
+   },
+   "1_to_2_in": {
+    "pitches": 22866,
+    "own_part_sd_points": 8.049,
+    "runs_per_point": [
+     -0.000648,
+     -0.001287,
+     -2.8e-05
+    ]
+   },
+   "2_to_4_in": {
+    "pitches": 42149,
+    "own_part_sd_points": 8.287,
+    "runs_per_point": [
+     -9.2e-05,
+     -0.000619,
+     0.000261
+    ]
+   },
+   "4_to_99_in": {
+    "pitches": 113654,
+    "own_part_sd_points": 7.034,
+    "runs_per_point": [
+     -0.000743,
+     -0.001091,
+     -0.000401
+    ]
+   }
+  },
+  "by_command_sd_ft": {
+   "0.6": {
+    "outside_gain_points": 2.955,
+    "inside_gain_points": -2.917,
+    "runs_per_6200_outside_only_interval": [
+     -27.7,
+     -11.3
+    ],
+    "runs_per_6200_both_interval": [
+     -47.3,
+     -23.7
+    ],
+    "runs_per_6200_outside_only": -19.8,
+    "runs_per_6200_inside_only": -15.9,
+    "runs_per_6200_both": -35.7
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T11:44:28.368495+00:00",
+ "seconds": 87.3
+}
