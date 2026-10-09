@@ -124,7 +124,8 @@ def put_text(repo, token, path, text, branch, message):
 # ---------------------------------------------------------------- pitch table
 SUBTYPES = ('FF', 'FA', 'SI', 'FC', 'SL', 'ST', 'SV', 'CU', 'KC', 'CS', 'CH', 'FS', 'FO', 'SC', 'KN', 'EP')
 FIELDS = ('season', 'day', 'game', 'pitcher', 'batter', 'stand_r', 'throw_r', 'inning', 'group', 'sub', 'balls', 'strikes', 'call',
-          'v0', 'v1', 'spin', 'pfx_x', 'pfx_z', 'px', 'pz', 'x0', 'z0', 'ext', 'last_in_pa', 'bunt_pa', 'ab', 'pitch_no', 'la', 'ls', 'cs', 'zone')
+          'v0', 'v1', 'spin', 'pfx_x', 'pfx_z', 'px', 'pz', 'x0', 'z0', 'ext', 'last_in_pa', 'bunt_pa', 'ab', 'pitch_no', 'la', 'ls', 'cs', 'zone', 'out7', 'half')
+OUT7 = ('BIP_OUT', 'K', 'BB_HBP', '1B', '2B_3B', 'HR', 'OTHER_REACH')
 CALLS = {'take': 0, 'swing_contact': 1, 'whiff': 2, 'other': 3}
 
 
@@ -163,6 +164,9 @@ def pitch_table(doc: dict, season: int) -> dict:
                     cols['zone'].append(int(_zone) if _zone is not None else -1)
                 except (TypeError, ValueError):
                     cols['zone'].append(-1)
+                o_ = str(row.get('o') or '')
+                cols['out7'].append(OUT7.index(o_) if o_ in OUT7 else -1)
+                cols['half'].append(0 if str(row.get('half') or 'top') == 'top' else 1)
     out = {}
     for k, v in cols.items():
         out[k] = np.asarray(v, dtype=np.float32 if k in ('v0', 'v1', 'spin', 'pfx_x', 'pfx_z', 'px', 'pz', 'x0', 'z0', 'ext', 'la', 'ls') else np.int64)
@@ -2492,6 +2496,153 @@ def matchup_swing(T: dict, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- FATIGUE-01: the pitcher's state inside the game
+LW7 = np.array([-0.26, -0.28, 0.32, 0.47, 0.78, 1.40, 0.45])
+
+
+def _prior_by_day(key, day, value, use):
+    """Count and sum of value over rows of the same key on earlier days where use."""
+    n = len(key); order = np.lexsort((day, key)); k, d = key[order], day[order]
+    u = use[order].astype(np.float64); v = np.where(use[order], np.nan_to_num(value[order]), 0.0)
+    cu, cv = np.cumsum(u), np.cumsum(v)
+    first = np.ones(n, bool); first[1:] = (k[1:] != k[:-1]) | (d[1:] != d[:-1])
+    start = np.ones(n, bool); start[1:] = k[1:] != k[:-1]
+    i_f = np.maximum.accumulate(np.where(first, np.arange(n), 0)); i_k = np.maximum.accumulate(np.where(start, np.arange(n), 0))
+    b = lambda c: np.where(i_f > 0, c[i_f - 1], 0.0) - np.where(i_k > 0, c[i_k - 1], 0.0)
+    on, ov = np.empty(n), np.empty(n); on[order], ov[order] = b(cu), b(cv)
+    return on, ov
+
+
+def fatigue(T: dict, params: dict, stage) -> dict:
+    """Does the starter's measured physical drift inside the game (fastball speed, release height, spin, extension over
+    his last eight fastballs against his first ten) predict the next plate appearances beyond pitch count, times
+    through the order and both players' rates? And does a start that begins below his usual speed run worse all game?
+    Starters only; train 2023-2024, score 2025 and 2026 through July."""
+    res = {}
+    T = take(T, (T['day'] < date(2026, 8, 1).toordinal()) & (T['out7'] >= -1))
+    order = np.lexsort((T['pitch_no'], T['ab'], T['pitcher'], T['game']))
+    T = take(T, order)
+    gp = T['game'].astype(np.int64) * 10_000_000 + T['pitcher'].astype(np.int64)
+    n = len(gp)
+    start = np.ones(n, bool); start[1:] = gp[1:] != gp[:-1]
+    gidx = np.cumsum(start) - 1
+    first_row = np.flatnonzero(start)
+    pos = np.arange(n) - first_row[gidx]                         # pitches thrown in this game before this one
+    # starters: the first pitcher of each team in each game
+    gh = T['game'].astype(np.int64) * 2 + T['half']
+    o2 = np.lexsort((T['pitch_no'], T['ab'], gh))
+    starter_of = {}
+    ghs = gh[o2]; ps = T['pitcher'][o2]
+    keep_first = np.r_[True, ghs[1:] != ghs[:-1]]
+    for g_, p_ in zip(ghs[keep_first], ps[keep_first]):
+        starter_of[int(g_)] = int(p_)
+    is_starter = np.asarray([starter_of.get(int(g_), -1) == int(p_) for g_, p_ in zip(gh, T['pitcher'])])
+    fb = np.isin(T['group'], (0, 1)) & np.isfinite(T['v0'])
+    feats = {'v0': T['v0'].astype(np.float64), 'z0': T['z0'].astype(np.float64), 'spin': T['spin'].astype(np.float64), 'ext': T['ext'].astype(np.float64)}
+    # cumulative fastball sums within each game-pitcher group, before each pitch
+    def before_cum(x, mask):
+        c = np.cumsum(np.where(mask, x, 0.0)); c0 = c - np.where(mask, x, 0.0)
+        return c0 - (c[first_row] - np.where(mask, x, 0.0)[first_row])[gidx]
+    nfb = before_cum(np.ones(n), fb)
+    pa_start = (T['pitch_no'] == 0) & (T['out7'] >= 0) & is_starter
+    idx = np.flatnonzero(pa_start)
+    # fastball sequences per group, to read the first ten and the last eight before each plate appearance
+    fb_rows = np.flatnonzero(fb)
+    fb_g = gidx[fb_rows]
+    fb_first = np.searchsorted(fb_g, np.arange(gidx[-1] + 1), side='left')
+    out = {name: np.full(len(idx), np.nan) for name in ('drift_v', 'drift_z', 'drift_spin', 'drift_ext', 'start_v')}
+    cums = {name: np.r_[0.0, np.cumsum(np.nan_to_num(feats[name][fb_rows]))] for name in feats}
+    fcnt = np.r_[0.0, np.cumsum(np.isfinite(feats['spin'][fb_rows]).astype(float))]
+    for j, i in enumerate(idx):
+        k = int(nfb[i]); g0 = fb_first[gidx[i]]
+        if k >= 10:
+            out['start_v'][j] = (cums['v0'][g0 + 10] - cums['v0'][g0]) / 10.0
+        if k >= 18:
+            for name, key in (('drift_v', 'v0'), ('drift_z', 'z0'), ('drift_spin', 'spin'), ('drift_ext', 'ext')):
+                base = (cums[key][g0 + 10] - cums[key][g0]) / 10.0
+                last = (cums[key][g0 + k] - cums[key][g0 + k - 8]) / 8.0
+                out[name][j] = last - base
+    stage('drift')
+    P = {k: v[idx] for k, v in T.items()}
+    P['pitch_count'] = pos[idx].astype(np.float64)
+    # times this batter has faced this starter earlier in the game
+    bk = P['game'].astype(np.int64) * 10_000_000 + P['batter'].astype(np.int64)
+    o3 = np.lexsort((P['ab'], bk)); tto = np.zeros(len(idx))
+    bks = bk[o3]; st3 = np.r_[True, bks[1:] != bks[:-1]]; grp3 = np.cumsum(st3) - 1
+    tto[o3] = np.arange(len(o3)) - np.flatnonzero(st3)[grp3]
+    # the starter's usual fastball speed: his fastballs on earlier days
+    nv, sv_ = _prior_by_day(T['pitcher'].astype(np.int64), T['day'].astype(np.int64), feats['v0'], fb)
+    norm_v = np.where(nv[idx] >= 50, sv_[idx] / np.maximum(nv[idx], 1), np.nan)
+    today = out['start_v'] - norm_v
+    # both players' earlier rates by outcome class (shrunk shares, as log ratios to the league)
+    y7 = P['out7'].astype(int)
+    league = np.bincount(y7, minlength=7) / len(y7)
+    def rates(key, k=150.0):
+        cols_ = []
+        for c in range(7):
+            nn, ss = _prior_by_day(key, P['day'].astype(np.int64), (y7 == c).astype(float), np.ones(len(y7), bool))
+            cols_.append(np.log((ss + k * league[c]) / (nn + k) / league[c]))
+        return np.column_stack(cols_)
+    rb = rates(P['batter'].astype(np.int64)); rp = rates(P['pitcher'].astype(np.int64), 300.0)
+    stage('rates')
+    pc = hats(P['pitch_count'], (0, 15, 30, 45, 60, 75, 90, 105, 120))
+    tto_d = np.column_stack([(tto == 1), (tto >= 2)]).astype(float)
+    plat = (P['stand_r'] == P['throw_r']).astype(float)[:, None]
+    have = np.isfinite(out['drift_v'])
+    D = np.column_stack([np.where(have, out[k], 0.0) for k in ('drift_v', 'drift_z', 'drift_spin', 'drift_ext')] + [have.astype(float)])
+    D[:, 2] /= 100.0
+    tv = np.isfinite(today)
+    TD = np.column_stack([np.where(tv, today, 0.0), tv.astype(float)])
+    X0 = np.hstack([pc, tto_d, rb, rp, plat])
+    designs = {'M0_count_tto_rates': X0, 'M1_plus_drift': np.hstack([X0, D]), 'M2_plus_drift_and_start': np.hstack([X0, D, TD])}
+    tr = np.isin(P['season'], (2023, 2024))
+    tests = {'2025': P['season'] == 2025, '2026_through_july': P['season'] == 2026}
+    from sklearn.linear_model import LogisticRegression
+    res['rows'] = {'plate_appearances': int(len(idx)), 'with_drift': int(have.sum()), 'with_start_vs_norm': int(tv.sum()),
+                   'drift_v_sd': round(float(np.nanstd(out['drift_v'])), 3), 'drift_v_mean': round(float(np.nanmean(out['drift_v'])), 3),
+                   'start_vs_norm_sd': round(float(np.nanstd(today)), 3)}
+    fits = {}
+    for name, X in designs.items():
+        m = LogisticRegression(max_iter=500, C=10.0).fit(X[tr], y7[tr]); fits[name] = m
+    stage('multinomial fits')
+    res['test_logloss_gain_nats_per_1000_pa'] = {}
+    for tname, tm in tests.items():
+        if not tm.any():
+            continue
+        ll = {k: -np.log(np.clip(m.predict_proba(designs[k][tm])[np.arange(tm.sum()), y7[tm]], 1e-9, 1)) for k, m in fits.items()}
+        g = P['game'][tm]
+        res['test_logloss_gain_nats_per_1000_pa'][tname] = {
+            'drift': [round(v * 1000, 3) for v in clustered_ci(ll['M0_count_tto_rates'] - ll['M1_plus_drift'], g)],
+            'start_vs_norm': [round(v * 1000, 3) for v in clustered_ci(ll['M1_plus_drift'] - ll['M2_plus_drift_and_start'], g)],
+            'plate_appearances': int(tm.sum())}
+    # run value per plate appearance on the same features (least squares), coefficients with game-clustered intervals
+    rv = LW7[y7]
+    names = [f'pc{i}' for i in range(pc.shape[1])] + ['tto2', 'tto3plus'] + [f'b{c}' for c in range(7)] + [f'p{c}' for c in range(7)] + ['platoon',
+             'drift_v', 'drift_z', 'drift_spin100', 'drift_ext', 'has_drift', 'start_vs_norm_v', 'has_start']
+    X = designs['M2_plus_drift_and_start']
+    def ols(rows):
+        A = np.column_stack([np.ones(rows.sum()), X[rows]]); return np.linalg.lstsq(A, rv[rows], rcond=None)[0][1:]
+    allr = tr | tests['2025'] | tests['2026_through_july']
+    beta = ols(allr)
+    games_all = np.unique(P['game'][allr]); rng = np.random.default_rng(5); draws = []
+    gi = np.searchsorted(games_all, P['game'][allr]); rows_all = np.flatnonzero(allr)
+    for _ in range(int(params.get('reps', 150))):
+        pick = rng.integers(0, len(games_all), len(games_all)); w = np.bincount(pick, minlength=len(games_all))[gi]
+        sel = np.repeat(rows_all, w)
+        A = np.column_stack([np.ones(len(sel)), X[sel]]); draws.append(np.linalg.lstsq(A, rv[sel], rcond=None)[0][1:])
+    draws = np.asarray(draws)
+    keep_n = ('tto2', 'tto3plus', 'drift_v', 'drift_z', 'drift_spin100', 'drift_ext', 'start_vs_norm_v')
+    res['run_value_per_pa'] = {nm: [round(float(beta[names.index(nm)]), 5), round(float(np.percentile(draws[:, names.index(nm)], 2.5)), 5),
+                                    round(float(np.percentile(draws[:, names.index(nm)], 97.5)), 5)] for nm in keep_n}
+    # how much of the times-through-the-order penalty the measured drift accounts for
+    X0r = designs['M0_count_tto_rates'][allr]; A0 = np.column_stack([np.ones(allr.sum()), X0r]); b0 = np.linalg.lstsq(A0, rv[allr], rcond=None)[0][1:]
+    i2, i3 = pc.shape[1], pc.shape[1] + 1
+    res['tto_without_drift'] = {'tto2': round(float(b0[i2]), 5), 'tto3plus': round(float(b0[i3]), 5)}
+    res['tto_with_drift'] = {'tto2': round(float(beta[i2]), 5), 'tto3plus': round(float(beta[i3]), 5)}
+    stage('run value')
+    return res
+
+
 # ---------------------------------------------------------------- ZONE-01: pitch location across the 2026 definition change
 YMID = 8.5 / 12.0          # the middle of the plate, Statcast's reference for plate_x and plate_z from 2026
 
@@ -2682,6 +2833,8 @@ def main():
             receipt['results'] = zone_audit(T, params, stage)
         elif experiment == 'matchup_swing':
             receipt['results'] = matchup_swing(T, params, stage)
+        elif experiment == 'fatigue':
+            receipt['results'] = fatigue(T, params, stage)
         receipt['status'] = 'completed'
     except StopIteration:
         receipt['status'] = 'completed'
