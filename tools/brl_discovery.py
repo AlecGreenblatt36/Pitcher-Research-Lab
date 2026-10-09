@@ -2485,46 +2485,74 @@ def matchup_swing(T: dict, params: dict, stage) -> dict:
 
 
 # ---------------------------------------------------------------- MATCHUP-04: hitter maps by pitch family at the decision moment
+def family_basis(B, group):
+    """MATCHUP-04's map basis: the shared surface (hitter_basis, last column the level), its location bands times
+    breaking (groups 3 and 4) and times offspeed (group 5), and the two family levels."""
+    loc = B[:, :-1]
+    brk = np.isin(group, (3, 4))[:, None].astype(np.float64); ofs = (group == 5)[:, None].astype(np.float64)
+    return np.hstack([B, loc * brk, loc * ofs, brk, ofs])
+
+
+FAMILY_SHRINKAGE = {'location': 10.0, 'location_by_family': 3.0}     # chosen on the validation half in MATCHUP-04 (run 37889588250)
+
+
 def matchup_family(T: dict, params: dict, stage) -> dict:
     """MATCHUP-01's hitter maps at the decision moment treat every pitch family alike: a hitter's map is one surface
     over where the pitch appears to be headed. If hitters answer the same apparent location differently for a
     fastball and a breaking ball (some chase sliders low and away and lay off fastballs there), a map with a family
     part (the location bands times breaking and times offspeed, on top of the shared surface) predicts better. League
-    model and data as MATCHUP-01 (train 2023-2024, shrinkage on the second half of 2024, score 2025, paired by game)."""
+    model and data as MATCHUP-01 (train 2023-2024, shrinkage on the second half of 2024, score 2025, paired by game).
+    final_eval (MATCHUP-04F): league and both maps fitted on 2023-2025 at the shrinkage MATCHUP-04 chose, scored once
+    on the 2026 pitches from August 1 (the untouched months)."""
     res = {}
-    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+    final = bool(params.get('final_eval'))
+    if final and not params.get('frozen_commit'):
+        raise ValueError('the family maps are scored on the untouched months only as the registered evaluation of a frozen commit')
+    if final:
+        T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | ((T['season'] == 2026) & (T['day'] >= date(2026, 8, 1).toordinal())))
+    else:
+        T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
     F = rebuild(T)
     keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['strikes'] >= 0) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
     T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
     swing = ((T['call'] == 1) | (T['call'] == 2)).astype(np.float64)
     xp, zp = projected(T, F, None, 'straight', 0.26)
     X = np.hstack([location_block(xp, zp, T['stand_r'], T['strikes']), control_block(T, swing_propensity(T)), pitcher_propensity(T)[:, None].astype(np.float32)])
-    tr = np.isin(T['season'], (2023, 2024)); te = T['season'] == 2025
+    if final:
+        tr = T['season'] <= 2025; te = T['season'] == 2026
+    else:
+        tr = np.isin(T['season'], (2023, 2024)); te = T['season'] == 2025
     mid = date(2024, 7, 1).toordinal()
     fit_a = tr & ~((T['season'] == 2024) & (T['day'] >= mid)); val = tr & (T['season'] == 2024) & (T['day'] >= mid)
     rng = np.random.default_rng(11)
     def league(rows):
         idx = np.flatnonzero(rows); idx = rng.choice(idx, min(len(idx), 600000), replace=False) if len(idx) > 600000 else idx
         return fit_logistic(X[idx], swing[idx]).decision_function(X)
-    off_a, off = league(fit_a), league(tr)
+    if final:
+        off = league(tr); off_a = None
+    else:
+        off_a, off = league(fit_a), league(tr)
     stage('league')
     B = hitter_basis(xp, zp, T['stand_r'], T['strikes'])
-    loc = B[:, :-1]
-    brk = np.isin(T['group'], (3, 4))[:, None].astype(np.float64); ofs = (T['group'] == 5)[:, None].astype(np.float64)
-    bases = {'location': B, 'location_by_family': np.hstack([B, loc * brk, loc * ofs, brk, ofs])}
+    bases = {'location': B, 'location_by_family': family_basis(B, T['group'])}
     bat = T['batter']
-    ga, gv, gt, ge = _groups(bat, fit_a), _groups(bat, val), _groups(bat, tr), _groups(bat, te)
+    gt, ge = _groups(bat, tr), _groups(bat, te)
+    if not final:
+        ga, gv = _groups(bat, fit_a), _groups(bat, val)
     yt = swing[te]; games = T['game'][te]
     preds = {}; out = {}
     for name, Bm in bases.items():
         val_ll = {}
-        for lam in (3.0, 10.0, 30.0, 100.0):
-            lo = off_a.copy()
-            for h, b in _hitter_maps(Bm, swing, off_a, ga, lam, 300).items():
-                if h in gv:
-                    v = gv[h]; lo[v] += Bm[v] @ b
-            val_ll[lam] = float(logloss_vec(1 / (1 + np.exp(-lo[val])), swing[val]).mean())
-        best = min(val_ll, key=val_ll.get)
+        if final:
+            best = FAMILY_SHRINKAGE[name]
+        else:
+            for lam in (3.0, 10.0, 30.0, 100.0):
+                lo = off_a.copy()
+                for h, b in _hitter_maps(Bm, swing, off_a, ga, lam, 300).items():
+                    if h in gv:
+                        v = gv[h]; lo[v] += Bm[v] @ b
+                val_ll[lam] = float(logloss_vec(1 / (1 + np.exp(-lo[val])), swing[val]).mean())
+            best = min(val_ll, key=val_ll.get)
         lo = off.copy(); cov = np.zeros(len(swing), bool)
         for h, b in _hitter_maps(Bm, swing, off, gt, best, 300).items():
             if h in ge:
@@ -2533,6 +2561,7 @@ def matchup_family(T: dict, params: dict, stage) -> dict:
         out[name] = {'shrinkage': best, 'validation': {str(k): round(v, 5) for k, v in val_ll.items()}, 'covered': round(float(cov[te].mean()), 4),
                      'test_logloss': round(float(logloss_vec(preds[name], yt).mean()), 5)}
         stage('maps ' + name)
+    res['test_decisions'] = int(te.sum())
     p_l = 1 / (1 + np.exp(-off[te]))
     ll_l = logloss_vec(p_l, yt); ll_a = logloss_vec(preds['location'], yt); ll_b = logloss_vec(preds['location_by_family'], yt)
     cc = lambda d: [round(v * 1000, 3) for v in clustered_ci(d, games)]
@@ -3445,8 +3474,11 @@ def value2_study(T: dict, params: dict, stage) -> dict:
     rng = np.random.default_rng(11)
     idx = np.flatnonzero(tr); idx = rng.choice(idx, min(len(idx), 600000), replace=False)
     league = fit_logistic(X[idx], swing[idx]); off = league.decision_function(X); wL = league.coef_[0][:nL].astype(np.float64)
+    fam = bool(params.get('family_maps'))                 # VALUE-06: MATCHUP-04's maps, with a part by pitch family
     Bm = hitter_basis(xp, zp, T['stand_r'], T['strikes'])
-    maps = _hitter_maps(Bm, swing, off, _groups(T['batter'], tr), 10.0, 300)
+    if fam:
+        Bm = family_basis(Bm, T['group'])
+    maps = _hitter_maps(Bm, swing, off, _groups(T['batter'], tr), float(params.get('shrinkage', FAMILY_SHRINKAGE['location_by_family'] if fam else 10.0)), 300)
     stage(f'maps {len(maps)}')
     te = (T['season'] == test_season) & (T['out7'] >= 0) & np.isin(T['batter'], np.asarray(list(maps), dtype=np.int64))
     ix = np.flatnonzero(te)
@@ -3493,6 +3525,45 @@ def value2_study(T: dict, params: dict, stage) -> dict:
     n_pa = max(int((T['pitch_no'][ix] == 0).sum()), 1)
     res['coefficients'] = {'test_season': test_season, 'test_pitches': int(len(ix)), 'runs_per_point_outside': round(b_out, 6), 'runs_per_point_inside': round(b_in, 6),
                            'outside_pitches_per_pa': round(float(outside.sum() / n_pa), 3), 'inside_pitches_per_pa': round(float((~outside).sum() / n_pa), 3)}
+    if params.get('checks'):
+        # attempts to break the coefficient (own random stream, so the aiming below is unchanged): (1) placebo, each
+        # hitter's pitches read through another hitter's map of the same side, must show nothing; (2) only the variation
+        # the aiming uses, the deviation minus its mean for this hitter, pitch group and side of the zone edge, must keep it
+        rc = np.random.default_rng(5)
+        def boot(Xm, reps=200):
+            pk = Xm.shape[1]; XtX_ = np.zeros((len(ug), pk, pk))
+            for a_ in range(pk):
+                for c_ in range(a_, pk):
+                    v_ = np.bincount(gi, weights=Xm[:, a_] * Xm[:, c_], minlength=len(ug)); XtX_[:, a_, c_] = v_; XtX_[:, c_, a_] = v_
+            Xty_ = np.column_stack([np.bincount(gi, weights=Xm[:, a_] * y, minlength=len(ug)) for a_ in range(pk)])
+            dr = []
+            for _ in range(reps):
+                w_ = np.bincount(rc.integers(0, len(ug), len(ug)), minlength=len(ug)).astype(float)
+                dr.append(np.linalg.solve(np.tensordot(w_, XtX_, 1) + 1e-9 * np.eye(pk), w_ @ Xty_)[-2:])
+            dr = np.asarray(dr)
+            return [[round(float(np.percentile(dr[:, j], q)), 6) for q in (2.5, 97.5)] for j in (0, 1)]
+        by_side = {}
+        for h, rr in gb.items():
+            by_side.setdefault(int(np.round(T['stand_r'][ix[rr]].mean())), []).append(h)
+        perm = {}
+        for hs in by_side.values():
+            sh = list(hs); rc.shuffle(sh); perm.update({h: sh[(k + 1) % len(sh)] for k, h in enumerate(hs)})
+        Dp = np.zeros(len(ix))
+        for h, rr in gb.items():
+            Dp[rr] = (sig(off[ix[rr]] + Bm[ix[rr]] @ maps[perm[h]]) - p_l[rr]) * 100
+        _, ki = np.unique((T['batter'][ix].astype(np.int64) * 10 + np.clip(T['group'][ix], 0, 6)) * 2 + outside, return_inverse=True)
+        Dw = D - (np.bincount(ki, weights=D) / np.bincount(ki))[ki]
+        chk = {'own_map': {'outside': round(b_out, 6), 'inside': round(b_in, 6),
+                           'outside_interval': [round(float(np.percentile(draws[:, 0], q)), 6) for q in (2.5, 97.5)],
+                           'inside_interval': [round(float(np.percentile(draws[:, 1], q)), 6) for q in (2.5, 97.5)]}}
+        for nm, dd in (('placebo_other_hitter', Dp), ('within_hitter_group_and_zone_side', Dw)):
+            Xk = np.column_stack([Xd[:, :-2], dd * outside, dd * ~outside])
+            bk_ = np.linalg.lstsq(Xk, y, rcond=None)[0]
+            ci_ = boot(Xk)
+            chk[nm] = {'outside': round(float(bk_[-2]), 6), 'inside': round(float(bk_[-1]), 6), 'outside_interval': ci_[0], 'inside_interval': ci_[1],
+                       'sd_points_outside': round(float(dd[outside].std()), 3)}
+        chk['own_map']['sd_points_outside'] = round(float(D[outside].std()), 3)
+        res['coefficient_checks'] = chk
     stage('coefficients')
     sigmas = [float(v) for v in params.get('sigmas', (0.0, 0.3, 0.6, 0.9))]
     K = 16
@@ -3525,7 +3596,10 @@ def value2_study(T: dict, params: dict, stage) -> dict:
                         xj = (xp[ix[pool]][:, None] + sg * jit[None, :, 0]).ravel(); zj = (zp[ix[pool]][:, None] + sg * jit[None, :, 1]).ravel()
                         sj = np.repeat(np.full(len(pool), sd), K); kj = np.repeat(strikes[pool], K)
                         offj = np.repeat(off[ix[pool]] - lb0, K) + location_block(xj, zj, sj, kj).astype(np.float64) @ wL
-                        mats[sg] = (offj, hitter_basis(xj, zj, sj, kj))
+                        Bj = hitter_basis(xj, zj, sj, kj)
+                        if fam:
+                            Bj = family_basis(Bj, np.repeat(T['group'][ix[pool]], K))
+                        mats[sg] = (offj, Bj)
                     for h in hs_here:
                         if int(h) not in maps or hit_side.get(int(h)) != sd:
                             continue
