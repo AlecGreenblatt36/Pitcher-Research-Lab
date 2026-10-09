@@ -150,8 +150,9 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   TOTALS-06 (park adjustment), both to be registered before any change.
 - ENG-01: research/registry.json is generated from the ledger by tools/registry.py; the discovery workflow refuses an
   experiment run whose commit message names an ID without a ledger row (registered or diagnostic). Still open from the
-  audit: Actions pinned by commit (the tag SHAs could not be verified from this session), a locked environment, LICENSE
-  and CITATION.cff (license choice is Alec's), a smaller discovery module, a reproduction package.
+  audit: a locked environment and a smaller discovery module. Done October 9: Actions pinned by commit (each uses: line
+  names the commit its major tag pointed to, read from the action repositories over git and verified to be commits;
+  bump by re-resolving the tag), LICENSE and CITATION.cff, the reproduction section in README.
 - PLAN-01b landed (run 37957704310): random maps with the own part's variance moved the natural-experiment slope to -0.36,
   far outside the registered band, so under the rule the planner is set aside; no plan value is stated. PLAN-03 (off-policy
   evaluation against the pitcher's logged choices, checked first in the synthetic worlds) is the replacement design when
