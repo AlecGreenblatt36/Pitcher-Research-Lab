@@ -345,6 +345,9 @@ class BoxAccumulator:
 # relief_exit: when a reliever comes out, from logistic hazards fitted on every real relief decision point (RELIEF-02;
 # research_lab.game_sim.relief_exit.ReliefExit, table brl_live/relief_exit.json from tools/brl_relief_exit.py). Off until
 # its replays are read; off, the hand-set rule decides (it pulls relievers mid-inning far more often than managers do).
+# postseason_exit_offset: with relief_exit, log-odds added to the exit hazard in postseason games (POST-02): postseason
+# managers use 4.2 relievers a team-game against 3.3 in the regular season (POST-01); with the starter scale and the
+# fitted exits the engine gives 3.8, and +0.4 gives 4.15. The World Series keeps the regular hazard, as its starters do.
 # relief_hooks: with relief_exit, each team's tendency to pull relievers faster or slower than the fitted hazard
 # (RELIEF-03; table brl_live/relief_hooks.json from tools/brl_relief_hooks.py). Off until its replays are read.
 # base_state: the stack's probabilities shaped by bases and outs (RUNS-02; brl_live.provider_adjust.BaseStateAdjust,
@@ -355,7 +358,8 @@ class BoxAccumulator:
 ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         'postseason_exp_scale':{'F':0.91,'D':0.91,'L':0.91,'W':1.0},
         'environment':True,'team_offsets':True,'steals':True,'transitions':True,'running_events':False,
-        'reliever_choice':False,'leash':False,'base_state':False,'relief_exit':False,'relief_hooks':False}
+        'reliever_choice':False,'leash':False,'base_state':False,'relief_exit':False,'relief_hooks':False,
+        'postseason_exit_offset':{'F':0.4,'D':0.4,'L':0.4,'W':0.0}}
 
 TRANSITIONS_PATH=Path(__file__).resolve().parent/'transitions.json'
 RUNNING_EVENTS_PATH=Path(__file__).resolve().parent/'running_events.json'
@@ -409,19 +413,29 @@ def relief_hooks_for(settings):
     if 'h' not in _KERNEL:_KERNEL['h']=json.loads(RELIEF_HOOKS_PATH.read_text())
     return _KERNEL['h']
 
-def manager_for(manager,settings,teams=None):
+def manager_for(manager,settings,teams=None,game_type='R'):
     """(manager, label): the engine's manager with the fitted reliever choice and exits (and, given the game's teams as
-    (away, home) abbreviations, their hook offsets) attached when switched on (a copy, so the engine's own manager is
-    unchanged), else the manager itself and None."""
+    (away, home) abbreviations, their hook offsets; in postseason games the postseason exit offset) attached when
+    switched on (a copy, so the engine's own manager is unchanged), else the manager itself and None."""
     choice=reliever_choice_for(settings);exits=relief_exit_for(settings);hooks=relief_hooks_for(settings)
     if choice is None and exits is None:return manager,None
     import copy
     m=copy.copy(manager);labels=[]
     if choice is not None:m.reliever_choice=choice;labels.append(choice.name)
-    if exits is not None:m.relief_exit=exits;labels.append(exits.name)
-    if hooks is not None and teams and all(teams):
-        t=hooks.get('teams') or {}
-        m.relief_offsets={'away':t.get(str(teams[0]).upper()),'home':t.get(str(teams[1]).upper())};labels.append(str(hooks.get('name')))
+    if exits is not None:
+        m.relief_exit=exits;labels.append(exits.name)
+        offs={'away':{'mid':0.0,'end':0.0},'home':{'mid':0.0,'end':0.0}}
+        if hooks is not None and teams and all(teams):
+            t=hooks.get('teams') or {}
+            for side,team in zip(('away','home'),teams):
+                o=t.get(str(team).upper()) or {}
+                offs[side]={'mid':float(o.get('mid',0.0)),'end':float(o.get('end',0.0))}
+            labels.append(str(hooks.get('name')))
+        post=float((settings.get('postseason_exit_offset') or {}).get(str(game_type),0.0)) if str(game_type)!='R' else 0.0
+        if post:
+            for side in offs:offs[side]={k:v+post for k,v in offs[side].items()}
+            labels.append('postseason reliever exits (log-odds +%.2f)'%post)
+        if any(v for o in offs.values() for v in o.values()):m.relief_offsets=offs
     return m,'; '.join(labels)
 
 def running_events_for(settings):
@@ -497,7 +511,7 @@ def run_box_worlds(engine,matchup,history,date,seeds,full_history=None,settings=
     if kernel is not None:adjust_label=list(adjust_label)+[kernel.name]
     running=running_events_for(settings)
     if running is not None:adjust_label=list(adjust_label)+[running.name]
-    manager,choice_label=manager_for(engine.manager,settings,teams)
+    manager,choice_label=manager_for(engine.manager,settings,teams,getattr(matchup,'game_type','R'))
     if choice_label:adjust_label=list(adjust_label)+[choice_label]
     sim=ObservedSimulator(provider,config=engine.config,manager_policy=manager,steals=steals,transitions=kernel,running_events=running)
     accumulator=BoxAccumulator(matchup);results=[]

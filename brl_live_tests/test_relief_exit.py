@@ -121,3 +121,18 @@ def test_production_attaches_both_sides_hooks():
     assert set(m.relief_offsets) == {'away', 'home'} and set(m.relief_offsets['away']) == {'mid', 'end'} and 'hooks' in label
     m, _ = manager_for(ManagerPolicy(), dict(ADJUST, relief_exit=False, relief_hooks=True), ('NYY', 'DET'))
     assert getattr(m, 'relief_offsets', None) is None
+
+
+def test_postseason_exit_offset_adds_to_the_hooks():
+    from brl_live.boxscore import ADJUST, manager_for
+    s = dict(ADJUST, relief_exit=True, relief_hooks=False)
+    m, label = manager_for(ManagerPolicy(), s, ('NYY', 'DET'), 'D')
+    assert m.relief_offsets == {'away': {'mid': 0.4, 'end': 0.4}, 'home': {'mid': 0.4, 'end': 0.4}} and 'postseason' in label
+    m, _ = manager_for(ManagerPolicy(), s, ('NYY', 'DET'), 'R')
+    assert m.relief_offsets is None
+    m, _ = manager_for(ManagerPolicy(), s, ('NYY', 'DET'), 'W')
+    assert m.relief_offsets is None
+    m, _ = manager_for(ManagerPolicy(), dict(s, relief_hooks=True), ('NYY', 'DET'), 'L')
+    import json as _j
+    hooks = _j.loads((ROOT / 'brl_live' / 'relief_hooks.json').read_text())['teams']
+    assert abs(m.relief_offsets['away']['mid'] - (hooks['NYY']['mid'] + 0.4)) < 1e-12
