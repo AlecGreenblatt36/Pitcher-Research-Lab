@@ -391,6 +391,8 @@ class Fitted:
         v_out = {f_: np.zeros(len(GU) * len(GZ)) for f_, *_ in FAMILIES}; v_in = {f_: np.zeros(len(GU) * len(GZ)) for f_, *_ in FAMILIES}
         land_n = {f_: np.zeros(len(GU) * len(GZ)) for f_, *_ in FAMILIES}; land_v = {f_: np.zeros(len(GU) * len(GZ)) for f_, *_ in FAMILIES}
         by_count = {}
+        # by family: the value per pitch of aiming that family's outside pitches at its best third (which family to lean on, per count and overall)
+        fam_runs = {f_: 0.0 for f_, *_ in FAMILIES}; fam_w = {f_: 0.0 for f_, *_ in FAMILIES}
 
         def labeled(c_, vo_, vi_):
             return [[float(GU[k % len(GU)]), float(GZ[k // len(GU)]), 'chase' if vo_[k] <= vi_[k] else 'take'] for k in np.argsort(c_)[::-1][:3] if c_[k] > 0]
@@ -398,6 +400,7 @@ class Fitted:
         for c3, cname in ((0, 'even_or_ahead'), (1, 'behind'), (2, 'two_strikes')):
             ct = 0.0; cw = 0.0; ct_runs = 0.0; ccells = {f_: np.zeros(len(GU) * len(GZ)) for f_, *_ in FAMILIES}
             cv_out = {f_: np.zeros(len(GU) * len(GZ)) for f_, *_ in FAMILIES}; cv_in = {f_: np.zeros(len(GU) * len(GZ)) for f_, *_ in FAMILIES}
+            cfam_runs = {f_: 0.0 for f_, *_ in FAMILIES}; cfam_w = {f_: 0.0 for f_, *_ in FAMILIES}
             for tg in range(7):
                 P_ = self._pool(p, sd, c3, tg)
                 if P_ is None:
@@ -432,11 +435,14 @@ class Fitted:
                     tot += n_all * float(np.mean(gains)); wsum += n_all; ct += n_all * float(np.mean(gains)); cw += n_all
                     if gains_runs:
                         tot_runs += n_all * float(np.mean(gains_runs)); ct_runs += n_all * float(np.mean(gains_runs))
+                        fam_runs[famof(tg)] += n_all * float(np.mean(gains_runs)); fam_w[famof(tg)] += n_all
+                        cfam_runs[famof(tg)] += n_all * float(np.mean(gains_runs)); cfam_w[famof(tg)] += n_all
             if cw > 0:
                 by_count[cname] = {'gain_points': round(ct / cw, 2), 'pitches': int(cw),
                                    'cells': {f_: labeled(c_, cv_out[f_], cv_in[f_]) for f_, c_ in ccells.items()}}
                 if self.PM is not None:
                     by_count[cname]['runs_per_100_pa'] = round(float(ct_runs / cw * N_OUT) * 100, 2)
+                    by_count[cname]['by_family'] = {f_: {'runs_per_100_pitches': round(float(cfam_runs[f_] / cfam_w[f_]) * 100, 2), 'pitches': int(cfam_w[f_])} for f_ in cfam_w if cfam_w[f_] > 0}
         if wsum > 0:
             g_ = tot / wsum
             out['aim'] = {'runs_per_100_pa': round(float(tot_runs / wsum * N_OUT) * 100, 2) if self.PM is not None else round(float(B_OUT_FAMILY * g_ * N_OUT) * 100, 2),
@@ -445,6 +451,7 @@ class Fitted:
                           'by_count': by_count, 'pricing': 'structural' if self.PM is not None else 'regression'}
             if self.PM is not None:
                 out['aim']['runs_per_100_pa_regression'] = round(float(B_OUT_FAMILY * g_ * N_OUT) * 100, 2)
+                out['aim']['by_family'] = {f_: {'runs_per_100_pitches': round(float(fam_runs[f_] / fam_w[f_]) * 100, 2), 'pitches': int(fam_w[f_])} for f_ in fam_w if fam_w[f_] > 0}
                 # the dangerous miss, by family: among where the chosen aims' scattered pitches land, the cell that gives the hitter the most
                 # (its share of landings and its cost per 100 plate appearances), and the landing cloud itself (share by cell)
                 dm = {}

@@ -2178,6 +2178,13 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var ht = z < 1.5 ? "below the zone" : z < 1.75 ? "at the knees" : z < 2.25 ? "low" : z < 2.75 ? "mid-height" : z < 3.25 ? "high" : z < 3.75 ? "at the letters" : "above the zone";
     return ht + ", " + side + (c[2] === "take" ? " (he lets it go)" : c[2] === "chase" ? " (he chases)" : c[2] === "weak" ? " (he swings to little effect)" : "");
   }
+  /* Which family to lean on: what aiming each family's outside pitches at its best third saves, per 100 such pitches (negative in the document is good for the pitcher). */
+  function famLine(bf) {
+    if (!bf) return "";
+    var order = ["fastball", "breaking", "offspeed"].filter(function (f) { return bf[f] && bf[f].pitches >= 30; }).sort(function (a, b) { return bf[a].runs_per_100_pitches - bf[b].runs_per_100_pitches; });
+    if (!order.length) return "";
+    return "Which family to lean on, by what aiming at its best spots saves per 100 such pitches: " + order.map(function (f) { return f + " " + (-bf[f].runs_per_100_pitches).toFixed(2); }).join(", ") + ".";
+  }
   function reportTab(f, pk) {
     return '<div id="rp-' + pk + '"><p class="empty">Loading the matchup report…</p></div>';
   }
@@ -2247,6 +2254,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       "Where to put outside pitches" + (cname ? " " + cname : "") + ", from the hitter's own chase map against the spots this pitcher actually throws to.") +
       (ck !== "all" && bc[ck].runs_per_100_pa != null ? " In this count the best third of his spots saves " + (-bc[ck].runs_per_100_pa).toFixed(2) + " runs per 100 plate appearances over his usual spots, on " + Number(bc[ck].pitches).toLocaleString() + " such pitches." :
         pr.aim.runs_per_100_pa != null ? " Aiming at his costliest spots saves " + (-pr.aim.runs_per_100_pa).toFixed(2) + " runs per 100 plate appearances over this pitcher's usual spots." : "") + (pr.evidence && pr.evidence.level === "thin" ? " Thin evidence: read it as a leaning." : "") + "</p>";
+    var fl2 = famLine(ck === "all" ? pr.aim.by_family : bc[ck].by_family);
+    if (fl2) h += '<p class="note">' + esc(fl2) + "</p>";
     h += '<div class="rp-cards">';
     ["fastball", "breaking", "offspeed"].forEach(function (fam) {
       var own = hc.own_chase && hc.own_chase[fam], mix = pc && pc.mix && pc.mix[fam];
@@ -2364,6 +2373,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
             " The outlined cells are the heart of the strike zone, the ring around them its edges, seen from the catcher with the hitter's side on the left.</p>";
           h += '<div class="seg" role="group" aria-label="Which count">' + counts.filter(function (c) { return c[0] === "all" || bc[c[0]]; }).map(function (c) { return '<button data-rpcount="' + c[0] + '" aria-pressed="' + (c[0] === ck) + '">' + c[1] + "</button>"; }).join("") + "</div>";
           if (ck !== "all") h += '<p class="note">' + esc(counts.filter(function (c) { return c[0] === ck; })[0][1]) + ": " + (bc[ck].runs_per_100_pa != null ? "the best third of his spots saves " + (-bc[ck].runs_per_100_pa).toFixed(2) + " runs per 100 plate appearances over his usual spots" : "the best third of his spots gains " + bc[ck].gain_points.toFixed(1) + " points of chase over his usual spots") + ", on " + Number(bc[ck].pitches).toLocaleString() + " such pitches.</p>";
+          var fl = famLine(ck === "all" ? pr2.aim.by_family : bc[ck].by_family);
+          if (fl) h += '<p class="note">' + esc(fl) + "</p>";
           if (ck === "all" && pr2.aim.pricing === "structural") {
             // the hitter's side of the same spots: where to lay off and where not to let a strike go by
             var layoff = [], dontTake = [];
