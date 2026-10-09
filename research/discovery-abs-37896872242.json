@@ -1,0 +1,227 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "abs",
+ "run_id": "37896872242",
+ "params": {
+  "experiment": "abs",
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "reps": 200
+ },
+ "started_at": "2026-10-09T07:03:59.586167+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 9.0
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 17.9
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 26.9
+  },
+  {
+   "stage": "called strikes",
+   "at_seconds": 36.3
+  },
+  {
+   "stage": "swing against take",
+   "at_seconds": 44.5
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 484833
+ },
+ "results": {
+  "called_strike_on_takes": {
+   "2025": {
+    "inside_4in_plus": {
+     "called_strike": 0.9968,
+     "takes": 47372
+    },
+    "inside_2_4in": {
+     "called_strike": 0.9387,
+     "takes": 32455
+    },
+    "inside_1_2in": {
+     "called_strike": 0.7797,
+     "takes": 17656
+    },
+    "inside_0_1in": {
+     "called_strike": 0.5652,
+     "takes": 21698
+    },
+    "outside_0_1in": {
+     "called_strike": 0.3299,
+     "takes": 20400
+    },
+    "outside_1_2in": {
+     "called_strike": 0.1551,
+     "takes": 20656
+    },
+    "outside_2_4in": {
+     "called_strike": 0.034,
+     "takes": 44212
+    },
+    "outside_4_8in": {
+     "called_strike": 0.001,
+     "takes": 72560
+    },
+    "outside_8in_plus": {
+     "called_strike": 0.0,
+     "takes": 90663
+    }
+   },
+   "2026": {
+    "inside_4in_plus": {
+     "called_strike": 0.9983,
+     "takes": 34619
+    },
+    "inside_2_4in": {
+     "called_strike": 0.9424,
+     "takes": 23788
+    },
+    "inside_1_2in": {
+     "called_strike": 0.7612,
+     "takes": 12791
+    },
+    "inside_0_1in": {
+     "called_strike": 0.4775,
+     "takes": 15302
+    },
+    "outside_0_1in": {
+     "called_strike": 0.2025,
+     "takes": 14138
+    },
+    "outside_1_2in": {
+     "called_strike": 0.0755,
+     "takes": 14270
+    },
+    "outside_2_4in": {
+     "called_strike": 0.0122,
+     "takes": 30433
+    },
+    "outside_4_8in": {
+     "called_strike": 0.0005,
+     "takes": 48715
+    },
+    "outside_8in_plus": {
+     "called_strike": 0.0001,
+     "takes": 57694
+    }
+   }
+  },
+  "called_strike_on_takes_side_edges": {
+   "2025": {
+    "inside_4in_plus": {
+     "called_strike": 0.9989,
+     "takes": 36229
+    },
+    "inside_2_4in": {
+     "called_strike": 0.9802,
+     "takes": 13047
+    },
+    "inside_1_2in": {
+     "called_strike": 0.8948,
+     "takes": 6120
+    },
+    "inside_0_1in": {
+     "called_strike": 0.7349,
+     "takes": 7000
+    },
+    "outside_0_1in": {
+     "called_strike": 0.4904,
+     "takes": 6014
+    },
+    "outside_1_2in": {
+     "called_strike": 0.2589,
+     "takes": 5879
+    },
+    "outside_2_4in": {
+     "called_strike": 0.062,
+     "takes": 11709
+    },
+    "outside_4_8in": {
+     "called_strike": 0.0018,
+     "takes": 16319
+    },
+    "outside_8in_plus": {
+     "called_strike": 0.0,
+     "takes": 13513
+    }
+   },
+   "2026": {
+    "inside_4in_plus": {
+     "called_strike": 0.9997,
+     "takes": 26438
+    },
+    "inside_2_4in": {
+     "called_strike": 0.9889,
+     "takes": 9590
+    },
+    "inside_1_2in": {
+     "called_strike": 0.9304,
+     "takes": 4471
+    },
+    "inside_0_1in": {
+     "called_strike": 0.7124,
+     "takes": 4931
+    },
+    "outside_0_1in": {
+     "called_strike": 0.348,
+     "takes": 4305
+    },
+    "outside_1_2in": {
+     "called_strike": 0.1541,
+     "takes": 3991
+    },
+    "outside_2_4in": {
+     "called_strike": 0.0272,
+     "takes": 7905
+    },
+    "outside_4_8in": {
+     "called_strike": 0.0009,
+     "takes": 10884
+    },
+    "outside_8in_plus": {
+     "called_strike": 0.0001,
+     "takes": 8448
+    }
+   }
+  },
+  "swing_vs_take_outside": {
+   "pitches": 577302,
+   "runs_2025": -0.11197,
+   "runs_2025_interval": [
+    -0.11477,
+    -0.10928
+   ],
+   "runs_2026": -0.12311,
+   "runs_2026_interval": [
+    -0.12645,
+    -0.11988
+   ],
+   "change_2026": -0.01115,
+   "change_2026_interval": [
+    -0.01601,
+    -0.00666
+   ]
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T07:04:44.089747+00:00",
+ "seconds": 44.5
+}
