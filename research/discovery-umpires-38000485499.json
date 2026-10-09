@@ -1,0 +1,1237 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "umpires",
+ "run_id": "38000485499",
+ "params": {
+  "experiment": "umpires",
+  "seasons": [
+   2025,
+   2026
+  ],
+  "workers": 6
+ },
+ "started_at": "2026-10-09T22:41:44.052699+00:00",
+ "stages": [
+  {
+   "stage": "load 2025",
+   "at_seconds": 0.1
+  },
+  {
+   "stage": "umpires 2025: 2430 games to fetch",
+   "at_seconds": 10.3
+  },
+  {
+   "stage": "umpires 2025: 2430 games with a plate umpire",
+   "at_seconds": 80.2
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 80.2
+  },
+  {
+   "stage": "umpires 2026: 1652 games to fetch",
+   "at_seconds": 90.1
+  },
+  {
+   "stage": "umpires 2026: 1652 games with a plate umpire",
+   "at_seconds": 138.1
+  },
+  {
+   "stage": "taken pitches with a plate umpire: 619760 of 619760",
+   "at_seconds": 138.2
+  },
+  {
+   "stage": "season 2025 offsets",
+   "at_seconds": 138.8
+  },
+  {
+   "stage": "season 2026 offsets",
+   "at_seconds": 139.2
+  }
+ ],
+ "environment": {
+  "python": "3.12.15",
+  "commit": "2e81000ee5afde7278c9747af0c5c27b9c256e99",
+  "numpy": "2.5.3",
+  "scipy": "1.18.1",
+  "scikit-learn": "1.9.1",
+  "pandas": "3.0.6",
+  "cryptography": "46.0.4"
+ },
+ "seasons_rows": {
+  "2025": 708985,
+  "2026": 484833
+ },
+ "results": {
+  "pitches": 619760,
+  "edge_pitches": 278407,
+  "umpires": 95,
+  "league_strike_rate_edges": 0.4134,
+  "edge_shares": {
+   "low": 0.1548,
+   "high": 0.1136,
+   "inside": 0.0605,
+   "outside": 0.1204
+  },
+  "by_season": {
+   "2025": {
+    "games": 2430,
+    "umpires": 92,
+    "split_half": {
+     "low": {
+      "umpires": 83,
+      "corr": 0.581,
+      "sd_half_figures": 1.663,
+      "true_sd_strikes_per_100": 1.267,
+      "median_n_per_half": 294
+     },
+     "high": {
+      "umpires": 76,
+      "corr": 0.476,
+      "sd_half_figures": 1.582,
+      "true_sd_strikes_per_100": 1.092,
+      "median_n_per_half": 222
+     },
+     "inside": {
+      "umpires": 0
+     },
+     "outside": {
+      "umpires": 80,
+      "corr": 0.538,
+      "sd_half_figures": 1.749,
+      "true_sd_strikes_per_100": 1.284,
+      "median_n_per_half": 230
+     },
+     "all_edges": {
+      "umpires": 83,
+      "corr": 0.609,
+      "sd_half_figures": 1.631,
+      "true_sd_strikes_per_100": 1.273,
+      "median_n_per_half": 867
+     }
+    }
+   },
+   "2026": {
+    "games": 1652,
+    "umpires": 91,
+    "split_half": {
+     "low": {
+      "umpires": 63,
+      "corr": 0.145,
+      "sd_half_figures": 0.992,
+      "true_sd_strikes_per_100": 0.378,
+      "median_n_per_half": 191
+     },
+     "high": {
+      "umpires": 26,
+      "corr": 0.466,
+      "sd_half_figures": 1.162,
+      "true_sd_strikes_per_100": 0.793,
+      "median_n_per_half": 161
+     },
+     "inside": {
+      "umpires": 0
+     },
+     "outside": {
+      "umpires": 35,
+      "corr": 0.502,
+      "sd_half_figures": 1.234,
+      "true_sd_strikes_per_100": 0.874,
+      "median_n_per_half": 163
+     },
+     "all_edges": {
+      "umpires": 79,
+      "corr": 0.34,
+      "sd_half_figures": 1.208,
+      "true_sd_strikes_per_100": 0.704,
+      "median_n_per_half": 539
+     }
+    }
+   }
+  },
+  "across_seasons": {
+   "2025_vs_2026": {
+    "low": {
+     "umpires": 81,
+     "corr": 0.282,
+     "sd_half_figures": 2.292,
+     "true_sd_strikes_per_100": 1.217,
+     "median_n_per_half": 459
+    },
+    "high": {
+     "umpires": 79,
+     "corr": 0.49,
+     "sd_half_figures": 2.001,
+     "true_sd_strikes_per_100": 1.4,
+     "median_n_per_half": 343
+    },
+    "inside": {
+     "umpires": 66,
+     "corr": 0.36,
+     "sd_half_figures": 1.324,
+     "true_sd_strikes_per_100": 0.794,
+     "median_n_per_half": 190
+    },
+    "outside": {
+     "umpires": 81,
+     "corr": 0.585,
+     "sd_half_figures": 2.136,
+     "true_sd_strikes_per_100": 1.634,
+     "median_n_per_half": 361
+    },
+    "all_edges": {
+     "umpires": 83,
+     "corr": 0.361,
+     "sd_half_figures": 2.217,
+     "true_sd_strikes_per_100": 1.331,
+     "median_n_per_half": 1357
+    }
+   }
+  },
+  "umpires_table": {
+   "season": 2026,
+   "count": 90,
+   "rows": {
+    "427013": {
+     "name": "Lance Barksdale",
+     "edge_calls": 1528,
+     "strikes_per_100": {
+      "low": -4.57,
+      "high": 0.63,
+      "inside": 0.02,
+      "outside": -2.65,
+      "all_edges": -3.05
+     }
+    },
+    "427113": {
+     "name": "Laz Diaz",
+     "edge_calls": 1418,
+     "strikes_per_100": {
+      "low": -3.7,
+      "high": -1.69,
+      "inside": -1.4,
+      "outside": 1.13,
+      "all_edges": -2.52
+     }
+    },
+    "427128": {
+     "name": "Rob Drake",
+     "edge_calls": 1479,
+     "strikes_per_100": {
+      "low": -1.85,
+      "high": -1.56,
+      "inside": 1.81,
+      "outside": 3.27,
+      "all_edges": 0.39
+     }
+    },
+    "427129": {
+     "name": "Bruce Dreckman",
+     "edge_calls": 1474,
+     "strikes_per_100": {
+      "low": -2.31,
+      "high": -2.8,
+      "inside": -0.2,
+      "outside": 3.2,
+      "all_edges": -1.03
+     }
+    },
+    "427139": {
+     "name": "Doug Eddings",
+     "edge_calls": 1348,
+     "strikes_per_100": {
+      "low": 0.86,
+      "high": 2.63,
+      "inside": 1.51,
+      "outside": 0.41,
+      "all_edges": 2.24
+     }
+    },
+    "427164": {
+     "name": "Andy Fletcher",
+     "edge_calls": 919,
+     "strikes_per_100": {
+      "low": -2.64,
+      "high": -2.58,
+      "inside": 1.5,
+      "outside": 0.62,
+      "all_edges": -1.76
+     }
+    },
+    "427197": {
+     "name": "Chris Guccione",
+     "edge_calls": 1357,
+     "strikes_per_100": {
+      "low": -1.7,
+      "high": -3.21,
+      "inside": -1.17,
+      "outside": -2.16,
+      "all_edges": -3.52
+     }
+    },
+    "427243": {
+     "name": "Marvin Hudson",
+     "edge_calls": 1118,
+     "strikes_per_100": {
+      "low": -0.51,
+      "high": -0.79,
+      "inside": -0.17,
+      "outside": 0.24,
+      "all_edges": -0.59
+     }
+    },
+    "427248": {
+     "name": "Dan Iassogna",
+     "edge_calls": 1408,
+     "strikes_per_100": {
+      "low": -0.58,
+      "high": -2.36,
+      "inside": -0.21,
+      "outside": 0.25,
+      "all_edges": -1.22
+     }
+    },
+    "427292": {
+     "name": "Ron Kulpa",
+     "edge_calls": 962,
+     "strikes_per_100": {
+      "low": 0.31,
+      "high": -2.65,
+      "inside": 0.59,
+      "outside": 1.49,
+      "all_edges": -0.12
+     }
+    },
+    "427315": {
+     "name": "Alfonso M\u00e1rquez",
+     "edge_calls": 1444,
+     "strikes_per_100": {
+      "low": -1.59,
+      "high": -4.06,
+      "inside": -2.19,
+      "outside": 1.14,
+      "all_edges": -2.64
+     }
+    },
+    "427344": {
+     "name": "Bill Miller",
+     "edge_calls": 1536,
+     "strikes_per_100": {
+      "low": 0.96,
+      "high": -1.32,
+      "inside": 1.1,
+      "outside": -0.82,
+      "all_edges": -0.06
+     }
+    },
+    "427366": {
+     "name": "Brian O'Nora",
+     "edge_calls": 1080,
+     "strikes_per_100": {
+      "low": -0.67,
+      "high": -2.07,
+      "inside": -1.32,
+      "outside": 2.19,
+      "all_edges": -0.75
+     }
+    },
+    "427533": {
+     "name": "Mark Wegner",
+     "edge_calls": 1472,
+     "strikes_per_100": {
+      "low": -2.79,
+      "high": -1.63,
+      "inside": -0.29,
+      "outside": -0.38,
+      "all_edges": -2.25
+     }
+    },
+    "427537": {
+     "name": "Hunter Wendelstedt",
+     "edge_calls": 1500,
+     "strikes_per_100": {
+      "low": -0.61,
+      "high": -4.35,
+      "inside": -1.82,
+      "outside": 0.4,
+      "all_edges": -2.43
+     }
+    },
+    "427554": {
+     "name": "Jim Wolf",
+     "edge_calls": 1244,
+     "strikes_per_100": {
+      "low": -0.41,
+      "high": -3.15,
+      "inside": -0.03,
+      "outside": 1.55,
+      "all_edges": -0.92
+     }
+    },
+    "428442": {
+     "name": "James Hoye",
+     "edge_calls": 1376,
+     "strikes_per_100": {
+      "low": -4.54,
+      "high": -1.61,
+      "inside": -1.07,
+      "outside": 0.23,
+      "all_edges": -3.2
+     }
+    },
+    "429805": {
+     "name": "Todd Tichenor",
+     "edge_calls": 1333,
+     "strikes_per_100": {
+      "low": -2.64,
+      "high": -1.81,
+      "inside": -0.38,
+      "outside": -0.0,
+      "all_edges": -2.19
+     }
+    },
+    "431232": {
+     "name": "Chad Fairchild",
+     "edge_calls": 1366,
+     "strikes_per_100": {
+      "low": -1.39,
+      "high": -2.18,
+      "inside": -0.29,
+      "outside": 1.58,
+      "all_edges": -1.03
+     }
+    },
+    "482608": {
+     "name": "Scott Barry",
+     "edge_calls": 1226,
+     "strikes_per_100": {
+      "low": -2.64,
+      "high": -1.52,
+      "inside": -0.48,
+      "outside": 1.45,
+      "all_edges": -1.58
+     }
+    },
+    "482620": {
+     "name": "Chris Conroy",
+     "edge_calls": 1412,
+     "strikes_per_100": {
+      "low": -3.09,
+      "high": -1.51,
+      "inside": -0.98,
+      "outside": 0.16,
+      "all_edges": -2.39
+     }
+    },
+    "482631": {
+     "name": "Mike Estabrook",
+     "edge_calls": 1379,
+     "strikes_per_100": {
+      "low": -2.22,
+      "high": -2.58,
+      "inside": 1.14,
+      "outside": 0.97,
+      "all_edges": -1.37
+     }
+    },
+    "482641": {
+     "name": "Adrian Johnson",
+     "edge_calls": 980,
+     "strikes_per_100": {
+      "low": -1.11,
+      "high": -1.49,
+      "inside": -0.58,
+      "outside": 1.22,
+      "all_edges": -0.92
+     }
+    },
+    "482663": {
+     "name": "David Rackley",
+     "edge_calls": 1440,
+     "strikes_per_100": {
+      "low": -2.15,
+      "high": -0.22,
+      "inside": 1.38,
+      "outside": 0.14,
+      "all_edges": -0.65
+     }
+    },
+    "482666": {
+     "name": "D.J. Reyburn",
+     "edge_calls": 1157,
+     "strikes_per_100": {
+      "low": -1.62,
+      "high": -1.65,
+      "inside": -0.28,
+      "outside": 0.91,
+      "all_edges": -1.25
+     }
+    },
+    "483561": {
+     "name": "Lance Barrett",
+     "edge_calls": 1568,
+     "strikes_per_100": {
+      "low": -2.01,
+      "high": -1.58,
+      "inside": 1.09,
+      "outside": 0.74,
+      "all_edges": -0.95
+     }
+    },
+    "483564": {
+     "name": "Dan Bellino",
+     "edge_calls": 1524,
+     "strikes_per_100": {
+      "low": -3.25,
+      "high": -4.11,
+      "inside": 1.06,
+      "outside": -1.94,
+      "all_edges": -3.69
+     }
+    },
+    "483569": {
+     "name": "Vic Carapazza",
+     "edge_calls": 1608,
+     "strikes_per_100": {
+      "low": -1.55,
+      "high": -2.14,
+      "inside": -0.65,
+      "outside": 0.02,
+      "all_edges": -1.76
+     }
+    },
+    "483630": {
+     "name": "John Tumpane",
+     "edge_calls": 1360,
+     "strikes_per_100": {
+      "low": -1.99,
+      "high": -2.41,
+      "inside": 1.27,
+      "outside": 1.28,
+      "all_edges": -1.07
+     }
+    },
+    "483912": {
+     "name": "Mike Muchlinski",
+     "edge_calls": 1446,
+     "strikes_per_100": {
+      "low": -2.1,
+      "high": -0.16,
+      "inside": 0.61,
+      "outside": 1.89,
+      "all_edges": -0.17
+     }
+    },
+    "483919": {
+     "name": "Mark Ripperger",
+     "edge_calls": 1539,
+     "strikes_per_100": {
+      "low": -3.36,
+      "high": -0.92,
+      "inside": -0.28,
+      "outside": -1.21,
+      "all_edges": -2.58
+     }
+    },
+    "484183": {
+     "name": "Cory Blaser",
+     "edge_calls": 1215,
+     "strikes_per_100": {
+      "low": -0.26,
+      "high": -3.11,
+      "inside": 0.08,
+      "outside": 0.09,
+      "all_edges": -1.42
+     }
+    },
+    "484198": {
+     "name": "Alan Porter",
+     "edge_calls": 1368,
+     "strikes_per_100": {
+      "low": -1.25,
+      "high": -2.49,
+      "inside": -0.36,
+      "outside": -3.91,
+      "all_edges": -3.49
+     }
+    },
+    "484499": {
+     "name": "Manny Gonzalez",
+     "edge_calls": 1274,
+     "strikes_per_100": {
+      "low": -2.81,
+      "high": 0.38,
+      "inside": -0.63,
+      "outside": -0.09,
+      "all_edges": -1.53
+     }
+    },
+    "485856": {
+     "name": "Jonathan Parra",
+     "edge_calls": 673,
+     "strikes_per_100": {
+      "low": -0.99,
+      "high": -1.23,
+      "inside": 0.22,
+      "outside": -1.02,
+      "all_edges": -1.69
+     }
+    },
+    "489985": {
+     "name": "Chad Whitson",
+     "edge_calls": 1279,
+     "strikes_per_100": {
+      "low": -2.33,
+      "high": -1.04,
+      "inside": -0.53,
+      "outside": -1.27,
+      "all_edges": -2.39
+     }
+    },
+    "490319": {
+     "name": "Jordan Baker",
+     "edge_calls": 1446,
+     "strikes_per_100": {
+      "low": -2.78,
+      "high": 0.24,
+      "inside": -0.84,
+      "outside": -1.43,
+      "all_edges": -2.1
+     }
+    },
+    "503077": {
+     "name": "Adam Hamari",
+     "edge_calls": 1497,
+     "strikes_per_100": {
+      "low": -2.59,
+      "high": -2.12,
+      "inside": -0.58,
+      "outside": -2.01,
+      "all_edges": -3.17
+     }
+    },
+    "503490": {
+     "name": "Chris Segal",
+     "edge_calls": 1353,
+     "strikes_per_100": {
+      "low": -1.3,
+      "high": -0.1,
+      "inside": -1.93,
+      "outside": 0.48,
+      "all_edges": -1.08
+     }
+    },
+    "503493": {
+     "name": "Sean Barber",
+     "edge_calls": 1393,
+     "strikes_per_100": {
+      "low": -2.14,
+      "high": -1.45,
+      "inside": 1.53,
+      "outside": -3.04,
+      "all_edges": -2.54
+     }
+    },
+    "503502": {
+     "name": "Ryan Blakney",
+     "edge_calls": 1171,
+     "strikes_per_100": {
+      "low": -3.54,
+      "high": -2.26,
+      "inside": -0.66,
+      "outside": -1.61,
+      "all_edges": -3.8
+     }
+    },
+    "503586": {
+     "name": "Tripp Gibson",
+     "edge_calls": 1545,
+     "strikes_per_100": {
+      "low": -0.77,
+      "high": -3.73,
+      "inside": 1.23,
+      "outside": -1.87,
+      "all_edges": -2.26
+     }
+    },
+    "504381": {
+     "name": "Will Little",
+     "edge_calls": 1546,
+     "strikes_per_100": {
+      "low": -2.58,
+      "high": -2.62,
+      "inside": -1.07,
+      "outside": -3.88,
+      "all_edges": -4.24
+     }
+    },
+    "511890": {
+     "name": "Quinn Wolcott",
+     "edge_calls": 1550,
+     "strikes_per_100": {
+      "low": -1.3,
+      "high": -0.25,
+      "inside": -1.31,
+      "outside": -2.5,
+      "all_edges": -2.21
+     }
+    },
+    "521051": {
+     "name": "Nick Mahrley",
+     "edge_calls": 1355,
+     "strikes_per_100": {
+      "low": -4.04,
+      "high": 0.52,
+      "inside": 0.85,
+      "outside": -0.26,
+      "all_edges": -1.53
+     }
+    },
+    "521251": {
+     "name": "Ben May",
+     "edge_calls": 1483,
+     "strikes_per_100": {
+      "low": -1.51,
+      "high": -2.21,
+      "inside": -0.07,
+      "outside": -0.79,
+      "all_edges": -2.0
+     }
+    },
+    "521889": {
+     "name": "Stu Scheurwater",
+     "edge_calls": 1451,
+     "strikes_per_100": {
+      "low": -2.29,
+      "high": -2.08,
+      "inside": -2.96,
+      "outside": -1.25,
+      "all_edges": -3.46
+     }
+    },
+    "544728": {
+     "name": "Nic Lentz",
+     "edge_calls": 1526,
+     "strikes_per_100": {
+      "low": -1.61,
+      "high": -2.35,
+      "inside": -1.46,
+      "outside": -2.76,
+      "all_edges": -3.36
+     }
+    },
+    "545402": {
+     "name": "John Bacon",
+     "edge_calls": 692,
+     "strikes_per_100": {
+      "low": -0.72,
+      "high": -0.5,
+      "inside": 1.01,
+      "outside": 2.44,
+      "all_edges": 1.11
+     }
+    },
+    "547380": {
+     "name": "Carlos Torres",
+     "edge_calls": 1278,
+     "strikes_per_100": {
+      "low": -2.9,
+      "high": -0.93,
+      "inside": 2.26,
+      "outside": -1.81,
+      "all_edges": -1.84
+     }
+    },
+    "554242": {
+     "name": "Edwin Moscoso",
+     "edge_calls": 1362,
+     "strikes_per_100": {
+      "low": -2.22,
+      "high": -0.74,
+      "inside": -1.72,
+      "outside": -1.41,
+      "all_edges": -2.57
+     }
+    },
+    "573597": {
+     "name": "Gabe Morales",
+     "edge_calls": 1297,
+     "strikes_per_100": {
+      "low": -1.94,
+      "high": -1.35,
+      "inside": 0.67,
+      "outside": 1.23,
+      "all_edges": -0.71
+     }
+    },
+    "575629": {
+     "name": "Shane Livensparger",
+     "edge_calls": 1256,
+     "strikes_per_100": {
+      "low": -2.76,
+      "high": -0.44,
+      "inside": -0.1,
+      "outside": -1.69,
+      "all_edges": -2.36
+     }
+    },
+    "577468": {
+     "name": "Roberto Ortiz",
+     "edge_calls": 1234,
+     "strikes_per_100": {
+      "low": -1.8,
+      "high": -2.21,
+      "inside": -1.0,
+      "outside": -1.88,
+      "all_edges": -3.07
+     }
+    },
+    "594151": {
+     "name": "Ramon De Jesus",
+     "edge_calls": 1193,
+     "strikes_per_100": {
+      "low": -2.38,
+      "high": -0.01,
+      "inside": 0.21,
+      "outside": 0.33,
+      "all_edges": -0.92
+     }
+    },
+    "596740": {
+     "name": "Jansen Visconti",
+     "edge_calls": 1320,
+     "strikes_per_100": {
+      "low": -2.64,
+      "high": -2.63,
+      "inside": -0.38,
+      "outside": -3.43,
+      "all_edges": -4.08
+     }
+    },
+    "596805": {
+     "name": "John Libka",
+     "edge_calls": 1252,
+     "strikes_per_100": {
+      "low": -1.87,
+      "high": -1.84,
+      "inside": 0.11,
+      "outside": -1.31,
+      "all_edges": -2.28
+     }
+    },
+    "596809": {
+     "name": "Ryan Additon",
+     "edge_calls": 1582,
+     "strikes_per_100": {
+      "low": -3.96,
+      "high": 0.32,
+      "inside": 0.18,
+      "outside": 0.48,
+      "all_edges": -1.57
+     }
+    },
+    "598411": {
+     "name": "Nestor Ceja",
+     "edge_calls": 1500,
+     "strikes_per_100": {
+      "low": -2.36,
+      "high": -0.86,
+      "inside": -0.7,
+      "outside": -3.3,
+      "all_edges": -3.13
+     }
+    },
+    "605670": {
+     "name": "Dan Merzel",
+     "edge_calls": 1432,
+     "strikes_per_100": {
+      "low": -2.19,
+      "high": -1.2,
+      "inside": -0.3,
+      "outside": -0.79,
+      "all_edges": -1.99
+     }
+    },
+    "605671": {
+     "name": "Charlie Ramos",
+     "edge_calls": 1053,
+     "strikes_per_100": {
+      "low": -1.55,
+      "high": -1.66,
+      "inside": 0.23,
+      "outside": -1.54,
+      "all_edges": -2.23
+     }
+    },
+    "605672": {
+     "name": "Jeremie Rehak",
+     "edge_calls": 1308,
+     "strikes_per_100": {
+      "low": -1.55,
+      "high": -0.28,
+      "inside": 0.26,
+      "outside": -2.71,
+      "all_edges": -2.01
+     }
+    },
+    "605673": {
+     "name": "Alex Tosi",
+     "edge_calls": 1332,
+     "strikes_per_100": {
+      "low": -0.98,
+      "high": -1.31,
+      "inside": 0.11,
+      "outside": -2.69,
+      "all_edges": -2.16
+     }
+    },
+    "605674": {
+     "name": "Ryan Wills",
+     "edge_calls": 1466,
+     "strikes_per_100": {
+      "low": -1.1,
+      "high": -2.53,
+      "inside": -0.83,
+      "outside": -1.61,
+      "all_edges": -2.54
+     }
+    },
+    "607884": {
+     "name": "Paul Clemons",
+     "edge_calls": 1354,
+     "strikes_per_100": {
+      "low": -2.15,
+      "high": 0.67,
+      "inside": 0.96,
+      "outside": -1.21,
+      "all_edges": -0.94
+     }
+    },
+    "608093": {
+     "name": "Junior Valentine",
+     "edge_calls": 1434,
+     "strikes_per_100": {
+      "low": -1.67,
+      "high": -1.18,
+      "inside": -0.39,
+      "outside": 0.17,
+      "all_edges": -1.36
+     }
+    },
+    "608158": {
+     "name": "Nate Tomlinson",
+     "edge_calls": 1357,
+     "strikes_per_100": {
+      "low": -2.22,
+      "high": -2.47,
+      "inside": -0.85,
+      "outside": -2.09,
+      "all_edges": -3.32
+     }
+    },
+    "621660": {
+     "name": "Emil Jimenez",
+     "edge_calls": 1349,
+     "strikes_per_100": {
+      "low": -1.97,
+      "high": 1.36,
+      "inside": 0.64,
+      "outside": -1.73,
+      "all_edges": -0.93
+     }
+    },
+    "623938": {
+     "name": "Erich Bacchus",
+     "edge_calls": 1396,
+     "strikes_per_100": {
+      "low": -2.98,
+      "high": -1.36,
+      "inside": 0.2,
+      "outside": 1.85,
+      "all_edges": -1.14
+     }
+    },
+    "623945": {
+     "name": "Alex MacKay",
+     "edge_calls": 1368,
+     "strikes_per_100": {
+      "low": -0.64,
+      "high": -2.13,
+      "inside": 1.68,
+      "outside": -1.22,
+      "all_edges": -1.16
+     }
+    },
+    "623946": {
+     "name": "Malachi Moore",
+     "edge_calls": 1690,
+     "strikes_per_100": {
+      "low": -3.71,
+      "high": 0.69,
+      "inside": -1.14,
+      "outside": 1.89,
+      "all_edges": -0.94
+     }
+    },
+    "623949": {
+     "name": "Clint Vondrak",
+     "edge_calls": 1373,
+     "strikes_per_100": {
+      "low": -0.88,
+      "high": -3.6,
+      "inside": 0.72,
+      "outside": -0.09,
+      "all_edges": -1.77
+     }
+    },
+    "639723": {
+     "name": "Brennan Miller",
+     "edge_calls": 1397,
+     "strikes_per_100": {
+      "low": -1.89,
+      "high": -1.58,
+      "inside": 0.61,
+      "outside": 0.02,
+      "all_edges": -1.4
+     }
+    },
+    "644760": {
+     "name": "Adam Beck",
+     "edge_calls": 1505,
+     "strikes_per_100": {
+      "low": -3.01,
+      "high": 0.23,
+      "inside": -0.72,
+      "outside": -2.44,
+      "all_edges": -2.6
+     }
+    },
+    "658082": {
+     "name": "Jacob Metz",
+     "edge_calls": 859,
+     "strikes_per_100": {
+      "low": -0.3,
+      "high": -0.19,
+      "inside": 0.49,
+      "outside": -1.96,
+      "all_edges": -1.07
+     }
+    },
+    "658292": {
+     "name": "Derek Thomas",
+     "edge_calls": 1198,
+     "strikes_per_100": {
+      "low": -0.89,
+      "high": -0.68,
+      "inside": -0.47,
+      "outside": -1.62,
+      "all_edges": -1.65
+     }
+    },
+    "658325": {
+     "name": "Tyler Jones",
+     "edge_calls": 1049,
+     "strikes_per_100": {
+      "low": -1.3,
+      "high": -4.71,
+      "inside": -0.09,
+      "outside": -3.62,
+      "all_edges": -4.65
+     }
+    },
+    "658536": {
+     "name": "Austin Jones",
+     "edge_calls": 1000,
+     "strikes_per_100": {
+      "low": 0.39,
+      "high": -1.18,
+      "inside": -0.08,
+      "outside": -1.72,
+      "all_edges": -1.21
+     }
+    },
+    "664263": {
+     "name": "Edwin Jimenez",
+     "edge_calls": 612,
+     "strikes_per_100": {
+      "low": -1.05,
+      "high": 1.82,
+      "inside": 0.88,
+      "outside": 0.11,
+      "all_edges": 0.83
+     }
+    },
+    "665281": {
+     "name": "Brian Walsh",
+     "edge_calls": 1259,
+     "strikes_per_100": {
+      "low": -2.3,
+      "high": -2.48,
+      "inside": -0.43,
+      "outside": -0.52,
+      "all_edges": -2.64
+     }
+    },
+    "665297": {
+     "name": "Tom Hanahan",
+     "edge_calls": 1439,
+     "strikes_per_100": {
+      "low": -2.41,
+      "high": -0.97,
+      "inside": 1.27,
+      "outside": -0.03,
+      "all_edges": -1.2
+     }
+    },
+    "665298": {
+     "name": "Dexter Kelley",
+     "edge_calls": 896,
+     "strikes_per_100": {
+      "low": -2.12,
+      "high": -0.05,
+      "inside": -0.27,
+      "outside": 1.16,
+      "all_edges": -0.69
+     }
+    },
+    "665299": {
+     "name": "Louie Krupa",
+     "edge_calls": 550,
+     "strikes_per_100": {
+      "low": -1.94,
+      "high": -1.02,
+      "inside": -0.8,
+      "outside": -1.09,
+      "all_edges": -2.81
+     }
+    },
+    "665302": {
+     "name": "Dillon Wilson",
+     "edge_calls": 538,
+     "strikes_per_100": {
+      "low": -0.61,
+      "high": -0.23,
+      "inside": -0.04,
+      "outside": -1.21,
+      "all_edges": -1.25
+     }
+    },
+    "665576": {
+     "name": "Brock Ballou",
+     "edge_calls": 874,
+     "strikes_per_100": {
+      "low": -3.59,
+      "high": 0.19,
+      "inside": -0.02,
+      "outside": -0.71,
+      "all_edges": -2.21
+     }
+    },
+    "668921": {
+     "name": "Jen Pawol",
+     "edge_calls": 846,
+     "strikes_per_100": {
+      "low": -1.92,
+      "high": -0.76,
+      "inside": -0.38,
+      "outside": 0.35,
+      "all_edges": -1.41
+     }
+    },
+    "676580": {
+     "name": "Steven Jaschinski",
+     "edge_calls": 648,
+     "strikes_per_100": {
+      "low": -1.81,
+      "high": 1.07,
+      "inside": 0.47,
+      "outside": -0.01,
+      "all_edges": -0.31
+     }
+    },
+    "676581": {
+     "name": "James Jean",
+     "edge_calls": 1204,
+     "strikes_per_100": {
+      "low": -3.4,
+      "high": -1.11,
+      "inside": -0.57,
+      "outside": -1.49,
+      "all_edges": -3.15
+     }
+    },
+    "681849": {
+     "name": "Felix Neon",
+     "edge_calls": 427,
+     "strikes_per_100": {
+      "low": -2.12,
+      "high": -1.32,
+      "inside": 0.8,
+      "outside": -1.37,
+      "all_edges": -2.67
+     }
+    },
+    "691042": {
+     "name": "Willie Traynor",
+     "edge_calls": 1694,
+     "strikes_per_100": {
+      "low": -4.0,
+      "high": -1.68,
+      "inside": -2.54,
+      "outside": -3.2,
+      "all_edges": -4.61
+     }
+    }
+   }
+  },
+  "widest_and_tightest": {
+   "tightest": [
+    [
+     "Tyler Jones",
+     -4.65
+    ],
+    [
+     "Willie Traynor",
+     -4.61
+    ],
+    [
+     "Will Little",
+     -4.24
+    ],
+    [
+     "Jansen Visconti",
+     -4.08
+    ],
+    [
+     "Ryan Blakney",
+     -3.8
+    ]
+   ],
+   "widest": [
+    [
+     "Bill Miller",
+     -0.06
+    ],
+    [
+     "Rob Drake",
+     0.39
+    ],
+    [
+     "Edwin Jimenez",
+     0.83
+    ],
+    [
+     "John Bacon",
+     1.11
+    ],
+    [
+     "Doug Eddings",
+     2.24
+    ]
+   ]
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T22:44:03.239268+00:00",
+ "seconds": 139.2
+}
