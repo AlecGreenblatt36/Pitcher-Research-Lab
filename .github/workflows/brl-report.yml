@@ -3,6 +3,7 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '20 13 * * *'
+    - cron: '35 20 * * *'
   push:
     branches: [diag/report]
 permissions:
@@ -30,4 +31,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           BRL_PA_PACKAGE_KEY: ${{ secrets.BRL_PA_PACKAGE_KEY }}
+          BRL_REPORT_DAILY: ${{ github.event_name == 'schedule' && '1' || '' }}
         run: python tools/brl_report.py

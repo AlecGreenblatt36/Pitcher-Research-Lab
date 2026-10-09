@@ -475,6 +475,8 @@ def main():
     branch = os.environ.get('BRL_LEDGER_BRANCH', 'brl-live-data')
     params = json.loads((ROOT / 'tools' / 'report_params.json').read_text()) if (ROOT / 'tools' / 'report_params.json').exists() else {}
     now_et = datetime.now(timezone.utc).astimezone(ZoneInfo('America/New_York'))
+    if os.environ.get('BRL_REPORT_DAILY'):        # the scheduled runs: yesterday (now graded) and today, each as of its own date
+        params = {'publish': True, 'dates': [(now_et.date() - timedelta(days=1)).isoformat(), now_et.date().isoformat()]}
     dates = params.get('dates') or [params.get('date') or now_et.date().isoformat()]
     asof = params.get('asof')                      # one as-of date for every report in the run (a backfilled month); default: each report's own date
     run_id = os.environ.get('GITHUB_RUN_ID', 'local')
@@ -502,7 +504,7 @@ def main():
             a = asof or day
             if a not in fits:
                 fits.clear()
-                fits[a] = Fitted(T, date.fromisoformat(a).toordinal(), stage, int(params.get('min_pitches', 400)), int(params.get('min_swings', 200)))
+                fits[a] = Fitted(T, date.fromisoformat(a).toordinal(), stage, int(params.get('min_pitches', 300)), int(params.get('min_swings', 200)))
             rep = build_report(fits[a], T, day, a, stage, int(params.get('max_relievers', 4)))
             total = 0
             summary = {k: v for k, v in rep.items() if k != 'games'}
