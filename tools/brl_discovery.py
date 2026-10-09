@@ -2357,6 +2357,141 @@ def scarcity(T: dict, X: dict, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- MATCHUP-01: hitters' swing maps at the decision moment
+def _ridge_offset(B, y, off, lam, iters=25):
+    """Ridge logistic with an offset (Newton); B small dense design. Returns coefficients."""
+    b = np.zeros(B.shape[1])
+    for _ in range(iters):
+        p = 1.0 / (1.0 + np.exp(-(off + B @ b)))
+        g = B.T @ (y - p) - lam * b
+        H = (B * (p * (1 - p))[:, None]).T @ B + lam * np.eye(B.shape[1])
+        step = np.linalg.solve(H, g); b += step
+        if np.max(np.abs(step)) < 1e-6:
+            break
+    return b
+
+
+def hitter_basis(x, z, stand_r, strikes):
+    u = np.where(stand_r == 1, x, -x)
+    e = np.maximum(np.maximum(np.abs(u) - ZONE_HALF, z - ZONE_TOP), ZONE_BOT - z)
+    return np.hstack([hats(e, (-0.8, -0.4, -0.15, 0.0, 0.15, 0.4, 0.8, 1.5)), hats(u, (-1.5, -0.8, -0.3, 0.3, 0.8, 1.5)),
+                      hats(z, (0.5, 1.5, 2.2, 2.9, 3.6, 4.5)), (strikes == 2)[:, None].astype(np.float32)]).astype(np.float64)
+
+
+def pitcher_propensity(t: dict, k: float = 600.0) -> np.ndarray:
+    """Logit of the swing rate of hitters facing each pitcher on earlier dates (shrunk toward the league by k pitches)."""
+    tt = dict(t); tt['batter'] = t['pitcher']
+    return swing_propensity(tt, k)
+
+
+def matchup_swing(T: dict, params: dict, stage) -> dict:
+    """Does each hitter's own swing map, read at the decision moment, predict his swings (and his chases against a given
+    pitcher) beyond the league map and additive hitter and pitcher terms? Train 2023-2024, choose the shrinkage on the
+    second half of 2024, score 2025 (2026 is left out: its plate locations use a different reference)."""
+    res = {}
+    seasons = [int(s) for s in params.get('train', (2023, 2024))] + [int(params.get('test', 2025))]
+    T = take(T, np.isin(T['season'], seasons))
+    F = rebuild(T)
+    keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['strikes'] >= 0) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
+    T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
+    swing = ((T['call'] == 1) | (T['call'] == 2)).astype(np.float64)
+    tau = float(params.get('tau', 0.26))
+    xp, zp = projected(T, F, None, 'straight', tau)
+    reps = {'true': (T['px'].astype(np.float64), T['pz'].astype(np.float64)), 'percept': (xp, zp)}
+    C = np.hstack([control_block(T, swing_propensity(T)), pitcher_propensity(T)[:, None].astype(np.float32)])
+    stage('features')
+    test_season = seasons[-1]
+    tr = np.isin(T['season'], seasons[:-1]); te = T['season'] == test_season
+    mid = date(seasons[-2], 7, 1).toordinal()
+    fit_a = tr & ~((T['season'] == seasons[-2]) & (T['day'] >= mid)); val = tr & (T['season'] == seasons[-2]) & (T['day'] >= mid)
+    rng = np.random.default_rng(int(params.get('seed', 11)))
+    n_league = int(params.get('league_n', 600000))
+    lams = [float(v) for v in params.get('lams', (3.0, 10.0, 30.0, 100.0, 300.0))]
+    min_n = int(params.get('min_pitches', 300))
+    games = T['game'][te]; yt = swing[te]
+    out = {}
+    preds = {}
+    for name, (x, z) in reps.items():
+        X = np.hstack([location_block(x, z, T['stand_r'], T['strikes']), C])
+        def league(rows):
+            idx = np.flatnonzero(rows); idx = rng.choice(idx, min(len(idx), n_league), replace=False) if len(idx) > n_league else idx
+            m = fit_logistic(X[idx], swing[idx])
+            return m.decision_function(X)
+        off_a = league(fit_a)                     # league model without the validation half, for choosing shrinkage
+        off = league(tr)                          # league model on all training pitches, for the test
+        Bm = hitter_basis(x, z, T['stand_r'], T['strikes'])
+        bat = T['batter']
+        def groups(rows):
+            idx = np.flatnonzero(rows); order = np.argsort(bat[idx], kind='stable'); idx = idx[order]
+            hb = bat[idx]; cut = np.flatnonzero(np.diff(hb)) + 1
+            return {int(g[0]): g for g in (idx[a:b] for a, b in zip(np.r_[0, cut], np.r_[cut, len(idx)])) if len(g)} if len(idx) else {}
+        def key_of(g):
+            return int(bat[g[0]])
+        ga = {key_of(g): g for g in groups(fit_a).values()}
+        gv = {key_of(g): g for g in groups(val).values()}
+        gt = {key_of(g): g for g in groups(tr).values()}
+        ge = {key_of(g): g for g in groups(te).values()}
+        # choose the shrinkage on the validation half
+        val_ll = {}
+        lo_val = {lam: off_a.copy() for lam in lams}
+        for h, r in ga.items():
+            if len(r) < min_n or h not in gv:
+                continue
+            v = gv[h]
+            for lam in lams:
+                b = _ridge_offset(Bm[r], swing[r], off_a[r], lam)
+                lo_val[lam][v] += Bm[v] @ b
+        for lam in lams:
+            val_ll[lam] = float(logloss_vec(1 / (1 + np.exp(-lo_val[lam][val])), swing[val]).mean())
+        best = min(val_ll, key=val_ll.get)
+        # refit hitter maps on all training pitches at the chosen shrinkage, score the test season
+        lo_all = off.copy(); covered = np.zeros(len(off), bool)
+        for h, r in gt.items():
+            if len(r) < min_n or h not in ge:
+                continue
+            b = _ridge_offset(Bm[r], swing[r], off[r], best)
+            e = ge[h]
+            lo_all[e] += Bm[e] @ b; covered[e] = True
+        lo_te = lo_all[te]; covered = covered[te]
+        p_league = 1 / (1 + np.exp(-off[te])); p_hit = 1 / (1 + np.exp(-lo_te))
+        preds[name] = (p_league, p_hit)
+        out[name] = {'shrinkage_chosen': best, 'validation_logloss': {str(k): round(v, 5) for k, v in val_ll.items()},
+                     'test_logloss_league': round(float(logloss_vec(p_league, yt).mean()), 5), 'test_logloss_hitter_maps': round(float(logloss_vec(p_hit, yt).mean()), 5),
+                     'test_share_with_hitter_map': round(float(covered.mean()), 4)}
+        stage('representation ' + name)
+    lt, ht = [logloss_vec(p, yt) for p in preds['true']]
+    lp, hp = [logloss_vec(p, yt) for p in preds['percept']]
+    cc = lambda d: [round(v * 1000, 3) for v in clustered_ci(d, games)]
+    res['representations'] = out
+    res['gain_nats_per_1000_decisions'] = {'percept_over_true_league': cc(lt - lp), 'percept_over_true_hitter_maps': cc(ht - hp),
+                                           'hitter_maps_over_league_true': cc(lt - ht), 'hitter_maps_over_league_percept': cc(lp - hp)}
+    # matchups: chases by hitter-pitcher pair on pitches outside the zone, observed against the league-plus-additive model
+    xt, zt = reps['true']
+    u = np.where(T['stand_r'] == 1, xt, -xt)
+    outside = ((np.abs(u) > ZONE_HALF) | (zt > ZONE_TOP) | (zt < ZONE_BOT))[te]
+    pair = T['batter'][te].astype(np.int64) * 1_000_000 + T['pitcher'][te].astype(np.int64)
+    pl, ph = preds['percept']
+    rows = []
+    for k in np.unique(pair[outside]):
+        sel = outside & (pair == k)
+        if sel.sum() >= int(params.get('pair_min', 10)):
+            rows.append((sel.sum(), yt[sel].mean(), pl[sel].mean(), ph[sel].mean()))
+    if rows:
+        R = np.asarray(rows, float); w = R[:, 0]
+        resid = R[:, 1] - R[:, 2]; pred = R[:, 3] - R[:, 2]
+        slope = float(np.sum(w * pred * resid) / max(np.sum(w * pred * pred), 1e-12))
+        corr = float(np.corrcoef(resid, pred)[0, 1]) if len(R) > 3 else None
+        bs = []
+        for _ in range(300):
+            j = rng.integers(0, len(R), len(R))
+            bs.append(np.sum(w[j] * pred[j] * resid[j]) / max(np.sum(w[j] * pred[j] ** 2), 1e-12))
+        res['pairs_outside_zone'] = {'pairs': int(len(R)), 'pitches': int(w.sum()), 'sd_observed_minus_additive': round(float(np.sqrt(np.average(resid ** 2, weights=w))), 4),
+                                     'sd_predicted_pair_effect': round(float(np.sqrt(np.average(pred ** 2, weights=w))), 4), 'corr': round(corr, 4) if corr is not None else None,
+                                     'slope_observed_on_predicted': [round(slope, 3), round(float(np.percentile(bs, 2.5)), 3), round(float(np.percentile(bs, 97.5)), 3)]}
+    stage('pairs')
+    return res
+
+
 # ---------------------------------------------------------------- ZONE-01: pitch location across the 2026 definition change
 YMID = 8.5 / 12.0          # the middle of the plate, Statcast's reference for plate_x and plate_z from 2026
 
@@ -2481,6 +2616,20 @@ def main():
                 del cols
             receipt['results'] = results
             raise StopIteration
+        if experiment == 'contact':
+            import importlib.util
+            spec = importlib.util.spec_from_file_location('brl_matchup', ROOT / 'tools' / 'brl_matchup.py')
+            mx = importlib.util.module_from_spec(spec); spec.loader.exec_module(mx)
+            sv = savant_module(); got = []
+            for year in params.get('seasons', (2024, 2025, 2026)):
+                stage(f'load savant {year}')
+                c = load_savant(repo, token, branch, key, int(year))
+                if c is not None:
+                    got.append(c)
+            cols = mx.merge(got); del got
+            receipt['rows'] = int(len(cols['day']))
+            receipt['results'] = mx.contact_study(sv, cols, params, stage)
+            raise StopIteration
         if experiment in ('challenges', 'scarcity'):
             stage('fetch the 2026 play-by-play')
             cdoc = challenge_study(int(params.get('season', 2026)), int(params.get('workers', 6)))
@@ -2531,6 +2680,8 @@ def main():
             receipt['results'] = horizon14(T, params, stage)
         elif experiment == 'zone_audit':
             receipt['results'] = zone_audit(T, params, stage)
+        elif experiment == 'matchup_swing':
+            receipt['results'] = matchup_swing(T, params, stage)
         receipt['status'] = 'completed'
     except StopIteration:
         receipt['status'] = 'completed'
