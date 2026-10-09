@@ -1,0 +1,134 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "adapt",
+ "run_id": "37886804864",
+ "params": {
+  "experiment": "adapt",
+  "seasons": [
+   2023,
+   2024,
+   2025
+  ],
+  "reps": 60
+ },
+ "started_at": "2026-10-09T05:04:30.531771+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 9.1
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 17.8
+  },
+  {
+   "stage": "maps 604",
+   "at_seconds": 49.7
+  },
+  {
+   "stage": "adaptation",
+   "at_seconds": 54.7
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985
+ },
+ "results": {
+  "coefficients": {
+   "intercept": [
+    -0.2683,
+    -0.293,
+    -0.237
+   ],
+   "outside_seen_before": [
+    -0.0145,
+    -0.0197,
+    -0.0112
+   ],
+   "high_spots_seen_beyond_chance": [
+    -0.0651,
+    -0.0743,
+    -0.0543
+   ],
+   "high_spots_beyond_chance_x_deviation": [
+    0.0091,
+    -0.0039,
+    0.0244
+   ],
+   "own_high_share_x_deviation": [
+    0.0951,
+    0.0398,
+    0.1397
+   ],
+   "outside_seen_x_deviation": [
+    -0.0056,
+    -0.0086,
+    -0.0026
+   ],
+   "high_spots_chased": [
+    0.0816,
+    0.0644,
+    0.0984
+   ],
+   "high_spots_chased_x_deviation": [
+    0.0388,
+    0.0227,
+    0.0589
+   ],
+   "earlier_plate_appearances": [
+    0.0512,
+    0.0345,
+    0.0645
+   ],
+   "pitch_number": [
+    -0.0247,
+    -0.0305,
+    -0.0189
+   ]
+  },
+  "high_spot_pitches_by_earlier_exposure": [
+   {
+    "earlier_high_spots": 0,
+    "pitches": 30540,
+    "observed_swing": 0.438,
+    "map_predicted": 0.4823,
+    "league_predicted": 0.3925
+   },
+   {
+    "earlier_high_spots": 1,
+    "pitches": 19940,
+    "observed_swing": 0.4673,
+    "map_predicted": 0.5025,
+    "league_predicted": 0.407
+   },
+   {
+    "earlier_high_spots": 2,
+    "pitches": 12013,
+    "observed_swing": 0.4714,
+    "map_predicted": 0.5097,
+    "league_predicted": 0.4111
+   },
+   {
+    "earlier_high_spots": 3,
+    "pitches": 13950,
+    "observed_swing": 0.4723,
+    "map_predicted": 0.5094,
+    "league_predicted": 0.4061
+   }
+  ],
+  "rows": {
+   "outside_pitches": 305771,
+   "high_threshold_points": 3.19,
+   "high_share": 0.25
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T05:05:25.235781+00:00",
+ "seconds": 54.7
+}
