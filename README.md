@@ -20,6 +20,8 @@ cited in LEDGER.md (VALUE-17, VALUE-18, VALUE-18I, VALUE-18J) are on the data br
 record `research/registry.json` is generated from LEDGER.md by `python tools/registry.py`; the discovery lane refuses an
 experiment run whose commit names an ID without a ledger row.
 
+License: MIT (LICENSE). Citation: CITATION.cff.
+
 **Pitcher Research Lab** is the original local application for studying how a pitcher's tracked profile moves over
 time, described below.
 
