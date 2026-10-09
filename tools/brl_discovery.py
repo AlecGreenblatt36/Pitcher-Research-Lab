@@ -3471,6 +3471,103 @@ def value2_study(T: dict, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- ADAPT-01: do hitters learn their own chase spots within a game?
+def adapt_study(T: dict, params: dict, stage) -> dict:
+    """If pitchers started aiming at a hitter's own chase spots (VALUE-01F), would he adapt? Pitchers do not aim today
+    (EXPLOIT-01), so how many of his chase spots a hitter has already been shown in a game is chance. Every 2025 pitch
+    outside the zone to a hitter with a map (2023-2024): his swing on it, with the map's prediction as offset, on the
+    number of earlier pitches in the same game that fell in his high spots (outside the zone, his own deviation in the
+    top quarter), those he chased, and their products with this pitch's deviation (does his excess chasing at his own
+    spots shrink after he has been shown them?), holding fixed the outside pitches seen so far, times through the
+    order and the pitch number of the plate appearance. Game-bootstrap intervals."""
+    res = {}
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+    F = rebuild(T)
+    keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
+    T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
+    swing = ((T['call'] == 1) | (T['call'] == 2)).astype(np.float64)
+    xp, zp = projected(T, F, None, 'straight', 0.26)
+    X = np.hstack([location_block(xp, zp, T['stand_r'], T['strikes']), control_block(T, swing_propensity(T)), pitcher_propensity(T)[:, None].astype(np.float32)])
+    tr = np.isin(T['season'], (2023, 2024))
+    rng = np.random.default_rng(11)
+    idx = np.flatnonzero(tr); idx = rng.choice(idx, min(len(idx), 600000), replace=False)
+    off = fit_logistic(X[idx], swing[idx]).decision_function(X)
+    Bm = hitter_basis(xp, zp, T['stand_r'], T['strikes'])
+    maps = _hitter_maps(Bm, swing, off, _groups(T['batter'], tr), 10.0, 300)
+    stage(f'maps {len(maps)}')
+    te = (T['season'] == 2025) & np.isin(T['batter'], np.asarray(list(maps), dtype=np.int64))
+    ix = np.flatnonzero(te)
+    sig = lambda v: 1 / (1 + np.exp(-v))
+    lo_map = np.zeros(len(ix)); d = np.zeros(len(ix))
+    for h, rr in _groups(T['batter'][ix], np.ones(len(ix), bool)).items():
+        dev = Bm[ix[rr]] @ maps[h]; lo_map[rr] = off[ix[rr]] + dev
+        d[rr] = (sig(off[ix[rr]] + dev) - sig(off[ix[rr]])) * 100
+    xt, zt = T['px'][ix], T['pz'][ix]
+    u_t = np.where(T['stand_r'][ix] == 1, xt, -xt)
+    outside = (np.abs(u_t) > ZONE_HALF) | (zt > ZONE_TOP) | (zt < ZONE_BOT)
+    thr = float(np.percentile(d[outside], 75))
+    high = outside & (d >= thr)
+    y = swing[ix]
+    # earlier pitches in the same game to the same hitter (order: game, hitter, plate appearance, pitch)
+    o = np.lexsort((T['pitch_no'][ix], T['ab'][ix], T['batter'][ix], T['game'][ix]))
+    g_, b_ = T['game'][ix][o], T['batter'][ix][o]
+    start = np.ones(len(o), bool); start[1:] = (g_[1:] != g_[:-1]) | (b_[1:] != b_[:-1])
+    def prev_cum(v):
+        c = np.cumsum(v[o].astype(float)); seg = np.maximum.accumulate(np.where(start, np.arange(len(o)), 0))
+        before = c - v[o].astype(float) - np.where(seg > 0, c[seg - 1], 0.0)
+        out_ = np.empty(len(o)); out_[o] = before; return out_
+    n_out = prev_cum(outside); n_high = prev_cum(high); n_high_ch = prev_cum(high & (y == 1)); n_low = prev_cum(outside & ~high)
+    # times through the order: plate appearances this hitter has had in the game before this one
+    pa_key = T['game'][ix].astype(np.int64) * 10000 + T['ab'][ix].astype(np.int64)
+    first_pitch = T['pitch_no'][ix] == 0
+    n_pa_prev = prev_cum(first_pitch) - 0.0
+    m = outside
+    dd = d[m] / 10.0
+    # how many of the outside pitches already seen fell in his high spots, beyond what his own share of high spots
+    # would give by chance (hitters with more distinct maps have more high spots, which would otherwise stand in for
+    # how distinct, and how well calibrated, the map is)
+    bat_ix = T['batter'][ix]
+    uh, ih = np.unique(bat_ix[outside], return_inverse=True)
+    qh = dict(zip(uh.tolist(), (np.bincount(ih, weights=high[outside].astype(float)) / np.bincount(ih)).tolist()))
+    q = np.asarray([qh.get(int(h_), 0.25) for h_ in bat_ix])
+    excess = n_high - n_out * q
+    Z = np.column_stack([np.ones(m.sum()), n_out[m], excess[m], excess[m] * dd, q[m] * dd, n_out[m] * dd, n_high_ch[m], n_high_ch[m] * dd,
+                         np.minimum(n_pa_prev[m], 3), np.minimum(T['pitch_no'][ix][m], 6)])
+    names = ['intercept', 'outside_seen_before', 'high_spots_seen_beyond_chance', 'high_spots_beyond_chance_x_deviation', 'own_high_share_x_deviation',
+             'outside_seen_x_deviation', 'high_spots_chased', 'high_spots_chased_x_deviation', 'earlier_plate_appearances', 'pitch_number']
+    yy = y[m]; base = lo_map[m]
+    from sklearn.linear_model import LogisticRegression
+    def fit(Zs, ys, bs):
+        # logistic with offset: fold the offset into the working response by Newton steps
+        bcoef = np.zeros(Zs.shape[1])
+        for _ in range(25):
+            p_ = sig(bs + Zs @ bcoef); W = p_ * (1 - p_)
+            H = (Zs * W[:, None]).T @ Zs + 1e-6 * np.eye(Zs.shape[1]); g = Zs.T @ (ys - p_)
+            step = np.linalg.solve(H, g); bcoef += step
+            if np.max(np.abs(step)) < 1e-8:
+                break
+        return bcoef
+    bfull = fit(Z, yy, base)
+    games = T['game'][ix][m]; ug, gi = np.unique(games, return_inverse=True); draws = []
+    for _ in range(int(params.get('reps', 60))):
+        w = np.bincount(rng.integers(0, len(ug), len(ug)), minlength=len(ug))[gi]; sel = np.repeat(np.arange(len(yy)), w)
+        draws.append(fit(Z[sel], yy[sel], base[sel]))
+    draws = np.asarray(draws)
+    res['coefficients'] = {n_: [round(float(bfull[k]), 4), round(float(np.percentile(draws[:, k], 2.5)), 4), round(float(np.percentile(draws[:, k], 97.5)), 4)] for k, n_ in enumerate(names)}
+    # the excess chase at a high spot, after 0 to 3 earlier high spots, model against map
+    hi_m = high[m]
+    tab = []
+    for k in range(4):
+        sel = hi_m & (np.minimum(n_high[m], 3) == k)            # descriptive only: mixes chance with how distinct the hitter's map is
+        if sel.sum() > 200:
+            tab.append({'earlier_high_spots': k, 'pitches': int(sel.sum()), 'observed_swing': round(float(yy[sel].mean()), 4),
+                        'map_predicted': round(float(sig(base[sel]).mean()), 4), 'league_predicted': round(float(sig(off[ix][m][sel]).mean()), 4)})
+    res['high_spot_pitches_by_earlier_exposure'] = tab
+    res['rows'] = {'outside_pitches': int(m.sum()), 'high_threshold_points': round(thr, 2), 'high_share': round(float(hi_m.mean()), 4)}
+    stage('adaptation')
+    return res
+
+
 # ---------------------------------------------------------------- SCOUT-01: per-player decision-moment profiles and postseason matchups
 def _postseason_rosters(season: int) -> dict:
     """Postseason teams of the season (public schedule), their active rosters split into hitters and pitchers, and the
@@ -4383,6 +4480,8 @@ def main():
             receipt['results'] = value_study(T, params, stage)
         elif experiment == 'value2':
             receipt['results'] = value2_study(T, params, stage)
+        elif experiment == 'adapt':
+            receipt['results'] = adapt_study(T, params, stage)
         elif experiment == 'steer':
             receipt['results'] = steer_profile(T, params, stage)
         elif experiment == 'matchup_final':
