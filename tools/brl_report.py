@@ -45,7 +45,8 @@ GU = np.array([-1.25, -0.83, -0.42, 0.0, 0.42, 0.83, 1.25]); GZ = np.array([1.0,
 FAMILIES = (('fastball', (0, 1, 2, 6), 0, 94.0), ('breaking', (3, 4), 3, 85.0), ('offspeed', (5,), 5, 86.0))
 B_OUT_FAMILY, N_OUT = -0.000657, 1.876          # VALUE-08F (family maps): runs per point of the own part, outside pitches per plate appearance
 STRUCTURAL = True                                # VALUE-18: aims chosen and priced by the engine's components (whiff, called strike, foul, contact value, count values)
-STRIKE_SPOTS = True                              # VALUE-18I: in-zone aims priced the same way (strike spots); its synthetic verdict held on October 9, 2026
+STRIKE_SPOTS = True
+POOL_CACHE = 800            # pools kept in memory at once (pitcher, side, count group, type group, zone); see Fitted._pool                              # VALUE-18I: in-zone aims priced the same way (strike spots); its synthetic verdict held on October 9, 2026
 N_IN = 2.04                                      # inside pitches per plate appearance (VALUE-18F)
 OWN_PART_CALIBRATION = {'outside': 0.95, 'inside': 0.82}   # VALUE-18 (2025 development run): how much of a fitted point of the own part shows up in actual swings
 CHASE_SLOPE, K_SCALE, BB_SCALE = 0.95, 0.40, 0.53   # MATCHUP-01F pair slope; ENGINE-01 coefficients over calibrated
@@ -339,6 +340,9 @@ class Fitted:
         r = r[side] if side.sum() >= 100 else r
         A = {'r': r, 'ci': self.cidx[r], 'pcs': self.p_cs[r], 'pfo': self.p_fo[r], 'os': self.off_s[r], 'ow': self.off_w[r], 'Bs': self.Bs[r], 'Bw': self.Bw[r], 'out': self.outside[r]}
         A['league'] = self._chain(sig(A['os']), sig(A['ow']), A['pcs'], A['pfo'], A['ci'])
+        if len(self.chains) >= POOL_CACHE // 2:
+            for k_ in list(self.chains)[:POOL_CACHE // 8]:
+                del self.chains[k_]
         self.chains[key] = A
         return A
 
@@ -372,6 +376,11 @@ class Fitted:
             blk = self.PM.blocks_at(xj, zj, xtj, ztj, sj, np.repeat(T['throw_r'][r], K), gj, np.repeat(T['v0'][r].astype(np.float64), K), bj_, kj)
             land = np.argmin(np.abs(uj[:, None] - GU[None, :]), 1) + len(GU) * np.argmin(np.abs(ztj[:, None] - GZ[None, :]), 1)   # where each scattered pitch lands
             struct = (blk, bj_, kj, lam_j, e_j > 0, land)
+        if len(self.pools) >= POOL_CACHE:
+            # the pools of a pitcher are reused across the hitters of one lineup, which are consecutive calls; a month of pitchers would
+            # otherwise hold several gigabytes (a run reached 14.8 GB of 16 on the runner), so the oldest entries go first
+            for k_ in list(self.pools)[:POOL_CACHE // 4]:
+                del self.pools[k_]
         self.pools[key] = (offj, D.family_basis(Bj0, gj), third, cell, len(r), n_all, struct)
         return self.pools[key]
 
