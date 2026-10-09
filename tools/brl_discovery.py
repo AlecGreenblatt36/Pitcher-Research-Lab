@@ -2538,10 +2538,17 @@ def bench_swing(T: dict, params: dict, stage) -> dict:
     training rows for the test. Log loss on the test season's decisions, game-clustered intervals."""
     from sklearn.ensemble import HistGradientBoostingClassifier
     res = {}
+    final = bool(params.get('final_eval'))          # BENCH-01F: trained on everything before August 1, 2026, scored once on the untouched months
+    if final and not params.get('frozen_commit'):
+        raise ValueError('bench_swing scores the untouched months only as the registered evaluation of a frozen commit')
+    test_from = date(2026, 8, 1).toordinal()
     train = [int(v) for v in params.get('train', (2023, 2024))]; test = int(params.get('test', 2025))
-    T = take(T, np.isin(T['season'], train + [test]))
-    if test == 2026:
-        T = take(T, (T['season'] != 2026) | (T['day'] < date(2026, 8, 1).toordinal()))
+    if final:
+        T = take(T, np.isin(T['season'], (2023, 2024, 2025, 2026)) & (T['post'] == 0))
+    else:
+        T = take(T, np.isin(T['season'], train + [test]))
+        if test == 2026:
+            T = take(T, (T['season'] != 2026) | (T['day'] < test_from))
     F = rebuild(T)
     keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['strikes'] >= 0) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
     T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
@@ -2551,7 +2558,10 @@ def bench_swing(T: dict, params: dict, stage) -> dict:
     px, pz = T['px'].astype(np.float64), T['pz'].astype(np.float64)
     prop = swing_propensity(T); pprop = pitcher_propensity(T)
     C = np.hstack([control_block(T, prop), pprop[:, None].astype(np.float32)])
-    tr = np.isin(T['season'], train); te = T['season'] == test
+    if final:
+        tr = T['day'] < test_from; te = T['day'] >= test_from
+    else:
+        tr = np.isin(T['season'], train); te = T['season'] == test
     fold = (T['game'] % 2).astype(np.int64)
     rng = np.random.default_rng(int(params.get('seed', 11)))
     lam = float(params.get('lam', 10.0)); min_n = int(params.get('min_pitches', 300)); n_league = int(params.get('league_n', 600000))
