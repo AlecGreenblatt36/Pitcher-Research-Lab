@@ -4690,6 +4690,194 @@ def command2_study(T: dict, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- WARMUP-01: whose decline is the times-through-the-order penalty?
+def warmup_study(T: dict, H, params: dict, stage) -> dict:
+    """Hitters do better the more often they have batted in a game. Three explanations are tangled in a starter's
+    times through the order: the hitter warming up to live pitching from anyone (general exposure), the hitter learning
+    this pitcher (pair familiarity) and the pitcher tiring (his pitches thrown). Relievers separate them: a reliever's
+    first meeting with a hitter has no pair familiarity and little load, while the hitter may have batted three times
+    already; relievers who enter early (short starts, openers, long relief) face hitters who have batted little.
+    Substitutes come in late and cold. Plate appearances 2023 to July 2026 (feed), with outs, runners and score from the
+    plate-appearance history. Talent enters as batter-season and pitcher-season fixed effects, not as earlier rates,
+    which absorb each player's usual contexts (relievers mostly face hitters who have batted; starters tire).
+    (S1) Joint run-value model: steps for the hitter's earlier plate appearances in the game (k = 1, 2, 3, 4 or more),
+    his earlier meetings with this pitcher (F = 1, 2 or more), the pitcher's pitches thrown per 100, a substitute's first
+    plate appearance and the hitter's pitches seen beyond 3.9 per earlier plate appearance, with platoon, home, outs,
+    runners and score; game-bootstrap intervals; with inning and in linear form as secondary readings. (S2) Relievers'
+    first meetings only. (S4) Out-of-sample log loss (fit 2023-2024, scored 2025 and 2026 through July; earlier rates as
+    talent, as the simulator has them) of the decomposition added to the simulator's structure (starter times through by
+    batters faced, reliever, inning). A substitutes-batting-twice contrast was dropped before registering: conditioning on
+    a second plate appearance selects innings where the first went well."""
+    res = {}
+    import pandas as pd
+    from sklearn.linear_model import LogisticRegression
+    real = T['group'] != -1                                            # pickoffs and other non-pitches do not count
+    gh = T['game'].astype(np.int64) * 2 + T['half'].astype(np.int64)
+    order = np.lexsort((T['pitch_no'], T['ab'], gh)); T = take(T, order); real = real[order]
+    pak = T['game'].astype(np.int64) * 1000 + T['ab'].astype(np.int64)
+    first = np.r_[True, pak[1:] != pak[:-1]]
+    pa_id = np.cumsum(first) - 1
+    npitch = np.bincount(pa_id, weights=real.astype(float))
+    # the pitcher's pitches thrown in this game before each pitch
+    gp = T['game'].astype(np.int64) * 10_000_000 + T['pitcher'].astype(np.int64)
+    o2 = np.lexsort((T['pitch_no'], T['ab'], gp)); gps = gp[o2]
+    st2 = np.r_[True, gps[1:] != gps[:-1]]; grp2 = np.cumsum(st2) - 1
+    cr = np.cumsum(real[o2].astype(float)); cr0 = cr - real[o2]
+    load = np.empty(len(gp)); load[o2] = cr0 - (cr0[np.flatnonzero(st2)])[grp2]
+    # starters: the first pitcher of each half-inning side in each game
+    ghs = T['game'].astype(np.int64) * 2 + T['half'].astype(np.int64)
+    starter_of = {}
+    for g_, p_ in zip(ghs[first], T['pitcher'][first]):
+        starter_of.setdefault(int(g_), int(p_))
+    P = {k: v[first] for k, v in T.items()}
+    P['load'] = load[first]; P['np'] = npitch
+    P['starter'] = np.asarray([starter_of[int(g_)] == int(p_) for g_, p_ in zip(ghs[first], P['pitcher'])])
+    df = pd.DataFrame({'game': P['game'], 'half': P['half'], 'ab': P['ab'], 'batter': P['batter'], 'pitcher': P['pitcher'], 'np': P['np']})
+    df['k'] = df.groupby(['game', 'batter']).cumcount()
+    df['E'] = df.groupby(['game', 'batter'])['np'].cumsum() - df['np']
+    df['F'] = df.groupby(['game', 'batter', 'pitcher']).cumcount()
+    df['team_pa'] = df.groupby(['game', 'half']).cumcount()
+    df['sub'] = df.groupby(['game', 'batter'])['team_pa'].transform('min') >= 9
+    df['bf'] = df.groupby(['game', 'pitcher']).cumcount()               # the pitcher's batters faced before this one
+    k = df['k'].to_numpy(); E = df['E'].to_numpy(float); F = df['F'].to_numpy(); sub = df['sub'].to_numpy(); bf = df['bf'].to_numpy()
+    stage('exposure')
+    # base-out state and score from the plate-appearance history
+    Hk = (H['game_pk'].astype(np.int64) * 1000 + H['at_bat_number'].astype(np.int64) - 1).to_numpy()
+    Hs = H.set_index(pd.Index(Hk))
+    Hs = Hs[~Hs.index.duplicated()]
+    key = P['game'].astype(np.int64) * 1000 + P['ab'].astype(np.int64)
+    st = Hs.reindex(key)
+    outs = st['outs_when_up'].to_numpy(float); r1 = st['on_1b'].notna().to_numpy(float); r2 = st['on_2b'].notna().to_numpy(float); r3 = st['on_3b'].notna().to_numpy(float)
+    sd_ = st['bat_score_diff'].to_numpy(float)
+    have_state = np.isfinite(outs) & np.isfinite(sd_)
+    res['state_matched_share'] = round(float(have_state.mean()), 4)
+    ok = (P['out7'] >= 0) & have_state & (P['bunt_pa'] == 0)
+    y7 = P['out7'].astype(int)
+    # both players' earlier rates by outcome class (shrunk, log ratios to the league)
+    league = np.bincount(y7[ok], minlength=7) / ok.sum()
+
+    def rates(key_, kk):
+        cols_ = []
+        for c in range(7):
+            nn, ss = _prior_by_day(key_, P['day'].astype(np.int64), (y7 == c).astype(float), ok)
+            cols_.append(np.log((ss + kk * league[c]) / (nn + kk) / league[c]))
+        return np.column_stack(cols_)
+    rb = rates(P['batter'].astype(np.int64), 150.0); rp = rates(P['pitcher'].astype(np.int64), 300.0)
+    stage('rates')
+    inn = np.clip(P['inning'], 1, 10)
+    C = np.column_stack([rb, rp, (P['stand_r'] == P['throw_r']).astype(float), (P['half'] == 1).astype(float)]
+                        + [(inn == i).astype(float) for i in range(2, 11)]
+                        + [(P['season'] == s).astype(float) for s in (2024, 2025, 2026)]
+                        + [np.nan_to_num(outs) == o for o in (1, 2)] + [r1, r2, r3, r1 * r2, r2 * r3, r1 * r3]
+                        + [np.clip(np.nan_to_num(sd_), -4, 4) == v for v in (-4, -3, -2, -1, 1, 2, 3, 4)]).astype(float)
+    rel = (~P['starter']).astype(float)
+    K = np.minimum(k, 4).astype(float)[:, None]                       # earlier plate appearances in the game (to 4)
+    Fm = np.minimum(F, 2).astype(float)[:, None]                      # earlier meetings with this pitcher (to 2)
+    L = (np.minimum(P['load'].astype(float), 120.0) / 100.0)[:, None]   # the pitcher's pitches thrown, per 100
+    extra = ((E - 3.9 * k) / 10.0)[:, None]
+    subf = (sub & (k == 0)).astype(float)[:, None]
+    # game-state controls for the fixed-effects designs (talent is in the player-season effects, not in prior rates,
+    # which absorb each player's usual contexts: relievers mostly face hitters who have batted, starters tire)
+    G = np.column_stack([(P['stand_r'] == P['throw_r']).astype(float), (P['half'] == 1).astype(float)]
+                        + [np.nan_to_num(outs) == o for o in (1, 2)] + [r1, r2, r3, r1 * r2, r2 * r3, r1 * r3]
+                        + [np.clip(np.nan_to_num(sd_), -4, 4) == v for v in (-4, -3, -2, -1, 1, 2, 3, 4)]).astype(float)
+    inn_d = np.column_stack([(inn == i) for i in range(2, 11)]).astype(float)
+    rv = LW7[np.clip(y7, 0, 6)]
+    games = P['game']
+    rng = np.random.default_rng(5)
+    bsk = P['batter'].astype(np.int64) * 10000 + P['season']; psk = P['pitcher'].astype(np.int64) * 10000 + P['season']
+
+    def fe_fit(rows, X, names, reps):
+        """Run value on X with batter-season and pitcher-season effects estimated from the player's other games
+        (leave-game-out), so a player's effect never contains the errors of the plate appearance being explained:
+        with effects from the same games, a reliever's bad outing both lengthens it (more hitters, higher k) and lowers
+        his effect, which biases the exposure steps (seen in the synthetic null). Two rounds: plain two-way demeaning for
+        a first beta, then the effects from the residual, taken out game by game, and least squares on the remainder.
+        Intervals from resampling games with the effects held."""
+        ub, ib = np.unique(bsk[rows], return_inverse=True); up, ip = np.unique(psk[rows], return_inverse=True)
+        cb = np.bincount(ib).astype(float); cp = np.bincount(ip).astype(float)
+        Xr = X[rows].astype(np.float64); yr = rv[rows]
+        Z = np.column_stack([Xr, yr])
+        for _ in range(int(params.get('fe_iters', 40))):
+            for ids, cnt in ((ib, cb), (ip, cp)):
+                for j in range(Z.shape[1]):
+                    Z[:, j] -= (np.bincount(ids, weights=Z[:, j], minlength=len(cnt)) / cnt)[ids]
+        beta = np.linalg.lstsq(Z[:, :-1], Z[:, -1], rcond=None)[0]
+        gr = games[rows]
+        gb_key = ib.astype(np.int64) * 10_000_000 + (gr % 10_000_000); gp_key = ip.astype(np.int64) * 10_000_000 + (gr % 10_000_000)
+        ugb, igb = np.unique(gb_key, return_inverse=True); ugp, igp = np.unique(gp_key, return_inverse=True)
+        cgb = np.bincount(igb).astype(float); cgp = np.bincount(igp).astype(float)
+        keep = (cb[ib] - cgb[igb] >= 1) & (cp[ip] - cgp[igp] >= 1)
+        for _ in range(2):
+            r = yr - Xr @ beta; a_ = np.zeros(len(cb)); b_ = np.zeros(len(cp))
+            for _ in range(30):
+                a_ = np.bincount(ib, weights=r - b_[ip], minlength=len(cb)) / cb
+                b_ = np.bincount(ip, weights=r - a_[ib], minlength=len(cp)) / cp
+            ra = r - b_[ip]; rb_ = r - a_[ib]
+            sa = np.bincount(ib, weights=ra, minlength=len(cb)); sag = np.bincount(igb, weights=ra, minlength=len(cgb))
+            sp = np.bincount(ip, weights=rb_, minlength=len(cp)); spg = np.bincount(igp, weights=rb_, minlength=len(cgp))
+            with np.errstate(invalid='ignore', divide='ignore'):
+                a_lgo = (sa[ib] - sag[igb]) / (cb[ib] - cgb[igb]); b_lgo = (sp[ip] - spg[igp]) / (cp[ip] - cgp[igp])
+            yadj = (yr - a_lgo - b_lgo)[keep]; A = np.column_stack([np.ones(keep.sum()), Xr[keep]])
+            beta = np.linalg.lstsq(A, yadj, rcond=None)[0][1:]
+        A = np.column_stack([np.ones(keep.sum()), Xr[keep]])
+        gk = gr[keep]; ug = np.unique(gk); gi = np.searchsorted(ug, gk); draws = []
+        for _ in range(reps):
+            w = np.bincount(rng.integers(0, len(ug), len(ug)), minlength=len(ug))[gi].astype(float)
+            Aw = A * w[:, None]
+            draws.append(np.linalg.solve(Aw.T @ A + np.eye(A.shape[1]) * 1e-9, Aw.T @ yadj)[1:])
+        draws = np.asarray(draws)
+        out = {nm: [round(float(beta[i]), 5), round(float(np.percentile(draws[:, i], 2.5)), 5), round(float(np.percentile(draws[:, i], 97.5)), 5)] for i, nm in enumerate(names)}
+        out['rows_used'] = int(keep.sum())
+        return out, None
+    reps = int(params.get('reps', 150))
+    res['rows'] = {'plate_appearances': int(ok.sum()), 'reliever_share': round(float(rel[ok].mean()), 3), 'substitute_first_pa': int(subf[ok, 0].sum()),
+                   'mean_pitches_per_pa': round(float(P['np'][ok].mean()), 3),
+                   'k_shares': [round(float(((k == v) if v < 4 else (k >= 4))[ok].mean()), 3) for v in range(5)]}
+    Kd = np.column_stack([(k == 1), (k == 2), (k == 3), (k >= 4), (F == 1), (F >= 2)]).astype(float)
+    names1 = ['k1', 'k2', 'k3', 'k4plus', 'F1', 'F2plus', 'per_100_pitches_thrown', 'sub_first', 'extra_pitches_per10']
+    res['S1_joint_run_value'], _ = fe_fit(ok, np.hstack([Kd, L, subf, extra, G]), names1, reps)
+    res['S1_with_inning_secondary'], _ = fe_fit(ok, np.hstack([Kd, L, subf, extra, G, inn_d]), names1, max(40, reps // 3))
+    res['S1_linear_secondary'], _ = fe_fit(ok, np.hstack([K, Fm, L, subf, extra, G]), ['per_earlier_pa', 'per_earlier_meeting', 'per_100_pitches_thrown', 'sub_first', 'extra_pitches_per10'], max(40, reps // 3))
+    # identification: how many plate appearances against relievers come early in the hitter's game
+    res['reliever_meetings_by_k'] = [int((ok & (rel == 1) & (F == 0) & ~sub & ((k == v) if v < 4 else (k >= 4))).sum()) for v in range(5)]
+    stage('S1 joint')
+    # S2: relievers' first meetings
+    r2_ = ok & (rel == 1) & (F == 0)
+    K4 = np.column_stack([(k == 1), (k == 2), (k == 3), (k >= 4)]).astype(float)
+    res['S2_relievers_first_meeting'], _ = fe_fit(r2_, np.hstack([K4, L, subf, extra, G]), ['k1', 'k2', 'k3', 'k4plus', 'per_100_pitches_thrown', 'sub_first', 'extra_pitches_per10'], reps)
+    res['S2_linear_secondary'], _ = fe_fit(r2_, np.hstack([K, L, subf, extra, G]), ['per_earlier_pa', 'per_100_pitches_thrown', 'sub_first', 'extra_pitches_per10'], max(40, reps // 3))
+    res['S2_relievers_first_meeting']['plate_appearances'] = int(r2_.sum())
+    res['S2_raw_run_value_by_k'] = [round(float(rv[r2_ & ((k == v) if v < 4 else (k >= 4))].mean()), 4) for v in range(5)]
+    stage('S2 relievers')
+    # how the starter's times-through rise splits: the simulator-style terms alone, then the decomposition
+    tto_p = np.minimum(bf // 9, 3)
+    T0 = np.column_stack([(tto_p == 1) & (rel == 0), (tto_p == 2) & (rel == 0), (tto_p >= 3) & (rel == 0), rel]).astype(float)
+    res['S1_simulator_terms_only'], _ = fe_fit(ok, np.hstack([T0[:, :3], G, inn_d]), ['starter_tto2', 'starter_tto3', 'starter_tto4plus'], max(40, reps // 3))
+    stage('simulator terms')
+    # S4: out-of-sample log loss, the decomposition against the simulator's structure
+    X0m = np.hstack([T0, C]); X1m = np.hstack([T0, K, Fm, L, subf, extra, C])
+    tr = ok & np.isin(P['season'], (2023, 2024))
+    m0 = LogisticRegression(max_iter=600, C=10.0).fit(X0m[tr], y7[tr]); m1 = LogisticRegression(max_iter=600, C=10.0).fit(X1m[tr], y7[tr])
+    res['S4_logloss_gain_nats_per_1000'] = {}
+    for tname, tm in (('2025', ok & (P['season'] == 2025)), ('2026_through_july', ok & (P['season'] == 2026))):
+        if tm.sum() < 1000:
+            continue
+        l0 = -np.log(np.clip(m0.predict_proba(X0m[tm])[np.arange(tm.sum()), y7[tm]], 1e-9, 1)); l1 = -np.log(np.clip(m1.predict_proba(X1m[tm])[np.arange(tm.sum()), y7[tm]], 1e-9, 1))
+        ci = clustered_ci(l0 - l1, games[tm])
+        res['S4_logloss_gain_nats_per_1000'][tname] = {'plate_appearances': int(tm.sum()), 'gain': [round(v * 1000, 3) for v in ci]}
+        # where it acts: relievers' plate appearances
+        tr_ = tm & (rel == 1)
+        ci_r = clustered_ci(l0[rel[tm] == 1] - l1[rel[tm] == 1], games[tr_])
+        res['S4_logloss_gain_nats_per_1000'][tname]['relievers_only'] = [round(v * 1000, 3) for v in ci_r]
+    tp = ok & np.isin(P['season'], (2025, 2026))
+    if tp.sum() >= 1000:
+        l0 = -np.log(np.clip(m0.predict_proba(X0m[tp])[np.arange(tp.sum()), y7[tp]], 1e-9, 1)); l1 = -np.log(np.clip(m1.predict_proba(X1m[tp])[np.arange(tp.sum()), y7[tp]], 1e-9, 1))
+        res['S4_logloss_gain_nats_per_1000']['pooled'] = {'plate_appearances': int(tp.sum()), 'gain': [round(v * 1000, 3) for v in clustered_ci(l0 - l1, games[tp])]}
+    stage('S4 out of sample')
+    return res
+
+
 def value_whiff_study(T: dict, params: dict, stage) -> dict:
     """VALUE-08's design for the whiff map on the true crossing (MATCHUP-03's representation: league whiff model on
     swings, hitter maps on location, family and height bands, shrinkage 30, at least 250 swings). Each pitch's whiff
@@ -6411,6 +6599,11 @@ def main():
             receipt['results'] = framing_study(T, H, params, stage); del H
         elif experiment == 'command2':
             receipt['results'] = command2_study(T, params, stage)
+        elif experiment == 'warmup':
+            stage('load plate-appearance states')
+            H = load_pa_states(repo, token, os.environ['BRL_PA_PACKAGE_KEY'])
+            H = H[H['date_key'].astype(str).str[:10] < '2026-08-01']
+            receipt['results'] = warmup_study(T, H, params, stage); del H
         elif experiment == 'scout':
             receipt['results'] = scout_export(T, params, stage)
         elif experiment == 'value':
