@@ -1,0 +1,125 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "matchup_swing",
+ "run_id": "37876160597",
+ "params": {
+  "experiment": "matchup_swing",
+  "seasons": [
+   2023,
+   2024,
+   2025
+  ],
+  "train": [
+   2023,
+   2024
+  ],
+  "test": 2025,
+  "tau": 0.26,
+  "league_n": 600000,
+  "min_pitches": 300,
+  "seed": 11
+ },
+ "started_at": "2026-10-09T02:50:46.604859+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 9.1
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 18.0
+  },
+  {
+   "stage": "features",
+   "at_seconds": 29.1
+  },
+  {
+   "stage": "representation true",
+   "at_seconds": 67.6
+  },
+  {
+   "stage": "representation percept",
+   "at_seconds": 111.5
+  },
+  {
+   "stage": "pairs",
+   "at_seconds": 144.8
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985
+ },
+ "results": {
+  "representations": {
+   "true": {
+    "shrinkage_chosen": 10.0,
+    "validation_logloss": {
+     "3.0": 0.4891,
+     "10.0": 0.48858,
+     "30.0": 0.48899,
+     "100.0": 0.49103,
+     "300.0": 0.49354
+    },
+    "test_logloss_league": 0.50187,
+    "test_logloss_hitter_maps": 0.49373,
+    "test_share_with_hitter_map": 0.8772
+   },
+   "percept": {
+    "shrinkage_chosen": 10.0,
+    "validation_logloss": {
+     "3.0": 0.45188,
+     "10.0": 0.45154,
+     "30.0": 0.45249,
+     "100.0": 0.45549,
+     "300.0": 0.45886
+    },
+    "test_logloss_league": 0.46899,
+    "test_logloss_hitter_maps": 0.45721,
+    "test_share_with_hitter_map": 0.8772
+   }
+  },
+  "gain_nats_per_1000_decisions": {
+   "percept_over_true_league": [
+    32.879,
+    31.874,
+    33.796
+   ],
+   "percept_over_true_hitter_maps": [
+    36.519,
+    35.512,
+    37.515
+   ],
+   "hitter_maps_over_league_true": [
+    8.137,
+    7.821,
+    8.476
+   ],
+   "hitter_maps_over_league_percept": [
+    11.776,
+    11.362,
+    12.202
+   ]
+  },
+  "pairs_outside_zone": {
+   "pairs": 5440,
+   "pitches": 70618,
+   "sd_observed_minus_additive": 0.1264,
+   "sd_predicted_pair_effect": 0.0333,
+   "corr": 0.2508,
+   "slope_observed_on_predicted": [
+    0.981,
+    0.879,
+    1.085
+   ]
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T02:53:11.416486+00:00",
+ "seconds": 144.8
+}
