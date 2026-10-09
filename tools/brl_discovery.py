@@ -3310,6 +3310,118 @@ def exploit_study(T: dict, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- EXPLOIT-02: do pitchers aim at a hitter's own whiff holes?
+def exploit2_study(T: dict, params: dict, stage) -> dict:
+    """EXPLOIT-01 for both of a hitter's maps, each as his own part (his map minus the same-side mean map of the other
+    hitters with maps, VALUE-08): the whiff map on the true crossing (MATCHUP-03's representation: league whiff model on
+    swings, hitter maps on location, family and height bands, shrinkage 30, at least 250 swings) and the swing map at
+    the decision moment (MATCHUP-05F's: league with its family part, family maps, shrinkage 10). Maps from 2023-2024;
+    for each 2025 hitter-pitcher pair, zone side and count group, the own-part deviation at the pitches thrown to him
+    against the same pitcher's pitches to other hitters of that side read through his maps at his own levels. Whiffs:
+    positive means more pitches where he misses more than the average hitter (on a swing). Chases: outside positive
+    means more pitches where he chases more; inside negative means more where he takes more. Headroom: the best of the
+    same pool. Bootstrap over hitters."""
+    res = {}
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+    F = rebuild(T)
+    keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
+    T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
+    swing = ((T['call'] == 1) | (T['call'] == 2)).astype(np.float64); whiff = (T['call'] == 2).astype(np.float64)
+    xp, zp = projected(T, F, None, 'straight', 0.26)
+    xt, zt = T['px'].astype(np.float64), T['pz'].astype(np.float64)
+    tr = np.isin(T['season'], (2023, 2024)); te = T['season'] == 2025
+    rng = np.random.default_rng(11)
+    def sample(rows, n=600000):
+        idx = np.flatnonzero(rows); return rng.choice(idx, min(len(idx), n), replace=False) if len(idx) > n else idx
+    def own_maps(Bm, y, off, rows, lam, min_n):
+        maps = _hitter_maps(Bm, y, off, _groups(T['batter'], rows), lam, min_n)
+        ub_, bi_ = np.unique(T['batter'][tr], return_inverse=True)
+        side_of = dict(zip(ub_.tolist(), np.round(np.bincount(bi_, weights=T['stand_r'][tr]) / np.bincount(bi_)).astype(int).tolist()))
+        Ss = {0: 0.0, 1: 0.0}; Nn = {0: 0, 1: 0}
+        for h, m in maps.items():
+            Ss[side_of[h]] = Ss[side_of[h]] + m; Nn[side_of[h]] += 1
+        return maps, {h: (Ss[side_of[h]] - m) / max(Nn[side_of[h]] - 1, 1) for h, m in maps.items()}
+    kinds = {}
+    # whiffs: league on swings at the true crossing, every pitch read as if swung at
+    tw = dict(T); tw['call'] = np.where(whiff == 1, 1, np.where(swing == 1, 0, 3)); prop_w = swing_propensity(tw, 200.0)
+    grp = np.zeros((len(swing), 7), np.float32); grp[np.arange(len(swing)), np.clip(T['group'], 0, 6)] = 1
+    Lw = location_block(xt, zt, T['stand_r'], T['strikes'])
+    Xw = np.hstack([Lw, grp, hats(T['v0'].astype(np.float64), V_KNOTS), (T['strikes'] == 2)[:, None].astype(np.float32), prop_w[:, None].astype(np.float32),
+                    (T['stand_r'] == T['throw_r'])[:, None].astype(np.float32)]); i_pw = Lw.shape[1] + 7 + len(V_KNOTS) + 1
+    i = sample(tr & (swing == 1)); m_w = fit_logistic(Xw[i], whiff[i]); off_w = m_w.decision_function(Xw); c_w = float(m_w.coef_[0][i_pw]); del Xw, Lw
+    famc = np.column_stack([np.isin(T['group'], (0, 1, 2)), np.isin(T['group'], (3, 4)), np.isin(T['group'], (5,))]).astype(np.float64)
+    Bw = np.hstack([hitter_basis(xt, zt, T['stand_r'], T['strikes']), famc, hats(zt, (1.0, 2.0, 3.0, 4.0)).astype(np.float64)])
+    maps_w, mbar_w = own_maps(Bw, whiff, off_w, tr & (swing == 1), 30.0, 250)
+    kinds['whiff'] = (Bw, off_w, prop_w, c_w, maps_w, mbar_w)
+    stage(f'whiff maps {len(maps_w)}')
+    # chases: MATCHUP-05F's swing representation
+    prop_s = swing_propensity(T)
+    Ls = location_block(xp, zp, T['stand_r'], T['strikes']); Bh = hitter_basis(xp, zp, T['stand_r'], T['strikes'])
+    Xs = np.hstack([Ls, (Bh[:, :-1] * np.isin(T['group'], (3, 4))[:, None]).astype(np.float32), (Bh[:, :-1] * (T['group'] == 5)[:, None]).astype(np.float32),
+                    control_block(T, prop_s), pitcher_propensity(T)[:, None].astype(np.float32)]); i_ps = Ls.shape[1] + 2 * (Bh.shape[1] - 1) + 32
+    i = sample(tr); m_s = fit_logistic(Xs[i], swing[i]); off_s = m_s.decision_function(Xs); c_s = float(m_s.coef_[0][i_ps]); del Xs, Ls
+    Bs = family_basis(Bh, T['group']); del Bh
+    maps_s, mbar_s = own_maps(Bs, swing, off_s, tr, 10.0, 300)
+    kinds['chase'] = (Bs, off_s, prop_s, c_s, maps_s, mbar_s)
+    stage(f'swing maps {len(maps_s)}')
+    u_t = np.where(T['stand_r'] == 1, xt, -xt)
+    outside = (np.abs(u_t) > ZONE_HALF) | (zt > ZONE_TOP) | (zt < ZONE_BOT)
+    cgrp = np.where(T['strikes'] == 2, 2, np.where(T['balls'] > T['strikes'], 1, 0))
+    pool = {}
+    for pid, r in _groups(T['pitcher'], te).items():
+        for side in (0, 1):
+            for cg in (0, 1, 2):
+                rr = r[(T['stand_r'][r] == side) & (cgrp[r] == cg)]
+                if len(rr) >= 30:
+                    pool[(pid, side, cg)] = rr if len(rr) <= 600 else rng.choice(rr, 600, replace=False)
+    sig = lambda v: 1 / (1 + np.exp(-v))
+    bat_te = _groups(T['batter'], te)
+    for kind, (Bm, off, prop, c_prop, maps, mbar) in kinds.items():
+        rows = []
+        for h, r in bat_te.items():
+            if h not in maps:
+                continue
+            mh, mb = maps[h], mbar[h]
+            pr = T['pitcher'][r]
+            for pid in np.unique(pr):
+                rp = r[pr == pid]; side = int(T['stand_r'][rp[0]])
+                for zo in (True, False):
+                    for cg in (0, 1, 2):
+                        a = rp[(outside[rp] == zo) & (cgrp[rp] == cg)]
+                        key = (int(pid), side, cg)
+                        if len(a) == 0 or key not in pool:
+                            continue
+                        b = pool[key]; b = b[(outside[b] == zo) & (T['batter'][b] != h)]
+                        if len(b) < 10:
+                            continue
+                        da = sig(off[a] + Bm[a] @ mh) - sig(off[a] + Bm[a] @ mb)
+                        ob = off[b] + c_prop * (float(prop[a].mean()) - prop[b])
+                        db = sig(ob + Bm[b] @ mh) - sig(ob + Bm[b] @ mb)
+                        sg = 1.0 if (kind == 'whiff' or zo) else -1.0
+                        best = np.sort(sg * db)[::-1][:len(a)]
+                        rows.append((h, zo, len(a), sg * float(da.mean()), sg * float(db.mean()), float(best.mean())))
+        out = {}
+        R = np.asarray([r_[1:] for r_ in rows], float); H = np.asarray([r_[0] for r_ in rows])
+        for zone_name, zo in (('outside', 1.0), ('inside', 0.0)):
+            m = R[:, 0] == zo
+            n = R[m, 1]; act, gen, best = R[m, 2], R[m, 3], R[m, 4]
+            tgt = np.average(act - gen, weights=n); room = np.average(best - gen, weights=n)
+            uh, ih = np.unique(H[m], return_inverse=True)
+            sa = np.bincount(ih, weights=n * (act - gen)); sr = np.bincount(ih, weights=n * (best - gen)); sn = np.bincount(ih, weights=n)
+            bs = []
+            for _ in range(int(params.get('reps', 300))):
+                w = np.bincount(rng.integers(0, len(uh), len(uh)), minlength=len(uh))
+                bs.append(((w * sa).sum() / (w * sn).sum(), (w * sa).sum() / max((w * sr).sum(), 1e-12)))
+            bs = np.asarray(bs)
+            out[zone_name] = {'pitches': int(n.sum()), 'hitters': int(len(uh)),
+                              'targeting_points': [round(float(tgt) * 100, 3), round(float(np.percentile(bs[:, 0], 2.5)) * 100, 3), round(float(np.percentile(bs[:, 0], 97.5)) * 100, 3)],
+                              'headroom_points': round(float(room) * 100, 3),
+                              'share_of_headroom_used': [round(float(tgt / room), 3) if room != 0 else None, round(float(np.percentile(bs[:, 1], 2.5)), 3), round(float(np.percentile(bs[:, 1], 97.5)), 3)]}
+        res[kind] = out
+        stage('targeting ' + kind)
+    return res
+
+
 # ---------------------------------------------------------------- VALUE-01: what a hitter's own map is worth to the pitcher
 def value_study(T: dict, params: dict, stage) -> dict:
     """Pitchers do not aim at a hitter's own decision-moment swing map (EXPLOIT-01), so where a pitch falls on that map,
@@ -5159,6 +5271,8 @@ def main():
             receipt['results'] = discipline_study(T, params, stage)
         elif experiment == 'exploit':
             receipt['results'] = exploit_study(T, params, stage)
+        elif experiment == 'exploit2':
+            receipt['results'] = exploit2_study(T, params, stage)
         elif experiment == 'scout':
             receipt['results'] = scout_export(T, params, stage)
         elif experiment == 'value':
