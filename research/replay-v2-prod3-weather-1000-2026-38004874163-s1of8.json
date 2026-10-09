@@ -1,0 +1,300 @@
+{
+ "schema": "brl.replay-receipt.v1",
+ "tag": "v2-prod3-weather-1000-2026",
+ "model": "pa-2026-v2-physics",
+ "season": 2026,
+ "n_sims": 1000,
+ "date_from": "2026-01-01",
+ "step": 1,
+ "offsets": true,
+ "rest": false,
+ "workers": 4,
+ "run_id": "38004874163",
+ "shard": [
+  1,
+  8
+ ],
+ "started_at": "2026-10-09T23:32:16.830455+00:00",
+ "stages": [
+  {
+   "stage": "restore data package",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load physics tables",
+   "at_seconds": 2.6
+  },
+  {
+   "stage": "load history and reconstruct games",
+   "at_seconds": 5.7
+  },
+  {
+   "stage": "replay 297 games with 4 workers",
+   "at_seconds": 24.7
+  },
+  {
+   "stage": "score",
+   "at_seconds": 1230.4
+  }
+ ],
+ "model_selected": {
+  "name": "pa-2026-v2-physics",
+  "source": "private/models/pa-2026-v2-physics.enc",
+  "sha256": "4c8822abcb65eff2ec2fcf3a1d7c3b57f13dec0d21d26a9508e18f74944b3a54",
+  "fitted_at": "2026-10-07T09:43:32.959674+00:00",
+  "physics_features": 30
+ },
+ "physics_years": [
+  2025,
+  2026
+ ],
+ "physics_rows": 372170,
+ "games": 297,
+ "offsets_table": {
+  "path": "brl_replay/context_recent_fit2025.json",
+  "estimated_through": "2025-09-28"
+ },
+ "environment": {
+  "table": "env-v1-fit2025-weather",
+  "conditions": "research/conditions-37697026337.jsonl.gz",
+  "games_with_conditions": 297
+ },
+ "team_offsets": {
+  "rows": "research/team-resid-v2-37712616076.json.gz",
+  "k": 4000,
+  "half_life": 120,
+  "sides": [
+   "bat",
+   "fld"
+  ],
+  "center": true,
+  "dates": 23,
+  "largest_offset": 0.252
+ },
+ "transitions": {
+  "path": "brl_replay/transitions_fit_2023_2025.json",
+  "name": "base running from 2023, 2024, 2025 play-by-play",
+  "cells": 167
+ },
+ "reliever_choice": {
+  "path": "brl_replay/reliever_choice_fit_2023_2025.json",
+  "name": "reliever choice from 2023-2025 relief entries"
+ },
+ "relief_exit": {
+  "path": "brl_replay/relief_exit_fit_2023_2025.json",
+  "name": "reliever exits from 2023-2025 relief decisions"
+ },
+ "relief_hooks": {
+  "half_life": 90.0,
+  "k": 10.0,
+  "decisions": 290114
+ },
+ "leash": {
+  "path": "brl_replay/leash_fit_2025.json",
+  "name": "starter leash from the 2025 replay starts",
+  "terms": {
+   "base": 0.5404,
+   "short": -7.3787,
+   "relief": -1.4776,
+   "lay1": -1.7512,
+   "lay2": -0.8739,
+   "mar": 0.378,
+   "sep": -0.8959
+  }
+ },
+ "steals": {
+  "per_pa": 0.85
+ },
+ "win_states": true,
+ "scores": {
+  "p_sim": {
+   "brier": 0.24181595371768833,
+   "log_loss": 0.6763644665650976,
+   "better_than_coin_pct": 3.2736185129246698
+  },
+  "p_team": {
+   "brier": 0.24201384833469702,
+   "log_loss": 0.6770088614591159,
+   "better_than_coin_pct": 3.1944606661211905
+  },
+  "p_blend": {
+   "brier": 0.24118139733393326,
+   "log_loss": 0.675201148661202,
+   "better_than_coin_pct": 3.5274410664266953
+  },
+  "p_coin": {
+   "brier": 0.25,
+   "log_loss": 0.6931471805599453,
+   "better_than_coin_pct": 0.0
+  },
+  "n_games": 297
+ },
+ "scores_by_month": {
+  "03": {
+   "p_sim": {
+    "brier": 0.24386135161723207,
+    "log_loss": 0.6806222689194048,
+    "better_than_coin_pct": 2.45545935310717
+   },
+   "p_team": {
+    "brier": 0.2553608504928182,
+    "log_loss": 0.7043748458064335,
+    "better_than_coin_pct": -2.1443401971272813
+   },
+   "p_blend": {
+    "brier": 0.2488877026273853,
+    "log_loss": 0.6911979755535893,
+    "better_than_coin_pct": 0.4449189490458805
+   },
+   "p_coin": {
+    "brier": 0.25,
+    "log_loss": 0.6931471805599453,
+    "better_than_coin_pct": 0.0
+   },
+   "n_games": 11
+  },
+  "04": {
+   "p_sim": {
+    "brier": 0.24234450614320743,
+    "log_loss": 0.6772330454588359,
+    "better_than_coin_pct": 3.0621975427170267
+   },
+   "p_team": {
+    "brier": 0.24684737231823078,
+    "log_loss": 0.6869746142132777,
+    "better_than_coin_pct": 1.2610510727076862
+   },
+   "p_blend": {
+    "brier": 0.24411904357641592,
+    "log_loss": 0.6811690706950344,
+    "better_than_coin_pct": 2.352382569433631
+   },
+   "p_coin": {
+    "brier": 0.25,
+    "log_loss": 0.6931471805599454,
+    "better_than_coin_pct": 0.0
+   },
+   "n_games": 52
+  },
+  "05": {
+   "p_sim": {
+    "brier": 0.24584534845773606,
+    "log_loss": 0.6848054488641775,
+    "better_than_coin_pct": 1.661860616905575
+   },
+   "p_team": {
+    "brier": 0.23753261913293996,
+    "log_loss": 0.668091151374545,
+    "better_than_coin_pct": 4.986952346824014
+   },
+   "p_blend": {
+    "brier": 0.24108481765822445,
+    "log_loss": 0.6752423596476631,
+    "better_than_coin_pct": 3.5660729367102184
+   },
+   "p_coin": {
+    "brier": 0.25,
+    "log_loss": 0.6931471805599453,
+    "better_than_coin_pct": 0.0
+   },
+   "n_games": 50
+  },
+  "06": {
+   "p_sim": {
+    "brier": 0.22682080429787269,
+    "log_loss": 0.645109377408444,
+    "better_than_coin_pct": 9.271678280850926
+   },
+   "p_team": {
+    "brier": 0.2422067322109091,
+    "log_loss": 0.6768913774784228,
+    "better_than_coin_pct": 3.1173071156363585
+   },
+   "p_blend": {
+    "brier": 0.23367316959597084,
+    "log_loss": 0.6593949191279257,
+    "better_than_coin_pct": 6.530732161611663
+   },
+   "p_coin": {
+    "brier": 0.25,
+    "log_loss": 0.6931471805599455,
+    "better_than_coin_pct": 0.0
+   },
+   "n_games": 55
+  },
+  "07": {
+   "p_sim": {
+    "brier": 0.23896466503859107,
+    "log_loss": 0.6708824588350698,
+    "better_than_coin_pct": 4.414133984563573
+   },
+   "p_team": {
+    "brier": 0.24183060074585716,
+    "log_loss": 0.6765068420388598,
+    "better_than_coin_pct": 3.267759701657136
+   },
+   "p_blend": {
+    "brier": 0.23968858629959172,
+    "log_loss": 0.6722265312502146,
+    "better_than_coin_pct": 4.124565480163311
+   },
+   "p_coin": {
+    "brier": 0.25,
+    "log_loss": 0.6931471805599452,
+    "better_than_coin_pct": 0.0
+   },
+   "n_games": 42
+  },
+  "08": {
+   "p_sim": {
+    "brier": 0.23674884888671102,
+    "log_loss": 0.6661927197959281,
+    "better_than_coin_pct": 5.300460445315592
+   },
+   "p_team": {
+    "brier": 0.23139999201696299,
+    "log_loss": 0.6555190782117537,
+    "better_than_coin_pct": 7.440003193214806
+   },
+   "p_blend": {
+    "brier": 0.23306782071141086,
+    "log_loss": 0.6588883908673642,
+    "better_than_coin_pct": 6.772871715435658
+   },
+   "p_coin": {
+    "brier": 0.25,
+    "log_loss": 0.6931471805599455,
+    "better_than_coin_pct": 0.0
+   },
+   "n_games": 54
+  },
+  "09": {
+   "p_sim": {
+    "brier": 0.27110859503466894,
+    "log_loss": 0.7365007547616589,
+    "better_than_coin_pct": -8.443438013867578
+   },
+   "p_team": {
+    "brier": 0.25401800639233335,
+    "log_loss": 0.7016947785239065,
+    "better_than_coin_pct": -1.6072025569333404
+   },
+   "p_blend": {
+    "brier": 0.26182035938226217,
+    "log_loss": 0.7172256300418182,
+    "better_than_coin_pct": -4.7281437529048675
+   },
+   "p_coin": {
+    "brier": 0.25,
+    "log_loss": 0.6931471805599453,
+    "better_than_coin_pct": 0.0
+   },
+   "n_games": 33
+  }
+ },
+ "per_game_file": "research/replay-v2-prod3-weather-1000-2026-38004874163-s1of8.jsonl.gz",
+ "per_game_sha256": "ae3c5351fe9673075cc7053634ce821a1f69fe60f39cf7117b5ba2fa48279821",
+ "status": "completed",
+ "finished_at": "2026-10-09T23:53:03.870565+00:00",
+ "seconds": 1247.0
+}
