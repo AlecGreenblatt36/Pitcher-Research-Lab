@@ -1,0 +1,401 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "seq2",
+ "run_id": "37953062671",
+ "params": {
+  "experiment": "seq2",
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "final_eval": true,
+  "frozen_commit": "4ec64b6890e1c00ab649216479a3540cf4e9df0f",
+  "reps": 30
+ },
+ "started_at": "2026-10-09T15:37:28.060325+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 9.6
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 18.6
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 27.9
+  },
+  {
+   "stage": "features: 1122403 swings with a previous pitch, train 900000",
+   "at_seconds": 42.1
+  },
+  {
+   "stage": "coefficients",
+   "at_seconds": 1069.8
+  },
+  {
+   "stage": "test 2026",
+   "at_seconds": 1070.0
+  },
+  {
+   "stage": "boosting",
+   "at_seconds": 1101.8
+  }
+ ],
+ "final_eval": {
+  "frozen_commit": "4ec64b6890e1c00ab649216479a3540cf4e9df0f",
+  "untouched_rows": 228549
+ },
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 713382
+ },
+ "results": {
+  "sequence_coefficients_logodds": {
+   "ball_x_repeat": [
+    0.1241,
+    0.0964,
+    0.1379
+   ],
+   "ball_x_speed_change_per10": [
+    -0.1501,
+    -0.1677,
+    -0.1259
+   ],
+   "called_strike_x_repeat": [
+    0.1116,
+    0.0898,
+    0.1384
+   ],
+   "called_strike_x_speed_change_per10": [
+    -0.0399,
+    -0.0586,
+    -0.0184
+   ],
+   "foul_x_repeat": [
+    -0.0001,
+    -0.0199,
+    0.0297
+   ],
+   "foul_x_speed_change_per10": [
+    -0.0567,
+    -0.0824,
+    -0.0326
+   ],
+   "miss_x_repeat": [
+    0.2161,
+    0.1802,
+    0.2347
+   ],
+   "miss_x_speed_change_per10": [
+    -0.1191,
+    -0.1448,
+    -0.0757
+   ]
+  },
+  "called_strike_minus_ball_repeat": [
+   -0.0124,
+   -0.0408,
+   0.0168
+  ],
+  "called_strike_minus_foul_repeat": [
+   0.1118,
+   0.0745,
+   0.1383
+  ],
+  "test": {
+   "2026": {
+    "swings": 89898,
+    "gain_nats_per_1000_swings": [
+     0.598,
+     0.419,
+     0.771
+    ],
+    "after_called_strike": {
+     "repeat_minus_change_observed_minus_predicted": 0.0252,
+     "swings_repeat": 8809,
+     "swings_change": 8951,
+     "bins": [
+      {
+       "bin": 0,
+       "kind": "repeat",
+       "n": 2669,
+       "observed": 0.0828,
+       "predicted_no_sequence": 0.0669
+      },
+      {
+       "bin": 0,
+       "kind": "change",
+       "n": 1771,
+       "observed": 0.0638,
+       "predicted_no_sequence": 0.0697
+      },
+      {
+       "bin": 1,
+       "kind": "repeat",
+       "n": 2310,
+       "observed": 0.1286,
+       "predicted_no_sequence": 0.1261
+      },
+      {
+       "bin": 1,
+       "kind": "change",
+       "n": 2130,
+       "observed": 0.1216,
+       "predicted_no_sequence": 0.1273
+      },
+      {
+       "bin": 2,
+       "kind": "repeat",
+       "n": 2022,
+       "observed": 0.2354,
+       "predicted_no_sequence": 0.2105
+      },
+      {
+       "bin": 2,
+       "kind": "change",
+       "n": 2418,
+       "observed": 0.2031,
+       "predicted_no_sequence": 0.2112
+      },
+      {
+       "bin": 3,
+       "kind": "repeat",
+       "n": 1808,
+       "observed": 0.5299,
+       "predicted_no_sequence": 0.5002
+      },
+      {
+       "bin": 3,
+       "kind": "change",
+       "n": 2632,
+       "observed": 0.511,
+       "predicted_no_sequence": 0.5217
+      }
+     ]
+    },
+    "after_ball": {
+     "repeat_minus_change_observed_minus_predicted": 0.0188,
+     "swings_repeat": 18352,
+     "swings_change": 20954,
+     "bins": [
+      {
+       "bin": 0,
+       "kind": "repeat",
+       "n": 4826,
+       "observed": 0.0676,
+       "predicted_no_sequence": 0.0678
+      },
+      {
+       "bin": 0,
+       "kind": "change",
+       "n": 5001,
+       "observed": 0.0608,
+       "predicted_no_sequence": 0.0683
+      },
+      {
+       "bin": 1,
+       "kind": "repeat",
+       "n": 4561,
+       "observed": 0.132,
+       "predicted_no_sequence": 0.1211
+      },
+      {
+       "bin": 1,
+       "kind": "change",
+       "n": 5265,
+       "observed": 0.1083,
+       "predicted_no_sequence": 0.1216
+      },
+      {
+       "bin": 2,
+       "kind": "repeat",
+       "n": 4505,
+       "observed": 0.2002,
+       "predicted_no_sequence": 0.1944
+      },
+      {
+       "bin": 2,
+       "kind": "change",
+       "n": 5321,
+       "observed": 0.1827,
+       "predicted_no_sequence": 0.1946
+      },
+      {
+       "bin": 3,
+       "kind": "repeat",
+       "n": 4460,
+       "observed": 0.5002,
+       "predicted_no_sequence": 0.4605
+      },
+      {
+       "bin": 3,
+       "kind": "change",
+       "n": 5367,
+       "observed": 0.479,
+       "predicted_no_sequence": 0.4668
+      }
+     ]
+    },
+    "after_foul": {
+     "repeat_minus_change_observed_minus_predicted": -0.0035,
+     "swings_repeat": 10881,
+     "swings_change": 13557,
+     "bins": [
+      {
+       "bin": 0,
+       "kind": "repeat",
+       "n": 3240,
+       "observed": 0.0654,
+       "predicted_no_sequence": 0.0623
+      },
+      {
+       "bin": 0,
+       "kind": "change",
+       "n": 2870,
+       "observed": 0.0582,
+       "predicted_no_sequence": 0.065
+      },
+      {
+       "bin": 1,
+       "kind": "repeat",
+       "n": 2745,
+       "observed": 0.1107,
+       "predicted_no_sequence": 0.1158
+      },
+      {
+       "bin": 1,
+       "kind": "change",
+       "n": 3364,
+       "observed": 0.1168,
+       "predicted_no_sequence": 0.1167
+      },
+      {
+       "bin": 2,
+       "kind": "repeat",
+       "n": 2598,
+       "observed": 0.1875,
+       "predicted_no_sequence": 0.1917
+      },
+      {
+       "bin": 2,
+       "kind": "change",
+       "n": 3511,
+       "observed": 0.19,
+       "predicted_no_sequence": 0.1935
+      },
+      {
+       "bin": 3,
+       "kind": "repeat",
+       "n": 2298,
+       "observed": 0.4417,
+       "predicted_no_sequence": 0.4464
+      },
+      {
+       "bin": 3,
+       "kind": "change",
+       "n": 3812,
+       "observed": 0.4816,
+       "predicted_no_sequence": 0.4693
+      }
+     ]
+    },
+    "after_miss": {
+     "repeat_minus_change_observed_minus_predicted": 0.0343,
+     "swings_repeat": 5016,
+     "swings_change": 3378,
+     "bins": [
+      {
+       "bin": 0,
+       "kind": "repeat",
+       "n": 1232,
+       "observed": 0.1201,
+       "predicted_no_sequence": 0.0947
+      },
+      {
+       "bin": 0,
+       "kind": "change",
+       "n": 867,
+       "observed": 0.0738,
+       "predicted_no_sequence": 0.0957
+      },
+      {
+       "bin": 1,
+       "kind": "repeat",
+       "n": 1264,
+       "observed": 0.1891,
+       "predicted_no_sequence": 0.1689
+      },
+      {
+       "bin": 1,
+       "kind": "change",
+       "n": 834,
+       "observed": 0.1415,
+       "predicted_no_sequence": 0.167
+      },
+      {
+       "bin": 2,
+       "kind": "repeat",
+       "n": 1257,
+       "observed": 0.3047,
+       "predicted_no_sequence": 0.2755
+      },
+      {
+       "bin": 2,
+       "kind": "change",
+       "n": 841,
+       "observed": 0.2806,
+       "predicted_no_sequence": 0.2775
+      },
+      {
+       "bin": 3,
+       "kind": "repeat",
+       "n": 1263,
+       "observed": 0.6002,
+       "predicted_no_sequence": 0.5914
+      },
+      {
+       "bin": 3,
+       "kind": "change",
+       "n": 836,
+       "observed": 0.5766,
+       "predicted_no_sequence": 0.586
+      }
+     ]
+    }
+   }
+  },
+  "launch_speed_coefficients_mph": {
+   "ball_x_repeat": -0.698,
+   "ball_x_speed_change_per10": 0.349,
+   "called_strike_x_repeat": -0.604,
+   "called_strike_x_speed_change_per10": 0.261,
+   "foul_x_repeat": -0.164,
+   "foul_x_speed_change_per10": 0.339,
+   "miss_x_repeat": -0.442,
+   "miss_x_speed_change_per10": 0.496
+  },
+  "launch_speed_balls_in_play_train": 379621,
+  "boosting": {
+   "2026": {
+    "sequence_terms_gain_nats_per_1000_swings": [
+     0.999,
+     0.676,
+     1.334
+    ]
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T15:55:49.882596+00:00",
+ "seconds": 1101.8
+}
