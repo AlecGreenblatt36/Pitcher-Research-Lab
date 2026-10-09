@@ -45,24 +45,33 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
-### In flight (updated 1:30 p.m. Eastern October 9; earlier stamps in this section ran ahead of the clock)
+### In flight (updated 3:45 p.m. Eastern October 9; earlier stamps in this section ran ahead of the clock)
 
-- Afternoon of October 9, after the outside audit (AUDIT-01): the run-value estimator got its stress test. tools/brl_synth.py
-  builds synthetic seasons with known truth (eight world kinds); the discovery lane runs them as experiment 'value_synth'
-  (no sealed data). VALUE-17 (registered) found, in one smoke world, that the headline aiming figure (regression coefficient
-  times fitted gain) overstated the true value of its own choices by 1.5x at zero scatter and 1.9x at 0.6 ft; the per-point
-  value varies across pitches and the chosen spots carry less of it. VALUE-18 (registered): structural pricing, each aim
-  priced by the engine's components (whiff, called strike, foul, contact value, count values) times the hitter's own part
-  scaled by its out-of-sample calibration on the test season's swings; in the smoke worlds it priced its own choices within
-  a few percent and chose spots worth about twice the old method's; null world near zero with calibration 0.00. Real 2025
-  development run: calibration 0.95 outside; regression figure -25.7 per 6,200 (pitch estimand), structural -43.3. Lane runs
-  in flight: ten worlds per kind for VALUE-17 (both estimands) and for VALUE-18 (structural on); receipts
-  research/discovery-value_synth-<run>.json. Decision rules are in the ledger rows: if they hold, VALUE-18F (frozen, scored
-  once on the later-period months) replaces the stated 32 runs (done: VALUE-18F, 30 to 45); the Report tab's aim plan now chooses cells by
-  structural value (tools/brl_report.py pair(): needs a ball-in-play value grid and the whiff model at scattered points).
-  value2_study options added: estimand 'pitch' (telescoping realized value, pre-action controls), pool_from_train,
-  reprice_boundary (side), reprice_bands (six distance bands), reprice_structural (PAModels.blocks_at and
-  swing_minus_take), aim_hook and diag_hook (synthetic worlds only).
+- The afternoon of October 9 settled the aiming edge's pricing. VALUE-17 (80 synthetic worlds with known truth,
+  tools/brl_synth.py, lane experiment 'value_synth'): the old headline method (regression coefficient times fitted gain)
+  overstated the true value of its own chosen spots by 1.3 to 2.0 times in every structured world; the plate-appearance
+  estimand's own-map intervals were too narrow (3 of 10 null false positives); the within-hitter neighbor-held estimator
+  and the new pitch estimand passed. VALUE-18 (structural pricing: each aim priced by the engine's components times the
+  hitter's own part scaled by its out-of-sample calibration) priced its own choices within 5% of the truth in every
+  structured world, read zero in null worlds, and chose spots worth 1.3 to 1.8 times the old method's. VALUE-18F (frozen
+  a06aa19e, later-period months): structural -43.5 [-46.6, -40.7] per 6,200 outside only; the outcome regression on the
+  same months -29.4; VALUE-19 found the structure calibrated against outcomes (slopes 0.93 to 1.03). **Stated value of
+  the aiming edge: 30 to 45 runs per team-season from outside pitches alone** (METHODS.md, the program page, the site's
+  How page). The old 32 is superseded.
+- The Report tab now chooses and prices aim plans structurally (tools/brl_report.py STRUCTURAL = True, calibration
+  constants 0.95 outside and 0.82 inside): spots labeled chase (filled dot) or take (hollow dot), runs by count group,
+  an evidence level per pair (thin under 700 hitter pitches or 150 pitcher pitches to the side), the dangerous miss per
+  family (where the chosen aims' scattered pitches land, the worst cell's share and cost), and the record split by
+  pricing method and by count group, family, side, evidence level and season (forward conditional calibration). Every
+  backfilled month is being rebuilt with it (scratch report/backfill_loop.sh from the bf_wt worktree, most recent
+  first; log report/backfill_loop.log); October 1 to 7 and September 2026 were rebuilt before the dangerous miss and the
+  by-group tallies landed and should be rebuilt once more at the end.
+- PLAN-01b landed: random maps moved the natural-experiment slope to -0.36, so the planner is set aside under its rule.
+  PLAN-02S (synthetic, the planner priced by the generator): the single-best-pitch planner misreads noise as gain
+  (null world claims +15 per 6,100 while truly costing 10); a calibrated soft planner (own part scaled by its
+  calibration, the best tenth of the pool per state) tracks the truth in all three worlds (small world true +5.1,
+  claimed +4.6). PLAN-03, when taken up: that planner with a sequential off-policy evaluation checked first in the
+  synthetic worlds. Not in the product.
 - TOTALS-04 (diagnostic, tools/totals_diag.py on the PROD-03 replays): means right overall, by team, by half and by inning;
   home-away independence holds; the team-run shape is 8 to 10% narrow; a negative binomial on the simulator's own mean
   matches CRPS and beats the histogram's log score by 0.047 nats per team-game (Monte Carlo bin noise); park extremes
