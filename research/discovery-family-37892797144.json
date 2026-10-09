@@ -1,0 +1,134 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "family",
+ "run_id": "37892797144",
+ "params": {
+  "experiment": "family",
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "league_family": true,
+  "final_eval": true,
+  "frozen_commit": "9f2f971e0851e624f31f8f76280a8db01d81c0c1"
+ },
+ "started_at": "2026-10-09T06:18:14.340051+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 10.5
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 20.7
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 31.0
+  },
+  {
+   "stage": "league",
+   "at_seconds": 89.3
+  },
+  {
+   "stage": "maps location",
+   "at_seconds": 91.7
+  },
+  {
+   "stage": "maps location_by_family",
+   "at_seconds": 95.1
+  }
+ ],
+ "final_eval": {
+  "frozen_commit": "9f2f971e0851e624f31f8f76280a8db01d81c0c1",
+  "untouched_rows": 228549
+ },
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 713382
+ },
+ "results": {
+  "test_decisions": 226679,
+  "maps": {
+   "location": {
+    "shrinkage": 10.0,
+    "validation": {},
+    "covered": 0.8131,
+    "test_logloss": 0.45255
+   },
+   "location_by_family": {
+    "shrinkage": 10.0,
+    "validation": {},
+    "covered": 0.8131,
+    "test_logloss": 0.45039
+   }
+  },
+  "gain_nats_per_1000_decisions": {
+   "location_over_league": [
+    11.202,
+    10.481,
+    11.9
+   ],
+   "family_over_location": [
+    2.159,
+    1.783,
+    2.52
+   ],
+   "family_over_league": [
+    13.361,
+    12.522,
+    14.127
+   ],
+   "league_family_over_plain_league": [
+    4.668,
+    4.279,
+    5.084
+   ]
+  },
+  "family_over_location_by_subset": {
+   "fastball_outside": {
+    "decisions": 53114,
+    "gain": [
+     2.1,
+     1.637,
+     2.567
+    ]
+   },
+   "breaking_outside": {
+    "decisions": 35082,
+    "gain": [
+     3.946,
+     2.775,
+     4.999
+    ]
+   },
+   "offspeed_outside": {
+    "decisions": 20160,
+    "gain": [
+     1.443,
+     0.172,
+     2.584
+    ]
+   },
+   "all_inside": {
+    "decisions": 118259,
+    "gain": [
+     1.781,
+     1.321,
+     2.236
+    ]
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T06:19:49.581837+00:00",
+ "seconds": 95.2
+}
