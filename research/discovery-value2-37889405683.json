@@ -1,0 +1,187 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "value2",
+ "run_id": "37889405683",
+ "params": {
+  "experiment": "value2",
+  "seasons": [
+   2023,
+   2024,
+   2025
+  ],
+  "sigmas": [
+   0.6
+  ],
+  "within_type": true,
+  "breakdown": true,
+  "reps": 100
+ },
+ "started_at": "2026-10-09T05:37:10.014763+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 8.3
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 16.1
+  },
+  {
+   "stage": "maps 604",
+   "at_seconds": 48.6
+  },
+  {
+   "stage": "coefficients",
+   "at_seconds": 53.3
+  },
+  {
+   "stage": "aiming with scatter",
+   "at_seconds": 87.4
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985
+ },
+ "results": {
+  "coefficients": {
+   "test_season": 2025,
+   "test_pitches": 617627,
+   "runs_per_point_outside": -0.000694,
+   "runs_per_point_inside": 0.000826,
+   "outside_pitches_per_pa": 1.932,
+   "inside_pitches_per_pa": 1.97
+  },
+  "by_command_sd_ft": {
+   "0.6": {
+    "outside_gain_points": 3.166,
+    "inside_gain_points": -3.11,
+    "runs_per_6200_outside_only_interval": [
+     -35.7,
+     -18.2
+    ],
+    "runs_per_6200_both_interval": [
+     -68.4,
+     -46.4
+    ],
+    "runs_per_6200_outside_only": -26.3,
+    "runs_per_6200_inside_only": -31.4,
+    "runs_per_6200_both": -57.7
+   }
+  },
+  "coefficients_by_count": {
+   "outside_ahead_or_even": -0.000416,
+   "outside_behind": -0.00139,
+   "outside_two_strikes": -0.000672,
+   "inside_ahead_or_even": 0.000782,
+   "inside_behind": 0.000168,
+   "inside_two_strikes": 0.001906
+  },
+  "breakdown": {
+   "0.6": {
+    "count": {
+     "outside_ahead_or_even": {
+      "gain_points": 3.012,
+      "pitches_per_pa": 0.916,
+      "runs_per_6200": -7.1
+     },
+     "inside_ahead_or_even": {
+      "gain_points": -3.275,
+      "pitches_per_pa": 0.981,
+      "runs_per_6200": -15.6
+     },
+     "outside_behind": {
+      "gain_points": 3.42,
+      "pitches_per_pa": 0.348,
+      "runs_per_6200": -10.3
+     },
+     "inside_behind": {
+      "gain_points": -3.301,
+      "pitches_per_pa": 0.485,
+      "runs_per_6200": -1.7
+     },
+     "outside_two_strikes": {
+      "gain_points": 3.355,
+      "pitches_per_pa": 0.668,
+      "runs_per_6200": -9.3
+     },
+     "inside_two_strikes": {
+      "gain_points": -2.417,
+      "pitches_per_pa": 0.504,
+      "runs_per_6200": -14.4
+     }
+    },
+    "type": {
+     "outside_group_0": {
+      "gain_points": 3.546,
+      "pitches_per_pa": 0.552,
+      "runs_per_6200": -8.4
+     },
+     "inside_group_0": {
+      "gain_points": -3.116,
+      "pitches_per_pa": 0.697,
+      "runs_per_6200": -11.1
+     },
+     "outside_group_3": {
+      "gain_points": 2.783,
+      "pitches_per_pa": 0.476,
+      "runs_per_6200": -5.7
+     },
+     "inside_group_3": {
+      "gain_points": -3.209,
+      "pitches_per_pa": 0.41,
+      "runs_per_6200": -6.7
+     },
+     "outside_group_4": {
+      "gain_points": 2.706,
+      "pitches_per_pa": 0.188,
+      "runs_per_6200": -2.2
+     },
+     "inside_group_4": {
+      "gain_points": -2.756,
+      "pitches_per_pa": 0.144,
+      "runs_per_6200": -2.0
+     },
+     "outside_group_5": {
+      "gain_points": 3.358,
+      "pitches_per_pa": 0.328,
+      "runs_per_6200": -4.7
+     },
+     "inside_group_5": {
+      "gain_points": -3.043,
+      "pitches_per_pa": 0.21,
+      "runs_per_6200": -3.3
+     },
+     "outside_group_2": {
+      "gain_points": 3.32,
+      "pitches_per_pa": 0.135,
+      "runs_per_6200": -1.9
+     },
+     "inside_group_2": {
+      "gain_points": -3.525,
+      "pitches_per_pa": 0.158,
+      "runs_per_6200": -2.9
+     },
+     "inside_group_1": {
+      "gain_points": -2.991,
+      "pitches_per_pa": 0.351,
+      "runs_per_6200": -5.4
+     },
+     "outside_group_1": {
+      "gain_points": 3.036,
+      "pitches_per_pa": 0.251,
+      "runs_per_6200": -3.3
+     }
+    }
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T05:38:37.406850+00:00",
+ "seconds": 87.4
+}
