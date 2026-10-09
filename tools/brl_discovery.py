@@ -3568,6 +3568,83 @@ def adapt_study(T: dict, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- DAMAGE-01: where a hitter does damage, and which clock it follows
+def damage_study(T: dict, params: dict, stage) -> dict:
+    """The third part of the matchup engine: damage on contact. Each ball in play's expected run value from its launch
+    speed and angle (a league table of run value by speed and angle bins fitted on 2023-2024, so fielding drops out).
+    League model: the pitch's location bands by count, group, speed and platoon, plus the hitter's earlier damage
+    (shrunk), linear. Hitter damage maps: ridge regression of the residual on the 22-column hitter basis (at least 150
+    training balls in play), shrinkage chosen on the second half of 2024. Each on the true crossing and at the decision
+    moment. Trained 2023-2024, scored on 2025, squared-error reduction per 1,000 balls in play, paired by game. Also the
+    run value of a ball in play by the hitter's map value at that spot (calibration across quintiles)."""
+    res = {}
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+    F = rebuild(T)
+    bip = F['ok'] & (T['group'] >= 0) & (T['call'] == 1) & (T['last_in_pa'] == 1) & np.isfinite(T['ls']) & np.isfinite(T['la']) & (T['ls'] > 20) & (T['bunt_pa'] == 0) & np.isin(T['out7'], (0, 3, 4, 5, 6))
+    T = take(T, bip); F = {k: v[bip] for k, v in F.items()}
+    rv = LW7[T['out7'].astype(int)]
+    tr = np.isin(T['season'], (2023, 2024)); te = T['season'] == 2025
+    # expected run value by launch speed and angle (league table from training seasons)
+    sb = np.clip(((T['ls'] - 40) // 4).astype(int), 0, 18); ab = np.clip(((T['la'] + 40) // 6).astype(int), 0, 19)
+    cell = sb * 20 + ab
+    sums = np.bincount(cell[tr], weights=rv[tr], minlength=19 * 20); cnts = np.bincount(cell[tr], minlength=19 * 20)
+    xrv_tab = (sums + 20 * rv[tr].mean()) / (cnts + 20)
+    y = xrv_tab[cell]
+    stage('expected run value table')
+    # hitter's earlier damage (shrunk), from earlier days
+    nn, ss = _prior_by_day(T['batter'].astype(np.int64), T['day'].astype(np.int64), y, np.ones(len(y), bool))
+    prior_h = (ss + 100 * y[tr].mean()) / (nn + 100)
+    xp, zp = projected(T, F, None, 'straight', 0.26)
+    xt, zt = T['px'].astype(np.float64), T['pz'].astype(np.float64)
+    grp = np.zeros((len(y), 7), np.float32); grp[np.arange(len(y)), np.clip(T['group'], 0, 6)] = 1
+    C = np.hstack([grp, hats(T['v0'].astype(np.float64), V_KNOTS), (T['stand_r'] == T['throw_r'])[:, None], prior_h[:, None]]).astype(np.float64)
+    mid = date(2024, 7, 1).toordinal()
+    fit_a = tr & ~((T['season'] == 2024) & (T['day'] >= mid)); val = tr & (T['season'] == 2024) & (T['day'] >= mid)
+    games = T['game'][te]; yt = y[te]
+    out, preds = {}, {}
+    for name, (x, z) in (('true', (xt, zt)), ('percept', (xp, zp))):
+        X = np.hstack([location_block(x, z, T['stand_r'], T['strikes']).astype(np.float64), C])
+        def league(rows):
+            A = X[rows]; b = np.linalg.solve(A.T @ A + 1.0 * np.eye(A.shape[1]), A.T @ y[rows]); return X @ b
+        base_a, base = league(fit_a), league(tr)
+        Bm = hitter_basis(x, z, T['stand_r'], T['strikes'])
+        def maps_for(rows, basev, lam):
+            mp = {}
+            for h, r in _groups(T['batter'], rows).items():
+                if len(r) >= 150:
+                    A = Bm[r]; mp[h] = np.linalg.solve(A.T @ A + lam * np.eye(A.shape[1]), A.T @ (y[r] - basev[r]))
+            return mp
+        val_mse = {}
+        for lam in (10.0, 30.0, 100.0, 300.0, 1000.0, 3000.0, 10000.0):
+            mp = maps_for(fit_a, base_a, lam); pr = base_a.copy()
+            for h, r in _groups(T['batter'], val).items():
+                if h in mp:
+                    pr[r] += Bm[r] @ mp[h]
+            val_mse[lam] = float(np.mean((y[val] - pr[val]) ** 2))
+        best = min(val_mse, key=val_mse.get)
+        mp = maps_for(tr, base, best); ph = base.copy(); cov = np.zeros(len(y), bool)
+        for h, r in _groups(T['batter'], te).items():
+            if h in mp:
+                ph[r] += Bm[r] @ mp[h]; cov[r] = True
+        preds[name] = (base[te], ph[te])
+        out[name] = {'shrinkage': best, 'validation_mse': {str(k): round(v, 6) for k, v in val_mse.items()}, 'covered': round(float(cov[te].mean()), 4),
+                     'test_mse_league': round(float(np.mean((yt - base[te]) ** 2)), 6), 'test_mse_hitter_maps': round(float(np.mean((yt - ph[te]) ** 2)), 6)}
+        stage('damage ' + name)
+    se = lambda p_: (yt - p_) ** 2
+    cc = lambda dlt: [round(v * 1000, 4) for v in clustered_ci(dlt, games)]
+    res['representations'] = out
+    res['balls_in_play_2025'] = int(te.sum()); res['expected_run_value_sd'] = round(float(yt.std()), 4)
+    res['squared_error_reduction_per_1000'] = {'hitter_maps_over_league_true': cc(se(preds['true'][0]) - se(preds['true'][1])),
+                                               'hitter_maps_over_league_percept': cc(se(preds['percept'][0]) - se(preds['percept'][1])),
+                                               'true_over_percept_hitter_maps': cc(se(preds['percept'][1]) - se(preds['true'][1]))}
+    # calibration of the hitter-map deviation (true crossing) across quintiles
+    dev = preds['true'][1] - preds['true'][0]
+    q = np.percentile(dev, [20, 40, 60, 80]); qi = np.searchsorted(q, dev)
+    res['by_map_deviation_quintile'] = [{'map_deviation': round(float(dev[qi == k].mean()), 4), 'observed_minus_league': round(float((yt - preds['true'][0])[qi == k].mean()), 4),
+                                         'balls_in_play': int((qi == k).sum())} for k in range(5)]
+    return res
+
+
 # ---------------------------------------------------------------- SCOUT-01: per-player decision-moment profiles and postseason matchups
 def _postseason_rosters(season: int) -> dict:
     """Postseason teams of the season (public schedule), their active rosters split into hitters and pitchers, and the
@@ -4482,6 +4559,8 @@ def main():
             receipt['results'] = value2_study(T, params, stage)
         elif experiment == 'adapt':
             receipt['results'] = adapt_study(T, params, stage)
+        elif experiment == 'damage':
+            receipt['results'] = damage_study(T, params, stage)
         elif experiment == 'steer':
             receipt['results'] = steer_profile(T, params, stage)
         elif experiment == 'matchup_final':
