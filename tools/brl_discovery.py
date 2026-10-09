@@ -4915,6 +4915,162 @@ def warmup_study(T: dict, H, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- SWINGMAP-01: do hitters chase where their bat goes?
+def _bat_intrinsic(S: dict, seasons, min_swings: int = 150) -> tuple[dict, dict]:
+    """Per hitter-season, each bat-tracking measure net of the pitch it met: every competitive swing's value (bat speed at
+    least 50 mph) regressed, within a season, on the pitch's height (and its square), its side toward or away from the
+    hitter (and its square), contact depth (for the angles), speed, two strikes and pitch group; the hitter's mean
+    residual is his intrinsic value. Attack direction is oriented toward the pull side by the data (the sign, by batter
+    side, that makes it agree with where his balls in play go). Returns {(batter, season): {measure: value, 'n': swings}}
+    and the orientation check."""
+    desc = np.asarray(S['description__vocab'])[S['description']] if 'description__vocab' in S else np.asarray(S['description'])
+    stand = np.asarray(S['stand__vocab'])[S['stand']] if 'stand__vocab' in S else np.asarray(S['stand'])
+    ptype = np.asarray(S['pitch_type__vocab'])[S['pitch_type']] if 'pitch_type__vocab' in S else np.asarray(S['pitch_type'])
+    swing = np.isin(desc, ('swinging_strike', 'swinging_strike_blocked', 'foul', 'foul_tip', 'hit_into_play'))
+    day = S['day'].astype(np.int64); year = np.asarray([date.fromordinal(int(d_)).year for d_ in day])
+    stand_r = stand == 'R'
+    px = S['plate_x'].astype(np.float64); pz = S['plate_z'].astype(np.float64)
+    u = np.where(stand_r, px, -px)
+    bs = S['bat_speed'].astype(np.float64)
+    ok = swing & np.isfinite(bs) & (bs >= 50) & np.isfinite(px) & np.isfinite(pz) & np.isin(year, seasons)
+    grpv = np.asarray([TYPE_GROUPS.get(str(t_ or '').upper(), 6) for t_ in ptype])
+    G = np.column_stack([(grpv == g_) for g_ in (1, 2, 3, 4, 5, 6)]).astype(float)
+    depth = S['intercept_ball_minus_batter_pos_y_inches'].astype(np.float64)
+    speed = S['release_speed'].astype(np.float64); two = (S['strikes'] == 2).astype(float)
+    # orientation of attack direction: its correlation with pull-side spray on balls in play, by batter side
+    check = {}
+    sign = {}
+    hx, hy = S['hc_x'].astype(np.float64), S['hc_y'].astype(np.float64)
+    spray = np.degrees(np.arctan2(hx - 125.42, 198.27 - hy))           # positive toward right field
+    pull = np.where(stand_r, -spray, spray)
+    ad = S['attack_direction'].astype(np.float64)
+    for side, m_side in (('R', stand_r), ('L', ~stand_r)):
+        m = ok & m_side & np.isfinite(ad) & np.isfinite(pull) & (desc == 'hit_into_play')
+        c = float(np.corrcoef(ad[m], pull[m])[0, 1]) if m.sum() > 100 else 0.0
+        sign[side] = 1.0 if c >= 0 else -1.0
+        check[side] = {'corr_raw_with_pull_spray': round(c, 3), 'balls_in_play': int(m.sum())}
+    adir = ad * np.where(stand_r, sign['R'], sign['L'])
+    measures = {'attack_angle': S['attack_angle'].astype(np.float64), 'swing_path_tilt': S['swing_path_tilt'].astype(np.float64),
+                'attack_direction_pull': adir, 'contact_depth_in': depth, 'bat_speed': bs, 'swing_length': S['swing_length'].astype(np.float64)}
+    out = {}
+    bat = S['batter'].astype(np.int64)
+    for ssn in seasons:
+        ms = ok & (year == ssn)
+        base = np.column_stack([np.ones(len(u)), pz, pz ** 2, u, u ** 2, np.nan_to_num(speed, nan=float(np.nanmean(speed))), two, G])
+        for name, v in measures.items():
+            use_depth = name in ('attack_angle', 'swing_path_tilt', 'attack_direction_pull')
+            X = np.column_stack([base, np.nan_to_num(depth)]) if use_depth else base
+            m = ms & np.isfinite(v) & (np.isfinite(depth) if use_depth else True)
+            if m.sum() < 1000:
+                continue
+            beta = np.linalg.lstsq(X[m], v[m], rcond=None)[0]
+            r = v[m] - X[m] @ beta
+            ub, ib = np.unique(bat[m], return_inverse=True); cnt = np.bincount(ib); mean_r = np.bincount(ib, weights=r) / cnt
+            for b_, n_, mr in zip(ub, cnt, mean_r):
+                if n_ >= min_swings:
+                    d_ = out.setdefault((int(b_), int(ssn)), {}); d_[name] = float(mr); d_['n'] = max(d_.get('n', 0), int(n_))
+    return out, check
+
+
+def swingmap_study(T: dict, S: dict, params: dict, stage) -> dict:
+    """SWINGMAP-01. Each hitter's own chase spots at the decision moment (his swing map minus the same-side mean map of
+    the other hitters, MATCHUP-01's representation, VALUE-08's own part) against his swing path from bat tracking, net
+    of the pitches each swing met. Map features per hitter-season (2025 and 2026 through July, maps fitted per season
+    with shrinkage 10, at least 500 pitches), read for a first-pitch four-seamer: high minus low (mean own part above
+    the zone, 3.75 and 4.0 ft, minus below, 1.0 and 1.25 ft, across the plate), away minus inside (outside the plate
+    at mid heights) and the overall outside level, in points of swing chance. Correlations with intrinsic attack angle,
+    swing path tilt, pull-side attack direction, contact depth, bat speed and swing length by season (bootstrap over
+    hitters), and the same for each hitter's change from 2025 to 2026."""
+    res = {}
+    seasons = tuple(int(s) for s in params.get('map_seasons', (2025, 2026)))
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025, 2026)))
+    F = rebuild(T)
+    keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
+    T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
+    swing = ((T['call'] == 1) | (T['call'] == 2)).astype(np.float64)
+    xp, zp = projected(T, F, None, 'straight', 0.26)
+    Lb = location_block(xp, zp, T['stand_r'], T['strikes']); prop = swing_propensity(T); pprop = pitcher_propensity(T)
+    X = np.hstack([Lb, control_block(T, prop), pprop[:, None].astype(np.float32)]); i_prop = Lb.shape[1] + 32
+    rng = np.random.default_rng(13)
+    idx = rng.choice(len(swing), min(len(swing), 700000), replace=False)
+    league = fit_logistic(X[idx], swing[idx]); off = league.decision_function(X)
+    Bm = hitter_basis(xp, zp, T['stand_r'], T['strikes'])
+    stage('league model')
+    # the reference read: first-pitch four-seamer to a hitter of each side, league-average swing level
+    def ref_points(us, zs):
+        UU, ZZ = np.meshgrid(np.asarray(us, float), np.asarray(zs, float)); return UU.ravel(), ZZ.ravel()
+    bands = {'high': ref_points((-0.6, 0.0, 0.6), (3.75, 4.0)), 'low': ref_points((-0.6, 0.0, 0.6), (1.0, 1.25)),
+             'away': ref_points((1.05, 1.25), (2.0, 2.5, 3.0)), 'inside': ref_points((-1.05, -1.25), (2.0, 2.5, 3.0))}
+    lg_prop = float(np.mean(prop)); lg_pp = float(np.mean(pprop))
+    ref = {}
+    for sd in (0, 1):
+        for name, (uu, zz) in bands.items():
+            n_ = len(uu); px_ = uu if sd == 1 else -uu
+            g_t = {'balls': np.zeros(n_, np.int64), 'strikes': np.zeros(n_, np.int64), 'group': np.zeros(n_, np.int64), 'v0': np.full(n_, 94.0),
+                   'stand_r': np.full(n_, sd, np.int64), 'throw_r': np.ones(n_, np.int64)}
+            Xg = np.hstack([location_block(px_, zz, g_t['stand_r'], g_t['strikes']), control_block(g_t, np.full(n_, lg_prop)), np.full((n_, 1), lg_pp, np.float32)])
+            ref[(sd, name)] = (league.decision_function(Xg).astype(np.float64), hitter_basis(px_, zz, g_t['stand_r'], g_t['strikes']))
+    feats = {}
+    for ssn in seasons:
+        rows_s = T['season'] == ssn
+        maps = _hitter_maps(Bm, swing, off, _groups(T['batter'], rows_s), 10.0, int(params.get('min_pitches', 500)))
+        side = {h: int(np.round(T['stand_r'][r].mean())) for h, r in _groups(T['batter'], rows_s).items() if h in maps}
+        tot = {0: 0.0, 1: 0.0}; nn = {0: 0, 1: 0}
+        for h, m in maps.items():
+            tot[side[h]] = tot[side[h]] + m; nn[side[h]] += 1
+        for h, m in maps.items():
+            sd = side[h]; mbar = (tot[sd] - m) / max(nn[sd] - 1, 1)
+            own = {}
+            for name in bands:
+                lo, Bg = ref[(sd, name)]
+                own[name] = float(np.mean(1 / (1 + np.exp(-(lo + Bg @ m))) - 1 / (1 + np.exp(-(lo + Bg @ mbar))))) * 100
+            feats[(int(h), int(ssn))] = {'high_minus_low': own['high'] - own['low'], 'away_minus_inside': own['away'] - own['inside'],
+                                         'outside_level': float(np.mean([own[k] for k in bands])), 'side': sd}
+        stage(f'maps {ssn}: {len(maps)}')
+    bat, check = _bat_intrinsic(S, seasons, int(params.get('min_swings', 150)))
+    res['attack_direction_orientation'] = check
+    stage(f'bat measures {len(bat)}')
+    keys = sorted(set(feats) & set(bat))
+    res['hitter_seasons'] = {str(s): int(sum(1 for k in keys if k[1] == s)) for s in seasons}
+    pairs_ = [('attack_angle', 'high_minus_low'), ('swing_path_tilt', 'high_minus_low'), ('attack_direction_pull', 'away_minus_inside'),
+              ('contact_depth_in', 'away_minus_inside'), ('bat_speed', 'outside_level'), ('swing_length', 'outside_level'),
+              ('attack_angle', 'outside_level'), ('contact_depth_in', 'high_minus_low')]
+
+    def corr_ci(x, y, reps=2000):
+        x, y = np.asarray(x, float), np.asarray(y, float); ok_ = np.isfinite(x) & np.isfinite(y); x, y = x[ok_], y[ok_]
+        if len(x) < 30:
+            return None
+        r0 = float(np.corrcoef(x, y)[0, 1]); bs_ = []
+        for _ in range(reps):
+            j = rng.integers(0, len(x), len(x)); bs_.append(np.corrcoef(x[j], y[j])[0, 1])
+        slope = float(np.polyfit(x, y, 1)[0])
+        return {'n': int(len(x)), 'r': [round(r0, 3), round(float(np.percentile(bs_, 2.5)), 3), round(float(np.percentile(bs_, 97.5)), 3)], 'slope_points_per_unit': round(slope, 4)}
+    res['by_season'] = {}
+    for s in seasons:
+        ks = [k for k in keys if k[1] == s]
+        res['by_season'][str(s)] = {f'{a}__{b}': corr_ci([bat[k].get(a, np.nan) for k in ks], [feats[k][b] for k in ks]) for a, b in pairs_}
+        # within each batter side, the headline pair
+        for sd, nm in ((1, 'R'), (0, 'L')):
+            ks2 = [k for k in ks if feats[k]['side'] == sd]
+            res['by_season'][str(s)][f'attack_angle__high_minus_low__{nm}'] = corr_ci([bat[k].get('attack_angle', np.nan) for k in ks2], [feats[k]['high_minus_low'] for k in ks2])
+    # change from the first to the second season, within hitter
+    if len(seasons) == 2:
+        s0, s1 = seasons
+        hs = sorted({k[0] for k in keys if (k[0], s0) in bat and (k[0], s1) in bat and (k[0], s0) in feats and (k[0], s1) in feats})
+        res['change'] = {'hitters': len(hs)}
+        for a, b in pairs_[:4]:
+            dx = [bat[(h, s1)].get(a, np.nan) - bat[(h, s0)].get(a, np.nan) for h in hs]; dy = [feats[(h, s1)][b] - feats[(h, s0)][b] for h in hs]
+            res['change'][f'{a}__{b}'] = corr_ci(dx, dy)
+        # how much each map feature and bat measure repeat between the seasons (their reliability bounds any correlation)
+        res['repeat'] = {}
+        for b in ('high_minus_low', 'away_minus_inside', 'outside_level'):
+            res['repeat'][b] = corr_ci([feats[(h, s0)][b] for h in hs], [feats[(h, s1)][b] for h in hs], 500)
+        for a in ('attack_angle', 'swing_path_tilt', 'attack_direction_pull', 'contact_depth_in'):
+            res['repeat'][a] = corr_ci([bat[(h, s0)].get(a, np.nan) for h in hs], [bat[(h, s1)].get(a, np.nan) for h in hs], 500)
+    stage('correlations')
+    return res
+
+
 def value_whiff_study(T: dict, params: dict, stage) -> dict:
     """VALUE-08's design for the whiff map on the true crossing (MATCHUP-03's representation: league whiff model on
     swings, hitter maps on location, family and height bands, shrinkage 30, at least 250 swings). Each pitch's whiff
@@ -6654,6 +6810,19 @@ def main():
             receipt['results'] = framing_study(T, H, params, stage); del H
         elif experiment == 'command2':
             receipt['results'] = command2_study(T, params, stage)
+        elif experiment == 'swingmap':
+            import importlib.util
+            spec = importlib.util.spec_from_file_location('brl_matchup', ROOT / 'tools' / 'brl_matchup.py')
+            mx = importlib.util.module_from_spec(spec); spec.loader.exec_module(mx)
+            got = []
+            for year in (2025, 2026):
+                stage(f'load savant {year}')
+                got.extend(load_savant(repo, token, branch, key, int(year)))
+            S = mx.merge(got); del got
+            keep_s = S['day'] < date(2026, 8, 1).toordinal()             # the untouched months stay out
+            S = {k: (v[keep_s] if not k.endswith('__vocab') else v) for k, v in S.items()}
+            receipt['savant_rows'] = int(keep_s.sum())
+            receipt['results'] = swingmap_study(T, S, params, stage); del S
         elif experiment == 'warmup':
             stage('load plate-appearance states')
             H = load_pa_states(repo, token, os.environ['BRL_PA_PACKAGE_KEY'])
