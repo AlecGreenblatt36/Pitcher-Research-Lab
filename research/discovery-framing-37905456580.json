@@ -1,0 +1,118 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "framing",
+ "run_id": "37905456580",
+ "params": {
+  "experiment": "framing",
+  "seasons": [
+   2024,
+   2025,
+   2026
+  ],
+  "reps": 1000
+ },
+ "started_at": "2026-10-09T08:35:04.822084+00:00",
+ "stages": [
+  {
+   "stage": "load 2024",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 9.3
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 18.4
+  },
+  {
+   "stage": "load plate-appearance states",
+   "at_seconds": 27.6
+  },
+  {
+   "stage": "framing parts",
+   "at_seconds": 32.0
+  }
+ ],
+ "seasons_rows": {
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 484833
+ },
+ "results": {
+  "matched_share": 1.0,
+  "by_season": {
+   "2024": {
+    "borderline_takes": 79673,
+    "called_strike_rate": 0.5052,
+    "catchers": 42,
+    "sd_extra_strikes_per_1000": 36.41,
+    "band_rates": [
+     0.855,
+     0.788,
+     0.697,
+     0.601,
+     0.447,
+     0.343,
+     0.255,
+     0.163
+    ]
+   },
+   "2025": {
+    "borderline_takes": 80459,
+    "called_strike_rate": 0.4473,
+    "catchers": 45,
+    "sd_extra_strikes_per_1000": 40.0,
+    "band_rates": [
+     0.82,
+     0.74,
+     0.64,
+     0.519,
+     0.381,
+     0.282,
+     0.191,
+     0.119
+    ]
+   },
+   "2026": {
+    "borderline_takes": 56548,
+    "called_strike_rate": 0.3714,
+    "catchers": 29,
+    "sd_extra_strikes_per_1000": 26.85,
+    "band_rates": [
+     0.812,
+     0.712,
+     0.576,
+     0.42,
+     0.244,
+     0.158,
+     0.1,
+     0.052
+    ]
+   }
+  },
+  "persistence_2024_to_2025": {
+   "catchers": 33,
+   "slope": [
+    0.321,
+    -0.056,
+    0.799
+   ],
+   "correlation": 0.269
+  },
+  "persistence_2025_to_2026": {
+   "catchers": 25,
+   "slope": [
+    0.155,
+    -0.083,
+    0.325
+   ],
+   "correlation": 0.271
+  },
+  "persistence_ratio": 0.483,
+  "spread_ratio_2026_over_2025": 0.671
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T08:35:36.898931+00:00",
+ "seconds": 32.1
+}
