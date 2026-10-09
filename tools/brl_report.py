@@ -55,19 +55,14 @@ def bin_of(chase_points: float) -> str:
     return BINS[0] if chase_points < -2 else BINS[1] if chase_points < 0 else BINS[2] if chase_points < 2 else BINS[3]
 
 
-def record_from(repo, token, branch, idx: dict) -> dict:
+def record_from(days: dict) -> dict:
     """The forward record over every graded game: chases against the league's and the maps' expectations, by what the
     map predicted for the pair, and staffs' aiming against their usual rates."""
     rec = {'schema': 'brl.report-record.v1', 'built_at': datetime.now(timezone.utc).isoformat(), 'games': 0, 'dates': 0, 'first_date': None, 'last_date': None,
            'outside_pitches': 0, 'in_recommended': 0, 'usual_expected': 0.0, 'chases': 0, 'chases_expected_league': 0.0, 'chases_expected_map': 0.0,
            'bins': {k: {'pairs': 0, 'outside': 0, 'chases': 0, 'league': 0.0, 'map': 0.0} for k in BINS}, 'by_month': {}}
-    for day in sorted(idx.get('dates') or {}):
-        if not (idx['dates'][day].get('graded') or 0):
-            continue
-        raw = D.read_blob(repo, token, f'public/reports/{day}/index.json', branch)
-        if raw is None:
-            continue
-        doc = json.loads(raw.decode()); used = False
+    for day in sorted(days):
+        doc = days[day]; used = False
         for g in (doc.get('games') or {}).values():
             gr = g.get('grade')
             if not gr or not gr.get('pairs'):
@@ -91,6 +86,39 @@ def record_from(repo, token, branch, idx: dict) -> dict:
     for bn in rec['bins'].values():
         bn['league'] = round(bn['league'], 1); bn['map'] = round(bn['map'], 1)
     return rec
+
+
+def put(repo, token, path, text, branch, message, tries=14):
+    """put_text with patience: several backfills commit to the same branch at once, so a 409 is ordinary."""
+    import random
+    from urllib.error import HTTPError
+    for attempt in range(tries):
+        try:
+            return D.put_text(repo, token, path, text, branch, message)
+        except HTTPError as exc:
+            if exc.code not in (409, 422) or attempt == tries - 1:
+                raise
+            time.sleep(random.uniform(2, 6) * (1 + attempt / 3))
+
+
+def rebuild_index(repo, token, branch) -> tuple[dict, dict]:
+    """The reports index from what is on the branch (never a read-modify-write, which parallel backfills would race):
+    every public/reports/<date>/index.json, as {date: summary} and the index document."""
+    listing = D.api(f'https://api.github.com/repos/{repo}/contents/public/reports?ref={branch}', token)
+    days = {}
+    for item in listing if isinstance(listing, list) else []:
+        if item.get('type') == 'dir' and len(item.get('name', '')) == 10:
+            raw = D.read_blob(repo, token, f"public/reports/{item['name']}/index.json", branch)
+            if raw is not None:
+                try:
+                    days[item['name']] = json.loads(raw.decode())
+                except ValueError:
+                    pass
+    idx = {'schema': 'brl.reports.v1', 'dates': {}}
+    for day, doc in sorted(days.items()):
+        games = doc.get('games') or {}
+        idx['dates'][day] = {'asof': doc.get('asof'), 'games': len(games), 'graded': sum(1 for g in games.values() if (g.get('grade') or {}).get('pairs'))}
+    return idx, days
 
 
 def famof(g: int) -> str:
@@ -563,22 +591,20 @@ def main():
                 doc = dict(entry); doc.update({'schema': SCHEMA, 'date': day, 'asof': a, 'game_pk': int(pk), 'grid': rep['grid'], 'training_pitches': fit_n(fits[a])})
                 text = json.dumps(doc, separators=(',', ':')); total += len(text)
                 if params.get('publish', True):
-                    D.put_text(repo, token, f'public/reports/{day}/{pk}.json', text, branch, f'BRL report {day} game {pk} (as of {a})')
+                    put(repo, token, f'public/reports/{day}/{pk}.json', text, branch, f'BRL report {day} game {pk} (as of {a})')
                 summary['games'][pk] = {'teams': {sd: {'id': entry['teams'][sd]['id'], 'name': entry['teams'][sd]['name'], 'abbr': entry['teams'][sd]['abbr']} for sd in ('away', 'home')},
                                         'status': entry['status'], 'final': entry['final'], 'start': entry['start'], 'grade': entry.get('grade'),
                                         'pairs': sum(len(se['pairs']) for se in entry['sides'].values())}
             if params.get('publish', True):
-                D.put_text(repo, token, f'public/reports/{day}/index.json', json.dumps(summary, separators=(',', ':')), branch, f'BRL report {day} summary (as of {a})')
+                put(repo, token, f'public/reports/{day}/index.json', json.dumps(summary, separators=(',', ':')), branch, f'BRL report {day} summary (as of {a})')
             receipt['reports'][day] = {'games': len(rep['games']), 'bytes': total, 'asof': a, 'graded': sum(1 for g in rep['games'].values() if g.get('grade'))}
             stage(f'report {day}')
         if params.get('publish', True):
-            idx_raw = D.read_blob(repo, token, 'public/reports/index.json', branch)
-            idx = json.loads(idx_raw.decode()) if idx_raw else {'schema': 'brl.reports.v1', 'dates': {}}
-            for day, info in receipt['reports'].items():
-                idx['dates'][day] = {'asof': info['asof'], 'games': info['games'], 'graded': info['graded']}
-            D.put_text(repo, token, 'public/reports/index.json', json.dumps(idx, separators=(',', ':'), sort_keys=True), branch, 'BRL reports index')
-            rec = record_from(repo, token, branch, idx)
-            D.put_text(repo, token, 'public/reports/record.json', json.dumps(rec, separators=(',', ':')), branch, 'BRL reports record')
+            stage('index')
+            idx, days = rebuild_index(repo, token, branch)
+            put(repo, token, 'public/reports/index.json', json.dumps(idx, separators=(',', ':'), sort_keys=True), branch, 'BRL reports index')
+            rec = record_from(days)
+            put(repo, token, 'public/reports/record.json', json.dumps(rec, separators=(',', ':')), branch, 'BRL reports record')
             receipt['record'] = {k: rec[k] for k in ('games', 'dates', 'first_date', 'last_date', 'chases', 'chases_expected_league', 'chases_expected_map', 'in_recommended', 'usual_expected', 'outside_pitches')}
         receipt['status'] = 'completed'
     except Exception as exc:
@@ -587,7 +613,7 @@ def main():
         receipt['trace'] = traceback.format_exc()[-2500:]
         print(receipt['trace'], flush=True)
     receipt['finished_at'] = datetime.now(timezone.utc).isoformat(); receipt['seconds'] = round(time.time() - t0, 1)
-    D.put_text(repo, token, f'research/report-{run_id}.json', json.dumps(receipt, indent=1), branch, f'BRL report receipt {run_id}')
+    put(repo, token, f'research/report-{run_id}.json', json.dumps(receipt, indent=1), branch, f'BRL report receipt {run_id}')
     if receipt['status'] != 'completed':
         sys.exit(1)
 
