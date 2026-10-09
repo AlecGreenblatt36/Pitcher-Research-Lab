@@ -3601,12 +3601,19 @@ def damage_study(T: dict, params: dict, stage) -> dict:
     moment. Trained 2023-2024, scored on 2025, squared-error reduction per 1,000 balls in play, paired by game. Also the
     run value of a ball in play by the hitter's map value at that spot (calibration across quintiles)."""
     res = {}
-    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+    final = bool(params.get('final_eval'))
+    if final and not params.get('frozen_commit'):
+        raise ValueError('the final damage scoring runs only as the registered evaluation of a frozen commit')
+    if final:      # DAMAGE-01F: fitted on 2023-2025 (shrinkage on the second half of 2025), scored on 2026 from August 1
+        T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | ((T['season'] == 2026) & (T['day'] >= date(2026, 8, 1).toordinal())))
+    else:
+        T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
     F = rebuild(T)
     bip = F['ok'] & (T['group'] >= 0) & (T['call'] == 1) & (T['last_in_pa'] == 1) & np.isfinite(T['ls']) & np.isfinite(T['la']) & (T['ls'] > 20) & (T['bunt_pa'] == 0) & np.isin(T['out7'], (0, 3, 4, 5, 6))
     T = take(T, bip); F = {k: v[bip] for k, v in F.items()}
     rv = LW7[T['out7'].astype(int)]
-    tr = np.isin(T['season'], (2023, 2024)); te = T['season'] == 2025
+    last_train = 2025 if final else 2024
+    tr = (T['season'] <= last_train); te = T['season'] == last_train + 1
     # expected run value by launch speed and angle (league table from training seasons)
     sb = np.clip(((T['ls'] - 40) // 4).astype(int), 0, 18); ab = np.clip(((T['la'] + 40) // 6).astype(int), 0, 19)
     cell = sb * 20 + ab
@@ -3621,8 +3628,8 @@ def damage_study(T: dict, params: dict, stage) -> dict:
     xt, zt = T['px'].astype(np.float64), T['pz'].astype(np.float64)
     grp = np.zeros((len(y), 7), np.float32); grp[np.arange(len(y)), np.clip(T['group'], 0, 6)] = 1
     C = np.hstack([grp, hats(T['v0'].astype(np.float64), V_KNOTS), (T['stand_r'] == T['throw_r'])[:, None], prior_h[:, None]]).astype(np.float64)
-    mid = date(2024, 7, 1).toordinal()
-    fit_a = tr & ~((T['season'] == 2024) & (T['day'] >= mid)); val = tr & (T['season'] == 2024) & (T['day'] >= mid)
+    mid = date(last_train, 7, 1).toordinal()
+    fit_a = tr & ~((T['season'] == last_train) & (T['day'] >= mid)); val = tr & (T['season'] == last_train) & (T['day'] >= mid)
     games = T['game'][te]; yt = y[te]
     out, preds = {}, {}
     for name, (x, z) in (('true', (xt, zt)), ('percept', (xp, zp))):
@@ -3656,7 +3663,7 @@ def damage_study(T: dict, params: dict, stage) -> dict:
     se = lambda p_: (yt - p_) ** 2
     cc = lambda dlt: [round(v * 1000, 4) for v in clustered_ci(dlt, games)]
     res['representations'] = out
-    res['balls_in_play_2025'] = int(te.sum()); res['expected_run_value_sd'] = round(float(yt.std()), 4)
+    res['balls_in_play_test'] = int(te.sum()); res['test_season'] = int(last_train + 1); res['expected_run_value_sd'] = round(float(yt.std()), 4)
     res['squared_error_reduction_per_1000'] = {'hitter_maps_over_league_true': cc(se(preds['true'][0]) - se(preds['true'][1])),
                                                'hitter_maps_over_league_percept': cc(se(preds['percept'][0]) - se(preds['percept'][1])),
                                                'true_over_percept_hitter_maps': cc(se(preds['percept'][1]) - se(preds['true'][1]))}
