@@ -1,12 +1,12 @@
 {
- "created_at": "2026-10-09T20:26:45.071747+00:00",
- "status": "blocked",
+ "created_at": "2026-10-09T20:42:25.123322+00:00",
+ "status": "iteration_completed",
  "runtime": "brl_engine (public code, sealed data)",
  "ledger_branch": "brl-live-data",
  "shadow": false,
  "live_forecasts_created": 0,
  "raw_data_published": false,
- "stage": "history_and_forecast_iteration",
+ "stage": "complete",
  "secret_present": true,
  "scheduled_games": [],
  "data_source": "brl-data-202610070629",
@@ -17,39 +17,85 @@
   "fitted_at": "2026-10-07T09:43:32.959674+00:00",
   "physics_features": 30
  },
- "reason": "HTTPError: HTTP Error 409: Conflict",
- "error_type": "HTTPError",
- "error_trace": [
-  {
-   "file": "request.py",
-   "function": "urlopen",
-   "line": 215
-  },
-  {
-   "file": "request.py",
-   "function": "open",
-   "line": 521
-  },
-  {
-   "file": "request.py",
-   "function": "http_response",
-   "line": 630
-  },
-  {
-   "file": "request.py",
-   "function": "error",
-   "line": 559
-  },
-  {
-   "file": "request.py",
-   "function": "_call_chain",
-   "line": 492
-  },
-  {
-   "file": "request.py",
-   "function": "http_error_default",
-   "line": 639
+ "forecasts": 35,
+ "box_forecasts_created": 0,
+ "box_forecasts": 30,
+ "player_scored_games": 6,
+ "scored_games": 6,
+ "skill_scored_games": 5,
+ "skill_baseline_prior_games": 38,
+ "history_coverage_through": "2026-10-08",
+ "history_added_PA": 1759,
+ "history_refresh_note": null,
+ "history_day_notes": {
+  "2026-10-06": {
+   "excluded_non_PA_events": 1,
+   "mid_pa_substitutions": 2
   }
- ],
- "preserved_previous_forecasts": false
+ },
+ "pa_model": {
+  "name": "pa-2026-v2-physics",
+  "sha256": "4c8822abcb65eff2ec2fcf3a1d7c3b57f13dec0d21d26a9508e18f74944b3a54",
+  "physics": {
+   "seasons": {
+    "2025": {
+     "rows": 186562,
+     "through": "2025-11-01"
+    },
+    "2026": {
+     "rows": 185608,
+     "through": "2026-10-08"
+    }
+   },
+   "day_cache_days": 0,
+   "day_cache_rows": 0,
+   "rows": 372170,
+   "through": "2026-10-08",
+   "seasons_mode": "live"
+  }
+ },
+ "pitch_bookkeeping_prior_PA": 214050,
+ "pitch_bookkeeping_season_games": 4930,
+ "engine_rules_changed": false,
+ "model_parameters_changed": false,
+ "simulation_adjustments": "context offsets (brl_live/context_offsets.json)",
+ "live_updates": 1,
+ "live_update_errors": 0,
+ "market_receipt": {
+  "date": "2026-10-09",
+  "schedule_games": 0,
+  "lines_seen": 0,
+  "matched": 0,
+  "captured_pregame": 0,
+  "books": {
+   "games_with_consensus": 0,
+   "mean_books": 0
+  },
+  "events": 0,
+  "competition_keys": [],
+  "odds_keys": [],
+  "odds_subkeys": {},
+  "moneyline_shape": null,
+  "moneyline_home_shape": null
+ },
+ "team_results_rows": 9718,
+ "team_results_meta": {
+  "files": [
+   "team_results_2023.json.gz",
+   "team_results_2024.json.gz",
+   "team_results_2025.json.gz",
+   "team_results_2026.json.gz"
+  ],
+  "row_keys": [
+   "schedule document"
+  ],
+  "skipped": 0
+ },
+ "storage_read_audit": {
+  "contents_verified": 23,
+  "blob_fallbacks": 29,
+  "bytes_verified": 99592724,
+  "requests": 86,
+  "rate_limit_remaining": 3162
+ }
 }
