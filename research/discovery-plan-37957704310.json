@@ -1,0 +1,357 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "plan",
+ "run_id": "37957704310",
+ "params": {
+  "experiment": "plan",
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "train": [
+   2023,
+   2024
+  ],
+  "tests": [
+   2025,
+   2026
+  ],
+  "max_pairs": 6000,
+  "min_pair_pitches": 12,
+  "reps": 300,
+  "placebo_n": 120000,
+  "placebo_kinds": [
+   "shuffle",
+   "mean",
+   "noise",
+   "flip",
+   "half_a",
+   "half_b"
+  ]
+ },
+ "started_at": "2026-10-09T16:15:12.054029+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 9.4
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 18.7
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 27.9
+  },
+  {
+   "stage": "swing model, 604 maps",
+   "at_seconds": 72.6
+  },
+  {
+   "stage": "models fitted",
+   "at_seconds": 111.0
+  },
+  {
+   "stage": "states",
+   "at_seconds": 111.2
+  },
+  {
+   "stage": "6000 pairs",
+   "at_seconds": 111.3
+  },
+  {
+   "stage": "pairs solved 200",
+   "at_seconds": 153.7
+  },
+  {
+   "stage": "pairs solved 400",
+   "at_seconds": 194.4
+  },
+  {
+   "stage": "pairs solved 600",
+   "at_seconds": 234.5
+  },
+  {
+   "stage": "pairs solved 800",
+   "at_seconds": 274.4
+  },
+  {
+   "stage": "pairs solved 1000",
+   "at_seconds": 314.1
+  },
+  {
+   "stage": "pairs solved 1200",
+   "at_seconds": 353.8
+  },
+  {
+   "stage": "pairs solved 1400",
+   "at_seconds": 393.3
+  },
+  {
+   "stage": "pairs solved 1600",
+   "at_seconds": 432.8
+  },
+  {
+   "stage": "pairs solved 1800",
+   "at_seconds": 472.1
+  },
+  {
+   "stage": "pairs solved 2000",
+   "at_seconds": 511.1
+  },
+  {
+   "stage": "pairs solved 2200",
+   "at_seconds": 550.5
+  },
+  {
+   "stage": "pairs solved 2400",
+   "at_seconds": 589.6
+  },
+  {
+   "stage": "pairs solved 2600",
+   "at_seconds": 628.7
+  },
+  {
+   "stage": "pairs solved 2800",
+   "at_seconds": 667.9
+  },
+  {
+   "stage": "pairs solved 3000",
+   "at_seconds": 706.8
+  },
+  {
+   "stage": "pairs solved 3200",
+   "at_seconds": 745.9
+  },
+  {
+   "stage": "pairs solved 3400",
+   "at_seconds": 785.1
+  },
+  {
+   "stage": "pairs solved 3600",
+   "at_seconds": 824.1
+  },
+  {
+   "stage": "pairs solved 3800",
+   "at_seconds": 863.3
+  },
+  {
+   "stage": "pairs solved 4000",
+   "at_seconds": 902.1
+  },
+  {
+   "stage": "pairs solved 4200",
+   "at_seconds": 941.2
+  },
+  {
+   "stage": "pairs solved 4400",
+   "at_seconds": 980.1
+  },
+  {
+   "stage": "pairs solved 4600",
+   "at_seconds": 1019.0
+  },
+  {
+   "stage": "pairs solved 4800",
+   "at_seconds": 1057.7
+  },
+  {
+   "stage": "pairs solved 4821, pitches 156359",
+   "at_seconds": 1061.8
+  },
+  {
+   "stage": "placebo shuffle",
+   "at_seconds": 1683.4
+  },
+  {
+   "stage": "placebo mean",
+   "at_seconds": 2279.8
+  },
+  {
+   "stage": "placebo noise",
+   "at_seconds": 2873.8
+  },
+  {
+   "stage": "placebo flip",
+   "at_seconds": 3468.6
+  },
+  {
+   "stage": "placebo half_a",
+   "at_seconds": 3993.9
+  },
+  {
+   "stage": "placebo half_b",
+   "at_seconds": 4581.8
+  },
+  {
+   "stage": "natural experiment",
+   "at_seconds": 4581.8
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 484833
+ },
+ "results": {
+  "count_values": {
+   "0-0": -0.0028,
+   "0-1": -0.0446,
+   "0-2": -0.1016,
+   "1-0": 0.0328,
+   "1-1": -0.0185,
+   "1-2": -0.0806,
+   "2-0": 0.091,
+   "2-1": 0.0301,
+   "2-2": -0.043,
+   "3-0": 0.1966,
+   "3-1": 0.1314,
+   "3-2": 0.0483
+  },
+  "value_runs_per_pa": {
+   "pairs": 4821,
+   "actual_mix": -0.2057,
+   "league_plan": -0.2246,
+   "hitter_plan": -0.237,
+   "league_plan_over_actual": 0.0188,
+   "hitter_plan_over_league_plan": 0.0125,
+   "per_team_season_6100_pa": {
+    "league_plan_over_actual": 114.9,
+    "hitter_plan_over_league_plan": 76.2
+   }
+  },
+  "natural_experiment": {
+   "2025": {
+    "hitter_specific_slope": [
+     0.385,
+     0.255,
+     0.503
+    ],
+    "league_advantage_slope": [
+     0.43,
+     0.401,
+     0.462
+    ],
+    "pitches": 98452,
+    "sd_hitter_specific_advantage_runs": 0.0123,
+    "sd_league_advantage_runs": 0.052
+   },
+   "2026": {
+    "hitter_specific_slope": [
+     0.262,
+     0.093,
+     0.44
+    ],
+    "league_advantage_slope": [
+     0.419,
+     0.377,
+     0.461
+    ],
+    "pitches": 57907,
+    "sd_hitter_specific_advantage_runs": 0.012,
+    "sd_league_advantage_runs": 0.0515
+   }
+  },
+  "placebo": {
+   "shuffle": {
+    "hitter_specific_slope": [
+     -0.193,
+     -0.307,
+     -0.069
+    ],
+    "league_advantage_slope": [
+     0.433,
+     0.406,
+     0.462
+    ],
+    "pitches": 120000,
+    "corr_with_real_advantage": 0.1584
+   },
+   "mean": {
+    "hitter_specific_slope": [
+     0.521,
+     0.192,
+     0.85
+    ],
+    "league_advantage_slope": [
+     0.423,
+     0.397,
+     0.451
+    ],
+    "pitches": 120000,
+    "corr_with_real_advantage": 0.3334
+   },
+   "noise": {
+    "hitter_specific_slope": [
+     -0.357,
+     -0.496,
+     -0.223
+    ],
+    "league_advantage_slope": [
+     0.436,
+     0.411,
+     0.463
+    ],
+    "pitches": 120000,
+    "corr_with_real_advantage": 0.1334
+   },
+   "flip": {
+    "hitter_specific_slope": [
+     -0.818,
+     -0.933,
+     -0.691
+    ],
+    "league_advantage_slope": [
+     0.455,
+     0.427,
+     0.482
+    ],
+    "pitches": 120000,
+    "corr_with_real_advantage": -0.685
+   },
+   "half_a": {
+    "hitter_specific_slope": [
+     0.317,
+     0.181,
+     0.443
+    ],
+    "league_advantage_slope": [
+     0.418,
+     0.387,
+     0.448
+    ],
+    "pitches": 106607,
+    "corr_with_real_advantage": 0.8852
+   },
+   "half_b": {
+    "hitter_specific_slope": [
+     0.317,
+     0.206,
+     0.44
+    ],
+    "league_advantage_slope": [
+     0.427,
+     0.398,
+     0.455
+    ],
+    "pitches": 119298,
+    "corr_with_real_advantage": 0.9282
+   }
+  },
+  "reliability": {
+   "corr_half_a_half_b": 0.6767,
+   "pitches": 105905,
+   "note": "the claim from two-season maps has reliability about 2r/(1+r) of this; the validated slope is attenuated by it"
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T17:31:33.910405+00:00",
+ "seconds": 4581.9
+}
