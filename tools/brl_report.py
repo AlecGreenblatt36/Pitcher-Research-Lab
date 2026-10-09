@@ -64,6 +64,7 @@ def record_from(days: dict) -> dict:
     map predicted for the pair, and staffs' aiming against their usual rates."""
     rec = {'schema': 'brl.report-record.v1', 'built_at': datetime.now(timezone.utc).isoformat(), 'games': 0, 'dates': 0, 'first_date': None, 'last_date': None,
            'outside_pitches': 0, 'in_recommended': 0, 'usual_expected': 0.0, 'chases': 0, 'chases_expected_league': 0.0, 'chases_expected_map': 0.0,
+           'scored': {'decisions': 0, 'log_loss_map': 0.0, 'log_loss_league': 0.0, 'games': 0},
            'bins': {k: {'pairs': 0, 'outside': 0, 'chases': 0, 'league': 0.0, 'map': 0.0} for k in BINS}, 'by_month': {}, 'by_pricing': {}}
     for day in sorted(days):
         doc = days[day]; used = False
@@ -75,6 +76,8 @@ def record_from(days: dict) -> dict:
             used = True; rec['games'] += 1
             for k in ('outside_pitches', 'in_recommended', 'usual_expected', 'chases', 'chases_expected_league', 'chases_expected_map'):
                 rec[k] += gr.get(k, 0)
+            if gr.get('log_loss_map') is not None and gr.get('log_loss_league') is not None and gr.get('outside_pitches'):
+                sc = rec['scored']; sc['games'] += 1; sc['decisions'] += gr['outside_pitches']; sc['log_loss_map'] += gr['log_loss_map']; sc['log_loss_league'] += gr['log_loss_league']
             bp = rec['by_pricing'].setdefault(pricing, {'games': 0, 'outside_pitches': 0, 'in_recommended': 0, 'usual_expected': 0.0})
             bp['games'] += 1
             for k in ('outside_pitches', 'in_recommended', 'usual_expected'):
@@ -99,6 +102,10 @@ def record_from(days: dict) -> dict:
     for d_ in [rec] + list(rec['by_month'].values()):
         for k in ('usual_expected', 'chases_expected_league', 'chases_expected_map'):
             d_[k] = round(d_[k], 1)
+    sc = rec['scored']
+    if sc['decisions']:
+        sc['log_loss_map'] = round(sc['log_loss_map'], 2); sc['log_loss_league'] = round(sc['log_loss_league'], 2)
+        sc['map_gain_nats_per_1000'] = round(1000.0 * (sc['log_loss_league'] - sc['log_loss_map']) / sc['decisions'], 2)
     for d_ in rec['by_pricing'].values():
         d_['usual_expected'] = round(d_['usual_expected'], 1)
     for g_ in (rec.get('by_group') or {}).values():
@@ -534,6 +541,10 @@ class Fitted:
         if len(o) and h in self.maps_s:
             pl = sig(self.off_s[o]); ph = sig(self.off_s[o] + self.Bs[o] @ self.maps_s[h])
             out['chases'] = int(self.swing[o].sum()); out['chases_expected_league'] = round(float(pl.sum()), 2); out['chases_expected_map'] = round(float(ph.sum()), 2)
+            # the forward scoring record: the log loss of each swing decision under the map and under the league rates (sums; nats)
+            y = self.swing[o].astype(float); e_ = 1e-6
+            out['log_loss_map'] = round(float(-np.sum(y * np.log(np.clip(ph, e_, 1)) + (1 - y) * np.log(np.clip(1 - ph, e_, 1)))), 4)
+            out['log_loss_league'] = round(float(-np.sum(y * np.log(np.clip(pl, e_, 1)) + (1 - y) * np.log(np.clip(1 - pl, e_, 1)))), 4)
             # the same by count group, pitch family and batter side (conditional calibration, accumulated in the record)
             side_lab = 'R' if T['stand_r'][o][0] == 1 else 'L'
             sub = {}
@@ -767,7 +778,7 @@ def build_report(fit: Fitted, T_all: dict, day: str, asof: str, stage, max_relie
         # game grade summary, with the chases binned by what the map predicted for the pair (the forward calibration record)
         if g['final']:
             tot = {'pairs': 0, 'outside_pitches': 0, 'in_recommended': 0, 'usual_expected': 0.0, 'chases': 0, 'chases_expected_league': 0.0, 'chases_expected_map': 0.0,
-                   'bins': {k: {'pairs': 0, 'outside': 0, 'chases': 0, 'league': 0.0, 'map': 0.0} for k in BINS}}
+                   'log_loss_map': 0.0, 'log_loss_league': 0.0, 'bins': {k: {'pairs': 0, 'outside': 0, 'chases': 0, 'league': 0.0, 'map': 0.0} for k in BINS}}
             for se in entry['sides'].values():
                 for pr in se['pairs'].values():
                     gr = pr.get('grade')
@@ -775,6 +786,7 @@ def build_report(fit: Fitted, T_all: dict, day: str, asof: str, stage, max_relie
                         continue
                     tot['pairs'] += 1; tot['outside_pitches'] += gr['outside']; tot['chases'] += gr['chases']
                     tot['chases_expected_league'] += gr['chases_expected_league']; tot['chases_expected_map'] += gr['chases_expected_map']
+                    tot['log_loss_map'] += gr.get('log_loss_map', 0.0); tot['log_loss_league'] += gr.get('log_loss_league', 0.0)
                     if 'in_recommended_cells' in gr and 'usual_share_in_cells' in gr:
                         tot['in_recommended'] += gr['in_recommended_cells']; tot['usual_expected'] += gr['usual_share_in_cells'] * gr['outside']
                     bn = tot['bins'][bin_of(pr['chase_points'])]
@@ -787,8 +799,8 @@ def build_report(fit: Fitted, T_all: dict, day: str, asof: str, stage, max_relie
                         g_ = tot.setdefault('by_group', {}).setdefault(gk, {'outside': 0, 'chases': 0, 'league': 0.0, 'map': 0.0})
                         for kk in ('outside', 'chases', 'league', 'map'):
                             g_[kk] += gv[kk]
-            for k in ('usual_expected', 'chases_expected_league', 'chases_expected_map'):
-                tot[k] = round(tot[k], 2)
+            for k in ('usual_expected', 'chases_expected_league', 'chases_expected_map', 'log_loss_map', 'log_loss_league'):
+                tot[k] = round(tot[k], 3)
             for bn in tot['bins'].values():
                 bn['league'] = round(bn['league'], 2); bn['map'] = round(bn['map'], 2)
             for g_ in (tot.get('by_group') or {}).values():
