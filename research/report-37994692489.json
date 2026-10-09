@@ -1,0 +1,96 @@
+{
+ "schema": "brl.report-receipt.v1",
+ "run_id": "37994692489",
+ "params": {
+  "dates": [
+   "2026-10-09"
+  ],
+  "players": true,
+  "publish": true
+ },
+ "started_at": "2026-10-09T21:40:15.036647+00:00",
+ "stages": [
+  {
+   "stage": "load 2025",
+   "at_seconds": 10.1
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 20.5
+  },
+  {
+   "stage": "league swing model",
+   "at_seconds": 50.0
+  },
+  {
+   "stage": "hitter swing maps 616",
+   "at_seconds": 52.5
+  },
+  {
+   "stage": "whiff maps 580",
+   "at_seconds": 94.7
+  },
+  {
+   "stage": "swing model, 616 maps",
+   "at_seconds": 127.9
+  },
+  {
+   "stage": "models fitted",
+   "at_seconds": 163.8
+  },
+  {
+   "stage": "fitted",
+   "at_seconds": 163.9
+  },
+  {
+   "stage": "report 2026-10-09",
+   "at_seconds": 165.5
+  },
+  {
+   "stage": "player cards 616 hitters, 880 pitchers",
+   "at_seconds": 172.6
+  },
+  {
+   "stage": "index",
+   "at_seconds": 231.6
+  }
+ ],
+ "reports": {
+  "2026-10-09": {
+   "games": 0,
+   "bytes": 0,
+   "asof": "2026-10-09",
+   "graded": 0
+  }
+ },
+ "environment": {
+  "python": "3.12.15",
+  "commit": "f30d638fee3a658e1126addcb7306b92f98fc1bb",
+  "numpy": "2.5.3",
+  "scipy": "1.18.1",
+  "scikit-learn": "1.9.1",
+  "pandas": "3.0.6",
+  "cryptography": "46.0.4"
+ },
+ "players": {
+  "hitters": 616,
+  "pitchers": 880,
+  "asof": "2026-10-09",
+  "shards": 32
+ },
+ "record": {
+  "games": 4991,
+  "dates": 401,
+  "first_date": "2025-03-27",
+  "last_date": "2026-10-08",
+  "chases": 152037,
+  "chases_expected_league": 169054.8,
+  "chases_expected_map": 167364.7,
+  "in_recommended": 98455,
+  "usual_expected": 116337.5,
+  "outside_pitches": 534748
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T21:46:23.861975+00:00",
+ "seconds": 368.8
+}
