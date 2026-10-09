@@ -1,0 +1,128 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "family",
+ "run_id": "37890575360",
+ "params": {
+  "experiment": "family",
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "final_eval": true,
+  "frozen_commit": "fdb61e971a1a3393136c5ee1fc772def86a14bc6"
+ },
+ "started_at": "2026-10-09T05:51:53.064566+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 10.6
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 20.9
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 31.3
+  },
+  {
+   "stage": "league",
+   "at_seconds": 65.5
+  },
+  {
+   "stage": "maps location",
+   "at_seconds": 68.0
+  },
+  {
+   "stage": "maps location_by_family",
+   "at_seconds": 71.2
+  }
+ ],
+ "final_eval": {
+  "frozen_commit": "fdb61e971a1a3393136c5ee1fc772def86a14bc6",
+  "untouched_rows": 228549
+ },
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 713382
+ },
+ "results": {
+  "test_decisions": 226679,
+  "maps": {
+   "location": {
+    "shrinkage": 10.0,
+    "validation": {},
+    "covered": 0.8131,
+    "test_logloss": 0.45723
+   },
+   "location_by_family": {
+    "shrinkage": 3.0,
+    "validation": {},
+    "covered": 0.8131,
+    "test_logloss": 0.45332
+   }
+  },
+  "gain_nats_per_1000_decisions": {
+   "location_over_league": [
+    11.157,
+    10.441,
+    11.885
+   ],
+   "family_over_location": [
+    3.907,
+    3.341,
+    4.437
+   ],
+   "family_over_league": [
+    15.064,
+    14.115,
+    15.946
+   ]
+  },
+  "family_over_location_by_subset": {
+   "fastball_outside": {
+    "decisions": 53114,
+    "gain": [
+     4.844,
+     4.179,
+     5.618
+    ]
+   },
+   "breaking_outside": {
+    "decisions": 35082,
+    "gain": [
+     4.054,
+     2.46,
+     5.523
+    ]
+   },
+   "offspeed_outside": {
+    "decisions": 20160,
+    "gain": [
+     7.039,
+     4.839,
+     9.187
+    ]
+   },
+   "all_inside": {
+    "decisions": 118259,
+    "gain": [
+     2.918,
+     2.23,
+     3.657
+    ]
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T05:53:04.411305+00:00",
+ "seconds": 71.3
+}
