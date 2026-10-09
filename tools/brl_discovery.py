@@ -3438,6 +3438,7 @@ def value2_study(T: dict, params: dict, stage) -> dict:
     pit = T['pitcher'][ix]; stand = T['stand_r'][ix]; strikes = T['strikes'][ix]
     hit_side = {h: int(np.round(stand[rr].mean())) for h, rr in gb.items()}
     acc = {(zn, sg): [0.0, 0.0] for zn in ('outside', 'inside') for sg in sigmas}
+    acc_b = {}
     gp = _groups(pit, np.ones(len(ix), bool))
     within_type = bool(params.get('within_type'))            # VALUE-04: aim only among the same pitch group's spots
     pgroup = np.clip(T['group'][ix], 0, 6)
@@ -3481,6 +3482,8 @@ def value2_study(T: dict, params: dict, stage) -> dict:
                                     parts.append(float(best - dd_.mean()))
                             if parts:
                                 acc[(zn, sg)][0] += n_here * float(np.mean(parts)); acc[(zn, sg)][1] += n_here
+                                for bk in (('count', c3), ('type', tg)):
+                                    a_ = acc_b.setdefault((zn, sg) + bk, [0.0, 0.0]); a_[0] += n_here * float(np.mean(parts)); a_[1] += n_here
     out = {}
     for sg in sigmas:
         go = acc[('outside', sg)][0] / max(acc[('outside', sg)][1], 1); gi_ = acc[('inside', sg)][0] / max(acc[('inside', sg)][1], 1)
@@ -3494,6 +3497,25 @@ def value2_study(T: dict, params: dict, stage) -> dict:
                         'runs_per_6200_inside_only': round(b_in * gi_ * res['coefficients']['inside_pitches_per_pa'] * 6200, 1),
                         'runs_per_6200_both': round(per_pa * 6200, 1)}
     res['by_command_sd_ft'] = out
+    if params.get('breakdown'):
+        # runs per 6,200 plate appearances from each count group (and, aiming within type, each pitch group), at each sigma;
+        # count groups use their own run value per point (the regression with the deviation split by count group)
+        names_c = {0: 'ahead_or_even', 1: 'behind', 2: 'two_strikes'}
+        Xc = np.column_stack([Xd[:, :-2]] + [D * outside * (cg == k) for k in range(3)] + [D * ~outside * (cg == k) for k in range(3)])
+        bc = np.linalg.lstsq(Xc, y, rcond=None)[0]
+        coef_c = {('outside', k): float(bc[-6 + k]) for k in range(3)}; coef_c.update({('inside', k): float(bc[-3 + k]) for k in range(3)})
+        res['coefficients_by_count'] = {f'{zn}_{names_c[k]}': round(v, 6) for (zn, k), v in coef_c.items()}
+        bd = {}
+        for (zn, sg, kind, lev), (sm, nn_) in acc_b.items():
+            if lev is None or nn_ == 0:
+                continue
+            sel = (outside if zn == 'outside' else ~outside) & ((cg == lev) if kind == 'count' else (np.clip(T['group'][ix], 0, 6) == lev))
+            per_pa = float(sel.sum() / n_pa)
+            coef = coef_c[(zn, lev)] if kind == 'count' else (b_out if zn == 'outside' else b_in)
+            label = names_c[lev] if kind == 'count' else f'group_{lev}'
+            bd.setdefault(str(sg), {}).setdefault(kind, {})[f'{zn}_{label}'] = {'gain_points': round(sm / nn_, 3), 'pitches_per_pa': round(per_pa, 3),
+                                                                                'runs_per_6200': round(coef * (sm / nn_) * per_pa * 6200, 1)}
+        res['breakdown'] = bd
     stage('aiming with scatter')
     return res
 
