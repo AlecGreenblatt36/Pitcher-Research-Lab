@@ -80,7 +80,15 @@ location structure and read zero in worlds with none, and its choices were worth
 The earlier stated figure of 32 runs was the regression's and is superseded. The in-zone part, priced the same way, adds
 about 23 runs per team-season on the later-period months (VALUE-18I: in the synthetic worlds the inside structural pricing
 came within 2 to 6% of the truth of its own choices, and the Report tab shows those strike spots beside the chase and take
-spots).
+spots). The maps' own noise, measured by refitting the maps on resampled training sets (VALUE-18J), is about 13% of the
+structural interval's width (0.4 runs per 6,200 outside pitches against 0.85 to 1.1 from hitters and calibration); in the
+synthetic worlds with noisy hitters the structural estimate runs about 5% below the true value of its own choices, the
+conservative direction.
+
+The plate umpire is a note, not an input (UMP-01): umpires' edge leanings, measured against league called-strike rates for
+the same locations by season, persist only partly from one season to the next (correlation 0.37 at the edges, 0.60 at the
+outside edge, a true spread of about 1 strike per 100 taken pitches at the edges), below the bar set in advance for
+moving a strike spot. The live report names the plate umpire from the box score with his leanings and says so.
 
 ## The matchup report
 
