@@ -48,6 +48,51 @@ CHASE_SLOPE, K_SCALE, BB_SCALE = 0.95, 0.40, 0.53   # MATCHUP-01F pair slope; EN
 sig = lambda v: 1 / (1 + np.exp(-v))
 
 
+BINS = ('under -2', '-2 to 0', '0 to 2', 'over 2')
+
+
+def bin_of(chase_points: float) -> str:
+    return BINS[0] if chase_points < -2 else BINS[1] if chase_points < 0 else BINS[2] if chase_points < 2 else BINS[3]
+
+
+def record_from(repo, token, branch, idx: dict) -> dict:
+    """The forward record over every graded game: chases against the league's and the maps' expectations, by what the
+    map predicted for the pair, and staffs' aiming against their usual rates."""
+    rec = {'schema': 'brl.report-record.v1', 'built_at': datetime.now(timezone.utc).isoformat(), 'games': 0, 'dates': 0, 'first_date': None, 'last_date': None,
+           'outside_pitches': 0, 'in_recommended': 0, 'usual_expected': 0.0, 'chases': 0, 'chases_expected_league': 0.0, 'chases_expected_map': 0.0,
+           'bins': {k: {'pairs': 0, 'outside': 0, 'chases': 0, 'league': 0.0, 'map': 0.0} for k in BINS}, 'by_month': {}}
+    for day in sorted(idx.get('dates') or {}):
+        if not (idx['dates'][day].get('graded') or 0):
+            continue
+        raw = D.read_blob(repo, token, f'public/reports/{day}/index.json', branch)
+        if raw is None:
+            continue
+        doc = json.loads(raw.decode()); used = False
+        for g in (doc.get('games') or {}).values():
+            gr = g.get('grade')
+            if not gr or not gr.get('pairs'):
+                continue
+            used = True; rec['games'] += 1
+            for k in ('outside_pitches', 'in_recommended', 'usual_expected', 'chases', 'chases_expected_league', 'chases_expected_map'):
+                rec[k] += gr.get(k, 0)
+            mo = rec['by_month'].setdefault(day[:7], {'games': 0, 'outside_pitches': 0, 'in_recommended': 0, 'usual_expected': 0.0, 'chases': 0, 'chases_expected_league': 0.0, 'chases_expected_map': 0.0})
+            mo['games'] += 1
+            for k in ('outside_pitches', 'in_recommended', 'usual_expected', 'chases', 'chases_expected_league', 'chases_expected_map'):
+                mo[k] += gr.get(k, 0)
+            for k, bn in (gr.get('bins') or {}).items():
+                if k in rec['bins']:
+                    for kk in ('pairs', 'outside', 'chases', 'league', 'map'):
+                        rec['bins'][k][kk] += bn.get(kk, 0)
+        if used:
+            rec['dates'] += 1; rec['first_date'] = rec['first_date'] or day; rec['last_date'] = day
+    for d_ in [rec] + list(rec['by_month'].values()):
+        for k in ('usual_expected', 'chases_expected_league', 'chases_expected_map'):
+            d_[k] = round(d_[k], 1)
+    for bn in rec['bins'].values():
+        bn['league'] = round(bn['league'], 1); bn['map'] = round(bn['map'], 1)
+    return rec
+
+
 def famof(g: int) -> str:
     return 'fastball' if g in (0, 1, 2, 6) else ('breaking' if g in (3, 4) else 'offspeed')
 
@@ -428,9 +473,10 @@ def build_report(fit: Fitted, T_all: dict, day: str, asof: str, stage, max_relie
                             pr['grade'] = gr
                     side_entry['pairs'][f'{h}:{p}'] = pr
             entry['sides'][bat_side] = side_entry
-        # game grade summary
+        # game grade summary, with the chases binned by what the map predicted for the pair (the forward calibration record)
         if g['final']:
-            tot = {'pairs': 0, 'outside_pitches': 0, 'in_recommended': 0, 'usual_expected': 0.0, 'chases': 0, 'chases_expected_league': 0.0, 'chases_expected_map': 0.0}
+            tot = {'pairs': 0, 'outside_pitches': 0, 'in_recommended': 0, 'usual_expected': 0.0, 'chases': 0, 'chases_expected_league': 0.0, 'chases_expected_map': 0.0,
+                   'bins': {k: {'pairs': 0, 'outside': 0, 'chases': 0, 'league': 0.0, 'map': 0.0} for k in BINS}}
             for se in entry['sides'].values():
                 for pr in se['pairs'].values():
                     gr = pr.get('grade')
@@ -440,8 +486,12 @@ def build_report(fit: Fitted, T_all: dict, day: str, asof: str, stage, max_relie
                     tot['chases_expected_league'] += gr['chases_expected_league']; tot['chases_expected_map'] += gr['chases_expected_map']
                     if 'in_recommended_cells' in gr and 'usual_share_in_cells' in gr:
                         tot['in_recommended'] += gr['in_recommended_cells']; tot['usual_expected'] += gr['usual_share_in_cells'] * gr['outside']
+                    bn = tot['bins'][bin_of(pr['chase_points'])]
+                    bn['pairs'] += 1; bn['outside'] += gr['outside']; bn['chases'] += gr['chases']; bn['league'] += gr['chases_expected_league']; bn['map'] += gr['chases_expected_map']
             for k in ('usual_expected', 'chases_expected_league', 'chases_expected_map'):
                 tot[k] = round(tot[k], 2)
+            for bn in tot['bins'].values():
+                bn['league'] = round(bn['league'], 2); bn['map'] = round(bn['map'], 2)
             entry['grade'] = tot
         entry['players'] = {}
         ids = set()
@@ -527,6 +577,9 @@ def main():
             for day, info in receipt['reports'].items():
                 idx['dates'][day] = {'asof': info['asof'], 'games': info['games'], 'graded': info['graded']}
             D.put_text(repo, token, 'public/reports/index.json', json.dumps(idx, separators=(',', ':'), sort_keys=True), branch, 'BRL reports index')
+            rec = record_from(repo, token, branch, idx)
+            D.put_text(repo, token, 'public/reports/record.json', json.dumps(rec, separators=(',', ':')), branch, 'BRL reports record')
+            receipt['record'] = {k: rec[k] for k in ('games', 'dates', 'first_date', 'last_date', 'chases', 'chases_expected_league', 'chases_expected_map', 'in_recommended', 'usual_expected', 'outside_pitches')}
         receipt['status'] = 'completed'
     except Exception as exc:
         import traceback
