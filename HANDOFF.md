@@ -77,6 +77,19 @@ Credited on the untouched set (frozen code, one scoring each; ledger rows):
   misses beyond his whiff rate: +0.16 nats per 1,000 swings [0.05, 0.27], coefficient -0.86 per 10 inches; the
   flexible swing-geometry model +1.07. Frozen commit 618cc7f3. Reading: contact depth is only seen on contact, so its
   spread is the hitter's window, not timing error (the M1 equation's assumption was wrong in sign).
+- TIMING-03F: after a called strike the next contact is farther out front the slower that strike was, +0.151 inches
+  per 10 ms [0.101, 0.192]; after a miss later, -0.239 [-0.317, -0.146] (within pitcher-types, cell fixed effects).
+  Frozen commit 8795ff00.
+
+Also from the night: EXPLOIT-01 pitchers do not aim at a hitter's own chase zones (-0.09 points), so the maps'
+information is unexploited and the realized map deviation is a natural experiment; VALUE-01 (running) prices it in
+runs. DISCIPLINE-01 failed (maps do not improve next-season strikeout or walk projections, -0.37 and -0.49). LIVE-05:
+the bullpen package is no worse in game (-0.00012 [-0.00042, +0.00020]), so it stands once switched on.
+
+Private scouting page: scratchpad matchup_page/ (template.html, build.py; data from receipt
+research/discovery-scout-37884968211.json, SCOUT-01), sent to Alec as a file; publishing it as an artifact was
+blocked by the session's permission check (publishing new work needs Alec's approval). Never commit it to the
+public repo (per-player summaries with names).
 
 Development results since (October 8 night): MATCHUP-03 hitter whiff maps +6.5 on the true crossing (misses follow
 where the ball arrives, swing decisions follow the decision moment: two clocks); STEER-01 falsifier triggered (one
