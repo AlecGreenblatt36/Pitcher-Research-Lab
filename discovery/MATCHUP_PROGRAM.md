@@ -128,6 +128,17 @@ adversarial stress test of its estimator registered (VALUE-17) before the figure
   32 was the regression's figure, which synthetic worlds showed overstating its own choices by 1.3 to 2.0 times);
   in-zone aiming is not stated.
 
+- **The pricing, stress-tested and replaced** (VALUE-17, VALUE-18, VALUE-18F, VALUE-19; October 9). Eighty synthetic
+  seasons with known truth (tools/brl_synth.py) showed the regression-times-gain figure overstating the true value of its
+  own chosen spots by 1.3 to 2.0 times: the run value of a point of extra swing is not one number, and the spots the
+  method picks carry less of it. Structural pricing replaced it: each aim priced by the engine's components (whiff,
+  called strike, foul, contact value, count values) times the hitter's own swing part scaled by its out-of-sample
+  calibration on real swings. In the synthetic worlds it priced its own choices within 5% and read zero where there was
+  nothing, and its choices were worth 1.3 to 1.8 times the old method's. On the later-period months the structural figure
+  is 43.5 runs per team-season from outside pitches alone [40.7, 46.6], the outcome regression 29; the structure is
+  calibrated against outcomes (slopes 0.93 to 1.03), and the stated range is 30 to 45. The Report tab chooses spots this
+  way and labels each by its mechanism (chase or take).
+
 - **Each batter's own zone** (MATCHUP-08F): the league swing model on each batter's zone beats the fixed zone on the
   untouched months (+0.59 nats per 1,000 decisions [0.28, 0.88]); hitter maps already carry it. Part of a hitter's
   high-versus-low own part is his zone height (ZONEMAP-01, correlation 0.35), and re-priced on batter zones the edge
