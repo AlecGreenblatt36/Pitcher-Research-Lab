@@ -1,0 +1,79 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "value3",
+ "run_id": "37887938035",
+ "params": {
+  "experiment": "value3",
+  "seasons": [
+   2023,
+   2024,
+   2025
+  ],
+  "sigma": 0.6,
+  "tighten": 0.065
+ },
+ "started_at": "2026-10-09T05:18:39.878242+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 8.9
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 17.8
+  },
+  {
+   "stage": "maps 604",
+   "at_seconds": 48.6
+  },
+  {
+   "stage": "coefficient",
+   "at_seconds": 49.6
+  },
+  {
+   "stage": "cells 192265",
+   "at_seconds": 81.4
+  },
+  {
+   "stage": "net",
+   "at_seconds": 444.4
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985
+ },
+ "results": {
+  "inputs": {
+   "sigma_ft": 0.6,
+   "tighten_per_extra_high_spot": 0.065,
+   "high_threshold_points": 3.19,
+   "runs_per_point_outside": -0.000694,
+   "outside_pitches_valued": 278779,
+   "plate_appearances": 158267
+  },
+  "extra_high_spots_before_a_pitch": {
+   "mean": 0.55,
+   "p90": 1.496,
+   "max": 8.552
+  },
+  "runs_per_6200": {
+   "gross": -28.4,
+   "tightening": 4.1,
+   "net": -24.3,
+   "net_tightening_capped_at_3": -24.3
+  },
+  "points": {
+   "gain_per_pitch": 3.744,
+   "tightening_per_pitch": 0.537
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T05:26:04.367832+00:00",
+ "seconds": 444.5
+}
