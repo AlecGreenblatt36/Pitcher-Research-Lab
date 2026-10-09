@@ -1,0 +1,111 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "bench_swing",
+ "run_id": "37937716461",
+ "params": {
+  "experiment": "bench_swing",
+  "target": "whiff",
+  "seasons": [
+   2023,
+   2024,
+   2025
+  ],
+  "train": [
+   2023,
+   2024
+  ],
+  "test": 2025
+ },
+ "started_at": "2026-10-09T13:34:03.083718+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 7.7
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 15.0
+  },
+  {
+   "stage": "features",
+   "at_seconds": 25.2
+  },
+  {
+   "stage": "maps true",
+   "at_seconds": 68.6
+  },
+  {
+   "stage": "maps percept",
+   "at_seconds": 115.8
+  },
+  {
+   "stage": "boosting G0",
+   "at_seconds": 130.5
+  },
+  {
+   "stage": "boosting G1",
+   "at_seconds": 145.1
+  },
+  {
+   "stage": "boosting G2",
+   "at_seconds": 160.1
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985
+ },
+ "results": {
+  "target": "whiff",
+  "gbm_iterations": {
+   "G0": 385,
+   "G1": 400,
+   "G2": 400
+  },
+  "test_decisions": 336419,
+  "logloss": {
+   "G0_boosting": 0.424815,
+   "G1_boosting_plus_heat_map": 0.418602,
+   "G2_G1_plus_decision_moment": 0.418513,
+   "league_true": 0.439751,
+   "heat_map_true": 0.433932,
+   "league_decision_moment": 0.470734,
+   "ours_decision_moment": 0.468163
+  },
+  "gain_nats_per_1000_decisions": {
+   "ours_over_G1": [
+    -49.561,
+    -50.512,
+    -48.453
+   ],
+   "ours_over_G0": [
+    -43.348,
+    -44.336,
+    -42.147
+   ],
+   "G2_over_G1": [
+    0.089,
+    -0.108,
+    0.287
+   ],
+   "G1_over_G0": [
+    6.213,
+    5.675,
+    6.733
+   ],
+   "ours_over_heat_map_logistic": [
+    -34.232,
+    -34.937,
+    -33.31
+   ]
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T13:36:43.272249+00:00",
+ "seconds": 160.2
+}
