@@ -3484,7 +3484,7 @@ def value2_study(T: dict, params: dict, stage) -> dict:
     lf = bool(params.get('league_family'))                # VALUE-07: the league model gets the maps' family-by-location part
     fam_parts = [(Bh[:, :-1] * np.isin(T['group'], (3, 4))[:, None]).astype(np.float32), (Bh[:, :-1] * (T['group'] == 5)[:, None]).astype(np.float32)] if lf else []
     X = np.hstack([LB] + fam_parts + [control_block(T, swing_propensity(T)), pitcher_propensity(T)[:, None].astype(np.float32)]); del fam_parts
-    tr = np.isin(T['season'], (2023, 2024, 2025)) if final else np.isin(T['season'], (2023, 2024))
+    tr = np.isin(T['season'], (2023, 2024, 2025)) if final else np.isin(T['season'], tuple(int(v) for v in params.get('map_seasons', (2023, 2024))))   # VALUE-10: map_seasons
     test_season = 2026 if final else 2025
     rng = np.random.default_rng(11)
     idx = np.flatnonzero(tr); idx = rng.choice(idx, min(len(idx), 600000), replace=False)
