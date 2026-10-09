@@ -44,6 +44,8 @@ SCHEMA = 'brl.report.v1'
 GU = np.array([-1.25, -0.83, -0.42, 0.0, 0.42, 0.83, 1.25]); GZ = np.array([1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0])
 FAMILIES = (('fastball', (0, 1, 2, 6), 0, 94.0), ('breaking', (3, 4), 3, 85.0), ('offspeed', (5,), 5, 86.0))
 B_OUT_FAMILY, N_OUT = -0.000657, 1.876          # VALUE-08F (family maps): runs per point of the own part, outside pitches per plate appearance
+STRUCTURAL = True                                # VALUE-18: aims chosen and priced by the engine's components (whiff, called strike, foul, contact value, count values)
+OWN_PART_CALIBRATION = {'outside': 0.95, 'inside': 0.82}   # VALUE-18 (2025 development run): how much of a fitted point of the own part shows up in actual swings
 CHASE_SLOPE, K_SCALE, BB_SCALE = 0.95, 0.40, 0.53   # MATCHUP-01F pair slope; ENGINE-01 coefficients over calibrated
 sig = lambda v: 1 / (1 + np.exp(-v))
 
@@ -206,6 +208,14 @@ class Fitted:
         self.cidx = T['balls'].astype(np.int64) * 3 + T['strikes'].astype(np.int64)
         K = 16; jit = np.random.default_rng(3).standard_normal((K, 2)); self.jit = (jit - jit.mean(0)) / jit.std(0); self.K = K
         self.pools = {}; self.chains = {}
+        # VALUE-18: the engine's components for pricing aims (the planner's fitted pieces) and the training count values
+        self.PM = None
+        if STRUCTURAL:
+            self.PM = D.PAModels(T, tr, rng, {'league_n': 500000, 'min_pitches': min_pitches, 'min_swings': min_swings}, stage)
+            ci_all = np.clip(T['balls'], 0, 3) * 3 + np.clip(T['strikes'], 0, 2)
+            fin_all = np.where(T['out7'] >= 0, D.LW7[np.clip(T['out7'], 0, 6)], np.nan)
+            self.cv = np.array([float(np.nanmean(fin_all[tr & (ci_all == c_)])) if (tr & (ci_all == c_) & np.isfinite(fin_all)).any() else 0.0 for c_ in range(12)])
+            self.xoff, self.zoff = self.xp - self.xt, self.zp - self.zt
         # grids
         UU, ZZ = np.meshgrid(GU, GZ); self.uu, self.zz = UU.ravel(), ZZ.ravel()
         self.Bg = D.hitter_basis(self.uu, self.zz, np.ones(len(self.uu), np.int64), np.zeros(len(self.uu), np.int64))
@@ -288,7 +298,16 @@ class Fitted:
         offj = np.repeat(self.off_s[r] - lb0, K) + self.league_loc(D.location_block(xj, zj, sj, kj), Bj0, gj)
         uu_ = np.where(sd == 1, self.xt[r], -self.xt[r])
         cell = np.argmin(np.abs(uu_[:, None] - GU[None, :]), 1) + len(GU) * np.argmin(np.abs(self.zt[r][:, None] - GZ[None, :]), 1)
-        self.pools[key] = (offj, D.family_basis(Bj0, gj), third, cell, len(r), n_all)
+        struct = None
+        if self.PM is not None:
+            # the scattered pitch's true crossing (the same scatter), its side of the zone and the engine's blocks there
+            xtj = xj - np.repeat(self.xoff[r], K); ztj = zj - np.repeat(self.zoff[r], K)
+            uj = np.where(sd == 1, xtj, -xtj); e_j = np.maximum(np.maximum(np.abs(uj) - D.ZONE_HALF, ztj - D.ZONE_TOP), D.ZONE_BOT - ztj)
+            lam_j = np.where(e_j > 0, OWN_PART_CALIBRATION['outside'], OWN_PART_CALIBRATION['inside'])
+            bj_ = np.repeat(T['balls'][r], K)
+            blk = self.PM.blocks_at(xj, zj, xtj, ztj, sj, np.repeat(T['throw_r'][r], K), gj, np.repeat(T['v0'][r].astype(np.float64), K), bj_, kj)
+            struct = (blk, bj_, kj, lam_j, e_j > 0)
+        self.pools[key] = (offj, D.family_basis(Bj0, gj), third, cell, len(r), n_all, struct)
         return self.pools[key]
 
     def pair(self, h: int, p: int) -> dict | None:
@@ -305,33 +324,61 @@ class Fitted:
         T = self.T; rp = self.gp[p][(T['stand_r'][self.gp[p]] == sd) & self.outside[self.gp[p]]]
         if len(rp) < 40:
             return out
-        tot = 0.0; wsum = 0.0; cells = {f_: np.zeros(len(GU) * len(GZ)) for f_, *_ in FAMILIES}
+        tot = 0.0; wsum = 0.0; tot_runs = 0.0; cells = {f_: np.zeros(len(GU) * len(GZ)) for f_, *_ in FAMILIES}
+        # where each chosen spot's value comes from: the scattered pitches that stay outside (his extra chases) or land inside (strikes he takes)
+        v_out = {f_: np.zeros(len(GU) * len(GZ)) for f_, *_ in FAMILIES}; v_in = {f_: np.zeros(len(GU) * len(GZ)) for f_, *_ in FAMILIES}
         by_count = {}
+
+        def labeled(c_, vo_, vi_):
+            return [[float(GU[k % len(GU)]), float(GZ[k // len(GU)]), 'chase' if vo_[k] <= vi_[k] else 'take'] for k in np.argsort(c_)[::-1][:3] if c_[k] > 0]
+        p_scalar = self.PM.p_scalar.get(p, (0.0, self.PM.lg_bip)) if self.PM is not None else None
         for c3, cname in ((0, 'even_or_ahead'), (1, 'behind'), (2, 'two_strikes')):
-            ct = 0.0; cw = 0.0; ccells = {f_: np.zeros(len(GU) * len(GZ)) for f_, *_ in FAMILIES}
+            ct = 0.0; cw = 0.0; ct_runs = 0.0; ccells = {f_: np.zeros(len(GU) * len(GZ)) for f_, *_ in FAMILIES}
+            cv_out = {f_: np.zeros(len(GU) * len(GZ)) for f_, *_ in FAMILIES}; cv_in = {f_: np.zeros(len(GU) * len(GZ)) for f_, *_ in FAMILIES}
             for tg in range(7):
                 P_ = self._pool(p, sd, c3, tg)
                 if P_ is None:
                     continue
-                offj, Bj, third, cell, npool, n_all = P_
-                dj = ((sig(offj + Bj @ self.maps_s[h]) - sig(offj + Bj @ self.mbar[h])) * 100).reshape(npool, self.K).mean(1)
-                gains = []
+                offj, Bj, third, cell, npool, n_all, struct = P_
+                dev_jk = (sig(offj + Bj @ self.maps_s[h]) - sig(offj + Bj @ self.mbar[h])) * 100
+                dj = dev_jk.reshape(npool, self.K).mean(1)
+                if struct is not None:
+                    # VALUE-18: the structural value of each aim, runs per pitch (negative is good for the pitcher): the calibrated own part
+                    # times the value if the hitter swings minus if he takes, averaged over the scatter
+                    blk, bj_, kj, lam_j, out_j = struct
+                    tau_j = 0.01 * self.PM.swing_minus_take(blk, h, p_scalar, bj_, kj, self.cv)
+                    vjk = dev_jk * lam_j * tau_j
+                    vj = vjk.reshape(npool, self.K).mean(1)
+                    vo_j = (vjk * out_j).reshape(npool, self.K).mean(1); vi_j = (vjk * ~out_j).reshape(npool, self.K).mean(1)
+                gains = []; gains_runs = []
                 for t3 in range(3):
                     sel = np.flatnonzero(third == t3)
                     if len(sel) >= 3:
-                        k3 = max(1, len(sel) // 3); best = sel[np.argsort(dj[sel])[::-1][:k3]]
+                        k3 = max(1, len(sel) // 3)
+                        best = sel[np.argsort(vj[sel])[:k3]] if struct is not None else sel[np.argsort(dj[sel])[::-1][:k3]]
                         gains.append(float(dj[best].mean() - dj[sel].mean()))
+                        if struct is not None:
+                            gains_runs.append(float(vj[best].mean() - vj[sel].mean()))
+                            np.add.at(v_out[famof(tg)], cell[best], n_all * vo_j[best]); np.add.at(v_in[famof(tg)], cell[best], n_all * vi_j[best])
+                            np.add.at(cv_out[famof(tg)], cell[best], n_all * vo_j[best]); np.add.at(cv_in[famof(tg)], cell[best], n_all * vi_j[best])
                         np.add.at(cells[famof(tg)], cell[best], n_all / len(rp)); np.add.at(ccells[famof(tg)], cell[best], n_all)
                 if gains:
                     tot += n_all * float(np.mean(gains)); wsum += n_all; ct += n_all * float(np.mean(gains)); cw += n_all
+                    if gains_runs:
+                        tot_runs += n_all * float(np.mean(gains_runs)); ct_runs += n_all * float(np.mean(gains_runs))
             if cw > 0:
                 by_count[cname] = {'gain_points': round(ct / cw, 2), 'pitches': int(cw),
-                                   'cells': {f_: [[float(GU[k % len(GU)]), float(GZ[k // len(GU)])] for k in np.argsort(c_)[::-1][:3] if c_[k] > 0] for f_, c_ in ccells.items()}}
+                                   'cells': {f_: labeled(c_, cv_out[f_], cv_in[f_]) for f_, c_ in ccells.items()}}
+                if self.PM is not None:
+                    by_count[cname]['runs_per_100_pa'] = round(float(ct_runs / cw * N_OUT) * 100, 2)
         if wsum > 0:
             g_ = tot / wsum
-            out['aim'] = {'runs_per_100_pa': round(float(B_OUT_FAMILY * g_ * N_OUT) * 100, 2), 'gain_points': round(g_, 2),
-                          'cells': {f_: [[float(GU[k % len(GU)]), float(GZ[k // len(GU)])] for k in np.argsort(c_)[::-1][:3] if c_[k] > 0] for f_, c_ in cells.items()},
-                          'by_count': by_count}
+            out['aim'] = {'runs_per_100_pa': round(float(tot_runs / wsum * N_OUT) * 100, 2) if self.PM is not None else round(float(B_OUT_FAMILY * g_ * N_OUT) * 100, 2),
+                          'gain_points': round(g_, 2),
+                          'cells': {f_: labeled(c_, v_out[f_], v_in[f_]) for f_, c_ in cells.items()},
+                          'by_count': by_count, 'pricing': 'structural' if self.PM is not None else 'regression'}
+            if self.PM is not None:
+                out['aim']['runs_per_100_pa_regression'] = round(float(B_OUT_FAMILY * g_ * N_OUT) * 100, 2)
         # miss spots (unpriced): among the pitcher's two-strike pitches to this side, where this hitter's own whiff map
         # (his map minus the same-side mean) says he misses most, by family
         if wmap is not None and h in self.mbar_w:

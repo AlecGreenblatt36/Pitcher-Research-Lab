@@ -362,6 +362,7 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .rp-grid i { display: block; border-radius: 3px; background: var(--surface); border: 1px solid transparent; position: relative; }
 .rp-grid i.z { border-color: var(--ink); }
 .rp-grid i.aim::after { content: ""; position: absolute; inset: 25%; border-radius: 50%; background: var(--ink); }
+.rp-grid i.aim.take::after { background: transparent; border: 2px solid var(--ink); box-sizing: border-box; }
 .rp-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
 .rp-card { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 12px; min-width: 0; }
 .rp-card h4 { margin: 0 0 6px; font-size: 16px; }
@@ -2122,7 +2123,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     chase: { label: "Extra chases", unit: "per 100 outside pitches from his own map against this arsenal", f: function (p) { return p.chase_points; }, good: 1, scale: 2.5, fmt: function (v) { return (v > 0 ? "+" : "") + v.toFixed(1); } },
     k: { label: "Strikeouts", unit: "points of strikeout chance against the league pairing", f: function (p) { return p.k_points; }, good: 1, scale: 1.5, fmt: function (v) { return (v > 0 ? "+" : "") + v.toFixed(1); } },
     bb: { label: "Walks", unit: "points of walk chance against the league pairing", f: function (p) { return p.bb_points; }, good: -1, scale: 1.5, fmt: function (v) { return (v > 0 ? "+" : "") + v.toFixed(1); } },
-    aim: { label: "Runs saved", unit: "per 100 plate appearances by aiming outside pitches at his spots", f: function (p) { return p.aim ? -p.aim.runs_per_100_pa : null; }, good: 1, scale: 0.5, fmt: function (v) { return v.toFixed(2); } }
+    aim: { label: "Runs saved", unit: "per 100 plate appearances by aiming at the spots that cost him most", f: function (p) { return p.aim ? -p.aim.runs_per_100_pa : null; }, good: 1, scale: 0.5, fmt: function (v) { return v.toFixed(2); } }
   };
   function rpCell(v, m, key, sel) {
     if (v == null) return '<td class="rp-cell" data-rp="' + key + '">–</td>';
@@ -2136,8 +2137,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var k = r * gu.length + c, v = grid ? grid[k] : 0, a = Math.min(0.85, Math.abs(v) / scale);
       var bg = v >= 0 ? "rgba(240,178,58," + a.toFixed(3) + ")" : "rgba(46,125,154," + a.toFixed(3) + ")";
       var inz = Math.abs(gu[c]) < 0.83 && gz[r] > 1.5 && gz[r] < 3.5;
-      var isAim = (aim || []).some(function (p) { return Math.abs(p[0] - gu[c]) < 0.01 && Math.abs(p[1] - gz[r]) < 0.01; });
-      h += '<i class="' + (inz ? "z" : "") + (isAim ? " aim" : "") + '" style="background:' + bg + '" title="' + esc(gu[c] + " ft, " + gz[r] + " ft: " + (v > 0 ? "+" : "") + v) + '"></i>';
+      var aimAt = (aim || []).filter(function (p) { return Math.abs(p[0] - gu[c]) < 0.01 && Math.abs(p[1] - gz[r]) < 0.01; })[0];
+      var isTake = aimAt && aimAt[2] === "take";
+      h += '<i class="' + (inz ? "z" : "") + (aimAt ? (isTake ? " aim take" : " aim") : "") + '" style="background:' + bg + '" title="' + esc(gu[c] + " ft, " + gz[r] + " ft: " + (v > 0 ? "+" : "") + v + (aimAt ? (isTake ? "; aim here: strikes he takes" : "; aim here: he chases") : "")) + '"></i>';
     }
     return h + "</div>";
   }
@@ -2226,15 +2228,18 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         h += '<section class="sec wide" id="rp-detail-' + pk + '"><h3>' + esc(nm(ids[0])) + " against " + esc(nm(ids[1])) + "</h3>";
         h += '<ul class="compare"><li><span>Extra chases per 100 outside pitches from his own map</span><b>' + RP_METRICS.chase.fmt(pr2.chase_points) + "</b></li>" +
           "<li><span>Strikeout chance against the league pairing</span><b>" + RP_METRICS.k.fmt(pr2.k_points) + " pts</b></li><li><span>Walk chance</span><b>" + RP_METRICS.bb.fmt(pr2.bb_points) + " pts</b></li>" +
-          (pr2.aim ? "<li><span>Aiming outside pitches at his spots, typical command</span><b>" + (-pr2.aim.runs_per_100_pa).toFixed(2) + " runs saved per 100 PA</b></li>" : "") + "</ul>";
+          (pr2.aim ? "<li><span>" + (pr2.aim.pricing === "structural" ? "Aiming at the spots that cost him most (chases, or strikes he takes), typical command" : "Aiming outside pitches at his spots, typical command") + "</span><b>" + (-pr2.aim.runs_per_100_pa).toFixed(2) + " runs saved per 100 PA</b></li>" : "") + "</ul>";
         if (pc && pc.looks_in_ends_out != null && doc.league) h += '<p class="note">' + esc(lastName(nm(ids[1]))) + ": " + pct(pc.looks_in_ends_out) + " of his pitches look like strikes at the decision moment and end out of the zone (league " + pct(doc.league.looks_in_ends_out) + "); hitters chase " + pct(pc.chase_rate_against) + " of his outside pitches (league " + pct(doc.league.chase_rate) + ").</p>";
         if (pr2.aim && hc) {
           var counts = [["all", "All counts"], ["even_or_ahead", "Even or ahead"], ["behind", "Behind"], ["two_strikes", "Two strikes"]], bc = pr2.aim.by_count || {};
           var ck = state.rpCount && (state.rpCount === "all" || bc[state.rpCount]) ? state.rpCount : "all";
           var plan = ck === "all" ? pr2.aim.cells : bc[ck].cells;
-          h += '<p class="note">Where to put outside pitches (dots): the best of the spots this pitcher actually throws that family to, by the hitter\'s own chase map (gold is where he chases more than the average hitter his side, blue less). The outlined cells are the heart of the strike zone, the ring around them its edges, seen from the catcher with the hitter\'s side on the left.</p>';
+          h += '<p class="note">' + (pr2.aim.pricing === "structural" ?
+            "Where to put pitches (dots): the best of the spots this pitcher actually throws that family to, priced by what each spot does to this hitter with typical command: a filled dot is a spot where his extra chases cost him, a hollow dot a spot where the strikes he takes at the edge cost him. Gold is where he chases more than the average hitter his side, blue less." :
+            "Where to put outside pitches (dots): the best of the spots this pitcher actually throws that family to, by the hitter\'s own chase map (gold is where he chases more than the average hitter his side, blue less).") +
+            " The outlined cells are the heart of the strike zone, the ring around them its edges, seen from the catcher with the hitter's side on the left.</p>";
           h += '<div class="seg" role="group" aria-label="Which count">' + counts.filter(function (c) { return c[0] === "all" || bc[c[0]]; }).map(function (c) { return '<button data-rpcount="' + c[0] + '" aria-pressed="' + (c[0] === ck) + '">' + c[1] + "</button>"; }).join("") + "</div>";
-          if (ck !== "all") h += '<p class="note">' + esc(counts.filter(function (c) { return c[0] === ck; })[0][1]) + ": the best third of his spots gains " + bc[ck].gain_points.toFixed(1) + " points of chase over his usual spots, on " + Number(bc[ck].pitches).toLocaleString() + " such pitches.</p>";
+          if (ck !== "all") h += '<p class="note">' + esc(counts.filter(function (c) { return c[0] === ck; })[0][1]) + ": " + (bc[ck].runs_per_100_pa != null ? "the best third of his spots saves " + (-bc[ck].runs_per_100_pa).toFixed(2) + " runs per 100 plate appearances over his usual spots" : "the best third of his spots gains " + bc[ck].gain_points.toFixed(1) + " points of chase over his usual spots") + ", on " + Number(bc[ck].pitches).toLocaleString() + " such pitches.</p>";
           h += '<div class="rp-cards">';
           ["fastball", "breaking", "offspeed"].forEach(function (fam) {
             var own = hc.own_chase && hc.own_chase[fam], mix = pc && pc.mix && pc.mix[fam];
