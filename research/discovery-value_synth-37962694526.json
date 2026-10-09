@@ -1,0 +1,3692 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "value_synth",
+ "run_id": "37962694526",
+ "params": {
+  "experiment": "value_synth",
+  "kinds": [
+   "opposing"
+  ],
+  "reps": 10,
+  "seed": 100,
+  "n_pa": 200000,
+  "hitters": 240,
+  "pitchers": 120,
+  "boot_reps": 100,
+  "placebo_draws": 2,
+  "estimands": [
+   "pa",
+   "pitch"
+  ],
+  "sigmas": [
+   0.6
+  ],
+  "pool_from_train": true,
+  "reprice_boundary": true,
+  "reprice_bands": true
+ },
+ "started_at": "2026-10-09T16:56:49.744345+00:00",
+ "stages": [
+  {
+   "stage": "opposing rep 0 (255 s): truth -0.001066 pa own -0.001128 within -0.001198 runs -86.4/-68.1/-66.2 true -63.2/-64.5/-64.8 pitch own -0.001118 within -0.00115 runs -85.6/-66.2/-65.7 true -63.2/-64.2/-64.2",
+   "at_seconds": 255.8
+  },
+  {
+   "stage": "opposing rep 1 (255 s): truth -0.001089 pa own -0.001265 within -0.001206 runs -101.1/-78.3/-83.6 true -72.2/-73.3/-73.3 pitch own -0.001142 within -0.001175 runs -91.3/-70.0/-72.1 true -72.2/-73.0/-73.2",
+   "at_seconds": 510.6
+  },
+  {
+   "stage": "opposing rep 2 (250 s): truth -0.001115 pa own -0.001298 within -0.001223 runs -101.9/-79.4/-80.4 true -68.8/-70.2/-70.1 pitch own -0.001158 within -0.001165 runs -91.0/-71.0/-70.1 true -68.8/-70.2/-70.3",
+   "at_seconds": 760.4
+  },
+  {
+   "stage": "opposing rep 3 (251 s): truth -0.001088 pa own -0.001403 within -0.001383 runs -106.2/-83.1/-85.2 true -64.0/-65.7/-65.7 pitch own -0.001167 within -0.001185 runs -88.4/-67.9/-68.0 true -64.0/-65.4/-65.4",
+   "at_seconds": 1011.8
+  },
+  {
+   "stage": "opposing rep 4 (258 s): truth -0.001111 pa own -0.00145 within -0.001473 runs -111.6/-90.2/-91.8 true -70.5/-72.2/-72.3 pitch own -0.001246 within -0.001265 runs -95.9/-75.5/-74.2 true -70.5/-71.8/-71.9",
+   "at_seconds": 1269.8
+  },
+  {
+   "stage": "opposing rep 5 (256 s): truth -0.001048 pa own -0.001292 within -0.001264 runs -98.8/-77.7/-77.6 true -64.6/-66.1/-66.2 pitch own -0.001187 within -0.001206 runs -90.7/-70.7/-70.3 true -64.6/-66.0/-66.1",
+   "at_seconds": 1525.9
+  },
+  {
+   "stage": "opposing rep 6 (255 s): truth -0.001077 pa own -0.001005 within -0.001061 runs -74.9/-58.1/-58.0 true -65.7/-66.9/-67.0 pitch own -0.001065 within -0.001102 runs -79.4/-61.3/-59.9 true -65.7/-66.7/-67.1",
+   "at_seconds": 1781.1
+  },
+  {
+   "stage": "opposing rep 7 (255 s): truth -0.001098 pa own -0.001484 within -0.001476 runs -112.8/-88.1/-86.5 true -66.9/-68.4/-68.5 pitch own -0.001333 within -0.001357 runs -101.3/-78.9/-76.3 true -66.9/-68.3/-68.5",
+   "at_seconds": 2035.8
+  },
+  {
+   "stage": "opposing rep 8 (259 s): truth -0.001086 pa own -0.001391 within -0.001383 runs -111.6/-87.2/-90.1 true -71.6/-72.8/-72.8 pitch own -0.001197 within -0.001233 runs -96.1/-74.0/-73.5 true -71.6/-72.5/-72.8",
+   "at_seconds": 2294.3
+  },
+  {
+   "stage": "opposing rep 9 (260 s): truth -0.001092 pa own -0.001277 within -0.001298 runs -92.3/-71.6/-74.2 true -60.7/-61.7/-61.5 pitch own -0.001248 within -0.001266 runs -90.2/-69.1/-71.3 true -60.7/-61.4/-61.3",
+   "at_seconds": 2554.8
+  }
+ ],
+ "results": {
+  "opposing": {
+   "summary": {
+    "pa_own": {
+     "mean": -0.001299,
+     "sd_across_reps": 0.000139,
+     "truth_mean": -0.001087,
+     "truth_weighted_mean": -0.001037,
+     "bias": -0.000212,
+     "bias_vs_weighted": -0.000262,
+     "coverage": 0.4,
+     "coverage_weighted": 0.2,
+     "excludes_zero": 1.0,
+     "one_sd_value_mean": -0.01396,
+     "one_sd_value_truth": -0.01436,
+     "reps": 10
+    },
+    "pa_own_held": {
+     "mean": -0.00109,
+     "sd_across_reps": 0.000106,
+     "truth_mean": -0.001087,
+     "truth_weighted_mean": -0.001037,
+     "bias": -3e-06,
+     "bias_vs_weighted": -5.3e-05,
+     "coverage": 0.9,
+     "coverage_weighted": 0.9,
+     "excludes_zero": 1.0,
+     "one_sd_value_mean": -0.0117,
+     "one_sd_value_truth": -0.01436,
+     "reps": 10
+    },
+    "pa_within": {
+     "mean": -0.001297,
+     "sd_across_reps": 0.000126,
+     "truth_mean": -0.001087,
+     "truth_weighted_mean": -0.001037,
+     "bias": -0.000209,
+     "bias_vs_weighted": -0.000259,
+     "coverage": 0.5,
+     "coverage_weighted": 0.3,
+     "excludes_zero": 1.0,
+     "one_sd_value_mean": -0.01392,
+     "one_sd_value_truth": -0.01436,
+     "reps": 10
+    },
+    "pa_within_held": {
+     "mean": -0.001076,
+     "sd_across_reps": 9.5e-05,
+     "truth_mean": -0.001087,
+     "truth_weighted_mean": -0.001037,
+     "bias": 1.1e-05,
+     "bias_vs_weighted": -3.8e-05,
+     "coverage": 1.0,
+     "coverage_weighted": 1.0,
+     "excludes_zero": 1.0,
+     "one_sd_value_mean": -0.01155,
+     "one_sd_value_truth": -0.01436,
+     "reps": 10
+    },
+    "pa_placebo": {
+     "mean": 7e-06,
+     "sd_across_reps": 0.000117,
+     "truth_mean": 0.0,
+     "truth_weighted_mean": 0.0,
+     "bias": 7e-06,
+     "bias_vs_weighted": 7e-06,
+     "coverage": 1.0,
+     "coverage_weighted": 1.0,
+     "excludes_zero": 0.0,
+     "one_sd_value_mean": 8e-05,
+     "one_sd_value_truth": 0.0,
+     "reps": 10
+    },
+    "pa_runs_6200": {
+     "oracle_mean": -100.0,
+     "points": {
+      "estimate_mean": -99.8,
+      "true_value_of_choices_mean": -66.8,
+      "estimate_minus_true_mean": -32.9,
+      "ratio_estimate_to_true": 1.493,
+      "interval_covers_true": 0.1,
+      "interval_excludes_zero": 1.0
+     },
+     "side": {
+      "estimate_mean": -78.2,
+      "true_value_of_choices_mean": -68.2,
+      "estimate_minus_true_mean": -10.0,
+      "ratio_estimate_to_true": 1.147
+     },
+     "bands": {
+      "estimate_mean": -79.4,
+      "true_value_of_choices_mean": -68.2,
+      "estimate_minus_true_mean": -11.1,
+      "ratio_estimate_to_true": 1.163,
+      "interval_covers_true": 0.7,
+      "interval_excludes_zero": 1.0
+     }
+    },
+    "pitch_own": {
+     "mean": -0.001186,
+     "sd_across_reps": 7.2e-05,
+     "truth_mean": -0.001087,
+     "truth_weighted_mean": -0.001037,
+     "bias": -9.9e-05,
+     "bias_vs_weighted": -0.000149,
+     "coverage": 0.4,
+     "coverage_weighted": 0.2,
+     "excludes_zero": 1.0,
+     "one_sd_value_mean": -0.01273,
+     "one_sd_value_truth": -0.01436,
+     "reps": 10
+    },
+    "pitch_own_held": {
+     "mean": -0.001181,
+     "sd_across_reps": 6.9e-05,
+     "truth_mean": -0.001087,
+     "truth_weighted_mean": -0.001037,
+     "bias": -9.3e-05,
+     "bias_vs_weighted": -0.000143,
+     "coverage": 0.5,
+     "coverage_weighted": 0.2,
+     "excludes_zero": 1.0,
+     "one_sd_value_mean": -0.01267,
+     "one_sd_value_truth": -0.01436,
+     "reps": 10
+    },
+    "pitch_within": {
+     "mean": -0.00121,
+     "sd_across_reps": 6.9e-05,
+     "truth_mean": -0.001087,
+     "truth_weighted_mean": -0.001037,
+     "bias": -0.000123,
+     "bias_vs_weighted": -0.000173,
+     "coverage": 0.5,
+     "coverage_weighted": 0.1,
+     "excludes_zero": 1.0,
+     "one_sd_value_mean": -0.01299,
+     "one_sd_value_truth": -0.01436,
+     "reps": 10
+    },
+    "pitch_within_held": {
+     "mean": -0.001205,
+     "sd_across_reps": 6.6e-05,
+     "truth_mean": -0.001087,
+     "truth_weighted_mean": -0.001037,
+     "bias": -0.000118,
+     "bias_vs_weighted": -0.000168,
+     "coverage": 0.5,
+     "coverage_weighted": 0.1,
+     "excludes_zero": 1.0,
+     "one_sd_value_mean": -0.01293,
+     "one_sd_value_truth": -0.01436,
+     "reps": 10
+    },
+    "pitch_placebo": {
+     "mean": -1.8e-05,
+     "sd_across_reps": 8.1e-05,
+     "truth_mean": 0.0,
+     "truth_weighted_mean": 0.0,
+     "bias": -1.8e-05,
+     "bias_vs_weighted": -1.8e-05,
+     "coverage": 0.7,
+     "coverage_weighted": 0.7,
+     "excludes_zero": 0.3,
+     "one_sd_value_mean": -0.00019,
+     "one_sd_value_truth": 0.0,
+     "reps": 10
+    },
+    "pitch_runs_6200": {
+     "oracle_mean": -100.0,
+     "points": {
+      "estimate_mean": -91.0,
+      "true_value_of_choices_mean": -66.8,
+      "estimate_minus_true_mean": -24.2,
+      "ratio_estimate_to_true": 1.362,
+      "interval_covers_true": 0.0,
+      "interval_excludes_zero": 1.0
+     },
+     "side": {
+      "estimate_mean": -70.5,
+      "true_value_of_choices_mean": -68.0,
+      "estimate_minus_true_mean": -2.5,
+      "ratio_estimate_to_true": 1.037
+     },
+     "bands": {
+      "estimate_mean": -70.1,
+      "true_value_of_choices_mean": -68.1,
+      "estimate_minus_true_mean": -2.1,
+      "ratio_estimate_to_true": 1.03,
+      "interval_covers_true": 0.8,
+      "interval_excludes_zero": 1.0
+     }
+    }
+   },
+   "rows": [
+    {
+     "rep": 0,
+     "seed": 100,
+     "truth": {
+      "runs_per_point_outside": -0.001066,
+      "runs_per_point_outside_deviation_weighted": -0.000971,
+      "outside_test_pitches": 135580,
+      "sd_true_deviation_points_outside": 13.936,
+      "runs_per_point_inside": 0.000686,
+      "runs_per_point_inside_deviation_weighted": 0.000687,
+      "inside_test_pitches": 106166,
+      "sd_true_deviation_points_inside": 15.729,
+      "count_values": {
+       "0-0": 0.0043,
+       "0-1": -0.0623,
+       "0-2": -0.143,
+       "1-0": 0.0488,
+       "1-1": -0.0286,
+       "1-2": -0.1259,
+       "2-0": 0.1224,
+       "2-1": 0.0395,
+       "2-2": -0.0797,
+       "3-0": 0.215,
+       "3-1": 0.158,
+       "3-2": 0.0375
+      },
+      "rows": 725747,
+      "hitters": 240,
+      "planted_deviation": true
+     },
+     "world_seconds": 0.4,
+     "pa": {
+      "own": -0.001128,
+      "own_interval": [
+       -0.001327,
+       -0.000914
+      ],
+      "own_inside": 0.000529,
+      "own_inside_interval": [
+       0.000241,
+       0.000766
+      ],
+      "within": -0.001198,
+      "within_interval": [
+       -0.001373,
+       -0.001018
+      ],
+      "within_held": -0.000972,
+      "within_held_interval": [
+       -0.001143,
+       -0.000791
+      ],
+      "own_held": -0.000946,
+      "own_held_interval": [
+       -0.001118,
+       -0.0008
+      ],
+      "placebo": -3.3e-05,
+      "placebo_interval": [
+       -0.000289,
+       0.000199
+      ],
+      "within_pa_correlation_outside": 0.1978,
+      "sd_points_own_part_outside": 10.849,
+      "test_pitches": 241746,
+      "outside_pitches_per_pa": 2.034,
+      "runs_6200_repriced": -68.1,
+      "runs_6200_bands": -66.2,
+      "runs_6200_bands_interval": [
+       -78.7,
+       -53.3
+      ],
+      "coefficients_by_band": {
+       "inside_2in_plus": {
+        "runs_per_point": 0.000697,
+        "interval": [
+         0.000427,
+         0.000941
+        ],
+        "pitches": 75493
+       },
+       "inside_0_2in": {
+        "runs_per_point": 0.000249,
+        "interval": [
+         -5.2e-05,
+         0.00064
+        ],
+        "pitches": 30673
+       },
+       "outside_0_1in": {
+        "runs_per_point": -0.001037,
+        "interval": [
+         -0.001569,
+         -0.000563
+        ],
+        "pitches": 15256
+       },
+       "outside_1_2in": {
+        "runs_per_point": -0.001514,
+        "interval": [
+         -0.002068,
+         -0.001172
+        ],
+        "pitches": 15318
+       },
+       "outside_2_4in": {
+        "runs_per_point": -0.001186,
+        "interval": [
+         -0.001502,
+         -0.000811
+        ],
+        "pitches": 28538
+       },
+       "outside_4in_plus": {
+        "runs_per_point": -0.00101,
+        "interval": [
+         -0.001254,
+         -0.000748
+        ],
+        "pitches": 76468
+       }
+      },
+      "runs_6200_points": -86.4,
+      "runs_6200_points_interval": [
+       -101.6,
+       -69.9
+      ],
+      "outside_gain_points": 6.069,
+      "truth_policy_outside": {
+       "oracle_runs_per_pitch": -0.007629,
+       "oracle_runs_per_6200": -96.2,
+       "true_runs_per_pitch_points": -0.005008,
+       "true_runs_per_6200_points": -63.2,
+       "true_runs_per_pitch_side": -0.005119,
+       "true_runs_per_6200_side": -64.5,
+       "true_runs_per_pitch_bands": -0.005142,
+       "true_runs_per_6200_bands": -64.8,
+       "slope_true_value_on_fitted_part_at_aims": -0.000525,
+       "aim_pairs": 64076
+      },
+      "truth_policy_inside": {
+       "oracle_runs_per_pitch": -0.005242,
+       "oracle_runs_per_6200": -51.8,
+       "true_runs_per_pitch_points": 0.000554,
+       "true_runs_per_6200_points": 5.5,
+       "true_runs_per_pitch_side": -0.001981,
+       "true_runs_per_6200_side": -19.6,
+       "true_runs_per_pitch_bands": -0.002061,
+       "true_runs_per_6200_bands": -20.4,
+       "slope_true_value_on_fitted_part_at_aims": 0.000191,
+       "aim_pairs": 62952
+      },
+      "by_sigma": {
+       "0.6": {
+        "runs_6200_points": -86.4,
+        "runs_6200_repriced": -68.1,
+        "runs_6200_bands": -66.2,
+        "truth_policy_outside": {
+         "oracle_runs_per_pitch": -0.007629,
+         "oracle_runs_per_6200": -96.2,
+         "true_runs_per_pitch_points": -0.005008,
+         "true_runs_per_6200_points": -63.2,
+         "true_runs_per_pitch_side": -0.005119,
+         "true_runs_per_6200_side": -64.5,
+         "true_runs_per_pitch_bands": -0.005142,
+         "true_runs_per_6200_bands": -64.8,
+         "slope_true_value_on_fitted_part_at_aims": -0.000525,
+         "aim_pairs": 64076
+        }
+       }
+      },
+      "regression_against_truth": {
+       "coef_outside": -0.001128,
+       "coef_inside": 0.000529,
+       "coef_outside_with_true_outcome": -0.001081,
+       "coef_inside_with_true_outcome": 0.000791,
+       "slope_true_value_on_fitted_part_outside": -0.001081,
+       "slope_true_value_on_fitted_part_inside": 0.000791,
+       "slope_true_deviation_on_fitted_part_outside": 1.117,
+       "slope_true_deviation_on_fitted_part_inside": 1.155,
+       "corr_fitted_true_deviation_outside": 0.8702,
+       "sd_fitted_outside": 10.849,
+       "sd_true_outside": 13.925
+      },
+      "seconds": 127.7
+     },
+     "pitch": {
+      "own": -0.001118,
+      "own_interval": [
+       -0.001189,
+       -0.001021
+      ],
+      "own_inside": 0.000697,
+      "own_inside_interval": [
+       0.000557,
+       0.000822
+      ],
+      "within": -0.00115,
+      "within_interval": [
+       -0.001247,
+       -0.00105
+      ],
+      "within_held": -0.001144,
+      "within_held_interval": [
+       -0.001256,
+       -0.001021
+      ],
+      "own_held": -0.00112,
+      "own_held_interval": [
+       -0.001225,
+       -0.001021
+      ],
+      "placebo": -1.8e-05,
+      "placebo_interval": [
+       -0.000123,
+       7.1e-05
+      ],
+      "within_pa_correlation_outside": 0.1978,
+      "sd_points_own_part_outside": 10.849,
+      "test_pitches": 241746,
+      "outside_pitches_per_pa": 2.034,
+      "runs_6200_repriced": -66.2,
+      "runs_6200_bands": -65.7,
+      "runs_6200_bands_interval": [
+       -73.8,
+       -60.0
+      ],
+      "coefficients_by_band": {
+       "inside_2in_plus": {
+        "runs_per_point": 0.000745,
+        "interval": [
+         0.000563,
+         0.000889
+        ],
+        "pitches": 75493
+       },
+       "inside_0_2in": {
+        "runs_per_point": 0.000617,
+        "interval": [
+         0.000416,
+         0.000819
+        ],
+        "pitches": 30673
+       },
+       "outside_0_1in": {
+        "runs_per_point": -0.001009,
+        "interval": [
+         -0.001241,
+         -0.000735
+        ],
+        "pitches": 15256
+       },
+       "outside_1_2in": {
+        "runs_per_point": -0.001446,
+        "interval": [
+         -0.001798,
+         -0.001196
+        ],
+        "pitches": 15318
+       },
+       "outside_2_4in": {
+        "runs_per_point": -0.001022,
+        "interval": [
+         -0.001215,
+         -0.000818
+        ],
+        "pitches": 28538
+       },
+       "outside_4in_plus": {
+        "runs_per_point": -0.0011,
+        "interval": [
+         -0.001243,
+         -0.000994
+        ],
+        "pitches": 76468
+       }
+      },
+      "runs_6200_points": -85.6,
+      "runs_6200_points_interval": [
+       -91.0,
+       -78.1
+      ],
+      "outside_gain_points": 6.069,
+      "truth_policy_outside": {
+       "oracle_runs_per_pitch": -0.007629,
+       "oracle_runs_per_6200": -96.2,
+       "true_runs_per_pitch_points": -0.005008,
+       "true_runs_per_6200_points": -63.2,
+       "true_runs_per_pitch_side": -0.005089,
+       "true_runs_per_6200_side": -64.2,
+       "true_runs_per_pitch_bands": -0.005092,
+       "true_runs_per_6200_bands": -64.2,
+       "slope_true_value_on_fitted_part_at_aims": -0.000525,
+       "aim_pairs": 64076
+      },
+      "truth_policy_inside": {
+       "oracle_runs_per_pitch": -0.005242,
+       "oracle_runs_per_6200": -51.8,
+       "true_runs_per_pitch_points": 0.000554,
+       "true_runs_per_6200_points": 5.5,
+       "true_runs_per_pitch_side": -0.002115,
+       "true_runs_per_6200_side": -20.9,
+       "true_runs_per_pitch_bands": -0.002133,
+       "true_runs_per_6200_bands": -21.1,
+       "slope_true_value_on_fitted_part_at_aims": 0.000191,
+       "aim_pairs": 62952
+      },
+      "by_sigma": {
+       "0.6": {
+        "runs_6200_points": -85.6,
+        "runs_6200_repriced": -66.2,
+        "runs_6200_bands": -65.7,
+        "truth_policy_outside": {
+         "oracle_runs_per_pitch": -0.007629,
+         "oracle_runs_per_6200": -96.2,
+         "true_runs_per_pitch_points": -0.005008,
+         "true_runs_per_6200_points": -63.2,
+         "true_runs_per_pitch_side": -0.005089,
+         "true_runs_per_6200_side": -64.2,
+         "true_runs_per_pitch_bands": -0.005092,
+         "true_runs_per_6200_bands": -64.2,
+         "slope_true_value_on_fitted_part_at_aims": -0.000525,
+         "aim_pairs": 64076
+        }
+       }
+      },
+      "regression_against_truth": {
+       "coef_outside": -0.001118,
+       "coef_inside": 0.000697,
+       "coef_outside_with_true_outcome": -0.001081,
+       "coef_inside_with_true_outcome": 0.000791,
+       "slope_true_value_on_fitted_part_outside": -0.001081,
+       "slope_true_value_on_fitted_part_inside": 0.000791,
+       "slope_true_deviation_on_fitted_part_outside": 1.117,
+       "slope_true_deviation_on_fitted_part_inside": 1.155,
+       "corr_fitted_true_deviation_outside": 0.8702,
+       "sd_fitted_outside": 10.849,
+       "sd_true_outside": 13.925
+      },
+      "seconds": 126.9
+     }
+    },
+    {
+     "rep": 1,
+     "seed": 101,
+     "truth": {
+      "runs_per_point_outside": -0.001089,
+      "runs_per_point_outside_deviation_weighted": -0.00106,
+      "outside_test_pitches": 137819,
+      "sd_true_deviation_points_outside": 14.207,
+      "runs_per_point_inside": 0.000703,
+      "runs_per_point_inside_deviation_weighted": 0.000663,
+      "inside_test_pitches": 104206,
+      "sd_true_deviation_points_inside": 16.209,
+      "count_values": {
+       "0-0": 0.0098,
+       "0-1": -0.06,
+       "0-2": -0.1415,
+       "1-0": 0.0564,
+       "1-1": -0.0222,
+       "1-2": -0.1213,
+       "2-0": 0.1279,
+       "2-1": 0.0466,
+       "2-2": -0.0685,
+       "3-0": 0.2195,
+       "3-1": 0.1611,
+       "3-2": 0.0459
+      },
+      "rows": 725072,
+      "hitters": 240,
+      "planted_deviation": true
+     },
+     "world_seconds": 0.3,
+     "pa": {
+      "own": -0.001265,
+      "own_interval": [
+       -0.001491,
+       -0.001062
+      ],
+      "own_inside": 0.00075,
+      "own_inside_interval": [
+       0.000533,
+       0.001012
+      ],
+      "within": -0.001206,
+      "within_interval": [
+       -0.001415,
+       -0.000984
+      ],
+      "within_held": -0.001025,
+      "within_held_interval": [
+       -0.001198,
+       -0.000862
+      ],
+      "own_held": -0.001085,
+      "own_held_interval": [
+       -0.001243,
+       -0.000916
+      ],
+      "placebo": 0.000198,
+      "placebo_interval": [
+       -1.3e-05,
+       0.000409
+      ],
+      "within_pa_correlation_outside": 0.2039,
+      "sd_points_own_part_outside": 10.885,
+      "test_pitches": 242025,
+      "outside_pitches_per_pa": 2.067,
+      "runs_6200_repriced": -78.3,
+      "runs_6200_bands": -83.6,
+      "runs_6200_bands_interval": [
+       -96.9,
+       -66.7
+      ],
+      "coefficients_by_band": {
+       "inside_2in_plus": {
+        "runs_per_point": 0.001018,
+        "interval": [
+         0.000802,
+         0.0013
+        ],
+        "pitches": 74214
+       },
+       "inside_0_2in": {
+        "runs_per_point": 0.000309,
+        "interval": [
+         4e-06,
+         0.000669
+        ],
+        "pitches": 29992
+       },
+       "outside_0_1in": {
+        "runs_per_point": -0.000911,
+        "interval": [
+         -0.001336,
+         -0.000461
+        ],
+        "pitches": 15733
+       },
+       "outside_1_2in": {
+        "runs_per_point": -0.001085,
+        "interval": [
+         -0.001612,
+         -0.000615
+        ],
+        "pitches": 15373
+       },
+       "outside_2_4in": {
+        "runs_per_point": -0.001346,
+        "interval": [
+         -0.001679,
+         -0.001018
+        ],
+        "pitches": 28969
+       },
+       "outside_4in_plus": {
+        "runs_per_point": -0.001388,
+        "interval": [
+         -0.001662,
+         -0.001076
+        ],
+        "pitches": 77744
+       }
+      },
+      "runs_6200_points": -101.1,
+      "runs_6200_points_interval": [
+       -119.2,
+       -84.9
+      ],
+      "outside_gain_points": 6.239,
+      "truth_policy_outside": {
+       "oracle_runs_per_pitch": -0.008265,
+       "oracle_runs_per_6200": -105.9,
+       "true_runs_per_pitch_points": -0.005637,
+       "true_runs_per_6200_points": -72.2,
+       "true_runs_per_pitch_side": -0.005717,
+       "true_runs_per_6200_side": -73.3,
+       "true_runs_per_pitch_bands": -0.005723,
+       "true_runs_per_6200_bands": -73.3,
+       "slope_true_value_on_fitted_part_at_aims": -0.000574,
+       "aim_pairs": 70053
+      },
+      "truth_policy_inside": {
+       "oracle_runs_per_pitch": -0.005609,
+       "oracle_runs_per_6200": -54.4,
+       "true_runs_per_pitch_points": 0.000858,
+       "true_runs_per_6200_points": 8.3,
+       "true_runs_per_pitch_side": -0.002268,
+       "true_runs_per_6200_side": -22.0,
+       "true_runs_per_pitch_bands": -0.002236,
+       "true_runs_per_6200_bands": -21.7,
+       "slope_true_value_on_fitted_part_at_aims": 0.000203,
+       "aim_pairs": 63520
+      },
+      "by_sigma": {
+       "0.6": {
+        "runs_6200_points": -101.1,
+        "runs_6200_repriced": -78.3,
+        "runs_6200_bands": -83.6,
+        "truth_policy_outside": {
+         "oracle_runs_per_pitch": -0.008265,
+         "oracle_runs_per_6200": -105.9,
+         "true_runs_per_pitch_points": -0.005637,
+         "true_runs_per_6200_points": -72.2,
+         "true_runs_per_pitch_side": -0.005717,
+         "true_runs_per_6200_side": -73.3,
+         "true_runs_per_pitch_bands": -0.005723,
+         "true_runs_per_6200_bands": -73.3,
+         "slope_true_value_on_fitted_part_at_aims": -0.000574,
+         "aim_pairs": 70053
+        }
+       }
+      },
+      "regression_against_truth": {
+       "coef_outside": -0.001265,
+       "coef_inside": 0.00075,
+       "coef_outside_with_true_outcome": -0.001219,
+       "coef_inside_with_true_outcome": 0.000739,
+       "slope_true_value_on_fitted_part_outside": -0.001215,
+       "slope_true_value_on_fitted_part_inside": 0.000746,
+       "slope_true_deviation_on_fitted_part_outside": 1.1382,
+       "slope_true_deviation_on_fitted_part_inside": 1.1743,
+       "corr_fitted_true_deviation_outside": 0.8727,
+       "sd_fitted_outside": 10.885,
+       "sd_true_outside": 14.196
+      },
+      "seconds": 128.7
+     },
+     "pitch": {
+      "own": -0.001142,
+      "own_interval": [
+       -0.001245,
+       -0.001046
+      ],
+      "own_inside": 0.000777,
+      "own_inside_interval": [
+       0.000653,
+       0.000917
+      ],
+      "within": -0.001175,
+      "within_interval": [
+       -0.001281,
+       -0.001073
+      ],
+      "within_held": -0.001172,
+      "within_held_interval": [
+       -0.001272,
+       -0.001079
+      ],
+      "own_held": -0.001134,
+      "own_held_interval": [
+       -0.001239,
+       -0.001032
+      ],
+      "placebo": 0.000135,
+      "placebo_interval": [
+       4.3e-05,
+       0.000235
+      ],
+      "within_pa_correlation_outside": 0.2039,
+      "sd_points_own_part_outside": 10.885,
+      "test_pitches": 242025,
+      "outside_pitches_per_pa": 2.067,
+      "runs_6200_repriced": -70.0,
+      "runs_6200_bands": -72.1,
+      "runs_6200_bands_interval": [
+       -77.5,
+       -64.9
+      ],
+      "coefficients_by_band": {
+       "inside_2in_plus": {
+        "runs_per_point": 0.000934,
+        "interval": [
+         0.000754,
+         0.001129
+        ],
+        "pitches": 74214
+       },
+       "inside_0_2in": {
+        "runs_per_point": 0.000519,
+        "interval": [
+         0.000283,
+         0.000738
+        ],
+        "pitches": 29992
+       },
+       "outside_0_1in": {
+        "runs_per_point": -0.001041,
+        "interval": [
+         -0.001329,
+         -0.000741
+        ],
+        "pitches": 15733
+       },
+       "outside_1_2in": {
+        "runs_per_point": -0.000972,
+        "interval": [
+         -0.001317,
+         -0.000677
+        ],
+        "pitches": 15373
+       },
+       "outside_2_4in": {
+        "runs_per_point": -0.001221,
+        "interval": [
+         -0.001402,
+         -0.001035
+        ],
+        "pitches": 28969
+       },
+       "outside_4in_plus": {
+        "runs_per_point": -0.001183,
+        "interval": [
+         -0.001294,
+         -0.001049
+        ],
+        "pitches": 77744
+       }
+      },
+      "runs_6200_points": -91.3,
+      "runs_6200_points_interval": [
+       -99.5,
+       -83.6
+      ],
+      "outside_gain_points": 6.239,
+      "truth_policy_outside": {
+       "oracle_runs_per_pitch": -0.008265,
+       "oracle_runs_per_6200": -105.9,
+       "true_runs_per_pitch_points": -0.005637,
+       "true_runs_per_6200_points": -72.2,
+       "true_runs_per_pitch_side": -0.005694,
+       "true_runs_per_6200_side": -73.0,
+       "true_runs_per_pitch_bands": -0.005711,
+       "true_runs_per_6200_bands": -73.2,
+       "slope_true_value_on_fitted_part_at_aims": -0.000574,
+       "aim_pairs": 70053
+      },
+      "truth_policy_inside": {
+       "oracle_runs_per_pitch": -0.005609,
+       "oracle_runs_per_6200": -54.4,
+       "true_runs_per_pitch_points": 0.000858,
+       "true_runs_per_6200_points": 8.3,
+       "true_runs_per_pitch_side": -0.002282,
+       "true_runs_per_6200_side": -22.1,
+       "true_runs_per_pitch_bands": -0.002272,
+       "true_runs_per_6200_bands": -22.0,
+       "slope_true_value_on_fitted_part_at_aims": 0.000203,
+       "aim_pairs": 63520
+      },
+      "by_sigma": {
+       "0.6": {
+        "runs_6200_points": -91.3,
+        "runs_6200_repriced": -70.0,
+        "runs_6200_bands": -72.1,
+        "truth_policy_outside": {
+         "oracle_runs_per_pitch": -0.008265,
+         "oracle_runs_per_6200": -105.9,
+         "true_runs_per_pitch_points": -0.005637,
+         "true_runs_per_6200_points": -72.2,
+         "true_runs_per_pitch_side": -0.005694,
+         "true_runs_per_6200_side": -73.0,
+         "true_runs_per_pitch_bands": -0.005711,
+         "true_runs_per_6200_bands": -73.2,
+         "slope_true_value_on_fitted_part_at_aims": -0.000574,
+         "aim_pairs": 70053
+        }
+       }
+      },
+      "regression_against_truth": {
+       "coef_outside": -0.001142,
+       "coef_inside": 0.000777,
+       "coef_outside_with_true_outcome": -0.001219,
+       "coef_inside_with_true_outcome": 0.000739,
+       "slope_true_value_on_fitted_part_outside": -0.001215,
+       "slope_true_value_on_fitted_part_inside": 0.000746,
+       "slope_true_deviation_on_fitted_part_outside": 1.1382,
+       "slope_true_deviation_on_fitted_part_inside": 1.1743,
+       "corr_fitted_true_deviation_outside": 0.8727,
+       "sd_fitted_outside": 10.885,
+       "sd_true_outside": 14.196
+      },
+      "seconds": 125.8
+     }
+    },
+    {
+     "rep": 2,
+     "seed": 102,
+     "truth": {
+      "runs_per_point_outside": -0.001115,
+      "runs_per_point_outside_deviation_weighted": -0.001035,
+      "outside_test_pitches": 138816,
+      "sd_true_deviation_points_outside": 14.041,
+      "runs_per_point_inside": 0.000645,
+      "runs_per_point_inside_deviation_weighted": 0.000651,
+      "inside_test_pitches": 104815,
+      "sd_true_deviation_points_inside": 16.112,
+      "count_values": {
+       "0-0": -0.0014,
+       "0-1": -0.0691,
+       "0-2": -0.1478,
+       "1-0": 0.0463,
+       "1-1": -0.0331,
+       "1-2": -0.1271,
+       "2-0": 0.1173,
+       "2-1": 0.0356,
+       "2-2": -0.0815,
+       "3-0": 0.2155,
+       "3-1": 0.1592,
+       "3-2": 0.0379
+      },
+      "rows": 728996,
+      "hitters": 240,
+      "planted_deviation": true
+     },
+     "world_seconds": 0.3,
+     "pa": {
+      "own": -0.001298,
+      "own_interval": [
+       -0.001513,
+       -0.001068
+      ],
+      "own_inside": 0.000744,
+      "own_inside_interval": [
+       0.000523,
+       0.000977
+      ],
+      "within": -0.001223,
+      "within_interval": [
+       -0.001438,
+       -0.001031
+      ],
+      "within_held": -0.001025,
+      "within_held_interval": [
+       -0.001189,
+       -0.000881
+      ],
+      "own_held": -0.001088,
+      "own_held_interval": [
+       -0.001258,
+       -0.000926
+      ],
+      "placebo": 5e-06,
+      "placebo_interval": [
+       -0.000214,
+       0.000244
+      ],
+      "within_pa_correlation_outside": 0.1981,
+      "sd_points_own_part_outside": 10.849,
+      "test_pitches": 243631,
+      "outside_pitches_per_pa": 2.082,
+      "runs_6200_repriced": -79.4,
+      "runs_6200_bands": -80.4,
+      "runs_6200_bands_interval": [
+       -95.0,
+       -64.7
+      ],
+      "coefficients_by_band": {
+       "inside_2in_plus": {
+        "runs_per_point": 0.000718,
+        "interval": [
+         0.00038,
+         0.00105
+        ],
+        "pitches": 74391
+       },
+       "inside_0_2in": {
+        "runs_per_point": 0.000787,
+        "interval": [
+         0.000435,
+         0.001202
+        ],
+        "pitches": 30424
+       },
+       "outside_0_1in": {
+        "runs_per_point": -0.00115,
+        "interval": [
+         -0.001691,
+         -0.000759
+        ],
+        "pitches": 15360
+       },
+       "outside_1_2in": {
+        "runs_per_point": -0.001197,
+        "interval": [
+         -0.001639,
+         -0.000743
+        ],
+        "pitches": 15449
+       },
+       "outside_2_4in": {
+        "runs_per_point": -0.001394,
+        "interval": [
+         -0.001697,
+         -0.000942
+        ],
+        "pitches": 29351
+       },
+       "outside_4in_plus": {
+        "runs_per_point": -0.001322,
+        "interval": [
+         -0.001588,
+         -0.00098
+        ],
+        "pitches": 78656
+       }
+      },
+      "runs_6200_points": -101.9,
+      "runs_6200_points_interval": [
+       -118.8,
+       -83.8
+      ],
+      "outside_gain_points": 6.082,
+      "truth_policy_outside": {
+       "oracle_runs_per_pitch": -0.007973,
+       "oracle_runs_per_6200": -102.9,
+       "true_runs_per_pitch_points": -0.005333,
+       "true_runs_per_6200_points": -68.8,
+       "true_runs_per_pitch_side": -0.005438,
+       "true_runs_per_6200_side": -70.2,
+       "true_runs_per_pitch_bands": -0.005431,
+       "true_runs_per_6200_bands": -70.1,
+       "slope_true_value_on_fitted_part_at_aims": -0.000585,
+       "aim_pairs": 64684
+      },
+      "truth_policy_inside": {
+       "oracle_runs_per_pitch": -0.005356,
+       "oracle_runs_per_6200": -52.2,
+       "true_runs_per_pitch_points": 0.000828,
+       "true_runs_per_6200_points": 8.1,
+       "true_runs_per_pitch_side": -0.00211,
+       "true_runs_per_6200_side": -20.6,
+       "true_runs_per_pitch_bands": -0.002094,
+       "true_runs_per_6200_bands": -20.4,
+       "slope_true_value_on_fitted_part_at_aims": 6.5e-05,
+       "aim_pairs": 59865
+      },
+      "by_sigma": {
+       "0.6": {
+        "runs_6200_points": -101.9,
+        "runs_6200_repriced": -79.4,
+        "runs_6200_bands": -80.4,
+        "truth_policy_outside": {
+         "oracle_runs_per_pitch": -0.007973,
+         "oracle_runs_per_6200": -102.9,
+         "true_runs_per_pitch_points": -0.005333,
+         "true_runs_per_6200_points": -68.8,
+         "true_runs_per_pitch_side": -0.005438,
+         "true_runs_per_6200_side": -70.2,
+         "true_runs_per_pitch_bands": -0.005431,
+         "true_runs_per_6200_bands": -70.1,
+         "slope_true_value_on_fitted_part_at_aims": -0.000585,
+         "aim_pairs": 64684
+        }
+       }
+      },
+      "regression_against_truth": {
+       "coef_outside": -0.001298,
+       "coef_inside": 0.000744,
+       "coef_outside_with_true_outcome": -0.001137,
+       "coef_inside_with_true_outcome": 0.00073,
+       "slope_true_value_on_fitted_part_outside": -0.001168,
+       "slope_true_value_on_fitted_part_inside": 0.000759,
+       "slope_true_deviation_on_fitted_part_outside": 1.1286,
+       "slope_true_deviation_on_fitted_part_inside": 1.1713,
+       "corr_fitted_true_deviation_outside": 0.8729,
+       "sd_fitted_outside": 10.849,
+       "sd_true_outside": 14.026
+      },
+      "seconds": 123.8
+     },
+     "pitch": {
+      "own": -0.001158,
+      "own_interval": [
+       -0.00127,
+       -0.00106
+      ],
+      "own_inside": 0.000652,
+      "own_inside_interval": [
+       0.000529,
+       0.000785
+      ],
+      "within": -0.001165,
+      "within_interval": [
+       -0.001254,
+       -0.001059
+      ],
+      "within_held": -0.001165,
+      "within_held_interval": [
+       -0.001278,
+       -0.001078
+      ],
+      "own_held": -0.001153,
+      "own_held_interval": [
+       -0.001245,
+       -0.001047
+      ],
+      "placebo": -0.000116,
+      "placebo_interval": [
+       -0.00021,
+       -2.2e-05
+      ],
+      "within_pa_correlation_outside": 0.1981,
+      "sd_points_own_part_outside": 10.849,
+      "test_pitches": 243631,
+      "outside_pitches_per_pa": 2.082,
+      "runs_6200_repriced": -71.0,
+      "runs_6200_bands": -70.1,
+      "runs_6200_bands_interval": [
+       -76.1,
+       -63.2
+      ],
+      "coefficients_by_band": {
+       "inside_2in_plus": {
+        "runs_per_point": 0.000638,
+        "interval": [
+         0.000452,
+         0.000826
+        ],
+        "pitches": 74391
+       },
+       "inside_0_2in": {
+        "runs_per_point": 0.000674,
+        "interval": [
+         0.000445,
+         0.000942
+        ],
+        "pitches": 30424
+       },
+       "outside_0_1in": {
+        "runs_per_point": -0.001142,
+        "interval": [
+         -0.001467,
+         -0.000894
+        ],
+        "pitches": 15360
+       },
+       "outside_1_2in": {
+        "runs_per_point": -0.001161,
+        "interval": [
+         -0.001398,
+         -0.000909
+        ],
+        "pitches": 15449
+       },
+       "outside_2_4in": {
+        "runs_per_point": -0.001246,
+        "interval": [
+         -0.001483,
+         -0.000976
+        ],
+        "pitches": 29351
+       },
+       "outside_4in_plus": {
+        "runs_per_point": -0.001116,
+        "interval": [
+         -0.001256,
+         -0.000991
+        ],
+        "pitches": 78656
+       }
+      },
+      "runs_6200_points": -91.0,
+      "runs_6200_points_interval": [
+       -99.7,
+       -83.2
+      ],
+      "outside_gain_points": 6.082,
+      "truth_policy_outside": {
+       "oracle_runs_per_pitch": -0.007973,
+       "oracle_runs_per_6200": -102.9,
+       "true_runs_per_pitch_points": -0.005333,
+       "true_runs_per_6200_points": -68.8,
+       "true_runs_per_pitch_side": -0.005441,
+       "true_runs_per_6200_side": -70.2,
+       "true_runs_per_pitch_bands": -0.005444,
+       "true_runs_per_6200_bands": -70.3,
+       "slope_true_value_on_fitted_part_at_aims": -0.000585,
+       "aim_pairs": 64684
+      },
+      "truth_policy_inside": {
+       "oracle_runs_per_pitch": -0.005356,
+       "oracle_runs_per_6200": -52.2,
+       "true_runs_per_pitch_points": 0.000828,
+       "true_runs_per_6200_points": 8.1,
+       "true_runs_per_pitch_side": -0.002106,
+       "true_runs_per_6200_side": -20.5,
+       "true_runs_per_pitch_bands": -0.00211,
+       "true_runs_per_6200_bands": -20.6,
+       "slope_true_value_on_fitted_part_at_aims": 6.5e-05,
+       "aim_pairs": 59865
+      },
+      "by_sigma": {
+       "0.6": {
+        "runs_6200_points": -91.0,
+        "runs_6200_repriced": -71.0,
+        "runs_6200_bands": -70.1,
+        "truth_policy_outside": {
+         "oracle_runs_per_pitch": -0.007973,
+         "oracle_runs_per_6200": -102.9,
+         "true_runs_per_pitch_points": -0.005333,
+         "true_runs_per_6200_points": -68.8,
+         "true_runs_per_pitch_side": -0.005441,
+         "true_runs_per_6200_side": -70.2,
+         "true_runs_per_pitch_bands": -0.005444,
+         "true_runs_per_6200_bands": -70.3,
+         "slope_true_value_on_fitted_part_at_aims": -0.000585,
+         "aim_pairs": 64684
+        }
+       }
+      },
+      "regression_against_truth": {
+       "coef_outside": -0.001158,
+       "coef_inside": 0.000652,
+       "coef_outside_with_true_outcome": -0.001137,
+       "coef_inside_with_true_outcome": 0.00073,
+       "slope_true_value_on_fitted_part_outside": -0.001168,
+       "slope_true_value_on_fitted_part_inside": 0.000759,
+       "slope_true_deviation_on_fitted_part_outside": 1.1286,
+       "slope_true_deviation_on_fitted_part_inside": 1.1713,
+       "corr_fitted_true_deviation_outside": 0.8729,
+       "sd_fitted_outside": 10.849,
+       "sd_true_outside": 14.026
+      },
+      "seconds": 125.7
+     }
+    },
+    {
+     "rep": 3,
+     "seed": 103,
+     "truth": {
+      "runs_per_point_outside": -0.001088,
+      "runs_per_point_outside_deviation_weighted": -0.001015,
+      "outside_test_pitches": 137365,
+      "sd_true_deviation_points_outside": 13.692,
+      "runs_per_point_inside": 0.000681,
+      "runs_per_point_inside_deviation_weighted": 0.000687,
+      "inside_test_pitches": 104869,
+      "sd_true_deviation_points_inside": 15.597,
+      "count_values": {
+       "0-0": 0.0032,
+       "0-1": -0.064,
+       "0-2": -0.1452,
+       "1-0": 0.0494,
+       "1-1": -0.0283,
+       "1-2": -0.1239,
+       "2-0": 0.123,
+       "2-1": 0.0401,
+       "2-2": -0.0757,
+       "3-0": 0.22,
+       "3-1": 0.1566,
+       "3-2": 0.0392
+      },
+      "rows": 726413,
+      "hitters": 240,
+      "planted_deviation": true
+     },
+     "world_seconds": 0.3,
+     "pa": {
+      "own": -0.001403,
+      "own_interval": [
+       -0.001619,
+       -0.001169
+      ],
+      "own_inside": 0.000677,
+      "own_inside_interval": [
+       0.000382,
+       0.00093
+      ],
+      "within": -0.001383,
+      "within_interval": [
+       -0.001612,
+       -0.001154
+      ],
+      "within_held": -0.001123,
+      "within_held_interval": [
+       -0.001264,
+       -0.00095
+      ],
+      "own_held": -0.001146,
+      "own_held_interval": [
+       -0.001314,
+       -0.000981
+      ],
+      "placebo": -0.000149,
+      "placebo_interval": [
+       -0.000378,
+       6.3e-05
+      ],
+      "within_pa_correlation_outside": 0.2051,
+      "sd_points_own_part_outside": 10.63,
+      "test_pitches": 242234,
+      "outside_pitches_per_pa": 2.06,
+      "runs_6200_repriced": -83.1,
+      "runs_6200_bands": -85.2,
+      "runs_6200_bands_interval": [
+       -101.5,
+       -73.1
+      ],
+      "coefficients_by_band": {
+       "inside_2in_plus": {
+        "runs_per_point": 0.000815,
+        "interval": [
+         0.000463,
+         0.001121
+        ],
+        "pitches": 74724
+       },
+       "inside_0_2in": {
+        "runs_per_point": 0.000452,
+        "interval": [
+         9e-06,
+         0.000802
+        ],
+        "pitches": 30145
+       },
+       "outside_0_1in": {
+        "runs_per_point": -0.001399,
+        "interval": [
+         -0.001827,
+         -0.000893
+        ],
+        "pitches": 15582
+       },
+       "outside_1_2in": {
+        "runs_per_point": -0.00126,
+        "interval": [
+         -0.001754,
+         -0.000745
+        ],
+        "pitches": 15337
+       },
+       "outside_2_4in": {
+        "runs_per_point": -0.001372,
+        "interval": [
+         -0.001749,
+         -0.001007
+        ],
+        "pitches": 28905
+       },
+       "outside_4in_plus": {
+        "runs_per_point": -0.001466,
+        "interval": [
+         -0.001809,
+         -0.001256
+        ],
+        "pitches": 77541
+       }
+      },
+      "runs_6200_points": -106.2,
+      "runs_6200_points_interval": [
+       -122.6,
+       -88.5
+      ],
+      "outside_gain_points": 5.927,
+      "truth_policy_outside": {
+       "oracle_runs_per_pitch": -0.00762,
+       "oracle_runs_per_6200": -97.3,
+       "true_runs_per_pitch_points": -0.005011,
+       "true_runs_per_6200_points": -64.0,
+       "true_runs_per_pitch_side": -0.005146,
+       "true_runs_per_6200_side": -65.7,
+       "true_runs_per_pitch_bands": -0.005148,
+       "true_runs_per_6200_bands": -65.7,
+       "slope_true_value_on_fitted_part_at_aims": -0.000758,
+       "aim_pairs": 78264
+      },
+      "truth_policy_inside": {
+       "oracle_runs_per_pitch": -0.005261,
+       "oracle_runs_per_6200": -51.3,
+       "true_runs_per_pitch_points": 0.000544,
+       "true_runs_per_6200_points": 5.3,
+       "true_runs_per_pitch_side": -0.001938,
+       "true_runs_per_6200_side": -18.9,
+       "true_runs_per_pitch_bands": -0.001957,
+       "true_runs_per_6200_bands": -19.1,
+       "slope_true_value_on_fitted_part_at_aims": 1.6e-05,
+       "aim_pairs": 34746
+      },
+      "by_sigma": {
+       "0.6": {
+        "runs_6200_points": -106.2,
+        "runs_6200_repriced": -83.1,
+        "runs_6200_bands": -85.2,
+        "truth_policy_outside": {
+         "oracle_runs_per_pitch": -0.00762,
+         "oracle_runs_per_6200": -97.3,
+         "true_runs_per_pitch_points": -0.005011,
+         "true_runs_per_6200_points": -64.0,
+         "true_runs_per_pitch_side": -0.005146,
+         "true_runs_per_6200_side": -65.7,
+         "true_runs_per_pitch_bands": -0.005148,
+         "true_runs_per_6200_bands": -65.7,
+         "slope_true_value_on_fitted_part_at_aims": -0.000758,
+         "aim_pairs": 78264
+        }
+       }
+      },
+      "regression_against_truth": {
+       "coef_outside": -0.001403,
+       "coef_inside": 0.000677,
+       "coef_outside_with_true_outcome": -0.00114,
+       "coef_inside_with_true_outcome": 0.000755,
+       "slope_true_value_on_fitted_part_outside": -0.001143,
+       "slope_true_value_on_fitted_part_inside": 0.000765,
+       "slope_true_deviation_on_fitted_part_outside": 1.1283,
+       "slope_true_deviation_on_fitted_part_inside": 1.1625,
+       "corr_fitted_true_deviation_outside": 0.8764,
+       "sd_fitted_outside": 10.63,
+       "sd_true_outside": 13.686
+      },
+      "seconds": 123.8
+     },
+     "pitch": {
+      "own": -0.001167,
+      "own_interval": [
+       -0.00129,
+       -0.001091
+      ],
+      "own_inside": 0.000722,
+      "own_inside_interval": [
+       0.000583,
+       0.000855
+      ],
+      "within": -0.001185,
+      "within_interval": [
+       -0.001292,
+       -0.00108
+      ],
+      "within_held": -0.001178,
+      "within_held_interval": [
+       -0.00128,
+       -0.001065
+      ],
+      "own_held": -0.001157,
+      "own_held_interval": [
+       -0.001257,
+       -0.00105
+      ],
+      "placebo": -3.1e-05,
+      "placebo_interval": [
+       -0.000142,
+       6e-05
+      ],
+      "within_pa_correlation_outside": 0.2051,
+      "sd_points_own_part_outside": 10.63,
+      "test_pitches": 242234,
+      "outside_pitches_per_pa": 2.06,
+      "runs_6200_repriced": -67.9,
+      "runs_6200_bands": -68.0,
+      "runs_6200_bands_interval": [
+       -75.2,
+       -60.9
+      ],
+      "coefficients_by_band": {
+       "inside_2in_plus": {
+        "runs_per_point": 0.000762,
+        "interval": [
+         0.000585,
+         0.000975
+        ],
+        "pitches": 74724
+       },
+       "inside_0_2in": {
+        "runs_per_point": 0.000656,
+        "interval": [
+         0.000445,
+         0.000833
+        ],
+        "pitches": 30145
+       },
+       "outside_0_1in": {
+        "runs_per_point": -0.001272,
+        "interval": [
+         -0.001557,
+         -0.001057
+        ],
+        "pitches": 15582
+       },
+       "outside_1_2in": {
+        "runs_per_point": -0.000927,
+        "interval": [
+         -0.001191,
+         -0.000656
+        ],
+        "pitches": 15337
+       },
+       "outside_2_4in": {
+        "runs_per_point": -0.001257,
+        "interval": [
+         -0.00145,
+         -0.001052
+        ],
+        "pitches": 28905
+       },
+       "outside_4in_plus": {
+        "runs_per_point": -0.001157,
+        "interval": [
+         -0.001288,
+         -0.001019
+        ],
+        "pitches": 77541
+       }
+      },
+      "runs_6200_points": -88.4,
+      "runs_6200_points_interval": [
+       -97.7,
+       -82.6
+      ],
+      "outside_gain_points": 5.927,
+      "truth_policy_outside": {
+       "oracle_runs_per_pitch": -0.00762,
+       "oracle_runs_per_6200": -97.3,
+       "true_runs_per_pitch_points": -0.005011,
+       "true_runs_per_6200_points": -64.0,
+       "true_runs_per_pitch_side": -0.005118,
+       "true_runs_per_6200_side": -65.4,
+       "true_runs_per_pitch_bands": -0.005123,
+       "true_runs_per_6200_bands": -65.4,
+       "slope_true_value_on_fitted_part_at_aims": -0.000758,
+       "aim_pairs": 78264
+      },
+      "truth_policy_inside": {
+       "oracle_runs_per_pitch": -0.005261,
+       "oracle_runs_per_6200": -51.3,
+       "true_runs_per_pitch_points": 0.000544,
+       "true_runs_per_6200_points": 5.3,
+       "true_runs_per_pitch_side": -0.002049,
+       "true_runs_per_6200_side": -20.0,
+       "true_runs_per_pitch_bands": -0.00205,
+       "true_runs_per_6200_bands": -20.0,
+       "slope_true_value_on_fitted_part_at_aims": 1.6e-05,
+       "aim_pairs": 34746
+      },
+      "by_sigma": {
+       "0.6": {
+        "runs_6200_points": -88.4,
+        "runs_6200_repriced": -67.9,
+        "runs_6200_bands": -68.0,
+        "truth_policy_outside": {
+         "oracle_runs_per_pitch": -0.00762,
+         "oracle_runs_per_6200": -97.3,
+         "true_runs_per_pitch_points": -0.005011,
+         "true_runs_per_6200_points": -64.0,
+         "true_runs_per_pitch_side": -0.005118,
+         "true_runs_per_6200_side": -65.4,
+         "true_runs_per_pitch_bands": -0.005123,
+         "true_runs_per_6200_bands": -65.4,
+         "slope_true_value_on_fitted_part_at_aims": -0.000758,
+         "aim_pairs": 78264
+        }
+       }
+      },
+      "regression_against_truth": {
+       "coef_outside": -0.001167,
+       "coef_inside": 0.000722,
+       "coef_outside_with_true_outcome": -0.00114,
+       "coef_inside_with_true_outcome": 0.000755,
+       "slope_true_value_on_fitted_part_outside": -0.001143,
+       "slope_true_value_on_fitted_part_inside": 0.000765,
+       "slope_true_deviation_on_fitted_part_outside": 1.1283,
+       "slope_true_deviation_on_fitted_part_inside": 1.1625,
+       "corr_fitted_true_deviation_outside": 0.8764,
+       "sd_fitted_outside": 10.63,
+       "sd_true_outside": 13.686
+      },
+      "seconds": 127.4
+     }
+    },
+    {
+     "rep": 4,
+     "seed": 104,
+     "truth": {
+      "runs_per_point_outside": -0.001111,
+      "runs_per_point_outside_deviation_weighted": -0.001085,
+      "outside_test_pitches": 138959,
+      "sd_true_deviation_points_outside": 13.77,
+      "runs_per_point_inside": 0.000675,
+      "runs_per_point_inside_deviation_weighted": 0.000624,
+      "inside_test_pitches": 103358,
+      "sd_true_deviation_points_inside": 15.65,
+      "count_values": {
+       "0-0": 0.0076,
+       "0-1": -0.0612,
+       "0-2": -0.1418,
+       "1-0": 0.0565,
+       "1-1": -0.0232,
+       "1-2": -0.1219,
+       "2-0": 0.1283,
+       "2-1": 0.0473,
+       "2-2": -0.0708,
+       "3-0": 0.2219,
+       "3-1": 0.1642,
+       "3-2": 0.0466
+      },
+      "rows": 727610,
+      "hitters": 240,
+      "planted_deviation": true
+     },
+     "world_seconds": 0.3,
+     "pa": {
+      "own": -0.00145,
+      "own_interval": [
+       -0.001643,
+       -0.001271
+      ],
+      "own_inside": 0.000437,
+      "own_inside_interval": [
+       0.000188,
+       0.000657
+      ],
+      "within": -0.001473,
+      "within_interval": [
+       -0.001703,
+       -0.001255
+      ],
+      "within_held": -0.001221,
+      "within_held_interval": [
+       -0.001376,
+       -0.001063
+      ],
+      "own_held": -0.001215,
+      "own_held_interval": [
+       -0.001394,
+       -0.001051
+      ],
+      "placebo": -0.000229,
+      "placebo_interval": [
+       -0.000479,
+       4e-06
+      ],
+      "within_pa_correlation_outside": 0.2027,
+      "sd_points_own_part_outside": 10.69,
+      "test_pitches": 242317,
+      "outside_pitches_per_pa": 2.084,
+      "runs_6200_repriced": -90.2,
+      "runs_6200_bands": -91.8,
+      "runs_6200_bands_interval": [
+       -106.7,
+       -72.3
+      ],
+      "coefficients_by_band": {
+       "inside_2in_plus": {
+        "runs_per_point": 0.000597,
+        "interval": [
+         0.00028,
+         0.000896
+        ],
+        "pitches": 73521
+       },
+       "inside_0_2in": {
+        "runs_per_point": 0.000164,
+        "interval": [
+         -0.000155,
+         0.000625
+        ],
+        "pitches": 29837
+       },
+       "outside_0_1in": {
+        "runs_per_point": -0.001266,
+        "interval": [
+         -0.001783,
+         -0.000726
+        ],
+        "pitches": 15374
+       },
+       "outside_1_2in": {
+        "runs_per_point": -0.00127,
+        "interval": [
+         -0.001749,
+         -0.000824
+        ],
+        "pitches": 15207
+       },
+       "outside_2_4in": {
+        "runs_per_point": -0.001647,
+        "interval": [
+         -0.002079,
+         -0.001152
+        ],
+        "pitches": 29158
+       },
+       "outside_4in_plus": {
+        "runs_per_point": -0.001453,
+        "interval": [
+         -0.001734,
+         -0.001144
+        ],
+        "pitches": 79220
+       }
+      },
+      "runs_6200_points": -111.6,
+      "runs_6200_points_interval": [
+       -126.4,
+       -97.8
+      ],
+      "outside_gain_points": 5.955,
+      "truth_policy_outside": {
+       "oracle_runs_per_pitch": -0.008066,
+       "oracle_runs_per_6200": -104.2,
+       "true_runs_per_pitch_points": -0.005454,
+       "true_runs_per_6200_points": -70.5,
+       "true_runs_per_pitch_side": -0.005589,
+       "true_runs_per_6200_side": -72.2,
+       "true_runs_per_pitch_bands": -0.005596,
+       "true_runs_per_6200_bands": -72.3,
+       "slope_true_value_on_fitted_part_at_aims": -0.001048,
+       "aim_pairs": 78436
+      },
+      "truth_policy_inside": {
+       "oracle_runs_per_pitch": -0.005514,
+       "oracle_runs_per_6200": -53.0,
+       "true_runs_per_pitch_points": 0.000811,
+       "true_runs_per_6200_points": 7.8,
+       "true_runs_per_pitch_side": -0.001815,
+       "true_runs_per_6200_side": -17.4,
+       "true_runs_per_pitch_bands": -0.001872,
+       "true_runs_per_6200_bands": -18.0,
+       "slope_true_value_on_fitted_part_at_aims": -0.000224,
+       "aim_pairs": 38288
+      },
+      "by_sigma": {
+       "0.6": {
+        "runs_6200_points": -111.6,
+        "runs_6200_repriced": -90.2,
+        "runs_6200_bands": -91.8,
+        "truth_policy_outside": {
+         "oracle_runs_per_pitch": -0.008066,
+         "oracle_runs_per_6200": -104.2,
+         "true_runs_per_pitch_points": -0.005454,
+         "true_runs_per_6200_points": -70.5,
+         "true_runs_per_pitch_side": -0.005589,
+         "true_runs_per_6200_side": -72.2,
+         "true_runs_per_pitch_bands": -0.005596,
+         "true_runs_per_6200_bands": -72.3,
+         "slope_true_value_on_fitted_part_at_aims": -0.001048,
+         "aim_pairs": 78436
+        }
+       }
+      },
+      "regression_against_truth": {
+       "coef_outside": -0.00145,
+       "coef_inside": 0.000437,
+       "coef_outside_with_true_outcome": -0.001208,
+       "coef_inside_with_true_outcome": 0.00066,
+       "slope_true_value_on_fitted_part_outside": -0.001229,
+       "slope_true_value_on_fitted_part_inside": 0.000679,
+       "slope_true_deviation_on_fitted_part_outside": 1.1272,
+       "slope_true_deviation_on_fitted_part_inside": 1.1434,
+       "corr_fitted_true_deviation_outside": 0.876,
+       "sd_fitted_outside": 10.69,
+       "sd_true_outside": 13.755
+      },
+      "seconds": 129.2
+     },
+     "pitch": {
+      "own": -0.001246,
+      "own_interval": [
+       -0.001331,
+       -0.001136
+      ],
+      "own_inside": 0.00062,
+      "own_inside_interval": [
+       0.000465,
+       0.000761
+      ],
+      "within": -0.001265,
+      "within_interval": [
+       -0.001371,
+       -0.001168
+      ],
+      "within_held": -0.001248,
+      "within_held_interval": [
+       -0.001346,
+       -0.001161
+      ],
+      "own_held": -0.001232,
+      "own_held_interval": [
+       -0.00133,
+       -0.001124
+      ],
+      "placebo": -0.00012,
+      "placebo_interval": [
+       -0.000222,
+       -3.4e-05
+      ],
+      "within_pa_correlation_outside": 0.2027,
+      "sd_points_own_part_outside": 10.69,
+      "test_pitches": 242317,
+      "outside_pitches_per_pa": 2.084,
+      "runs_6200_repriced": -75.5,
+      "runs_6200_bands": -74.2,
+      "runs_6200_bands_interval": [
+       -82.6,
+       -67.5
+      ],
+      "coefficients_by_band": {
+       "inside_2in_plus": {
+        "runs_per_point": 0.000617,
+        "interval": [
+         0.000428,
+         0.000813
+        ],
+        "pitches": 73521
+       },
+       "inside_0_2in": {
+        "runs_per_point": 0.000624,
+        "interval": [
+         0.000405,
+         0.000801
+        ],
+        "pitches": 29837
+       },
+       "outside_0_1in": {
+        "runs_per_point": -0.001326,
+        "interval": [
+         -0.001536,
+         -0.001077
+        ],
+        "pitches": 15374
+       },
+       "outside_1_2in": {
+        "runs_per_point": -0.001224,
+        "interval": [
+         -0.001447,
+         -0.000993
+        ],
+        "pitches": 15207
+       },
+       "outside_2_4in": {
+        "runs_per_point": -0.001317,
+        "interval": [
+         -0.001507,
+         -0.001106
+        ],
+        "pitches": 29158
+       },
+       "outside_4in_plus": {
+        "runs_per_point": -0.001191,
+        "interval": [
+         -0.001373,
+         -0.001059
+        ],
+        "pitches": 79220
+       }
+      },
+      "runs_6200_points": -95.9,
+      "runs_6200_points_interval": [
+       -102.4,
+       -87.4
+      ],
+      "outside_gain_points": 5.955,
+      "truth_policy_outside": {
+       "oracle_runs_per_pitch": -0.008066,
+       "oracle_runs_per_6200": -104.2,
+       "true_runs_per_pitch_points": -0.005454,
+       "true_runs_per_6200_points": -70.5,
+       "true_runs_per_pitch_side": -0.005558,
+       "true_runs_per_6200_side": -71.8,
+       "true_runs_per_pitch_bands": -0.005566,
+       "true_runs_per_6200_bands": -71.9,
+       "slope_true_value_on_fitted_part_at_aims": -0.001048,
+       "aim_pairs": 78436
+      },
+      "truth_policy_inside": {
+       "oracle_runs_per_pitch": -0.005514,
+       "oracle_runs_per_6200": -53.0,
+       "true_runs_per_pitch_points": 0.000811,
+       "true_runs_per_6200_points": 7.8,
+       "true_runs_per_pitch_side": -0.002059,
+       "true_runs_per_6200_side": -19.8,
+       "true_runs_per_pitch_bands": -0.002067,
+       "true_runs_per_6200_bands": -19.9,
+       "slope_true_value_on_fitted_part_at_aims": -0.000224,
+       "aim_pairs": 38288
+      },
+      "by_sigma": {
+       "0.6": {
+        "runs_6200_points": -95.9,
+        "runs_6200_repriced": -75.5,
+        "runs_6200_bands": -74.2,
+        "truth_policy_outside": {
+         "oracle_runs_per_pitch": -0.008066,
+         "oracle_runs_per_6200": -104.2,
+         "true_runs_per_pitch_points": -0.005454,
+         "true_runs_per_6200_points": -70.5,
+         "true_runs_per_pitch_side": -0.005558,
+         "true_runs_per_6200_side": -71.8,
+         "true_runs_per_pitch_bands": -0.005566,
+         "true_runs_per_6200_bands": -71.9,
+         "slope_true_value_on_fitted_part_at_aims": -0.001048,
+         "aim_pairs": 78436
+        }
+       }
+      },
+      "regression_against_truth": {
+       "coef_outside": -0.001246,
+       "coef_inside": 0.00062,
+       "coef_outside_with_true_outcome": -0.001208,
+       "coef_inside_with_true_outcome": 0.00066,
+       "slope_true_value_on_fitted_part_outside": -0.001229,
+       "slope_true_value_on_fitted_part_inside": 0.000679,
+       "slope_true_deviation_on_fitted_part_outside": 1.1272,
+       "slope_true_deviation_on_fitted_part_inside": 1.1434,
+       "corr_fitted_true_deviation_outside": 0.876,
+       "sd_fitted_outside": 10.69,
+       "sd_true_outside": 13.755
+      },
+      "seconds": 128.5
+     }
+    },
+    {
+     "rep": 5,
+     "seed": 105,
+     "truth": {
+      "runs_per_point_outside": -0.001048,
+      "runs_per_point_outside_deviation_weighted": -0.001039,
+      "outside_test_pitches": 135195,
+      "sd_true_deviation_points_outside": 13.858,
+      "runs_per_point_inside": 0.000716,
+      "runs_per_point_inside_deviation_weighted": 0.000655,
+      "inside_test_pitches": 105849,
+      "sd_true_deviation_points_inside": 15.631,
+      "count_values": {
+       "0-0": 0.0054,
+       "0-1": -0.063,
+       "0-2": -0.1429,
+       "1-0": 0.0519,
+       "1-1": -0.0266,
+       "1-2": -0.1216,
+       "2-0": 0.12,
+       "2-1": 0.0397,
+       "2-2": -0.0754,
+       "3-0": 0.2159,
+       "3-1": 0.1537,
+       "3-2": 0.0406
+      },
+      "rows": 723202,
+      "hitters": 240,
+      "planted_deviation": true
+     },
+     "world_seconds": 0.3,
+     "pa": {
+      "own": -0.001292,
+      "own_interval": [
+       -0.001553,
+       -0.001077
+      ],
+      "own_inside": 0.00062,
+      "own_inside_interval": [
+       0.000408,
+       0.0009
+      ],
+      "within": -0.001264,
+      "within_interval": [
+       -0.001473,
+       -0.00107
+      ],
+      "within_held": -0.001059,
+      "within_held_interval": [
+       -0.001216,
+       -0.000897
+      ],
+      "own_held": -0.001095,
+      "own_held_interval": [
+       -0.001268,
+       -0.000936
+      ],
+      "placebo": 7.4e-05,
+      "placebo_interval": [
+       -0.000168,
+       0.000316
+      ],
+      "within_pa_correlation_outside": 0.1919,
+      "sd_points_own_part_outside": 10.913,
+      "test_pitches": 241044,
+      "outside_pitches_per_pa": 2.028,
+      "runs_6200_repriced": -77.7,
+      "runs_6200_bands": -77.6,
+      "runs_6200_bands_interval": [
+       -89.7,
+       -65.5
+      ],
+      "coefficients_by_band": {
+       "inside_2in_plus": {
+        "runs_per_point": 0.000723,
+        "interval": [
+         0.000423,
+         0.000986
+        ],
+        "pitches": 75435
+       },
+       "inside_0_2in": {
+        "runs_per_point": 0.000448,
+        "interval": [
+         4.3e-05,
+         0.000883
+        ],
+        "pitches": 30414
+       },
+       "outside_0_1in": {
+        "runs_per_point": -0.001327,
+        "interval": [
+         -0.001814,
+         -0.000845
+        ],
+        "pitches": 15464
+       },
+       "outside_1_2in": {
+        "runs_per_point": -0.001215,
+        "interval": [
+         -0.001701,
+         -0.00067
+        ],
+        "pitches": 15327
+       },
+       "outside_2_4in": {
+        "runs_per_point": -0.001367,
+        "interval": [
+         -0.001746,
+         -0.001023
+        ],
+        "pitches": 28823
+       },
+       "outside_4in_plus": {
+        "runs_per_point": -0.001264,
+        "interval": [
+         -0.001487,
+         -0.001015
+        ],
+        "pitches": 75581
+       }
+      },
+      "runs_6200_points": -98.8,
+      "runs_6200_points_interval": [
+       -118.7,
+       -82.3
+      ],
+      "outside_gain_points": 6.079,
+      "truth_policy_outside": {
+       "oracle_runs_per_pitch": -0.007636,
+       "oracle_runs_per_6200": -96.0,
+       "true_runs_per_pitch_points": -0.005136,
+       "true_runs_per_6200_points": -64.6,
+       "true_runs_per_pitch_side": -0.005256,
+       "true_runs_per_6200_side": -66.1,
+       "true_runs_per_pitch_bands": -0.005268,
+       "true_runs_per_6200_bands": -66.2,
+       "slope_true_value_on_fitted_part_at_aims": -0.000718,
+       "aim_pairs": 80346
+      },
+      "truth_policy_inside": {
+       "oracle_runs_per_pitch": -0.005205,
+       "oracle_runs_per_6200": -51.2,
+       "true_runs_per_pitch_points": 0.000572,
+       "true_runs_per_6200_points": 5.6,
+       "true_runs_per_pitch_side": -0.002023,
+       "true_runs_per_6200_side": -19.9,
+       "true_runs_per_pitch_bands": -0.002053,
+       "true_runs_per_6200_bands": -20.2,
+       "slope_true_value_on_fitted_part_at_aims": -1e-05,
+       "aim_pairs": 39589
+      },
+      "by_sigma": {
+       "0.6": {
+        "runs_6200_points": -98.8,
+        "runs_6200_repriced": -77.7,
+        "runs_6200_bands": -77.6,
+        "truth_policy_outside": {
+         "oracle_runs_per_pitch": -0.007636,
+         "oracle_runs_per_6200": -96.0,
+         "true_runs_per_pitch_points": -0.005136,
+         "true_runs_per_6200_points": -64.6,
+         "true_runs_per_pitch_side": -0.005256,
+         "true_runs_per_6200_side": -66.1,
+         "true_runs_per_pitch_bands": -0.005268,
+         "true_runs_per_6200_bands": -66.2,
+         "slope_true_value_on_fitted_part_at_aims": -0.000718,
+         "aim_pairs": 80346
+        }
+       }
+      },
+      "regression_against_truth": {
+       "coef_outside": -0.001292,
+       "coef_inside": 0.00062,
+       "coef_outside_with_true_outcome": -0.001169,
+       "coef_inside_with_true_outcome": 0.000728,
+       "slope_true_value_on_fitted_part_outside": -0.001175,
+       "slope_true_value_on_fitted_part_inside": 0.000727,
+       "slope_true_deviation_on_fitted_part_outside": 1.1203,
+       "slope_true_deviation_on_fitted_part_inside": 1.1642,
+       "corr_fitted_true_deviation_outside": 0.8831,
+       "sd_fitted_outside": 10.913,
+       "sd_true_outside": 13.844
+      },
+      "seconds": 127.8
+     },
+     "pitch": {
+      "own": -0.001187,
+      "own_interval": [
+       -0.001299,
+       -0.001096
+      ],
+      "own_inside": 0.000656,
+      "own_inside_interval": [
+       0.000525,
+       0.000808
+      ],
+      "within": -0.001206,
+      "within_interval": [
+       -0.001301,
+       -0.001103
+      ],
+      "within_held": -0.001201,
+      "within_held_interval": [
+       -0.001283,
+       -0.001087
+      ],
+      "own_held": -0.001181,
+      "own_held_interval": [
+       -0.001288,
+       -0.001059
+      ],
+      "placebo": 2.2e-05,
+      "placebo_interval": [
+       -9.2e-05,
+       0.000123
+      ],
+      "within_pa_correlation_outside": 0.1919,
+      "sd_points_own_part_outside": 10.913,
+      "test_pitches": 241044,
+      "outside_pitches_per_pa": 2.028,
+      "runs_6200_repriced": -70.7,
+      "runs_6200_bands": -70.3,
+      "runs_6200_bands_interval": [
+       -74.5,
+       -64.3
+      ],
+      "coefficients_by_band": {
+       "inside_2in_plus": {
+        "runs_per_point": 0.00078,
+        "interval": [
+         0.000556,
+         0.00094
+        ],
+        "pitches": 75435
+       },
+       "inside_0_2in": {
+        "runs_per_point": 0.000449,
+        "interval": [
+         0.000207,
+         0.000692
+        ],
+        "pitches": 30414
+       },
+       "outside_0_1in": {
+        "runs_per_point": -0.001327,
+        "interval": [
+         -0.001615,
+         -0.001059
+        ],
+        "pitches": 15464
+       },
+       "outside_1_2in": {
+        "runs_per_point": -0.001186,
+        "interval": [
+         -0.001484,
+         -0.000853
+        ],
+        "pitches": 15327
+       },
+       "outside_2_4in": {
+        "runs_per_point": -0.00117,
+        "interval": [
+         -0.001311,
+         -0.000975
+        ],
+        "pitches": 28823
+       },
+       "outside_4in_plus": {
+        "runs_per_point": -0.001155,
+        "interval": [
+         -0.001239,
+         -0.00103
+        ],
+        "pitches": 75581
+       }
+      },
+      "runs_6200_points": -90.7,
+      "runs_6200_points_interval": [
+       -99.3,
+       -83.8
+      ],
+      "outside_gain_points": 6.079,
+      "truth_policy_outside": {
+       "oracle_runs_per_pitch": -0.007636,
+       "oracle_runs_per_6200": -96.0,
+       "true_runs_per_pitch_points": -0.005136,
+       "true_runs_per_6200_points": -64.6,
+       "true_runs_per_pitch_side": -0.005245,
+       "true_runs_per_6200_side": -66.0,
+       "true_runs_per_pitch_bands": -0.00526,
+       "true_runs_per_6200_bands": -66.1,
+       "slope_true_value_on_fitted_part_at_aims": -0.000718,
+       "aim_pairs": 80346
+      },
+      "truth_policy_inside": {
+       "oracle_runs_per_pitch": -0.005205,
+       "oracle_runs_per_6200": -51.2,
+       "true_runs_per_pitch_points": 0.000572,
+       "true_runs_per_6200_points": 5.6,
+       "true_runs_per_pitch_side": -0.002092,
+       "true_runs_per_6200_side": -20.6,
+       "true_runs_per_pitch_bands": -0.00211,
+       "true_runs_per_6200_bands": -20.8,
+       "slope_true_value_on_fitted_part_at_aims": -1e-05,
+       "aim_pairs": 39589
+      },
+      "by_sigma": {
+       "0.6": {
+        "runs_6200_points": -90.7,
+        "runs_6200_repriced": -70.7,
+        "runs_6200_bands": -70.3,
+        "truth_policy_outside": {
+         "oracle_runs_per_pitch": -0.007636,
+         "oracle_runs_per_6200": -96.0,
+         "true_runs_per_pitch_points": -0.005136,
+         "true_runs_per_6200_points": -64.6,
+         "true_runs_per_pitch_side": -0.005245,
+         "true_runs_per_6200_side": -66.0,
+         "true_runs_per_pitch_bands": -0.00526,
+         "true_runs_per_6200_bands": -66.1,
+         "slope_true_value_on_fitted_part_at_aims": -0.000718,
+         "aim_pairs": 80346
+        }
+       }
+      },
+      "regression_against_truth": {
+       "coef_outside": -0.001187,
+       "coef_inside": 0.000656,
+       "coef_outside_with_true_outcome": -0.001169,
+       "coef_inside_with_true_outcome": 0.000728,
+       "slope_true_value_on_fitted_part_outside": -0.001175,
+       "slope_true_value_on_fitted_part_inside": 0.000727,
+       "slope_true_deviation_on_fitted_part_outside": 1.1203,
+       "slope_true_deviation_on_fitted_part_inside": 1.1642,
+       "corr_fitted_true_deviation_outside": 0.8831,
+       "sd_fitted_outside": 10.913,
+       "sd_true_outside": 13.844
+      },
+      "seconds": 128.0
+     }
+    },
+    {
+     "rep": 6,
+     "seed": 106,
+     "truth": {
+      "runs_per_point_outside": -0.001077,
+      "runs_per_point_outside_deviation_weighted": -0.001055,
+      "outside_test_pitches": 138642,
+      "sd_true_deviation_points_outside": 13.764,
+      "runs_per_point_inside": 0.000699,
+      "runs_per_point_inside_deviation_weighted": 0.000656,
+      "inside_test_pitches": 104062,
+      "sd_true_deviation_points_inside": 15.74,
+      "count_values": {
+       "0-0": 0.0101,
+       "0-1": -0.0586,
+       "0-2": -0.1435,
+       "1-0": 0.0559,
+       "1-1": -0.0223,
+       "1-2": -0.1219,
+       "2-0": 0.1255,
+       "2-1": 0.0451,
+       "2-2": -0.0751,
+       "3-0": 0.221,
+       "3-1": 0.1632,
+       "3-2": 0.0403
+      },
+      "rows": 726681,
+      "hitters": 240,
+      "planted_deviation": true
+     },
+     "world_seconds": 0.3,
+     "pa": {
+      "own": -0.001005,
+      "own_interval": [
+       -0.00121,
+       -0.000815
+      ],
+      "own_inside": 0.000652,
+      "own_inside_interval": [
+       0.000399,
+       0.000924
+      ],
+      "within": -0.001061,
+      "within_interval": [
+       -0.001292,
+       -0.000813
+      ],
+      "within_held": -0.000906,
+      "within_held_interval": [
+       -0.001079,
+       -0.000735
+      ],
+      "own_held": -0.000864,
+      "own_held_interval": [
+       -0.001023,
+       -0.000661
+      ],
+      "placebo": 0.000102,
+      "placebo_interval": [
+       -0.000131,
+       0.000351
+      ],
+      "within_pa_correlation_outside": 0.1999,
+      "sd_points_own_part_outside": 10.489,
+      "test_pitches": 242704,
+      "outside_pitches_per_pa": 2.08,
+      "runs_6200_repriced": -58.1,
+      "runs_6200_bands": -58.0,
+      "runs_6200_bands_interval": [
+       -71.1,
+       -43.4
+      ],
+      "coefficients_by_band": {
+       "inside_2in_plus": {
+        "runs_per_point": 0.000724,
+        "interval": [
+         0.000368,
+         0.001045
+        ],
+        "pitches": 73929
+       },
+       "inside_0_2in": {
+        "runs_per_point": 0.000534,
+        "interval": [
+         0.000108,
+         0.000856
+        ],
+        "pitches": 30132
+       },
+       "outside_0_1in": {
+        "runs_per_point": -0.00097,
+        "interval": [
+         -0.001507,
+         -0.000517
+        ],
+        "pitches": 15599
+       },
+       "outside_1_2in": {
+        "runs_per_point": -0.001097,
+        "interval": [
+         -0.001604,
+         -0.000585
+        ],
+        "pitches": 15368
+       },
+       "outside_2_4in": {
+        "runs_per_point": -0.001005,
+        "interval": [
+         -0.001416,
+         -0.000639
+        ],
+        "pitches": 29228
+       },
+       "outside_4in_plus": {
+        "runs_per_point": -0.00099,
+        "interval": [
+         -0.001261,
+         -0.000744
+        ],
+        "pitches": 78448
+       }
+      },
+      "runs_6200_points": -74.9,
+      "runs_6200_points_interval": [
+       -90.2,
+       -60.8
+      ],
+      "outside_gain_points": 5.781,
+      "truth_policy_outside": {
+       "oracle_runs_per_pitch": -0.007684,
+       "oracle_runs_per_6200": -99.1,
+       "true_runs_per_pitch_points": -0.005095,
+       "true_runs_per_6200_points": -65.7,
+       "true_runs_per_pitch_side": -0.005185,
+       "true_runs_per_6200_side": -66.9,
+       "true_runs_per_pitch_bands": -0.005198,
+       "true_runs_per_6200_bands": -67.0,
+       "slope_true_value_on_fitted_part_at_aims": -0.000503,
+       "aim_pairs": 64560
+      },
+      "truth_policy_inside": {
+       "oracle_runs_per_pitch": -0.005379,
+       "oracle_runs_per_6200": -52.1,
+       "true_runs_per_pitch_points": 0.000719,
+       "true_runs_per_6200_points": 7.0,
+       "true_runs_per_pitch_side": -0.002123,
+       "true_runs_per_6200_side": -20.5,
+       "true_runs_per_pitch_bands": -0.002145,
+       "true_runs_per_6200_bands": -20.8,
+       "slope_true_value_on_fitted_part_at_aims": 0.000114,
+       "aim_pairs": 60418
+      },
+      "by_sigma": {
+       "0.6": {
+        "runs_6200_points": -74.9,
+        "runs_6200_repriced": -58.1,
+        "runs_6200_bands": -58.0,
+        "truth_policy_outside": {
+         "oracle_runs_per_pitch": -0.007684,
+         "oracle_runs_per_6200": -99.1,
+         "true_runs_per_pitch_points": -0.005095,
+         "true_runs_per_6200_points": -65.7,
+         "true_runs_per_pitch_side": -0.005185,
+         "true_runs_per_6200_side": -66.9,
+         "true_runs_per_pitch_bands": -0.005198,
+         "true_runs_per_6200_bands": -67.0,
+         "slope_true_value_on_fitted_part_at_aims": -0.000503,
+         "aim_pairs": 64560
+        }
+       }
+      },
+      "regression_against_truth": {
+       "coef_outside": -0.001005,
+       "coef_inside": 0.000652,
+       "coef_outside_with_true_outcome": -0.001193,
+       "coef_inside_with_true_outcome": 0.000736,
+       "slope_true_value_on_fitted_part_outside": -0.001196,
+       "slope_true_value_on_fitted_part_inside": 0.000748,
+       "slope_true_deviation_on_fitted_part_outside": 1.1284,
+       "slope_true_deviation_on_fitted_part_inside": 1.1757,
+       "corr_fitted_true_deviation_outside": 0.8609,
+       "sd_fitted_outside": 10.489,
+       "sd_true_outside": 13.748
+      },
+      "seconds": 128.8
+     },
+     "pitch": {
+      "own": -0.001065,
+      "own_interval": [
+       -0.001162,
+       -0.000952
+      ],
+      "own_inside": 0.000738,
+      "own_inside_interval": [
+       0.000587,
+       0.000878
+      ],
+      "within": -0.001102,
+      "within_interval": [
+       -0.001209,
+       -0.000998
+      ],
+      "within_held": -0.001106,
+      "within_held_interval": [
+       -0.00121,
+       -0.001
+      ],
+      "own_held": -0.001072,
+      "own_held_interval": [
+       -0.00118,
+       -0.000967
+      ],
+      "placebo": -5.5e-05,
+      "placebo_interval": [
+       -0.000151,
+       8.1e-05
+      ],
+      "within_pa_correlation_outside": 0.1999,
+      "sd_points_own_part_outside": 10.489,
+      "test_pitches": 242704,
+      "outside_pitches_per_pa": 2.08,
+      "runs_6200_repriced": -61.3,
+      "runs_6200_bands": -59.9,
+      "runs_6200_bands_interval": [
+       -67.9,
+       -53.9
+      ],
+      "coefficients_by_band": {
+       "inside_2in_plus": {
+        "runs_per_point": 0.000873,
+        "interval": [
+         0.000616,
+         0.001035
+        ],
+        "pitches": 73929
+       },
+       "inside_0_2in": {
+        "runs_per_point": 0.000514,
+        "interval": [
+         0.000325,
+         0.000705
+        ],
+        "pitches": 30132
+       },
+       "outside_0_1in": {
+        "runs_per_point": -0.001173,
+        "interval": [
+         -0.00147,
+         -0.000923
+        ],
+        "pitches": 15599
+       },
+       "outside_1_2in": {
+        "runs_per_point": -0.001165,
+        "interval": [
+         -0.001478,
+         -0.000895
+        ],
+        "pitches": 15368
+       },
+       "outside_2_4in": {
+        "runs_per_point": -0.001097,
+        "interval": [
+         -0.001304,
+         -0.000889
+        ],
+        "pitches": 29228
+       },
+       "outside_4in_plus": {
+        "runs_per_point": -0.000988,
+        "interval": [
+         -0.001137,
+         -0.000862
+        ],
+        "pitches": 78448
+       }
+      },
+      "runs_6200_points": -79.4,
+      "runs_6200_points_interval": [
+       -86.6,
+       -71.0
+      ],
+      "outside_gain_points": 5.781,
+      "truth_policy_outside": {
+       "oracle_runs_per_pitch": -0.007684,
+       "oracle_runs_per_6200": -99.1,
+       "true_runs_per_pitch_points": -0.005095,
+       "true_runs_per_6200_points": -65.7,
+       "true_runs_per_pitch_side": -0.005176,
+       "true_runs_per_6200_side": -66.7,
+       "true_runs_per_pitch_bands": -0.005205,
+       "true_runs_per_6200_bands": -67.1,
+       "slope_true_value_on_fitted_part_at_aims": -0.000503,
+       "aim_pairs": 64560
+      },
+      "truth_policy_inside": {
+       "oracle_runs_per_pitch": -0.005379,
+       "oracle_runs_per_6200": -52.1,
+       "true_runs_per_pitch_points": 0.000719,
+       "true_runs_per_6200_points": 7.0,
+       "true_runs_per_pitch_side": -0.002123,
+       "true_runs_per_6200_side": -20.5,
+       "true_runs_per_pitch_bands": -0.002159,
+       "true_runs_per_6200_bands": -20.9,
+       "slope_true_value_on_fitted_part_at_aims": 0.000114,
+       "aim_pairs": 60418
+      },
+      "by_sigma": {
+       "0.6": {
+        "runs_6200_points": -79.4,
+        "runs_6200_repriced": -61.3,
+        "runs_6200_bands": -59.9,
+        "truth_policy_outside": {
+         "oracle_runs_per_pitch": -0.007684,
+         "oracle_runs_per_6200": -99.1,
+         "true_runs_per_pitch_points": -0.005095,
+         "true_runs_per_6200_points": -65.7,
+         "true_runs_per_pitch_side": -0.005176,
+         "true_runs_per_6200_side": -66.7,
+         "true_runs_per_pitch_bands": -0.005205,
+         "true_runs_per_6200_bands": -67.1,
+         "slope_true_value_on_fitted_part_at_aims": -0.000503,
+         "aim_pairs": 64560
+        }
+       }
+      },
+      "regression_against_truth": {
+       "coef_outside": -0.001065,
+       "coef_inside": 0.000738,
+       "coef_outside_with_true_outcome": -0.001193,
+       "coef_inside_with_true_outcome": 0.000736,
+       "slope_true_value_on_fitted_part_outside": -0.001196,
+       "slope_true_value_on_fitted_part_inside": 0.000748,
+       "slope_true_deviation_on_fitted_part_outside": 1.1284,
+       "slope_true_deviation_on_fitted_part_inside": 1.1757,
+       "corr_fitted_true_deviation_outside": 0.8609,
+       "sd_fitted_outside": 10.489,
+       "sd_true_outside": 13.748
+      },
+      "seconds": 126.1
+     }
+    },
+    {
+     "rep": 7,
+     "seed": 107,
+     "truth": {
+      "runs_per_point_outside": -0.001098,
+      "runs_per_point_outside_deviation_weighted": -0.001062,
+      "outside_test_pitches": 137486,
+      "sd_true_deviation_points_outside": 13.503,
+      "runs_per_point_inside": 0.000686,
+      "runs_per_point_inside_deviation_weighted": 0.000652,
+      "inside_test_pitches": 105434,
+      "sd_true_deviation_points_inside": 15.756,
+      "count_values": {
+       "0-0": 0.0037,
+       "0-1": -0.0671,
+       "0-2": -0.1478,
+       "1-0": 0.0521,
+       "1-1": -0.0307,
+       "1-2": -0.1273,
+       "2-0": 0.1251,
+       "2-1": 0.0394,
+       "2-2": -0.0776,
+       "3-0": 0.2233,
+       "3-1": 0.1572,
+       "3-2": 0.0414
+      },
+      "rows": 727929,
+      "hitters": 240,
+      "planted_deviation": true
+     },
+     "world_seconds": 0.3,
+     "pa": {
+      "own": -0.001484,
+      "own_interval": [
+       -0.001677,
+       -0.00129
+      ],
+      "own_inside": 0.00081,
+      "own_inside_interval": [
+       0.00064,
+       0.001039
+      ],
+      "within": -0.001476,
+      "within_interval": [
+       -0.001676,
+       -0.001244
+      ],
+      "within_held": -0.001211,
+      "within_held_interval": [
+       -0.001376,
+       -0.00104
+      ],
+      "own_held": -0.001225,
+      "own_held_interval": [
+       -0.00138,
+       -0.001056
+      ],
+      "placebo": 8e-05,
+      "placebo_interval": [
+       -0.000148,
+       0.000335
+      ],
+      "within_pa_correlation_outside": 0.2,
+      "sd_points_own_part_outside": 10.519,
+      "test_pitches": 242920,
+      "outside_pitches_per_pa": 2.062,
+      "runs_6200_repriced": -88.1,
+      "runs_6200_bands": -86.5,
+      "runs_6200_bands_interval": [
+       -100.7,
+       -74.2
+      ],
+      "coefficients_by_band": {
+       "inside_2in_plus": {
+        "runs_per_point": 0.000855,
+        "interval": [
+         0.000534,
+         0.001235
+        ],
+        "pitches": 74991
+       },
+       "inside_0_2in": {
+        "runs_per_point": 0.000735,
+        "interval": [
+         0.00038,
+         0.001038
+        ],
+        "pitches": 30443
+       },
+       "outside_0_1in": {
+        "runs_per_point": -0.001319,
+        "interval": [
+         -0.00177,
+         -0.000847
+        ],
+        "pitches": 15399
+       },
+       "outside_1_2in": {
+        "runs_per_point": -0.00159,
+        "interval": [
+         -0.002111,
+         -0.001253
+        ],
+        "pitches": 15343
+       },
+       "outside_2_4in": {
+        "runs_per_point": -0.0017,
+        "interval": [
+         -0.002027,
+         -0.001268
+        ],
+        "pitches": 28883
+       },
+       "outside_4in_plus": {
+        "runs_per_point": -0.001386,
+        "interval": [
+         -0.001663,
+         -0.001113
+        ],
+        "pitches": 77861
+       }
+      },
+      "runs_6200_points": -112.8,
+      "runs_6200_points_interval": [
+       -127.4,
+       -98.0
+      ],
+      "outside_gain_points": 5.943,
+      "truth_policy_outside": {
+       "oracle_runs_per_pitch": -0.007763,
+       "oracle_runs_per_6200": -99.2,
+       "true_runs_per_pitch_points": -0.005237,
+       "true_runs_per_6200_points": -66.9,
+       "true_runs_per_pitch_side": -0.005347,
+       "true_runs_per_6200_side": -68.4,
+       "true_runs_per_pitch_bands": -0.005361,
+       "true_runs_per_6200_bands": -68.5,
+       "slope_true_value_on_fitted_part_at_aims": -0.000515,
+       "aim_pairs": 67198
+      },
+      "truth_policy_inside": {
+       "oracle_runs_per_pitch": -0.005472,
+       "oracle_runs_per_6200": -53.7,
+       "true_runs_per_pitch_points": 0.000705,
+       "true_runs_per_6200_points": 6.9,
+       "true_runs_per_pitch_side": -0.002176,
+       "true_runs_per_6200_side": -21.3,
+       "true_runs_per_pitch_bands": -0.002201,
+       "true_runs_per_6200_bands": -21.6,
+       "slope_true_value_on_fitted_part_at_aims": 0.000123,
+       "aim_pairs": 63532
+      },
+      "by_sigma": {
+       "0.6": {
+        "runs_6200_points": -112.8,
+        "runs_6200_repriced": -88.1,
+        "runs_6200_bands": -86.5,
+        "truth_policy_outside": {
+         "oracle_runs_per_pitch": -0.007763,
+         "oracle_runs_per_6200": -99.2,
+         "true_runs_per_pitch_points": -0.005237,
+         "true_runs_per_6200_points": -66.9,
+         "true_runs_per_pitch_side": -0.005347,
+         "true_runs_per_6200_side": -68.4,
+         "true_runs_per_pitch_bands": -0.005361,
+         "true_runs_per_6200_bands": -68.5,
+         "slope_true_value_on_fitted_part_at_aims": -0.000515,
+         "aim_pairs": 67198
+        }
+       }
+      },
+      "regression_against_truth": {
+       "coef_outside": -0.001484,
+       "coef_inside": 0.00081,
+       "coef_outside_with_true_outcome": -0.001189,
+       "coef_inside_with_true_outcome": 0.000711,
+       "slope_true_value_on_fitted_part_outside": -0.001204,
+       "slope_true_value_on_fitted_part_inside": 0.000726,
+       "slope_true_deviation_on_fitted_part_outside": 1.123,
+       "slope_true_deviation_on_fitted_part_inside": 1.1668,
+       "corr_fitted_true_deviation_outside": 0.8749,
+       "sd_fitted_outside": 10.519,
+       "sd_true_outside": 13.502
+      },
+      "seconds": 125.7
+     },
+     "pitch": {
+      "own": -0.001333,
+      "own_interval": [
+       -0.001418,
+       -0.001228
+      ],
+      "own_inside": 0.000754,
+      "own_inside_interval": [
+       0.00059,
+       0.000885
+      ],
+      "within": -0.001357,
+      "within_interval": [
+       -0.001442,
+       -0.001249
+      ],
+      "within_held": -0.001353,
+      "within_held_interval": [
+       -0.001468,
+       -0.00124
+      ],
+      "own_held": -0.001327,
+      "own_held_interval": [
+       -0.001423,
+       -0.001228
+      ],
+      "placebo": 0.0001,
+      "placebo_interval": [
+       -3e-06,
+       0.000203
+      ],
+      "within_pa_correlation_outside": 0.2,
+      "sd_points_own_part_outside": 10.519,
+      "test_pitches": 242920,
+      "outside_pitches_per_pa": 2.062,
+      "runs_6200_repriced": -78.9,
+      "runs_6200_bands": -76.3,
+      "runs_6200_bands_interval": [
+       -83.4,
+       -70.1
+      ],
+      "coefficients_by_band": {
+       "inside_2in_plus": {
+        "runs_per_point": 0.000791,
+        "interval": [
+         0.000573,
+         0.000961
+        ],
+        "pitches": 74991
+       },
+       "inside_0_2in": {
+        "runs_per_point": 0.000692,
+        "interval": [
+         0.000466,
+         0.000872
+        ],
+        "pitches": 30443
+       },
+       "outside_0_1in": {
+        "runs_per_point": -0.001476,
+        "interval": [
+         -0.001746,
+         -0.001275
+        ],
+        "pitches": 15399
+       },
+       "outside_1_2in": {
+        "runs_per_point": -0.001362,
+        "interval": [
+         -0.001698,
+         -0.001113
+        ],
+        "pitches": 15343
+       },
+       "outside_2_4in": {
+        "runs_per_point": -0.001454,
+        "interval": [
+         -0.001651,
+         -0.001209
+        ],
+        "pitches": 28883
+       },
+       "outside_4in_plus": {
+        "runs_per_point": -0.001217,
+        "interval": [
+         -0.001348,
+         -0.001102
+        ],
+        "pitches": 77861
+       }
+      },
+      "runs_6200_points": -101.3,
+      "runs_6200_points_interval": [
+       -107.8,
+       -93.3
+      ],
+      "outside_gain_points": 5.943,
+      "truth_policy_outside": {
+       "oracle_runs_per_pitch": -0.007763,
+       "oracle_runs_per_6200": -99.2,
+       "true_runs_per_pitch_points": -0.005237,
+       "true_runs_per_6200_points": -66.9,
+       "true_runs_per_pitch_side": -0.005344,
+       "true_runs_per_6200_side": -68.3,
+       "true_runs_per_pitch_bands": -0.005359,
+       "true_runs_per_6200_bands": -68.5,
+       "slope_true_value_on_fitted_part_at_aims": -0.000515,
+       "aim_pairs": 67198
+      },
+      "truth_policy_inside": {
+       "oracle_runs_per_pitch": -0.005472,
+       "oracle_runs_per_6200": -53.7,
+       "true_runs_per_pitch_points": 0.000705,
+       "true_runs_per_6200_points": 6.9,
+       "true_runs_per_pitch_side": -0.002189,
+       "true_runs_per_6200_side": -21.5,
+       "true_runs_per_pitch_bands": -0.00221,
+       "true_runs_per_6200_bands": -21.7,
+       "slope_true_value_on_fitted_part_at_aims": 0.000123,
+       "aim_pairs": 63532
+      },
+      "by_sigma": {
+       "0.6": {
+        "runs_6200_points": -101.3,
+        "runs_6200_repriced": -78.9,
+        "runs_6200_bands": -76.3,
+        "truth_policy_outside": {
+         "oracle_runs_per_pitch": -0.007763,
+         "oracle_runs_per_6200": -99.2,
+         "true_runs_per_pitch_points": -0.005237,
+         "true_runs_per_6200_points": -66.9,
+         "true_runs_per_pitch_side": -0.005344,
+         "true_runs_per_6200_side": -68.3,
+         "true_runs_per_pitch_bands": -0.005359,
+         "true_runs_per_6200_bands": -68.5,
+         "slope_true_value_on_fitted_part_at_aims": -0.000515,
+         "aim_pairs": 67198
+        }
+       }
+      },
+      "regression_against_truth": {
+       "coef_outside": -0.001333,
+       "coef_inside": 0.000754,
+       "coef_outside_with_true_outcome": -0.001189,
+       "coef_inside_with_true_outcome": 0.000711,
+       "slope_true_value_on_fitted_part_outside": -0.001204,
+       "slope_true_value_on_fitted_part_inside": 0.000726,
+       "slope_true_deviation_on_fitted_part_outside": 1.123,
+       "slope_true_deviation_on_fitted_part_inside": 1.1668,
+       "corr_fitted_true_deviation_outside": 0.8749,
+       "sd_fitted_outside": 10.519,
+       "sd_true_outside": 13.502
+      },
+      "seconds": 128.7
+     }
+    },
+    {
+     "rep": 8,
+     "seed": 108,
+     "truth": {
+      "runs_per_point_outside": -0.001086,
+      "runs_per_point_outside_deviation_weighted": -0.001031,
+      "outside_test_pitches": 137172,
+      "sd_true_deviation_points_outside": 14.435,
+      "runs_per_point_inside": 0.000661,
+      "runs_per_point_inside_deviation_weighted": 0.000657,
+      "inside_test_pitches": 105212,
+      "sd_true_deviation_points_inside": 16.348,
+      "count_values": {
+       "0-0": -0.0035,
+       "0-1": -0.0696,
+       "0-2": -0.1499,
+       "1-0": 0.0423,
+       "1-1": -0.0347,
+       "1-2": -0.1302,
+       "2-0": 0.1163,
+       "2-1": 0.0344,
+       "2-2": -0.0845,
+       "3-0": 0.2151,
+       "3-1": 0.1577,
+       "3-2": 0.0365
+      },
+      "rows": 727377,
+      "hitters": 240,
+      "planted_deviation": true
+     },
+     "world_seconds": 0.3,
+     "pa": {
+      "own": -0.001391,
+      "own_interval": [
+       -0.001621,
+       -0.001221
+      ],
+      "own_inside": 0.000799,
+      "own_inside_interval": [
+       0.000569,
+       0.001017
+      ],
+      "within": -0.001383,
+      "within_interval": [
+       -0.001586,
+       -0.001197
+      ],
+      "within_held": -0.001133,
+      "within_held_interval": [
+       -0.001267,
+       -0.000965
+      ],
+      "own_held": -0.001144,
+      "own_held_interval": [
+       -0.001311,
+       -0.000975
+      ],
+      "placebo": 1.5e-05,
+      "placebo_interval": [
+       -0.000205,
+       0.00022
+      ],
+      "within_pa_correlation_outside": 0.1986,
+      "sd_points_own_part_outside": 11.215,
+      "test_pitches": 242384,
+      "outside_pitches_per_pa": 2.058,
+      "runs_6200_repriced": -87.2,
+      "runs_6200_bands": -90.1,
+      "runs_6200_bands_interval": [
+       -103.7,
+       -73.4
+      ],
+      "coefficients_by_band": {
+       "inside_2in_plus": {
+        "runs_per_point": 0.000883,
+        "interval": [
+         0.000618,
+         0.001158
+        ],
+        "pitches": 74752
+       },
+       "inside_0_2in": {
+        "runs_per_point": 0.000669,
+        "interval": [
+         0.0004,
+         0.000989
+        ],
+        "pitches": 30460
+       },
+       "outside_0_1in": {
+        "runs_per_point": -0.001484,
+        "interval": [
+         -0.001908,
+         -0.00109
+        ],
+        "pitches": 15546
+       },
+       "outside_1_2in": {
+        "runs_per_point": -0.000922,
+        "interval": [
+         -0.001386,
+         -0.000347
+        ],
+        "pitches": 15652
+       },
+       "outside_2_4in": {
+        "runs_per_point": -0.001455,
+        "interval": [
+         -0.001848,
+         -0.001082
+        ],
+        "pitches": 28267
+       },
+       "outside_4in_plus": {
+        "runs_per_point": -0.001473,
+        "interval": [
+         -0.001721,
+         -0.001166
+        ],
+        "pitches": 77707
+       }
+      },
+      "runs_6200_points": -111.6,
+      "runs_6200_points_interval": [
+       -130.1,
+       -98.0
+      ],
+      "outside_gain_points": 6.289,
+      "truth_policy_outside": {
+       "oracle_runs_per_pitch": -0.008313,
+       "oracle_runs_per_6200": -106.1,
+       "true_runs_per_pitch_points": -0.005608,
+       "true_runs_per_6200_points": -71.6,
+       "true_runs_per_pitch_side": -0.005709,
+       "true_runs_per_6200_side": -72.8,
+       "true_runs_per_pitch_bands": -0.005702,
+       "true_runs_per_6200_bands": -72.8,
+       "slope_true_value_on_fitted_part_at_aims": -0.001119,
+       "aim_pairs": 89984
+      },
+      "truth_policy_inside": {
+       "oracle_runs_per_pitch": -0.005634,
+       "oracle_runs_per_6200": -55.1,
+       "true_runs_per_pitch_points": 0.00089,
+       "true_runs_per_6200_points": 8.7,
+       "true_runs_per_pitch_side": -0.002236,
+       "true_runs_per_6200_side": -21.9,
+       "true_runs_per_pitch_bands": -0.002215,
+       "true_runs_per_6200_bands": -21.7,
+       "slope_true_value_on_fitted_part_at_aims": -0.000278,
+       "aim_pairs": 39757
+      },
+      "by_sigma": {
+       "0.6": {
+        "runs_6200_points": -111.6,
+        "runs_6200_repriced": -87.2,
+        "runs_6200_bands": -90.1,
+        "truth_policy_outside": {
+         "oracle_runs_per_pitch": -0.008313,
+         "oracle_runs_per_6200": -106.1,
+         "true_runs_per_pitch_points": -0.005608,
+         "true_runs_per_6200_points": -71.6,
+         "true_runs_per_pitch_side": -0.005709,
+         "true_runs_per_6200_side": -72.8,
+         "true_runs_per_pitch_bands": -0.005702,
+         "true_runs_per_6200_bands": -72.8,
+         "slope_true_value_on_fitted_part_at_aims": -0.001119,
+         "aim_pairs": 89984
+        }
+       }
+      },
+      "regression_against_truth": {
+       "coef_outside": -0.001391,
+       "coef_inside": 0.000799,
+       "coef_outside_with_true_outcome": -0.001156,
+       "coef_inside_with_true_outcome": 0.000725,
+       "slope_true_value_on_fitted_part_outside": -0.001183,
+       "slope_true_value_on_fitted_part_inside": 0.000736,
+       "slope_true_deviation_on_fitted_part_outside": 1.1348,
+       "slope_true_deviation_on_fitted_part_inside": 1.1937,
+       "corr_fitted_true_deviation_outside": 0.8826,
+       "sd_fitted_outside": 11.215,
+       "sd_true_outside": 14.42
+      },
+      "seconds": 128.3
+     },
+     "pitch": {
+      "own": -0.001197,
+      "own_interval": [
+       -0.001297,
+       -0.00109
+      ],
+      "own_inside": 0.000825,
+      "own_inside_interval": [
+       0.000688,
+       0.00095
+      ],
+      "within": -0.001233,
+      "within_interval": [
+       -0.001321,
+       -0.001132
+      ],
+      "within_held": -0.00122,
+      "within_held_interval": [
+       -0.001316,
+       -0.001136
+      ],
+      "own_held": -0.00118,
+      "own_held_interval": [
+       -0.001275,
+       -0.001089
+      ],
+      "placebo": -1.4e-05,
+      "placebo_interval": [
+       -9.4e-05,
+       7.5e-05
+      ],
+      "within_pa_correlation_outside": 0.1986,
+      "sd_points_own_part_outside": 11.215,
+      "test_pitches": 242384,
+      "outside_pitches_per_pa": 2.058,
+      "runs_6200_repriced": -74.0,
+      "runs_6200_bands": -73.5,
+      "runs_6200_bands_interval": [
+       -79.0,
+       -66.9
+      ],
+      "coefficients_by_band": {
+       "inside_2in_plus": {
+        "runs_per_point": 0.000998,
+        "interval": [
+         0.00081,
+         0.001135
+        ],
+        "pitches": 74752
+       },
+       "inside_0_2in": {
+        "runs_per_point": 0.000551,
+        "interval": [
+         0.000386,
+         0.000799
+        ],
+        "pitches": 30460
+       },
+       "outside_0_1in": {
+        "runs_per_point": -0.001333,
+        "interval": [
+         -0.001609,
+         -0.001069
+        ],
+        "pitches": 15546
+       },
+       "outside_1_2in": {
+        "runs_per_point": -0.001083,
+        "interval": [
+         -0.001348,
+         -0.000761
+        ],
+        "pitches": 15652
+       },
+       "outside_2_4in": {
+        "runs_per_point": -0.001282,
+        "interval": [
+         -0.001512,
+         -0.001089
+        ],
+        "pitches": 28267
+       },
+       "outside_4in_plus": {
+        "runs_per_point": -0.001145,
+        "interval": [
+         -0.001255,
+         -0.001012
+        ],
+        "pitches": 77707
+       }
+      },
+      "runs_6200_points": -96.1,
+      "runs_6200_points_interval": [
+       -104.1,
+       -87.5
+      ],
+      "outside_gain_points": 6.289,
+      "truth_policy_outside": {
+       "oracle_runs_per_pitch": -0.008313,
+       "oracle_runs_per_6200": -106.1,
+       "true_runs_per_pitch_points": -0.005608,
+       "true_runs_per_6200_points": -71.6,
+       "true_runs_per_pitch_side": -0.00568,
+       "true_runs_per_6200_side": -72.5,
+       "true_runs_per_pitch_bands": -0.005708,
+       "true_runs_per_6200_bands": -72.8,
+       "slope_true_value_on_fitted_part_at_aims": -0.001119,
+       "aim_pairs": 89984
+      },
+      "truth_policy_inside": {
+       "oracle_runs_per_pitch": -0.005634,
+       "oracle_runs_per_6200": -55.1,
+       "true_runs_per_pitch_points": 0.00089,
+       "true_runs_per_6200_points": 8.7,
+       "true_runs_per_pitch_side": -0.002249,
+       "true_runs_per_6200_side": -22.0,
+       "true_runs_per_pitch_bands": -0.002261,
+       "true_runs_per_6200_bands": -22.1,
+       "slope_true_value_on_fitted_part_at_aims": -0.000278,
+       "aim_pairs": 39757
+      },
+      "by_sigma": {
+       "0.6": {
+        "runs_6200_points": -96.1,
+        "runs_6200_repriced": -74.0,
+        "runs_6200_bands": -73.5,
+        "truth_policy_outside": {
+         "oracle_runs_per_pitch": -0.008313,
+         "oracle_runs_per_6200": -106.1,
+         "true_runs_per_pitch_points": -0.005608,
+         "true_runs_per_6200_points": -71.6,
+         "true_runs_per_pitch_side": -0.00568,
+         "true_runs_per_6200_side": -72.5,
+         "true_runs_per_pitch_bands": -0.005708,
+         "true_runs_per_6200_bands": -72.8,
+         "slope_true_value_on_fitted_part_at_aims": -0.001119,
+         "aim_pairs": 89984
+        }
+       }
+      },
+      "regression_against_truth": {
+       "coef_outside": -0.001197,
+       "coef_inside": 0.000825,
+       "coef_outside_with_true_outcome": -0.001156,
+       "coef_inside_with_true_outcome": 0.000725,
+       "slope_true_value_on_fitted_part_outside": -0.001183,
+       "slope_true_value_on_fitted_part_inside": 0.000736,
+       "slope_true_deviation_on_fitted_part_outside": 1.1348,
+       "slope_true_deviation_on_fitted_part_inside": 1.1937,
+       "corr_fitted_true_deviation_outside": 0.8826,
+       "sd_fitted_outside": 11.215,
+       "sd_true_outside": 14.42
+      },
+      "seconds": 129.9
+     }
+    },
+    {
+     "rep": 9,
+     "seed": 109,
+     "truth": {
+      "runs_per_point_outside": -0.001092,
+      "runs_per_point_outside_deviation_weighted": -0.001018,
+      "outside_test_pitches": 137839,
+      "sd_true_deviation_points_outside": 13.283,
+      "runs_per_point_inside": 0.000673,
+      "runs_per_point_inside_deviation_weighted": 0.000678,
+      "inside_test_pitches": 105434,
+      "sd_true_deviation_points_inside": 15.201,
+      "count_values": {
+       "0-0": 0.0016,
+       "0-1": -0.0672,
+       "0-2": -0.1466,
+       "1-0": 0.0486,
+       "1-1": -0.0329,
+       "1-2": -0.1279,
+       "2-0": 0.123,
+       "2-1": 0.036,
+       "2-2": -0.0802,
+       "3-0": 0.2194,
+       "3-1": 0.1584,
+       "3-2": 0.0364
+      },
+      "rows": 729098,
+      "hitters": 240,
+      "planted_deviation": true
+     },
+     "world_seconds": 0.3,
+     "pa": {
+      "own": -0.001277,
+      "own_interval": [
+       -0.001493,
+       -0.001095
+      ],
+      "own_inside": 0.000722,
+      "own_inside_interval": [
+       0.000444,
+       0.000967
+      ],
+      "within": -0.001298,
+      "within_interval": [
+       -0.001515,
+       -0.001088
+      ],
+      "within_held": -0.00108,
+      "within_held_interval": [
+       -0.001265,
+       -0.000899
+      ],
+      "own_held": -0.001088,
+      "own_held_interval": [
+       -0.001266,
+       -0.000917
+      ],
+      "placebo": 1e-05,
+      "placebo_interval": [
+       -0.000215,
+       0.000253
+      ],
+      "within_pa_correlation_outside": 0.2102,
+      "sd_points_own_part_outside": 10.341,
+      "test_pitches": 243273,
+      "outside_pitches_per_pa": 2.068,
+      "runs_6200_repriced": -71.6,
+      "runs_6200_bands": -74.2,
+      "runs_6200_bands_interval": [
+       -91.0,
+       -61.3
+      ],
+      "coefficients_by_band": {
+       "inside_2in_plus": {
+        "runs_per_point": 0.00074,
+        "interval": [
+         0.000445,
+         0.001095
+        ],
+        "pitches": 74934
+       },
+       "inside_0_2in": {
+        "runs_per_point": 0.000691,
+        "interval": [
+         0.000323,
+         0.001007
+        ],
+        "pitches": 30500
+       },
+       "outside_0_1in": {
+        "runs_per_point": -0.00148,
+        "interval": [
+         -0.001976,
+         -0.001073
+        ],
+        "pitches": 15433
+       },
+       "outside_1_2in": {
+        "runs_per_point": -0.000955,
+        "interval": [
+         -0.001464,
+         -0.000236
+        ],
+        "pitches": 15498
+       },
+       "outside_2_4in": {
+        "runs_per_point": -0.001131,
+        "interval": [
+         -0.001531,
+         -0.000834
+        ],
+        "pitches": 29358
+       },
+       "outside_4in_plus": {
+        "runs_per_point": -0.001392,
+        "interval": [
+         -0.001729,
+         -0.001113
+        ],
+        "pitches": 77550
+       }
+      },
+      "runs_6200_points": -92.3,
+      "runs_6200_points_interval": [
+       -108.0,
+       -79.2
+      ],
+      "outside_gain_points": 5.639,
+      "truth_policy_outside": {
+       "oracle_runs_per_pitch": -0.007304,
+       "oracle_runs_per_6200": -93.6,
+       "true_runs_per_pitch_points": -0.004731,
+       "true_runs_per_6200_points": -60.7,
+       "true_runs_per_pitch_side": -0.004813,
+       "true_runs_per_6200_side": -61.7,
+       "true_runs_per_pitch_bands": -0.004795,
+       "true_runs_per_6200_bands": -61.5,
+       "slope_true_value_on_fitted_part_at_aims": -0.000802,
+       "aim_pairs": 61935
+      },
+      "truth_policy_inside": {
+       "oracle_runs_per_pitch": -0.005139,
+       "oracle_runs_per_6200": -50.4,
+       "true_runs_per_pitch_points": 0.000594,
+       "true_runs_per_6200_points": 5.8,
+       "true_runs_per_pitch_side": -0.001997,
+       "true_runs_per_6200_side": -19.6,
+       "true_runs_per_pitch_bands": -0.001959,
+       "true_runs_per_6200_bands": -19.2,
+       "slope_true_value_on_fitted_part_at_aims": -1.3e-05,
+       "aim_pairs": 47925
+      },
+      "by_sigma": {
+       "0.6": {
+        "runs_6200_points": -92.3,
+        "runs_6200_repriced": -71.6,
+        "runs_6200_bands": -74.2,
+        "truth_policy_outside": {
+         "oracle_runs_per_pitch": -0.007304,
+         "oracle_runs_per_6200": -93.6,
+         "true_runs_per_pitch_points": -0.004731,
+         "true_runs_per_6200_points": -60.7,
+         "true_runs_per_pitch_side": -0.004813,
+         "true_runs_per_6200_side": -61.7,
+         "true_runs_per_pitch_bands": -0.004795,
+         "true_runs_per_6200_bands": -61.5,
+         "slope_true_value_on_fitted_part_at_aims": -0.000802,
+         "aim_pairs": 61935
+        }
+       }
+      },
+      "regression_against_truth": {
+       "coef_outside": -0.001277,
+       "coef_inside": 0.000722,
+       "coef_outside_with_true_outcome": -0.001122,
+       "coef_inside_with_true_outcome": 0.000729,
+       "slope_true_value_on_fitted_part_outside": -0.001143,
+       "slope_true_value_on_fitted_part_inside": 0.000747,
+       "slope_true_deviation_on_fitted_part_outside": 1.1177,
+       "slope_true_deviation_on_fitted_part_inside": 1.143,
+       "corr_fitted_true_deviation_outside": 0.8702,
+       "sd_fitted_outside": 10.341,
+       "sd_true_outside": 13.283
+      },
+      "seconds": 130.2
+     },
+     "pitch": {
+      "own": -0.001248,
+      "own_interval": [
+       -0.001342,
+       -0.001159
+      ],
+      "own_inside": 0.000842,
+      "own_inside_interval": [
+       0.000673,
+       0.000996
+      ],
+      "within": -0.001266,
+      "within_interval": [
+       -0.001368,
+       -0.001159
+      ],
+      "within_held": -0.00126,
+      "within_held_interval": [
+       -0.001359,
+       -0.001156
+      ],
+      "own_held": -0.001249,
+      "own_held_interval": [
+       -0.001371,
+       -0.001148
+      ],
+      "placebo": -8.4e-05,
+      "placebo_interval": [
+       -0.000185,
+       1.3e-05
+      ],
+      "within_pa_correlation_outside": 0.2102,
+      "sd_points_own_part_outside": 10.341,
+      "test_pitches": 243273,
+      "outside_pitches_per_pa": 2.068,
+      "runs_6200_repriced": -69.1,
+      "runs_6200_bands": -71.3,
+      "runs_6200_bands_interval": [
+       -76.9,
+       -64.0
+      ],
+      "coefficients_by_band": {
+       "inside_2in_plus": {
+        "runs_per_point": 0.000934,
+        "interval": [
+         0.000769,
+         0.001128
+        ],
+        "pitches": 74934
+       },
+       "inside_0_2in": {
+        "runs_per_point": 0.000687,
+        "interval": [
+         0.000447,
+         0.000922
+        ],
+        "pitches": 30500
+       },
+       "outside_0_1in": {
+        "runs_per_point": -0.001616,
+        "interval": [
+         -0.001876,
+         -0.001387
+        ],
+        "pitches": 15433
+       },
+       "outside_1_2in": {
+        "runs_per_point": -0.000833,
+        "interval": [
+         -0.001146,
+         -0.00053
+        ],
+        "pitches": 15498
+       },
+       "outside_2_4in": {
+        "runs_per_point": -0.001103,
+        "interval": [
+         -0.001326,
+         -0.000872
+        ],
+        "pitches": 29358
+       },
+       "outside_4in_plus": {
+        "runs_per_point": -0.001342,
+        "interval": [
+         -0.001483,
+         -0.001207
+        ],
+        "pitches": 77550
+       }
+      },
+      "runs_6200_points": -90.2,
+      "runs_6200_points_interval": [
+       -97.0,
+       -83.8
+      ],
+      "outside_gain_points": 5.639,
+      "truth_policy_outside": {
+       "oracle_runs_per_pitch": -0.007304,
+       "oracle_runs_per_6200": -93.6,
+       "true_runs_per_pitch_points": -0.004731,
+       "true_runs_per_6200_points": -60.7,
+       "true_runs_per_pitch_side": -0.004788,
+       "true_runs_per_6200_side": -61.4,
+       "true_runs_per_pitch_bands": -0.004779,
+       "true_runs_per_6200_bands": -61.3,
+       "slope_true_value_on_fitted_part_at_aims": -0.000802,
+       "aim_pairs": 61935
+      },
+      "truth_policy_inside": {
+       "oracle_runs_per_pitch": -0.005139,
+       "oracle_runs_per_6200": -50.4,
+       "true_runs_per_pitch_points": 0.000594,
+       "true_runs_per_6200_points": 5.8,
+       "true_runs_per_pitch_side": -0.002047,
+       "true_runs_per_6200_side": -20.1,
+       "true_runs_per_pitch_bands": -0.002006,
+       "true_runs_per_6200_bands": -19.7,
+       "slope_true_value_on_fitted_part_at_aims": -1.3e-05,
+       "aim_pairs": 47925
+      },
+      "by_sigma": {
+       "0.6": {
+        "runs_6200_points": -90.2,
+        "runs_6200_repriced": -69.1,
+        "runs_6200_bands": -71.3,
+        "truth_policy_outside": {
+         "oracle_runs_per_pitch": -0.007304,
+         "oracle_runs_per_6200": -93.6,
+         "true_runs_per_pitch_points": -0.004731,
+         "true_runs_per_6200_points": -60.7,
+         "true_runs_per_pitch_side": -0.004788,
+         "true_runs_per_6200_side": -61.4,
+         "true_runs_per_pitch_bands": -0.004779,
+         "true_runs_per_6200_bands": -61.3,
+         "slope_true_value_on_fitted_part_at_aims": -0.000802,
+         "aim_pairs": 61935
+        }
+       }
+      },
+      "regression_against_truth": {
+       "coef_outside": -0.001248,
+       "coef_inside": 0.000842,
+       "coef_outside_with_true_outcome": -0.001122,
+       "coef_inside_with_true_outcome": 0.000729,
+       "slope_true_value_on_fitted_part_outside": -0.001143,
+       "slope_true_value_on_fitted_part_inside": 0.000747,
+       "slope_true_deviation_on_fitted_part_outside": 1.1177,
+       "slope_true_deviation_on_fitted_part_inside": 1.143,
+       "corr_fitted_true_deviation_outside": 0.8702,
+       "sd_fitted_outside": 10.341,
+       "sd_true_outside": 13.283
+      },
+      "seconds": 130.0
+     }
+    }
+   ]
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T17:39:24.522001+00:00",
+ "seconds": 2554.8
+}
