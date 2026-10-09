@@ -58,7 +58,7 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   development run: calibration 0.95 outside; regression figure -25.7 per 6,200 (pitch estimand), structural -43.3. Lane runs
   in flight: ten worlds per kind for VALUE-17 (both estimands) and for VALUE-18 (structural on); receipts
   research/discovery-value_synth-<run>.json. Decision rules are in the ledger rows: if they hold, VALUE-18F (frozen, scored
-  once on the untouched months) replaces the stated 32 runs; the Report tab's aim plan should then choose cells by
+  once on the later-period months) replaces the stated 32 runs (done: VALUE-18F, 30 to 45); the Report tab's aim plan now chooses cells by
   structural value (tools/brl_report.py pair(): needs a ball-in-play value grid and the whiff model at scattered points).
   value2_study options added: estimand 'pitch' (telescoping realized value, pre-action controls), pool_from_train,
   reprice_boundary (side), reprice_bands (six distance bands), reprice_structural (PAModels.blocks_at and

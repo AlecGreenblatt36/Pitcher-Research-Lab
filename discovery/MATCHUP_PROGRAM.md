@@ -123,8 +123,10 @@ adversarial stress test of its estimator registered (VALUE-17) before the figure
   pricing (VALUE-01F, VALUE-02F) mixed it in and was withdrawn when a fresh placebo failed. Each hitter's own part (his
   map minus the average same-side map) passes the placebo, holds among pitches at the same spot and with the plate
   appearance's other pitches fixed. Aiming each outside pitch at the best third of the pitcher's own spots of that
-  pitch type for this hitter, at typical command, is worth about 32 runs over a team's season (21 to 44) on the
-  untouched months; in-zone aiming is not established.
+  pitch type for this hitter, at typical command, is worth about 30 to 45 runs over a team's season on the later-period
+  months (VALUE-18F: 43.5 [40.7, 46.6] priced by the engine's components, 29 [25, 34] by realized outcomes; the earlier
+  32 was the regression's figure, which synthetic worlds showed overstating its own choices by 1.3 to 2.0 times);
+  in-zone aiming is not stated.
 
 - **Each batter's own zone** (MATCHUP-08F): the league swing model on each batter's zone beats the fixed zone on the
   untouched months (+0.59 nats per 1,000 decisions [0.28, 0.88]); hitter maps already carry it. Part of a hitter's

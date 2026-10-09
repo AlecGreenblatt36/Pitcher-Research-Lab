@@ -64,13 +64,20 @@ corrected there (VALUE-01F and VALUE-02F were withdrawn and VALUE-08F replaced t
 horizon work inspected 2026, so a new registration cannot restore them as untouched. Forward confirmation: the 2026
 postseason and 2027, scored under predeclared rules.
 
-The aiming value (about 32 runs per team-season) is estimated policy potential, not observed runs saved. It depends
-on identification (pitchers do not aim at hitter-specific spots on average, which does not by itself establish that
-exposure to the map is as good as random), an assumed 0.6 ft of command scatter per axis, menus of spots taken from
-the evaluation period, limited hitter adaptation, and an interval that does not propagate every source of
-uncertainty. An adversarial stress test of the estimator (pre-action controls only, repricing scattered pitches at
-their realized locations, menus from earlier data, false-positive rate and interval coverage across many synthetic
-repetitions) is registered before the figure is used again.
+The aiming value is estimated policy potential, not observed runs saved. It is stated as a range, about 30 to 45
+runs over a team's season from outside pitches alone on the later-period months (VALUE-18F): 43.5 [40.7, 46.6] when
+each aim is priced by the engine's own components (the hitter's calibrated own swing part times the value of a swing
+against a take from the whiff, called-strike, foul and contact models and the count values), 29 [25, 34] when the
+same kind of choice is priced by a regression of realized pitch outcomes on the own part. The two disagree by about
+38% in the per-point value of an extra swing, and the range carries that disagreement. The figure depends on
+identification (pitchers do not aim at hitter-specific spots on average, which does not by itself establish that
+exposure to the map is as good as random), an assumed 0.6 ft of command scatter per axis, limited hitter adaptation,
+and intervals that do not propagate every source of uncertainty (the structural interval resamples hitters and the
+calibration, not the maps' own noise or the component models). The estimator was stress-tested in synthetic seasons
+with known truth (VALUE-17, VALUE-18): the earlier regression-times-gain figure overstated the true value of its
+chosen spots by 1.3 to 2.0 times, the structural pricing priced its own choices within 5% in every world with
+location structure and read zero in worlds with none, and its choices were worth 1.3 to 1.8 times the old method's.
+The earlier stated figure of 32 runs was the regression's and is superseded.
 
 ## The matchup report
 
