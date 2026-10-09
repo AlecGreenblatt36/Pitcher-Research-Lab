@@ -983,3 +983,91 @@ def timing3_study(sv, cols: dict, params: dict, stage) -> dict:
     res['whiffs'] = wh_out
     stage('whiffs')
     return res
+
+
+# ---------------------------------------------------------------- TIMING-03F: the sequence effects scored once on the untouched set
+def timing_final_study(sv, cols: dict, params: dict, stage) -> dict:
+    """TIMING-03F. TIMING-03's contact-depth design (cell fixed effects for pitcher, pitch type, season and the previous
+    pitch's outcome kind; full controls; the same variants) scored once on the untouched set: every contact swing from
+    August 1, 2026 with a previous pitch in the plate appearance. Hitters' usual depth from all earlier days."""
+    if not params.get('final_eval') or not params.get('frozen_commit'):
+        raise ValueError('timing_final runs only as the registered final evaluation of a frozen commit')
+    res = {}
+    desc = label(cols, 'description')
+    swing = np.isin(desc, WHIFF + CONTACT); whiff = np.isin(desc, WHIFF); contact = np.isin(desc, CONTACT)
+    batter = cols['batter'].astype(np.int64); day = cols['day'].astype(np.int64)
+    G = geometry(sv, cols); year = G['year']
+    ft = flight_time(sv, cols) * 1000.0
+    p1 = _previous(cols, 1); has1 = p1 >= 0; q1 = np.maximum(p1, 0)
+    f1 = np.where(has1, ft[q1], np.nan)
+    called = desc == 'called_strike'; ball = np.isin(desc, ('ball', 'blocked_ball'))
+    k_ball, k_cs, k_foul, k_miss = (has1 & ball[q1]), (has1 & called[q1]), (has1 & contact[q1]), (has1 & whiff[q1])
+    ptype = label(cols, 'pitch_type'); grp = np.asarray([GROUPS.get(t, 6) for t in ptype])
+    fam = np.where(grp <= 2, 0, np.where(grp <= 4, 1, np.where(grp == 5, 2, 3)))
+    fam1 = np.where(has1, fam[q1], -1)
+    tcode = np.unique(ptype, return_inverse=True)[1]
+    stand_r = label(cols, 'stand') == 'R'; throw_r = label(cols, 'p_throws') == 'R'
+    u = np.where(stand_r, G['x'], -G['x']); z = G['z']
+    u1 = np.where(has1, u[q1], np.nan); z1 = np.where(has1, z[q1], np.nan)
+    inz1 = (np.abs(u1) <= 0.83) & (z1 >= 1.5) & (z1 <= 3.5)
+    iy = cols['intercept_ball_minus_batter_pos_y_inches'].astype(np.float64)
+    train_year, test_year = int(params.get('train_year', 2025)), int(params.get('test_year', 2026))
+    ci = contact & np.isfinite(iy)
+    n_y, s_y, q_y = prior_stats(batter, day, iy, ci)
+    lm = float(np.nanmean(iy[ci & (year == train_year)])); lv = float(np.nanvar(iy[ci & (year == train_year)]))
+    mu_y = (s_y + 50 * lm) / (n_y + 50)
+    with np.errstate(invalid='ignore', divide='ignore'):
+        var_h = np.where(n_y > 1, (q_y - s_y * s_y / np.maximum(n_y, 1)) / np.maximum(n_y - 1, 1), lv)
+    sig_y = np.sqrt((np.maximum(n_y - 1, 0) * var_h + 50 * lv) / (np.maximum(n_y - 1, 0) + 50))
+    pkey = cols['pitcher'].astype(np.int64) * 100 + (year - 2000); gkey = pkey * 1000 + tcode.astype(np.int64)
+    def center(v, key, rows):
+        ug, gi = np.unique(key[rows], return_inverse=True); cnt = np.bincount(gi)
+        out = np.full(len(v), np.nan); out[rows] = _demean(v[rows], gi, cnt); return out
+    base_ok = ci & np.isfinite(ft) & np.isfinite(u) & np.isfinite(z) & (n_y >= 20)
+    ok = base_ok & has1 & np.isfinite(f1) & np.isfinite(u1) & np.isfinite(z1) & (k_ball | k_cs | k_foul | k_miss)
+    ftc = center(ft, gkey, base_ok) / 10.0
+    f1c = center(np.where(ok, f1, 0.0), gkey, ok) / 10.0
+    cnt_code = np.clip(cols['balls'], 0, 3) * 3 + np.clip(cols['strikes'], 0, 2)
+    pno = np.clip(cols['pitch_number'], 1, 8).astype(float)
+    stage('sequence and priors')
+
+    kind = np.where(k_ball, 0, np.where(k_cs, 1, np.where(k_foul, 2, 3)))
+
+    def within(rows, cell, cols_):
+        # fixed effects for every cell (pitcher-type-season by the previous pitch's outcome kind, and more when asked):
+        # the previous pitch's flight is compared only among pitches of the same type, same pitcher and season, after
+        # the same kind of previous outcome
+        ug, gi = np.unique(cell[rows], return_inverse=True); cnt = np.bincount(gi); keep = cnt[gi] >= 2
+        names = list(cols_)
+        X = np.column_stack([_demean(np.asarray(cols_[k], dtype=np.float64), gi, cnt) for k in names])[keep]
+        return names, X, _demean(iy[rows] - mu_y[rows], gi, cnt)[keep], keep
+
+    def design(r):
+        c_ = {'own_flight': ftc[r]}
+        for q, nm in enumerate(('after_ball', 'after_called_strike', 'after_foul', 'after_miss')):
+            c_['prev_flight_' + nm] = np.where(kind[r] == q, f1[r] / 10.0, 0.0)
+        for cc in range(1, 12):
+            c_[f'count_{cc}'] = (cnt_code[r] == cc).astype(float)
+        c_.update({'pitch_no': pno[r], 'prev_side': u1[r], 'prev_height': z1[r] - 2.5, 'prev_in_zone': inz1[r].astype(float),
+                   'side': u[r], 'side_abs': np.abs(u[r]), 'height': z[r] - 2.5, 'height_sq': (z[r] - 2.5) ** 2, 'platoon': (stand_r == throw_r)[r].astype(float)})
+        return c_
+    keys = ['prev_flight_after_ball', 'prev_flight_after_called_strike', 'prev_flight_after_foul', 'prev_flight_after_miss', 'own_flight']
+    cell_kind = gkey * 10 + kind
+    cell_fam = cell_kind * 10 + (fam1 + 1)
+    depth = {}
+    for yr in ('untouched',):
+        r0 = ok & (day >= UNTOUCHED_FROM)
+        if r0.sum() < 5000:
+            continue
+        out = {}
+        for vname, rows, cell in (('full_controls', r0, cell_kind), ('within_previous_family', r0, cell_fam),
+                                  ('alternations', r0 & (fam1 != fam), cell_kind), ('repeats', r0 & (fam1 == fam), cell_kind)):
+            names, X, y, keep = within(rows, cell, design(rows))
+            b, lo, hi = _ols(X, y, cols['game_pk'][rows][keep]); j = {n_: q for q, n_ in enumerate(names)}
+            out[vname] = {'contacts': int(keep.sum()), **{k: [round(float(b[j[k]]), 4), round(float(lo[j[k]]), 4), round(float(hi[j[k]]), 4)] for k in keys}}
+        depth[yr] = out
+        stage(f'depth {yr}')
+    res['contact_depth'] = depth
+    res['rows'] = {'untouched_contacts_with_previous': int((ok & (day >= UNTOUCHED_FROM)).sum()),
+                   'untouched_days': [str(date.fromordinal(int(day[ok & (day >= UNTOUCHED_FROM)].min()))), str(date.fromordinal(int(day[ok & (day >= UNTOUCHED_FROM)].max())))] if (ok & (day >= UNTOUCHED_FROM)).any() else None}
+    return res
