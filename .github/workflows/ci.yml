@@ -2,6 +2,7 @@ name: CI
 
 on:
   push:
+    branches-ignore: ['diag/**', 'tmp-**']      # lane triggers carry commits CI already checked on their source branch
   pull_request:
 
 permissions:
