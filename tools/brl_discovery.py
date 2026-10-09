@@ -7929,6 +7929,19 @@ def zone_audit(T: dict, params: dict, stage) -> dict:
     return res
 
 
+
+def environment_record() -> dict:
+    """ENG-01: the versions a run used, kept in its receipt so a result can be reproduced (python, numpy, scipy, scikit-learn, pandas, the commit)."""
+    import platform
+    from importlib import metadata
+    out = {'python': platform.python_version(), 'commit': os.environ.get('GITHUB_SHA')}
+    for pkg in ('numpy', 'scipy', 'scikit-learn', 'pandas', 'cryptography'):
+        try:
+            out[pkg] = metadata.version(pkg)
+        except metadata.PackageNotFoundError:
+            out[pkg] = None
+    return out
+
 def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']
     from cloud.security import unseal, key_bytes
@@ -7940,6 +7953,7 @@ def main():
     run_id = os.environ.get('GITHUB_RUN_ID', 'local')
     receipt = {'schema': 'brl.discovery-receipt.v1', 'experiment': experiment, 'run_id': run_id, 'params': params,
                'started_at': datetime.now(timezone.utc).isoformat(), 'stages': []}
+    receipt['environment'] = environment_record()
     t0 = time.time()
 
     def stage(name):
