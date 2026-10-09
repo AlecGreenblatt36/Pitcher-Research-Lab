@@ -515,6 +515,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   var app = document.getElementById("app");
   var state = { variant: {}, boxSide: {}, playSide: {}, muMetric: "obp", rpMetric: "chase", rpPair: {}, rpCount: "all" };
   var REPORTS = "https://raw.githubusercontent.com/AlecGreenblatt36/Pitcher-Research-Lab/brl-live-data/public/reports/";
+  var TOTAL_TAUGHT = { sim: 0.32, line: 0.78, shift: -0.543, from: "2026-10-10" };   /* TOTALS-03: expected total taught by results, fixed cross-season weights */
   var RP = {};
 
   /* ---------- small helpers ---------- */
@@ -2307,7 +2308,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (tr) {
       var mkt2 = D.market && D.market[f.game_pk], mline = "";
       if (mkt2 && mkt2.over_under != null) mline = " Betting market total: " + mkt2.over_under + (mkt2.p_over != null ? " (over " + pct(mkt2.p_over) + ")" : "") + ".";
-      h += '<section class="sec"><h2>Total runs</h2><p class="lede">Most likely ' + mode(tr) + ". Half of games land between " + quant(tr, .25) + " and " + quant(tr, .75) + ". " + pct(probAtLeast(tr, 10)) + " reach 10 or more." + esc(mline) + "</p></section>";
+      var taughtTotal = (mkt2 && mkt2.over_under != null && f.date >= TOTAL_TAUGHT.from) ? (TOTAL_TAUGHT.sim * mean(tr) + TOTAL_TAUGHT.line * Number(mkt2.over_under) + TOTAL_TAUGHT.shift) : null;
+      h += '<section class="sec"><h2>Total runs</h2><p class="lede">' + (taughtTotal != null ? "Expected " + taughtTotal.toFixed(1) + " runs: our best number, the simulator\'s " + mean(tr).toFixed(1) + " combined with the market total (in replays of 2025 and 2026 the combination beat the market line on its own). " : "Expected " + mean(tr).toFixed(1) + " runs. ") +
+        "Most likely " + mode(tr) + ". Half of games land between " + quant(tr, .25) + " and " + quant(tr, .75) + ". " + pct(probAtLeast(tr, 10)) + " reach 10 or more." + esc(mline) + "</p></section>";
     }
 
     h += '<section class="sec"><h2>Starting pitchers</h2><ul class="range-list">';
