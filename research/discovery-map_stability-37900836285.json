@@ -1,0 +1,90 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "map_stability",
+ "run_id": "37900836285",
+ "params": {
+  "experiment": "map_stability",
+  "seasons": [
+   2023,
+   2024,
+   2025
+  ]
+ },
+ "started_at": "2026-10-09T07:50:57.627957+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 9.6
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 19.4
+  },
+  {
+   "stage": "league",
+   "at_seconds": 60.0
+  },
+  {
+   "stage": "maps",
+   "at_seconds": 64.7
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985
+ },
+ "results": {
+  "seasons_2023_24_vs_2025": {
+   "all_cells": {
+    "hitters": 398,
+    "median": 0.609,
+    "quartiles": [
+     0.384,
+     0.76
+    ],
+    "mean": 0.545
+   },
+   "outside_cells": {
+    "hitters": 398,
+    "median": 0.659,
+    "quartiles": [
+     0.411,
+     0.817
+    ],
+    "mean": 0.568
+   }
+  },
+  "split_halves_2025": {
+   "all_cells": {
+    "hitters": 368,
+    "median": 0.591,
+    "quartiles": [
+     0.416,
+     0.75
+    ],
+    "mean": 0.549
+   },
+   "outside_cells": {
+    "hitters": 368,
+    "median": 0.619,
+    "quartiles": [
+     0.436,
+     0.795
+    ],
+    "mean": 0.575
+   }
+  },
+  "trait_share": {
+   "all_cells": 0.82,
+   "outside_cells": 0.862
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T07:52:02.455895+00:00",
+ "seconds": 64.8
+}
