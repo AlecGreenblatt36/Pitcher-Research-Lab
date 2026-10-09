@@ -1,5 +1,13 @@
 # Baseball Research Lab handoff
 
+## Standing rule from Alec (October 9, 2026, 7:43 a.m. Eastern)
+
+A change that is proven to make a significant improvement goes live without waiting for his approval: it must pass
+its registered gates in full-season replays of more than one season (or, for an invention, hold up under stress tests
+across seasons), and the ledger row says which gate it passed. Below-floor effects (too small for the replay gates to
+see) are not covered and stay queued. Publishing new pages, outside contact and costs still need his approval; the
+discovery page stays private.
+
 ## Current checkpoint, October 8, 2026, 5 p.m. Eastern (Claude in charge)
 
 Read this section first, then LEDGER.md (every experiment with its registered prediction, result and decision). The
@@ -33,7 +41,7 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
-### In flight (updated 11:30 a.m. Eastern October 9)
+### In flight (updated 7:45 a.m. Eastern October 9; earlier stamps in this section ran ahead of the clock)
 
 - Recorded since 3:45 a.m.: COMMAND-01 failed (early-start zone and waste rates add nothing beyond velocity);
   FRAMING-01 passed (the challenge system cut the spread of catcher framing to 0.67 of 2025's); PRESSURE-01 (hitters
