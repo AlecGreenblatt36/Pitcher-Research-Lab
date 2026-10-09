@@ -4964,6 +4964,209 @@ def warmup_study(T: dict, H, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- CHANGE-01: timing carried across a pitching change
+def _fe_lgo(rows, X, y, bkey, pkey, games, names, reps, rng, iters=40):
+    """Least squares of y on X with batter-season and pitcher-season effects estimated from the player's other games
+    (leave-game-out, WARMUP-01's design), intervals from resampling games with the effects held."""
+    ub, ib = np.unique(bkey[rows], return_inverse=True); up, ip = np.unique(pkey[rows], return_inverse=True)
+    cb = np.bincount(ib).astype(float); cp = np.bincount(ip).astype(float)
+    Xr = X[rows].astype(np.float64); yr = y[rows].astype(np.float64)
+    Z = np.column_stack([Xr, yr])
+    for _ in range(iters):
+        for ids, cnt in ((ib, cb), (ip, cp)):
+            for j in range(Z.shape[1]):
+                Z[:, j] -= (np.bincount(ids, weights=Z[:, j], minlength=len(cnt)) / cnt)[ids]
+    beta = np.linalg.lstsq(Z[:, :-1], Z[:, -1], rcond=None)[0]
+    gr = games[rows]
+    gb_key = ib.astype(np.int64) * 10_000_000 + (gr % 10_000_000); gp_key = ip.astype(np.int64) * 10_000_000 + (gr % 10_000_000)
+    ugb, igb = np.unique(gb_key, return_inverse=True); ugp, igp = np.unique(gp_key, return_inverse=True)
+    cgb = np.bincount(igb).astype(float); cgp = np.bincount(igp).astype(float)
+    keep = (cb[ib] - cgb[igb] >= 1) & (cp[ip] - cgp[igp] >= 1)
+    for _ in range(2):
+        r = yr - Xr @ beta; a_ = np.zeros(len(cb)); b_ = np.zeros(len(cp))
+        for _ in range(30):
+            a_ = np.bincount(ib, weights=r - b_[ip], minlength=len(cb)) / cb
+            b_ = np.bincount(ip, weights=r - a_[ib], minlength=len(cp)) / cp
+        ra = r - b_[ip]; rb_ = r - a_[ib]
+        sa = np.bincount(ib, weights=ra, minlength=len(cb)); sag = np.bincount(igb, weights=ra, minlength=len(cgb))
+        sp = np.bincount(ip, weights=rb_, minlength=len(cp)); spg = np.bincount(igp, weights=rb_, minlength=len(cgp))
+        with np.errstate(invalid='ignore', divide='ignore'):
+            a_lgo = (sa[ib] - sag[igb]) / (cb[ib] - cgb[igb]); b_lgo = (sp[ip] - spg[igp]) / (cp[ip] - cgp[igp])
+        yadj = (yr - a_lgo - b_lgo)[keep]; A = np.column_stack([np.ones(keep.sum()), Xr[keep]])
+        beta = np.linalg.lstsq(A, yadj, rcond=None)[0][1:]
+    A = np.column_stack([np.ones(keep.sum()), Xr[keep]])
+    gk = gr[keep]; ug = np.unique(gk); gi = np.searchsorted(ug, gk); draws = []
+    for _ in range(reps):
+        w = np.bincount(rng.integers(0, len(ug), len(ug)), minlength=len(ug))[gi].astype(float)
+        Aw = A * w[:, None]
+        draws.append(np.linalg.solve(Aw.T @ A + np.eye(A.shape[1]) * 1e-9, Aw.T @ yadj)[1:])
+    draws = np.asarray(draws)
+    out = {nm: [round(float(beta[i]), 6), round(float(np.percentile(draws[:, i], 2.5)), 6), round(float(np.percentile(draws[:, i], 97.5)), 6)] for i, nm in enumerate(names)}
+    out['rows_used'] = int(keep.sum())
+    return out
+
+
+def change_study(T: dict, H, params: dict, stage) -> dict:
+    """CHANGE-01. Does a hitter's timing, calibrated on the pitcher he has been facing, carry into his first plate
+    appearances against a reliever? TIMING-01 to 03F: hitters do not fully re-time between one pitcher's pitches and the
+    last pitch's speed moves the next contact. If the calibration also carries across a pitching change, a reliever who
+    throws harder than the pitcher he replaces meets hitters who are late, one who throws softer meets hitters who are
+    early, for his first batters, fading as the hitters watch him.
+    Speed gap = the reliever's usual fastball speed (four-seam and sinker on his earlier days of the season, at least 30)
+    minus the mean of the last 10 fastballs of the pitcher he replaced (at least 5). Plate appearances in relievers' first
+    meetings with each hitter (feed, development seasons). Run value per plate appearance with leave-game-out
+    batter-season and pitcher-season effects (WARMUP-01's design): the reliever's own level and the hitter's are absorbed,
+    so the gap acts through who pitched before him. Pitch level: whiff per swing on his fastballs to those hitters.
+    Secondary: the absolute gap (it also picks up the curvature of the run scale), the previous pitcher's usual speed
+    instead of his last fastballs, and the out-of-sample log loss of the gap terms on a plate-appearance model with both
+    players' earlier rates. Two designs were dropped after the synthetic checks: the gap to the pitcher who follows
+    (selected by how the reliever did: -0.0017 with nothing planted) and a within-entry gap from each hitter's own last
+    fastballs (+0.0014 to +0.0037 with nothing planted)."""
+    import pandas as pd
+    from sklearn.linear_model import LogisticRegression
+    res = {}
+    N_LAST = int(params.get('last_fastballs', 10)); MIN_LAST = int(params.get('min_last', 5)); MIN_NORM = int(params.get('min_norm', 30))
+    real = T['group'] != -1
+    gh = T['game'].astype(np.int64) * 2 + T['half'].astype(np.int64)
+    order = np.lexsort((T['pitch_no'], T['ab'], gh)); T = take(T, order); real = real[order]; gh = gh[order]
+    n = len(gh)
+    v0 = T['v0'].astype(np.float64)
+    fb = real & np.isin(T['group'], (0, 1)) & np.isfinite(v0)
+    # pitcher blocks: contiguous runs of one pitcher inside a fielding side's pitch sequence
+    newblk = np.r_[True, (gh[1:] != gh[:-1]) | (T['pitcher'][1:] != T['pitcher'][:-1])]
+    blk = np.cumsum(newblk) - 1; nblk = int(blk[-1]) + 1
+    bstart = np.flatnonzero(newblk)
+    side_new = np.r_[True, gh[bstart][1:] != gh[bstart][:-1]]
+    bpos = np.arange(nblk) - np.maximum.accumulate(np.where(side_new, np.arange(nblk), 0))   # 0 = the side's first pitcher
+    # first and last fastballs of each block
+    fi = np.flatnonzero(fb); bb = blk[fi]; vv = v0[fi]
+    cnt_b = np.bincount(bb, minlength=nblk)
+    fpos_new = np.r_[True, bb[1:] != bb[:-1]]
+    pos = np.arange(len(bb)) - np.maximum.accumulate(np.where(fpos_new, np.arange(len(bb)), 0)); rpos = cnt_b[bb] - 1 - pos
+    lastm = rpos < N_LAST
+    last_n = np.bincount(bb[lastm], minlength=nblk); last_mean = np.bincount(bb[lastm], weights=vv[lastm], minlength=nblk) / np.maximum(last_n, 1)
+    # each pitcher's usual fastball speed: his earlier days of the season
+    pks = T['pitcher'].astype(np.int64) * 10000 + T['season'].astype(np.int64)
+    on, ov = _prior_by_day(pks, T['day'].astype(np.int64), v0, fb)
+    norm_n = on[bstart]; norm = np.where(norm_n > 0, ov[bstart] / np.maximum(norm_n, 1), np.nan)
+    have_norm = norm_n >= MIN_NORM
+    prev_ok = (bpos > 0) & np.r_[False, last_n[:-1] >= MIN_LAST]
+    prev_seen = np.r_[np.nan, last_mean[:-1]]
+    gap_b = np.where(prev_ok & have_norm, norm - prev_seen, np.nan)
+    prev_norm = np.r_[np.nan, norm[:-1]]; prev_norm_ok = np.r_[False, have_norm[:-1]] & (bpos > 0)
+    stage('blocks')
+    # plate appearances
+    pak = T['game'].astype(np.int64) * 1000 + T['ab'].astype(np.int64)
+    first = np.r_[True, pak[1:] != pak[:-1]]
+    pa_id = np.cumsum(first) - 1
+    P = {k: v[first] for k, v in T.items()}
+    P['blk'] = blk[first]
+    npitch = np.bincount(pa_id, weights=real.astype(float))
+    df = pd.DataFrame({'game': P['game'], 'half': P['half'], 'batter': P['batter'], 'pitcher': P['pitcher'], 'np': npitch})
+    df['k'] = df.groupby(['game', 'batter']).cumcount()
+    df['F'] = df.groupby(['game', 'batter', 'pitcher']).cumcount()
+    df['bf'] = df.groupby(['game', 'pitcher']).cumcount()
+    df['team_pa'] = df.groupby(['game', 'half']).cumcount()
+    df['sub'] = df.groupby(['game', 'batter'])['team_pa'].transform('min') >= 9
+    df['load'] = df.groupby(['game', 'pitcher'])['np'].cumsum() - df['np']
+    k = df['k'].to_numpy(); F = df['F'].to_numpy(); bf = df['bf'].to_numpy(); sub = df['sub'].to_numpy()
+    load = df['load'].to_numpy(float)
+    b_of = P['blk']
+    rel = bpos[b_of] > 0
+    gap = gap_b[b_of]; nrm = norm[b_of]
+    # base-out state and score from the plate-appearance history
+    Hk = (H['game_pk'].astype(np.int64) * 1000 + H['at_bat_number'].astype(np.int64) - 1).to_numpy()
+    Hs = H.set_index(pd.Index(Hk)); Hs = Hs[~Hs.index.duplicated()]
+    st = Hs.reindex(P['game'].astype(np.int64) * 1000 + P['ab'].astype(np.int64))
+    outs = st['outs_when_up'].to_numpy(float); r1 = st['on_1b'].notna().to_numpy(float); r2 = st['on_2b'].notna().to_numpy(float); r3 = st['on_3b'].notna().to_numpy(float)
+    sd_ = st['bat_score_diff'].to_numpy(float)
+    have_state = np.isfinite(outs) & np.isfinite(sd_)
+    ok = (P['out7'] >= 0) & have_state & (P['bunt_pa'] == 0)
+    y7 = P['out7'].astype(int); rv = LW7[np.clip(y7, 0, 6)]
+    inn = np.clip(P['inning'], 1, 10)
+    G = np.column_stack([(P['stand_r'] == P['throw_r']).astype(float), (P['half'] == 1).astype(float)]
+                        + [np.nan_to_num(outs) == o for o in (1, 2)] + [r1, r2, r3, r1 * r2, r2 * r3, r1 * r3]
+                        + [np.clip(np.nan_to_num(sd_), -4, 4) == v for v in (-4, -3, -2, -1, 1, 2, 3, 4)]
+                        + [(inn == i) for i in range(2, 11)]).astype(float)
+    early = (bf <= 2).astype(float); later = ((bf >= 3) & (bf <= 5)).astype(float); late = (bf >= 6).astype(float)
+    Bd = np.column_stack([(bf == 1), (bf == 2), (bf >= 3) & (bf <= 5), (bf >= 6), (k == 1), (k == 2), (k >= 3), sub & (k == 0),
+                          np.minimum(load, 60.0) / 100.0]).astype(float)
+    bsk = P['batter'].astype(np.int64) * 10000 + P['season']; psk = P['pitcher'].astype(np.int64) * 10000 + P['season']
+    games = P['game']; rng = np.random.default_rng(int(params.get('seed', 11))); reps = int(params.get('reps', 150))
+    cap = float(params.get('gap_cap', 10.0))
+    g_ = np.clip(np.nan_to_num(gap), -cap, cap)
+    base = ok & rel & (F == 0) & np.isfinite(gap)
+    res['rows'] = {'plate_appearances': int(ok.sum()), 'reliever_first_meetings_with_gap': int(base.sum()),
+                   'reliever_entries_with_gap': int(len(np.unique(b_of[base]))),
+                   'first_three_batters': int((base & (bf <= 2)).sum()),
+                   'gap_percentiles_mph': [round(float(v), 2) for v in np.percentile(gap[base], [5, 25, 50, 75, 95])],
+                   'gap_sd_mph': round(float(np.std(gap[base])), 3),
+                   'share_abs_gap_4plus': round(float((np.abs(gap[base]) >= 4).mean()), 4),
+                   'corr_gap_inning': round(float(np.corrcoef(gap[base], inn[base])[0, 1]), 4),
+                   'corr_gap_score_diff': round(float(np.corrcoef(gap[base], np.nan_to_num(sd_[base]))[0, 1]), 4),
+                   'corr_gap_reliever_norm': round(float(np.corrcoef(gap[base], nrm[base])[0, 1]), 4),
+                   'mean_run_value': round(float(rv[base].mean()), 5)}
+    stage('plate appearances')
+    # (1) run value: the gap for his first three batters and for later ones
+    names = ['gap_first3', 'gap_batters4to6', 'gap_batters7plus']
+    X = np.column_stack([g_ * early, g_ * later, g_ * late, Bd, G])
+    res['R1_run_value_per_mph'] = _fe_lgo(base, X, rv, bsk, psk, games, names, reps, rng)
+    # finer: each of the first three batters
+    Xf = np.column_stack([g_ * (bf == 0), g_ * (bf == 1), g_ * (bf == 2), g_ * (bf >= 3), Bd, G])
+    res['R1_by_batter'] = _fe_lgo(base, Xf, rv, bsk, psk, games, ['gap_batter1', 'gap_batter2', 'gap_batter3', 'gap_batter4plus'], max(40, reps // 3), rng)
+    # absolute gap (a change of pace either way)
+    Xa = np.column_stack([g_ * early, np.abs(g_) * early, g_ * (1 - early), np.abs(g_) * (1 - early), Bd, G])
+    res['R1_signed_and_absolute'] = _fe_lgo(base, Xa, rv, bsk, psk, games, ['gap_first3', 'abs_gap_first3', 'gap_later', 'abs_gap_later'], max(40, reps // 3), rng)
+    # strikeouts and walks (linear probability)
+    for nm, yy in (('strikeout', (y7 == 1).astype(float)), ('walk', (y7 == 2).astype(float))):
+        res['R1_' + nm + '_per_mph'] = _fe_lgo(base, X, yy, bsk, psk, games, names, max(40, reps // 3), rng)
+    # the previous pitcher's usual speed instead of what was seen (what hitters were calibrated on, net of his drift today)
+    gn = np.where(prev_norm_ok[b_of] & have_norm[b_of], nrm - prev_norm[b_of], np.nan)
+    bn = base & np.isfinite(gn)
+    res['R1_usual_speeds_gap'] = _fe_lgo(bn, np.column_stack([np.clip(np.nan_to_num(gn), -cap, cap) * early, np.clip(np.nan_to_num(gn), -cap, cap) * (1 - early), Bd, G]),
+                                         rv, bsk, psk, games, ['gap_first3', 'gap_later'], max(40, reps // 3), rng)
+    stage('run value')
+    # (3) pitch level: whiff per swing on his fastballs in the hitter's first plate appearance against him
+    on_pitch = base[pa_id]
+    sw = on_pitch & fb & np.isin(T['call'], (1, 2))
+    yv = (T['call'] == 2).astype(float)
+    gp_ = g_[pa_id]; early_p = early[pa_id]
+    cnt_d = np.column_stack([(T['balls'] == b_) & (T['strikes'] == s_) for b_ in range(4) for s_ in range(3)][1:]).astype(float)
+    zin = ((T['zone'] >= 1) & (T['zone'] <= 9)).astype(float)
+    effort = np.clip(np.nan_to_num(v0 - nrm[pa_id]), -6, 6)
+    first2 = (T['pitch_no'] <= 1).astype(float)
+    Xp = np.column_stack([gp_ * early_p * first2, gp_ * early_p * (1 - first2), gp_ * (1 - early_p), effort, zin, cnt_d,
+                          (T['stand_r'] == T['throw_r']).astype(float)])
+    bskp = T['batter'].astype(np.int64) * 10000 + T['season']; pskp = T['pitcher'].astype(np.int64) * 10000 + T['season']
+    res['R3_whiff_per_swing_per_mph'] = _fe_lgo(sw, Xp, yv, bskp, pskp, T['game'], ['gap_first3_pitches1to2', 'gap_first3_later_pitches', 'gap_later_batters', 'own_speed_vs_usual'],
+                                                max(40, reps // 3), rng)
+    res['R3_whiff_per_swing_per_mph']['swings'] = int(sw.sum()); res['R3_whiff_per_swing_per_mph']['mean_whiff'] = round(float(yv[sw].mean()), 4)
+    stage('pitch level')
+    # (4) out of sample: the gap terms on a plate-appearance model with both players' earlier rates
+    league = np.bincount(y7[ok], minlength=7) / ok.sum()
+
+    def rates(key_, kk):
+        cols_ = []
+        for c in range(7):
+            nn, ss = _prior_by_day(key_, P['day'].astype(np.int64), (y7 == c).astype(float), ok)
+            cols_.append(np.log((ss + kk * league[c]) / (nn + kk) / league[c]))
+        return np.column_stack(cols_)
+    rb = rates(P['batter'].astype(np.int64), 150.0); rp = rates(P['pitcher'].astype(np.int64), 300.0)
+    X0 = np.hstack([rb, rp, Bd, G]); X1 = np.hstack([X0, np.column_stack([g_ * early, g_ * (1 - early)])])
+    tr = base & np.isin(P['season'], (2023, 2024))
+    res['R4_logloss_gain_nats_per_1000'] = {}
+    if tr.sum() > 5000:
+        m0 = LogisticRegression(max_iter=600, C=10.0).fit(X0[tr], y7[tr]); m1 = LogisticRegression(max_iter=600, C=10.0).fit(X1[tr], y7[tr])
+        for tname, tm in (('2025', base & (P['season'] == 2025)), ('2026_development', base & (P['season'] == 2026))):
+            if tm.sum() < 1000:
+                continue
+            l0 = -np.log(np.clip(m0.predict_proba(X0[tm])[np.arange(tm.sum()), y7[tm]], 1e-9, 1))
+            l1 = -np.log(np.clip(m1.predict_proba(X1[tm])[np.arange(tm.sum()), y7[tm]], 1e-9, 1))
+            res['R4_logloss_gain_nats_per_1000'][tname] = {'plate_appearances': int(tm.sum()), 'gain': [round(v * 1000, 3) for v in clustered_ci(l0 - l1, games[tm])]}
+    stage('out of sample')
+    return res
+
+
 # ---------------------------------------------------------------- SWINGMAP-01: do hitters chase where their bat goes?
 def _bat_intrinsic(S: dict, seasons, min_swings: int = 150) -> tuple[dict, dict]:
     """Per hitter-season, each bat-tracking measure net of the pitch it met: every competitive swing's value (bat speed at
@@ -6893,6 +7096,12 @@ def main():
             H = load_pa_states(repo, token, os.environ['BRL_PA_PACKAGE_KEY'])
             H = H[H['date_key'].astype(str).str[:10] < '2026-08-01']
             receipt['results'] = warmup_study(T, H, params, stage); del H
+        elif experiment == 'change':
+            stage('load plate-appearance states')
+            H = load_pa_states(repo, token, os.environ['BRL_PA_PACKAGE_KEY'])
+            if not params.get('final_eval'):
+                H = H[H['date_key'].astype(str).str[:10] < '2026-08-01']
+            receipt['results'] = change_study(T, H, params, stage); del H
         elif experiment == 'scout':
             receipt['results'] = scout_export(T, params, stage)
         elif experiment == 'value':

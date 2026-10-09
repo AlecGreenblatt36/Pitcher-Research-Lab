@@ -84,7 +84,10 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   fading over meetings), ABS-01, PERCEPT-01/02F (failed), MATCHUP-06/07 (failed), ENGINE-02 (no larger pair effect).
 - FWD-01 runs after the World Series (instructions in the matchup section).
 - PROD-03 and taught-v5 went live at about 8 a.m. Eastern October 9 (Alec: "Stop asking for permission you have it").
-  Awaiting Alec only for publishing new pages (the Matchup Physics page).
+  The first live runs on the new code (37926945664, 37927992799) succeeded and the phone check passed at 12:09 UTC
+  (390 and 1440 px, no errors); October 9 has no games, so the first forecasts with the package come on the next game
+  day: check their boxes (pitchers per team, starters' batters faced) then. Awaiting Alec only for publishing new
+  pages (the Matchup Physics page) and the CLV-03 public wording.
 
 Earlier (10:30 p.m. October 8):
 
