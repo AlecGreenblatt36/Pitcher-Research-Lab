@@ -45,7 +45,31 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
-### In flight (updated 6:15 p.m. Eastern October 9, by `date -u`; earlier stamps in this section ran ahead of the clock)
+### In flight (updated 7:40 p.m. Eastern October 9, by `date -u`; earlier stamps in this section ran ahead of the clock)
+
+- TOTALS-07 failed (the park prior is not the source of the cross-season park reversal; replays scored by
+  tools/replay_compare.py, a general two-replay comparison paired by game). The source is the run-environment table's
+  venue residual: fitted on one season and applied to the other in every replay, and the two seasons' venue terms are
+  uncorrelated (-0.02 across 29 venues, spread 0.17 runs per game). TOTALS-08 registered and running (replays
+  38004874163 for 2026 with brl_replay/environment_fit2025_weather.json, 38004938036 for 2025 with
+  environment_fit2026_weather.json; the production candidate is brl_replay/environment_weather.json). Score with
+  `python tools/replay_compare.py v2-prod3-1000 v2-prod3-weather-1000 out.json`; the gate is in the ledger row. If it
+  passes: copy environment_weather.json over brl_live/environment.json (ADJUST['environment'] stays on), refit the taught
+  headline on the new replays (harness/fit_headline), bump the headline version, then push main.
+- UMP-01 (diagnostic): plate umpires' edge leanings persist only partly (0.37 across seasons; outside edge 0.60); the
+  table is published (public/reports/umpires.json) and the live strip names the plate umpire from the box score with his
+  leanings; nothing in the pricing. The lane experiment 'umpires' caches officials per game on the data branch
+  (research/umpires-<season>.json).
+- Forward scoring record: every graded swing decision's log loss under the hitter's map and under the league swing
+  model, summed per pair, game and record (record.json 'scored'); the Report tab states the maps' gain per 1,000
+  decisions once 1,000 decisions are graded with the new code (months rebuilt before 23:00 UTC October 9 lack it).
+- Report: 'which family to lean on' per 100 pitches, overall and by count. Players: a team picker. The daily report build
+  now starts from the live slate chain within an hour of 13:20 and 20:35 UTC when the cron does not fire
+  (tools/brl_daily_report_trigger.py); check tomorrow that a daily run appears and that reports exist for the games.
+- Backfill: July and June 2025 rebuilt; May, April, March 2025 then the second pass over 2026 follow in loop3; the
+  worktree was moved to the latest code at 23:02 UTC. August and September 2025 died on the runner (step cancelled,
+  not a timeout) and are queued by scratch report/after_loop3.sh with the October 8 to 9 daily rebuild; the receipt now
+  records peak memory per stage and is published after every date.
 
 - Night of October 9, live: the Report tab follows the game. During a game the page reads the official feed's batter,
   on-deck hitter and pitcher (lcSituation; SIT_FIELDS carries onDeck), matches the pair in the report, selects it and the
