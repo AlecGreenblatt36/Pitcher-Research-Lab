@@ -1,0 +1,100 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "matchup_whiff",
+ "run_id": "37877789480",
+ "params": {
+  "experiment": "matchup_whiff",
+  "seasons": [
+   2023,
+   2024,
+   2025
+  ],
+  "tau": 0.26,
+  "league_n": 600000,
+  "min_swings": 250,
+  "seed": 11
+ },
+ "started_at": "2026-10-09T03:24:47.809005+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 7.6
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 14.9
+  },
+  {
+   "stage": "whiff true",
+   "at_seconds": 56.6
+  },
+  {
+   "stage": "whiff percept",
+   "at_seconds": 90.4
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985
+ },
+ "results": {
+  "representations": {
+   "true": {
+    "shrinkage": 30.0,
+    "validation": {
+     "3.0": 0.43835,
+     "10.0": 0.43697,
+     "30.0": 0.43687,
+     "100.0": 0.4384
+    },
+    "covered": 0.846,
+    "test_logloss_league": 0.44011,
+    "test_logloss_hitter": 0.43361
+   },
+   "percept": {
+    "shrinkage": 30.0,
+    "validation": {
+     "3.0": 0.47271,
+     "10.0": 0.4711,
+     "30.0": 0.4707,
+     "100.0": 0.4716
+    },
+    "covered": 0.846,
+    "test_logloss_league": 0.47083,
+    "test_logloss_hitter": 0.46716
+   }
+  },
+  "test_swings": 336383,
+  "test_whiff_rate": 0.2318,
+  "gain_nats_per_1000_swings": {
+   "percept_over_true_league": [
+    -30.724,
+    -31.437,
+    -29.83
+   ],
+   "percept_over_true_hitter": [
+    -33.551,
+    -34.285,
+    -32.708
+   ],
+   "hitter_over_league_true": [
+    6.498,
+    6.104,
+    6.912
+   ],
+   "hitter_over_league_percept": [
+    3.671,
+    3.337,
+    4.01
+   ]
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T03:26:18.302981+00:00",
+ "seconds": 90.5
+}
