@@ -6968,10 +6968,18 @@ def seq2_study(T: dict, params: dict, stage) -> dict:
     from sklearn.linear_model import LogisticRegression
     from sklearn.ensemble import HistGradientBoostingClassifier
     res = {}
+    final = bool(params.get('final_eval'))           # SEQ-03F: trained on everything before August 1, 2026, scored once on the untouched months
+    if final and not params.get('frozen_commit'):
+        raise ValueError('seq2_study scores the untouched months only as the registered evaluation of a frozen commit')
     train = tuple(int(v) for v in params.get('train', (2023, 2024))); tests = tuple(int(v) for v in params.get('tests', (2025, 2026)))
+    if final:
+        train = (2023, 2024, 2025, 2026); tests = (2026,)
     T = take(T, np.isin(T['season'], train + tests) & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2))
+    if final:
+        T = take(T, T['post'] == 0)
     order = np.lexsort((T['pitch_no'], T['ab'], T['game'])); T = take(T, order)
     n = len(T['game'])
+    test_from = date(2026, 8, 1).toordinal()
     same_pa = np.r_[False, (T['game'][1:] == T['game'][:-1]) & (T['ab'][1:] == T['ab'][:-1])]
     fam = np.where(np.isin(T['group'], (0, 1, 2)), 0, np.where(np.isin(T['group'], (3, 4)), 1, 2))
     prev_fam = np.r_[-1, fam[:-1]]; prev_v0 = np.r_[np.nan, T['v0'][:-1].astype(np.float64)]
@@ -7003,7 +7011,7 @@ def seq2_study(T: dict, params: dict, stage) -> dict:
         seq_cols += [m * repeat, m * dv]; seq_names += [f'{kname}_x_repeat', f'{kname}_x_speed_change_per10']
     S = np.column_stack(seq_cols).astype(np.float32)
     X0 = base; X1 = np.hstack([base, S])
-    tr = ok & np.isin(T['season'], train)
+    tr = ok & ((T['day'] < test_from) if final else np.isin(T['season'], train))
     rng = np.random.default_rng(int(params.get('seed', 11)))
     idx = np.flatnonzero(tr); idx = rng.choice(idx, min(len(idx), int(params.get('train_n', 900000))), replace=False)
     stage(f'features: {int(ok.sum())} swings with a previous pitch, train {len(idx)}')
@@ -7026,7 +7034,7 @@ def seq2_study(T: dict, params: dict, stage) -> dict:
     # out of sample
     res['test'] = {}
     for s_ in tests:
-        te = ok & (T['season'] == s_)
+        te = ok & ((T['day'] >= test_from) if final else (T['season'] == s_))
         if te.sum() < 5000:
             continue
         p0 = m0.predict_proba(X0[te])[:, 1]; p1 = m1.predict_proba(X1[te])[:, 1]; y = whiff[te]
@@ -7053,7 +7061,7 @@ def seq2_study(T: dict, params: dict, stage) -> dict:
         stage(f'test {s_}')
     # contact quality: launch speed on balls in play (the last pitch), same design, OLS
     ls = T['ls'].astype(np.float64); inplay = ok & np.isfinite(ls) & (T['last_in_pa'] == 1) & (T['call'] == 1)
-    trc = inplay & np.isin(T['season'], train)
+    trc = inplay & ((T['day'] < test_from) if final else np.isin(T['season'], train))
     if trc.sum() > 20000:
         A1 = np.column_stack([np.ones(int(trc.sum())), X1[trc]]); b1 = np.linalg.lstsq(A1, ls[trc], rcond=None)[0]
         cq = b1[-len(seq_names):]
@@ -7067,7 +7075,7 @@ def seq2_study(T: dict, params: dict, stage) -> dict:
         g0 = HistGradientBoostingClassifier(**hp).fit(raw[idx], whiff[idx]); g1 = HistGradientBoostingClassifier(**hp).fit(raw1[idx], whiff[idx])
         res['boosting'] = {}
         for s_ in tests:
-            te = ok & (T['season'] == s_)
+            te = ok & ((T['day'] >= test_from) if final else (T['season'] == s_))
             if te.sum() < 5000:
                 continue
             l0 = logloss_vec(g0.predict_proba(raw[te])[:, 1], whiff[te]); l1 = logloss_vec(g1.predict_proba(raw1[te])[:, 1], whiff[te])
