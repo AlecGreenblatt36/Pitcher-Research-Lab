@@ -3350,6 +3350,127 @@ def value_study(T: dict, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- VALUE-02: the same edge with real command
+def value2_study(T: dict, params: dict, stage) -> dict:
+    """VALUE-01 assumed every pitch lands where it is aimed. Here each aim point (one of the pitcher's own 2025 spots to
+    that side and count group) is scattered by command error: the pitch crosses at the aim plus a two-dimensional
+    normal offset with SD sigma per axis (the decision-moment picture shifts with it), and the hitter's own deviation
+    is averaged over the scatter. The pitcher picks the best third of his aim points for this hitter by that expected
+    deviation (outside the zone the highest, inside the lowest, since inside a higher deviation helps the hitter),
+    within thirds of the league's swing chance at the aim; the gain against all his aim points, times the run value
+    per point (VALUE-01's regression, re-estimated here on the same 2025 pitches) and the pitches per plate
+    appearance. Sigma 0, 0.3, 0.6 and 0.9 ft. A pitch that scatters across the zone edge keeps the coefficient of where
+    it was aimed (a simplification). Development data only (2025)."""
+    res = {}
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+    F = rebuild(T)
+    keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
+    T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
+    swing = ((T['call'] == 1) | (T['call'] == 2)).astype(np.float64)
+    xp, zp = projected(T, F, None, 'straight', 0.26)
+    LB = location_block(xp, zp, T['stand_r'], T['strikes']); nL = LB.shape[1]
+    X = np.hstack([LB, control_block(T, swing_propensity(T)), pitcher_propensity(T)[:, None].astype(np.float32)])
+    tr = np.isin(T['season'], (2023, 2024))
+    rng = np.random.default_rng(11)
+    idx = np.flatnonzero(tr); idx = rng.choice(idx, min(len(idx), 600000), replace=False)
+    league = fit_logistic(X[idx], swing[idx]); off = league.decision_function(X); wL = league.coef_[0][:nL].astype(np.float64)
+    Bm = hitter_basis(xp, zp, T['stand_r'], T['strikes'])
+    maps = _hitter_maps(Bm, swing, off, _groups(T['batter'], tr), 10.0, 300)
+    stage(f'maps {len(maps)}')
+    te = (T['season'] == 2025) & (T['out7'] >= 0) & np.isin(T['batter'], np.asarray(list(maps), dtype=np.int64))
+    ix = np.flatnonzero(te)
+    sig = lambda v: 1 / (1 + np.exp(-v))
+    p_l = sig(off[ix])
+    D = np.zeros(len(ix))
+    gb = _groups(T['batter'][ix], np.ones(len(ix), bool))
+    for h, rr in gb.items():
+        D[rr] = (sig(off[ix[rr]] + Bm[ix[rr]] @ maps[h]) - p_l[rr]) * 100
+    xt, zt = T['px'][ix].astype(np.float64), T['pz'][ix].astype(np.float64)
+    u_t = np.where(T['stand_r'][ix] == 1, xt, -xt)
+    e = np.maximum(np.maximum(np.abs(u_t) - ZONE_HALF, zt - ZONE_TOP), ZONE_BOT - zt)
+    outside = e > 0
+    y = LW7[T['out7'][ix].astype(int)]
+    first = (T['pitch_no'] == 0) & (T['out7'] >= 0)
+    rv_all = LW7[np.clip(T['out7'], 0, 6).astype(int)]
+    def prior_rv(key):
+        nn, ss = _prior_by_day(np.r_[key[first], key[ix]].astype(np.int64), np.r_[T['day'][first], T['day'][ix]].astype(np.int64),
+                               np.r_[rv_all[first], np.zeros(len(ix))], np.r_[np.ones(int(first.sum()), bool), np.zeros(len(ix), bool)])
+        nn, ss = nn[int(first.sum()):], ss[int(first.sum()):]
+        lg_ = float(rv_all[first].mean()); return (ss + 200 * lg_) / (nn + 200)
+    rv_b, rv_p = prior_rv(T['batter']), prior_rv(T['pitcher'])
+    cnt = np.zeros((len(ix), 11)); cc = np.clip(T['balls'][ix], 0, 3) * 3 + np.clip(T['strikes'][ix], 0, 2)
+    for k in range(1, 12):
+        cnt[:, k - 1] = cc == k
+    grp = np.zeros((len(ix), 6)); g_ = np.clip(T['group'][ix], 0, 6)
+    for k in range(1, 7):
+        grp[:, k - 1] = g_ == k
+    Xd = np.column_stack([np.ones(len(ix)), cnt, grp, p_l, np.log(p_l / (1 - p_l)), outside, hats(e, (-0.8, -0.4, -0.15, 0.0, 0.15, 0.4, 0.8, 1.5)), rv_b, rv_p,
+                          (T['stand_r'][ix] == T['throw_r'][ix]).astype(float), D * outside, D * ~outside])
+    b = np.linalg.lstsq(Xd, y, rcond=None)[0]; b_out, b_in = float(b[-2]), float(b[-1])
+    n_pa = max(int((T['pitch_no'][ix] == 0).sum()), 1)
+    res['coefficients'] = {'runs_per_point_outside': round(b_out, 6), 'runs_per_point_inside': round(b_in, 6),
+                           'outside_pitches_per_pa': round(float(outside.sum() / n_pa), 3), 'inside_pitches_per_pa': round(float((~outside).sum() / n_pa), 3)}
+    stage('coefficients')
+    sigmas = [float(v) for v in params.get('sigmas', (0.0, 0.3, 0.6, 0.9))]
+    K = 16
+    jit = np.random.default_rng(3).standard_normal((K, 2))
+    jit = (jit - jit.mean(0)) / jit.std(0)
+    cg = np.where(T['strikes'][ix] == 2, 2, np.where(T['balls'][ix] > T['strikes'][ix], 1, 0))
+    pit = T['pitcher'][ix]; stand = T['stand_r'][ix]; strikes = T['strikes'][ix]
+    hit_side = {h: int(np.round(stand[rr].mean())) for h, rr in gb.items()}
+    acc = {(zn, sg): [0.0, 0.0] for zn in ('outside', 'inside') for sg in sigmas}
+    gp = _groups(pit, np.ones(len(ix), bool))
+    for pid, rr in gp.items():
+        hs_here = np.unique(T['batter'][ix[rr]])
+        for sd in (0, 1):
+            for c3 in (0, 1, 2):
+                for zn, zmask in (('outside', outside), ('inside', ~outside)):
+                    pool = rr[(stand[rr] == sd) & (cg[rr] == c3) & zmask[rr]]
+                    if len(pool) < 30:
+                        continue
+                    if len(pool) > 300:
+                        pool = rng.choice(pool, 300, replace=False)
+                    third = np.searchsorted(np.percentile(p_l[pool], [33.3, 66.7]), p_l[pool])
+                    lb0 = LB[ix[pool]].astype(np.float64) @ wL
+                    mats = {}
+                    for sg in sigmas:
+                        xj = (xp[ix[pool]][:, None] + sg * jit[None, :, 0]).ravel(); zj = (zp[ix[pool]][:, None] + sg * jit[None, :, 1]).ravel()
+                        sj = np.repeat(np.full(len(pool), sd), K); kj = np.repeat(strikes[pool], K)
+                        offj = np.repeat(off[ix[pool]] - lb0, K) + location_block(xj, zj, sj, kj).astype(np.float64) @ wL
+                        mats[sg] = (offj, hitter_basis(xj, zj, sj, kj))
+                    for h in hs_here:
+                        if int(h) not in maps or hit_side.get(int(h)) != sd:
+                            continue
+                        n_here = int(np.sum((T['batter'][ix[rr]] == h) & (stand[rr] == sd) & (cg[rr] == c3) & zmask[rr]))
+                        if n_here == 0:
+                            continue
+                        mh = maps[int(h)]
+                        for sg in sigmas:
+                            offj, Bj = mats[sg]
+                            dj = ((sig(offj + Bj @ mh) - sig(offj)) * 100).reshape(len(pool), K).mean(1)
+                            parts = []
+                            for t3 in range(3):
+                                dd_ = dj[third == t3]
+                                if len(dd_) >= 3:
+                                    k3 = max(1, len(dd_) // 3)
+                                    srt = np.sort(dd_)
+                                    best = srt[::-1][:k3].mean() if zn == 'outside' else srt[:k3].mean()
+                                    parts.append(float(best - dd_.mean()))
+                            if parts:
+                                acc[(zn, sg)][0] += n_here * float(np.mean(parts)); acc[(zn, sg)][1] += n_here
+    out = {}
+    for sg in sigmas:
+        go = acc[('outside', sg)][0] / max(acc[('outside', sg)][1], 1); gi_ = acc[('inside', sg)][0] / max(acc[('inside', sg)][1], 1)
+        per_pa = b_out * go * res['coefficients']['outside_pitches_per_pa'] + b_in * gi_ * res['coefficients']['inside_pitches_per_pa']
+        out[str(sg)] = {'outside_gain_points': round(go, 3), 'inside_gain_points': round(gi_, 3),
+                        'runs_per_6200_outside_only': round(b_out * go * res['coefficients']['outside_pitches_per_pa'] * 6200, 1),
+                        'runs_per_6200_inside_only': round(b_in * gi_ * res['coefficients']['inside_pitches_per_pa'] * 6200, 1),
+                        'runs_per_6200_both': round(per_pa * 6200, 1)}
+    res['by_command_sd_ft'] = out
+    stage('aiming with scatter')
+    return res
+
+
 # ---------------------------------------------------------------- SCOUT-01: per-player decision-moment profiles and postseason matchups
 def _postseason_rosters(season: int) -> dict:
     """Postseason teams of the season (public schedule), their active rosters split into hitters and pitchers, and the
@@ -4260,6 +4381,8 @@ def main():
             receipt['results'] = scout_export(T, params, stage)
         elif experiment == 'value':
             receipt['results'] = value_study(T, params, stage)
+        elif experiment == 'value2':
+            receipt['results'] = value2_study(T, params, stage)
         elif experiment == 'steer':
             receipt['results'] = steer_profile(T, params, stage)
         elif experiment == 'matchup_final':
