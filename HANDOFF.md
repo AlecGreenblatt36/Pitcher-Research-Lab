@@ -45,7 +45,23 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
-### In flight (updated 7:45 a.m. Eastern October 9; earlier stamps in this section ran ahead of the clock)
+### In flight (updated 9:35 a.m. Eastern October 9; earlier stamps in this section ran ahead of the clock)
+
+- Alec, 8:56 a.m. October 9: the goal is to beat every model that exists. Where we stand (ledger rows):
+  WHERE-01 (diagnostic): in the PROD-03 production replays our own number is level with the closing line (Brier pooled
+  0.24245 against 0.24289; 2026 simulator alone 0.24274 against 0.24325) and a results logistic on both leans on ours
+  (0.65 [0.24, 1.09] against the market's 0.38); development seasons, so FWD-02 (registered) scores ours against the
+  market from October 9 on (the 2026 postseason is a record; 2027 is the test). Headline stays 60/40. Totals: our mean
+  total ties the line in 2026 (squared error 19.71 against 19.73), trails in 2025 (20.32 against 20.10); P(over) is
+  still worse than a coin (0.2527, 0.2517), the clear gap left.
+  BENCH-01: against a boosted learner given the same pitch inputs, the logistic decision-moment model is 23 nats per
+  1,000 decisions behind (most of MATCHUP-01F's +40 was the logistic league model's weakness), but the hitter maps read
+  at the decision moment add +2.9 and +3.0 beyond boosting with the heat map; BENCH-01F (frozen 5e29436b) scores that
+  once on the untouched months (run 37936470999).
+- STANCE-01 held (partial): distance off the plate, recovered from the bat-tracking intercepts (reliability 0.99), goes
+  with the sideways chase pattern (-0.27, -0.30; within hitter -0.31); MATCHUP-09 failed (shifting the swing surface by
+  stance hurts the league model), so it is a scouting signal. CHANGE-01 failed: hitters re-time fully between pitchers.
+- The CLV-03 public wording went live at 9 a.m. Eastern (Alec: push the public wording).
 
 - Recorded since 3:45 a.m.: COMMAND-01 failed (early-start zone and waste rates add nothing beyond velocity);
   FRAMING-01 passed (the challenge system cut the spread of catcher framing to 0.67 of 2025's); PRESSURE-01 (hitters
