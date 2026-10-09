@@ -62,6 +62,29 @@ Recorded today: TRANS-02, BULLPEN-01, BULLPEN-02 (pooled bound missed by 0.00000
 Private pages: Decision Horizon (discovery, version 10) and Going to the Pen (bullpen management measured,
 https://claude.ai/artifact/KyCZ1uYHxQmSEribmxwuQA; source in the scratchpad pen_page/).
 
+### Matchup physics research program (from 10:30 p.m. Eastern, October 8)
+
+Alec's direction: put the main effort into invention and discovery (a new predictive method with a demonstrable
+advantage), keep the product running, keep an untouched evaluation. Plan, mechanisms and rules:
+discovery/MATCHUP_PROGRAM.md. Untouched set for the program: 2026 pitches from August 1 and the 2026 postseason
+(dropped in code; one scoring per frozen candidate). Evidence rules for everything: top of LEDGER.md.
+
+Results so far (ledger rows): MATCHUP-01 holds (hitter swing maps at the decision moment beat standard hitter heat maps
+by 36.5 nats per 1,000 decisions on 2025; matchup chase deviations calibrated, slope 0.98). FATIGUE-01: velocity drift
+and slow starts cost runs; the times-through-the-order penalty is not velocity fatigue. SEQ-01: pitch-type surprise
+adds nothing (ruled out). ZONE-01 inconclusive (confounded); ZONE-02 measures the 2026 plate reference directly.
+DISP-01 failed its pooled bound by 0.00005 (not on). METHOD-01: paired streams cut replay comparison noise 71 to 84%.
+
+Queued or running (discovery lane, experiments in tools/brl_discovery.py and tools/brl_matchup.py, receipts
+research/discovery-<experiment>-<run>.json): MATCHUP-02 (matchups to strikeouts and walks), EXPOSURE-01 (pitch-type
+familiarity), CONTACT-01 (swing plane against pitch plane, Savant 2025-2026 in private/savant/), MATCHUP-03 (whiff
+maps), ZONE-02, DRIFT-01. Built and off until tested: brl_live.provider_adjust.MatchupAdjust, experiment
+matchup_table (sealed pair tables, private/matchup/), replay param matchup. Every experiment was checked on synthetic
+planted and null worlds before it ran (scripts in the scratchpad matchup/).
+
+Runner capacity: the account runs about 20 jobs at once; replays (8 shards), discovery jobs, CI and the live slate
+share it. Keep research light while games are on (live slate runs every 15 minutes). CI no longer runs on diag/**.
+
 ### What the bullpen work found (RELIEF-02)
 
 The hand-set reliever exit rule pulled relievers mid-inning at about 57% of the decision points where a change is
