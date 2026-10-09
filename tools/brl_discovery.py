@@ -3856,6 +3856,21 @@ def value2_study(T: dict, params: dict, stage) -> dict:
                                   'outside_interval': [round(float(np.percentile(dr[:, 0], q)), 6) for q in (2.5, 97.5)],
                                   'inside_interval': [round(float(np.percentile(dr[:, 1], q)), 6) for q in (2.5, 97.5)],
                                   'cells': int(len(nc)), 'pitches_in_cells_with_two_or_more': int(keep_c.sum())}
+        if params.get('channels'):
+            # VALUE-14: through which outcomes the own part works: the primary design (within hitter, neighbor-held) on
+            # each outcome class's indicator instead of the run value; the classes' coefficients times their linear
+            # weights add up to the run value's
+            Xk = np.column_stack([Xd[:, :-2], loo(Dw * outside), loo(Dw * ~outside), Dw * outside, Dw * ~outside])
+            y_save = y
+            ch = {}
+            for k_, nm_ in enumerate(OUT7):
+                y = (T['out7'][ix] == k_).astype(float)
+                bk_ = np.linalg.lstsq(Xk, y, rcond=None)[0]; ci_ = boot(Xk, reps=100)
+                ch[nm_] = {'outside_per_point': round(float(bk_[-2]), 7), 'outside_interval': ci_[0], 'inside_per_point': round(float(bk_[-1]), 7), 'inside_interval': ci_[1],
+                           'rate': round(float(y.mean()), 4)}
+            y = y_save
+            ch['weights_check_outside'] = round(float(sum(LW7[k_] * ch[nm_]['outside_per_point'] for k_, nm_ in enumerate(OUT7))), 7)
+            chk['channels'] = ch
         res['coefficient_checks'] = chk
     stage('coefficients')
     sigmas = [float(v) for v in params.get('sigmas', (0.0, 0.3, 0.6, 0.9))]
