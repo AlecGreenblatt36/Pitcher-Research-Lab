@@ -363,6 +363,8 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .rp-grid i.z { border-color: var(--ink); }
 .rp-grid i.aim::after { content: ""; position: absolute; inset: 25%; border-radius: 50%; background: var(--ink); }
 .rp-grid i.aim.take::after { background: transparent; border: 2px solid var(--ink); box-sizing: border-box; }
+.rp-grid i.strike::after { content: ""; position: absolute; inset: 28%; border-radius: 2px; background: var(--ink); }
+.rp-grid i.strike.weak::after { background: transparent; border: 2px solid var(--ink); box-sizing: border-box; }
 .rp-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
 .rp-card { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 12px; min-width: 0; }
 .rp-card h4 { margin: 0 0 6px; font-size: 16px; }
@@ -2131,15 +2133,18 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var bg = edge >= 0 ? "rgba(46,125,154," + a.toFixed(3) + ")" : "rgba(240,178,58," + a.toFixed(3) + ")";
     return '<td class="rp-cell' + (sel ? " rp-sel" : "") + '" data-rp="' + key + '" style="background:' + bg + '">' + m.fmt(v) + "</td>";
   }
-  function rpGrid(doc, grid, aim, label, scale) {
+  function rpGrid(doc, grid, aim, label, scale, strike) {
     var gu = doc.grid.side_ft, gz = doc.grid.height_ft, h = '<div class="rp-grid" role="img" aria-label="' + esc(label) + '">';
     for (var r = gz.length - 1; r >= 0; r--) for (var c = 0; c < gu.length; c++) {
       var k = r * gu.length + c, v = grid ? grid[k] : 0, a = Math.min(0.85, Math.abs(v) / scale);
       var bg = v >= 0 ? "rgba(240,178,58," + a.toFixed(3) + ")" : "rgba(46,125,154," + a.toFixed(3) + ")";
       var inz = Math.abs(gu[c]) < 0.83 && gz[r] > 1.5 && gz[r] < 3.5;
       var aimAt = (aim || []).filter(function (p) { return Math.abs(p[0] - gu[c]) < 0.01 && Math.abs(p[1] - gz[r]) < 0.01; })[0];
-      var isTake = aimAt && aimAt[2] === "take";
-      h += '<i class="' + (inz ? "z" : "") + (aimAt ? (isTake ? " aim take" : " aim") : "") + '" style="background:' + bg + '" title="' + esc(gu[c] + " ft, " + gz[r] + " ft: " + (v > 0 ? "+" : "") + v + (aimAt ? (isTake ? "; aim here: strikes he takes" : "; aim here: he chases") : "")) + '"></i>';
+      var stAt = (strike || []).filter(function (p) { return Math.abs(p[0] - gu[c]) < 0.01 && Math.abs(p[1] - gz[r]) < 0.01; })[0];
+      var isTake = aimAt && aimAt[2] === "take", isWeak = stAt && stAt[2] === "weak";
+      var cls = (inz ? "z" : "") + (aimAt ? (isTake ? " aim take" : " aim") : "") + (stAt ? (isWeak ? " strike weak" : " strike") : "");
+      var why = aimAt ? (isTake ? "; aim here: strikes he takes" : "; aim here: he chases") : stAt ? (isWeak ? "; strike spot: he swings to little effect" : "; strike spot: he lets it go") : "";
+      h += '<i class="' + cls + '" style="background:' + bg + '" title="' + esc(gu[c] + " ft, " + gz[r] + " ft: " + (v > 0 ? "+" : "") + v + why) + '"></i>';
     }
     return h + "</div>";
   }
@@ -2147,7 +2152,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var u = c[0], z = c[1];
     var side = u < -0.83 ? "in off the plate" : u < -0.3 ? "inside edge" : u <= 0.3 ? "middle" : u <= 0.83 ? "outside edge" : "away off the plate";
     var ht = z < 1.5 ? "below the zone" : z < 2.0 ? "low" : z <= 3.0 ? "mid-height" : z <= 3.5 ? "high" : "above the zone";
-    return ht + ", " + side + (c[2] === "take" ? " (strikes he takes)" : c[2] === "chase" ? " (he chases)" : "");
+    return ht + ", " + side + (c[2] === "take" ? " (he lets it go)" : c[2] === "chase" ? " (he chases)" : c[2] === "weak" ? " (he swings to little effect)" : "");
   }
   function reportTab(f, pk) {
     return '<div id="rp-' + pk + '"><p class="empty">Loading the matchup report…</p></div>';
@@ -2235,7 +2240,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         if (pr2.evidence) h += '<p class="note">' + (pr2.evidence.level === "thin" ? "Thin evidence: " : "Evidence: ") + "the hitter's map rests on " + Number(pr2.evidence.hitter_pitches).toLocaleString() + " earlier pitches" + (pr2.evidence.whiff_map ? " (with a whiff map)" : " (no whiff map yet)") + ", the pitcher's spots on " + Number(pr2.evidence.pitcher_pitches_to_side).toLocaleString() + " pitches to this side." + (pr2.evidence.level === "thin" ? " Read the numbers as leanings, not measurements." : "") + "</p>";
         h += '<ul class="compare"><li><span>Extra chases per 100 outside pitches from his own map</span><b>' + RP_METRICS.chase.fmt(pr2.chase_points) + "</b></li>" +
           "<li><span>Strikeout chance against the league pairing</span><b>" + RP_METRICS.k.fmt(pr2.k_points) + " pts</b></li><li><span>Walk chance</span><b>" + RP_METRICS.bb.fmt(pr2.bb_points) + " pts</b></li>" +
-          (pr2.aim ? "<li><span>" + (pr2.aim.pricing === "structural" ? "Runs saved per 100 PA by aiming at his costliest spots (chases, or strikes he takes), typical command" : "Runs saved per 100 PA by aiming outside pitches at his spots, typical command") + "</span><b>" + (-pr2.aim.runs_per_100_pa).toFixed(2) + "</b></li>" : "") + "</ul>";
+          (pr2.aim ? "<li><span>" + (pr2.aim.pricing === "structural" ? "Runs saved per 100 PA by aiming at his costliest spots (chases, or strikes he takes), typical command" : "Runs saved per 100 PA by aiming outside pitches at his spots, typical command") + "</span><b>" + (-pr2.aim.runs_per_100_pa).toFixed(2) + "</b></li>" : "") +
+          (pr2.strike ? "<li><span>Runs saved per 100 PA by putting strikes where he lets them go or swings to little effect, typical command</span><b>" + (-pr2.strike.runs_per_100_pa).toFixed(2) + "</b></li>" : "") + "</ul>";
         if (pc && pc.looks_in_ends_out != null && doc.league) h += '<p class="note">' + esc(lastName(nm(ids[1]))) + ": " + pct(pc.looks_in_ends_out) + " of his pitches look like strikes at the decision moment and end out of the zone (league " + pct(doc.league.looks_in_ends_out) + "); hitters chase " + pct(pc.chase_rate_against) + " of his outside pitches (league " + pct(doc.league.chase_rate) + ").</p>";
         if (pr2.aim && hc) {
           var counts = [["all", "All counts"], ["even_or_ahead", "Even or ahead"], ["behind", "Behind"], ["two_strikes", "Two strikes"]], bc = pr2.aim.by_count || {};
@@ -2251,8 +2257,10 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
           ["fastball", "breaking", "offspeed"].forEach(function (fam) {
             var own = hc.own_chase && hc.own_chase[fam], mix = pc && pc.mix && pc.mix[fam];
             if (!own) return;
-            h += '<div class="rp-card"><h4>' + fam.charAt(0).toUpperCase() + fam.slice(1) + (mix ? " <small>" + pct(mix.share) + " of his pitches, " + mix.speed + " mph</small>" : "") + "</h4>" + rpGrid(doc, own.grid, plan[fam], fam + " aim plan", 0.8) +
+            var stPlan = pr2.strike ? (ck === "all" ? pr2.strike.cells : (pr2.strike.by_count && pr2.strike.by_count[ck] ? pr2.strike.by_count[ck].cells : {})) : {};
+            h += '<div class="rp-card"><h4>' + fam.charAt(0).toUpperCase() + fam.slice(1) + (mix ? " <small>" + pct(mix.share) + " of his pitches, " + mix.speed + " mph</small>" : "") + "</h4>" + rpGrid(doc, own.grid, plan[fam], fam + " aim plan", 0.8, stPlan[fam]) +
               (plan[fam] && plan[fam].length ? '<div class="lbl">' + esc(plan[fam].map(rpWords).join("; ")) + "</div>" : '<div class="lbl">He rarely throws this family out of the zone to this side.</div>') +
+              (stPlan[fam] && stPlan[fam].length ? '<div class="lbl">Strike spots (squares): ' + esc(stPlan[fam].map(rpWords).join("; ")) + "</div>" : "") +
               (ck === "all" && pr2.aim.dangerous_miss && pr2.aim.dangerous_miss[fam] && pr2.aim.dangerous_miss[fam].runs_per_100_pa >= 0.05 ? '<div class="lbl">Dangerous miss: ' + esc(rpWords(pr2.aim.dangerous_miss[fam].cell)) + ", where " + pct(pr2.aim.dangerous_miss[fam].share) + " of these throws land with typical command; it gives back " + pr2.aim.dangerous_miss[fam].runs_per_100_pa.toFixed(2) + " runs per 100 PA.</div>" : "") + "</div>";
           });
           h += "</div>";

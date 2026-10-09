@@ -45,6 +45,8 @@ GU = np.array([-1.25, -0.83, -0.42, 0.0, 0.42, 0.83, 1.25]); GZ = np.array([1.0,
 FAMILIES = (('fastball', (0, 1, 2, 6), 0, 94.0), ('breaking', (3, 4), 3, 85.0), ('offspeed', (5,), 5, 86.0))
 B_OUT_FAMILY, N_OUT = -0.000657, 1.876          # VALUE-08F (family maps): runs per point of the own part, outside pitches per plate appearance
 STRUCTURAL = True                                # VALUE-18: aims chosen and priced by the engine's components (whiff, called strike, foul, contact value, count values)
+STRIKE_SPOTS = False                             # VALUE-18I: in-zone aims priced the same way (strike spots), on once its synthetic verdict holds
+N_IN = 2.04                                      # inside pitches per plate appearance (VALUE-18F)
 OWN_PART_CALIBRATION = {'outside': 0.95, 'inside': 0.82}   # VALUE-18 (2025 development run): how much of a fitted point of the own part shows up in actual swings
 CHASE_SLOPE, K_SCALE, BB_SCALE = 0.95, 0.40, 0.53   # MATCHUP-01F pair slope; ENGINE-01 coefficients over calibrated
 sig = lambda v: 1 / (1 + np.exp(-v))
@@ -295,12 +297,13 @@ class Fitted:
         self.chains[key] = A
         return A
 
-    def _pool(self, p, sd, c3, tg):
-        key = (p, sd, c3, tg)
+    def _pool(self, p, sd, c3, tg, zone='outside'):
+        key = (p, sd, c3, tg, zone)
         if key in self.pools:
             return self.pools[key]
         T = self.T; r = self.gp[p]
-        r = r[(T['stand_r'][r] == sd) & (self.cgrp[r] == c3) & self.outside[r] & (np.clip(T['group'][r], 0, 6) == tg)]
+        zm = self.outside[r] if zone == 'outside' else ~self.outside[r]
+        r = r[(T['stand_r'][r] == sd) & (self.cgrp[r] == c3) & zm & (np.clip(T['group'][r], 0, 6) == tg)]
         if len(r) < 15:
             self.pools[key] = None; return None
         n_all = len(r)
@@ -419,6 +422,41 @@ class Fitted:
                               'cloud': [round(float(v_ / tot_f), 3) for v_ in land_n[f_]]}
                 if dm:
                     out['aim']['dangerous_miss'] = dm
+        # VALUE-18I: strike spots, the same pricing over the pitcher's in-zone spots (he takes them, or swings at them to little effect)
+        if STRIKE_SPOTS and self.PM is not None:
+            rpi = self.gp[p][(T['stand_r'][self.gp[p]] == sd) & ~self.outside[self.gp[p]]]
+            if len(rpi) >= 40:
+                tot_i = 0.0; wsum_i = 0.0; cells_i = {f_: np.zeros(len(GU) * len(GZ)) for f_, *_ in FAMILIES}; dev_i = {f_: np.zeros(len(GU) * len(GZ)) for f_, *_ in FAMILIES}
+                by_count_i = {}
+                for c3, cname in ((0, 'even_or_ahead'), (1, 'behind'), (2, 'two_strikes')):
+                    ct_i = 0.0; cw_i = 0.0; ccells_i = {f_: np.zeros(len(GU) * len(GZ)) for f_, *_ in FAMILIES}; cdev_i = {f_: np.zeros(len(GU) * len(GZ)) for f_, *_ in FAMILIES}
+                    for tg in range(7):
+                        P_ = self._pool(p, sd, c3, tg, 'inside')
+                        if P_ is None or P_[6] is None:
+                            continue
+                        offj, Bj, third, cell, npool, n_all, struct = P_
+                        dev_jk = (sig(offj + Bj @ self.maps_s[h]) - sig(offj + Bj @ self.mbar[h])) * 100
+                        dj = dev_jk.reshape(npool, self.K).mean(1)
+                        blk, bj_, kj, lam_j, out_j, land = struct
+                        tau_j = 0.01 * self.PM.swing_minus_take(blk, h, p_scalar, bj_, kj, self.cv)
+                        vj = (dev_jk * lam_j * tau_j).reshape(npool, self.K).mean(1)
+                        gains_i = []
+                        for t3 in range(3):
+                            sel = np.flatnonzero(third == t3)
+                            if len(sel) >= 3:
+                                k3 = max(1, len(sel) // 3); best = sel[np.argsort(vj[sel])[:k3]]
+                                gains_i.append(float(vj[best].mean() - vj[sel].mean()))
+                                np.add.at(cells_i[famof(tg)], cell[best], n_all / len(rpi)); np.add.at(ccells_i[famof(tg)], cell[best], n_all)
+                                np.add.at(dev_i[famof(tg)], cell[best], n_all * dj[best]); np.add.at(cdev_i[famof(tg)], cell[best], n_all * dj[best])
+                        if gains_i:
+                            tot_i += n_all * float(np.mean(gains_i)); wsum_i += n_all; ct_i += n_all * float(np.mean(gains_i)); cw_i += n_all
+                    if cw_i > 0:
+                        by_count_i[cname] = {'runs_per_100_pa': round(float(ct_i / cw_i * N_IN) * 100, 2), 'pitches': int(cw_i),
+                                             'cells': {f_: [[float(GU[k % len(GU)]), float(GZ[k // len(GU)]), 'take' if cdev_i[f_][k] < 0 else 'weak'] for k in np.argsort(c_)[::-1][:3] if c_[k] > 0] for f_, c_ in ccells_i.items()}}
+                if wsum_i > 0:
+                    out['strike'] = {'runs_per_100_pa': round(float(tot_i / wsum_i * N_IN) * 100, 2), 'pricing': 'structural',
+                                     'cells': {f_: [[float(GU[k % len(GU)]), float(GZ[k // len(GU)]), 'take' if dev_i[f_][k] < 0 else 'weak'] for k in np.argsort(c_)[::-1][:3] if c_[k] > 0] for f_, c_ in cells_i.items()},
+                                     'by_count': by_count_i}
         # miss spots (unpriced): among the pitcher's two-strike pitches to this side, where this hitter's own whiff map
         # (his map minus the same-side mean) says he misses most, by family
         if wmap is not None and h in self.mbar_w:
