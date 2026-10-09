@@ -117,11 +117,12 @@ OUT7 = ('BIP_OUT', 'K', 'BB_HBP', '1B', '2B_3B', 'HR', 'OTHER_REACH')
 CALLS = {'take': 0, 'swing_contact': 1, 'whiff': 2, 'other': 3}
 
 
-def pitch_table(doc: dict, season: int) -> dict:
-    """One row per pitch of the regular season, as numpy arrays (pitch-level data stays on the runner)."""
+def pitch_table(doc: dict, season: int, game_types=('R',)) -> dict:
+    """One row per pitch of the regular season (and the postseason rounds when asked), as numpy arrays (pitch-level
+    data stays on the runner)."""
     cols = {k: [] for k in FIELDS}
     for gpk, game in (doc.get('games') or {}).items():
-        if game.get('game_type') != 'R':
+        if game.get('game_type') not in game_types:
             continue
         day = date.fromisoformat(str(game['date'])[:10]).toordinal()
         for row in game.get('rows') or []:
@@ -3974,6 +3975,87 @@ def abs_study(T: dict, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- ABS-02: who the 2026 challenge system would hurt, measured in 2025
+def abs2_study(T: dict, params: dict, stage) -> dict:
+    """ABS-01 found the 2026 challenge system took away most borderline strikes on taken pitches and gave back a few
+    just inside. A rule change is a shock whose exposure can be measured before it: each pitcher's and hitter's 2025
+    taken pitches by distance from the zone edge, times the league's change in called-strike chance in that band
+    (2026 through July against 2025), per plate appearance, is the strikes the new calling would have taken from him
+    (pitchers) or given him back (hitters) on his own 2025 pitches. Outcome: the change in walk rate, strikeout rate
+    and run value per plate appearance from 2025 to 2026 (through July), for players with at least 150 plate
+    appearances in each, holding their 2024 and 2025 rates (regression to the mean) and the other outcome rates;
+    weighted by plate appearances; intervals from resampling players."""
+    res = {}
+    T = take(T, np.isin(T['season'], (2024, 2025, 2026)))
+    F = rebuild(T)
+    keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['strikes'] >= 0); del F
+    take_ = (T['call'] == 0) & keep; cs = T['cs'] == 1
+    xt, zt = T['px'].astype(np.float64), T['pz'].astype(np.float64)
+    u_t = np.where(T['stand_r'] == 1, xt, -xt)
+    e = np.maximum(np.maximum(np.abs(u_t) - ZONE_HALF, zt - ZONE_TOP), ZONE_BOT - zt)
+    edges = np.array([-4, -2, -1, 0, 1, 2, 4, 8, 99]) / 12.0
+    band = np.searchsorted(edges, e)
+    rate = {}
+    for ssn in (2025, 2026):
+        m = take_ & (T['season'] == ssn)
+        rate[ssn] = np.array([cs[m & (band == b)].mean() if (m & (band == b)).sum() > 100 else 0.0 for b in range(len(edges))])
+    dcs = rate[2026] - rate[2025]                       # change in called-strike chance by band (negative outside)
+    res['called_strike_change_by_band'] = [round(float(v), 4) for v in dcs]
+    pa = (T['pitch_no'] == 0) & (T['out7'] >= 0)
+    y7 = T['out7'].astype(int)
+    out = {}
+    for role, key in (('pitchers', 'pitcher'), ('hitters', 'batter')):
+        ids = T[key]
+        def per(ssn, w):
+            m = T['season'] == ssn
+            u_, i_ = np.unique(ids[m], return_inverse=True)
+            return dict(zip(u_.tolist(), np.bincount(i_, weights=w[m]).tolist()))
+        n_pa = {s_: per(s_, pa.astype(float)) for s_ in (2024, 2025, 2026)}
+        bb = {s_: per(s_, (pa & (y7 == 2)).astype(float)) for s_ in (2024, 2025, 2026)}
+        kk = {s_: per(s_, (pa & (y7 == 1)).astype(float)) for s_ in (2024, 2025, 2026)}
+        rv = {s_: per(s_, np.where(pa, LW7[np.clip(y7, 0, 6)], 0.0)) for s_ in (2024, 2025, 2026)}
+        lost = per(2025, np.where(take_ & (band >= 4), -dcs[np.clip(band, 0, len(dcs) - 1)], 0.0))      # outside: strikes the new calling takes away
+        gain = per(2025, np.where(take_ & (band <= 3), dcs[np.clip(band, 0, len(dcs) - 1)], 0.0))       # inside: strikes it adds
+        rows = []
+        for pid, n25 in n_pa[2025].items():
+            n26 = n_pa[2026].get(pid, 0.0)
+            if n25 < 150 or n26 < 150:
+                continue
+            n24 = n_pa[2024].get(pid, 0.0)
+            r = lambda d, s_, n: d[s_].get(pid, 0.0) / n if n > 0 else np.nan
+            lg24 = lambda d: sum(d[2024].values()) / max(sum(n_pa[2024].values()), 1)
+            rows.append([pid, n25, n26, (lost.get(pid, 0.0) - gain.get(pid, 0.0)) / n25,
+                         r(bb, 2025, n25), r(bb, 2026, n26), r(bb, 2024, n24) if n24 >= 50 else lg24(bb),
+                         r(kk, 2025, n25), r(kk, 2026, n26), r(kk, 2024, n24) if n24 >= 50 else lg24(kk),
+                         r(rv, 2025, n25), r(rv, 2026, n26), r(rv, 2024, n24) if n24 >= 50 else lg24(rv)])
+        R = np.asarray(rows, float)
+        if len(R) < 30:
+            out[role] = {'players': int(len(R))}; continue
+        expo = R[:, 3]; w = 1 / (1 / R[:, 1] + 1 / R[:, 2])
+        rng = np.random.default_rng(7)
+        res_role = {'players': int(len(R)), 'exposure_mean_per_pa': round(float(np.average(expo, weights=w)), 4), 'exposure_sd_per_pa': round(float(np.sqrt(np.cov(expo, aweights=w))), 4)}
+        for nm, c25, c26, c24 in (('walk_rate', 4, 5, 6), ('strikeout_rate', 7, 8, 9), ('runs_per_pa', 10, 11, 12)):
+            yv = R[:, c26] - R[:, c25]
+            X = np.column_stack([np.ones(len(R)), expo, R[:, c25], R[:, c24], R[:, 4], R[:, 7]])
+            def wls(idx):
+                Xw = X[idx] * np.sqrt(w[idx])[:, None]; yw = yv[idx] * np.sqrt(w[idx])
+                return np.linalg.lstsq(Xw, yw, rcond=None)[0][1]
+            b0 = wls(np.arange(len(R)))
+            bs = np.array([wls(rng.integers(0, len(R), len(R))) for _ in range(int(params.get('reps', 500)))])
+            q = np.std(expo)
+            res_role[nm] = {'per_strike_per_pa': round(float(b0), 4), 'interval': [round(float(np.percentile(bs, 2.5)), 4), round(float(np.percentile(bs, 97.5)), 4)],
+                            'per_sd_of_exposure': round(float(b0 * q), 5)}
+        # top and bottom fifth by exposure: average changes
+        qq = np.percentile(expo, [20, 80])
+        for nm_, sel in (('most_exposed_fifth', expo >= qq[1]), ('least_exposed_fifth', expo <= qq[0])):
+            res_role[nm_] = {'exposure': round(float(np.average(expo[sel], weights=w[sel])), 4), 'walk_rate_change': round(float(np.average(R[sel, 5] - R[sel, 4], weights=w[sel])), 4),
+                             'strikeout_rate_change': round(float(np.average(R[sel, 8] - R[sel, 7], weights=w[sel])), 4)}
+        out[role] = res_role
+        stage('role ' + role)
+    res.update(out)
+    return res
+
+
 # ---------------------------------------------------------------- VALUE-12: a hitter's own whiff holes, priced
 def value_whiff_study(T: dict, params: dict, stage) -> dict:
     """VALUE-08's design for the whiff map on the true crossing (MATCHUP-03's representation: league whiff model on
@@ -5508,7 +5590,7 @@ def main():
             doc = json.loads(gzip.decompress(unseal(raw, key, study_purpose(int(year)))))
             if doc.get('schema') != STUDY_SCHEMA:
                 raise ValueError('study schema mismatch')
-            tables.append(pitch_table(doc, int(year))); del doc, raw
+            tables.append(pitch_table(doc, int(year), tuple(params.get('game_types', ('R',))))); del doc, raw
         T = concat(tables); del tables
         untouched = (T['season'] == 2026) & (T['day'] >= date(2026, 8, 1).toordinal())
         if params.get('final_eval'):
@@ -5570,6 +5652,8 @@ def main():
             receipt['results'] = value_whiff_study(T, params, stage)
         elif experiment == 'abs':
             receipt['results'] = abs_study(T, params, stage)
+        elif experiment == 'abs2':
+            receipt['results'] = abs2_study(T, params, stage)
         elif experiment == 'scout':
             receipt['results'] = scout_export(T, params, stage)
         elif experiment == 'value':
