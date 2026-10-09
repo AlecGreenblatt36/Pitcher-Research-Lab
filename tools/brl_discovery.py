@@ -81,27 +81,15 @@ def savant_module():
     return sv
 
 
-def load_savant(repo, token, branch, key, year: int, parts=('a', 'b')) -> dict | None:
-    """The sealed Savant pitches of a season (the parts asked for), concatenated; None if not stored."""
+def load_savant(repo, token, branch, key, year: int, parts=('a', 'b')) -> list:
+    """The sealed Savant pitches of a season, one column set per stored part (merge them with brl_matchup.merge)."""
     from cloud.security import unseal
     sv = savant_module(); got = []
     for part in parts:
         raw = read_blob(repo, token, sv.path(year, part), branch)
         if raw is not None:
             got.append(sv.from_bytes(unseal(raw, key, sv.purpose(year, part))))
-    if not got:
-        return None
-    out = {}
-    for k in got[0]:
-        if k.endswith('__vocab'):
-            continue
-        if k + '__vocab' in got[0]:
-            vocab = np.unique(np.concatenate([g[k + '__vocab'] for g in got]))
-            out[k] = np.concatenate([np.searchsorted(vocab, g[k + '__vocab'][g[k]]) for g in got]).astype(np.int16)
-            out[k + '__vocab'] = vocab
-        else:
-            out[k] = np.concatenate([g[k] for g in got])
-    return out
+    return got
 
 
 def put_text(repo, token, path, text, branch, message):
@@ -2957,9 +2945,7 @@ def main():
             sv = savant_module(); got = []
             for year in params.get('seasons', (2024, 2025, 2026)):
                 stage(f'load savant {year}')
-                c = load_savant(repo, token, branch, key, int(year))
-                if c is not None:
-                    got.append(c)
+                got.extend(load_savant(repo, token, branch, key, int(year)))
             cols = mx.merge(got); del got
             receipt['rows'] = int(len(cols['day']))
             receipt['results'] = mx.contact_study(sv, cols, params, stage)

@@ -25,21 +25,27 @@ GROUPS = {'FF': 0, 'FA': 0, 'SI': 1, 'FT': 1, 'FC': 2, 'SL': 3, 'ST': 3, 'SV': 3
 
 
 def merge(parts: list) -> dict:
-    """Concatenate packed Savant column sets (each with its own category vocabularies) into one."""
+    """Concatenate packed Savant column sets (each with its own category vocabularies) into one. A column missing from
+    a part (bat tracking before it was recorded, for instance) is filled with NaN (numbers) or -1 (integers)."""
     parts = [p for p in parts if p]
+    keys = set()
+    for p in parts:
+        keys |= set(p)
     out = {}
-    keys = set(parts[0])
-    for p in parts[1:]:
-        keys &= set(p)
     for k in sorted(keys):
         if k.endswith('__vocab'):
             continue
         if k + '__vocab' in keys:
-            vocab = np.unique(np.concatenate([p[k + '__vocab'] for p in parts]))
-            out[k] = np.concatenate([np.searchsorted(vocab, p[k + '__vocab'][p[k]]) for p in parts]).astype(np.int16)
-            out[k + '__vocab'] = vocab
+            vocab = np.unique(np.concatenate([p[k + '__vocab'] for p in parts if k + '__vocab' in p] + [np.array([''])]))
+            chunks = []
+            for p in parts:
+                n = len(p['day'])
+                chunks.append(np.searchsorted(vocab, p[k + '__vocab'][p[k]]) if k in p else np.full(n, int(np.searchsorted(vocab, ''))))
+            out[k] = np.concatenate(chunks).astype(np.int16); out[k + '__vocab'] = vocab
         else:
-            out[k] = np.concatenate([p[k] for p in parts])
+            ref = next(p[k] for p in parts if k in p)
+            fill = np.nan if ref.dtype.kind == 'f' else -1
+            out[k] = np.concatenate([p[k] if k in p else np.full(len(p['day']), fill, dtype=ref.dtype) for p in parts])
     return out
 
 
