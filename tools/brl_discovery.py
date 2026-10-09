@@ -2742,6 +2742,95 @@ def matchup_table(T: dict, params: dict, stage, store) -> dict:
             'chase_sd_points': round(float(vals[:, 0].std()), 3) if len(vals) else None, 'zone_swing_sd_points': round(float(vals[:, 1].std()), 3) if len(vals) else None}
 
 
+# ---------------------------------------------------------------- DRIFT-01: swing maps that move before strikeouts and walks do
+def drift_study(T: dict, params: dict, stage) -> dict:
+    """Each hitter's swing map at the decision moment, refitted on each 30-day window, read on one fixed set of pitches
+    outside the zone (so what he was thrown does not move it): a pitch-mix-free chase propensity. Does its change in a
+    window, against his earlier windows, predict his strikeouts and walks in the next window beyond his recent and
+    earlier strikeout and walk rates, and better than the raw chase rate's change? Train 2023-2024, score 2025."""
+    res = {}
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+    F = rebuild(T)
+    keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['strikes'] >= 0)
+    Tk = take(T, keep); F = {k: v[keep] for k, v in F.items()}
+    swing = ((Tk['call'] == 1) | (Tk['call'] == 2)).astype(np.float64)
+    xp, zp = projected(Tk, F, None, 'straight', float(params.get('tau', 0.26)))
+    X = np.hstack([location_block(xp, zp, Tk['stand_r'], Tk['strikes']), control_block(Tk, np.zeros(len(swing)))])
+    rng = np.random.default_rng(11)
+    lg = np.flatnonzero(Tk['season'] == 2023); lg = rng.choice(lg, min(len(lg), 500000), replace=False)
+    off = fit_logistic(X[lg], swing[lg]).decision_function(X)
+    Bm = hitter_basis(xp, zp, Tk['stand_r'], Tk['strikes'])
+    u = np.where(Tk['stand_r'] == 1, Tk['px'], -Tk['px'])
+    outside = (np.abs(u) > ZONE_HALF) | (Tk['pz'] > ZONE_TOP) | (Tk['pz'] < ZONE_BOT)
+    ref = rng.choice(np.flatnonzero(outside & (Tk['season'] == 2023)), 4000, replace=False)
+    Bref, oref = Bm[ref], off[ref]
+    p_ref0 = (1 / (1 + np.exp(-oref))).mean()
+    # 30-day windows from each season's start
+    start = {s: int(Tk['day'][Tk['season'] == s].min()) for s in (2023, 2024, 2025)}
+    win = np.asarray([(int(d) - start[int(s)]) // 30 for d, s in zip(Tk['day'], Tk['season'])])
+    lam = float(params.get('lam', 30.0)); min_n = int(params.get('min_pitches', 150))
+    rows = {}
+    key = Tk['batter'].astype(np.int64) * 100000 + (Tk['season'].astype(np.int64) - 2000) * 100 + win
+    for k, r in _groups(key, np.ones(len(key), bool)).items():
+        if len(r) < min_n:
+            continue
+        b = _ridge_offset(Bm[r], swing[r], off[r], lam)
+        chase_map = float((1 / (1 + np.exp(-(oref + Bref @ b)))).mean() - p_ref0)
+        o = outside[r]
+        rows[k] = (chase_map, float(swing[r][o].mean()) if o.any() else np.nan, int(len(r)))
+    stage(f'window maps {len(rows)}')
+    # plate appearances with their window and outcomes
+    P = take(T, (T['pitch_no'] == 0) & (T['out7'] >= 0))
+    wp = np.asarray([(int(d) - start[int(s)]) // 30 for d, s in zip(P['day'], P['season'])])
+    kp = P['batter'].astype(np.int64) * 100000 + (P['season'].astype(np.int64) - 2000) * 100 + wp
+    y7 = P['out7'].astype(int); K = (y7 == 1).astype(float); BB = (y7 == 2).astype(float)
+    # window rates of K and BB per hitter-window
+    uk, inv = np.unique(kp, return_inverse=True)
+    nk = np.bincount(inv); kk = np.bincount(inv, weights=K); bb = np.bincount(inv, weights=BB)
+    win_rate = {int(k_): (kk[i] / nk[i], bb[i] / nk[i], nk[i]) for i, k_ in enumerate(uk)}
+    feats = []
+    for i in range(len(y7)):
+        k_now = int(kp[i]); w = int(wp[i])
+        if w < 2:
+            continue
+        prev = k_now - 1
+        earlier = [k_now - j for j in range(2, w + 1)]
+        if prev not in rows or prev not in win_rate or not all(e in rows for e in earlier[:1]):
+            continue
+        cm_prev, cr_prev, _ = rows[prev]
+        cm_old = np.mean([rows[e][0] for e in earlier if e in rows]); cr_old = np.nanmean([rows[e][1] for e in earlier if e in rows])
+        kr, br, n_ = win_rate[prev]
+        ko = [win_rate[e] for e in earlier if e in win_rate]
+        if not ko:
+            continue
+        ko_k = sum(a[0] * a[2] for a in ko) / sum(a[2] for a in ko); ko_b = sum(a[1] * a[2] for a in ko) / sum(a[2] for a in ko)
+        feats.append((i, kr, br, ko_k, ko_b, cm_prev - cm_old, cr_prev - cr_old))
+    Fm = np.asarray(feats, float)
+    idx = Fm[:, 0].astype(int)
+    lgt = lambda v: np.log(np.clip(v, 0.02, 0.98) / (1 - np.clip(v, 0.02, 0.98)))
+    season = P['season'][idx]; games = P['game'][idx]
+    out = {'plate_appearances': int(len(idx)), 'map_change_sd_points': round(float(np.std(Fm[:, 5]) * 100), 3), 'raw_chase_change_sd_points': round(float(np.nanstd(Fm[:, 6]) * 100), 3),
+           'corr_map_change_raw_change': round(float(np.corrcoef(Fm[:, 5], np.nan_to_num(Fm[:, 6]))[0, 1]), 3)}
+    from sklearn.linear_model import LogisticRegression
+    tr, te = np.isin(season, (2023, 2024)), season == 2025
+    for name, y, rcols in (('strikeout', K[idx], (1, 3)), ('walk', BB[idx], (2, 4))):
+        base = np.column_stack([lgt(Fm[:, rcols[0]]), lgt(Fm[:, rcols[1]])])
+        designs = {'rates': base, 'rates_raw_chase_change': np.column_stack([base, np.nan_to_num(Fm[:, 6]) * 100]),
+                   'rates_map_change': np.column_stack([base, Fm[:, 5] * 100]), 'rates_both': np.column_stack([base, Fm[:, 5] * 100, np.nan_to_num(Fm[:, 6]) * 100])}
+        ll = {}; coefs = {}
+        for nm, Xd in designs.items():
+            m = LogisticRegression(C=1e4, max_iter=500).fit(Xd[tr], y[tr])
+            ll[nm] = logloss_vec(m.predict_proba(Xd[te])[:, 1], y[te]); coefs[nm] = [round(float(c), 4) for c in m.coef_[0]]
+        g = games[te]
+        out[name] = {'gain_raw_chase_change': [round(v * 1000, 3) for v in clustered_ci(ll['rates'] - ll['rates_raw_chase_change'], g)],
+                     'gain_map_change': [round(v * 1000, 3) for v in clustered_ci(ll['rates'] - ll['rates_map_change'], g)],
+                     'map_over_raw': [round(v * 1000, 3) for v in clustered_ci(ll['rates_raw_chase_change'] - ll['rates_both'], g)],
+                     'coefs': coefs}
+    res.update(out)
+    stage('drift')
+    return res
+
+
 # ---------------------------------------------------------------- FATIGUE-01: the pitcher's state inside the game
 LW7 = np.array([-0.26, -0.28, 0.32, 0.47, 0.78, 1.40, 0.45])
 
@@ -3271,6 +3360,8 @@ def main():
             receipt['results'] = exposure_study(T, params, stage)
         elif experiment == 'matchup_whiff':
             receipt['results'] = matchup_whiff(T, params, stage)
+        elif experiment == 'drift':
+            receipt['results'] = drift_study(T, params, stage)
         elif experiment == 'matchup_table':
             from cloud.security import seal
 
