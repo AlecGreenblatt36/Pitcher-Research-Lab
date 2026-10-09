@@ -3205,6 +3205,220 @@ def exploit_study(T: dict, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- SCOUT-01: per-player decision-moment profiles and postseason matchups
+def _postseason_rosters(season: int) -> dict:
+    """Postseason teams of the season (public schedule), their active rosters split into hitters and pitchers, and the
+    pairs of teams that meet."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('brl_backfill_for_scout', ROOT / 'tools' / 'brl_bookkeeping_backfill.py')
+    bf = importlib.util.module_from_spec(spec); spec.loader.exec_module(bf)
+    sched = bf.get_json(f'{bf.API}/schedule?sportId=1&season={season}&gameType=F,D,L,W')
+    meets = set(); teams = {}
+    for d in sched.get('dates', []):
+        for g in d.get('games', []):
+            a = (g.get('teams') or {}).get('away', {}).get('team', {}); h = (g.get('teams') or {}).get('home', {}).get('team', {})
+            if a.get('id') and h.get('id'):
+                teams[int(a['id'])] = a.get('name', ''); teams[int(h['id'])] = h.get('name', '')
+                meets.add(tuple(sorted((int(a['id']), int(h['id'])))))
+    rosters = {}
+    for tid in teams:
+        try:
+            r = bf.get_json(f'{bf.API}/teams/{tid}/roster?rosterType=active&season={season}')
+        except Exception:
+            continue
+        hit, pit = [], []
+        for e in r.get('roster', []):
+            pid = int((e.get('person') or {}).get('id') or 0); pos = (e.get('position') or {}).get('type', '')
+            if not pid:
+                continue
+            (pit if pos == 'Pitcher' else hit).append(pid)
+            if pos == 'Two-Way Player':
+                pit.append(pid)
+        rosters[tid] = {'name': teams[tid], 'hitters': hit, 'pitchers': pit}
+    return {'teams': rosters, 'meets': sorted(list(m) for m in meets)}
+
+
+def scout_export(T: dict, params: dict, stage) -> dict:
+    """Per-player profiles from the credited decision-moment representation (MATCHUP-01F) and the miss maps
+    (MATCHUP-03), fitted on 2025 and 2026 through July (the program's untouched months stay out), and the postseason's
+    hitter-pitcher matchups: each hitter's swing map at the decision moment and whiff map on the true crossing as
+    log-odds deviations from the league on a 7 by 7 grid (feet; side measured away from the hitter), his chase,
+    zone-swing and miss tendencies read on one standard set of pitches, his top chase cells; each postseason pitcher's
+    arsenal; and for every postseason hitter against every pitcher of a team he meets: the extra chase his map predicts
+    on that pitcher's pitches (times the calibrated slope 0.95), and the count-by-count chain's strikeout and walk
+    changes (times the ENGINE-01 calibration, 0.40 and 0.53), split into hitter, pitcher and pair parts over these
+    pairs. Model outputs and per-player summaries only."""
+    res = {}
+    T = take(T, np.isin(T['season'], (2025, 2026)))
+    F = rebuild(T)
+    keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
+    Tk = take(T, keep); Fk = {k: v[keep] for k, v in F.items()}
+    swing = ((Tk['call'] == 1) | (Tk['call'] == 2)).astype(np.float64); whiff = (Tk['call'] == 2).astype(np.float64)
+    take_ = Tk['call'] == 0; cs = (Tk['cs'] == 1).astype(np.float64); contact = Tk['call'] == 1
+    foul = (contact & (Tk['last_in_pa'] == 0)).astype(np.float64)
+    xp, zp = projected(Tk, Fk, None, 'straight', 0.26)
+    xt, zt = Tk['px'].astype(np.float64), Tk['pz'].astype(np.float64)
+    u_t = np.where(Tk['stand_r'] == 1, xt, -xt)
+    outside = (np.abs(u_t) > ZONE_HALF) | (zt > ZONE_TOP) | (zt < ZONE_BOT)
+    rng = np.random.default_rng(11)
+    def sample(rows, n=600000):
+        idx = np.flatnonzero(rows); return rng.choice(idx, min(len(idx), n), replace=False) if len(idx) > n else idx
+    prop_s = swing_propensity(Tk); prop_p = pitcher_propensity(Tk)
+    Ls = location_block(xp, zp, Tk['stand_r'], Tk['strikes'])
+    Xs = np.hstack([Ls, control_block(Tk, prop_s), prop_p[:, None].astype(np.float32)]); i_ps = Ls.shape[1] + 32
+    allr = np.ones(len(swing), bool)
+    i = sample(allr); m_s = fit_logistic(Xs[i], swing[i]); off_s = m_s.decision_function(Xs)
+    Bs = hitter_basis(xp, zp, Tk['stand_r'], Tk['strikes'])
+    maps_s = _hitter_maps(Bs, swing, off_s, _groups(Tk['batter'], allr), 10.0, int(params.get('min_pitches', 500)))
+    tw = dict(Tk); tw['call'] = np.where(whiff == 1, 1, np.where(swing == 1, 0, 3)); prop_w = swing_propensity(tw, 200.0)
+    grp = np.zeros((len(swing), 7), np.float32); grp[np.arange(len(swing)), np.clip(Tk['group'], 0, 6)] = 1
+    Lw = location_block(xt, zt, Tk['stand_r'], Tk['strikes'])
+    Xw = np.hstack([Lw, grp, hats(Tk['v0'].astype(np.float64), V_KNOTS), (Tk['strikes'] == 2)[:, None].astype(np.float32), prop_w[:, None].astype(np.float32),
+                    (Tk['stand_r'] == Tk['throw_r'])[:, None].astype(np.float32)]); i_pw = Lw.shape[1] + 7 + len(V_KNOTS) + 1
+    sw_rows = swing == 1
+    i = sample(sw_rows); m_w = fit_logistic(Xw[i], whiff[i]); off_w = m_w.decision_function(Xw)
+    fam = np.column_stack([np.isin(Tk['group'], (0, 1, 2)), np.isin(Tk['group'], (3, 4)), np.isin(Tk['group'], (5,))]).astype(np.float64)
+    Bw = np.hstack([hitter_basis(xt, zt, Tk['stand_r'], Tk['strikes']), fam, hats(zt, (1.0, 2.0, 3.0, 4.0)).astype(np.float64)])
+    maps_w = _hitter_maps(Bw, whiff, off_w, _groups(Tk['batter'], sw_rows), 30.0, 250)
+    Xc = np.hstack([Lw, (Tk['stand_r'] == Tk['throw_r'])[:, None].astype(np.float32)])
+    i = sample(take_); p_cs = fit_logistic(Xc[i], cs[i]).predict_proba(Xc)[:, 1]
+    i = sample(contact); p_fo = fit_logistic(Xw[i], foul[i]).predict_proba(Xw)[:, 1]
+    stage(f'maps {len(maps_s)} swing, {len(maps_w)} whiff')
+    # grid in feet: side away from the hitter, height; the hitter basis at two strikes off
+    gu = np.array([-1.25, -0.83, -0.42, 0.0, 0.42, 0.83, 1.25]); gz = np.array([1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0])
+    UU, ZZ = np.meshgrid(gu, gz); uu, zz = UU.ravel(), ZZ.ravel()
+    Bg = hitter_basis(uu, zz, np.ones(len(uu), np.int64), np.zeros(len(uu), np.int64))
+    fam_ff = np.tile(np.array([1.0, 0.0, 0.0]), (len(uu), 1))
+    Bgw = np.hstack([Bg, fam_ff, hats(zz, (1.0, 2.0, 3.0, 4.0)).astype(np.float64)])
+    # league probabilities on the grid for a first-pitch four-seamer at 94 mph to a right-handed hitter, average propensities
+    g_t = {'balls': np.zeros(len(uu), np.int64), 'strikes': np.zeros(len(uu), np.int64), 'group': np.zeros(len(uu), np.int64), 'v0': np.full(len(uu), 94.0),
+           'stand_r': np.ones(len(uu), np.int64), 'throw_r': np.ones(len(uu), np.int64)}
+    lg_ps = float(np.mean(prop_s)); lg_pp = float(np.mean(prop_p)); lg_pw = float(np.mean(prop_w[sw_rows]))
+    Xg = np.hstack([location_block(uu, zz, g_t['stand_r'], g_t['strikes']), control_block(g_t, np.full(len(uu), lg_ps)), np.full((len(uu), 1), lg_pp, np.float32)])
+    Xgw = np.hstack([location_block(uu, zz, g_t['stand_r'], g_t['strikes']), np.tile(np.eye(7, dtype=np.float32)[0], (len(uu), 1)), hats(np.full(len(uu), 94.0), V_KNOTS),
+                     np.zeros((len(uu), 1), np.float32), np.full((len(uu), 1), lg_pw, np.float32), np.ones((len(uu), 1), np.float32)])
+    res['grid'] = {'side_ft': gu.tolist(), 'height_ft': gz.tolist(), 'league_swing': [round(float(v), 4) for v in 1 / (1 + np.exp(-m_s.decision_function(Xg).astype(np.float64)))],
+                   'league_whiff': [round(float(v), 4) for v in 1 / (1 + np.exp(-m_w.decision_function(Xgw).astype(np.float64)))],
+                   'context': 'first pitch, four-seamer at 94 mph, right-handed hitter and pitcher, league-average swing and miss levels'}
+    # standard reference pitches by side for the hitter summaries
+    ref = rng.choice(len(swing), min(len(swing), 40000), replace=False)
+    ref_side = {sd: ref[Tk['stand_r'][ref] == sd] for sd in (0, 1)}
+    base_s = {}; base_w = {}
+    for sd, R in ref_side.items():
+        a = Xs[R].astype(np.float64).copy(); a[:, i_ps] = 0.0; base_s[sd] = m_s.decision_function(a)
+        b = Xw[R].astype(np.float64).copy(); b[:, i_pw] = 0.0; base_w[sd] = m_w.decision_function(b)
+    c_s, c_w = float(m_s.coef_[0][i_ps]), float(m_w.coef_[0][i_pw])
+    lgt = lambda r: np.log(r / (1 - r))
+    lg_sw = float(swing.mean()); lg_wh = float(whiff[sw_rows].mean())
+    rost = {}
+    try:
+        rost = _postseason_rosters(int(params.get('season', 2026)))
+    except Exception as e:
+        res['roster_error'] = repr(e)[:300]
+    res['postseason'] = rost
+    want_h = set(h for t in (rost.get('teams') or {}).values() for h in t['hitters']) if rost else set()
+    want_p = set(p_ for t in (rost.get('teams') or {}).values() for p_ in t['pitchers']) if rost else set()
+    gb = _groups(Tk['batter'], allr)
+    hitters = {}
+    for h, r in gb.items():
+        if h not in maps_s or h not in maps_w:
+            continue
+        if want_h and h not in want_h and len(r) < int(params.get('min_pitches_all', 2500)):
+            continue
+        sd = int(np.round(Tk['stand_r'][r].mean())); R = ref_side[sd]
+        ps = (swing[r].sum() + 300 * lg_sw) / (len(r) + 300); pw = (whiff[r].sum() + 200 * lg_wh) / (swing[r].sum() + 200)
+        p_sw = 1 / (1 + np.exp(-(base_s[sd] + c_s * lgt(ps) + Bs[R] @ maps_s[h])))
+        p_wh = 1 / (1 + np.exp(-(base_w[sd] + c_w * lgt(pw) + Bw[R] @ maps_w[h])))
+        o = outside[R]
+        dg = Bg @ maps_s[h]; dw = Bgw @ maps_w[h]
+        out_cells = [k for k in range(len(uu)) if (abs(uu[k]) > ZONE_HALF or zz[k] > ZONE_TOP or zz[k] < ZONE_BOT)]
+        top = sorted(out_cells, key=lambda k: -dg[k])[:3]
+        hitters[int(h)] = {'side': 'R' if sd == 1 else 'L', 'pitches': int(len(r)), 'swings': int(swing[r].sum()),
+                           'map_chase': round(float(p_sw[o].mean()), 4), 'map_zone_swing': round(float(p_sw[~o].mean()), 4),
+                           'map_whiff': round(float((p_sw * p_wh).sum() / p_sw.sum()), 4),
+                           'raw_chase': round(float(swing[r][outside[r]].mean()), 4) if outside[r].any() else None,
+                           'raw_zone_swing': round(float(swing[r][~outside[r]].mean()), 4) if (~outside[r]).any() else None,
+                           'raw_whiff': round(float(whiff[r].sum() / max(swing[r].sum(), 1)), 4),
+                           'swing_dev_grid': [round(float(v), 3) for v in dg], 'whiff_dev_grid': [round(float(v), 3) for v in dw],
+                           'top_chase_cells': [[float(uu[k]), float(zz[k]), round(float(dg[k]), 3)] for k in top]}
+    res['hitters'] = hitters
+    stage(f'hitters {len(hitters)}')
+    # pitchers: arsenal by family and side, from 2025 and 2026 through July
+    gp = _groups(Tk['pitcher'], allr)
+    famname = np.where(np.isin(Tk['group'], (0, 1, 2)), 0, np.where(np.isin(Tk['group'], (3, 4)), 1, np.where(Tk['group'] == 5, 2, 3)))
+    pitchers = {}
+    for p_, r in gp.items():
+        if (want_p and p_ not in want_p) or len(r) < 300:
+            continue
+        mix = {}
+        for f_, nm in ((0, 'fastball'), (1, 'breaking'), (2, 'offspeed')):
+            mm = famname[r] == f_
+            if mm.any():
+                mix[nm] = {'share': round(float(mm.mean()), 3), 'speed': round(float(Tk['v0'][r][mm].mean()), 1)}
+        dm_in_true_out = float(np.mean((~((np.abs(np.where(Tk['stand_r'][r] == 1, xp[r], -xp[r])) > ZONE_HALF) | (zp[r] > ZONE_TOP) | (zp[r] < ZONE_BOT))) & outside[r]))
+        pitchers[int(p_)] = {'throws': 'R' if Tk['throw_r'][r][0] == 1 else 'L', 'pitches': int(len(r)), 'mix': mix,
+                             'looks_in_ends_out': round(dm_in_true_out, 4), 'chase_rate_against': round(float(swing[r][outside[r]].mean()), 4) if outside[r].any() else None}
+    res['pitchers'] = pitchers
+    stage(f'pitchers {len(pitchers)}')
+    # pairs: postseason hitters against the pitchers of every team they meet
+    if rost and rost.get('teams'):
+        team_of_h = {h: tid for tid, t in rost['teams'].items() for h in t['hitters']}
+        opp = {}
+        for a_, b_ in rost.get('meets', []):
+            opp.setdefault(a_, set()).add(b_); opp.setdefault(b_, set()).add(a_)
+        cidx = (Tk['balls'].astype(np.int64) * 3 + Tk['strikes'].astype(np.int64))
+        sig = lambda v: 1 / (1 + np.exp(-v))
+        def chain_from(ps_, pw_, pcs_, pfo_, ci_):
+            use_c = np.bincount(ci_, minlength=12) >= 15; ki = ci_ % 3
+            def agg(w):
+                return np.where(use_c, np.bincount(ci_, weights=w, minlength=12), np.bincount(ki, weights=w, minlength=3)[np.arange(12) % 3])
+            n_ = agg(np.ones(len(ps_))); s_ = agg(ps_); sw_ = agg(ps_ * pw_); t_ = agg(1 - ps_); tc_ = agg((1 - ps_) * pcs_)
+            c_ = agg(ps_ * (1 - pw_)); cf_ = agg(ps_ * (1 - pw_) * pfo_)
+            d = lambda v: {(b, k): float(v[b * 3 + k]) for b in range(4) for k in range(3)}
+            return _count_chain(d(s_ / np.maximum(n_, 1e-9)), d(sw_ / np.maximum(s_, 1e-9)), d(tc_ / np.maximum(t_, 1e-9)), d(cf_ / np.maximum(c_, 1e-9)))
+        rows = []
+        cache = {}
+        for h, tid in team_of_h.items():
+            if h not in maps_s or h not in maps_w:
+                continue
+            sd = int(np.round(Tk['stand_r'][gb[h]].mean())) if h in gb else 1
+            for ot in opp.get(int(tid), ()):
+                for p_ in rost['teams'].get(ot, {}).get('pitchers', []):
+                    if p_ not in gp or len(gp[p_]) < 300:
+                        continue
+                    key = (p_, sd)
+                    if key not in cache:
+                        r = gp[p_]; side = Tk['stand_r'][r] == sd
+                        r = r[side] if side.sum() >= 100 else r
+                        A = {'r': r, 'ci': cidx[r], 'pcs': p_cs[r], 'pfo': p_fo[r], 'os': off_s[r], 'ow': off_w[r], 'Bs': Bs[r], 'Bw': Bw[r], 'out': outside[r]}
+                        A['league'] = chain_from(sig(A['os']), sig(A['ow']), A['pcs'], A['pfo'], A['ci'])
+                        cache[key] = A
+                    A = cache[key]
+                    ph = sig(A['os'] + A['Bs'] @ maps_s[h]); pl = sig(A['os'])
+                    hit = chain_from(ph, sig(A['ow'] + A['Bw'] @ maps_w[h]), A['pcs'], A['pfo'], A['ci'])
+                    chase = float((ph - pl)[A['out']].mean()) if A['out'].any() else 0.0
+                    zsw = float((ph - pl)[~A['out']].mean()) if (~A['out']).any() else 0.0
+                    rows.append((int(h), int(p_), int(tid), int(ot), chase, zsw, hit[0] - A['league'][0], hit[1] - A['league'][1], A['league'][0], A['league'][1], int(len(A['r']))))
+        if rows:
+            Rr = np.asarray([r_[4:10] for r_ in rows], float)
+            hid = np.asarray([r_[0] for r_ in rows]); pid = np.asarray([r_[1] for r_ in rows])
+            def two_way(v, a, b, iters=12):
+                ua, ia = np.unique(a, return_inverse=True); ub, ib = np.unique(b, return_inverse=True)
+                na, nb = np.bincount(ia), np.bincount(ib); mu = float(v.mean()); ea = np.zeros(len(ua)); eb = np.zeros(len(ub))
+                for _ in range(iters):
+                    ea = np.bincount(ia, weights=v - mu - eb[ib]) / na; eb = np.bincount(ib, weights=v - mu - ea[ia]) / nb
+                return ea[ia], eb[ib], v - mu - ea[ia] - eb[ib]
+            hk, pk, rk = two_way(Rr[:, 2] * 100, hid, pid); hb_, pb_, rb = two_way(Rr[:, 3] * 100, hid, pid)
+            res['pairs'] = [{'hitter': r_[0], 'pitcher': r_[1], 'team': r_[2], 'opponent': r_[3], 'arsenal_pitches': r_[10],
+                             'chase_points': round(r_[4] * 100 * 0.95, 2), 'zone_swing_points': round(r_[5] * 100, 2),
+                             'k_points': round((r_[6] * 100) * 0.40, 2), 'bb_points': round((r_[7] * 100) * 0.53, 2),
+                             'k_pair_points': round(float(rk[j]) * 0.40, 2), 'bb_pair_points': round(float(rb[j]) * 0.53, 2),
+                             'league_chain_k': round(r_[8], 4), 'league_chain_bb': round(r_[9], 4)} for j, r_ in enumerate(rows)]
+            res['pair_scale_note'] = 'chase times 0.95 (MATCHUP-01F slope); strikeout and walk changes times 0.40 and 0.53 (ENGINE-01 coefficients over calibrated); pair parts after removing hitter and pitcher parts over these pairs'
+        stage(f'pairs {len(rows)}')
+    return res
+
+
 # ---------------------------------------------------------------- matchup tables for the simulator
 def matchup_pairs(T: dict, train_seasons, arsenal_season: int, target_pairs, params: dict, stage) -> dict:
     """{(batter, pitcher): (chase points, zone-swing points)} for the target pairs: hitter maps and the league map at
@@ -3897,6 +4111,8 @@ def main():
             receipt['results'] = discipline_study(T, params, stage)
         elif experiment == 'exploit':
             receipt['results'] = exploit_study(T, params, stage)
+        elif experiment == 'scout':
+            receipt['results'] = scout_export(T, params, stage)
         elif experiment == 'steer':
             receipt['results'] = steer_profile(T, params, stage)
         elif experiment == 'matchup_final':
