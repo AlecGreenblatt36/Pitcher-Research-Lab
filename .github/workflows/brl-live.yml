@@ -64,6 +64,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           BRL_DISPATCH_TOKEN: ${{ secrets.BRL_DISPATCH_TOKEN }}
         run: python tools/brl_chain_next.py
+      - name: Start the day's matchup reports when the report workflow's cron has not (within an hour after 13:20 and 20:35 UTC)
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRL_DISPATCH_TOKEN: ${{ secrets.BRL_DISPATCH_TOKEN }}
+        run: cd tools && python brl_daily_report_trigger.py
     outputs:
       pages_ready: ${{ steps.live.outputs.pages_ready }}
   publish:
