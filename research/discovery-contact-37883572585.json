@@ -1,0 +1,513 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "contact",
+ "run_id": "37883572585",
+ "params": {
+  "experiment": "contact",
+  "study": "timing_final",
+  "final_eval": true,
+  "frozen_commit": "8795ff00",
+  "seasons": [
+   2025,
+   2026
+  ]
+ },
+ "started_at": "2026-10-09T04:22:51.395077+00:00",
+ "stages": [
+  {
+   "stage": "load savant 2025",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load savant 2026",
+   "at_seconds": 5.8
+  },
+  {
+   "stage": "sequence and priors",
+   "at_seconds": 15.8
+  },
+  {
+   "stage": "depth untouched",
+   "at_seconds": 16.5
+  }
+ ],
+ "savant": {
+  "2025": {
+   "coverage": {
+    "rows": 712528,
+    "swings": 339177,
+    "columns": [
+     "age_bat",
+     "age_pit",
+     "arm_angle",
+     "at_bat_number",
+     "attack_angle",
+     "attack_direction",
+     "away_team",
+     "ax",
+     "ay",
+     "az",
+     "balls",
+     "bat_score",
+     "bat_speed",
+     "batter",
+     "bb_type",
+     "day",
+     "delta_run_exp",
+     "description",
+     "estimated_woba_using_speedangle",
+     "events",
+     "fielder_2",
+     "fld_score",
+     "game_pk",
+     "game_type",
+     "hc_x",
+     "hc_y",
+     "hit_distance_sc",
+     "home_team",
+     "inning",
+     "inning_topbot",
+     "intercept_ball_minus_batter_pos_x_inches",
+     "intercept_ball_minus_batter_pos_y_inches",
+     "launch_angle",
+     "launch_speed",
+     "n_thruorder_pitcher",
+     "on_1b",
+     "on_2b",
+     "on_3b",
+     "outs_when_up",
+     "p_throws",
+     "pfx_x",
+     "pfx_z",
+     "pitch_number",
+     "pitch_type",
+     "pitcher",
+     "plate_x",
+     "plate_z",
+     "release_extension",
+     "release_pos_x",
+     "release_pos_z",
+     "release_speed",
+     "release_spin_rate",
+     "spin_axis",
+     "stand",
+     "strikes",
+     "swing_length",
+     "swing_path_tilt",
+     "sz_bot",
+     "sz_top",
+     "vx0",
+     "vy0",
+     "vz0",
+     "zone"
+    ],
+    "rows_by_month": {
+     "3": 19786,
+     "4": 114767,
+     "5": 120218,
+     "6": 115816,
+     "7": 107305,
+     "8": 124298,
+     "9": 110338
+    },
+    "filled_share_by_month": {
+     "bat_speed": {
+      "3": 0.9748,
+      "4": 0.9734,
+      "5": 0.9773,
+      "6": 0.9771,
+      "7": 0.9784,
+      "8": 0.9743,
+      "9": 0.9642
+     },
+     "swing_length": {
+      "3": 0.9748,
+      "4": 0.9734,
+      "5": 0.9773,
+      "6": 0.9771,
+      "7": 0.9784,
+      "8": 0.9743,
+      "9": 0.9642
+     },
+     "attack_angle": {
+      "3": 0.9748,
+      "4": 0.9734,
+      "5": 0.9773,
+      "6": 0.9771,
+      "7": 0.9784,
+      "8": 0.9743,
+      "9": 0.9642
+     },
+     "attack_direction": {
+      "3": 0.9748,
+      "4": 0.9734,
+      "5": 0.9773,
+      "6": 0.9771,
+      "7": 0.9784,
+      "8": 0.9743,
+      "9": 0.9642
+     },
+     "swing_path_tilt": {
+      "3": 0.9748,
+      "4": 0.9734,
+      "5": 0.9773,
+      "6": 0.9771,
+      "7": 0.9784,
+      "8": 0.9743,
+      "9": 0.9642
+     },
+     "intercept_ball_minus_batter_pos_x_inches": {
+      "3": 0.9703,
+      "4": 0.9722,
+      "5": 0.9764,
+      "6": 0.9748,
+      "7": 0.9772,
+      "8": 0.9731,
+      "9": 0.9628
+     },
+     "intercept_ball_minus_batter_pos_y_inches": {
+      "3": 0.9703,
+      "4": 0.9722,
+      "5": 0.9764,
+      "6": 0.9748,
+      "7": 0.9772,
+      "8": 0.9731,
+      "9": 0.9628
+     },
+     "arm_angle": {
+      "3": 0.991,
+      "4": 0.9941,
+      "5": 0.9962,
+      "6": 0.9934,
+      "7": 0.9955,
+      "8": 0.9938,
+      "9": 0.9963
+     }
+    },
+    "attack_angle_league": {
+     "mean": 9.067,
+     "sd": 11.861,
+     "n": 330422
+    },
+    "swing_path_tilt_league": {
+     "mean": 32.232,
+     "sd": 7.137,
+     "n": 330419
+    },
+    "bat_speed_league": {
+     "mean": 69.628,
+     "sd": 9.287,
+     "n": 330422
+    }
+   },
+   "plate_reference": {
+    "front": {
+     "release_height_offset_in": -0.003,
+     "sd_in": 0.043,
+     "release_side_offset_in": -0.0,
+     "n": 709823
+    },
+    "middle": {
+     "release_height_offset_in": 0.944,
+     "sd_in": 0.301,
+     "release_side_offset_in": -0.128,
+     "n": 709823
+    }
+   }
+  },
+  "2026": {
+   "coverage": {
+    "rows": 487063,
+    "swings": 231254,
+    "columns": [
+     "age_bat",
+     "age_pit",
+     "arm_angle",
+     "at_bat_number",
+     "attack_angle",
+     "attack_direction",
+     "away_team",
+     "ax",
+     "ay",
+     "az",
+     "balls",
+     "bat_score",
+     "bat_speed",
+     "batter",
+     "bb_type",
+     "day",
+     "delta_run_exp",
+     "description",
+     "estimated_woba_using_speedangle",
+     "events",
+     "fielder_2",
+     "fld_score",
+     "game_pk",
+     "game_type",
+     "hc_x",
+     "hc_y",
+     "hit_distance_sc",
+     "home_team",
+     "inning",
+     "inning_topbot",
+     "intercept_ball_minus_batter_pos_x_inches",
+     "intercept_ball_minus_batter_pos_y_inches",
+     "launch_angle",
+     "launch_speed",
+     "n_thruorder_pitcher",
+     "on_1b",
+     "on_2b",
+     "on_3b",
+     "outs_when_up",
+     "p_throws",
+     "pfx_x",
+     "pfx_z",
+     "pitch_number",
+     "pitch_type",
+     "pitcher",
+     "plate_x",
+     "plate_z",
+     "release_extension",
+     "release_pos_x",
+     "release_pos_z",
+     "release_speed",
+     "release_spin_rate",
+     "spin_axis",
+     "stand",
+     "strikes",
+     "swing_length",
+     "swing_path_tilt",
+     "sz_bot",
+     "sz_top",
+     "vx0",
+     "vy0",
+     "vz0",
+     "zone"
+    ],
+    "rows_by_month": {
+     "3": 22610,
+     "4": 117333,
+     "5": 121779,
+     "6": 115920,
+     "7": 109421
+    },
+    "filled_share_by_month": {
+     "bat_speed": {
+      "3": 0.9722,
+      "4": 0.9717,
+      "5": 0.9778,
+      "6": 0.9618,
+      "7": 0.9816
+     },
+     "swing_length": {
+      "3": 0.9722,
+      "4": 0.9717,
+      "5": 0.9778,
+      "6": 0.9618,
+      "7": 0.9816
+     },
+     "attack_angle": {
+      "3": 0.9722,
+      "4": 0.9717,
+      "5": 0.9778,
+      "6": 0.9618,
+      "7": 0.9816
+     },
+     "attack_direction": {
+      "3": 0.9722,
+      "4": 0.9717,
+      "5": 0.9778,
+      "6": 0.9618,
+      "7": 0.9816
+     },
+     "swing_path_tilt": {
+      "3": 0.9722,
+      "4": 0.9716,
+      "5": 0.9778,
+      "6": 0.9618,
+      "7": 0.9816
+     },
+     "intercept_ball_minus_batter_pos_x_inches": {
+      "3": 0.9689,
+      "4": 0.9699,
+      "5": 0.9769,
+      "6": 0.9603,
+      "7": 0.9804
+     },
+     "intercept_ball_minus_batter_pos_y_inches": {
+      "3": 0.9689,
+      "4": 0.9699,
+      "5": 0.9769,
+      "6": 0.9603,
+      "7": 0.9804
+     },
+     "arm_angle": {
+      "3": 0.9889,
+      "4": 0.9858,
+      "5": 0.9968,
+      "6": 0.9953,
+      "7": 0.9962
+     }
+    },
+    "attack_angle_league": {
+     "mean": 9.074,
+     "sd": 12.072,
+     "n": 225046
+    },
+    "swing_path_tilt_league": {
+     "mean": 32.328,
+     "sd": 7.095,
+     "n": 225041
+    },
+    "bat_speed_league": {
+     "mean": 69.814,
+     "sd": 9.549,
+     "n": 225046
+    }
+   },
+   "plate_reference": {
+    "front": {
+     "release_height_offset_in": -0.94,
+     "sd_in": 0.299,
+     "release_side_offset_in": 0.11,
+     "n": 484665
+    },
+    "middle": {
+     "release_height_offset_in": -0.003,
+     "sd_in": 0.043,
+     "release_side_offset_in": -0.0,
+     "n": 484665
+    }
+   }
+  }
+ },
+ "rows": 1429320,
+ "results": {
+  "contact_depth": {
+   "untouched": {
+    "full_controls": {
+     "contacts": 65356,
+     "prev_flight_after_ball": [
+      0.0256,
+      -0.0067,
+      0.0551
+     ],
+     "prev_flight_after_called_strike": [
+      0.1505,
+      0.1014,
+      0.192
+     ],
+     "prev_flight_after_foul": [
+      -0.008,
+      -0.0573,
+      0.0305
+     ],
+     "prev_flight_after_miss": [
+      -0.2394,
+      -0.3167,
+      -0.1455
+     ],
+     "own_flight": [
+      1.4298,
+      1.2671,
+      1.6079
+     ]
+    },
+    "within_previous_family": {
+     "contacts": 61059,
+     "prev_flight_after_ball": [
+      -0.0173,
+      -0.0853,
+      0.0561
+     ],
+     "prev_flight_after_called_strike": [
+      0.0865,
+      -0.0641,
+      0.2319
+     ],
+     "prev_flight_after_foul": [
+      -0.1085,
+      -0.2216,
+      0.0177
+     ],
+     "prev_flight_after_miss": [
+      -0.3231,
+      -0.6295,
+      0.0254
+     ],
+     "own_flight": [
+      1.4369,
+      1.267,
+      1.6109
+     ]
+    },
+    "alternations": {
+     "contacts": 32726,
+     "prev_flight_after_ball": [
+      0.0481,
+      -0.0009,
+      0.1012
+     ],
+     "prev_flight_after_called_strike": [
+      0.0643,
+      -0.0199,
+      0.1533
+     ],
+     "prev_flight_after_foul": [
+      -0.0325,
+      -0.1026,
+      0.0494
+     ],
+     "prev_flight_after_miss": [
+      -0.1519,
+      -0.3289,
+      0.0365
+     ],
+     "own_flight": [
+      1.4899,
+      1.3338,
+      1.635
+     ]
+    },
+    "repeats": {
+     "contacts": 30087,
+     "prev_flight_after_ball": [
+      -0.0812,
+      -0.1963,
+      0.0429
+     ],
+     "prev_flight_after_called_strike": [
+      0.0877,
+      -0.1388,
+      0.3941
+     ],
+     "prev_flight_after_foul": [
+      -0.0937,
+      -0.3067,
+      0.0778
+     ],
+     "prev_flight_after_miss": [
+      -0.517,
+      -0.922,
+      0.0357
+     ],
+     "own_flight": [
+      1.4385,
+      1.1994,
+      1.7558
+     ]
+    }
+   }
+  },
+  "rows": {
+   "untouched_contacts_with_previous": 67138,
+   "untouched_days": [
+    "2026-08-01",
+    "2026-09-27"
+   ]
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T04:23:07.934612+00:00",
+ "seconds": 16.5
+}
