@@ -723,7 +723,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var out = { state: st, due_up: c.due_up, due_up_id: c.due_up_id, on_deck: c.on_deck, on_deck_id: c.on_deck_id, on_mound: c.on_mound, pitcher_names: Object.assign({}, (server || {}).pitcher_names || {}, c.pitcher_names || {}),
       plays: c.plays || (srv && srv.plays) || [], box: c.box || (srv && srv.box) || null, updated_at: server ? server.updated_at : null, n_worlds: server ? server.n_worlds : 0,
       projected_final: server ? server.projected_final : null, sim_home: server ? server.home_win_probability : null, fetched_at: c.fetched_at, _client: true, _final: !!c.final,
-      current: c.current || null };
+      current: c.current || null, plate_umpire: c.box && c.box.plate_umpire ? c.box.plate_umpire : null };
     if (out._final) { out.home_win_probability = st.home_score > st.away_score ? 1 : 0; out.win_source = "final"; }
     else if (server && sameState(server.state, st)) { out.home_win_probability = leagueBlend(anchored(server.home_win_probability, anchorGap(f, null), st.inning, st.half, st.outs), f, st.inning, st.half, st.outs, st.bases, (st.home_score || 0) - (st.away_score || 0)); out.win_source = "sim"; }
     else if (t) { out.home_win_probability = leagueBlend(anchored(winAt(t, st.inning, st.half, st.outs || 0, st.bases, st.home_score - st.away_score), anchorGap(f, t), st.inning, st.half, st.outs), f, st.inning, st.half, st.outs, st.bases, (st.home_score || 0) - (st.away_score || 0)); out.win_source = "table"; }
@@ -1712,6 +1712,10 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       });
       out.batting[s] = bat; out.pitching[s] = pit;
     });
+    /* the plate umpire, when the box score names the officials */
+    (doc.officials || []).forEach(function (o) {
+      if (/^home plate/i.test(String(o.officialType || "")) && o.official && o.official.id != null) out.plate_umpire = { id: String(o.official.id), name: String(o.official.fullName || "") };
+    });
     return out;
   }
   /* live-client:end */
@@ -2222,6 +2226,22 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       deck: deckId ? { id: String(deckId), key: side + "|" + deckId + ":" + pid, pair: pairs[deckId + ":" + pid] || null, name: lv.on_deck ? lv.on_deck[side] || "" : "" } : null };
   }
   function following(pk, now) { return !!(now && now.pair) && state.rpFollow[pk] !== false; }
+  /* The plate umpires' leanings (public/reports/umpires.json, UMP-01): fetched once; the strip re-renders when it arrives. */
+  var UMPS = null;
+  function withUmpires(then) {
+    if (UMPS !== null) return then(UMPS || null);
+    UMPS = false;
+    fetch(REPORTS + "umpires.json", { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : false; }).then(function (doc) { UMPS = doc || false; then(UMPS || null); }, function () { UMPS = false; });
+  }
+  function umpireLine(lv) {
+    var u = lv && lv.plate_umpire;
+    if (!u) return "";
+    var row = UMPS && UMPS.rows ? UMPS.rows[String(u.id)] : null, s = row && row.strikes_per_100 ? row.strikes_per_100 : null;
+    var sg = function (v) { return (v > 0 ? "+" : "") + v.toFixed(1); };
+    if (!s || s.all_edges == null) return "Plate umpire: " + esc(u.name || u.id) + ".";
+    var parts = [["outside edge", s.outside], ["inside edge", s.inside], ["bottom", s.low], ["top", s.high]].filter(function (q) { return q[1] != null; }).map(function (q) { return q[0] + " " + sg(q[1]); });
+    return "Plate umpire: " + esc(u.name || u.id) + ". At the edges of the zone he calls " + (Math.abs(s.all_edges) < 0.5 ? "about the league's share of strikes" : Math.abs(s.all_edges).toFixed(1) + (s.all_edges > 0 ? " more" : " fewer") + " strikes per 100 takes than the league") + (parts.length ? " (" + parts.join(", ") + "; " : " (") + Number(row.games).toLocaleString() + " games in " + UMPS.season + "). A leaning that persists only partly from season to season; it changes no spot here.";
+  }
   /* While the report follows the game, the selected pair and count move with every pitch; a tap on a cell or a count stops that. */
   function followLive(pk, now) {
     if (!following(pk, now)) return;
@@ -2242,6 +2262,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (onSummary) h += '<a class="rp-follow" href="#/game/' + esc(pk) + '/report">Full plan</a>';
     else if (now.pair) h += '<button class="rp-follow" data-rpfollow aria-pressed="' + fol + '">' + (fol ? "Following the game" : "Follow the game") + "</button>";
     if (!now.pair) h += '<small class="rp-now-miss">' + (doc.sides && doc.sides[now.side] && doc.sides[now.side].hitters.map(String).indexOf(now.hid) >= 0 ? "This pitcher was not on the morning card, so there is no plan for the pair." : "This hitter was not in the morning lineup, so there is no plan for the pair.") + "</small>";
+    var ul = umpireLine(now.lv);
+    if (ul) h += '<small class="rp-now-miss">' + ul + "</small>";
     return h + "</div>";
   }
   /* The Summary tab's live card: the plan for the at-bat in progress, priced for this count, with the grids. */
@@ -2274,6 +2296,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     withReportDoc(f, pk, function (doc) {
       var now = liveReportNow(pk, doc);
       host.innerHTML = now ? liveCardHtml(f, pk, doc, now) : "";
+      if (now && now.lv.plate_umpire && UMPS === null) withUmpires(function () { loadLiveCard(f, pk); });
     });
   }
   function loadReport(f, pk) {
@@ -2285,6 +2308,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var now = liveReportNow(pk, doc);
       followLive(pk, now);
       host.innerHTML = reportHtml(f, pk, doc, now); wireReport(f, pk);
+      if (now && now.lv.plate_umpire && UMPS === null) withUmpires(function () { loadReport(f, pk); });
     });
   }
   function wireReport(f, pk) {
