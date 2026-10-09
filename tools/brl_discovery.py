@@ -2605,7 +2605,10 @@ def matchup_family(T: dict, params: dict, stage) -> dict:
             a = r[fbm[r]]; b = r[brm[r]]
             if len(a) < 60 or len(b) < 60:
                 continue
-            A = np.column_stack([T['x0'][a], T['z0'][a], T['ext'][a]]).astype(np.float64); Bq = np.column_stack([T['x0'][b], T['z0'][b], T['ext'][b]]).astype(np.float64)
+            if params.get('separation') == 'speed':        # PERCEPT-02: the speed gap between the two families (the plainest type cue in flight)
+                A = T['v0'][a][:, None].astype(np.float64); Bq = T['v0'][b][:, None].astype(np.float64)
+            else:
+                A = np.column_stack([T['x0'][a], T['z0'][a], T['ext'][a]]).astype(np.float64); Bq = np.column_stack([T['x0'][b], T['z0'][b], T['ext'][b]]).astype(np.float64)
             ok_a = np.isfinite(A).all(1); ok_b = np.isfinite(Bq).all(1)
             if ok_a.sum() < 60 or ok_b.sum() < 60:
                 continue
