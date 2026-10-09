@@ -98,15 +98,16 @@ Credited (frozen code, scored once on the untouched months, August 1 to Septembe
   better described on the true crossing than at the decision moment. Hitter-specific damage maps were not confirmed.
 - **Sequence effects in timing** (TIMING-03F). After a called strike the next pitch is met farther out front the
   slower that strike was (0.15 inches per 10 ms); after a miss, later (0.24); a foul carries nothing.
-- **Hitters answer pitch families differently at the same apparent spot** (MATCHUP-04F): maps with a family part beat
-  location-only maps on the untouched months (+3.9 nats per 1,000 decisions). About half of that is a league-wide
-  family pattern; hitter-specific family parts add +2.55 in development (MATCHUP-05), frozen scoring next.
-- **An unexploited edge, price under re-examination** (EXPLOIT-01 stands; VALUE-01F and VALUE-02F run figures
-  withdrawn October 9). Pitchers do not aim at a hitter's own decision-moment chase spots (EXPLOIT-01). VALUE-01F and
-  VALUE-02F priced aiming at about 43 runs per team-season at typical command, but a fresh placebo (another hitter's
-  map) on 2025 is not nil (VALUE-07): hitters' maps share a shape that predicts run value for anyone, so part of the
-  price was not hitter-specific. VALUE-08 measures each hitter's own part net of the shared shape; no run figure is
-  stated until it passes with a nil placebo.
+- **Hitters answer pitch families differently at the same apparent spot** (MATCHUP-04F, MATCHUP-05F): maps with a
+  family part beat location-only maps on the untouched months (+3.9 nats per 1,000 decisions); about half is a
+  league-wide family pattern, and hitter-specific family parts add +2.2 [1.8, 2.5] beyond a league model that has it.
+- **An unexploited edge, priced on each hitter's own part** (EXPLOIT-01, VALUE-08F, VALUE-09). Pitchers do not aim at
+  a hitter's decision-moment chase spots. Hitters' maps share a shape that predicts run value for anyone; the first
+  pricing (VALUE-01F, VALUE-02F) mixed it in and was withdrawn when a fresh placebo failed. Each hitter's own part (his
+  map minus the average same-side map) passes the placebo, holds among pitches at the same spot and with the plate
+  appearance's other pitches fixed. Aiming each outside pitch at the best third of the pitcher's own spots of that
+  pitch type for this hitter, at typical command, is worth about 32 runs over a team's season (21 to 44) on the
+  untouched months; in-zone aiming is not established.
 
 What did not hold: maps as an early warning (DRIFT-01) or as season projections (DISCIPLINE-01); the swing-plane
 formula as the source of the geometry signal (CONTACT-01, -02); locating the steering limit from misses with one map

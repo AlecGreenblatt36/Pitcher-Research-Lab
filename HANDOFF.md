@@ -81,20 +81,20 @@ Credited on the untouched set (frozen code, one scoring each; ledger rows):
   per 10 ms [0.101, 0.192]; after a miss later, -0.239 [-0.317, -0.146] (within pitcher-types, cell fixed effects).
   Frozen commit 8795ff00.
 
-- MATCHUP-04F: maps with a part by pitch family (fastball, breaking, offspeed) beat location-only maps by +3.91
-  nats per 1,000 decisions [3.34, 4.44] on the untouched months. Frozen commit fdb61e97. About half of that is a
-  league-wide family pattern the league model lacked (MATCHUP-05, development: the league's own family part +4.80;
-  hitter-specific family parts still +2.55 [2.35, 2.75] on top, mostly breaking balls outside). MATCHUP-05F (frozen
-  scoring on the untouched months) is next; the scouting view and engine switch only if it holds.
-- VALUE-01F and VALUE-02F (run figures WITHDRAWN pending VALUE-08, October 9 about 2:30 a.m.): they reported a
-  hitter's own chase map costing him runs (-0.00095 per point outside) and an aiming value of about -43 runs per
-  team-season at typical command. VALUE-07 found the placebo (another hitter's map) is not nil on 2025 with a fresh
-  reassignment (-0.000267 [-0.000491, -0.000088], about 40% of the own-map coefficient; family maps the same), so
-  maps share a shape that predicts run value for anyone. Per VALUE-07's registered rule, no run figure is stated
-  until VALUE-08 measures each hitter's own part (own map minus the same-side mean map of the other hitters) with a
-  nil placebo. VALUE-07 also found pitches in a plate appearance share deviations (correlation 0.16) and the
-  neighbor-held coefficient keeps 88% (not a large overstatement). EXPLOIT-01 (pitchers do not aim at hitter maps)
-  stands. Frozen commits 63623e0f and 61549d73.
+- MATCHUP-04F and MATCHUP-05F: hitters answer pitch families differently at the same apparent spot. Family maps
+  beat location maps on the untouched months by +3.91 [3.34, 4.44] (frozen fdb61e97); about half of that is a
+  league-wide family pattern, so the league model now carries its own family-by-location part, and against it the
+  hitter-specific family parts still add +2.16 [1.78, 2.52] (MATCHUP-05F, frozen 9f2f971e; breaking balls outside
+  +3.95). Hitter family maps with the league's family part replace location maps in the scouting view and engine.
+- VALUE-08F (replaces VALUE-01F and VALUE-02F's run figures, which were withdrawn at about 2:30 a.m. October 9 when a
+  fresh placebo failed in VALUE-07): hitters' maps share a shape that predicts run value for anyone (SD 2.7 points,
+  -0.0019 runs per point); the hitter's own part (his map minus the same-side mean map) passes its placebo, keeps its
+  rate among pitches at the same spot (VALUE-09) and with the plate appearance's other pitches held fixed. Aiming
+  each outside pitch at the best third of the pitcher's own spots of that pitch type for this hitter, at typical
+  command (0.6 ft), by the hitter's own part: **about 32 runs per team-season [21, 44]** on the untouched months
+  (location maps; family maps 29 [18, 42]). Frozen 02b266a2. In-zone values are not stated (their placebo fails).
+  Development gave a smaller value (13.5 [7.2, 20.0]) with maps from two seasons instead of three; VALUE-10 checks
+  whether map training length explains it. EXPLOIT-01 (pitchers do not aim at hitter maps) stands.
 
 Development results around it (their run figures inherit the VALUE-07 withdrawal): VALUE-05 the outside edge sits most where the pitcher is behind in the count (39% of it on 18% of the pitches), two strikes carry their share. VALUE-03 nets ADAPT-01's tightening (hitters chase a little less everywhere after
 seeing more tempting pitches than chance, -0.065 log-odds per extra one; they do not learn their spots): 86 percent
