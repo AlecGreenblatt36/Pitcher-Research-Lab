@@ -21,6 +21,7 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install --disable-pip-version-check "numpy>=2,<3" "pandas>=2,<4" "scikit-learn>=1.5,<2" "scipy>=1.12,<2" joblib requests cryptography==46.0.4
       - name: Top up the season's pitch table through yesterday (sealed; incremental)
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
           BRL_PA_PACKAGE_KEY: ${{ secrets.BRL_PA_PACKAGE_KEY }}
