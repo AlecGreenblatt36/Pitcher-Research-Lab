@@ -3494,6 +3494,137 @@ def value2_study(T: dict, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- VALUE-03: the edge net of hitters tightening up
+def value3_study(T: dict, params: dict, stage) -> dict:
+    """VALUE-02's outside edge at command scatter sigma (default 0.6 ft), net of ADAPT-01's general tightening: a pitcher
+    who aims at a hitter's spots shows him more high spots than chance, and each extra one lowers the log-odds of his
+    swinging at any later outside pitch in the game by tighten (default 0.065, ADAPT-01). Each 2025 outside pitch to a
+    hitter with a map keeps its pitcher, side and count group; for that cell and hitter, aiming at the best third of
+    the pitcher's own spots (under scatter) gives a gain in the hitter's deviation and a share of pitches landing in
+    his high spots (top quarter of deviations); walking each hitter-game in order, the expected extra high spots seen
+    before each pitch, beyond his own share, sets the tightening on it. Net runs = run value per point (VALUE-01's
+    regression, re-estimated) times (gain minus tightening), per plate appearance, scaled to 6,200. Also with the
+    tightening capped at three extra high spots (ADAPT-01's data rarely go beyond). Development data (2025)."""
+    res = {}
+    sgm = float(params.get('sigma', 0.6)); tighten = float(params.get('tighten', 0.065))
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+    F = rebuild(T)
+    keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
+    T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
+    swing = ((T['call'] == 1) | (T['call'] == 2)).astype(np.float64)
+    xp, zp = projected(T, F, None, 'straight', 0.26)
+    LB = location_block(xp, zp, T['stand_r'], T['strikes']); nL = LB.shape[1]
+    X = np.hstack([LB, control_block(T, swing_propensity(T)), pitcher_propensity(T)[:, None].astype(np.float32)])
+    tr = np.isin(T['season'], (2023, 2024))
+    rng = np.random.default_rng(11)
+    idx = np.flatnonzero(tr); idx = rng.choice(idx, min(len(idx), 600000), replace=False)
+    league = fit_logistic(X[idx], swing[idx]); off = league.decision_function(X); wL = league.coef_[0][:nL].astype(np.float64)
+    Bm = hitter_basis(xp, zp, T['stand_r'], T['strikes'])
+    maps = _hitter_maps(Bm, swing, off, _groups(T['batter'], tr), 10.0, 300)
+    stage(f'maps {len(maps)}')
+    te = (T['season'] == 2025) & (T['out7'] >= 0) & np.isin(T['batter'], np.asarray(list(maps), dtype=np.int64))
+    ix = np.flatnonzero(te)
+    sig = lambda v: 1 / (1 + np.exp(-v))
+    p_l = sig(off[ix]); D = np.zeros(len(ix)); lo_map = np.zeros(len(ix))
+    gb = _groups(T['batter'][ix], np.ones(len(ix), bool))
+    for h, rr in gb.items():
+        dev = Bm[ix[rr]] @ maps[h]; lo_map[rr] = off[ix[rr]] + dev
+        D[rr] = (sig(off[ix[rr]] + dev) - p_l[rr]) * 100
+    xt, zt = T['px'][ix].astype(np.float64), T['pz'][ix].astype(np.float64)
+    u_t = np.where(T['stand_r'][ix] == 1, xt, -xt)
+    e = np.maximum(np.maximum(np.abs(u_t) - ZONE_HALF, zt - ZONE_TOP), ZONE_BOT - zt)
+    outside = e > 0
+    thr = float(np.percentile(D[outside], 75))
+    # run value per point outside (VALUE-01's regression)
+    y = LW7[T['out7'][ix].astype(int)]
+    first = (T['pitch_no'] == 0) & (T['out7'] >= 0)
+    rv_all = LW7[np.clip(T['out7'], 0, 6).astype(int)]
+    def prior_rv(key):
+        nn, ss = _prior_by_day(np.r_[key[first], key[ix]].astype(np.int64), np.r_[T['day'][first], T['day'][ix]].astype(np.int64),
+                               np.r_[rv_all[first], np.zeros(len(ix))], np.r_[np.ones(int(first.sum()), bool), np.zeros(len(ix), bool)])
+        nn, ss = nn[int(first.sum()):], ss[int(first.sum()):]
+        lg_ = float(rv_all[first].mean()); return (ss + 200 * lg_) / (nn + 200)
+    rv_b, rv_p = prior_rv(T['batter']), prior_rv(T['pitcher'])
+    cnt = np.zeros((len(ix), 11)); cc = np.clip(T['balls'][ix], 0, 3) * 3 + np.clip(T['strikes'][ix], 0, 2)
+    for k in range(1, 12):
+        cnt[:, k - 1] = cc == k
+    grp = np.zeros((len(ix), 6)); g_ = np.clip(T['group'][ix], 0, 6)
+    for k in range(1, 7):
+        grp[:, k - 1] = g_ == k
+    Xd = np.column_stack([np.ones(len(ix)), cnt, grp, p_l, np.log(p_l / (1 - p_l)), outside, hats(e, (-0.8, -0.4, -0.15, 0.0, 0.15, 0.4, 0.8, 1.5)), rv_b, rv_p,
+                          (T['stand_r'][ix] == T['throw_r'][ix]).astype(float), D * outside, D * ~outside])
+    b_out = float(np.linalg.lstsq(Xd, y, rcond=None)[0][-2])
+    stage('coefficient')
+    # per hitter and cell: gain and high-spot share when aiming at the best third under scatter
+    K = 16; jit = np.random.default_rng(3).standard_normal((K, 2)); jit = (jit - jit.mean(0)) / jit.std(0)
+    cg = np.where(T['strikes'][ix] == 2, 2, np.where(T['balls'][ix] > T['strikes'][ix], 1, 0))
+    pit = T['pitcher'][ix]; stand = T['stand_r'][ix]; strikes = T['strikes'][ix]; bat = T['batter'][ix]
+    hit_side = {h: int(np.round(stand[rr].mean())) for h, rr in gb.items()}
+    cell_gain, cell_high = {}, {}
+    for pid, rr in _groups(pit, np.ones(len(ix), bool)).items():
+        hs_here = np.unique(bat[rr])
+        for sd in (0, 1):
+            for c3 in (0, 1, 2):
+                pool = rr[(stand[rr] == sd) & (cg[rr] == c3) & outside[rr]]
+                if len(pool) < 30:
+                    continue
+                if len(pool) > 300:
+                    pool = rng.choice(pool, 300, replace=False)
+                third = np.searchsorted(np.percentile(p_l[pool], [33.3, 66.7]), p_l[pool])
+                lb0 = LB[ix[pool]].astype(np.float64) @ wL
+                xj = (xp[ix[pool]][:, None] + sgm * jit[None, :, 0]).ravel(); zj = (zp[ix[pool]][:, None] + sgm * jit[None, :, 1]).ravel()
+                sj = np.repeat(np.full(len(pool), sd), K); kj = np.repeat(strikes[pool], K)
+                offj = np.repeat(off[ix[pool]] - lb0, K) + location_block(xj, zj, sj, kj).astype(np.float64) @ wL
+                Bj = hitter_basis(xj, zj, sj, kj)
+                for h in hs_here:
+                    if int(h) not in maps or hit_side.get(int(h)) != sd:
+                        continue
+                    dmat = ((sig(offj + Bj @ maps[int(h)]) - sig(offj)) * 100).reshape(len(pool), K)
+                    dj = dmat.mean(1); hj = (dmat >= thr).mean(1)
+                    gains, highs = [], []
+                    for t3 in range(3):
+                        sel = np.flatnonzero(third == t3)
+                        if len(sel) >= 3:
+                            k3 = max(1, len(sel) // 3); best = sel[np.argsort(dj[sel])[::-1][:k3]]
+                            gains.append(float(dj[best].mean() - dj[sel].mean())); highs.append(float(hj[best].mean()))
+                    if gains:
+                        cell_gain[(int(h), int(pid), c3)] = float(np.mean(gains)); cell_high[(int(h), int(pid), c3)] = float(np.mean(highs))
+    stage(f'cells {len(cell_gain)}')
+    # each hitter's own share of high spots among his outside pitches (what chance gives)
+    uh, ih = np.unique(bat[outside], return_inverse=True)
+    qh = dict(zip(uh.tolist(), (np.bincount(ih, weights=(D[outside] >= thr).astype(float)) / np.bincount(ih)).tolist()))
+    # walk each hitter-game in order
+    o = np.lexsort((T['pitch_no'][ix], T['ab'][ix], bat, T['game'][ix]))
+    gross = tight = tight_cap = 0.0; n_used = 0; extra_hist = []
+    cur = None; extra = 0.0
+    for j in o:
+        key = (int(T['game'][ix][j]), int(bat[j]))
+        if key != cur:
+            cur = key; extra = 0.0
+        if not outside[j]:
+            continue
+        c = (int(bat[j]), int(pit[j]), int(cg[j]))
+        if c not in cell_gain:
+            continue
+        gnn = cell_gain[c]; p_aim = min(max(sig(lo_map[j]) + gnn / 100.0, 1e-4), 1 - 1e-4)
+        lo_aim = np.log(p_aim / (1 - p_aim))
+        t_full = (p_aim - sig(lo_aim - tighten * extra)) * 100
+        t_cap = (p_aim - sig(lo_aim - tighten * min(extra, 3.0))) * 100
+        gross += gnn; tight += t_full; tight_cap += t_cap; n_used += 1; extra_hist.append(extra)
+        extra += cell_high[c] - qh.get(int(bat[j]), 0.25)
+    n_pa = max(int((T['pitch_no'][ix] == 0).sum()), 1)
+    scale = 6200.0 / n_pa
+    res['inputs'] = {'sigma_ft': sgm, 'tighten_per_extra_high_spot': tighten, 'high_threshold_points': round(thr, 2), 'runs_per_point_outside': round(b_out, 6),
+                     'outside_pitches_valued': n_used, 'plate_appearances': n_pa}
+    eh = np.asarray(extra_hist) if extra_hist else np.zeros(1)
+    res['extra_high_spots_before_a_pitch'] = {'mean': round(float(eh.mean()), 3), 'p90': round(float(np.percentile(eh, 90)), 3), 'max': round(float(eh.max()), 3)}
+    res['runs_per_6200'] = {'gross': round(b_out * gross * scale, 1), 'tightening': round(-b_out * tight * scale, 1), 'net': round(b_out * (gross - tight) * scale, 1),
+                            'net_tightening_capped_at_3': round(b_out * (gross - tight_cap) * scale, 1)}
+    res['points'] = {'gain_per_pitch': round(gross / max(n_used, 1), 3), 'tightening_per_pitch': round(tight / max(n_used, 1), 3)}
+    stage('net')
+    return res
+
+
 # ---------------------------------------------------------------- ADAPT-01: do hitters learn their own chase spots within a game?
 def adapt_study(T: dict, params: dict, stage) -> dict:
     """If pitchers started aiming at a hitter's own chase spots (VALUE-01F), would he adapt? Pitchers do not aim today
@@ -4589,6 +4720,8 @@ def main():
             receipt['results'] = value2_study(T, params, stage)
         elif experiment == 'adapt':
             receipt['results'] = adapt_study(T, params, stage)
+        elif experiment == 'value3':
+            receipt['results'] = value3_study(T, params, stage)
         elif experiment == 'damage':
             receipt['results'] = damage_study(T, params, stage)
         elif experiment == 'steer':
