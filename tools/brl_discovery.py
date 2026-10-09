@@ -2525,6 +2525,93 @@ def matchup_swing(T: dict, params: dict, stage, positions: dict | None = None) -
     return res
 
 
+# ---------------------------------------------------------------- BENCH-01: the decision-moment model against a flexible learner
+def bench_swing(T: dict, params: dict, stage) -> dict:
+    """BENCH-01. Does the decision-moment representation beat the strongest flexible model given the same inputs? A
+    gradient-boosted classifier (scikit-learn's histogram boosting) gets every measured input of the pitch (speed at
+    release and plate, movement, spin, release point and extension, the true crossing), the count, pitch group, batter
+    and pitcher hands and both players' earlier swing levels (the same controls the logistic models have), so it could
+    learn the decision-moment projection itself, since that is a function of those inputs. G0: boosting on those inputs.
+    G1: G0 plus the standard hitter heat map (league logistic and hitter maps on the true crossing, as a predicted
+    log-odds). Ours: MATCHUP-01's league logistic and hitter maps at the decision moment. G2: G1 plus ours as an input.
+    Maps and league models used as inputs are cross-fitted on the training rows (two folds by game), and fitted on all
+    training rows for the test. Log loss on the test season's decisions, game-clustered intervals."""
+    from sklearn.ensemble import HistGradientBoostingClassifier
+    res = {}
+    train = [int(v) for v in params.get('train', (2023, 2024))]; test = int(params.get('test', 2025))
+    T = take(T, np.isin(T['season'], train + [test]))
+    if test == 2026:
+        T = take(T, (T['season'] != 2026) | (T['day'] < date(2026, 8, 1).toordinal()))
+    F = rebuild(T)
+    keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['strikes'] >= 0) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
+    T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
+    n = len(T['call'])
+    swing = ((T['call'] == 1) | (T['call'] == 2)).astype(np.float64)
+    xp, zp = projected(T, F, None, 'straight', float(params.get('tau', 0.26)))
+    px, pz = T['px'].astype(np.float64), T['pz'].astype(np.float64)
+    prop = swing_propensity(T); pprop = pitcher_propensity(T)
+    C = np.hstack([control_block(T, prop), pprop[:, None].astype(np.float32)])
+    tr = np.isin(T['season'], train); te = T['season'] == test
+    fold = (T['game'] % 2).astype(np.int64)
+    rng = np.random.default_rng(int(params.get('seed', 11)))
+    lam = float(params.get('lam', 10.0)); min_n = int(params.get('min_pitches', 300)); n_league = int(params.get('league_n', 600000))
+    stage('features')
+
+    def league_and_maps(x, z, fit_rows, pred_rows):
+        X = np.hstack([location_block(x, z, T['stand_r'], T['strikes']), C])
+        idx = np.flatnonzero(fit_rows); idx = rng.choice(idx, min(len(idx), n_league), replace=False)
+        off = fit_logistic(X[idx], swing[idx]).decision_function(X)
+        Bm = hitter_basis(x, z, T['stand_r'], T['strikes'])
+        lo = off.copy(); ge = _groups(T['batter'], pred_rows)
+        for h, b in _hitter_maps(Bm, swing, off, _groups(T['batter'], fit_rows), lam, min_n).items():
+            if h in ge:
+                e = ge[h]; lo[e] += Bm[e] @ b
+        return off, lo
+    feats = {}
+    for name, (x, z) in (('true', (px, pz)), ('percept', (xp, zp))):
+        lg_ = np.zeros(n); mp_ = np.zeros(n)
+        for f in (0, 1):
+            off, lo = league_and_maps(x, z, tr & (fold != f), tr & (fold == f))
+            r_ = tr & (fold == f); lg_[r_] = off[r_]; mp_[r_] = lo[r_]
+        off, lo = league_and_maps(x, z, tr, te)
+        lg_[te] = off[te]; mp_[te] = lo[te]
+        feats[name] = (lg_, mp_)
+        stage('maps ' + name)
+    raw = np.column_stack([T[k].astype(np.float64) for k in ('v0', 'v1', 'pfx_x', 'pfx_z', 'spin', 'x0', 'z0', 'ext', 'px', 'pz', 'balls', 'strikes', 'group', 'stand_r', 'throw_r')]
+                          + [prop, pprop, (T['stand_r'] == T['throw_r']).astype(np.float64)])
+    yt = swing[te]; games = T['game'][te]
+    n_gbm = int(params.get('gbm_n', 1500000))
+    idx = np.flatnonzero(tr); idx = rng.choice(idx, min(len(idx), n_gbm), replace=False)
+
+    def gbm(Xm, label):
+        m = HistGradientBoostingClassifier(max_iter=int(params.get('gbm_iter', 400)), learning_rate=float(params.get('gbm_lr', 0.08)), max_leaf_nodes=63,
+                                           min_samples_leaf=200, l2_regularization=1.0, early_stopping=True, validation_fraction=0.1, n_iter_no_change=20,
+                                           categorical_features=[12], random_state=0)
+        m.fit(Xm[idx], swing[idx])
+        p = m.predict_proba(Xm[te])[:, 1]
+        res.setdefault('gbm_iterations', {})[label] = int(m.n_iter_)
+        stage('boosting ' + label)
+        return p
+    P = {}
+    P['G0_boosting'] = gbm(raw, 'G0')
+    P['G1_boosting_plus_heat_map'] = gbm(np.column_stack([raw, feats['true'][1]]), 'G1')
+    P['G2_G1_plus_decision_moment'] = gbm(np.column_stack([raw, feats['true'][1], feats['percept'][1]]), 'G2')
+    sig_ = lambda v: 1 / (1 + np.exp(-v))
+    P['league_true'] = sig_(feats['true'][0][te]); P['heat_map_true'] = sig_(feats['true'][1][te])
+    P['league_decision_moment'] = sig_(feats['percept'][0][te]); P['ours_decision_moment'] = sig_(feats['percept'][1][te])
+    L = {k: logloss_vec(v, yt) for k, v in P.items()}
+    cc = lambda d: [round(v * 1000, 3) for v in clustered_ci(d, games)]
+    res['test_decisions'] = int(te.sum())
+    res['logloss'] = {k: round(float(v.mean()), 6) for k, v in L.items()}
+    res['gain_nats_per_1000_decisions'] = {
+        'ours_over_G1': cc(L['G1_boosting_plus_heat_map'] - L['ours_decision_moment']),
+        'ours_over_G0': cc(L['G0_boosting'] - L['ours_decision_moment']),
+        'G2_over_G1': cc(L['G1_boosting_plus_heat_map'] - L['G2_G1_plus_decision_moment']),
+        'G1_over_G0': cc(L['G0_boosting'] - L['G1_boosting_plus_heat_map']),
+        'ours_over_heat_map_logistic': cc(L['heat_map_true'] - L['ours_decision_moment'])}
+    return res
+
+
 # ---------------------------------------------------------------- MATCHUP-04: hitter maps by pitch family at the decision moment
 def family_basis(B, group):
     """MATCHUP-04's map basis: the shared surface (hitter_basis, last column the level), its location bands times
@@ -7180,6 +7267,8 @@ def main():
                     positions[b_] = v_['off_plate_in']                       # the latest position season wins
                 stage(f'positions {len(positions)}')
             receipt['results'] = matchup_swing(T, params, stage, positions)
+        elif experiment == 'bench_swing':
+            receipt['results'] = bench_swing(T, params, stage)
         elif experiment == 'fatigue':
             receipt['results'] = fatigue(T, params, stage)
         elif experiment == 'surprise':
