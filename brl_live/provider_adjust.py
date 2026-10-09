@@ -150,15 +150,17 @@ class DayForm:
     per team per world, and the seven probabilities renormalized. Real team runs vary more from game to game than a
     simulator with fixed rates gives (team-run SD 3.21 against 3.12 in 2026, 3.25 against 3.11 in 2025: starters' stuff,
     lineups' days, conditions). new_world(seed) must be called before each world."""
-    def __init__(self, inner, sigma: float):
-        self.inner, self.sigma = inner, float(sigma)
+    def __init__(self, inner, sigma: float, center: float = 0.0):
+        # center (DISP-02): an extra downward shift of the shock's mean, so the shock leaves mean runs unchanged (runs are
+        # convex in reaching base, so a mean-one multiplier on reaching base raises mean runs)
+        self.inner, self.sigma, self.center = inner, float(sigma), float(center)
         self.e = {'away': 0.0, 'home': 0.0}
         self.name = getattr(inner, 'name', 'provider')
         self.validation_status = getattr(inner, 'validation_status', '')
 
     def new_world(self, seed: int):
         r = np.random.default_rng(np.random.SeedSequence([int(seed) & 0x7FFFFFFF, 0x44415946]))
-        self.e = {s: float(r.normal(0.0, self.sigma) - 0.5 * self.sigma ** 2) for s in ('away', 'home')}
+        self.e = {s: float(r.normal(0.0, self.sigma) - 0.5 * self.sigma ** 2 - self.center) for s in ('away', 'home')}
 
     def probabilities(self, ctx):
         base = self.inner.probabilities(ctx)

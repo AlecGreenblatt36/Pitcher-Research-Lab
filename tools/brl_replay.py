@@ -358,11 +358,11 @@ def main():
                        n_sims=n_sims, physics_table=physics_table, offsets=offsets, rest=use_rest, environment=environment, team_offsets=team_offsets,
                        age_layer=age_layer, steals=steals, win_states=(params.get('win_states') if params.get('win_states') == 'split' else bool(params.get('win_states'))), starter_lines=bool(params.get('starter_lines')), role_offsets=role_offsets, real_pa_check=bool(params.get('real_pa_check')), transitions=transitions,
                        hitter_lines=bool(params.get('hitter_lines')), running_events=running_events, reliever_choice=reliever_choice, leash=leash, base_state=base_state, relief_exit=relief_exit, relief_hooks=relief_hooks,
-                       day_form=float(params.get('day_form') or 0.0), paired_streams=bool(params.get('streams')), matchup=matchup)
+                       day_form=(params['day_form'] if isinstance(params.get('day_form'), dict) else float(params.get('day_form') or 0.0)), paired_streams=bool(params.get('streams')), matchup=matchup)
         if params.get('streams'):
             receipt['paired_streams'] = True
         if params.get('day_form'):
-            receipt['day_form'] = float(params['day_form'])
+            receipt['day_form'] = params['day_form'] if isinstance(params['day_form'], dict) else float(params['day_form'])
         if params.get('win_states'):
             receipt['win_states'] = True
         stage(f'replay {len(games)} games with {workers} workers')

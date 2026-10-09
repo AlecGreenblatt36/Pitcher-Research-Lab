@@ -181,7 +181,11 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
     dform = None
     if day_form:
         from brl_live.provider_adjust import DayForm
-        dform = provider = DayForm(provider, float(day_form)); chain.append(('day_form', provider))
+        if isinstance(day_form, dict):
+            dform = provider = DayForm(provider, float(day_form.get('sigma', 0.0)), float(day_form.get('center', 0.0)))
+        else:
+            dform = provider = DayForm(provider, float(day_form))
+        chain.append(('day_form', provider))
     radj = None
     if role_offsets is not None:
         radj = provider = RoleAdjust(provider); chain.append(('role', radj))
