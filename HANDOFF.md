@@ -35,11 +35,15 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 
 ### In flight (updated 3:45 a.m. Eastern October 9)
 
-- CLV-03 replays (line movement with open-time lineups): tags clv3-proj-500-2026, clv3-act-500-2026,
-  clv3-proj-500-2025, clv3-act-500-2025 (runs 37899877774, 37899904754, 37899932178, 37899958040; 8 shards each).
-  When done: git fetch origin brl-live-data, then python3 S1/harness/clv3.py S1 (S1 = the older scratchpad with
-  harness/). Record under CLV-03; any public wording change is a production change and needs Alec's approval.
-- VALUE-14 (outcome channels of the own-part edge; runs 37900252781 and 37900274732): record in the ledger.
+- CLV-03 done (ledger): with open-time lineups the line still moved toward our taught number 67.9% (2025) and
+  72.6% (2026); lineups explain 0.5 to 3 points. Proposed public wording sent to Alec (needs approval).
+- DISP-02 replays (centered day-form shock with paired streams): tags disp2-ref-1000-2026, disp2-df-1000-2026,
+  disp2-ref-1000-2025, disp2-df-1000-2025 (runs 37902607182, 37902636013, 37902663425, 37902690574). Score with
+  scratch trans/package_eval.sh disp2-df-1000 disp2-ref-1000 and trans/over_pooled.py
+  disp2-df-1000-2026:disp2-ref-1000-2026 disp2-df-1000-2025:disp2-ref-1000-2025; decision rule in the DISP-02 row
+  (switching it on is a production change: propose to Alec).
+- Recorded overnight: VALUE-14 (edge works through walks and outs in play), MAPS-01 (trait share 0.86), SERIES-01 (no
+  fading over meetings), ABS-01, PERCEPT-01/02F (failed), MATCHUP-06/07 (failed), ENGINE-02 (no larger pair effect).
 - FWD-01 runs after the World Series (instructions in the matchup section).
 - Awaiting Alec: the PROD-03 switch (taught-v5 with it) and publishing the Matchup Physics page.
 
