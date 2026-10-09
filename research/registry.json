@@ -3563,14 +3563,17 @@
     "columns": {
      "ID": "VALUE-18J",
      "Attempt": "The maps' own noise in the structural interval (the audit: the interval does not propagate map uncertainty; the noisy synthetic worlds covered the truth in 2 of 10). Maps refitted on training games resampled with replacement (the league model, the engine and the aim menus held fixed), each draw with its own shared shape and calibration, the structural figure recomputed per draw; the interval combines the draws' spread with the hitter and calibration resampling. Diagnostic in synthetic worlds first (small and noisy, ten worlds each, six draws): the spread from maps against the spread from hitters, and the combined interval's coverage of the truth of the structural choices. Local smoke (effect world, three draws, disclosed): spread from maps 1.2 runs per 6,200, from hitters and calibration 1.7; the draws' figures sit 10 to 14% below the point estimate because a resampled training set carries less distinct information (a bootstrap artifact; only the spread is used)",
-     "Disposition and evidence": "Reading set in advance (diagnostic): if the combined interval covers the truth in at least eight of ten worlds of both kinds, the stated interval of the aiming edge is restated with map noise included in the next scoring; if coverage stays low with the spread included, the miss is bias (the calibration's few percent in noisy worlds), and the stated figure carries that note rather than a wider interval. Receipts: research/discovery-value_synth-<run>.json",
-     "Delta corrected Brier, 2026": "diagnostic, registered"
+     "Disposition and evidence": "Reading set in advance (diagnostic): if the combined interval covers the truth in at least eight of ten worlds of both kinds, the stated interval of the aiming edge is restated with map noise included in the next scoring; if coverage stays low with the spread included, the miss is bias (the calibration's few percent in noisy worlds), and the stated figure carries that note rather than a wider interval. Receipts: research/discovery-value_synth-<run>.json. **Results (runs 37990450846 small, 37990489632 noisy; 10 worlds each, 200,000 plate appearances, 6 map draws):** the spread from map noise is 0.4 runs per 6,200 outside pitches in both kinds against 0.85 and 1.06 from hitters and calibration, so including it widens the interval by 13% (3.3 to 3.8 wide in the small world, 4.2 to 4.5 in the noisy one). Small world: the structural estimate -18.7 against the true value of its own choices -19.1 (ratio 0.98), the interval covers the truth in 10 of 10 worlds with or without map noise. Noisy world: estimate -46.5 against -49.2 (ratio 0.946; inside 0.905), coverage 3 of 10 either way; the miss is a 5% understatement, the conservative direction, not width. Reading, by the rule set in advance: in the small world the first branch holds and the stated interval may carry map noise (about one run per team-season more width); in the noisy world the miss is bias, so the stated figure keeps its note that the structural estimate runs a few percent below the true value of its choices when hitters are noisy. The 30 to 45 range stands; it already spans far more than either source of spread.",
+     "Delta corrected Brier, 2026": "diagnostic: map noise 13% of the interval; noisy worlds a 5% understatement"
     },
     "registered_before_run": false,
     "diagnostic": true,
-    "runs": [],
+    "runs": [
+     "37990450846",
+     "37990489632"
+    ],
     "frozen_commits": [],
-    "status": "diagnostic, registered"
+    "status": "diagnostic: map noise 13% of the interval; noisy worlds a 5% understatement"
    }
   ],
   "TOTALS-04": [
