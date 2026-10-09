@@ -2496,6 +2496,122 @@ def matchup_swing(T: dict, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- MATCHUP-02: do decision-moment matchups move plate-appearance outcomes
+def matchup_pa(T: dict, params: dict, stage) -> dict:
+    """Hitter maps and the league map at the decision moment as in MATCHUP-01 (fitted on 2023-2024, shrinkage 10). For
+    every 2025 hitter-pitcher pair, the pitcher's 2024 pitches (his arsenal as the hitter could have known it) are run
+    through the hitter's map and the league map: the matchup's expected extra swing rate on pitches outside the zone
+    (chase deviation) and inside it (zone-swing deviation), beyond the additive terms. Do these predict the pair's 2025
+    strikeouts and walks beyond both players' earlier strikeout and walk rates? Coefficients and out-of-sample log loss
+    by game-parity cross-fitting within 2025."""
+    res = {}
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+    F = rebuild(T)
+    keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['strikes'] >= 0) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
+    Tk = take(T, keep); Fk = {k: v[keep] for k, v in F.items()}
+    swing = ((Tk['call'] == 1) | (Tk['call'] == 2)).astype(np.float64)
+    xp, zp = projected(Tk, Fk, None, 'straight', float(params.get('tau', 0.26)))
+    C = np.hstack([control_block(Tk, swing_propensity(Tk)), pitcher_propensity(Tk)[:, None].astype(np.float32)])
+    X = np.hstack([location_block(xp, zp, Tk['stand_r'], Tk['strikes']), C])
+    tr = np.isin(Tk['season'], (2023, 2024))
+    rng = np.random.default_rng(int(params.get('seed', 11)))
+    idx = np.flatnonzero(tr); idx = rng.choice(idx, min(len(idx), int(params.get('league_n', 600000))), replace=False)
+    league = fit_logistic(X[idx], swing[idx])
+    off = league.decision_function(X)
+    Bm = hitter_basis(xp, zp, Tk['stand_r'], Tk['strikes'])
+    bat = Tk['batter']
+    maps = {}
+    ordr = np.argsort(bat[tr], kind='stable'); tri = np.flatnonzero(tr)[ordr]; hb = bat[tri]
+    cut = np.flatnonzero(np.diff(hb)) + 1
+    for a, b in zip(np.r_[0, cut], np.r_[cut, len(tri)]):
+        r = tri[a:b]
+        if len(r) >= int(params.get('min_pitches', 300)):
+            maps[int(bat[r[0]])] = _ridge_offset(Bm[r], swing[r], off[r], float(params.get('lam', 10.0)))
+    stage(f'hitter maps {len(maps)}')
+    # each pitcher's 2024 pitches, as the arsenal sample (decision-moment crossing, count, outside or inside the zone)
+    u_true = np.where(Tk['stand_r'] == 1, Tk['px'], -Tk['px'])
+    outside = (np.abs(u_true) > ZONE_HALF) | (Tk['pz'] > ZONE_TOP) | (Tk['pz'] < ZONE_BOT)
+    arsenal_rows = np.flatnonzero(Tk['season'] == 2024)
+    pit = Tk['pitcher']
+    o2 = np.argsort(pit[arsenal_rows], kind='stable'); ar = arsenal_rows[o2]; pa_ = pit[ar]
+    cut2 = np.flatnonzero(np.diff(pa_)) + 1
+    arsenal = {}
+    for a, b in zip(np.r_[0, cut2], np.r_[cut2, len(ar)]):
+        r = ar[a:b]
+        if len(r) >= int(params.get('min_arsenal', 300)):
+            arsenal[int(pit[r[0]])] = r if len(r) <= 1500 else rng.choice(r, 1500, replace=False)
+    stage(f'arsenals {len(arsenal)}')
+    # 2025 plate appearances (first pitch of each), their outcome and both players' earlier strikeout and walk rates
+    P = take(T, (T['season'] == 2025) & (T['pitch_no'] == 0) & (T['out7'] >= 0))
+    y7 = P['out7'].astype(int)
+    K = (y7 == 1).astype(float); BB = (y7 == 2).astype(float)
+    # earlier rates from 2023-2024 plate appearances plus earlier 2025 days
+    PA_all = take(T, (T['pitch_no'] == 0) & (T['out7'] >= 0))
+    def rate(key_all, key_p, cls, k):
+        yy = (PA_all['out7'] == cls).astype(float)
+        nn, ss = _prior_by_day(np.r_[key_all, key_p].astype(np.int64), np.r_[PA_all['day'], P['day'] + 0].astype(np.int64),
+                               np.r_[yy, np.zeros(len(key_p))], np.r_[np.ones(len(key_all), bool), np.zeros(len(key_p), bool)])
+        nn, ss = nn[len(key_all):], ss[len(key_all):]
+        lg = yy.mean()
+        rr = (ss + k * lg) / (nn + k)
+        return np.log(rr / (1 - rr))
+    kb, kp = rate(PA_all['batter'], P['batter'], 1, 150.0), rate(PA_all['pitcher'], P['pitcher'], 1, 300.0)
+    bb_b, bb_p = rate(PA_all['batter'], P['batter'], 2, 150.0), rate(PA_all['pitcher'], P['pitcher'], 2, 300.0)
+    stage('rates')
+    # pair features: hitter map minus league on the pitcher's arsenal (the arsenal's hand split to the hitter's side)
+    pairs = {}
+    chase = np.full(len(y7), np.nan); zsw = np.full(len(y7), np.nan)
+    for i, (h, p_) in enumerate(zip(P['batter'], P['pitcher'])):
+        h, p_ = int(h), int(p_)
+        if h not in maps or p_ not in arsenal:
+            continue
+        key = (h, p_, int(P['stand_r'][i]))
+        if key not in pairs:
+            r = arsenal[p_]
+            r = r[Tk['stand_r'][r] == P['stand_r'][i]] if np.sum(Tk['stand_r'][r] == P['stand_r'][i]) >= 100 else r
+            dev_logit = Bm[r] @ maps[h]
+            p_l = 1 / (1 + np.exp(-off[r])); p_h = 1 / (1 + np.exp(-(off[r] + dev_logit)))
+            o = outside[r]
+            pairs[key] = (float((p_h - p_l)[o].mean()) if o.any() else 0.0, float((p_h - p_l)[~o].mean()) if (~o).any() else 0.0)
+        chase[i], zsw[i] = pairs[key]
+    stage(f'pairs {len(pairs)}')
+    have = np.isfinite(chase)
+    res['rows'] = {'plate_appearances_2025': int(len(y7)), 'with_pair_features': int(have.sum()), 'pairs': len(pairs),
+                   'chase_dev_sd_points': round(float(np.nanstd(chase) * 100), 3), 'zone_swing_dev_sd_points': round(float(np.nanstd(zsw) * 100), 3)}
+    plat = (P['stand_r'] == P['throw_r']).astype(float)
+    games = P['game'][have]
+    out = {}
+    for name, y, base in (('strikeout', K, np.column_stack([kb, kp, plat])), ('walk', BB, np.column_stack([bb_b, bb_p, plat]))):
+        Xb = base[have]; Xm = np.column_stack([Xb, chase[have] * 100, zsw[have] * 100]); yy = y[have]
+        par = games % 2 == 0
+        ll0 = np.zeros(len(yy)); ll1 = np.zeros(len(yy)); coefs = []
+        from sklearn.linear_model import LogisticRegression
+        for side in (True, False):
+            fr, pr = par == side, par != side
+            m0 = LogisticRegression(C=1e4, max_iter=500).fit(Xb[fr], yy[fr]); m1 = LogisticRegression(C=1e4, max_iter=500).fit(Xm[fr], yy[fr])
+            ll0[pr] = logloss_vec(m0.predict_proba(Xb[pr])[:, 1], yy[pr]); ll1[pr] = logloss_vec(m1.predict_proba(Xm[pr])[:, 1], yy[pr])
+            coefs.append(m1.coef_[0][-2:])
+        full = LogisticRegression(C=1e4, max_iter=500).fit(Xm, yy)
+        bs = []
+        ug = np.unique(games); gi = np.searchsorted(ug, games)
+        for _ in range(int(params.get('reps', 100))):
+            w = np.bincount(rng.integers(0, len(ug), len(ug)), minlength=len(ug))[gi]
+            sel = np.repeat(np.arange(len(yy)), w)
+            bs.append(LogisticRegression(C=1e4, max_iter=300).fit(Xm[sel], yy[sel]).coef_[0][-2:])
+        bs = np.asarray(bs)
+        out[name] = {'rate': round(float(yy.mean()), 4), 'gain_nats_per_1000_pa': [round(v * 1000, 3) for v in clustered_ci(ll0 - ll1, games)],
+                     'coef_chase_dev_per_point': [round(float(full.coef_[0][-2]), 4), round(float(np.percentile(bs[:, 0], 2.5)), 4), round(float(np.percentile(bs[:, 0], 97.5)), 4)],
+                     'coef_zone_swing_dev_per_point': [round(float(full.coef_[0][-1]), 4), round(float(np.percentile(bs[:, 1], 2.5)), 4), round(float(np.percentile(bs[:, 1], 97.5)), 4)]}
+        # observed rate by quintile of the chase deviation, against the base model
+        q = np.nanpercentile(chase[have], [20, 40, 60, 80]); qi = np.searchsorted(q, chase[have])
+        m0f = LogisticRegression(C=1e4, max_iter=500).fit(Xb, yy); p0 = m0f.predict_proba(Xb)[:, 1]
+        out[name]['by_chase_quintile'] = [{'chase_dev_points': round(float(chase[have][qi == j].mean() * 100), 2), 'observed': round(float(yy[qi == j].mean()), 4),
+                                           'base_model': round(float(p0[qi == j].mean()), 4), 'pa': int((qi == j).sum())} for j in range(5)]
+    res['outcomes'] = out
+    stage('plate appearances')
+    return res
+
+
 # ---------------------------------------------------------------- FATIGUE-01: the pitcher's state inside the game
 LW7 = np.array([-0.26, -0.28, 0.32, 0.47, 0.78, 1.40, 0.45])
 
@@ -2904,6 +3020,8 @@ def main():
             receipt['results'] = fatigue(T, params, stage)
         elif experiment == 'surprise':
             receipt['results'] = surprise_study(T, params, stage)
+        elif experiment == 'matchup_pa':
+            receipt['results'] = matchup_pa(T, params, stage)
         receipt['status'] = 'completed'
     except StopIteration:
         receipt['status'] = 'completed'
