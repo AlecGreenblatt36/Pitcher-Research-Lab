@@ -3470,10 +3470,11 @@ def value2_study(T: dict, params: dict, stage) -> dict:
     final = bool(params.get('final_eval'))
     if final and not params.get('frozen_commit'):
         raise ValueError('the final value scoring runs only as the registered evaluation of a frozen commit')
+    dev_test = int(params.get('test_season', 2025))   # VALUE-11: 2026 through July as a development test season
     if final:      # VALUE-02F: maps from 2023-2025, scored on the 2026 pitches from August 1 (second look at the untouched months)
         T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | ((T['season'] == 2026) & (T['day'] >= date(2026, 8, 1).toordinal())))
     else:
-        T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+        T = take(T, np.isin(T['season'], (2023, 2024, 2025) + ((2026,) if dev_test == 2026 else ())))
     F = rebuild(T)
     keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
     T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
@@ -3485,7 +3486,7 @@ def value2_study(T: dict, params: dict, stage) -> dict:
     fam_parts = [(Bh[:, :-1] * np.isin(T['group'], (3, 4))[:, None]).astype(np.float32), (Bh[:, :-1] * (T['group'] == 5)[:, None]).astype(np.float32)] if lf else []
     X = np.hstack([LB] + fam_parts + [control_block(T, swing_propensity(T)), pitcher_propensity(T)[:, None].astype(np.float32)]); del fam_parts
     tr = np.isin(T['season'], (2023, 2024, 2025)) if final else np.isin(T['season'], tuple(int(v) for v in params.get('map_seasons', (2023, 2024))))   # VALUE-10: map_seasons
-    test_season = 2026 if final else 2025
+    test_season = 2026 if final else dev_test
     rng = np.random.default_rng(11)
     idx = np.flatnonzero(tr); idx = rng.choice(idx, min(len(idx), 600000), replace=False)
     league = fit_logistic(X[idx], swing[idx]); off = league.decision_function(X); del X
