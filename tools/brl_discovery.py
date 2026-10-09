@@ -3152,6 +3152,42 @@ def main():
                 del cols
             receipt['results'] = results
             raise StopIteration
+        if experiment == 'feed_vs_savant':
+            import importlib.util
+            spec = importlib.util.spec_from_file_location('brl_matchup', ROOT / 'tools' / 'brl_matchup.py')
+            mx = importlib.util.module_from_spec(spec); spec.loader.exec_module(mx)
+            from cloud.security import unseal
+            sv = savant_module(); out = {}
+            for year in params.get('seasons', (2025, 2026)):
+                year = int(year)
+                stage(f'load {year}')
+                S = mx.merge(load_savant(repo, token, branch, key, year))
+                if year == 2026:
+                    keep_ = S['day'] < mx.UNTOUCHED_FROM
+                    S = {k: (v[keep_] if not k.endswith('__vocab') else v) for k, v in S.items()}
+                raw = read_blob(repo, token, study_path(year), branch)
+                doc = json.loads(gzip.decompress(unseal(raw, key, study_purpose(year))))
+                Tf = pitch_table(doc, year); del doc, raw
+                if year == 2026:
+                    keep_ = Tf['day'] < mx.UNTOUCHED_FROM
+                    Tf = take(Tf, keep_)
+                kf = (Tf['game'].astype(np.int64) * 1000 + Tf['ab'].astype(np.int64)) * 100 + Tf['pitch_no'].astype(np.int64)
+                ks = (S['game_pk'].astype(np.int64) * 1000 + (S['at_bat_number'].astype(np.int64) - 1)) * 100 + (S['pitch_number'].astype(np.int64) - 1)
+                common, i_f, i_s = np.intersect1d(kf, ks, return_indices=True)
+                c = {k: S[k][i_s].astype(np.float64) for k in ('vx0', 'vy0', 'vz0', 'ax', 'ay', 'az', 'plate_x', 'plate_z')}
+                sv.anchor(c, year)
+                xf, zf, _, _ = sv.at(c, sv.FRONT); xm, zm, _, _ = sv.at(c, sv.MIDDLE)
+                fz, fx = Tf['pz'][i_f].astype(np.float64), Tf['px'][i_f].astype(np.float64)
+                ok = np.isfinite(fz) & np.isfinite(zf) & np.isfinite(c['plate_z'])
+                med = lambda v: round(float(np.median(v[ok])) * 12.0, 3)
+                out[year] = {'matched': int(len(common)), 'feed_pitches': int(len(kf)), 'savant_pitches': int(len(ks)),
+                             'feed_minus_savant_plate_z_in': med(fz - c['plate_z']), 'feed_minus_front_z_in': med(fz - zf), 'feed_minus_middle_z_in': med(fz - zm),
+                             'abs_feed_minus_savant_plate_z_p90_in': round(float(np.percentile(np.abs(fz - c['plate_z'])[ok], 90)) * 12.0, 3),
+                             'feed_minus_savant_plate_x_in': round(float(np.median((fx - c['plate_x'])[ok])) * 12.0, 3),
+                             'savant_plate_reference': sv.reference_check(S)}
+                stage(f'compared {year}')
+            receipt['results'] = out
+            raise StopIteration
         if experiment == 'contact':
             import importlib.util
             spec = importlib.util.spec_from_file_location('brl_matchup', ROOT / 'tools' / 'brl_matchup.py')
