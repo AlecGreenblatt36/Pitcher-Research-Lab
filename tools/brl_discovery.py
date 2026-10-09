@@ -8126,6 +8126,9 @@ def main():
             T = concat(tables_); del tables_
             receipt['seasons_rows'] = {int(s): int((T['season'] == s).sum()) for s in np.unique(T['season'])}
             receipt['results'] = um.study(T, ump_tables, params, stage)
+            if params.get('publish'):
+                # the umpires' table for the page (model outputs about public figures, aggregated over thousands of calls)
+                put_bytes(repo, token, 'public/reports/umpires.json', json.dumps(receipt['results']['umpires_table'], separators=(',', ':')).encode(), branch, 'BRL: plate umpire tendencies')
             raise StopIteration
         if experiment in ('challenges', 'scarcity'):
             stage('fetch the 2026 play-by-play')

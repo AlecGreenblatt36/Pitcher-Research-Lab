@@ -87,10 +87,13 @@ def region_of(px, pz, stand_r):
     return r
 
 
-def league_rates(px, pz, stand_r, cs, cell=0.25):
-    """Called-strike rate on taken pitches by location cell and hitter side (additive smoothing toward 0.5 with a weight of 2)."""
+def league_rates(px, pz, stand_r, cs, season=None, cell=0.25):
+    """Called-strike rate on taken pitches by location cell, hitter side and season (additive smoothing toward 0.5 with a weight of 2);
+    by season so that a league-wide change in the zone (2026) does not read as every umpire's tendency."""
     ix = np.floor((px + 2.5) / cell).astype(np.int64); iz = np.floor((pz - 0.0) / cell).astype(np.int64)
     key = (stand_r.astype(np.int64) * 1000 + np.clip(ix, 0, 39)) * 100 + np.clip(iz, 0, 59)
+    if season is not None:
+        key = key + (season.astype(np.int64) - 2000) * 10000000
     uniq, inv = np.unique(key, return_inverse=True)
     n = np.bincount(inv, minlength=len(uniq)).astype(float); s = np.bincount(inv, weights=cs.astype(float), minlength=len(uniq))
     rate = (s + 1.0) / (n + 2.0)
@@ -149,7 +152,7 @@ def study(T: dict, tables: dict, params: dict, stage) -> dict:
     stage(f'taken pitches with a plate umpire: {int(keep.sum())} of {int(taken.sum())}')
     px = T['px'][keep].astype(float); pz = T['pz'][keep].astype(float); sr = T['stand_r'][keep]; cs = T['cs'][keep].astype(float); u = ump[keep]
     season = T['season'][keep]; day = T['day'][keep]
-    p = league_rates(px, pz, sr, cs)
+    p = league_rates(px, pz, sr, cs, season)
     region = region_of(px, pz, sr)
     out = {'pitches': int(len(px)), 'edge_pitches': int((region >= 0).sum()), 'umpires': int(len(np.unique(u))), 'league_strike_rate_edges': round(float(cs[region >= 0].mean()), 4),
            'edge_shares': {name: round(float((region == r).mean()), 4) for r, name in enumerate(('low', 'high', 'inside', 'outside'))}}
@@ -174,7 +177,13 @@ def study(T: dict, tables: dict, params: dict, stage) -> dict:
         if 'all_edges' in rec and rec['all_edges']['n'] >= 300:
             table[str(uid)] = {'name': names.get(uid), 'edge_calls': rec['all_edges']['n'],
                                'strikes_per_100': {r: round(rec[r]['strikes_per_100'], 2) for r in rec}}
-    out['umpires_table'] = {'season': last, 'count': len(table), 'rows': table}
+    games_by_ump = {}
+    for pk, uid in by_game.items():
+        games_by_ump[uid] = games_by_ump.get(uid, 0) + 1
+    for uid, rec in table.items():
+        rec['games'] = int(games_by_ump.get(int(uid), 0))
+    out['umpires_table'] = {'schema': 'brl.umpires.v1', 'season': last, 'count': len(table), 'league_strike_rate_edges': out['league_strike_rate_edges'], 'rows': table,
+                            'note': 'strikes per 100 taken pitches at the edges of the zone against the league rate for the same locations, shrunk; a leaning that persists only partly from season to season (UMP-01)'}
     ranked = sorted(table.items(), key=lambda kv: kv[1]['strikes_per_100'].get('all_edges', 0.0))
     out['widest_and_tightest'] = {'tightest': [(v['name'], v['strikes_per_100'].get('all_edges')) for _, v in ranked[:5]], 'widest': [(v['name'], v['strikes_per_100'].get('all_edges')) for _, v in ranked[-5:]]}
     return out
