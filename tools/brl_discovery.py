@@ -4192,6 +4192,83 @@ def abs2_study(T: dict, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- FRAMING-01: what the 2026 challenge system did to catcher framing
+def load_pa_states(repo, token, key_hex):
+    """The plate-appearance history from the sealed data package (game state, catcher), for joins to the pitch table;
+    stays on the runner."""
+    import importlib.util, tempfile
+    spec = importlib.util.spec_from_file_location('brl_entrypoint', ROOT / 'brl_engine' / 'entrypoint.py')
+    ep = importlib.util.module_from_spec(spec); spec.loader.exec_module(ep)
+    manifest = json.loads((ROOT / 'brl_engine' / 'data_package.json').read_text())
+    root = Path(tempfile.mkdtemp(prefix='brl-pkg-'))
+    ep.restore_package(repo, token, key_hex, manifest, root)
+    path = next(root.rglob('plate_appearances.csv.gz'))
+    import pandas as pd
+    h = pd.read_csv(path, usecols=['game_pk', 'at_bat_number', 'fielder_2', 'outs_when_up', 'on_1b', 'on_2b', 'on_3b', 'bat_score_diff', 'inning', 'date_key'], low_memory=False)
+    return h
+
+
+def framing_study(T: dict, H, params: dict, stage) -> dict:
+    """ABS-01 found the 2026 challenge system took away borderline strikes. Framing is a catcher's share of borderline
+    calls; if challenges overturn the framed ones, catchers' framing should shrink toward zero in 2026 beyond the usual
+    year-to-year regression. Taken pitches within 2 inches of the zone edge (either side), called-strike chance by
+    half-inch band and season (league); each pitch's surplus (called strike minus that chance) split into catcher and
+    pitcher parts by backfitting within a season; catchers with at least 800 such takes in a season. Spread of catcher
+    parts by season (extra strikes per 1,000 borderline takes) and persistence from one season to the next (2024 to 2025
+    against 2025 to 2026), with intervals from resampling catchers."""
+    res = {}
+    import pandas as pd
+    keyT = T['game'].astype(np.int64) * 1000 + T['ab'].astype(np.int64)
+    Hk = (H['game_pk'].astype(np.int64) * 1000 + H['at_bat_number'].astype(np.int64) - 1).to_numpy()
+    cat = pd.Series(H['fielder_2'].to_numpy(), index=Hk)
+    cat = cat[~cat.index.duplicated()]
+    catcher = cat.reindex(keyT).to_numpy()
+    take_ = (T['call'] == 0)
+    ut = np.where(T['stand_r'] == 1, T['px'].astype(np.float64), -T['px'].astype(np.float64)); zt = T['pz'].astype(np.float64)
+    e = np.maximum(np.maximum(np.abs(ut) - ZONE_HALF, zt - ZONE_TOP), ZONE_BOT - zt)
+    border = take_ & np.isfinite(e) & (np.abs(e) <= 2.0 / 12.0) & np.isfinite(catcher)
+    band = np.clip(np.floor((e + 2.0 / 12.0) / (0.5 / 12.0)), 0, 7).astype(int)
+    cs = (T['cs'] == 1).astype(float)
+    res['matched_share'] = round(float(np.isfinite(catcher[take_]).mean()), 4)
+    parts = {}
+    for ssn in (2024, 2025, 2026):
+        m = border & (T['season'] == ssn)
+        if m.sum() < 1000:
+            continue
+        pb = np.array([cs[m & (band == b)].mean() if (m & (band == b)).any() else 0.0 for b in range(8)])
+        surplus = cs[m] - pb[band[m]]
+        cid = catcher[m].astype(np.int64); pid = T['pitcher'][m].astype(np.int64)
+        uc, ic = np.unique(cid, return_inverse=True); up, ip = np.unique(pid, return_inverse=True)
+        nc, np_ = np.bincount(ic), np.bincount(ip)
+        ec = np.zeros(len(uc)); epp = np.zeros(len(up))
+        for _ in range(20):
+            ec = np.bincount(ic, weights=surplus - epp[ip]) / nc
+            epp = np.bincount(ip, weights=surplus - ec[ic]) / np_
+        keep = nc >= 800
+        parts[ssn] = dict(zip(uc[keep].tolist(), (ec[keep] * 1000).tolist()))
+        res.setdefault('by_season', {})[str(ssn)] = {'borderline_takes': int(m.sum()), 'called_strike_rate': round(float(cs[m].mean()), 4),
+                                                     'catchers': int(keep.sum()), 'sd_extra_strikes_per_1000': round(float(np.std(ec[keep] * 1000)), 2),
+                                                     'band_rates': [round(float(v), 3) for v in pb]}
+    stage('framing parts')
+    rng = np.random.default_rng(7)
+    for a, b in ((2024, 2025), (2025, 2026)):
+        if a not in parts or b not in parts:
+            continue
+        common = sorted(set(parts[a]) & set(parts[b]))
+        x = np.array([parts[a][c] for c in common]); y = np.array([parts[b][c] for c in common])
+        slope = float(np.polyfit(x, y, 1)[0]); corr = float(np.corrcoef(x, y)[0, 1])
+        bs = []
+        for _ in range(int(params.get('reps', 1000))):
+            j = rng.integers(0, len(x), len(x)); bs.append(np.polyfit(x[j], y[j], 1)[0])
+        res[f'persistence_{a}_to_{b}'] = {'catchers': len(common), 'slope': [round(slope, 3), round(float(np.percentile(bs, 2.5)), 3), round(float(np.percentile(bs, 97.5)), 3)],
+                                         'correlation': round(corr, 3)}
+    if 'persistence_2024_to_2025' in res and 'persistence_2025_to_2026' in res:
+        res['persistence_ratio'] = round(res['persistence_2025_to_2026']['slope'][0] / max(res['persistence_2024_to_2025']['slope'][0], 1e-9), 3)
+    if '2025' in res.get('by_season', {}) and '2026' in res.get('by_season', {}):
+        res['spread_ratio_2026_over_2025'] = round(res['by_season']['2026']['sd_extra_strikes_per_1000'] / res['by_season']['2025']['sd_extra_strikes_per_1000'], 3)
+    return res
+
+
 # ---------------------------------------------------------------- VALUE-12: a hitter's own whiff holes, priced
 def value_whiff_study(T: dict, params: dict, stage) -> dict:
     """VALUE-08's design for the whiff map on the true crossing (MATCHUP-03's representation: league whiff model on
@@ -5901,6 +5978,12 @@ def main():
             receipt['results'] = map_stability_study(T, params, stage)
         elif experiment == 'series':
             receipt['results'] = series_study(T, params, stage)
+        elif experiment == 'framing':
+            stage('load plate-appearance states')
+            H = load_pa_states(repo, token, os.environ['BRL_PA_PACKAGE_KEY'])
+            if not params.get('final_eval'):
+                H = H[H['date_key'].astype(str).str[:10] < '2026-08-01']
+            receipt['results'] = framing_study(T, H, params, stage); del H
         elif experiment == 'scout':
             receipt['results'] = scout_export(T, params, stage)
         elif experiment == 'value':
