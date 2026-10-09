@@ -218,6 +218,26 @@ def main():
         app = appearances(h)
         games = reconstruct(h)
         games['date'] = games['date'].astype(str)
+        if params.get('lineup_projection') == 'previous_game':
+            # CLV-03: only what was known at the open. Each team's lineup is its lineup from its previous game of the season
+            # (its actual lineup in its first game); starters stay as they were, since probable starters are usually posted
+            # before the opening line.
+            last = {}; proj = {}
+            for g in games.sort_values(['date', 'game_pk']).itertuples():
+                for side in ('away', 'home'):
+                    key = (int(g.season), str(getattr(g, side)))
+                    prev = last.get(key)
+                    if prev is not None and len(prev) == 9:
+                        proj[(int(g.game_pk), side)] = list(prev)
+                    actual = list(getattr(g, f'{side}_lineup'))
+                    if len(actual) == 9:
+                        last[key] = actual
+            changed = 0
+            for side in ('away', 'home'):
+                new_l = [proj.get((int(pk), side), list(l)) for pk, l in zip(games['game_pk'], games[f'{side}_lineup'])]
+                changed += sum(1 for a, b in zip(new_l, games[f'{side}_lineup']) if list(a) != list(b))
+                games[f'{side}_lineup'] = new_l
+            receipt['lineup_projection'] = {'kind': 'previous_game', 'sides_projected': len(proj), 'sides_different_from_actual': int(changed)}
         games = games[(games['season'] == season) & (~games['ambiguous']) & games['valid_lineups'] & (games['date'] >= date_from)].sort_values(['date', 'game_pk'])
         games = games.iloc[::step].reset_index(drop=True)
         if n_shards > 1:
