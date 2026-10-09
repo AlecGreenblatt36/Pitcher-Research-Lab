@@ -1,0 +1,291 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "value2",
+ "run_id": "37900274732",
+ "params": {
+  "experiment": "value2",
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "test_season": 2026,
+  "map_seasons": [
+   2023,
+   2024,
+   2025
+  ],
+  "sigmas": [
+   0.6
+  ],
+  "within_type": true,
+  "checks": true,
+  "specific": true,
+  "channels": true,
+  "placebo_draws": 0,
+  "reps": 100
+ },
+ "started_at": "2026-10-09T07:45:21.970503+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 8.4
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 16.4
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 24.4
+  },
+  {
+   "stage": "maps 711",
+   "at_seconds": 56.3
+  },
+  {
+   "stage": "coefficients",
+   "at_seconds": 117.1
+  },
+  {
+   "stage": "aiming with scatter",
+   "at_seconds": 134.0
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 484833
+ },
+ "results": {
+  "coefficients": {
+   "test_season": 2026,
+   "test_pitches": 425080,
+   "runs_per_point_outside": -0.000581,
+   "runs_per_point_inside": 0.00043,
+   "outside_pitches_per_pa": 1.864,
+   "inside_pitches_per_pa": 2.04,
+   "deviation": "own map minus the same-side mean map",
+   "shared_part_outside": -0.001678,
+   "shared_part_inside": 0.000834,
+   "sd_points_shared_outside": 2.677,
+   "sd_points_own_part_outside": 7.54
+  },
+  "coefficient_checks": {
+   "own_map": {
+    "outside": -0.000581,
+    "inside": 0.00043,
+    "outside_interval": [
+     -0.000808,
+     -0.000322
+    ],
+    "inside_interval": [
+     0.000153,
+     0.000633
+    ],
+    "sd_points_outside": 7.54,
+    "runs_per_6200_outside_at_0.6": -19.8,
+    "runs_per_6200_outside_interval_at_0.6": [
+     -27.6,
+     -11.0
+    ]
+   },
+   "placebo_other_hitter": {
+    "outside": -4.6e-05,
+    "inside": -0.00013,
+    "outside_interval": [
+     -0.000304,
+     0.000222
+    ],
+    "inside_interval": [
+     -0.000415,
+     0.000122
+    ],
+    "sd_points_outside": 7.359,
+    "outside_more_reassignments": [],
+    "runs_per_6200_outside_at_0.6": -1.6,
+    "runs_per_6200_outside_interval_at_0.6": [
+     -10.4,
+     7.6
+    ]
+   },
+   "within_hitter_group_and_zone_side": {
+    "outside": -0.000676,
+    "inside": 0.000587,
+    "outside_interval": [
+     -0.000935,
+     -0.000386
+    ],
+    "inside_interval": [
+     0.000243,
+     0.000821
+    ],
+    "sd_points_outside": 6.854,
+    "runs_per_6200_outside_at_0.6": -23.1,
+    "runs_per_6200_outside_interval_at_0.6": [
+     -31.9,
+     -13.2
+    ]
+   },
+   "within_pa_correlation_outside": 0.1689,
+   "own_map_holding_pa_others": {
+    "outside": -0.000511,
+    "inside": 0.000433,
+    "outside_interval": [
+     -0.000699,
+     -0.000307
+    ],
+    "inside_interval": [
+     0.000216,
+     0.000652
+    ],
+    "others_outside": -0.000261,
+    "others_inside": 0.000159,
+    "runs_per_6200_outside_at_0.6": -17.5,
+    "runs_per_6200_outside_interval_at_0.6": [
+     -23.9,
+     -10.5
+    ]
+   },
+   "within_hitter_holding_pa_others": {
+    "outside": -0.000637,
+    "inside": 0.0006,
+    "outside_interval": [
+     -0.000827,
+     -0.000433
+    ],
+    "inside_interval": [
+     0.000355,
+     0.000842
+    ],
+    "others_outside": -0.000465,
+    "others_inside": 0.000394,
+    "runs_per_6200_outside_at_0.6": -21.8,
+    "runs_per_6200_outside_interval_at_0.6": [
+     -28.2,
+     -14.8
+    ]
+   },
+   "channels": {
+    "BIP_OUT": {
+     "outside_per_point": 0.0010197,
+     "outside_interval": [
+      0.000806,
+      0.001249
+     ],
+     "inside_per_point": 0.0010695,
+     "inside_interval": [
+      0.000756,
+      0.001347
+     ],
+     "rate": 0.3925
+    },
+    "K": {
+     "outside_per_point": 0.0002307,
+     "outside_interval": [
+      -2.3e-05,
+      0.000447
+     ],
+     "inside_per_point": -0.0012873,
+     "inside_interval": [
+      -0.001505,
+      -0.001058
+     ],
+     "rate": 0.2767
+    },
+    "BB_HBP": {
+     "outside_per_point": -0.0016801,
+     "outside_interval": [
+      -0.001904,
+      -0.00145
+     ],
+     "inside_per_point": -0.0007424,
+     "inside_interval": [
+      -0.000919,
+      -0.000572
+     ],
+     "rate": 0.1359
+    },
+    "1B": {
+     "outside_per_point": 0.0002686,
+     "outside_interval": [
+      9.9e-05,
+      0.000479
+     ],
+     "inside_per_point": 0.0004611,
+     "inside_interval": [
+      0.000293,
+      0.000678
+     ],
+     "rate": 0.1221
+    },
+    "2B_3B": {
+     "outside_per_point": 8.08e-05,
+     "outside_interval": [
+      1e-06,
+      0.000192
+     ],
+     "inside_per_point": 0.0001982,
+     "inside_interval": [
+      5.9e-05,
+      0.000332
+     ],
+     "rate": 0.0389
+    },
+    "HR": {
+     "outside_per_point": 5.4e-06,
+     "outside_interval": [
+      -7.9e-05,
+      0.000115
+     ],
+     "inside_per_point": 0.0002616,
+     "inside_interval": [
+      0.000148,
+      0.000367
+     ],
+     "rate": 0.0261
+    },
+    "OTHER_REACH": {
+     "outside_per_point": 7.49e-05,
+     "outside_interval": [
+      3.1e-05,
+      0.000134
+     ],
+     "inside_per_point": 3.93e-05,
+     "inside_interval": [
+      -1.8e-05,
+      0.000103
+     ],
+     "rate": 0.0079
+    },
+    "weights_check_outside": -0.0006368
+   }
+  },
+  "by_command_sd_ft": {
+   "0.6": {
+    "outside_gain_points": 2.955,
+    "inside_gain_points": -2.917,
+    "runs_per_6200_outside_only_interval": [
+     -27.6,
+     -11.0
+    ],
+    "runs_per_6200_both_interval": [
+     -45.3,
+     -23.2
+    ],
+    "runs_per_6200_outside_only": -19.8,
+    "runs_per_6200_inside_only": -15.9,
+    "runs_per_6200_both": -35.7
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T07:47:35.997997+00:00",
+ "seconds": 134.0
+}
