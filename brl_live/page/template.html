@@ -2253,6 +2253,12 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
             " The outlined cells are the heart of the strike zone, the ring around them its edges, seen from the catcher with the hitter's side on the left.</p>";
           h += '<div class="seg" role="group" aria-label="Which count">' + counts.filter(function (c) { return c[0] === "all" || bc[c[0]]; }).map(function (c) { return '<button data-rpcount="' + c[0] + '" aria-pressed="' + (c[0] === ck) + '">' + c[1] + "</button>"; }).join("") + "</div>";
           if (ck !== "all") h += '<p class="note">' + esc(counts.filter(function (c) { return c[0] === ck; })[0][1]) + ": " + (bc[ck].runs_per_100_pa != null ? "the best third of his spots saves " + (-bc[ck].runs_per_100_pa).toFixed(2) + " runs per 100 plate appearances over his usual spots" : "the best third of his spots gains " + bc[ck].gain_points.toFixed(1) + " points of chase over his usual spots") + ", on " + Number(bc[ck].pitches).toLocaleString() + " such pitches.</p>";
+          if (ck === "all" && pr2.aim.pricing === "structural") {
+            // the hitter's side of the same spots: where to lay off and where not to let a strike go by
+            var layoff = [], dontTake = [];
+            ["fastball", "breaking", "offspeed"].forEach(function (fam) { (pr2.aim.cells[fam] || []).forEach(function (c) { var w = fam + " " + rpWords([c[0], c[1]]); if (c[2] === "take") dontTake.push(w); else layoff.push(w); }); });
+            if (layoff.length || dontTake.length) h += '<p class="note">For the hitter: ' + (layoff.length ? "lay off " + esc(layoff.join("; ")) + ". " : "") + (dontTake.length ? "Do not let a strike go by at " + esc(dontTake.join("; ")) + "." : "") + "</p>";
+          }
           h += '<div class="rp-cards">';
           ["fastball", "breaking", "offspeed"].forEach(function (fam) {
             var own = hc.own_chase && hc.own_chase[fam], mix = pc && pc.mix && pc.mix[fam];
