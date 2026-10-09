@@ -6949,6 +6949,133 @@ def surprise_study(T: dict, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- SEQ-02: does the carried timing after a called strike reach the outcome?
+def seq2_study(T: dict, params: dict, stage) -> dict:
+    """SEQ-02. TIMING-03F (credited): after a called strike the hitter meets the next pitch as if expecting the other
+    family (contact farther out front the slower that strike was); after a miss his swing's timing persists; a foul
+    carries nothing. If that reaches outcomes, then on the pitch after a called strike, repeating the previous family
+    should draw more misses than changing it, beyond what the pitch itself predicts, and the same contrast after a
+    taken ball (no carried timing) should be smaller. Swings with a previous pitch in the plate appearance (feed,
+    seasons by params). Whiff on a swing: logistic model with the pitch's location on the true crossing (whiff
+    representation), group, speed, two strikes, both players' earlier whiff levels, platoon, the count, the previous
+    pitch's family and this pitch's family, and the sequence terms: previous outcome kind (ball, called strike, foul,
+    miss) times repeat-family and times the speed change (this pitch minus the previous, per 10 mph). Fitted on the
+    training seasons; coefficients with game-bootstrap intervals; out-of-sample log loss gain of the sequence terms on
+    the test seasons (clustered by game); the observed whiff rate after called strikes, repeat against change, within
+    bins of the model's prediction without the sequence terms. Contact quality the same way (launch speed on balls
+    in play, OLS). Flexible check: boosting with and without the sequence terms."""
+    import pandas as pd
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.ensemble import HistGradientBoostingClassifier
+    res = {}
+    train = tuple(int(v) for v in params.get('train', (2023, 2024))); tests = tuple(int(v) for v in params.get('tests', (2025, 2026)))
+    T = take(T, np.isin(T['season'], train + tests) & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2))
+    order = np.lexsort((T['pitch_no'], T['ab'], T['game'])); T = take(T, order)
+    n = len(T['game'])
+    same_pa = np.r_[False, (T['game'][1:] == T['game'][:-1]) & (T['ab'][1:] == T['ab'][:-1])]
+    fam = np.where(np.isin(T['group'], (0, 1, 2)), 0, np.where(np.isin(T['group'], (3, 4)), 1, 2))
+    prev_fam = np.r_[-1, fam[:-1]]; prev_v0 = np.r_[np.nan, T['v0'][:-1].astype(np.float64)]
+    prev_call = np.r_[-1, T['call'][:-1]]; prev_cs = np.r_[0, T['cs'][:-1]]
+    # previous outcome kind: 0 ball, 1 called strike, 2 foul (contact that did not end the previous pitch's plate appearance), 3 miss
+    prev_kind = np.where(prev_call == 0, np.where(prev_cs == 1, 1, 0), np.where(prev_call == 2, 3, 2))
+    swing = (T['call'] == 1) | (T['call'] == 2); whiff = (T['call'] == 2).astype(np.float64)
+    v0 = T['v0'].astype(np.float64)
+    ok = same_pa & swing & np.isfinite(v0) & np.isfinite(prev_v0) & (prev_fam >= 0)
+    dv = np.where(ok, (v0 - prev_v0) / 10.0, 0.0); repeat = (fam == prev_fam).astype(np.float64)
+    # both players' earlier whiff levels (prior dates, shrunk)
+    lg_w = float(whiff[swing].mean())
+    def prop(key, k_):
+        nn, ss = _prior_by_day(key.astype(np.int64), T['day'].astype(np.int64), whiff, swing)
+        r_ = (ss + k_ * lg_w) / (nn + k_); return np.log(r_ / (1 - r_))
+    pw_b = prop(T['batter'], 150.0); pw_p = prop(T['pitcher'], 300.0)
+    xt, zt = T['px'].astype(np.float64), T['pz'].astype(np.float64)
+    Lw = location_block(xt, zt, T['stand_r'], T['strikes'])
+    grp = np.zeros((n, 7), np.float32); grp[np.arange(n), np.clip(T['group'], 0, 6)] = 1
+    cnt = np.zeros((n, 12), np.float32); cnt[np.arange(n), np.clip(T['balls'], 0, 3) * 3 + np.clip(T['strikes'], 0, 2)] = 1
+    pf = np.zeros((n, 3), np.float32); pf[np.arange(n), np.clip(prev_fam, 0, 2)] = 1
+    pk = np.zeros((n, 4), np.float32); pk[np.arange(n), prev_kind] = 1
+    base = np.hstack([Lw, grp, hats(v0, V_KNOTS), (T['strikes'] == 2)[:, None].astype(np.float32), pw_b[:, None].astype(np.float32), pw_p[:, None].astype(np.float32),
+                      (T['stand_r'] == T['throw_r'])[:, None].astype(np.float32), cnt, pf, pk])
+    # the sequence terms: for each previous kind, repeat and the speed change
+    seq_names = []; seq_cols = []
+    for kname, kv in (('ball', 0), ('called_strike', 1), ('foul', 2), ('miss', 3)):
+        m = (prev_kind == kv).astype(np.float64)
+        seq_cols += [m * repeat, m * dv]; seq_names += [f'{kname}_x_repeat', f'{kname}_x_speed_change_per10']
+    S = np.column_stack(seq_cols).astype(np.float32)
+    X0 = base; X1 = np.hstack([base, S])
+    tr = ok & np.isin(T['season'], train)
+    rng = np.random.default_rng(int(params.get('seed', 11)))
+    idx = np.flatnonzero(tr); idx = rng.choice(idx, min(len(idx), int(params.get('train_n', 900000))), replace=False)
+    stage(f'features: {int(ok.sum())} swings with a previous pitch, train {len(idx)}')
+    m1 = LogisticRegression(C=1.0, max_iter=400, tol=1e-6).fit(X1[idx], whiff[idx]); m0 = LogisticRegression(C=1.0, max_iter=400, tol=1e-6).fit(X0[idx], whiff[idx])
+    cs = m1.coef_[0][-len(seq_names):].astype(np.float64)
+    # game bootstrap of the sequence coefficients (refit on resampled games, a modest number of draws)
+    games_tr = T['game'][idx]; ug = np.unique(games_tr); gi = np.searchsorted(ug, games_tr); draws = []
+    for _ in range(int(params.get('reps', 30))):
+        w = np.bincount(rng.integers(0, len(ug), len(ug)), minlength=len(ug))[gi]
+        mb = LogisticRegression(C=1.0, max_iter=300, tol=1e-5, warm_start=False).fit(X1[idx], whiff[idx], sample_weight=w)
+        draws.append(mb.coef_[0][-len(seq_names):])
+    draws = np.asarray(draws)
+    res['sequence_coefficients_logodds'] = {nm: [round(float(cs[i]), 4), round(float(np.percentile(draws[:, i], 2.5)), 4), round(float(np.percentile(draws[:, i], 97.5)), 4)] for i, nm in enumerate(seq_names)}
+    i_cs, i_b, i_f = seq_names.index('called_strike_x_repeat'), seq_names.index('ball_x_repeat'), seq_names.index('foul_x_repeat')
+    d_ = draws[:, i_cs] - draws[:, i_b]
+    res['called_strike_minus_ball_repeat'] = [round(float(cs[i_cs] - cs[i_b]), 4), round(float(np.percentile(d_, 2.5)), 4), round(float(np.percentile(d_, 97.5)), 4)]
+    d2 = draws[:, i_cs] - draws[:, i_f]
+    res['called_strike_minus_foul_repeat'] = [round(float(cs[i_cs] - cs[i_f]), 4), round(float(np.percentile(d2, 2.5)), 4), round(float(np.percentile(d2, 97.5)), 4)]
+    stage('coefficients')
+    # out of sample
+    res['test'] = {}
+    for s_ in tests:
+        te = ok & (T['season'] == s_)
+        if te.sum() < 5000:
+            continue
+        p0 = m0.predict_proba(X0[te])[:, 1]; p1 = m1.predict_proba(X1[te])[:, 1]; y = whiff[te]
+        l0, l1 = logloss_vec(p0, y), logloss_vec(p1, y)
+        out = {'swings': int(te.sum()), 'gain_nats_per_1000_swings': [round(v * 1000, 3) for v in clustered_ci(l0 - l1, T['game'][te])]}
+        # observed whiff after called strikes, repeat against change, within bins of the no-sequence prediction
+        pkt = prev_kind[te]; rp = repeat[te]
+        for kname, kv in (('after_called_strike', 1), ('after_ball', 0), ('after_foul', 2), ('after_miss', 3)):
+            mk_ = pkt == kv
+            if mk_.sum() < 2000:
+                continue
+            q = np.percentile(p0[mk_], [25, 50, 75]); qb = np.searchsorted(q, p0[mk_])
+            rows = []
+            for j in range(4):
+                for r_, rname in ((1.0, 'repeat'), (0.0, 'change')):
+                    sel = mk_.copy(); sel[mk_] = (qb == j) & (rp[mk_] == r_)
+                    if sel.sum() >= 200:
+                        rows.append({'bin': j, 'kind': rname, 'n': int(sel.sum()), 'observed': round(float(y[sel].mean()), 4), 'predicted_no_sequence': round(float(p0[sel].mean()), 4)})
+            # the contrast: observed minus predicted, repeat minus change, pooled over bins (weighted by swings)
+            def omp(r_):
+                sel = mk_ & (rp == r_); return float((y[sel] - p0[sel]).mean()) if sel.sum() else float('nan')
+            out[kname] = {'repeat_minus_change_observed_minus_predicted': round(omp(1.0) - omp(0.0), 4), 'swings_repeat': int((mk_ & (rp == 1)).sum()), 'swings_change': int((mk_ & (rp == 0)).sum()), 'bins': rows}
+        res['test'][str(s_)] = out
+        stage(f'test {s_}')
+    # contact quality: launch speed on balls in play (the last pitch), same design, OLS
+    ls = T['ls'].astype(np.float64); inplay = ok & np.isfinite(ls) & (T['last_in_pa'] == 1) & (T['call'] == 1)
+    trc = inplay & np.isin(T['season'], train)
+    if trc.sum() > 20000:
+        A1 = np.column_stack([np.ones(int(trc.sum())), X1[trc]]); b1 = np.linalg.lstsq(A1, ls[trc], rcond=None)[0]
+        cq = b1[-len(seq_names):]
+        res['launch_speed_coefficients_mph'] = {nm: round(float(cq[i]), 3) for i, nm in enumerate(seq_names)}
+        res['launch_speed_balls_in_play_train'] = int(trc.sum())
+    # flexible check: boosting with the raw sequence facts (previous kind, previous family, repeat, speed change)
+    if params.get('gbm', True):
+        raw = np.column_stack([v0, T['pfx_x'], T['pfx_z'], xt, zt, T['balls'], T['strikes'], T['group'], T['stand_r'], T['throw_r'], pw_b, pw_p, prev_fam])
+        raw1 = np.column_stack([raw, prev_kind, repeat, dv])
+        hp = dict(max_iter=int(params.get('gbm_iter', 300)), learning_rate=0.08, max_leaf_nodes=48, min_samples_leaf=300, l2_regularization=1.0, random_state=11)
+        g0 = HistGradientBoostingClassifier(**hp).fit(raw[idx], whiff[idx]); g1 = HistGradientBoostingClassifier(**hp).fit(raw1[idx], whiff[idx])
+        res['boosting'] = {}
+        for s_ in tests:
+            te = ok & (T['season'] == s_)
+            if te.sum() < 5000:
+                continue
+            l0 = logloss_vec(g0.predict_proba(raw[te])[:, 1], whiff[te]); l1 = logloss_vec(g1.predict_proba(raw1[te])[:, 1], whiff[te])
+            res['boosting'][str(s_)] = {'sequence_terms_gain_nats_per_1000_swings': [round(v * 1000, 3) for v in clustered_ci(l0 - l1, T['game'][te])]}
+        stage('boosting')
+    return res
+
+
 # ---------------------------------------------------------------- EXPOSURE-01: does a hitter learn a pitch type within the game
 def exposure_study(T: dict, params: dict, stage) -> dict:
     """Times through the order, pitch by pitch: for each pitch, how many pitches of the same type this hitter has already
@@ -7295,6 +7422,8 @@ def main():
             receipt['results'] = fatigue(T, params, stage)
         elif experiment == 'surprise':
             receipt['results'] = surprise_study(T, params, stage)
+        elif experiment == 'seq2':
+            receipt['results'] = seq2_study(T, params, stage)
         elif experiment == 'matchup_pa':
             receipt['results'] = matchup_pa(T, params, stage)
         elif experiment == 'exposure':
