@@ -1,0 +1,131 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "drift",
+ "run_id": "37878336284",
+ "params": {
+  "experiment": "drift",
+  "seasons": [
+   2023,
+   2024,
+   2025
+  ],
+  "tau": 0.26,
+  "lam": 30.0,
+  "min_pitches": 150
+ },
+ "started_at": "2026-10-09T03:43:29.625770+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 9.4
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 18.3
+  },
+  {
+   "stage": "window maps 6066",
+   "at_seconds": 49.7
+  },
+  {
+   "stage": "drift",
+   "at_seconds": 62.3
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985
+ },
+ "results": {
+  "plate_appearances": 270377,
+  "map_change_sd_points": 1.895,
+  "raw_chase_change_sd_points": 5.09,
+  "corr_map_change_raw_change": 0.653,
+  "strikeout": {
+   "gain_raw_chase_change": [
+    0.024,
+    -0.005,
+    0.053
+   ],
+   "gain_map_change": [
+    -0.002,
+    -0.037,
+    0.034
+   ],
+   "map_over_raw": [
+    -0.019,
+    -0.041,
+    0.003
+   ],
+   "coefs": {
+    "rates": [
+     0.3422,
+     0.4466
+    ],
+    "rates_raw_chase_change": [
+     0.3505,
+     0.4403,
+     -0.0022
+    ],
+    "rates_map_change": [
+     0.3441,
+     0.4468,
+     -0.0071
+    ],
+    "rates_both": [
+     0.3461,
+     0.4456,
+     -0.0059,
+     -0.0006
+    ]
+   }
+  },
+  "walk": {
+   "gain_raw_chase_change": [
+    -0.023,
+    -0.048,
+    0.002
+   ],
+   "gain_map_change": [
+    -0.001,
+    -0.045,
+    0.039
+   ],
+   "map_over_raw": [
+    0.018,
+    -0.012,
+    0.048
+   ],
+   "coefs": {
+    "rates": [
+     0.2803,
+     0.3269
+    ],
+    "rates_raw_chase_change": [
+     0.2678,
+     0.3394,
+     -0.0029
+    ],
+    "rates_map_change": [
+     0.2631,
+     0.3429,
+     -0.0116
+    ],
+    "rates_both": [
+     0.2614,
+     0.3451,
+     -0.0109,
+     -0.0005
+    ]
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T03:44:32.004248+00:00",
+ "seconds": 62.4
+}
