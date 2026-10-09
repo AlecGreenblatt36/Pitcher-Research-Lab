@@ -84,7 +84,7 @@ expectation model scores how surprising each pitch is to that hitter at that mom
 - ZONE-01: the definition change in the feed's own locations (running).
 - M1 first test after DATA-02, M3 on the feed data in parallel.
 
-## Results through October 9, 2026, 9:40 a.m. Eastern (ledger rows carry every number and interval)
+## Results through October 9, 2026, 9:25 a.m. Eastern (ledger rows carry every number and interval)
 
 Credited (frozen code, scored once on the untouched months, August 1 to September 27, 2026):
 
