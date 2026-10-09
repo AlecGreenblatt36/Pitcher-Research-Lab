@@ -1,0 +1,91 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "matchup_final",
+ "run_id": "37881498012",
+ "params": {
+  "experiment": "matchup_final",
+  "final_eval": true,
+  "frozen_commit": "45576a52",
+  "harmonize_2026": false,
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ]
+ },
+ "started_at": "2026-10-09T03:55:53.996852+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 7.6
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 15.1
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 22.5
+  },
+  {
+   "stage": "final true",
+   "at_seconds": 46.0
+  },
+  {
+   "stage": "final percept",
+   "at_seconds": 61.5
+  }
+ ],
+ "final_eval": {
+  "frozen_commit": "45576a52",
+  "untouched_rows": 228549
+ },
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 713382
+ },
+ "results": {
+  "test_decisions": 226679,
+  "covered": 0.8131,
+  "gain_nats_per_1000_decisions": {
+   "percept_over_true_league": [
+    36.8,
+    35.062,
+    38.499
+   ],
+   "percept_over_true_hitter_maps": [
+    40.201,
+    38.53,
+    41.78
+   ],
+   "hitter_maps_over_league_true": [
+    7.755,
+    7.095,
+    8.377
+   ],
+   "hitter_maps_over_league_percept": [
+    11.155,
+    10.436,
+    11.895
+   ]
+  },
+  "pairs_outside_zone": {
+   "pairs": 820,
+   "slope": [
+    0.945,
+    0.659,
+    1.186
+   ]
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T03:56:58.435768+00:00",
+ "seconds": 64.4
+}
