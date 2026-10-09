@@ -2265,6 +2265,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         h += "</section>";
       }
     }
+    h += '<section class="sec"><h3>Sequencing</h3><p class="note">Measured on data the models never saw: after a taken pitch, and about twice as much after a swing and miss, coming back with the same pitch family draws more misses than changing it (about 2 to 3 points of whiff rate beyond what the pitch itself predicts) and softer contact; a slower next pitch adds to it; after a foul nothing carries. This holds league-wide; it is not yet folded into the per-hitter plan.</p></section>';
     h += '<section class="sec"><p class="note">Method: swing decisions are read where the pitch appears to be headed 260 ms before the plate (credited on untouched 2026 data: +40 nats per 1,000 decisions over the standard heat map in the same model, +3.6 beyond a boosted model given the same inputs). The run value rests on the finding that pitchers do not aim at these spots, so where a pitch lands on a hitter\'s map is chance (about 32 runs a team-season on untouched months). Strikeout and walk changes come from the count-by-count chain at its measured calibration. Every number here is a model output; the ledger in the repository carries the tests.</p></section>';
     return h;
   }

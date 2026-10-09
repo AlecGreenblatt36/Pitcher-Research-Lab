@@ -106,6 +106,11 @@ Credited (frozen code, scored once on the untouched months, August 1 to Septembe
   better described on the true crossing than at the decision moment. Hitter-specific damage maps were not confirmed.
 - **Sequence effects in timing** (TIMING-03F). After a called strike the next pitch is met farther out front the
   slower that strike was (0.15 inches per 10 ms); after a miss, later (0.24); a foul carries nothing.
+- **Sequencing reaches the outcome** (SEQ-03F, credited on untouched swings): after a taken pitch, and about twice
+  as much after a miss, coming back with the same pitch family draws more misses than changing it, beyond what the
+  pitch itself predicts (about +2 to +3 points of whiff rate; +0.11 to +0.22 log-odds), and softer contact (-0.4 to
+  -0.7 mph); a slower next pitch adds to it; a foul resets it. The registered mechanism (the timing carried after a
+  called strike, SEQ-02) was not what reaches misses: the effect is the same after a taken ball.
 - **Hitters answer pitch families differently at the same apparent spot** (MATCHUP-04F, MATCHUP-05F): maps with a
   family part beat location-only maps on the untouched months (+3.9 nats per 1,000 decisions); about half is a
   league-wide family pattern, and hitter-specific family parts add +2.2 [1.8, 2.5] beyond a league model that has it.
