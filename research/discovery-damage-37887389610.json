@@ -1,0 +1,141 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "damage",
+ "run_id": "37887389610",
+ "params": {
+  "experiment": "damage",
+  "final_eval": true,
+  "frozen_commit": "3df0dcbc",
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ]
+ },
+ "started_at": "2026-10-09T05:11:53.181195+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 8.3
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 16.7
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 24.7
+  },
+  {
+   "stage": "expected run value table",
+   "at_seconds": 33.6
+  },
+  {
+   "stage": "damage true",
+   "at_seconds": 35.0
+  },
+  {
+   "stage": "damage percept",
+   "at_seconds": 36.3
+  }
+ ],
+ "final_eval": {
+  "frozen_commit": "3df0dcbc",
+  "untouched_rows": 228549
+ },
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 713382
+ },
+ "results": {
+  "representations": {
+   "true": {
+    "shrinkage": 300.0,
+    "validation_mse": {
+     "10.0": 0.090777,
+     "30.0": 0.090471,
+     "100.0": 0.090233,
+     "300.0": 0.090204,
+     "1000.0": 0.0903,
+     "3000.0": 0.09039,
+     "10000.0": 0.090445
+    },
+    "covered": 0.7368,
+    "test_mse_league": 0.082271,
+    "test_mse_hitter_maps": 0.082231
+   },
+   "percept": {
+    "shrinkage": 1000.0,
+    "validation_mse": {
+     "10.0": 0.092867,
+     "30.0": 0.092428,
+     "100.0": 0.092063,
+     "300.0": 0.091927,
+     "1000.0": 0.091923,
+     "3000.0": 0.091957,
+     "10000.0": 0.091984
+    },
+    "covered": 0.7368,
+    "test_mse_league": 0.083382,
+    "test_mse_hitter_maps": 0.083383
+   }
+  },
+  "balls_in_play_test": 39420,
+  "test_season": 2026,
+  "expected_run_value_sd": 0.2913,
+  "squared_error_reduction_per_1000": {
+   "hitter_maps_over_league_true": [
+    0.0393,
+    -0.0556,
+    0.1172
+   ],
+   "hitter_maps_over_league_percept": [
+    -0.0006,
+    -0.0431,
+    0.0354
+   ],
+   "true_over_percept_hitter_maps": [
+    1.1517,
+    0.9459,
+    1.3307
+   ]
+  },
+  "by_map_deviation_quintile": [
+   {
+    "map_deviation": -0.0166,
+    "observed_minus_league": -0.0283,
+    "balls_in_play": 7884
+   },
+   {
+    "map_deviation": -0.0013,
+    "observed_minus_league": -0.0095,
+    "balls_in_play": 15819
+   },
+   {
+    "map_deviation": NaN,
+    "observed_minus_league": NaN,
+    "balls_in_play": 0
+   },
+   {
+    "map_deviation": 0.0056,
+    "observed_minus_league": -0.0065,
+    "balls_in_play": 7833
+   },
+   {
+    "map_deviation": 0.0242,
+    "observed_minus_league": 0.0035,
+    "balls_in_play": 7884
+   }
+  ]
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T05:12:29.545992+00:00",
+ "seconds": 36.4
+}
