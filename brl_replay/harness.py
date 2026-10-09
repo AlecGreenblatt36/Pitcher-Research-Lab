@@ -338,6 +338,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
             sl = {side: {m_: np.zeros(n_, int) for m_, n_ in (("k", 21), ("bf", 46), ("h", 21), ("bb", 16), ("outs", 28))} for side in ("away", "home")} if starter_lines else None
             tot = {side: np.zeros(4) for side in ("away", "home")} if starter_lines else None   # team pitching: K, BF, BB+HBP, hits
             npit = {side: 0 for side in ("away", "home")}                                         # pitchers used, summed over worlds
+            nhr = {side: 0 for side in ("away", "home")}                                          # home runs allowed, summed over worlds
             wt = WinTable() if win_states else None
             halves = (WinTable(), WinTable()) if win_states == "split" else None
             hl = None
@@ -373,6 +374,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                         if sd_ in tot:
                             tot[sd_] += (ln["strikeouts"], ln["batters_faced"], ln["walks_hbp"], ln["hits_allowed"])
                             npit[sd_] += 1
+                            nhr[sd_] += int(ln.get("home_runs") or 0)
                 if hl is not None:
                     cnt = {}
                     for e in r.events:
@@ -479,7 +481,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                                     "prior_k_rate": round(float(rate_), 4), "prior_bf_365": prior_bf, "expected_bf": round(float(pexp_g.get(sid_, hazard["league_mean_bf"])), 2),
                                     "expected_bf_record": round(float(pexp.get(sid_, hazard["league_mean_bf"])), 2),
                                     "team_sim_mean": [round(float(v_ / n_sims), 3) for v_ in tot[side]], "team_actual": act_lines.get((int(g.game_pk), side)),
-                                    "team_pitchers_sim_mean": round(npit[side] / n_sims, 3)}
+                                    "team_pitchers_sim_mean": round(npit[side] / n_sims, 3), "team_hr_sim_mean": round(nhr[side] / n_sims, 3)}
                 records[-1]["starters"] = st_out
             if wt is not None:
                 tb = wt.table()
