@@ -45,7 +45,7 @@ GU = np.array([-1.25, -0.83, -0.42, 0.0, 0.42, 0.83, 1.25]); GZ = np.array([1.0,
 FAMILIES = (('fastball', (0, 1, 2, 6), 0, 94.0), ('breaking', (3, 4), 3, 85.0), ('offspeed', (5,), 5, 86.0))
 B_OUT_FAMILY, N_OUT = -0.000657, 1.876          # VALUE-08F (family maps): runs per point of the own part, outside pitches per plate appearance
 STRUCTURAL = True                                # VALUE-18: aims chosen and priced by the engine's components (whiff, called strike, foul, contact value, count values)
-STRIKE_SPOTS = False                             # VALUE-18I: in-zone aims priced the same way (strike spots), on once its synthetic verdict holds
+STRIKE_SPOTS = True                              # VALUE-18I: in-zone aims priced the same way (strike spots); its synthetic verdict held on October 9, 2026
 N_IN = 2.04                                      # inside pitches per plate appearance (VALUE-18F)
 OWN_PART_CALIBRATION = {'outside': 0.95, 'inside': 0.82}   # VALUE-18 (2025 development run): how much of a fitted point of the own part shows up in actual swings
 CHASE_SLOPE, K_SCALE, BB_SCALE = 0.95, 0.40, 0.53   # MATCHUP-01F pair slope; ENGINE-01 coefficients over calibrated

@@ -3540,14 +3540,21 @@
     "columns": {
      "ID": "VALUE-18I",
      "Attempt": "The inside-zone part of the aiming edge, priced structurally (VALUE-18's pricing applied to the pitcher's in-zone spots: aims where the hitter's calibrated own part says he swings less than the league, or swings worse, priced by the engine's components; the pitcher's best third chosen by that value). The earlier rows stated outside-only figures because the inside regression coefficient's reading was less clean; the synthetic worlds price inside choices as they do outside ones. Local smoke (two 60,000-plate-appearance worlds, disclosed): effect inside structural -35.6 against the true value of its choices -37.2 (oracle -53.0), small -10.9 against -11.6 (oracle -21.8); the points-based inside choice was worth -4.1 and -2.5 in the lane's worlds",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the lane runs (ten worlds per kind, seeds 100-109, the same runs as VALUE-18 with the inside estimate recorded).** Predictions: (1) null: the inside structural figure's mean within 2 runs per 6,200 of zero; (2) effect, small, target, opposing, coincident: the inside structural estimate within 20% of the true value of its own inside choices (ratio 0.8 to 1.2); (3) the structural inside choice beats the points inside choice in at least eight of ten worlds in each of those kinds. Decision rule: if (1) to (3) hold, VALUE-18F's inside figure (-23.3 runs per 6,200 on the later-period months) is stated beside the outside one, labeled the same way, and the Report tab adds strike spots (in-zone aims priced structurally) to each plan; if (2) fails, the inside figure stays unstated. Receipts: research/discovery-value_synth-<run>.json",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before the lane runs (ten worlds per kind, seeds 100-109, the same runs as VALUE-18 with the inside estimate recorded).** Predictions: (1) null: the inside structural figure's mean within 2 runs per 6,200 of zero; (2) effect, small, target, opposing, coincident: the inside structural estimate within 20% of the true value of its own inside choices (ratio 0.8 to 1.2); (3) the structural inside choice beats the points inside choice in at least eight of ten worlds in each of those kinds. Decision rule: if (1) to (3) hold, VALUE-18F's inside figure (-23.3 runs per 6,200 on the later-period months) is stated beside the outside one, labeled the same way, and the Report tab adds strike spots (in-zone aims priced structurally) to each plan; if (2) fails, the inside figure stays unstated. Receipts: research/discovery-value_synth-<run>.json Results (runs 37982295284 null, 37982338018 effect, 37982382810 small, 37982425252 target, 37982470970 opposing, 37982511358 coincident; ten 200,000-plate-appearance worlds each): **(1) held: null inside -0.4 runs per 6,200; (2) held: the inside structural estimate against the true value of its own inside choices, effect -42.0 against -43.9 (ratio 0.96, per world 0.91 to 0.98), small -15.1 against -16.1 (0.94; 0.87 to 0.99), target -36.4 against -37.0 (0.98), opposing -39.5 against -40.6 (0.97), coincident -41.8 against -43.8 (0.96); (3) held: the structural inside choice beat the points inside choice in 10 of 10 worlds of every kind (the points inside choice was worth -4.1, -2.5, +2.4, +6.9 and -4.1, nothing or worse; the oracle -57, -23, -49, -53, -57).** Under the rule, VALUE-18F's inside figure is stated beside the outside one: **about 23 runs per team-season more from strikes placed where the hitter lets them go or swings to little effect (later-period months, estimated policy potential, the same labels as the outside figure)**, and the Report tab adds strike spots to each plan (squares; 'he lets it go' or 'he swings to little effect') from this commit.",
+     "Delta corrected Brier, 2026": "held: inside structural within 2 to 6% of the truth of its choices; strike spots on"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "37982295284",
+     "37982338018",
+     "37982382810",
+     "37982425252",
+     "37982470970",
+     "37982511358"
+    ],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "held: inside structural within 2 to 6% of the truth of its choices; strike spots on"
    }
   ],
   "TOTALS-04": [

@@ -77,7 +77,10 @@ calibration, not the maps' own noise or the component models). The estimator was
 with known truth (VALUE-17, VALUE-18): the earlier regression-times-gain figure overstated the true value of its
 chosen spots by 1.3 to 2.0 times, the structural pricing priced its own choices within 5% in every world with
 location structure and read zero in worlds with none, and its choices were worth 1.3 to 1.8 times the old method's.
-The earlier stated figure of 32 runs was the regression's and is superseded.
+The earlier stated figure of 32 runs was the regression's and is superseded. The in-zone part, priced the same way, adds
+about 23 runs per team-season on the later-period months (VALUE-18I: in the synthetic worlds the inside structural pricing
+came within 2 to 6% of the truth of its own choices, and the Report tab shows those strike spots beside the chase and take
+spots).
 
 ## The matchup report
 
