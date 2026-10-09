@@ -84,7 +84,7 @@ expectation model scores how surprising each pitch is to that hitter at that mom
 - ZONE-01: the definition change in the feed's own locations (running).
 - M1 first test after DATA-02, M3 on the feed data in parallel.
 
-## Results through October 9, 2026 (ledger rows carry every number and interval)
+## Results through October 9, 2026, 11 a.m. (ledger rows carry every number and interval)
 
 Credited (frozen code, scored once on the untouched months, August 1 to September 27, 2026):
 
@@ -109,11 +109,22 @@ Credited (frozen code, scored once on the untouched months, August 1 to Septembe
   pitch type for this hitter, at typical command, is worth about 32 runs over a team's season (21 to 44) on the
   untouched months; in-zone aiming is not established.
 
+- **Each batter's own zone** (MATCHUP-08F): the league swing model on each batter's zone beats the fixed zone on the
+  untouched months (+0.59 nats per 1,000 decisions [0.28, 0.88]); hitter maps already carry it. Part of a hitter's
+  high-versus-low own part is his zone height (ZONEMAP-01, correlation 0.35), and re-priced on batter zones the edge
+  keeps 85 to 94% of its value (VALUE-15), so about a tenth of it is zone height.
+- **The times-through-the-order penalty is the pitcher's pitch count** (WARMUP-01, development): against fresh
+  relievers hitters do not warm up (-0.003 runs per earlier plate appearance), familiarity with a pitcher adds nothing
+  measurable, and the decline tracks pitches thrown (+0.026 runs per plate appearance per 100); a substitute's first
+  plate appearance runs 0.014 below his level. Postseason staffs do not aim at hitters' own chase spots either
+  (EXPLOIT-03, 2023-2025; EXPLOIT-03F scores 2026 after the World Series).
+
 What did not hold: maps as an early warning (DRIFT-01) or as season projections (DISCIPLINE-01); the swing-plane
 formula as the source of the geometry signal (CONTACT-01, -02); locating the steering limit from misses with one map
 (STEER-01); pitch-type surprise (SEQ-01); velocity, flight reading and pitch-type familiarity as the
 times-through-the-order penalty (FATIGUE-01, EXPOSURE-01); pair-specific strikeout effects large enough for the
-simulator (ENGINE-01: real, about 0.4 points of strikeout rate).
+simulator (ENGINE-01: real, about 0.4 points of strikeout rate); command measured from repeated aims (COMMAND-02);
+chase spots explained by the bat path (SWINGMAP-01).
 
 ## What is original against the closest published work (checked October 9, 2026)
 
