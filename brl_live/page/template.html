@@ -2248,7 +2248,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
           var ck = state.rpCount && (state.rpCount === "all" || bc[state.rpCount]) ? state.rpCount : "all";
           var plan = ck === "all" ? pr2.aim.cells : bc[ck].cells;
           h += '<p class="note">' + (pr2.aim.pricing === "structural" ?
-            "Where to put pitches (dots): the best of the spots this pitcher actually throws that family to, priced by what each spot does to this hitter with typical command: a filled dot is a spot where his extra chases cost him, a hollow dot a spot where the strikes he takes at the edge cost him. Gold is where he chases more than the average hitter his side, blue less." :
+            "Where to put pitches: the best of the spots this pitcher actually throws that family to, priced by what each spot does to this hitter with typical command. Dots are outside aims: a filled dot where his extra chases cost him, a hollow dot where the strikes he takes at the edge cost him. Squares are strike spots inside the zone: filled where he lets strikes go, hollow where he swings to little effect. Gold is where he chases more than the average hitter his side, blue less." :
             "Where to put outside pitches (dots): the best of the spots this pitcher actually throws that family to, by the hitter\'s own chase map (gold is where he chases more than the average hitter his side, blue less).") +
             " The outlined cells are the heart of the strike zone, the ring around them its edges, seen from the catcher with the hitter's side on the left.</p>";
           h += '<div class="seg" role="group" aria-label="Which count">' + counts.filter(function (c) { return c[0] === "all" || bc[c[0]]; }).map(function (c) { return '<button data-rpcount="' + c[0] + '" aria-pressed="' + (c[0] === ck) + '">' + c[1] + "</button>"; }).join("") + "</div>";
@@ -2256,7 +2256,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
           if (ck === "all" && pr2.aim.pricing === "structural") {
             // the hitter's side of the same spots: where to lay off and where not to let a strike go by
             var layoff = [], dontTake = [];
-            ["fastball", "breaking", "offspeed"].forEach(function (fam) { (pr2.aim.cells[fam] || []).forEach(function (c) { var w = fam + " " + rpWords([c[0], c[1]]); if (c[2] === "take") dontTake.push(w); else layoff.push(w); }); });
+            ["fastball", "breaking", "offspeed"].forEach(function (fam) { (pr2.aim.cells[fam] || []).slice(0, 2).forEach(function (c) { var w = fam + " " + rpWords([c[0], c[1]]); if (c[2] === "take") dontTake.push(w); else layoff.push(w); }); });
             if (layoff.length || dontTake.length) h += '<p class="note">For the hitter: ' + (layoff.length ? "lay off " + esc(layoff.join("; ")) + ". " : "") + (dontTake.length ? "Do not let a strike go by at " + esc(dontTake.join("; ")) + "." : "") + "</p>";
           }
           h += '<div class="rp-cards">';
