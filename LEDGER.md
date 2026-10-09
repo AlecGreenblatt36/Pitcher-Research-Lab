@@ -34,6 +34,14 @@
    values from the natural experiment are estimated policy potential, not observed runs saved, and say so. Backfilled
    reports are retrospective reconstructions (earlier data, later method). Monte Carlo error (10,000 worlds: about
    0.5 points at 50%) is reported apart from game-sampling uncertainty.
+7. **Added October 9, 2026, after the estimator stress test (VALUE-17, VALUE-18).** A figure that prices a policy (what
+   aiming, a plan or any choice would be worth) is stated only after the method has been run in synthetic worlds with
+   known truth (tools/brl_synth.py) and its false-positive rate in worlds with nothing to find and the accuracy of its
+   pricing of its own choices in worlds with structure are on the ledger. A regression coefficient times a fitted gain
+   is not used for such a figure: it overstated the value of its own chosen spots by 1.3 to 2.0 times in those worlds
+   because the value per point varies across pitches and selection lands where it is smaller. Policy figures are
+   priced structurally (the engine's components times the calibrated own part) and carry the realized-outcome
+   regression beside them as the check; the structure's calibration against outcomes is reported (VALUE-19).
 
 ## Checkpoint, October 8, 2026, 6 a.m. Eastern
 
