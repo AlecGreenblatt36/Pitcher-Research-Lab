@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 229,
- "rows": 232,
+ "experiments": 230,
+ "rows": 233,
  "records": {
   "ACC-01": [
    {
@@ -3532,6 +3532,22 @@
     "runs": [],
     "frozen_commits": [],
     "status": "diagnostic: argmin planner misreads noise as gain; calibrated soft planner tracks the truth; actions must be aims under scatter; the increment is small"
+   }
+  ],
+  "VALUE-18I": [
+   {
+    "id": "VALUE-18I",
+    "columns": {
+     "ID": "VALUE-18I",
+     "Attempt": "The inside-zone part of the aiming edge, priced structurally (VALUE-18's pricing applied to the pitcher's in-zone spots: aims where the hitter's calibrated own part says he swings less than the league, or swings worse, priced by the engine's components; the pitcher's best third chosen by that value). The earlier rows stated outside-only figures because the inside regression coefficient's reading was less clean; the synthetic worlds price inside choices as they do outside ones. Local smoke (two 60,000-plate-appearance worlds, disclosed): effect inside structural -35.6 against the true value of its choices -37.2 (oracle -53.0), small -10.9 against -11.6 (oracle -21.8); the points-based inside choice was worth -4.1 and -2.5 in the lane's worlds",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the lane runs (ten worlds per kind, seeds 100-109, the same runs as VALUE-18 with the inside estimate recorded).** Predictions: (1) null: the inside structural figure's mean within 2 runs per 6,200 of zero; (2) effect, small, target, opposing, coincident: the inside structural estimate within 20% of the true value of its own inside choices (ratio 0.8 to 1.2); (3) the structural inside choice beats the points inside choice in at least eight of ten worlds in each of those kinds. Decision rule: if (1) to (3) hold, VALUE-18F's inside figure (-23.3 runs per 6,200 on the later-period months) is stated beside the outside one, labeled the same way, and the Report tab adds strike spots (in-zone aims priced structurally) to each plan; if (2) fails, the inside figure stays unstated. Receipts: research/discovery-value_synth-<run>.json",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "TOTALS-04": [

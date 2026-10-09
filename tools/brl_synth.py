@@ -296,6 +296,8 @@ def run_reps(kind: str, reps: int, seed0: int, params: dict, stage):
                         'test_pitches': co['test_pitches'], 'outside_pitches_per_pa': co['outside_pitches_per_pa'],
                         'runs_6200_repriced': (res.get('repriced_by_side') or {}).get(str(sigmas[-1]), {}).get('runs_per_6200_outside_only'),
                         'runs_6200_structural': (res.get('repriced_structural') or {}).get(str(sigmas[-1]), {}).get('runs_per_6200_outside_only'),
+                        'runs_6200_structural_inside': (res.get('repriced_structural') or {}).get(str(sigmas[-1]), {}).get('runs_per_6200_inside_only'),
+                        'runs_6200_points_inside': res['by_command_sd_ft'][str(sigmas[-1])]['runs_per_6200_inside_only'],
                         'runs_6200_structural_interval': (res.get('repriced_structural') or {}).get(str(sigmas[-1]), {}).get('runs_per_6200_outside_only_interval'),
                         'own_part_calibration': res.get('own_part_calibration'),
                         'structural_vs_truth': pricer.structural,
@@ -355,6 +357,15 @@ def summarize(rows: list, ests=('pa', 'pitch')) -> dict:
                 d_['interval_covers_true'] = round(float(np.nanmean((lo <= tp) & (tp <= hi))), 3); d_['interval_excludes_zero'] = round(float(np.nanmean((lo > 0) | (hi < 0))), 3)
             blk[nm] = d_
         summ[f'{est}_runs_6200'] = blk
+        # the inside part (VALUE-18I): the structural estimate against the truth of its inside choices
+        pin = [r[est]['truth_policy_inside'] for r in rows]
+        est_i = np.array([r[est].get('runs_6200_structural_inside') if r[est].get('runs_6200_structural_inside') is not None else np.nan for r in rows], float)
+        tp_i = np.array([q.get('true_runs_per_6200_structural', np.nan) for q in pin], float)
+        summ[f'{est}_runs_6200_inside'] = {'structural_estimate_mean': round(float(np.nanmean(est_i)), 1), 'true_value_of_structural_choices_mean': round(float(np.nanmean(tp_i)), 1),
+                                           'ratio_estimate_to_true': round(float(np.nanmean(est_i) / np.nanmean(tp_i)), 3) if np.nanmean(tp_i) != 0 else None,
+                                           'points_choice_true_mean': round(float(np.nanmean([q.get('true_runs_per_6200_points', np.nan) for q in pin])), 1),
+                                           'oracle_mean': round(float(np.nanmean([q.get('oracle_runs_per_6200', np.nan) for q in pin])), 1),
+                                           'structural_beats_points': int(sum(1 for q in pin if q.get('true_runs_per_6200_structural', 0) < q.get('true_runs_per_6200_points', 0)))}
     return summ
 
 
