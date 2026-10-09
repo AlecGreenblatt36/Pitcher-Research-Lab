@@ -7414,37 +7414,83 @@ def plan_study(T: dict, params: dict, stage) -> dict:
             out = reg(d[m], adv_l[m], y[m], games[m]); out['pitches'] = int(m.sum())
             out['sd_hitter_specific_advantage_runs'] = round(float(d[m].std()), 4); out['sd_league_advantage_runs'] = round(float(adv_l[m].std()), 4)
             res['natural_experiment'][str(s_)] = out
-        # placebo: the hitter-specific advantage recomputed with another hitter's maps of the same side (a shuffle of maps among the chosen hitters)
+        # placebos and reliability (PLAN-01b): the hitter-specific advantage recomputed under other map sets, for a
+        # sample of the pitches. 'shuffle': another same-side hitter's maps; 'mean': the same-side mean maps (the shared
+        # shape only); 'noise': random maps with each hitter's own-part variance; 'flip': the own part negated;
+        # 'half_a' and 'half_b': maps fitted on each training season alone (their agreement bounds the slope a noisy
+        # claim can reach: the validated slope is attenuated by the maps' reliability)
         hs_ = sorted({int(v[0]) for v in values}); by_side = {0: [], 1: []}
         for h in hs_:
             by_side[M.side[h]].append(h)
-        perm = {}
-        for sd_, lst in by_side.items():
-            sh = list(lst); rng.shuffle(sh); perm.update(dict(zip(lst, sh)))
         maps_s0, maps_w0 = M.maps_s, M.maps_w
-        M.maps_s = {h: maps_s0[perm[h]] for h in hs_ if perm[h] in maps_s0}; M.maps_w = {h: maps_w0[perm[h]] for h in hs_ if perm[h] in maps_w0}
-        d_pl = np.full(len(ri), np.nan)
-        # recompute the hitter-specific advantage under the shuffled maps for a sample of the pitches
+        Ss = {0: 0.0, 1: 0.0}; Ns = {0: 0, 1: 0}; Sw = {0: 0.0, 1: 0.0}; Nw = {0: 0, 1: 0}
+        for h, m in maps_s0.items():
+            sd_ = M.side.get(h, 1); Ss[sd_] = Ss[sd_] + m; Ns[sd_] += 1
+        for h, m in maps_w0.items():
+            sd_ = M.side.get(h, 1); Sw[sd_] = Sw[sd_] + m; Nw[sd_] += 1
+        mean_s = {sd_: Ss[sd_] / max(Ns[sd_], 1) for sd_ in (0, 1)}; mean_w = {sd_: Sw[sd_] / max(Nw[sd_], 1) for sd_ in (0, 1)}
+        own_sd_s = {sd_: np.std(np.array([maps_s0[h] - mean_s[sd_] for h in maps_s0 if M.side.get(h, 1) == sd_]), axis=0) for sd_ in (0, 1)}
+        own_sd_w = {sd_: np.std(np.array([maps_w0[h] - mean_w[sd_] for h in maps_w0 if M.side.get(h, 1) == sd_]), axis=0) for sd_ in (0, 1)}
+        kinds = list(params.get('placebo_kinds', ('shuffle', 'mean', 'noise', 'flip', 'half_a', 'half_b')))
+        half_maps = {}
+        if any(k_.startswith('half') for k_ in kinds) and len(train) >= 2:
+            for tag, ssn in (('half_a', train[0]), ('half_b', train[-1])):
+                rows_h = tr & (T['season'] == ssn)
+                ms_ = _hitter_maps(M.Bs, M.swing, M.off_s, _groups(T['batter'], rows_h), float(params.get('lam_s', 10.0)), max(150, int(params.get('min_pitches', 300)) // 2))
+                mw_ = _hitter_maps(M.Bw, M.whiff, M.off_w, _groups(T['batter'], rows_h & (M.swing == 1)), float(params.get('lam_w', 30.0)), max(100, int(params.get('min_swings', 200)) // 2))
+                half_maps[tag] = (ms_, mw_)
         sample = rng.choice(len(ri), min(len(ri), int(params.get('placebo_n', 150000))), replace=False)
-        cacheV = {}
-        for jj in sample:
-            h, p = int(A[jj, 3]), int(A[jj, 4]); key = (h, p)
-            if key not in cacheV:
-                P = M.pool(p, M.side[h]); V_h2, Va_h2, _ = M.solve(P, h); cacheV[key] = (P, V_h2, Va_h2)
-            P, V_h2, Va_h2 = cacheV[key]
-            r_ = np.array([ri[jj]]); b, k = int(T['balls'][ri[jj]]), int(T['strikes'][ri[jj]])
-            blk = M._blocks(r_, b, k); s, w, c, f, v, fm = M.probs(blk, h, P['p_scalar'])
-            e = int(e_state[ri[jj]]); ef = int(fm[0]); wj = float(w[0])
-            q = s[0] * (1 - wj) * (1 - f[0]) * v[0]
-            q += s[0] * wj * (LW7[1] if k == 2 else V_h2[b, k + 1, 1 + ef * 4 + 3])
-            q += s[0] * (1 - wj) * f[0] * (V_h2[b, 2, 1 + ef * 4 + 2] if k == 2 else V_h2[b, k + 1, 1 + ef * 4 + 2])
-            q += (1 - s[0]) * c[0] * (LW7[1] if k == 2 else V_h2[b, k + 1, 1 + ef * 4 + 1])
-            q += (1 - s[0]) * (1 - c[0]) * (LW7[2] if b == 3 else V_h2[b + 1, k, 1 + ef * 4 + 0])
-            d_pl[jj] = (q - Va_h2[b, k, e]) - adv_l[jj]
-        M.maps_s, M.maps_w = maps_s0, maps_w0
-        mp = np.isfinite(d_pl)
-        if mp.sum() > 5000:
-            res['placebo'] = reg(d_pl[mp], adv_l[mp], y[mp], games[mp]); res['placebo']['pitches'] = int(mp.sum())
+        res['placebo'] = {}
+        d_half = {}
+        for kind in kinds:
+            if kind == 'shuffle':
+                perm = {}
+                for sd_, lst in by_side.items():
+                    sh = list(lst); rng.shuffle(sh); perm.update(dict(zip(lst, sh)))
+                M.maps_s = {h: maps_s0[perm[h]] for h in hs_ if perm[h] in maps_s0}; M.maps_w = {h: maps_w0[perm[h]] for h in hs_ if perm[h] in maps_w0}
+            elif kind == 'mean':
+                M.maps_s = {h: mean_s[M.side[h]] for h in hs_}; M.maps_w = {h: mean_w[M.side[h]] for h in hs_ if h in maps_w0}
+            elif kind == 'noise':
+                M.maps_s = {h: mean_s[M.side[h]] + rng.standard_normal(len(mean_s[M.side[h]])) * own_sd_s[M.side[h]] for h in hs_}
+                M.maps_w = {h: mean_w[M.side[h]] + rng.standard_normal(len(mean_w[M.side[h]])) * own_sd_w[M.side[h]] for h in hs_ if h in maps_w0}
+            elif kind == 'flip':
+                M.maps_s = {h: 2 * mean_s[M.side[h]] - maps_s0[h] for h in hs_ if h in maps_s0}; M.maps_w = {h: 2 * mean_w[M.side[h]] - maps_w0[h] for h in hs_ if h in maps_w0}
+            elif kind in half_maps:
+                M.maps_s, M.maps_w = half_maps[kind]
+            else:
+                continue
+            d_pl = np.full(len(ri), np.nan); cacheV = {}
+            for jj in sample:
+                h, p = int(A[jj, 3]), int(A[jj, 4]); key = (h, p)
+                if h not in M.maps_s:
+                    continue
+                if key not in cacheV:
+                    P = M.pool(p, M.side[h]); V_h2, Va_h2, _ = M.solve(P, h); cacheV[key] = (P, V_h2, Va_h2)
+                P, V_h2, Va_h2 = cacheV[key]
+                r_ = np.array([ri[jj]]); b, k = int(T['balls'][ri[jj]]), int(T['strikes'][ri[jj]])
+                blk = M._blocks(r_, b, k); s, w, c, f, v, fm = M.probs(blk, h, P['p_scalar'])
+                e = int(e_state[ri[jj]]); ef = int(fm[0]); wj = float(w[0])
+                q = s[0] * (1 - wj) * (1 - f[0]) * v[0]
+                q += s[0] * wj * (LW7[1] if k == 2 else V_h2[b, k + 1, 1 + ef * 4 + 3])
+                q += s[0] * (1 - wj) * f[0] * (V_h2[b, 2, 1 + ef * 4 + 2] if k == 2 else V_h2[b, k + 1, 1 + ef * 4 + 2])
+                q += (1 - s[0]) * c[0] * (LW7[1] if k == 2 else V_h2[b, k + 1, 1 + ef * 4 + 1])
+                q += (1 - s[0]) * (1 - c[0]) * (LW7[2] if b == 3 else V_h2[b + 1, k, 1 + ef * 4 + 0])
+                d_pl[jj] = (q - Va_h2[b, k, e]) - adv_l[jj]
+            M.maps_s, M.maps_w = maps_s0, maps_w0
+            mp = np.isfinite(d_pl)
+            if mp.sum() > 5000:
+                out = reg(d_pl[mp], adv_l[mp], y[mp], games[mp]); out['pitches'] = int(mp.sum())
+                out['corr_with_real_advantage'] = round(float(np.corrcoef(d_pl[mp], d[mp])[0, 1]), 4)
+                res['placebo'][kind] = out
+            if kind.startswith('half'):
+                d_half[kind] = d_pl
+            stage(f'placebo {kind}')
+        if 'half_a' in d_half and 'half_b' in d_half:
+            mh = np.isfinite(d_half['half_a']) & np.isfinite(d_half['half_b'])
+            if mh.sum() > 5000:
+                r_ab = float(np.corrcoef(d_half['half_a'][mh], d_half['half_b'][mh])[0, 1])
+                res['reliability'] = {'corr_half_a_half_b': round(r_ab, 4), 'pitches': int(mh.sum()),
+                                      'note': 'the claim from two-season maps has reliability about 2r/(1+r) of this; the validated slope is attenuated by it'}
         stage('natural experiment')
     return res
 
