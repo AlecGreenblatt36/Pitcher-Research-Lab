@@ -2484,6 +2484,70 @@ def matchup_swing(T: dict, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- MATCHUP-04: hitter maps by pitch family at the decision moment
+def matchup_family(T: dict, params: dict, stage) -> dict:
+    """MATCHUP-01's hitter maps at the decision moment treat every pitch family alike: a hitter's map is one surface
+    over where the pitch appears to be headed. If hitters answer the same apparent location differently for a
+    fastball and a breaking ball (some chase sliders low and away and lay off fastballs there), a map with a family
+    part (the location bands times breaking and times offspeed, on top of the shared surface) predicts better. League
+    model and data as MATCHUP-01 (train 2023-2024, shrinkage on the second half of 2024, score 2025, paired by game)."""
+    res = {}
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+    F = rebuild(T)
+    keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['strikes'] >= 0) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
+    T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
+    swing = ((T['call'] == 1) | (T['call'] == 2)).astype(np.float64)
+    xp, zp = projected(T, F, None, 'straight', 0.26)
+    X = np.hstack([location_block(xp, zp, T['stand_r'], T['strikes']), control_block(T, swing_propensity(T)), pitcher_propensity(T)[:, None].astype(np.float32)])
+    tr = np.isin(T['season'], (2023, 2024)); te = T['season'] == 2025
+    mid = date(2024, 7, 1).toordinal()
+    fit_a = tr & ~((T['season'] == 2024) & (T['day'] >= mid)); val = tr & (T['season'] == 2024) & (T['day'] >= mid)
+    rng = np.random.default_rng(11)
+    def league(rows):
+        idx = np.flatnonzero(rows); idx = rng.choice(idx, min(len(idx), 600000), replace=False) if len(idx) > 600000 else idx
+        return fit_logistic(X[idx], swing[idx]).decision_function(X)
+    off_a, off = league(fit_a), league(tr)
+    stage('league')
+    B = hitter_basis(xp, zp, T['stand_r'], T['strikes'])
+    loc = B[:, :-1]
+    brk = np.isin(T['group'], (3, 4))[:, None].astype(np.float64); ofs = (T['group'] == 5)[:, None].astype(np.float64)
+    bases = {'location': B, 'location_by_family': np.hstack([B, loc * brk, loc * ofs, brk, ofs])}
+    bat = T['batter']
+    ga, gv, gt, ge = _groups(bat, fit_a), _groups(bat, val), _groups(bat, tr), _groups(bat, te)
+    yt = swing[te]; games = T['game'][te]
+    preds = {}; out = {}
+    for name, Bm in bases.items():
+        val_ll = {}
+        for lam in (3.0, 10.0, 30.0, 100.0):
+            lo = off_a.copy()
+            for h, b in _hitter_maps(Bm, swing, off_a, ga, lam, 300).items():
+                if h in gv:
+                    v = gv[h]; lo[v] += Bm[v] @ b
+            val_ll[lam] = float(logloss_vec(1 / (1 + np.exp(-lo[val])), swing[val]).mean())
+        best = min(val_ll, key=val_ll.get)
+        lo = off.copy(); cov = np.zeros(len(swing), bool)
+        for h, b in _hitter_maps(Bm, swing, off, gt, best, 300).items():
+            if h in ge:
+                e = ge[h]; lo[e] += Bm[e] @ b; cov[e] = True
+        preds[name] = 1 / (1 + np.exp(-lo[te]))
+        out[name] = {'shrinkage': best, 'validation': {str(k): round(v, 5) for k, v in val_ll.items()}, 'covered': round(float(cov[te].mean()), 4),
+                     'test_logloss': round(float(logloss_vec(preds[name], yt).mean()), 5)}
+        stage('maps ' + name)
+    p_l = 1 / (1 + np.exp(-off[te]))
+    ll_l = logloss_vec(p_l, yt); ll_a = logloss_vec(preds['location'], yt); ll_b = logloss_vec(preds['location_by_family'], yt)
+    cc = lambda d: [round(v * 1000, 3) for v in clustered_ci(d, games)]
+    res['maps'] = out
+    res['gain_nats_per_1000_decisions'] = {'location_over_league': cc(ll_l - ll_a), 'family_over_location': cc(ll_a - ll_b), 'family_over_league': cc(ll_l - ll_b)}
+    # where the family part helps: decisions on breaking and offspeed pitches outside the zone
+    u = np.where(T['stand_r'][te] == 1, T['px'][te], -T['px'][te])
+    outside = (np.abs(u) > ZONE_HALF) | (T['pz'][te] > ZONE_TOP) | (T['pz'][te] < ZONE_BOT)
+    for nm, m in (('fastball_outside', outside & np.isin(T['group'][te], (0, 1, 2))), ('breaking_outside', outside & np.isin(T['group'][te], (3, 4))),
+                  ('offspeed_outside', outside & (T['group'][te] == 5)), ('all_inside', ~outside)):
+        res.setdefault('family_over_location_by_subset', {})[nm] = {'decisions': int(m.sum()),
+                                                                   'gain': [round(v * 1000, 3) for v in clustered_ci((ll_a - ll_b)[m], games[m])] if m.sum() > 1000 else None}
+    return res
+
+
 # ---------------------------------------------------------------- MATCHUP-01, scored once on the untouched set
 def harmonize_2026(T: dict) -> dict:
     """2026 feed locations measured at the middle of the plate, moved to the front (the earlier seasons' reference):
@@ -4816,6 +4880,8 @@ def main():
             receipt['results'] = adapt_study(T, params, stage)
         elif experiment == 'value3':
             receipt['results'] = value3_study(T, params, stage)
+        elif experiment == 'family':
+            receipt['results'] = matchup_family(T, params, stage)
         elif experiment == 'damage':
             receipt['results'] = damage_study(T, params, stage)
         elif experiment == 'steer':
