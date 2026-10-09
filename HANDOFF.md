@@ -54,6 +54,19 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   document per game on the data branch under public/reports/<date>/, read by the site's Report tab (template.html,
   REPORTS base URL on raw.githubusercontent.com). 2026 backfill running month by month (September, August, October,
   July first); 2025 next (needs the 2024 table as the previous season; it exists). Phone check passed with the tab.
+- Afternoon of October 9 (ledger rows): BENCH-02F credited (hitter whiff maps +8.2 beyond boosting on untouched swings;
+  the decision moment adds nothing to misses). SEQ-02 failed as registered but found a broader effect (after any taken
+  pitch, and twice as much after a miss, a repeat of the family draws more misses and softer contact; a foul resets it);
+  SEQ-03F (frozen 4ec64b68) scores it once on the untouched months. PLAN-01 registered and running: the plate appearance
+  as a sequential decision problem (count plus what the hitter just saw; the pitcher's own pitches as actions; the credited
+  pieces as the transition model; value iteration), tested by VALUE-08's natural experiment (the validated value is the
+  slope times the claim; synthetic effect world slope 0.4, placebo -0.1, null 0.07). TOTALS-03 adopted as a product call:
+  the page's expected total is 0.32 x simulator mean + 0.78 x market line - 0.543 from October 10 (beat the line -0.27
+  [-0.42, -0.13] in 2026, -0.12 [-0.36, +0.11] in 2025); over chances stay unstated. The report tool now writes plans by
+  count, two-strike miss spots, the pitcher's decision-moment deception rate, calibration bins per game and a forward
+  record (public/reports/record.json, shown on the Report tab). Backfill loop: scratch report/backfill_loop.sh (a
+  worktree at scratch bf_wt pushes one month at a time to diag/report and waits for the run to finish; log in
+  report/backfill_loop.log); 2026 months done through the loop's list, then 2025.
 - Alec, 8:56 a.m. October 9: the goal is to beat every model that exists. Where we stand (ledger rows):
   WHERE-01 (diagnostic): in the PROD-03 production replays our own number is level with the closing line (Brier pooled
   0.24245 against 0.24289; 2026 simulator alone 0.24274 against 0.24325) and a results logistic on both leans on ours
