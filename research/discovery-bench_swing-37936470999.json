@@ -1,0 +1,116 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "bench_swing",
+ "run_id": "37936470999",
+ "params": {
+  "experiment": "bench_swing",
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "final_eval": true,
+  "frozen_commit": "5e29436b5b8b7eff2c141e455b9229fc6cab93ac"
+ },
+ "started_at": "2026-10-09T13:23:40.713062+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 9.5
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 18.7
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 28.0
+  },
+  {
+   "stage": "features",
+   "at_seconds": 41.6
+  },
+  {
+   "stage": "maps true",
+   "at_seconds": 101.2
+  },
+  {
+   "stage": "maps percept",
+   "at_seconds": 169.6
+  },
+  {
+   "stage": "boosting G0",
+   "at_seconds": 210.1
+  },
+  {
+   "stage": "boosting G1",
+   "at_seconds": 248.2
+  },
+  {
+   "stage": "boosting G2",
+   "at_seconds": 287.9
+  }
+ ],
+ "final_eval": {
+  "frozen_commit": "5e29436b5b8b7eff2c141e455b9229fc6cab93ac",
+  "untouched_rows": 228549
+ },
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 713382
+ },
+ "results": {
+  "gbm_iterations": {
+   "G0": 400,
+   "G1": 400,
+   "G2": 400
+  },
+  "test_decisions": 226679,
+  "logloss": {
+   "G0_boosting": 0.440993,
+   "G1_boosting_plus_heat_map": 0.430233,
+   "G2_G1_plus_decision_moment": 0.426653,
+   "league_true": 0.504011,
+   "heat_map_true": 0.493426,
+   "league_decision_moment": 0.467318,
+   "ours_decision_moment": 0.452681
+  },
+  "gain_nats_per_1000_decisions": {
+   "ours_over_G1": [
+    -22.448,
+    -23.447,
+    -21.46
+   ],
+   "ours_over_G0": [
+    -11.688,
+    -12.831,
+    -10.596
+   ],
+   "G2_over_G1": [
+    3.58,
+    3.174,
+    4.171
+   ],
+   "G1_over_G0": [
+    10.76,
+    9.935,
+    11.493
+   ],
+   "ours_over_heat_map_logistic": [
+    40.745,
+    39.067,
+    42.434
+   ]
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T13:28:28.694987+00:00",
+ "seconds": 288.0
+}
