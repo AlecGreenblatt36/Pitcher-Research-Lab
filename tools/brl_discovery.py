@@ -2524,9 +2524,17 @@ def matchup_family(T: dict, params: dict, stage) -> dict:
     xp, zp = projected(T, F, None, 'straight', 0.26)
     LBk = location_block(xp, zp, T['stand_r'], T['strikes']); Ck = np.hstack([control_block(T, swing_propensity(T)), pitcher_propensity(T)[:, None].astype(np.float32)])
     lf = bool(params.get('league_family'))          # MATCHUP-05: the league model gets the same family-by-location part as the hitter maps
+    extra = params.get('extra_part')                # MATCHUP-06: 'platoon' (location bands times same-hand pitcher) or 'two_strike' (times two strikes)
+    if extra == 'platoon':
+        xind = (T['stand_r'] == T['throw_r']).astype(np.float64)
+    elif extra == 'two_strike':
+        xind = (T['strikes'] == 2).astype(np.float64)
+    else:
+        xind = None
     if lf:
         Bh0 = hitter_basis(xp, zp, T['stand_r'], T['strikes'])[:, :-1]
-        X = np.hstack([LBk, (Bh0 * np.isin(T['group'], (3, 4))[:, None]).astype(np.float32), (Bh0 * (T['group'] == 5)[:, None]).astype(np.float32), Ck]); del Bh0
+        lx = [(Bh0 * xind[:, None]).astype(np.float32)] if extra == 'platoon' else []     # the league's own platoon-by-location part (it is split by count already)
+        X = np.hstack([LBk, (Bh0 * np.isin(T['group'], (3, 4))[:, None]).astype(np.float32), (Bh0 * (T['group'] == 5)[:, None]).astype(np.float32)] + lx + [Ck]); del Bh0, lx
     else:
         X = np.hstack([LBk, Ck])
     if final and fwd:
@@ -2552,6 +2560,8 @@ def matchup_family(T: dict, params: dict, stage) -> dict:
     stage('league')
     B = hitter_basis(xp, zp, T['stand_r'], T['strikes'])
     bases = {'location': B, 'location_by_family': family_basis(B, T['group'])}
+    if xind is not None:
+        bases = {'location_by_family': bases['location_by_family'], 'family_plus_extra': np.hstack([bases['location_by_family'], B[:, :-1] * xind[:, None], xind[:, None]])}
     bat = T['batter']
     gt, ge = _groups(bat, tr), _groups(bat, te)
     if not final:
@@ -2580,6 +2590,15 @@ def matchup_family(T: dict, params: dict, stage) -> dict:
         stage('maps ' + name)
     res['test_decisions'] = int(te.sum())
     p_l = 1 / (1 + np.exp(-off[te]))
+    if xind is not None:
+        ll_l = logloss_vec(p_l, yt); ll_f = logloss_vec(preds['location_by_family'], yt); ll_x = logloss_vec(preds['family_plus_extra'], yt)
+        cc = lambda d: [round(v * 1000, 3) for v in clustered_ci(d, games)]
+        res['maps'] = out
+        res['gain_nats_per_1000_decisions'] = {'family_over_league': cc(ll_l - ll_f), 'extra_over_family': cc(ll_f - ll_x)}
+        m2 = xind[te] == 1
+        res['extra_over_family_where_it_applies'] = {'decisions': int(m2.sum()), 'gain': [round(v * 1000, 3) for v in clustered_ci((ll_f - ll_x)[m2], games[m2])]}
+        res['extra_part'] = extra
+        return res
     ll_l = logloss_vec(p_l, yt); ll_a = logloss_vec(preds['location'], yt); ll_b = logloss_vec(preds['location_by_family'], yt)
     cc = lambda d: [round(v * 1000, 3) for v in clustered_ci(d, games)]
     res['maps'] = out
@@ -2600,7 +2619,7 @@ def matchup_family(T: dict, params: dict, stage) -> dict:
         # family part's gain by thirds of that separation, and the difference between the outer thirds
         rel = {}
         trp = _groups(T['pitcher'], tr)
-        fbm = np.isin(T['group'], (0, 1, 2)); brm = np.isin(T['group'], (3, 4))
+        fbm = np.isin(T['group'], (0, 1, 2)); brm = np.isin(T['group'], (3,) if params.get('sliders_only') else (3, 4))
         for pid, r in trp.items():
             a = r[fbm[r]]; b = r[brm[r]]
             if len(a) < 60 or len(b) < 60:
