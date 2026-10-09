@@ -2638,6 +2638,51 @@ def matchup_whiff(T: dict, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- STEER-01: where the bat aims, read from misses
+def steer_profile(T: dict, params: dict, stage) -> dict:
+    """Swing decisions follow the flight as it looked about 260 ms out (Decision Horizon) while misses follow the true
+    crossing far better than that (MATCHUP-03). If the bat keeps being steered until a later moment and no further, misses
+    are best explained by the flight as it looked at that moment: the gravity-only projection from tau seconds before
+    the plate, with one location map shared by all pitch types (as in the horizon's first run). Held-out whiff log loss
+    on 2025 swings for tau on a grid from 0 (the true crossing) to 0.26 s; models fitted on 2023-2024."""
+    res = {}
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+    F = rebuild(T)
+    keep = F['ok'] & (T['group'] >= 0) & ((T['call'] == 1) | (T['call'] == 2)) & (T['strikes'] >= 0) & (T['bunt_pa'] == 0)
+    T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
+    y = (T['call'] == 2).astype(np.float64)
+    tt = dict(T); tt['call'] = np.where(y == 1, 1, 0)
+    prop_b = swing_propensity(tt, 200.0)
+    grp = np.zeros((len(y), 7), np.float32); grp[np.arange(len(y)), np.clip(T['group'], 0, 6)] = 1
+    C = np.hstack([grp, hats(T['v0'].astype(np.float64), V_KNOTS), (T['strikes'] == 2)[:, None], prop_b[:, None], (T['stand_r'] == T['throw_r'])[:, None]]).astype(np.float32)
+    tr = np.isin(T['season'], (2023, 2024)); te = T['season'] == 2025
+    rng = np.random.default_rng(11)
+    idx = np.flatnonzero(tr); idx = rng.choice(idx, min(len(idx), int(params.get('train_n', 700000))), replace=False)
+    yt = y[te]; g = T['game'][te]
+    taus = [float(v) for v in params.get('taus', (0.0, 0.03, 0.05, 0.07, 0.09, 0.11, 0.13, 0.15, 0.18, 0.22, 0.26))]
+    lls = {}
+    for tau in taus:
+        x, z = projected(T, F, None, 'straight', tau) if tau > 0 else (T['px'].astype(np.float64), T['pz'].astype(np.float64))
+        X = np.hstack([location_block(x, z, T['stand_r'], T['strikes']), C])
+        m = fit_logistic(X[idx], y[idx])
+        lls[tau] = logloss_vec(m.predict_proba(X[te])[:, 1], yt)
+        stage(f'tau {tau}')
+    base = lls[0.0]
+    res['test_swings'] = int(te.sum())
+    res['profile_nats_per_1000_vs_true_crossing'] = {str(t): [round(v * 1000, 3) for v in clustered_ci(base - l, g)] for t, l in lls.items()}
+    best = max(lls, key=lambda t: float((base - lls[t]).mean()))
+    res['best_tau_s'] = best
+    # bootstrap of the best tau over games
+    ug, gi = np.unique(g, return_inverse=True)
+    sums = {t: np.bincount(gi, weights=base - l, minlength=len(ug)) for t, l in lls.items()}
+    cnt = np.bincount(gi, minlength=len(ug)); picks = []
+    for _ in range(300):
+        w = np.bincount(rng.integers(0, len(ug), len(ug)), minlength=len(ug))
+        picks.append(max(taus, key=lambda t: (w * sums[t]).sum() / max((w * cnt).sum(), 1)))
+    res['best_tau_bootstrap'] = {str(t): round(float(np.mean(np.asarray(picks) == t)), 3) for t in taus}
+    return res
+
+
 # ---------------------------------------------------------------- MATCHUP-02: do decision-moment matchups move plate-appearance outcomes
 def matchup_pa(T: dict, params: dict, stage) -> dict:
     """Hitter maps and the league map at the decision moment as in MATCHUP-01 (fitted on 2023-2024, shrinkage 10). For
@@ -3436,6 +3481,8 @@ def main():
             receipt['results'] = exposure_study(T, params, stage)
         elif experiment == 'matchup_whiff':
             receipt['results'] = matchup_whiff(T, params, stage)
+        elif experiment == 'steer':
+            receipt['results'] = steer_profile(T, params, stage)
         elif experiment == 'matchup_final':
             receipt['results'] = matchup_final(T, params, stage)
         elif experiment == 'drift':
