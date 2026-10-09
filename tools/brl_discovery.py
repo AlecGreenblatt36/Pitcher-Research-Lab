@@ -3216,21 +3216,28 @@ def value_study(T: dict, params: dict, stage) -> dict:
     show nothing. Worth of aiming: within each pitcher's own outside pitches to a side in a count group, the best third
     for this hitter against the average, times the outside coefficient and the outside pitches per plate appearance."""
     res = {}
-    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+    final = bool(params.get('final_eval'))
+    if final and not params.get('frozen_commit'):
+        raise ValueError('the final value scoring runs only as the registered evaluation of a frozen commit')
+    if final:      # VALUE-01F: maps from 2023-2025, scored on the 2026 pitches from August 1 (the untouched set)
+        T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | ((T['season'] == 2026) & (T['day'] >= date(2026, 8, 1).toordinal())))
+    else:
+        T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
     F = rebuild(T)
     keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
     T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
     swing = ((T['call'] == 1) | (T['call'] == 2)).astype(np.float64)
     xp, zp = projected(T, F, None, 'straight', 0.26)
     X = np.hstack([location_block(xp, zp, T['stand_r'], T['strikes']), control_block(T, swing_propensity(T)), pitcher_propensity(T)[:, None].astype(np.float32)])
-    tr = np.isin(T['season'], (2023, 2024))
+    tr = np.isin(T['season'], (2023, 2024, 2025)) if final else np.isin(T['season'], (2023, 2024))
+    test_season = 2026 if final else 2025
     rng = np.random.default_rng(11)
     idx = np.flatnonzero(tr); idx = rng.choice(idx, min(len(idx), 600000), replace=False)
     off = fit_logistic(X[idx], swing[idx]).decision_function(X)
     Bm = hitter_basis(xp, zp, T['stand_r'], T['strikes'])
     maps = _hitter_maps(Bm, swing, off, _groups(T['batter'], tr), 10.0, 300)
     stage(f'maps {len(maps)}')
-    te = (T['season'] == 2025) & (T['out7'] >= 0) & np.isin(T['batter'], np.asarray(list(maps), dtype=np.int64))
+    te = (T['season'] == test_season) & (T['out7'] >= 0) & np.isin(T['batter'], np.asarray(list(maps), dtype=np.int64))
     ix = np.flatnonzero(te)
     sig = lambda v: 1 / (1 + np.exp(-v))
     p_l = sig(off[ix])
@@ -3296,7 +3303,7 @@ def value_study(T: dict, params: dict, stage) -> dict:
                      'runs_per_point_inside': [round(float(b[-1]), 6), round(float(lo[-1]), 6), round(float(hi[-1]), 6)]}
         stage('regression ' + name)
     res['plate_appearance_run_value'] = out
-    res['rows'] = {'pitches_2025': int(len(ix)), 'outside_share': round(float(outside.mean()), 4), 'd_sd_points_outside': round(float(D[outside].std()), 3),
+    res['rows'] = {'test_pitches': int(len(ix)), 'test_season': test_season, 'outside_share': round(float(outside.mean()), 4), 'd_sd_points_outside': round(float(D[outside].std()), 3),
                    'd_sd_points_inside': round(float(D[~outside].std()), 3), 'outside_pitches_per_pa': round(float(outside.sum() / max(int((T['pitch_no'][ix] == 0).sum()), 1)), 3)}
     # worth of aiming: best third of each pitcher's own outside pitches for this hitter against their average
     cg = np.where(T['strikes'][ix] == 2, 2, np.where(T['balls'][ix] > T['strikes'][ix], 1, 0))
