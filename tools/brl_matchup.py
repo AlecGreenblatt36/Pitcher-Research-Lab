@@ -1071,3 +1071,87 @@ def timing_final_study(sv, cols: dict, params: dict, stage) -> dict:
     res['rows'] = {'untouched_contacts_with_previous': int((ok & (day >= UNTOUCHED_FROM)).sum()),
                    'untouched_days': [str(date.fromordinal(int(day[ok & (day >= UNTOUCHED_FROM)].min()))), str(date.fromordinal(int(day[ok & (day >= UNTOUCHED_FROM)].max())))] if (ok & (day >= UNTOUCHED_FROM)).any() else None}
     return res
+
+
+# ---------------------------------------------------------------- BATSPEED-01: does a bat-speed drop show before the results do?
+LW_EVENTS = {'strikeout': -0.28, 'strikeout_double_play': -0.28, 'walk': 0.32, 'hit_by_pitch': 0.32, 'intent_walk': 0.32, 'single': 0.47,
+             'double': 0.78, 'triple': 0.78, 'home_run': 1.40, 'field_error': 0.45, 'field_out': -0.26, 'force_out': -0.26,
+             'grounded_into_double_play': -0.26, 'double_play': -0.26, 'fielders_choice_out': -0.26, 'fielders_choice': -0.26,
+             'sac_fly': -0.26, 'sac_bunt': -0.26, 'triple_play': -0.26, 'sac_fly_double_play': -0.26}
+
+
+def _window_mean(key, day, value, use, lo, hi):
+    """For every row: mean and count of value over rows of the same key with day in [day - hi, day - lo) where use."""
+    n = len(key); order = np.lexsort((day, key)); k, d = key[order], day[order]
+    v = np.where(use[order], np.nan_to_num(value[order]), 0.0); u = use[order].astype(float)
+    cv = np.concatenate([[0.0], np.cumsum(v)]); cu = np.concatenate([[0.0], np.cumsum(u)])
+    out_m = np.full(n, np.nan); out_n = np.zeros(n)
+    starts = np.flatnonzero(np.r_[True, k[1:] != k[:-1]]); ends = np.r_[starts[1:], n]
+    for a, b in zip(starts, ends):
+        dd = d[a:b]
+        i_hi = a + np.searchsorted(dd, dd - hi, side='left'); i_lo = a + np.searchsorted(dd, dd - lo, side='left')
+        s_ = cv[i_lo] - cv[i_hi]; c_ = cu[i_lo] - cu[i_hi]
+        with np.errstate(invalid='ignore', divide='ignore'):
+            out_m[order[a:b]] = np.where(c_ > 0, s_ / np.maximum(c_, 1), np.nan)
+        out_n[order[a:b]] = c_
+    return out_m, out_n
+
+
+def batspeed_study(sv, cols: dict, params: dict, stage) -> dict:
+    """What changes before results do: a hitter's bat speed over his last 14 days against his own norm (the 120 days
+    before that), as a predictor of his plate appearances' run value (linear weights) beyond his earlier and recent run
+    values, strikeout rate and the pitcher's earlier run value allowed. Competitive swings only (bat speed at least 50
+    mph); at least 25 recent and 150 norm swings. Fitted on 2025, scored on 2026 through July, intervals by game."""
+    res = {}
+    cols = guard(cols, params)
+    desc = label(cols, 'description'); ev = label(cols, 'events')
+    batter = cols['batter'].astype(np.int64); pitcher = cols['pitcher'].astype(np.int64); day = cols['day'].astype(np.int64)
+    year = np.asarray([date.fromordinal(int(d_)).year for d_ in day])
+    bs = cols['bat_speed'].astype(np.float64)
+    swing = np.isin(desc, WHIFF + CONTACT)
+    comp = swing & np.isfinite(bs) & (bs >= 50)
+    recent, n_rec = _window_mean(batter, day, bs, comp, 0, int(params.get('recent_days', 14)))
+    norm, n_norm = _window_mean(batter, day, bs, comp, int(params.get('recent_days', 14)), int(params.get('recent_days', 14)) + int(params.get('norm_days', 120)))
+    stage('bat speed windows')
+    pa_end = np.asarray([e_ in LW_EVENTS for e_ in ev])
+    rv = np.asarray([LW_EVENTS.get(e_, 0.0) for e_ in ev])
+    k_ = np.isin(ev, ('strikeout', 'strikeout_double_play')).astype(float)
+    def prior_mean(key, val, use, k0):
+        nn, ss, _ = prior_stats(key, day, val, use)
+        lg = float(val[use].mean()); return (ss + k0 * lg) / (nn + k0)
+    rv_b = prior_mean(batter, rv, pa_end, 200.0); rv_p = prior_mean(pitcher, rv, pa_end, 300.0); k_b = prior_mean(batter, k_, pa_end, 150.0)
+    rv_rec, n_rv_rec = _window_mean(batter, day, rv, pa_end, 0, int(params.get('recent_days', 14)))
+    rv_rec_s = np.where(np.isfinite(rv_rec), (np.nan_to_num(rv_rec) * n_rv_rec + 40 * rv_b) / (n_rv_rec + 40), rv_b)
+    dev = recent - norm
+    ok = pa_end & np.isfinite(dev) & (n_rec >= 25) & (n_norm >= 150)
+    stand_r = label(cols, 'stand') == 'R'; throw_r = label(cols, 'p_throws') == 'R'
+    X = np.column_stack([np.ones(len(day)), rv_b, rv_p, k_b, rv_rec_s, (stand_r == throw_r).astype(float), norm - 70.0])
+    Xd = np.column_stack([X, dev])
+    tr = ok & (year == int(params.get('train_year', 2025))); te = ok & (year == int(params.get('test_year', 2026)))
+    res['rows'] = {'train_pa': int(tr.sum()), 'test_pa': int(te.sum()), 'dev_sd_mph': round(float(np.nanstd(dev[ok])), 3),
+                   'dev_quantiles_mph': [round(float(np.nanpercentile(dev[ok], q)), 2) for q in (5, 25, 50, 75, 95)] if ok.any() else None}
+    if tr.sum() < 20000 or te.sum() < 5000:
+        res['error'] = 'too few plate appearances'; return res
+    b0 = np.linalg.lstsq(X[tr], rv[tr], rcond=None)[0]; b1 = np.linalg.lstsq(Xd[tr], rv[tr], rcond=None)[0]
+    e0 = (rv[te] - X[te] @ b0) ** 2; e1 = (rv[te] - Xd[te] @ b1) ** 2
+    games = cols['game_pk'][te]
+    res['run_value_per_mph'] = round(float(b1[-1]), 5)
+    # interval for the coefficient from refits on bootstrap resamples of training games
+    tg = np.unique(cols['game_pk'][tr]); gi = np.searchsorted(tg, cols['game_pk'][tr]); rng = np.random.default_rng(5); bsd = []
+    Xt, yt_ = Xd[tr], rv[tr]
+    for _ in range(int(params.get('reps', 100))):
+        w = np.bincount(rng.integers(0, len(tg), len(tg)), minlength=len(tg))[gi].astype(float)
+        bsd.append(np.linalg.solve((Xt * w[:, None]).T @ Xt, (Xt * w[:, None]).T @ yt_)[-1])
+    res['run_value_per_mph_interval'] = [round(float(np.percentile(bsd, 2.5)), 5), round(float(np.percentile(bsd, 97.5)), 5)]
+    res['squared_error_reduction_per_1000_pa'] = clustered(e0 - e1, games)
+    # the same coefficient fitted on the test year (does the relation hold there)
+    b_te = np.linalg.lstsq(Xd[te], rv[te], rcond=None)[0]
+    res['run_value_per_mph_test_year_fit'] = round(float(b_te[-1]), 5)
+    # observed against the base model by bat-speed deviation band, test year
+    bands = [(-99, -1.5), (-1.5, -0.5), (-0.5, 0.5), (0.5, 1.5), (1.5, 99)]
+    p0 = X[te] @ b0
+    res['test_by_deviation_band'] = [{'band_mph': [lo_, hi_], 'pa': int(((dev[te] >= lo_) & (dev[te] < hi_)).sum()),
+                                      'observed_minus_base': round(float((rv[te] - p0)[(dev[te] >= lo_) & (dev[te] < hi_)].mean()), 4) if ((dev[te] >= lo_) & (dev[te] < hi_)).any() else None}
+                                     for lo_, hi_ in bands]
+    stage('bat speed')
+    return res
