@@ -4017,6 +4017,74 @@ def scout_export(T: dict, params: dict, stage) -> dict:
                              'league_chain_k': round(r_[8], 4), 'league_chain_bb': round(r_[9], 4)} for j, r_ in enumerate(rows)]
             res['pair_scale_note'] = 'chase times 0.95 (MATCHUP-01F slope); strikeout and walk changes times 0.40 and 0.53 (ENGINE-01 coefficients over calibrated); pair parts after removing hitter and pitcher parts over these pairs'
         stage(f'pairs {len(rows)}')
+        if params.get('aim') and rows:
+            # where each pitcher should aim against each hitter he may face (VALUE-02F): among his own spots to that side
+            # and count group, the best third for this hitter under 0.6 ft of command scatter (outside: highest extra
+            # chase; in the zone: lowest extra swing), within thirds of the league's swing chance; runs per 100 plate
+            # appearances from the credited coefficients
+            nL = Ls.shape[1]; wL = m_s.coef_[0][:nL].astype(np.float64)
+            b_out, b_in, n_out, n_in = -0.000945, 0.000384, 1.876, 2.04
+            K = 16; jit = np.random.default_rng(3).standard_normal((K, 2)); jit = (jit - jit.mean(0)) / jit.std(0); sgm = float(params.get('sigma', 0.6))
+            cgrp = np.where(Tk['strikes'] == 2, 2, np.where(Tk['balls'] > Tk['strikes'], 1, 0))
+            gu_ = np.asarray(res['grid']['side_ft']); gz_ = np.asarray(res['grid']['height_ft'])
+            pools = {}
+            def pool_for(p_, sd, c3, zone_out):
+                key = (p_, sd, c3, zone_out)
+                if key in pools:
+                    return pools[key]
+                r = gp[p_]; r = r[(Tk['stand_r'][r] == sd) & (cgrp[r] == c3) & (outside[r] == zone_out)]
+                if len(r) < 20:
+                    pools[key] = None; return None
+                if len(r) > 250:
+                    r = rng.choice(r, 250, replace=False)
+                pl_ = sig(off_s[r]); third = np.searchsorted(np.percentile(pl_, [33.3, 66.7]), pl_)
+                lb0 = Ls[r].astype(np.float64) @ wL
+                xj = (xp[r][:, None] + sgm * jit[None, :, 0]).ravel(); zj = (zp[r][:, None] + sgm * jit[None, :, 1]).ravel()
+                sj = np.repeat(np.full(len(r), sd), K); kj = np.repeat(Tk['strikes'][r], K)
+                offj = np.repeat(off_s[r] - lb0, K) + location_block(xj, zj, sj, kj).astype(np.float64) @ wL
+                uu_ = np.where(sd == 1, xt[r], -xt[r])                      # aim cells where the pitch arrives
+                cell = np.argmin(np.abs(uu_[:, None] - gu_[None, :]), 1) + len(gu_) * np.argmin(np.abs(zt[r][:, None] - gz_[None, :]), 1)
+                pools[key] = (offj, hitter_basis(xj, zj, sj, kj), third, cell, len(r))
+                return pools[key]
+            aim = []
+            for pr_ in res['pairs']:
+                h, p_ = int(pr_['hitter']), int(pr_['pitcher'])
+                if h not in maps_s or p_ not in gp:
+                    continue
+                sd = int(np.round(Tk['stand_r'][gb[h]].mean())) if h in gb else 1
+                rp = gp[p_][Tk['stand_r'][gp[p_]] == sd]
+                if len(rp) < 60:
+                    continue
+                wc = np.bincount(cgrp[rp], minlength=3) / len(rp)
+                runs = 0.0; cells_out = np.zeros(len(gu_) * len(gz_)); cells_in = np.zeros(len(gu_) * len(gz_)); used = 0.0
+                for c3 in (0, 1, 2):
+                    for zone_out in (True, False):
+                        P_ = pool_for(p_, sd, c3, zone_out)
+                        if P_ is None:
+                            continue
+                        offj, Bj, third, cell, npool = P_
+                        dj = ((sig(offj + Bj @ maps_s[h]) - sig(offj)) * 100).reshape(npool, K).mean(1)
+                        gains = []
+                        for t3 in range(3):
+                            sel = np.flatnonzero(third == t3)
+                            if len(sel) >= 3:
+                                k3 = max(1, len(sel) // 3)
+                                order = np.argsort(dj[sel]); best = sel[order[::-1][:k3]] if zone_out else sel[order[:k3]]
+                                gains.append(float(dj[best].mean() - dj[sel].mean()))
+                                np.add.at(cells_out if zone_out else cells_in, cell[best], wc[c3])
+                        if gains:
+                            g_ = float(np.mean(gains))
+                            runs += wc[c3] * (b_out * g_ * n_out if zone_out else b_in * g_ * n_in)
+                            used += wc[c3] / 2
+                if used > 0:
+                    top_out = [int(k) for k in np.argsort(cells_out)[::-1][:3] if cells_out[k] > 0]
+                    top_in = [int(k) for k in np.argsort(cells_in)[::-1][:3] if cells_in[k] > 0]
+                    aim.append({'hitter': h, 'pitcher': p_, 'runs_per_100_pa': round(float(runs) * 100, 2),
+                                'aim_outside_cells': [[float(gu_[k % len(gu_)]), float(gz_[k // len(gu_)])] for k in top_out],
+                                'aim_strike_cells': [[float(gu_[k % len(gu_)]), float(gz_[k // len(gu_)])] for k in top_in]})
+            res['aim'] = aim
+            res['aim_note'] = 'runs per 100 plate appearances saved by aiming (negative = fewer runs for the hitter), 0.6 ft command scatter, coefficients from VALUE-02F; cells are where the aimed pitches arrive (true crossing), weighted by count group'
+            stage(f'aim {len(aim)}')
     return res
 
 
