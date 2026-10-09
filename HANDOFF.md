@@ -72,8 +72,10 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   experiment run whose commit message names an ID without a ledger row (registered or diagnostic). Still open from the
   audit: Actions pinned by commit (the tag SHAs could not be verified from this session), a locked environment, LICENSE
   and CITATION.cff (license choice is Alec's), a smaller discovery module, a reproduction package.
-- PLAN-01b (registered) has been running since 12:14 p.m. Eastern; read it when it lands (research/discovery-plan-<run>.json)
-  and apply its rule (noise placebo within 0.1 either way, or the planner is set aside pending off-policy evaluation).
+- PLAN-01b landed (run 37957704310): random maps with the own part's variance moved the natural-experiment slope to -0.36,
+  far outside the registered band, so under the rule the planner is set aside; no plan value is stated. PLAN-03 (off-policy
+  evaluation against the pitcher's logged choices, checked first in the synthetic worlds) is the replacement design when
+  taken up.
 
 - Alec, 9:40 a.m. October 9: the product is for coaches, past games must be evaluable with only information up to each
   game, and it must be made genuinely better than anything that exists; he does not want to wait weeks. Built the same
