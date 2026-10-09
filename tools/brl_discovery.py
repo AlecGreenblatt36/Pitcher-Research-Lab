@@ -2494,6 +2494,7 @@ def family_basis(B, group):
 
 
 FAMILY_SHRINKAGE = {'location': 10.0, 'location_by_family': 3.0}     # chosen on the validation half in MATCHUP-04 (run 37889588250)
+FAMILY_SHRINKAGE_LEAGUE_FAMILY = {'location': 10.0, 'location_by_family': 10.0}   # MATCHUP-05 (league with its own family part, run 37891547233)
 
 
 def matchup_family(T: dict, params: dict, stage) -> dict:
@@ -2553,7 +2554,7 @@ def matchup_family(T: dict, params: dict, stage) -> dict:
     for name, Bm in bases.items():
         val_ll = {}
         if final:
-            best = FAMILY_SHRINKAGE[name]
+            best = (FAMILY_SHRINKAGE_LEAGUE_FAMILY if lf else FAMILY_SHRINKAGE)[name]
         else:
             for lam in (3.0, 10.0, 30.0, 100.0):
                 lo = off_a.copy()
@@ -3509,6 +3510,19 @@ def value2_study(T: dict, params: dict, stage) -> dict:
     gb = _groups(T['batter'][ix], np.ones(len(ix), bool))
     for h, rr in gb.items():
         D[rr] = (sig(off[ix[rr]] + Bm[ix[rr]] @ maps[h]) - p_l[rr]) * 100
+    specific = bool(params.get('specific'))           # VALUE-08: the hitter's own part, net of the shape all hitters' maps share
+    mbar = {}; Dmean = np.zeros(len(ix))
+    if specific:
+        # each hitter's same-side mean map over the other hitters with maps (equal weights; side from training pitches)
+        ub_, bi_ = np.unique(T['batter'][tr], return_inverse=True)
+        side_of = dict(zip(ub_.tolist(), np.round(np.bincount(bi_, weights=T['stand_r'][tr]) / np.bincount(bi_)).astype(int).tolist()))
+        Ssum = {0: 0.0, 1: 0.0}; Nn = {0: 0, 1: 0}
+        for h, m in maps.items():
+            Ssum[side_of[h]] = Ssum[side_of[h]] + m; Nn[side_of[h]] += 1
+        mbar = {h: (Ssum[side_of[h]] - m) / max(Nn[side_of[h]] - 1, 1) for h, m in maps.items()}
+        for h, rr in gb.items():
+            Dmean[rr] = (sig(off[ix[rr]] + Bm[ix[rr]] @ mbar[h]) - p_l[rr]) * 100
+        D = D - Dmean
     xt, zt = T['px'][ix].astype(np.float64), T['pz'][ix].astype(np.float64)
     u_t = np.where(T['stand_r'][ix] == 1, xt, -xt)
     e = np.maximum(np.maximum(np.abs(u_t) - ZONE_HALF, zt - ZONE_TOP), ZONE_BOT - zt)
@@ -3529,7 +3543,7 @@ def value2_study(T: dict, params: dict, stage) -> dict:
     for k in range(1, 7):
         grp[:, k - 1] = g_ == k
     Xd = np.column_stack([np.ones(len(ix)), cnt, grp, p_l, np.log(p_l / (1 - p_l)), outside, hats(e, (-0.8, -0.4, -0.15, 0.0, 0.15, 0.4, 0.8, 1.5)), rv_b, rv_p,
-                          (T['stand_r'][ix] == T['throw_r'][ix]).astype(float), D * outside, D * ~outside])
+                          (T['stand_r'][ix] == T['throw_r'][ix]).astype(float)] + ([Dmean * outside, Dmean * ~outside] if specific else []) + [D * outside, D * ~outside])
     b = np.linalg.lstsq(Xd, y, rcond=None)[0]; b_out, b_in = float(b[-2]), float(b[-1])
     # game bootstrap of the two coefficients (the gains below are nearly fixed, so the value's interval follows these)
     ug, gi = np.unique(T['game'][ix], return_inverse=True); p_ = Xd.shape[1]
@@ -3546,6 +3560,9 @@ def value2_study(T: dict, params: dict, stage) -> dict:
     n_pa = max(int((T['pitch_no'][ix] == 0).sum()), 1)
     res['coefficients'] = {'test_season': test_season, 'test_pitches': int(len(ix)), 'runs_per_point_outside': round(b_out, 6), 'runs_per_point_inside': round(b_in, 6),
                            'outside_pitches_per_pa': round(float(outside.sum() / n_pa), 3), 'inside_pitches_per_pa': round(float((~outside).sum() / n_pa), 3)}
+    if specific:
+        res['coefficients'].update({'deviation': 'own map minus the same-side mean map', 'shared_part_outside': round(float(b[-4]), 6), 'shared_part_inside': round(float(b[-3]), 6),
+                                    'sd_points_shared_outside': round(float(Dmean[outside].std()), 3), 'sd_points_own_part_outside': round(float(D[outside].std()), 3)})
     if params.get('checks'):
         # attempts to break the coefficient (own random stream, so the aiming below is unchanged): (1) placebo, each
         # hitter's pitches read through another hitter's map of the same side, must show nothing; (2) only the variation
@@ -3572,6 +3589,21 @@ def value2_study(T: dict, params: dict, stage) -> dict:
         Dp = np.zeros(len(ix))
         for h, rr in gb.items():
             Dp[rr] = (sig(off[ix[rr]] + Bm[ix[rr]] @ maps[perm[h]]) - p_l[rr]) * 100
+        if specific:
+            Dp = Dp - Dmean
+        # the placebo is one random reassignment; five more give its spread across reassignments (point estimates)
+        extra = []
+        for _ in range(int(params.get('placebo_draws', 5))):
+            pm = {}
+            for hs in by_side.values():
+                sh = list(hs); rc.shuffle(sh); pm.update({h: sh[(k + 1) % len(sh)] for k, h in enumerate(hs)})
+            Dq = np.zeros(len(ix))
+            for h, rr in gb.items():
+                Dq[rr] = (sig(off[ix[rr]] + Bm[ix[rr]] @ maps[pm[h]]) - p_l[rr]) * 100
+            if specific:
+                Dq = Dq - Dmean
+            bq = np.linalg.lstsq(np.column_stack([Xd[:, :-2], Dq * outside, Dq * ~outside]), y, rcond=None)[0]
+            extra.append(round(float(bq[-2]), 6))
         _, ki = np.unique((T['batter'][ix].astype(np.int64) * 10 + np.clip(T['group'][ix], 0, 6)) * 2 + outside, return_inverse=True)
         Dw = D - (np.bincount(ki, weights=D) / np.bincount(ki))[ki]
         chk = {'own_map': {'outside': round(b_out, 6), 'inside': round(b_in, 6),
@@ -3584,6 +3616,7 @@ def value2_study(T: dict, params: dict, stage) -> dict:
             chk[nm] = {'outside': round(float(bk_[-2]), 6), 'inside': round(float(bk_[-1]), 6), 'outside_interval': ci_[0], 'inside_interval': ci_[1],
                        'sd_points_outside': round(float(dd[outside].std()), 3)}
         chk['own_map']['sd_points_outside'] = round(float(D[outside].std()), 3)
+        chk['placebo_other_hitter']['outside_more_reassignments'] = extra
         # (3) one pitch's coefficient may count its neighbors: pitches in one plate appearance share the hitter's map and
         # the pitcher's spots, so their deviations are correlated; holding the plate appearance's other pitches fixed
         # gives the per-pitch effect the aiming multiplies by pitches per plate appearance
@@ -3644,7 +3677,8 @@ def value2_study(T: dict, params: dict, stage) -> dict:
                         mh = maps[int(h)]
                         for sg in sigmas:
                             offj, Bj = mats[sg]
-                            dj = ((sig(offj + Bj @ mh) - sig(offj)) * 100).reshape(len(pool), K).mean(1)
+                            base_j = sig(offj + Bj @ mbar[int(h)]) if specific else sig(offj)
+                            dj = ((sig(offj + Bj @ mh) - base_j) * 100).reshape(len(pool), K).mean(1)
                             parts = []
                             for t3 in range(3):
                                 dd_ = dj[third == t3]

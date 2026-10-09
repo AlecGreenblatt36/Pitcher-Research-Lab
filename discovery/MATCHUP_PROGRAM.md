@@ -98,13 +98,15 @@ Credited (frozen code, scored once on the untouched months, August 1 to Septembe
   better described on the true crossing than at the decision moment. Hitter-specific damage maps were not confirmed.
 - **Sequence effects in timing** (TIMING-03F). After a called strike the next pitch is met farther out front the
   slower that strike was (0.15 inches per 10 ms); after a miss, later (0.24); a foul carries nothing.
-- **An unexploited edge, priced** (EXPLOIT-01, VALUE-01F, VALUE-02F, with VALUE-03 and VALUE-04 in development).
-  Pitchers do not aim at a hitter's own decision-moment chase spots, so where a pitch lands on his map is as good as
-  chance; on that natural experiment a pitch in his own chase spots costs him runs (placebo maps nil). Aiming each
-  outside pitch at the best third of the pitcher's own spots for that hitter, with typical command (0.6 ft of
-  scatter per axis), is worth about 43 runs over a team's season (26 to 57) and about 60 with strikes aimed where he
-  swings least; about 86 percent survives hitters tightening up within a game, and about 85 percent survives
-  restricting the aim to each pitch type's own spots.
+- **Hitters answer pitch families differently at the same apparent spot** (MATCHUP-04F): maps with a family part beat
+  location-only maps on the untouched months (+3.9 nats per 1,000 decisions). About half of that is a league-wide
+  family pattern; hitter-specific family parts add +2.55 in development (MATCHUP-05), frozen scoring next.
+- **An unexploited edge, price under re-examination** (EXPLOIT-01 stands; VALUE-01F and VALUE-02F run figures
+  withdrawn October 9). Pitchers do not aim at a hitter's own decision-moment chase spots (EXPLOIT-01). VALUE-01F and
+  VALUE-02F priced aiming at about 43 runs per team-season at typical command, but a fresh placebo (another hitter's
+  map) on 2025 is not nil (VALUE-07): hitters' maps share a shape that predicts run value for anyone, so part of the
+  price was not hitter-specific. VALUE-08 measures each hitter's own part net of the shared shape; no run figure is
+  stated until it passes with a nil placebo.
 
 What did not hold: maps as an early warning (DRIFT-01) or as season projections (DISCIPLINE-01); the swing-plane
 formula as the source of the geometry signal (CONTACT-01, -02); locating the steering limit from misses with one map

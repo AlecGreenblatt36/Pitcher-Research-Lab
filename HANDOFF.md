@@ -81,13 +81,22 @@ Credited on the untouched set (frozen code, one scoring each; ledger rows):
   per 10 ms [0.101, 0.192]; after a miss later, -0.239 [-0.317, -0.146] (within pitcher-types, cell fixed effects).
   Frozen commit 8795ff00.
 
-- VALUE-01F and VALUE-02F: a hitter's own decision-moment chase map costs him runs when pitches land in it
-  (-0.00095 runs per point outside [-0.0012, -0.0006], placebo nil; inside +0.00038). Aiming each outside pitch at
-  the best third of the pitcher's own spots for that hitter: perfect placement about -69 runs per team-season
-  [-89, -44]; with typical command (0.6 ft scatter per axis) about -43 [-57, -26], with strikes too about -60
-  [-85, -43]. Frozen commits 63623e0f and 61549d73. Nobody collects it (EXPLOIT-01: targeting -0.09 points).
+- MATCHUP-04F: maps with a part by pitch family (fastball, breaking, offspeed) beat location-only maps by +3.91
+  nats per 1,000 decisions [3.34, 4.44] on the untouched months. Frozen commit fdb61e97. About half of that is a
+  league-wide family pattern the league model lacked (MATCHUP-05, development: the league's own family part +4.80;
+  hitter-specific family parts still +2.55 [2.35, 2.75] on top, mostly breaking balls outside). MATCHUP-05F (frozen
+  scoring on the untouched months) is next; the scouting view and engine switch only if it holds.
+- VALUE-01F and VALUE-02F (run figures WITHDRAWN pending VALUE-08, October 9 about 2:30 a.m.): they reported a
+  hitter's own chase map costing him runs (-0.00095 per point outside) and an aiming value of about -43 runs per
+  team-season at typical command. VALUE-07 found the placebo (another hitter's map) is not nil on 2025 with a fresh
+  reassignment (-0.000267 [-0.000491, -0.000088], about 40% of the own-map coefficient; family maps the same), so
+  maps share a shape that predicts run value for anyone. Per VALUE-07's registered rule, no run figure is stated
+  until VALUE-08 measures each hitter's own part (own map minus the same-side mean map of the other hitters) with a
+  nil placebo. VALUE-07 also found pitches in a plate appearance share deviations (correlation 0.16) and the
+  neighbor-held coefficient keeps 88% (not a large overstatement). EXPLOIT-01 (pitchers do not aim at hitter maps)
+  stands. Frozen commits 63623e0f and 61549d73.
 
-Development results around it: VALUE-03 nets ADAPT-01's tightening (hitters chase a little less everywhere after
+Development results around it (their run figures inherit the VALUE-07 withdrawal): VALUE-05 the outside edge sits most where the pitcher is behind in the count (39% of it on 18% of the pitches), two strikes carry their share. VALUE-03 nets ADAPT-01's tightening (hitters chase a little less everywhere after
 seeing more tempting pitches than chance, -0.065 log-odds per extra one; they do not learn their spots): 86 percent
 kept (about -37 outside on the credited value). VALUE-04 (running): the edge within each pitch type. DAMAGE-01: damage
 maps on the true crossing help on 2025 (+0.21 per 1,000 balls in play) but DAMAGE-01F did not confirm them (+0.04, CI
