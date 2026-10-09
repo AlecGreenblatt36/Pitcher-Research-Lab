@@ -45,7 +45,37 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
-### In flight (updated 5:15 p.m. Eastern October 9 by the clock; earlier stamps in this section ran ahead of it)
+### In flight (updated 6:15 p.m. Eastern October 9, by `date -u`; earlier stamps in this section ran ahead of the clock)
+
+- Night of October 9, live: the Report tab follows the game. During a game the page reads the official feed's batter,
+  on-deck hitter and pitcher (lcSituation; SIT_FIELDS carries onDeck), matches the pair in the report, selects it and the
+  count group the plan is priced by, and moves with every pitch until a cell or a count is tapped (state.rpFollow; a
+  Follow the game switch brings it back; the on-deck hitter is one tap away; a pinch hitter or a reliever not on the
+  morning card gets a plain line). While the pair at the plate is selected, its plan sits under the strip and the tables
+  follow. The Summary tab shows a This at-bat card (the strip, the count-specific figure, the three family grids, a
+  link to the full plan). Harness: scratch live/build_harness3.py builds a page with a faked live state for game 849832
+  from the data branch's predictions.json and report doc; live/shot3.js and live/design3.js check it (served from
+  scratch root on port 8766). The phone check now opens the Players list, a card and a game's Report tab with the
+  same design rules (receipt keys players, report; the live strip under browser_feed.this_at_bat).
+- Players pages are live from the lane (run 37994692489: 616 hitters, 880 pitchers, names and current teams from MLB,
+  some winter-league or minor-league clubs for players listed there today); public/reports/players/index.json and
+  16 shards each way, rebuilt by the daily report run or a push with "players": true.
+- TOTALS-06 failed (tools/totals_park.py, data-branch aggregates): park offsets learned on one season make the other
+  worse (-0.13 and -0.20 runs squared, intervals excluding zero); a park's mean residual reverses between seasons
+  (correlation -0.46 across 30 parks) while the same teams' away residuals do not (+0.09). Reading: the PA model's park
+  counter (all-time, 1,000-PA prior) carries one season's noise into the next with the wrong sign. TOTALS-07 registered
+  and its fit running (run 37998079379, name pa-2026-v5-parkprior: v2-physics with park_prior_pa 6,000; the fit tool now
+  reads the counter priors from tools/fit_model_params.json). Next: replay both seasons with the PROD-03 recipe (the
+  trigger parameters of e31c6b7478 with model pa-2026-v5-parkprior, 1,000 worlds, paired streams against
+  v2-prod3-1000-2025 and -2026, the cross-season tables: fit2025 tables for the 2026 replay, fit2026 for 2025), then
+  score with tools/totals_park.py's cross-season correlation, squared error, P(over) and the win Brier; the gate is in
+  the ledger row. If it passes, refit the taught headline on the new replays before any switch.
+- Still running at the stamp: VALUE-18J (runs 37990450846 small, 37990489632 noisy; started 20:57 UTC); the 2025
+  backfill months (loop3, log report/backfill_loop.log) with the second pass over 2026 after them. The 2025 September
+  run (37995723313) died 6.5 minutes into its build (step cancelled, not a timeout) and must be pushed again after the
+  loop ends: {"dates": [2025-09-01 .. 2025-09-28], "asof": "2025-09-01", "publish": true}. The daily October 8 to 9
+  reports were built before own cost landed and could be rebuilt with it.
+- LICENSE (MIT) and CITATION.cff exist (Alec: pick whatever); README cites them.
 
 - Evening of October 9: VALUE-18I held (in-zone aims priced structurally came within 2 to 6% of the truth of their own
   choices in every structured synthetic world; null read zero), so the Report tab shows strike spots (squares; he lets it
