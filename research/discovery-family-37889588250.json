@@ -1,0 +1,125 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "family",
+ "run_id": "37889588250",
+ "params": {
+  "experiment": "family",
+  "seasons": [
+   2023,
+   2024,
+   2025
+  ]
+ },
+ "started_at": "2026-10-09T05:39:28.798799+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 9.8
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 19.2
+  },
+  {
+   "stage": "league",
+   "at_seconds": 70.6
+  },
+  {
+   "stage": "maps location",
+   "at_seconds": 75.1
+  },
+  {
+   "stage": "maps location_by_family",
+   "at_seconds": 83.3
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985
+ },
+ "results": {
+  "maps": {
+   "location": {
+    "shrinkage": 10.0,
+    "validation": {
+     "3.0": 0.45191,
+     "10.0": 0.45157,
+     "30.0": 0.45252,
+     "100.0": 0.45551
+    },
+    "covered": 0.8772,
+    "test_logloss": 0.45727
+   },
+   "location_by_family": {
+    "shrinkage": 3.0,
+    "validation": {
+     "3.0": 0.44696,
+     "10.0": 0.44721,
+     "30.0": 0.44941,
+     "100.0": 0.45361
+    },
+    "covered": 0.8772,
+    "test_logloss": 0.45259
+   }
+  },
+  "gain_nats_per_1000_decisions": {
+   "location_over_league": [
+    11.739,
+    11.325,
+    12.172
+   ],
+   "family_over_location": [
+    4.683,
+    4.365,
+    4.988
+   ],
+   "family_over_league": [
+    16.422,
+    15.837,
+    16.993
+   ]
+  },
+  "family_over_location_by_subset": {
+   "fastball_outside": {
+    "decisions": 169115,
+    "gain": [
+     5.313,
+     4.938,
+     5.753
+    ]
+   },
+   "breaking_outside": {
+    "decisions": 119687,
+    "gain": [
+     3.844,
+     2.925,
+     4.713
+    ]
+   },
+   "offspeed_outside": {
+    "decisions": 58968,
+    "gain": [
+     5.896,
+     4.649,
+     7.131
+    ]
+   },
+   "all_inside": {
+    "decisions": 356022,
+    "gain": [
+     4.47,
+     4.071,
+     4.898
+    ]
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T05:40:52.326158+00:00",
+ "seconds": 83.5
+}
