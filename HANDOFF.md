@@ -45,8 +45,16 @@ trans/team_rates.py, trans/starter_leash.py and harness/starter_eval.py; referen
   37863398520 and 37863432413; tags v2-prod2-p1-1000-YYYY and v2-prod2-p2-1000-YYYY. This is the test that decides what
   goes live; the decision rule is in its ledger row.
 
-Recorded today: TRANS-02, BULLPEN-01, LEASH-01 (all not switched on under their own rules; retested in PROD-02), RUNS-01,
-RUN-03, DISC-08, POST-02 (postseason exit offset, acts only with the fitted exits).
+Also queued: DISP-01 (day-form shock for game-to-game spread, registered in commit 80be5e5e): 37864772513 (2026) and
+37864803481 (2025), tags v2-prod-trans-ctx-df-1000-YYYY. One-shot evaluation of a package: scratch trans/package_eval.sh
+PREFIX (e.g. v2-prod2-p1-1000), plus harness/taught_small.py S1 TAG25 TAG26 for the taught headline refit.
+
+Recorded today: TRANS-02, BULLPEN-01, BULLPEN-02 (pooled bound missed by 0.000004), LEASH-01, RUNS-02 (none switched on
+under their own rules; all retested in PROD-02), RUNS-01, RUN-03, DISC-08, POST-02 (postseason exit offset, acts only
+with the fitted exits).
+
+Private pages: Decision Horizon (discovery, version 10) and Going to the Pen (bullpen management measured,
+https://claude.ai/artifact/KyCZ1uYHxQmSEribmxwuQA; source in the scratchpad pen_page/).
 
 ### What the bullpen work found (RELIEF-02)
 
