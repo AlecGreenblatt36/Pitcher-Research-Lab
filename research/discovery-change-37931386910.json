@@ -1,0 +1,244 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "change",
+ "run_id": "37931386910",
+ "params": {
+  "experiment": "change",
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "reps": 150
+ },
+ "started_at": "2026-10-09T12:39:04.265333+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 9.9
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 19.7
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 30.2
+  },
+  {
+   "stage": "load plate-appearance states",
+   "at_seconds": 40.2
+  },
+  {
+   "stage": "blocks",
+   "at_seconds": 46.3
+  },
+  {
+   "stage": "plate appearances",
+   "at_seconds": 47.1
+  },
+  {
+   "stage": "run value",
+   "at_seconds": 87.7
+  },
+  {
+   "stage": "pitch level",
+   "at_seconds": 90.4
+  },
+  {
+   "stage": "out of sample",
+   "at_seconds": 120.7
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 484833
+ },
+ "results": {
+  "rows": {
+   "plate_appearances": 671176,
+   "reliever_first_meetings_with_gap": 190393,
+   "reliever_entries_with_gap": 41819,
+   "first_three_batters": 119894,
+   "gap_percentiles_mph": [
+    -5.5,
+    -1.93,
+    0.35,
+    2.58,
+    5.92
+   ],
+   "gap_sd_mph": 3.631,
+   "share_abs_gap_4plus": 0.24,
+   "corr_gap_inning": -0.0275,
+   "corr_gap_score_diff": -0.0143,
+   "corr_gap_reliever_norm": 0.6937,
+   "mean_run_value": -0.00515
+  },
+  "R1_run_value_per_mph": {
+   "gap_first3": [
+    -3.8e-05,
+    -0.000774,
+    0.000649
+   ],
+   "gap_batters4to6": [
+    0.000652,
+    -0.000364,
+    0.001574
+   ],
+   "gap_batters7plus": [
+    -0.000985,
+    -0.003381,
+    0.000876
+   ],
+   "rows_used": 189060
+  },
+  "R1_by_batter": {
+   "gap_batter1": [
+    -0.000286,
+    -0.001376,
+    0.000834
+   ],
+   "gap_batter2": [
+    -2.7e-05,
+    -0.00142,
+    0.000728
+   ],
+   "gap_batter3": [
+    0.000184,
+    -0.000651,
+    0.001439
+   ],
+   "gap_batter4plus": [
+    0.000319,
+    -0.000738,
+    0.001204
+   ],
+   "rows_used": 189060
+  },
+  "R1_signed_and_absolute": {
+   "gap_first3": [
+    -0.000121,
+    -0.000869,
+    0.000573
+   ],
+   "abs_gap_first3": [
+    0.000575,
+    -0.000745,
+    0.001834
+   ],
+   "gap_later": [
+    0.000289,
+    -0.000855,
+    0.001446
+   ],
+   "abs_gap_later": [
+    -0.00022,
+    -0.001604,
+    0.000976
+   ],
+   "rows_used": 189060
+  },
+  "R1_strikeout_per_mph": {
+   "gap_first3": [
+    -5.7e-05,
+    -0.000665,
+    0.000584
+   ],
+   "gap_batters4to6": [
+    -8e-05,
+    -0.000875,
+    0.000805
+   ],
+   "gap_batters7plus": [
+    -0.001115,
+    -0.002714,
+    0.001252
+   ],
+   "rows_used": 189060
+  },
+  "R1_walk_per_mph": {
+   "gap_first3": [
+    0.000759,
+    0.000222,
+    0.001139
+   ],
+   "gap_batters4to6": [
+    0.000973,
+    0.000237,
+    0.001653
+   ],
+   "gap_batters7plus": [
+    0.000539,
+    -0.000625,
+    0.001698
+   ],
+   "rows_used": 189060
+  },
+  "R1_usual_speeds_gap": {
+   "gap_first3": [
+    0.000166,
+    -0.000303,
+    0.00064
+   ],
+   "gap_later": [
+    0.000325,
+    -0.000922,
+    0.001222
+   ],
+   "rows_used": 178259
+  },
+  "R3_whiff_per_swing_per_mph": {
+   "gap_first3_pitches1to2": [
+    -0.000222,
+    -0.000972,
+    0.0008
+   ],
+   "gap_first3_later_pitches": [
+    -0.00079,
+    -0.001346,
+    3.4e-05
+   ],
+   "gap_later_batters": [
+    -0.000146,
+    -0.001121,
+    0.000612
+   ],
+   "own_speed_vs_usual": [
+    0.018878,
+    0.017571,
+    0.020456
+   ],
+   "rows_used": 175314,
+   "swings": 176639,
+   "mean_whiff": 0.1797
+  },
+  "R4_logloss_gain_nats_per_1000": {
+   "2025": {
+    "plate_appearances": 51241,
+    "gain": [
+     0.297,
+     0.095,
+     0.501
+    ]
+   },
+   "2026_development": {
+    "plate_appearances": 34214,
+    "gain": [
+     0.25,
+     -0.017,
+     0.542
+    ]
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T12:41:05.026656+00:00",
+ "seconds": 120.8
+}
