@@ -1,0 +1,168 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "fatigue",
+ "run_id": "37905032889",
+ "params": {
+  "experiment": "fatigue",
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "command": true,
+  "reps": 150
+ },
+ "started_at": "2026-10-09T08:27:54.012327+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 9.4
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 18.3
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 27.4
+  },
+  {
+   "stage": "drift",
+   "at_seconds": 39.7
+  },
+  {
+   "stage": "rates",
+   "at_seconds": 40.4
+  },
+  {
+   "stage": "multinomial fits",
+   "at_seconds": 75.8
+  },
+  {
+   "stage": "run value",
+   "at_seconds": 123.3
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 484833
+ },
+ "results": {
+  "command_rows": {
+   "plate_appearances_with_command": 267051,
+   "zone_dev_sd_points": 10.58,
+   "waste_dev_sd_points": 8.7
+  },
+  "rows": {
+   "plate_appearances": 390863,
+   "with_drift": 213613,
+   "with_start_vs_norm": 279204,
+   "drift_v_sd": 0.858,
+   "drift_v_mean": -0.267,
+   "start_vs_norm_sd": 1.01
+  },
+  "test_logloss_gain_nats_per_1000_pa": {
+   "2025": {
+    "drift": [
+     -0.047,
+     -0.146,
+     0.038
+    ],
+    "start_vs_norm": [
+     0.294,
+     0.162,
+     0.425
+    ],
+    "plate_appearances": 106448,
+    "command": [
+     -0.054,
+     -0.154,
+     0.051
+    ]
+   },
+   "2026_through_july": {
+    "drift": [
+     -0.118,
+     -0.24,
+     0.02
+    ],
+    "start_vs_norm": [
+     0.422,
+     0.238,
+     0.6
+    ],
+    "plate_appearances": 71220,
+    "command": [
+     -0.025,
+     -0.156,
+     0.101
+    ]
+   }
+  },
+  "run_value_per_pa": {
+   "tto2": [
+    0.02993,
+    0.02335,
+    0.03497
+   ],
+   "tto3plus": [
+    0.05281,
+    0.04401,
+    0.06134
+   ],
+   "drift_v": [
+    -0.00662,
+    -0.00885,
+    -0.00437
+   ],
+   "drift_z": [
+    -0.00911,
+    -0.03716,
+    0.01688
+   ],
+   "drift_spin100": [
+    -0.00186,
+    -0.00355,
+    -0.0002
+   ],
+   "drift_ext": [
+    0.00078,
+    -0.00965,
+    0.01516
+   ],
+   "start_vs_norm_v": [
+    -0.00357,
+    -0.00508,
+    -0.00188
+   ],
+   "zone_rate_dev_per_10pts": [
+    -0.00138,
+    -0.003,
+    0.0003
+   ],
+   "waste_rate_dev_per_10pts": [
+    0.00042,
+    -0.00198,
+    0.00228
+   ]
+  },
+  "tto_without_drift": {
+   "tto2": 0.03006,
+   "tto3plus": 0.05278
+  },
+  "tto_with_drift": {
+   "tto2": 0.02993,
+   "tto3plus": 0.05281
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T08:29:57.339154+00:00",
+ "seconds": 123.3
+}
