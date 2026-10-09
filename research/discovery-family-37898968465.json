@@ -1,0 +1,98 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "family",
+ "run_id": "37898968465",
+ "params": {
+  "experiment": "family",
+  "seasons": [
+   2023,
+   2024,
+   2025
+  ],
+  "league_family": true,
+  "extra_part": "platoon"
+ },
+ "started_at": "2026-10-09T07:26:16.471055+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 8.9
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 17.8
+  },
+  {
+   "stage": "league",
+   "at_seconds": 110.0
+  },
+  {
+   "stage": "maps location_by_family",
+   "at_seconds": 118.2
+  },
+  {
+   "stage": "maps family_plus_extra",
+   "at_seconds": 128.1
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985
+ },
+ "results": {
+  "test_decisions": 704092,
+  "maps": {
+   "location_by_family": {
+    "shrinkage": 10.0,
+    "validation": {
+     "3.0": 0.43866,
+     "10.0": 0.4378,
+     "30.0": 0.43885,
+     "100.0": 0.44191
+    },
+    "covered": 0.8772,
+    "test_logloss": 0.44354
+   },
+   "family_plus_extra": {
+    "shrinkage": 10.0,
+    "validation": {
+     "3.0": 0.43886,
+     "10.0": 0.43758,
+     "30.0": 0.43846,
+     "100.0": 0.44141
+    },
+    "covered": 0.8772,
+    "test_logloss": 0.44339
+   }
+  },
+  "gain_nats_per_1000_decisions": {
+   "family_over_league": [
+    11.947,
+    11.509,
+    12.396
+   ],
+   "extra_over_family": [
+    0.156,
+    0.058,
+    0.248
+   ]
+  },
+  "extra_over_family_where_it_applies": {
+   "decisions": 314938,
+   "gain": [
+    -0.148,
+    -0.323,
+    0.022
+   ]
+  },
+  "extra_part": "platoon"
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T07:28:24.652731+00:00",
+ "seconds": 128.2
+}
