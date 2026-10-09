@@ -4289,7 +4289,7 @@ def value2_study(T: dict, params: dict, stage) -> dict:
         u_all = np.where(T['stand_r'] == 1, xt_all, -xt_all)
         outside_all = np.maximum(np.maximum(np.abs(u_all) - ZONE_HALF, zt_all - ZONE_TOP), ZONE_BOT - zt_all) > 0
         cg_all = np.where(T['strikes'] == 2, 2, np.where(T['balls'] > T['strikes'], 1, 0)); pg_all = np.clip(T['group'], 0, 6)
-    acc_runs = {}; acc_expo = {}; acc_hit = {}
+    acc_runs = {}; acc_expo = {}; acc_expo_s = {}; acc_hit = {}
     for pid, rr in gp.items():
         hs_here = np.unique(T['batter'][ix[rr]])
         for sd in (0, 1):
@@ -4364,7 +4364,7 @@ def value2_study(T: dict, params: dict, stage) -> dict:
                                 lam_j = np.where(e_j_s > 0, lam['outside'], lam['inside'])
                                 vals['structural'] = (dev_jk * lam_j * tau_j).reshape(len(prow), K).mean(1)
                             parts = {nm_: [] for nm_ in vals}; chosen = {nm_: np.zeros(len(prow), bool) for nm_ in vals}; graded = np.zeros(len(prow), bool)
-                            expo_parts = []
+                            expo_parts = []; expo_parts_s = []
                             for t3 in range(3):
                                 sel3 = third == t3
                                 if int(sel3.sum()) >= 3:
@@ -4378,6 +4378,9 @@ def value2_study(T: dict, params: dict, stage) -> dict:
                                     if coef_band is not None:
                                         pick_b = np.flatnonzero(chosen['bands'] & sel3)
                                         expo_parts.append(expo[pick_b].mean(0) - expo[i3].mean(0))
+                                        if 'structural' in chosen:
+                                            pick_s = np.flatnonzero(chosen['structural'] & sel3)
+                                            expo_parts_s.append(expo[pick_s].mean(0) - expo[i3].mean(0))
                             if parts['points'] and aim_hook is not None:
                                 aim_hook(sg=sg, zone=zn, hitter=int(h), pitcher=int(pid), rows=prow, K=K, x_true=xtj, z_true=ztj,
                                          balls=np.repeat(T['balls'][prow], K), strikes=np.repeat(T['strikes'][prow], K), group=np.repeat(T['group'][prow], K),
@@ -4393,6 +4396,8 @@ def value2_study(T: dict, params: dict, stage) -> dict:
                                         hc = acc_hit.setdefault((zn, sg), {}); c_h = hc.setdefault(int(h), [0.0, 0.0]); c_h[0] += n_here * float(np.mean(parts[nm_])); c_h[1] += n_here
                             if expo_parts:
                                 a_ = acc_expo.setdefault((zn, sg), np.zeros(nb6)); a_ += n_here * np.mean(expo_parts, 0)
+                            if expo_parts_s:
+                                a_ = acc_expo_s.setdefault((zn, sg), np.zeros(nb6)); a_ += n_here * np.mean(expo_parts_s, 0)
     out = {}
     for sg in sigmas:
         go = acc[('outside', sg)][0] / max(acc[('outside', sg)][1], 1); gi_ = acc[('inside', sg)][0] / max(acc[('inside', sg)][1], 1)
@@ -4450,6 +4455,14 @@ def value2_study(T: dict, params: dict, stage) -> dict:
                             'runs_per_6200_outside_only': round(gr_o * res['coefficients']['outside_pitches_per_pa'] * 6200, 1),
                             'runs_per_6200_inside_only': round(gr_i * res['coefficients']['inside_pitches_per_pa'] * 6200, 1),
                             'runs_per_6200_outside_only_interval_by_hitter': hint, 'runs_per_6200_outside_only_interval': hint2, 'hitters': int(len(hv))}
+            if bands_rp and ('outside', sg) in acc_expo_s:
+                # VALUE-19: the same structural choices priced by the realized-outcome regression by band (outcome-anchored value of the structural choice)
+                ao_s = acc_runs.get(('structural', 'outside', sg), [0.0, 0.0])
+                ex_s = acc_expo_s[('outside', sg)] / max(ao_s[1], 1)
+                dr_s = dr6 @ ex_s * res['coefficients']['outside_pitches_per_pa'] * 6200
+                rs_[str(sg)]['structural_choice_priced_by_band_regression'] = {'runs_per_6200_outside_only': round(float(bb6 @ ex_s * res['coefficients']['outside_pitches_per_pa'] * 6200), 1),
+                                                                               'interval': [round(float(np.percentile(dr_s, q)), 1) for q in (2.5, 97.5)],
+                                                                               'chosen_points_by_band_outside': {band_names[k_]: round(float(ex_s[k_]), 3) for k_ in range(nb6)}}
         res['repriced_structural'] = rs_
         res['repriced_structural_note'] = ('each scattered aim priced by the engine: the hitter\'s own swing part, scaled by its out-of-sample calibration on the test season\'s swings, times '
                                            '(value if swing minus value if take) from the whiff, called-strike, foul and contact models with the hitter\'s and pitcher\'s terms and the training count '
