@@ -5224,6 +5224,90 @@ def _bat_intrinsic(S: dict, seasons, min_swings: int = 150) -> tuple[dict, dict]
     return out, check
 
 
+def _batter_positions(S: dict, seasons, min_swings: int = 150) -> tuple[dict, dict]:
+    """STANCE-01: where each hitter stands, from bat tracking. Savant's intercept fields give the ball's position minus
+    the batter's (his center of mass) when the bat meets the ball, sideways (ix) and toward the pitcher (iy). The ball's
+    position along its fitted flight is known at any distance from the plate, so for one hitter-season his position
+    (x_b, y_b) is the point that makes ball_x(y_b + iy) - ix agree across all his swings: a grid over y_b with x_b the
+    mean, identified by how the flight's sideways slope varies across his pitches. Distance off the plate is measured
+    from the plate's inside edge (0.708 ft from its center) to x_b, depth from the front of the plate back to y_b (both
+    in inches, at the moment of contact, so after the stride). The sign of the sideways intercept for each batter side is
+    set by the data (right-handed hitters stand on the third-base side, negative x from the catcher's view). Returns
+    {(batter, season): {'off_plate_in', 'depth_in', 'n_stance'}} and checks: the conventions, positions by side, the
+    share of fits at the grid's edge and the split-half reliability (odd and even games)."""
+    sv = savant_module()
+    desc = np.asarray(S['description__vocab'])[S['description']] if 'description__vocab' in S else np.asarray(S['description'])
+    stand = np.asarray(S['stand__vocab'])[S['stand']] if 'stand__vocab' in S else np.asarray(S['stand'])
+    swing = np.isin(desc, ('swinging_strike', 'swinging_strike_blocked', 'foul', 'foul_tip', 'hit_into_play'))
+    ix = S['intercept_ball_minus_batter_pos_x_inches'].astype(np.float64) / 12.0
+    iy = S['intercept_ball_minus_batter_pos_y_inches'].astype(np.float64) / 12.0
+    bs = S['bat_speed'].astype(np.float64)
+    yr = np.asarray([date.fromordinal(int(d_)).year for d_ in S['day']])
+    flight = ('vx0', 'vy0', 'vz0', 'ax', 'ay', 'az', 'plate_x', 'plate_z')
+    ok = swing & np.isfinite(ix) & np.isfinite(iy) & np.isfinite(bs) & (bs >= 50)
+    for k in flight:
+        ok &= np.isfinite(S[k].astype(np.float64))
+    stand_r = stand == 'R'
+    bat = S['batter'].astype(np.int64); gpk = S['game_pk'].astype(np.int64)
+    grid = np.round(np.arange(-1.5, 4.0001, 0.05), 3)
+    out, check = {}, {'grid_ft': [float(grid[0]), float(grid[-1])], 'by_season': {}}
+    for ssn in seasons:
+        m = ok & (yr == ssn)
+        if m.sum() < 2000:
+            continue
+        c = {k: S[k][m].astype(np.float64) for k in flight}
+        sv.anchor(c, int(ssn))
+        ixm, iym, sr, bm, half = ix[m], iy[m], stand_r[m], bat[m], (gpk[m] % 2)
+        # the sideways convention: which sign puts right-handed hitters at x < 0 and left-handed at x > 0
+        x_c0 = sv.at(c, 0.7 + iym)[0]
+        sign = {}
+        conv = {}
+        for side, ms in (('R', sr), ('L', ~sr)):
+            med_minus = float(np.median((x_c0 - ixm)[ms])); med_plus = float(np.median((x_c0 + ixm)[ms]))
+            want = -1.0 if side == 'R' else 1.0
+            sign[side] = 1.0 if med_minus * want > med_plus * want else -1.0          # x_b = x_c - sign * ix
+            conv[side] = {'median_x_ball_minus_ix_ft': round(med_minus, 3), 'median_x_ball_plus_ix_ft': round(med_plus, 3), 'sign_used': sign[side]}
+        sgn = np.where(sr, sign['R'], sign['L'])
+        # groups: hitter and side (a switch hitter's two sides are fitted apart; his majority side is kept)
+        key = bm * 2 + sr.astype(np.int64)
+        res_by = {}
+        for tag, gkey in (('all', key), ('half', key * 2 + half)):
+            ug, ig = np.unique(gkey, return_inverse=True); ng = np.bincount(ig).astype(float)
+            sse = np.empty((len(grid), len(ug))); mean_ = np.empty((len(grid), len(ug)))
+            for j, yb in enumerate(grid):
+                r = sv.at(c, yb + iym)[0] - sgn * ixm
+                s1 = np.bincount(ig, weights=r, minlength=len(ug)); s2 = np.bincount(ig, weights=r * r, minlength=len(ug))
+                mean_[j] = s1 / ng; sse[j] = s2 - s1 * s1 / ng
+            jb = np.argmin(sse, axis=0)
+            res_by[tag] = (ug, ng, grid[jb], mean_[jb, np.arange(len(ug))], (jb == 0) | (jb == len(grid) - 1))
+        ug, ng, yb, xb, edge = res_by['all']
+        off = (np.abs(xb) - 0.708) * 12.0; dep = (sv.FRONT - yb) * 12.0
+        b_of = ug // 2; side_of = ug % 2
+        keep = (ng >= min_swings) & ~edge
+        best = {}
+        for b_, n_, o_, d_, s_ in zip(b_of[keep], ng[keep], off[keep], dep[keep], side_of[keep]):
+            if int(b_) not in best or n_ > best[int(b_)][0]:
+                best[int(b_)] = (n_, o_, d_, s_)
+        for b_, (n_, o_, d_, s_) in best.items():
+            out[(b_, int(ssn))] = {'off_plate_in': float(o_), 'depth_in': float(d_), 'n_stance': int(n_)}
+        # split-half reliability: the same fit on odd and even games
+        ugh, ngh, ybh, xbh, edgeh = res_by['half']
+        offh = (np.abs(xbh) - 0.708) * 12.0; deph = (sv.FRONT - ybh) * 12.0
+        hk = {int(k_): (o_, d_) for k_, n_, o_, d_, e_ in zip(ugh, ngh, offh, deph, edgeh) if n_ >= min_swings / 2 and not e_}
+        pairs_h = [(hk[k_ * 2], hk[k_ * 2 + 1]) for k_ in {k_ // 2 for k_ in hk} if k_ * 2 in hk and k_ * 2 + 1 in hk]
+        rel = {}
+        for i_, nm in ((0, 'off_plate'), (1, 'depth')):
+            a_ = np.array([p_[0][i_] for p_ in pairs_h]); b2 = np.array([p_[1][i_] for p_ in pairs_h])
+            rel[nm] = round(float(np.corrcoef(a_, b2)[0, 1]), 3) if len(a_) > 20 else None
+        vals = np.array([[v['off_plate_in'], v['depth_in']] for k_, v in out.items() if k_[1] == int(ssn)])
+        check['by_season'][str(ssn)] = {'swings': int(m.sum()), 'convention': conv, 'hitters': int(len(best)),
+                                        'edge_share': round(float(edge[ng >= min_swings].mean()), 4) if (ng >= min_swings).any() else None,
+                                        'off_plate_in_percentiles': [round(float(v), 2) for v in np.percentile(vals[:, 0], [5, 25, 50, 75, 95])] if len(vals) else None,
+                                        'depth_in_percentiles': [round(float(v), 2) for v in np.percentile(vals[:, 1], [5, 25, 50, 75, 95])] if len(vals) else None,
+                                        'split_half_r': rel, 'split_half_hitters': len(pairs_h)}
+    return out, check
+
+
 def swingmap_study(T: dict, S: dict, params: dict, stage) -> dict:
     """SWINGMAP-01. Each hitter's own chase spots at the decision moment (his swing map minus the same-side mean map of
     the other hitters, MATCHUP-01's representation, VALUE-08's own part) against his swing path from bat tracking, net
@@ -5281,6 +5365,14 @@ def swingmap_study(T: dict, S: dict, params: dict, stage) -> dict:
         stage(f'maps {ssn}: {len(maps)}')
     bat, check = _bat_intrinsic(S, seasons, int(params.get('min_swings', 150)))
     res['attack_direction_orientation'] = check
+    if params.get('stance'):
+        # STANCE-01: each hitter-season's distance off the plate and depth at contact, from the intercept fields
+        pos, pos_check = _batter_positions(S, seasons, int(params.get('min_swings', 150)))
+        res['stance_check'] = pos_check
+        for k_, v_ in pos.items():
+            if k_ in bat:
+                bat[k_].update(v_)
+        stage('stance')
     if params.get('zones'):
         # ZONEMAP-01: each hitter-season's strike zone from Savant (median top and bottom over the pitches he saw)
         yr = np.asarray([date.fromordinal(int(d_)).year for d_ in S['day']])
@@ -5303,6 +5395,9 @@ def swingmap_study(T: dict, S: dict, params: dict, stage) -> dict:
     if params.get('zones'):
         pairs_ = [('zone_mid', 'high_minus_low'), ('zone_top', 'high_minus_low'), ('zone_bottom', 'high_minus_low'), ('zone_height', 'high_minus_low'),
                   ('zone_height', 'outside_level'), ('zone_mid', 'away_minus_inside')] + pairs_
+    if params.get('stance'):
+        pairs_ = [('off_plate_in', 'away_minus_inside'), ('depth_in', 'outside_level'), ('off_plate_in', 'outside_level'), ('depth_in', 'away_minus_inside'),
+                  ('off_plate_in', 'high_minus_low'), ('depth_in', 'high_minus_low')] + pairs_
 
     def corr_ci(x, y, reps=2000):
         x, y = np.asarray(x, float), np.asarray(y, float); ok_ = np.isfinite(x) & np.isfinite(y); x, y = x[ok_], y[ok_]
@@ -5321,6 +5416,8 @@ def swingmap_study(T: dict, S: dict, params: dict, stage) -> dict:
         for sd, nm in ((1, 'R'), (0, 'L')):
             ks2 = [k for k in ks if feats[k]['side'] == sd]
             res['by_season'][str(s)][f'attack_angle__high_minus_low__{nm}'] = corr_ci([bat[k].get('attack_angle', np.nan) for k in ks2], [feats[k]['high_minus_low'] for k in ks2])
+            if params.get('stance'):
+                res['by_season'][str(s)][f'off_plate_in__away_minus_inside__{nm}'] = corr_ci([bat[k].get('off_plate_in', np.nan) for k in ks2], [feats[k]['away_minus_inside'] for k in ks2])
     # change from the first to the second season, within hitter
     if len(seasons) == 2:
         s0, s1 = seasons
@@ -5333,7 +5430,7 @@ def swingmap_study(T: dict, S: dict, params: dict, stage) -> dict:
         res['repeat'] = {}
         for b in ('high_minus_low', 'away_minus_inside', 'outside_level'):
             res['repeat'][b] = corr_ci([feats[(h, s0)][b] for h in hs], [feats[(h, s1)][b] for h in hs], 500)
-        for a in ('attack_angle', 'swing_path_tilt', 'attack_direction_pull', 'contact_depth_in'):
+        for a in ('attack_angle', 'swing_path_tilt', 'attack_direction_pull', 'contact_depth_in') + (('off_plate_in', 'depth_in') if params.get('stance') else ()):
             res['repeat'][a] = corr_ci([bat[(h, s0)].get(a, np.nan) for h in hs], [bat[(h, s1)].get(a, np.nan) for h in hs], 500)
     stage('correlations')
     return res
