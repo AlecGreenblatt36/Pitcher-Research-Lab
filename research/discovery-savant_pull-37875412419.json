@@ -1,0 +1,65 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "savant_pull",
+ "run_id": "37875412419",
+ "params": {
+  "experiment": "savant_pull",
+  "seasons": [
+   2025,
+   2026,
+   2024
+  ],
+  "workers": 3
+ },
+ "started_at": "2026-10-09T02:40:50.427814+00:00",
+ "stages": [
+  {
+   "stage": "savant 2025",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "savant 2026",
+   "at_seconds": 464.8
+  },
+  {
+   "stage": "savant 2024",
+   "at_seconds": 886.3
+  }
+ ],
+ "status": "failed",
+ "error": "HTTPError: HTTP Error 403: Forbidden",
+ "where": [
+  {
+   "file": "request.py",
+   "function": "urlopen",
+   "line": 215
+  },
+  {
+   "file": "request.py",
+   "function": "open",
+   "line": 521
+  },
+  {
+   "file": "request.py",
+   "function": "http_response",
+   "line": 630
+  },
+  {
+   "file": "request.py",
+   "function": "error",
+   "line": 559
+  },
+  {
+   "file": "request.py",
+   "function": "_call_chain",
+   "line": 492
+  },
+  {
+   "file": "request.py",
+   "function": "http_error_default",
+   "line": 639
+  }
+ ],
+ "finished_at": "2026-10-09T03:03:21.343848+00:00",
+ "seconds": 1350.9
+}
