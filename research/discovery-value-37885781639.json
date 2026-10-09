@@ -1,0 +1,101 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "value",
+ "run_id": "37885781639",
+ "params": {
+  "experiment": "value",
+  "seasons": [
+   2023,
+   2024,
+   2025
+  ]
+ },
+ "started_at": "2026-10-09T04:51:11.121866+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 6.8
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 13.6
+  },
+  {
+   "stage": "maps 604",
+   "at_seconds": 35.4
+  },
+  {
+   "stage": "regression own_map",
+   "at_seconds": 39.3
+  },
+  {
+   "stage": "regression placebo_other_hitter",
+   "at_seconds": 42.8
+  },
+  {
+   "stage": "aiming",
+   "at_seconds": 55.0
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985
+ },
+ "results": {
+  "plate_appearance_run_value": {
+   "own_map": {
+    "runs_per_point_outside": [
+     -0.000694,
+     -0.000901,
+     -0.000526
+    ],
+    "runs_per_point_inside": [
+     0.000826,
+     0.000629,
+     0.001037
+    ]
+   },
+   "placebo_other_hitter": {
+    "runs_per_point_outside": [
+     -0.000124,
+     -0.000298,
+     9.1e-05
+    ],
+    "runs_per_point_inside": [
+     -2.5e-05,
+     -0.000248,
+     0.0002
+    ]
+   }
+  },
+  "rows": {
+   "pitches_2025": 617627,
+   "outside_share": 0.4951,
+   "d_sd_points_outside": 7.813,
+   "d_sd_points_inside": 7.327,
+   "outside_pitches_per_pa": 1.932
+  },
+  "aiming": {
+   "best_third_minus_average_points": 6.058,
+   "runs_per_plate_appearance": [
+    -0.00812,
+    -0.01055,
+    -0.00616
+   ],
+   "runs_per_6200_plate_appearances": [
+    -50.4,
+    -65.4,
+    -38.2
+   ],
+   "note": "hitter run values (negative = runs saved by the pitcher); aiming every outside pitch at the best third of the pitcher's own outside locations for that hitter, within thirds of the league swing chance so the location stays as good in general, the effect of each pitch on its plate appearance as measured above"
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T04:52:06.143685+00:00",
+ "seconds": 55.0
+}
