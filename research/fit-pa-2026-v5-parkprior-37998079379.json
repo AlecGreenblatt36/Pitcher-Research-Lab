@@ -1,0 +1,103 @@
+{
+ "schema": "brl.model-fit-receipt.v1",
+ "name": "pa-2026-v5-parkprior",
+ "run_id": "37998079379",
+ "started_at": "2026-10-09T22:14:20.998184+00:00",
+ "stages": [
+  {
+   "stage": "restore data package",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load plate appearances",
+   "at_seconds": 2.4
+  },
+  {
+   "stage": "load physics tables",
+   "at_seconds": 3.5
+  },
+  {
+   "stage": "build physics features",
+   "at_seconds": 9.5
+  },
+  {
+   "stage": "run the locked benchmark with physics features",
+   "at_seconds": 53.5
+  },
+  {
+   "stage": "seal the model",
+   "at_seconds": 390.7
+  }
+ ],
+ "physics_params": {
+  "xvalue": true,
+  "recent_days": 30
+ },
+ "config": {
+  "train_years": [
+   2023,
+   2024
+  ],
+  "validation_years": [
+   2025
+  ],
+  "test_years": [
+   2026
+  ],
+  "park_prior_pa": 6000.0
+ },
+ "pa_rows": 733328,
+ "seasons": [
+  2023,
+  2024,
+  2025,
+  2026
+ ],
+ "history_sha256": "e503e223eb4d6a2222ed35abe0439a0e6eea7fe85bf9061bcac96d0065a8a197",
+ "physics_rows": 745075,
+ "physics_join": {
+  "pa_rows": 733328,
+  "physics_rows": 745075,
+  "joined": 733328,
+  "ids_match": 733027,
+  "params": {
+   "k_rate": 150.0,
+   "k_bip": 60.0,
+   "k_velo": 100.0,
+   "xvalue": true,
+   "recent_days": 30,
+   "k_recent_pitch": 100.0,
+   "k_recent_bip": 40.0,
+   "k_cell": 40.0,
+   "pitch_types": false,
+   "k_type": 60.0,
+   "defense": false,
+   "k_def": 400.0,
+   "defense_days": 365,
+   "environment": false,
+   "env_days": 30,
+   "k_env": 2000.0,
+   "matchup": false,
+   "workload": false,
+   "aging": false,
+   "decay_days": 0,
+   "k_dec": 60.0,
+   "window_days": 0
+  },
+  "league_fastball_velocity": 94.10527696108461,
+  "league_exit_velocity": 88.41879062041012,
+  "league_hard_hit_rate": 0.3956972599867757,
+  "league_whiff_per_swing": 0.23186054567102798,
+  "league_ground_ball_share": 0.4400732981760124
+ },
+ "manifest": "brl_engine/models/pa-2026-v5-parkprior.json",
+ "model_sha256": "7444158d65a9af85adc8f6bbe07c6e05f839e74e126b39dcbf72c4ba2b639010",
+ "test_2026": {
+  "talent_only": 1.4605165896966243,
+  "talent_plus_context": 1.45861529926724,
+  "blended_candidate": 1.4584318924762258
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T22:20:54.148806+00:00",
+ "seconds": 393.2
+}
