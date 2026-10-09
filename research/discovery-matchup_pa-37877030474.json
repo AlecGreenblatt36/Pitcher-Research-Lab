@@ -1,0 +1,174 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "matchup_pa",
+ "run_id": "37877030474",
+ "params": {
+  "experiment": "matchup_pa",
+  "seasons": [
+   2023,
+   2024,
+   2025
+  ],
+  "tau": 0.26,
+  "league_n": 600000,
+  "min_pitches": 300,
+  "min_arsenal": 300,
+  "lam": 10.0,
+  "reps": 100,
+  "seed": 11
+ },
+ "started_at": "2026-10-09T03:12:49.646176+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 9.0
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 17.8
+  },
+  {
+   "stage": "hitter maps 604",
+   "at_seconds": 52.3
+  },
+  {
+   "stage": "arsenals 567",
+   "at_seconds": 52.3
+  },
+  {
+   "stage": "rates",
+   "at_seconds": 53.1
+  },
+  {
+   "stage": "pairs 55084",
+   "at_seconds": 58.2
+  },
+  {
+   "stage": "plate appearances",
+   "at_seconds": 167.8
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985
+ },
+ "results": {
+  "rows": {
+   "plate_appearances_2025": 182484,
+   "with_pair_features": 119264,
+   "pairs": 55084,
+   "chase_dev_sd_points": 2.583,
+   "zone_swing_dev_sd_points": 2.963
+  },
+  "outcomes": {
+   "strikeout": {
+    "rate": 0.2221,
+    "gain_nats_per_1000_pa": [
+     -0.031,
+     -0.072,
+     0.006
+    ],
+    "coef_chase_dev_per_point": [
+     -0.0037,
+     -0.0096,
+     0.0008
+    ],
+    "coef_zone_swing_dev_per_point": [
+     -0.0009,
+     -0.0058,
+     0.004
+    ],
+    "by_chase_quintile": [
+     {
+      "chase_dev_points": -3.49,
+      "observed": 0.2259,
+      "base_model": 0.2312,
+      "pa": 23856
+     },
+     {
+      "chase_dev_points": -1.53,
+      "observed": 0.2405,
+      "base_model": 0.2303,
+      "pa": 23851
+     },
+     {
+      "chase_dev_points": -0.23,
+      "observed": 0.2281,
+      "base_model": 0.2261,
+      "pa": 23852
+     },
+     {
+      "chase_dev_points": 1.2,
+      "observed": 0.2201,
+      "base_model": 0.2194,
+      "pa": 23852
+     },
+     {
+      "chase_dev_points": 3.69,
+      "observed": 0.196,
+      "base_model": 0.2033,
+      "pa": 23853
+     }
+    ]
+   },
+   "walk": {
+    "rate": 0.0897,
+    "gain_nats_per_1000_pa": [
+     0.067,
+     0.001,
+     0.136
+    ],
+    "coef_chase_dev_per_point": [
+     -0.0176,
+     -0.0284,
+     -0.0093
+    ],
+    "coef_zone_swing_dev_per_point": [
+     0.0084,
+     0.0023,
+     0.0154
+    ],
+    "by_chase_quintile": [
+     {
+      "chase_dev_points": -3.49,
+      "observed": 0.1024,
+      "base_model": 0.0983,
+      "pa": 23856
+     },
+     {
+      "chase_dev_points": -1.53,
+      "observed": 0.0926,
+      "base_model": 0.0933,
+      "pa": 23851
+     },
+     {
+      "chase_dev_points": -0.23,
+      "observed": 0.0932,
+      "base_model": 0.0926,
+      "pa": 23852
+     },
+     {
+      "chase_dev_points": 1.2,
+      "observed": 0.089,
+      "base_model": 0.0878,
+      "pa": 23852
+     },
+     {
+      "chase_dev_points": 3.69,
+      "observed": 0.0713,
+      "base_model": 0.0767,
+      "pa": 23853
+     }
+    ]
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T03:15:37.492770+00:00",
+ "seconds": 167.8
+}
