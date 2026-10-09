@@ -4269,6 +4269,85 @@ def framing_study(T: dict, H, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- PRESSURE-01: do hitters decide differently under pressure?
+def pressure_study(T: dict, H, params: dict, stage) -> dict:
+    """Hitter maps pool every game state. If hitters press (or tighten) with runners in scoring position or late in close
+    games, their swings at the same apparent spots differ from the map there, and an aim plan should know it.
+    MATCHUP-05F's representation fitted on 2023-2024; every 2025 pitch to a hitter with a map, joined to the plate
+    appearance's state (outs, runners, inning, score); his swing with the full map's prediction as offset, on runners in
+    scoring position, late and close (seventh inning on, within one run), two outs, and each of the first two times the
+    own part at this pitch (does the own part pull harder under pressure?), separately outside and inside the zone;
+    game-bootstrap intervals."""
+    res = {}
+    import pandas as pd
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+    F = rebuild(T)
+    keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
+    T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
+    swing = ((T['call'] == 1) | (T['call'] == 2)).astype(np.float64)
+    xp, zp = projected(T, F, None, 'straight', 0.26); del F
+    Bh = hitter_basis(xp, zp, T['stand_r'], T['strikes'])
+    X = np.hstack([location_block(xp, zp, T['stand_r'], T['strikes']), (Bh[:, :-1] * np.isin(T['group'], (3, 4))[:, None]).astype(np.float32),
+                   (Bh[:, :-1] * (T['group'] == 5)[:, None]).astype(np.float32), control_block(T, swing_propensity(T)), pitcher_propensity(T)[:, None].astype(np.float32)])
+    tr = np.isin(T['season'], (2023, 2024))
+    rng = np.random.default_rng(11)
+    idx = np.flatnonzero(tr); idx = rng.choice(idx, min(len(idx), 600000), replace=False)
+    off = fit_logistic(X[idx], swing[idx]).decision_function(X); del X
+    Bm = family_basis(Bh, T['group']); del Bh
+    maps = _hitter_maps(Bm, swing, off, _groups(T['batter'], tr), 10.0, 300)
+    ub_, bi_ = np.unique(T['batter'][tr], return_inverse=True)
+    side_of = dict(zip(ub_.tolist(), np.round(np.bincount(bi_, weights=T['stand_r'][tr]) / np.bincount(bi_)).astype(int).tolist()))
+    Ss = {0: 0.0, 1: 0.0}; Nn = {0: 0, 1: 0}
+    for h, m in maps.items():
+        Ss[side_of[h]] = Ss[side_of[h]] + m; Nn[side_of[h]] += 1
+    mbar = {h: (Ss[side_of[h]] - m) / max(Nn[side_of[h]] - 1, 1) for h, m in maps.items()}
+    stage(f'maps {len(maps)}')
+    te = (T['season'] == 2025) & np.isin(T['batter'], np.asarray(list(maps), dtype=np.int64))
+    ix = np.flatnonzero(te)
+    lo_map = np.zeros(len(ix)); own = np.zeros(len(ix))
+    for h, rr in _groups(T['batter'][ix], np.ones(len(ix), bool)).items():
+        a = ix[rr]; lo_map[rr] = off[a] + Bm[a] @ maps[h]; own[rr] = Bm[a] @ (maps[h] - mbar[h])
+    key = T['game'][ix].astype(np.int64) * 1000 + T['ab'][ix].astype(np.int64)
+    Hk = (H['game_pk'].astype(np.int64) * 1000 + H['at_bat_number'].astype(np.int64) - 1).to_numpy()
+    st = pd.DataFrame({'outs': H['outs_when_up'].to_numpy(), 'r2': H['on_2b'].notna().to_numpy() if H['on_2b'].dtype == object else np.isfinite(H['on_2b'].to_numpy(dtype=float)),
+                       'r3': H['on_3b'].notna().to_numpy() if H['on_3b'].dtype == object else np.isfinite(H['on_3b'].to_numpy(dtype=float)),
+                       'inning': H['inning'].to_numpy(), 'diff': H['bat_score_diff'].to_numpy()}, index=Hk)
+    st = st[~st.index.duplicated()].reindex(key)
+    have = st['outs'].notna().to_numpy()
+    risp = (st['r2'].fillna(False).to_numpy(bool) | st['r3'].fillna(False).to_numpy(bool)).astype(float)
+    late_close = ((st['inning'].fillna(0).to_numpy() >= 7) & (np.abs(st['diff'].fillna(99).to_numpy()) <= 1)).astype(float)
+    two_out = (st['outs'].fillna(0).to_numpy() == 2).astype(float)
+    sig = lambda v: 1 / (1 + np.exp(-v))
+    xt, zt = T['px'][ix], T['pz'][ix]
+    u_t = np.where(T['stand_r'][ix] == 1, xt, -xt)
+    outside = (np.abs(u_t) > ZONE_HALF) | (zt > ZONE_TOP) | (zt < ZONE_BOT)
+    def fit(Zs, ys, bs):
+        b = np.zeros(Zs.shape[1])
+        for _ in range(30):
+            p_ = sig(bs + Zs @ b); W = p_ * (1 - p_)
+            step = np.linalg.solve((Zs * W[:, None]).T @ Zs + 1e-6 * np.eye(Zs.shape[1]), Zs.T @ (ys - p_)); b += step
+            if np.max(np.abs(step)) < 1e-9:
+                break
+        return b
+    names = ['intercept', 'scoring_position', 'late_and_close', 'two_outs', 'own_part', 'own_part_x_scoring_position', 'own_part_x_late_and_close']
+    for zn, zm in (('outside', outside), ('inside', ~outside)):
+        m = zm & have
+        Z = np.column_stack([np.ones(m.sum()), risp[m], late_close[m], two_out[m], own[m], own[m] * risp[m], own[m] * late_close[m]])
+        yy = swing[ix][m]; bs_ = lo_map[m]
+        bfull = fit(Z, yy, bs_)
+        games = T['game'][ix][m]; ug, gi = np.unique(games, return_inverse=True); draws = []
+        for _ in range(int(params.get('reps', 60))):
+            w = np.bincount(rng.integers(0, len(ug), len(ug)), minlength=len(ug))[gi]; sel = np.repeat(np.arange(len(yy)), w)
+            draws.append(fit(Z[sel], yy[sel], bs_[sel]))
+        draws = np.asarray(draws)
+        res[zn] = {'pitches': int(m.sum()), 'share_scoring_position': round(float(risp[m].mean()), 3), 'share_late_close': round(float(late_close[m].mean()), 3),
+                   'coefficients_logodds': {n_: [round(float(bfull[j]), 4), round(float(np.percentile(draws[:, j], 2.5)), 4), round(float(np.percentile(draws[:, j], 97.5)), 4)] for j, n_ in enumerate(names)},
+                   'points_at_mean': {n_: round(float(bfull[j] * np.mean(sig(bs_) * (1 - sig(bs_))) * 100), 2) for j, n_ in enumerate(names[1:4], start=1)}}
+    res['matched_share'] = round(float(have.mean()), 4)
+    stage('pressure')
+    return res
+
+
 # ---------------------------------------------------------------- VALUE-12: a hitter's own whiff holes, priced
 def value_whiff_study(T: dict, params: dict, stage) -> dict:
     """VALUE-08's design for the whiff map on the true crossing (MATCHUP-03's representation: league whiff model on
@@ -5978,6 +6057,11 @@ def main():
             receipt['results'] = map_stability_study(T, params, stage)
         elif experiment == 'series':
             receipt['results'] = series_study(T, params, stage)
+        elif experiment == 'pressure':
+            stage('load plate-appearance states')
+            H = load_pa_states(repo, token, os.environ['BRL_PA_PACKAGE_KEY'])
+            H = H[H['date_key'].astype(str).str[:10] < '2026-08-01']
+            receipt['results'] = pressure_study(T, H, params, stage); del H
         elif experiment == 'framing':
             stage('load plate-appearance states')
             H = load_pa_states(repo, token, os.environ['BRL_PA_PACKAGE_KEY'])
