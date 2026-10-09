@@ -65,10 +65,11 @@ expectation model scores how surprising each pitch is to that hitter at that mom
 
 1. Each experiment is registered in LEDGER.md before it runs: the mechanism, the competing explanations, the
    prediction that would distinguish them, and the decision rule.
-2. **Untouched evaluation set for this program, fixed now:** every pitch of the 2026 regular season from August 1 on and
-   every 2026 postseason pitch. No model in this program is fitted, tuned or inspected on it. A candidate is frozen
-   (code commit and parameters) before it is scored there, once; a second look requires a new registration that says
-   so. Development uses 2023 to 2025 and 2026 through July 31. The prospective test is 2027.
+2. **Evaluation sets.** Development: 2023 to 2025 and 2026 through July 31. Later-period validation: the 2026 regular
+   season from August 1 (set aside as untouched on October 8; after the pricing correction of October 9 it counts as
+   validation with adaptive reuse, since VALUE-08F re-scored months VALUE-01F and VALUE-02F had used). Forward
+   confirmation: the 2026 postseason and 2027, with candidates frozen before any of their games and a predeclared
+   stopping rule. A second look at any block requires a registration that says so.
 3. Pitch locations are put on one reference before seasons are pooled (2026 plate_x and plate_z are at the middle of
    the plate; ZONE-01 and the Savant reference check measure it).
 4. A mechanism is credited only for what the flexible baseline with the same inputs cannot do: predicting held-out
@@ -84,9 +85,12 @@ expectation model scores how surprising each pitch is to that hitter at that mom
 - ZONE-01: the definition change in the feed's own locations (running).
 - M1 first test after DATA-02, M3 on the feed data in parallel.
 
-## Results through October 9, 2026, 9:25 a.m. Eastern (ledger rows carry every number and interval)
+## Results through October 9, 2026, 12:30 p.m. Eastern (ledger rows carry every number and interval)
 
-Credited (frozen code, scored once on the untouched months, August 1 to September 27, 2026):
+Credited (frozen code, scored once per candidate on the later-period validation months, August 1 to September 27, 2026;
+see evidence rule 6 on their reuse). The decision-relevant comparisons are the ones against a boosted learner with the
+same inputs (BENCH-01F, BENCH-02F); the aiming value is estimated policy potential under stated assumptions, with an
+adversarial stress test of its estimator registered (VALUE-17) before the figure is used again:
 
 - **Swing decisions are read at the decision moment** (MATCHUP-01F). A hitter's own swing map in the coordinates of
   where the pitch appears to be headed 260 ms before the plate (gravity-only projection) predicts his swings 40.2 nats
