@@ -2551,12 +2551,24 @@ def bench_swing(T: dict, params: dict, stage) -> dict:
             T = take(T, (T['season'] != 2026) | (T['day'] < test_from))
     F = rebuild(T)
     keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['strikes'] >= 0) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
+    target = str(params.get('target', 'swing'))      # BENCH-02: 'whiff' scores misses on swings with the same design
+    if target == 'whiff':
+        keep = keep & ((T['call'] == 1) | (T['call'] == 2))
     T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
     n = len(T['call'])
-    swing = ((T['call'] == 1) | (T['call'] == 2)).astype(np.float64)
+    if target == 'whiff':
+        swing = (T['call'] == 2).astype(np.float64)                 # the outcome modeled (a miss on a swing), named as in the swing design
+        lgr = float(swing.mean())
+        def prior_logit(key, k_):
+            nn, ss = _prior_by_day(key.astype(np.int64), T['day'].astype(np.int64), swing, np.ones(n, bool))
+            r_ = (ss + k_ * lgr) / (nn + k_); return np.log(r_ / (1 - r_))
+        prop = prior_logit(T['batter'], 150.0); pprop = prior_logit(T['pitcher'], 300.0)
+    else:
+        swing = ((T['call'] == 1) | (T['call'] == 2)).astype(np.float64)
+        prop = swing_propensity(T); pprop = pitcher_propensity(T)
+    res['target'] = target
     xp, zp = projected(T, F, None, 'straight', float(params.get('tau', 0.26)))
     px, pz = T['px'].astype(np.float64), T['pz'].astype(np.float64)
-    prop = swing_propensity(T); pprop = pitcher_propensity(T)
     C = np.hstack([control_block(T, prop), pprop[:, None].astype(np.float32)])
     if final:
         tr = T['day'] < test_from; te = T['day'] >= test_from
