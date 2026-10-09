@@ -33,7 +33,7 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
-### In flight (updated 8:30 a.m. Eastern October 9)
+### In flight (updated 10:15 a.m. Eastern October 9)
 
 - Recorded since 3:45 a.m.: COMMAND-01 failed (early-start zone and waste rates add nothing beyond velocity);
   FRAMING-01 passed (the challenge system cut the spread of catcher framing to 0.67 of 2025's); PRESSURE-01 (hitters
@@ -42,6 +42,13 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   (no), so it is not repeated.
 - Next research: COMMAND-02, execution scatter measured from consecutive same-type pitches (a same-intent mixture),
   which tests the 0.6 ft command assumption behind VALUE-08F's 32 runs and gives a per-pitcher realizable edge.
+- SCOUT-03 exported (product): the private scouting page now uses maps fitted on 2025 and the whole 2026 regular
+  season (scratch matchup_page/build.py matchup_page/scout3_receipt.json).
+- SWINGMAP-01 failed: hitters' own chase spots are not where their bat goes (attack angle, direction and their
+  changes all null). ZONEMAP-01 held in the partial band: the zone midpoint correlates +0.35 with the high-minus-low
+  own part in both seasons (part of the vertical pattern is the hitter's own strike zone).
+- MATCHUP-08 running (maps on each batter's own zone; runs 37923139320 for 2025, 37923262346 for 2026 through July);
+  the rule in its row decides MATCHUP-08F.
 - CLV-03 done (ledger): with open-time lineups the line still moved toward our taught number 67.9% (2025) and
   72.6% (2026); lineups explain 0.5 to 3 points. Proposed public wording sent to Alec (needs approval).
 - DISP-02 done (ledger): the centered day-form shock fixed the run spread (team-run SD toward actual in both seasons,
