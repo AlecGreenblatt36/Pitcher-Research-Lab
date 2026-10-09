@@ -1,0 +1,96 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "value2",
+ "run_id": "37888630473",
+ "params": {
+  "experiment": "value2",
+  "seasons": [
+   2023,
+   2024,
+   2025
+  ],
+  "sigmas": [
+   0.0,
+   0.6
+  ],
+  "within_type": true,
+  "reps": 200
+ },
+ "started_at": "2026-10-09T05:27:27.172041+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 8.0
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 15.9
+  },
+  {
+   "stage": "maps 604",
+   "at_seconds": 45.9
+  },
+  {
+   "stage": "coefficients",
+   "at_seconds": 52.7
+  },
+  {
+   "stage": "aiming with scatter",
+   "at_seconds": 97.4
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985
+ },
+ "results": {
+  "coefficients": {
+   "test_season": 2025,
+   "test_pitches": 617627,
+   "runs_per_point_outside": -0.000694,
+   "runs_per_point_inside": 0.000826,
+   "outside_pitches_per_pa": 1.932,
+   "inside_pitches_per_pa": 1.97
+  },
+  "by_command_sd_ft": {
+   "0.0": {
+    "outside_gain_points": 5.31,
+    "inside_gain_points": -5.317,
+    "runs_per_6200_outside_only_interval": [
+     -57.9,
+     -31.6
+    ],
+    "runs_per_6200_both_interval": [
+     -115.2,
+     -79.7
+    ],
+    "runs_per_6200_outside_only": -44.1,
+    "runs_per_6200_inside_only": -53.7,
+    "runs_per_6200_both": -97.8
+   },
+   "0.6": {
+    "outside_gain_points": 3.166,
+    "inside_gain_points": -3.11,
+    "runs_per_6200_outside_only_interval": [
+     -34.5,
+     -18.8
+    ],
+    "runs_per_6200_both_interval": [
+     -68.1,
+     -47.0
+    ],
+    "runs_per_6200_outside_only": -26.3,
+    "runs_per_6200_inside_only": -31.4,
+    "runs_per_6200_both": -57.7
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T05:29:04.571511+00:00",
+ "seconds": 97.4
+}
