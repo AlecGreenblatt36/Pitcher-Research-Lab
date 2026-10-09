@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 231,
- "rows": 234,
+ "experiments": 232,
+ "rows": 235,
  "records": {
   "ACC-01": [
    {
@@ -3587,6 +3587,22 @@
     "runs": [],
     "frozen_commits": [],
     "status": "diagnostic: means right, shape 8-10% narrow, histogram bins noisy, park extremes missed"
+   }
+  ],
+  "TOTALS-06": [
+   {
+    "id": "TOTALS-06",
+    "columns": {
+     "ID": "TOTALS-06",
+     "Attempt": "A park adjustment to the simulator's mean total (TOTALS-04's one feature with a visible target). Per-park offsets of the residual (actual total minus the simulator's mean) on one season of the PROD-03 replays (v2-prod3-1000), shrunk toward zero by the between-park variance against the noise of each park's mean (empirical Bayes), applied to the other season's games: the simulator's own mean total, then the taught expected total with TOTALS-03's fixed weights (0.32 simulator, 0.78 line, -0.543). Paired squared error, intervals by date bootstrap. Also whether the market line's park residuals have structure beyond noise. Scratch harness/totals_park2.py; data-branch aggregates only. **Registered in the commit that added this row, before the run.** Prediction: the simulator's own squared error improves by 0.05 to 0.15 runs squared in each season, with at least one season's interval reaching zero (TOTALS-04 found park biases with a standard deviation of 0.59 to 0.64 runs against about 0.5 from noise, so the true park spread is about 0.3 runs); the taught expected total improves by under 0.03 (below the floor); the line's park residuals show no structure (standard deviation under 0.5). Gate: the offsets enter the simulator's own mean total (the number the page shows beside the taught total) only if the paired improvement excludes zero in both seasons; the taught total changes only if its own improvement clears the floor, which is not expected.",
+     "Disposition and evidence": "pending",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "REPORT-01": [
