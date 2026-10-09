@@ -1,0 +1,298 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "value2",
+ "run_id": "37892835604",
+ "params": {
+  "experiment": "value2",
+  "seasons": [
+   2023,
+   2024,
+   2025
+  ],
+  "sigmas": [
+   0.6
+  ],
+  "within_type": true,
+  "breakdown": true,
+  "checks": true,
+  "specific": true,
+  "family_maps": true,
+  "league_family": true,
+  "reps": 100
+ },
+ "started_at": "2026-10-09T06:18:37.207840+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 8.1
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 16.0
+  },
+  {
+   "stage": "maps 604",
+   "at_seconds": 56.4
+  },
+  {
+   "stage": "coefficients",
+   "at_seconds": 95.3
+  },
+  {
+   "stage": "aiming with scatter",
+   "at_seconds": 132.7
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985
+ },
+ "results": {
+  "coefficients": {
+   "test_season": 2025,
+   "test_pitches": 617627,
+   "runs_per_point_outside": -0.00051,
+   "runs_per_point_inside": 0.000514,
+   "outside_pitches_per_pa": 1.932,
+   "inside_pitches_per_pa": 1.97,
+   "deviation": "own map minus the same-side mean map",
+   "shared_part_outside": -0.00173,
+   "shared_part_inside": 0.001109,
+   "sd_points_shared_outside": 3.421,
+   "sd_points_own_part_outside": 9.542
+  },
+  "coefficient_checks": {
+   "own_map": {
+    "outside": -0.00051,
+    "inside": 0.000514,
+    "outside_interval": [
+     -0.000685,
+     -0.000353
+    ],
+    "inside_interval": [
+     0.000337,
+     0.000719
+    ],
+    "sd_points_outside": 9.542,
+    "runs_per_6200_outside_at_0.6": -23.5,
+    "runs_per_6200_outside_interval_at_0.6": [
+     -31.5,
+     -16.2
+    ]
+   },
+   "placebo_other_hitter": {
+    "outside": -4.6e-05,
+    "inside": -3e-05,
+    "outside_interval": [
+     -0.000219,
+     0.000106
+    ],
+    "inside_interval": [
+     -0.000185,
+     0.000154
+    ],
+    "sd_points_outside": 9.575,
+    "outside_more_reassignments": [
+     -9.8e-05,
+     1e-06,
+     4.3e-05,
+     0.000218,
+     9.6e-05
+    ],
+    "runs_per_6200_outside_at_0.6": -2.1,
+    "runs_per_6200_outside_interval_at_0.6": [
+     -10.1,
+     4.9
+    ]
+   },
+   "within_hitter_group_and_zone_side": {
+    "outside": -0.000335,
+    "inside": 0.000467,
+    "outside_interval": [
+     -0.000487,
+     -0.000168
+    ],
+    "inside_interval": [
+     0.000242,
+     0.000652
+    ],
+    "sd_points_outside": 8.619,
+    "runs_per_6200_outside_at_0.6": -15.4,
+    "runs_per_6200_outside_interval_at_0.6": [
+     -22.4,
+     -7.7
+    ]
+   },
+   "within_pa_correlation_outside": 0.1419,
+   "own_map_holding_pa_others": {
+    "outside": -0.00046,
+    "inside": 0.000485,
+    "outside_interval": [
+     -0.000619,
+     -0.000327
+    ],
+    "inside_interval": [
+     0.000315,
+     0.000648
+    ],
+    "others_outside": -0.000253,
+    "others_inside": 0.000312,
+    "runs_per_6200_outside_at_0.6": -21.2,
+    "runs_per_6200_outside_interval_at_0.6": [
+     -28.5,
+     -15.0
+    ]
+   },
+   "within_hitter_holding_pa_others": {
+    "outside": -0.000333,
+    "inside": 0.000457,
+    "outside_interval": [
+     -0.000475,
+     -0.000172
+    ],
+    "inside_interval": [
+     0.000288,
+     0.00064
+    ],
+    "others_outside": -0.000166,
+    "others_inside": 0.000282,
+    "runs_per_6200_outside_at_0.6": -15.3,
+    "runs_per_6200_outside_interval_at_0.6": [
+     -21.9,
+     -7.9
+    ]
+   }
+  },
+  "by_command_sd_ft": {
+   "0.6": {
+    "outside_gain_points": 3.842,
+    "inside_gain_points": -3.5,
+    "runs_per_6200_outside_only_interval": [
+     -31.5,
+     -16.3
+    ],
+    "runs_per_6200_both_interval": [
+     -56.3,
+     -35.9
+    ],
+    "runs_per_6200_outside_only": -23.5,
+    "runs_per_6200_inside_only": -22.0,
+    "runs_per_6200_both": -45.4
+   }
+  },
+  "coefficients_by_count": {
+   "outside_ahead_or_even": -0.000424,
+   "outside_behind": -0.000678,
+   "outside_two_strikes": -0.000523,
+   "inside_ahead_or_even": 0.000551,
+   "inside_behind": -2.8e-05,
+   "inside_two_strikes": 0.001218
+  },
+  "breakdown": {
+   "0.6": {
+    "count": {
+     "outside_ahead_or_even": {
+      "gain_points": 3.619,
+      "pitches_per_pa": 0.916,
+      "runs_per_6200": -8.7
+     },
+     "inside_ahead_or_even": {
+      "gain_points": -3.684,
+      "pitches_per_pa": 0.981,
+      "runs_per_6200": -12.3
+     },
+     "outside_behind": {
+      "gain_points": 3.905,
+      "pitches_per_pa": 0.348,
+      "runs_per_6200": -5.7
+     },
+     "inside_behind": {
+      "gain_points": -3.638,
+      "pitches_per_pa": 0.485,
+      "runs_per_6200": 0.3
+     },
+     "outside_two_strikes": {
+      "gain_points": 4.19,
+      "pitches_per_pa": 0.668,
+      "runs_per_6200": -9.1
+     },
+     "inside_two_strikes": {
+      "gain_points": -2.802,
+      "pitches_per_pa": 0.504,
+      "runs_per_6200": -10.7
+     }
+    },
+    "type": {
+     "outside_group_0": {
+      "gain_points": 3.929,
+      "pitches_per_pa": 0.552,
+      "runs_per_6200": -6.9
+     },
+     "inside_group_0": {
+      "gain_points": -3.335,
+      "pitches_per_pa": 0.697,
+      "runs_per_6200": -7.4
+     },
+     "outside_group_3": {
+      "gain_points": 3.879,
+      "pitches_per_pa": 0.476,
+      "runs_per_6200": -5.8
+     },
+     "inside_group_3": {
+      "gain_points": -3.859,
+      "pitches_per_pa": 0.41,
+      "runs_per_6200": -5.0
+     },
+     "outside_group_4": {
+      "gain_points": 3.694,
+      "pitches_per_pa": 0.188,
+      "runs_per_6200": -2.2
+     },
+     "inside_group_4": {
+      "gain_points": -3.307,
+      "pitches_per_pa": 0.144,
+      "runs_per_6200": -1.5
+     },
+     "outside_group_5": {
+      "gain_points": 4.111,
+      "pitches_per_pa": 0.328,
+      "runs_per_6200": -4.3
+     },
+     "inside_group_5": {
+      "gain_points": -3.842,
+      "pitches_per_pa": 0.21,
+      "runs_per_6200": -2.6
+     },
+     "outside_group_2": {
+      "gain_points": 3.675,
+      "pitches_per_pa": 0.135,
+      "runs_per_6200": -1.6
+     },
+     "inside_group_2": {
+      "gain_points": -3.814,
+      "pitches_per_pa": 0.158,
+      "runs_per_6200": -1.9
+     },
+     "inside_group_1": {
+      "gain_points": -3.328,
+      "pitches_per_pa": 0.351,
+      "runs_per_6200": -3.7
+     },
+     "outside_group_1": {
+      "gain_points": 3.285,
+      "pitches_per_pa": 0.251,
+      "runs_per_6200": -2.6
+     }
+    }
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T06:20:49.932158+00:00",
+ "seconds": 132.7
+}
