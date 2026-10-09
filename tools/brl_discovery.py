@@ -3631,6 +3631,33 @@ def value2_study(T: dict, params: dict, stage) -> dict:
             ci_ = boot(Xk)
             chk[nm] = {'outside': round(float(bk_[-2]), 6), 'inside': round(float(bk_[-1]), 6), 'outside_interval': ci_[0], 'inside_interval': ci_[1],
                        'others_outside': round(float(bk_[-4]), 6), 'others_inside': round(float(bk_[-3]), 6)}
+        if params.get('within_spot'):
+            # (4) different hitters at the same spot: every column demeaned within cells of where the pitch crossed (0.2 ft
+            # squares, by batter side, count group and pitch group), so no location effect shared by hitters can carry it
+            cgp = np.where(T['strikes'][ix] == 2, 2, np.where(T['balls'][ix] > T['strikes'][ix], 1, 0))
+            cx = np.clip(np.floor((u_t + 2.5) / 0.2), 0, 25).astype(np.int64); cz = np.clip(np.floor(zt / 0.2), 0, 30).astype(np.int64)
+            cell = ((((T['stand_r'][ix].astype(np.int64) * 3 + cgp) * 7 + np.clip(T['group'][ix], 0, 6)) * 26 + cx) * 31 + cz)
+            _, ci_ = np.unique(cell, return_inverse=True); nc = np.bincount(ci_).astype(float)
+            dm = lambda v: v - (np.bincount(ci_, weights=v) / nc)[ci_]
+            keep_c = nc[ci_] >= 2
+            Xs_ = np.column_stack([dm(Xd[:, j]) for j in range(1, Xd.shape[1])]); ys_ = dm(y)
+            Xs_, ys_ = Xs_[keep_c], ys_[keep_c]
+            bs_ = np.linalg.lstsq(Xs_, ys_, rcond=None)[0]
+            ug2, gi2 = np.unique(T['game'][ix][keep_c], return_inverse=True); pk = Xs_.shape[1]
+            XtX2 = np.zeros((len(ug2), pk, pk))
+            for a_ in range(pk):
+                for c_ in range(a_, pk):
+                    v_ = np.bincount(gi2, weights=Xs_[:, a_] * Xs_[:, c_], minlength=len(ug2)); XtX2[:, a_, c_] = v_; XtX2[:, c_, a_] = v_
+            Xty2 = np.column_stack([np.bincount(gi2, weights=Xs_[:, a_] * ys_, minlength=len(ug2)) for a_ in range(pk)])
+            dr = []
+            for _ in range(200):
+                w_ = np.bincount(rc.integers(0, len(ug2), len(ug2)), minlength=len(ug2)).astype(float)
+                dr.append(np.linalg.solve(np.tensordot(w_, XtX2, 1) + 1e-9 * np.eye(pk), w_ @ Xty2)[-2:])
+            dr = np.asarray(dr)
+            chk['within_spot'] = {'outside': round(float(bs_[-2]), 6), 'inside': round(float(bs_[-1]), 6),
+                                  'outside_interval': [round(float(np.percentile(dr[:, 0], q)), 6) for q in (2.5, 97.5)],
+                                  'inside_interval': [round(float(np.percentile(dr[:, 1], q)), 6) for q in (2.5, 97.5)],
+                                  'cells': int(len(nc)), 'pitches_in_cells_with_two_or_more': int(keep_c.sum())}
         res['coefficient_checks'] = chk
     stage('coefficients')
     sigmas = [float(v) for v in params.get('sigmas', (0.0, 0.3, 0.6, 0.9))]
