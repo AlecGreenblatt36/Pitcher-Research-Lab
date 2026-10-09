@@ -83,3 +83,46 @@ expectation model scores how surprising each pitch is to that hitter at that mom
   ledger branch; coverage and the plate-reference check in the receipt.
 - ZONE-01: the definition change in the feed's own locations (running).
 - M1 first test after DATA-02, M3 on the feed data in parallel.
+
+## Results through October 9, 2026 (ledger rows carry every number and interval)
+
+Credited (frozen code, scored once on the untouched months, August 1 to September 27, 2026):
+
+- **Swing decisions are read at the decision moment** (MATCHUP-01F). A hitter's own swing map in the coordinates of
+  where the pitch appears to be headed 260 ms before the plate (gravity-only projection) predicts his swings 40.2 nats
+  per 1,000 decisions better than his standard heat map of where pitches cross the plate, and predicts his chasing
+  against a specific pitcher's arsenal with a calibration slope of 0.95.
+- **Misses and contact follow where the ball arrives** (MATCHUP-03, CONTACT-03, DAMAGE-01F). The spread of a hitter's
+  contact depth from bat tracking is his contact window (contact depth is only seen on contact, so the spread is the
+  range of timing he survives, not his timing error) and predicts misses beyond his whiff rate; damage on contact is
+  better described on the true crossing than at the decision moment. Hitter-specific damage maps were not confirmed.
+- **Sequence effects in timing** (TIMING-03F). After a called strike the next pitch is met farther out front the
+  slower that strike was (0.15 inches per 10 ms); after a miss, later (0.24); a foul carries nothing.
+- **An unexploited edge, priced** (EXPLOIT-01, VALUE-01F, VALUE-02F, with VALUE-03 and VALUE-04 in development).
+  Pitchers do not aim at a hitter's own decision-moment chase spots, so where a pitch lands on his map is as good as
+  chance; on that natural experiment a pitch in his own chase spots costs him runs (placebo maps nil). Aiming each
+  outside pitch at the best third of the pitcher's own spots for that hitter, with typical command (0.6 ft of
+  scatter per axis), is worth about 43 runs over a team's season (26 to 57) and about 60 with strikes aimed where he
+  swings least; about 86 percent survives hitters tightening up within a game, and about 85 percent survives
+  restricting the aim to each pitch type's own spots.
+
+What did not hold: maps as an early warning (DRIFT-01) or as season projections (DISCIPLINE-01); the swing-plane
+formula as the source of the geometry signal (CONTACT-01, -02); locating the steering limit from misses with one map
+(STEER-01); pitch-type surprise (SEQ-01); velocity, flight reading and pitch-type familiarity as the
+times-through-the-order penalty (FATIGUE-01, EXPOSURE-01); pair-specific strikeout effects large enough for the
+simulator (ENGINE-01: real, about 0.4 points of strikeout rate).
+
+## What is original against the closest published work (checked October 9, 2026)
+
+- Public swing-decision metrics (Statcast swing/take run values; SEAGER; SOTO) score decisions by where the pitch
+  crosses the plate, mostly with population models; SOTO adds a hitter-specific damage zone. None represents the
+  hitter at an estimated decision moment, and none tests hitter maps on held-out months.
+- Baseball Prospectus's 2025 swing-process work (bat and pitch tracking) models swing initiation and swing-or-take from
+  trajectory information up to a decision point with population-level models and leaves personalization to future
+  work; it does not price anything in runs or examine pitchers.
+- Pitch tunneling work (Baseball Prospectus, 2017 onward) assumes a tunnel point and scores pitchers; it does not
+  estimate the decision moment from swings or fit hitters.
+- New here: the decision moment estimated from swings (Decision Horizon) and used as the coordinate system for
+  per-hitter maps, credited on untouched data; the measurement that pitchers do not aim at these maps; that fact used
+  as a natural experiment to put a run value on hitter-specific maps, with command scatter, within-game adaptation and
+  within-pitch-type limits; the contact window reading of bat-tracking depth spread; the timing sequence effects.
