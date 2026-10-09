@@ -2643,6 +2643,73 @@ def fatigue(T: dict, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- SEQ-01: how unexpected a pitch is to the hitter
+def surprise_study(T: dict, params: dict, stage) -> dict:
+    """The hitter can know the pitcher's habits: how often he throws each pitch type in this count bucket, after this
+    previous pitch, to this side. Surprise = -log of that probability for the pitch actually thrown (the pitcher's
+    earlier days, shrunk toward the league in the same context). Does surprise predict swings, whiffs on swings and
+    called strikes on takes beyond the pitch's own physics, location, count and the hitter's habits? Train 2023-2024,
+    score 2025 (feed locations, one reference)."""
+    res = {}
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)) & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['strikes'] >= 0))
+    order = np.lexsort((T['pitch_no'], T['ab'], T['game']))
+    T = take(T, order)
+    n = len(T['game'])
+    # previous pitch type within the plate appearance (6 = none)
+    same_pa = np.r_[False, (T['game'][1:] == T['game'][:-1]) & (T['ab'][1:] == T['ab'][:-1])]
+    prev = np.where(same_pa, np.r_[6, np.clip(T['group'][:-1], 0, 5)], 6)
+    b, k = T['balls'], T['strikes']
+    bucket = np.select([(b == 0) & (k == 0), (k > b) & ~((b == 3) & (k == 2)), (b == k) & (b > 0), (b == 3) & (k == 2)], [0, 1, 2, 4], 3)
+    hand = (T['stand_r'] == T['throw_r']).astype(np.int64)
+    ctx = (bucket * 7 + prev) * 2 + hand                                   # 70 contexts
+    g6 = np.clip(T['group'], 0, 5)
+    key = T['pitcher'].astype(np.int64) * 100 + ctx
+    day = T['day'].astype(np.int64)
+    train_rows = np.isin(T['season'], (2023, 2024))
+    lc = np.zeros((70, 6))
+    for c in range(70):
+        m = train_rows & (ctx == c)
+        lc[c] = (np.bincount(g6[m], minlength=6) + 1.0) / (m.sum() + 6.0)
+    kk = float(params.get('k_usage', 60.0))
+    probs = np.zeros((n, 6))
+    tot_n = None
+    for g in range(6):
+        nn, ss = _prior_by_day(key, day, (g6 == g).astype(float), np.ones(n, bool))
+        probs[:, g] = ss; tot_n = nn
+    probs = (probs + kk * lc[ctx]) / (tot_n[:, None] + kk)
+    p_act = probs[np.arange(n), g6]
+    surprise = -np.log(np.clip(p_act, 1e-4, 1))
+    entropy = -(probs * np.log(np.clip(probs, 1e-9, 1))).sum(1)
+    stage('usage priors')
+    res['surprise'] = {'mean_bits': round(float(surprise.mean() / np.log(2)), 3), 'sd_bits': round(float(surprise.std() / np.log(2)), 3),
+                       'entropy_mean_bits': round(float(entropy.mean() / np.log(2)), 3)}
+    swing = (T['call'] == 1) | (T['call'] == 2); whiff = T['call'] == 2; take_ = T['call'] == 0
+    u = np.where(T['stand_r'] == 1, T['px'], -T['px'])
+    prop = swing_propensity(T)
+    X0 = np.column_stack([T['v0'], T['pfx_x'] * np.where(T['throw_r'] == 1, 1, -1), T['pfx_z'], u, T['pz'], T['spin'], T['x0'] * np.where(T['throw_r'] == 1, 1, -1),
+                          T['z0'], T['ext'], b, k, g6, hand, prop, prev])
+    X1 = np.column_stack([X0, surprise, entropy, probs])
+    from sklearn.ensemble import HistGradientBoostingClassifier
+    hp = dict(max_iter=int(params.get('gbm_iter', 300)), learning_rate=0.08, max_leaf_nodes=48, min_samples_leaf=300, l2_regularization=1.0, random_state=11)
+    tr = train_rows; te = T['season'] == 2025
+    rng = np.random.default_rng(11)
+    out = {}
+    for name, rows, y in (('swing', np.ones(n, bool), swing), ('whiff_on_swing', swing, whiff), ('called_strike_on_take', take_, T['cs'] == 1)):
+        a = np.flatnonzero(tr & rows); a = rng.choice(a, min(len(a), int(params.get('train_n', 1200000))), replace=False)
+        t_ = te & rows
+        yy = y.astype(float)
+        m0 = HistGradientBoostingClassifier(**hp).fit(X0[a], yy[a]); p0 = m0.predict_proba(X0[t_])[:, 1]
+        m1 = HistGradientBoostingClassifier(**hp).fit(X1[a], yy[a]); p1 = m1.predict_proba(X1[t_])[:, 1]
+        l0, l1 = logloss_vec(p0, yy[t_]), logloss_vec(p1, yy[t_])
+        q = np.nanpercentile(surprise[t_], [20, 40, 60, 80]); qi = np.searchsorted(q, surprise[t_])
+        out[name] = {'test_rows': int(t_.sum()), 'gain_nats_per_1000': [round(v * 1000, 3) for v in clustered_ci(l0 - l1, T['game'][t_])],
+                     'by_surprise_quintile': [{'surprise_bits': round(float(surprise[t_][qi == j].mean() / np.log(2)), 3), 'observed': round(float(yy[t_][qi == j].mean()), 4),
+                                               'predicted_without': round(float(p0[qi == j].mean()), 4)} for j in range(5)]}
+        stage('surprise ' + name)
+    res['models'] = out
+    return res
+
+
 # ---------------------------------------------------------------- ZONE-01: pitch location across the 2026 definition change
 YMID = 8.5 / 12.0          # the middle of the plate, Statcast's reference for plate_x and plate_z from 2026
 
@@ -2835,6 +2902,8 @@ def main():
             receipt['results'] = matchup_swing(T, params, stage)
         elif experiment == 'fatigue':
             receipt['results'] = fatigue(T, params, stage)
+        elif experiment == 'surprise':
+            receipt['results'] = surprise_study(T, params, stage)
         receipt['status'] = 'completed'
     except StopIteration:
         receipt['status'] = 'completed'
