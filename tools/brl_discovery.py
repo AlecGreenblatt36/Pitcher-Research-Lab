@@ -7084,6 +7084,371 @@ def seq2_study(T: dict, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- PLAN-01: the plate appearance as a sequential decision problem
+E_NONE = 0
+E_KINDS = ('ball', 'called', 'foul', 'miss')
+
+
+def e_index(fam: int, kind: int) -> int:
+    """Expectation state after a pitch: 0 none; 1 + family * 4 + kind (families 0-2, kinds ball, called, foul, miss)."""
+    return 1 + int(fam) * 4 + int(kind)
+
+
+class PAModels:
+    """The credited pieces fitted on the training rows, evaluated for any pitch at any count: swing at the decision
+    moment (league with its family part, hitter family maps), miss on the true crossing (league, hitter whiff maps),
+    called strike on a take, foul on contact, the run value of a ball in play. Hitter-level rates (swing, miss, contact
+    value) are scalars any plan may use; the maps are what makes a plan hitter-specific."""
+
+    def __init__(self, T: dict, tr: np.ndarray, rng, params: dict, stage):
+        self.T = T; self.tr = tr; self.rng = rng
+        F = rebuild(T)
+        self.xp, self.zp = projected(T, F, None, 'straight', 0.26)
+        self.xt, self.zt = T['px'].astype(np.float64), T['pz'].astype(np.float64)
+        n = len(T['call'])
+        swing = ((T['call'] == 1) | (T['call'] == 2)).astype(np.float64); whiff = (T['call'] == 2).astype(np.float64)
+        self.swing, self.whiff = swing, whiff
+        contact = (T['call'] == 1); foul = (contact & (T['last_in_pa'] == 0)).astype(np.float64); take_ = T['call'] == 0
+        self.inplay = contact & (T['last_in_pa'] == 1) & np.isin(T['out7'], (0, 3, 4, 5, 6))
+        self.bip_value = np.where(self.inplay, LW7[np.clip(T['out7'], 0, 6)], 0.0)
+        # hitter and pitcher levels from earlier dates (the rows' own propensities) and as scalars per player (training rows)
+        self.prop_s = swing_propensity(T); self.prop_p = pitcher_propensity(T)
+        tw = dict(T); tw['call'] = np.where(whiff == 1, 1, np.where(swing == 1, 0, 3)); self.prop_w = swing_propensity(tw, 200.0)
+        lg_bip = float(self.bip_value[self.inplay & tr].mean())
+        def prior_bip(key, k_):
+            nn, ss = _prior_by_day(key.astype(np.int64), T['day'].astype(np.int64), self.bip_value, self.inplay)
+            return (ss + k_ * lg_bip) / (nn + k_)
+        self.bip_b = prior_bip(T['batter'], 80.0); self.bip_p = prior_bip(T['pitcher'], 150.0)
+        self.lg_bip = lg_bip
+        # swing model: location at the decision moment with the league's family part, controls, pitcher propensity
+        Ls = location_block(self.xp, self.zp, T['stand_r'], T['strikes']); Bh0 = hitter_basis(self.xp, self.zp, T['stand_r'], T['strikes']); nh = Bh0.shape[1] - 1
+        brk = np.isin(T['group'], (3, 4))[:, None]; ofs = (T['group'] == 5)[:, None]
+        Xs = np.hstack([Ls, (Bh0[:, :-1] * brk).astype(np.float32), (Bh0[:, :-1] * ofs).astype(np.float32), control_block(T, self.prop_s), self.prop_p[:, None].astype(np.float32)])
+        idx = np.flatnonzero(tr); idx = rng.choice(idx, min(len(idx), int(params.get('league_n', 600000))), replace=False)
+        self.m_s = fit_logistic(Xs[idx], swing[idx]); self.off_s = self.m_s.decision_function(Xs)
+        self.nL, self.nh = Ls.shape[1], nh
+        self.Bs = family_basis(Bh0, T['group'])
+        gb_tr = _groups(T['batter'], tr)
+        self.maps_s = _hitter_maps(self.Bs, swing, self.off_s, gb_tr, float(params.get('lam_s', 10.0)), int(params.get('min_pitches', 300)))
+        self.side = {h: int(np.round(T['stand_r'][r].mean())) for h, r in gb_tr.items()}
+        del Xs
+        stage(f'swing model, {len(self.maps_s)} maps')
+        # whiff model on the true crossing
+        grp = np.zeros((n, 7), np.float32); grp[np.arange(n), np.clip(T['group'], 0, 6)] = 1
+        Lw = location_block(self.xt, self.zt, T['stand_r'], T['strikes'])
+        Xw = np.hstack([Lw, grp, hats(T['v0'].astype(np.float64), V_KNOTS), (T['strikes'] == 2)[:, None].astype(np.float32), self.prop_w[:, None].astype(np.float32),
+                        (T['stand_r'] == T['throw_r'])[:, None].astype(np.float32)])
+        sw_tr = tr & (swing == 1); idx = np.flatnonzero(sw_tr); idx = rng.choice(idx, min(len(idx), int(params.get('league_n', 600000))), replace=False)
+        self.m_w = fit_logistic(Xw[idx], whiff[idx]); self.off_w = self.m_w.decision_function(Xw)
+        fam3 = np.column_stack([np.isin(T['group'], (0, 1, 2)), np.isin(T['group'], (3, 4)), np.isin(T['group'], (5,))]).astype(np.float64)
+        self.Bw = np.hstack([hitter_basis(self.xt, self.zt, T['stand_r'], T['strikes']), fam3, hats(self.zt, (1.0, 2.0, 3.0, 4.0)).astype(np.float64)])
+        self.maps_w = _hitter_maps(self.Bw, whiff, self.off_w, _groups(T['batter'], sw_tr), float(params.get('lam_w', 30.0)), int(params.get('min_swings', 200)))
+        # called strike on a take; foul on contact
+        Xc = np.hstack([Lw, (T['stand_r'] == T['throw_r'])[:, None].astype(np.float32)])
+        tk = tr & take_; idx = np.flatnonzero(tk); idx = rng.choice(idx, min(len(idx), 400000), replace=False)
+        self.m_c = fit_logistic(Xc[idx], (T['cs'] == 1).astype(np.float64)[idx]); self.p_c = self.m_c.predict_proba(Xc)[:, 1]
+        ct = tr & contact; idx = np.flatnonzero(ct); idx = rng.choice(idx, min(len(idx), 400000), replace=False)
+        self.m_f = fit_logistic(Xw[idx], foul[idx]); self.p_f = self.m_f.predict_proba(Xw)[:, 1]
+        # the run value of a ball in play: linear on location, group, speed, count, platoon and both players' contact values
+        cnt = np.zeros((n, 12), np.float32); cnt[np.arange(n), np.clip(T['balls'], 0, 3) * 3 + np.clip(T['strikes'], 0, 2)] = 1
+        Xb = np.hstack([np.ones((n, 1), np.float32), Lw, grp, hats(T['v0'].astype(np.float64), V_KNOTS), cnt, (T['stand_r'] == T['throw_r'])[:, None].astype(np.float32),
+                        (self.bip_b - lg_bip)[:, None].astype(np.float32), (self.bip_p - lg_bip)[:, None].astype(np.float32)])
+        bp = tr & self.inplay
+        A = Xb[bp].astype(np.float64); self.beta_b = np.linalg.lstsq(A.T @ A + 1.0 * np.eye(A.shape[1]), A.T @ self.bip_value[bp], rcond=None)[0]
+        self.v_bip = Xb @ self.beta_b
+        del Xw, Xc, Xb, Lw, grp, cnt
+        # hitter scalars (training rows): swing, whiff, contact value, each as the row propensities would read at the end of training
+        self.h_scalar = {}
+        for h, r in gb_tr.items():
+            if h in self.maps_s:
+                self.h_scalar[h] = (float(self.prop_s[r[-1]]), float(self.prop_w[r[-1]]), float(self.bip_b[r[-1]]))
+        gp_tr = _groups(T['pitcher'], tr)
+        self.p_scalar = {p: (float(self.prop_p[r[-1]]), float(self.bip_p[r[-1]])) for p, r in gp_tr.items()}
+        self.gp = gp_tr
+        # the coefficients the per-hitter scalars multiply
+        cs_ = self.m_s.coef_[0].astype(np.float64); i_prop_s = self.nL + 2 * nh + 32   # control_block: 12 count + 7 group + 7 group x two strikes + 6 speed = 32, then prop
+        self.w_prop_s = float(cs_[i_prop_s]); self.w_prop_p = float(cs_[-1])
+        cw_ = self.m_w.coef_[0].astype(np.float64); self.w_prop_w = float(cw_[-2])
+        self.w_bip_b = float(self.beta_b[-2]); self.w_bip_p = float(self.beta_b[-1])
+        self.delta = float(params.get('delta_repeat_after_called', 0.0))     # SEQ-02's log-odds on a repeat after a called strike
+        self.cache = {}
+        stage('models fitted')
+
+    def _blocks(self, r: np.ndarray, b: int, k: int):
+        """Model logits for rows r evaluated as if at count (b, k), with the hitter-level scalars taken out (added per hitter)."""
+        T = self.T; n = len(r); stand = T['stand_r'][r]; throw = T['throw_r'][r]; grp_ = T['group'][r]; v0 = T['v0'][r].astype(np.float64)
+        strikes = np.full(n, k, np.int64); balls = np.full(n, b, np.int64)
+        tt = {'balls': balls, 'strikes': strikes, 'group': grp_, 'v0': v0, 'stand_r': stand, 'throw_r': throw}
+        Ls = location_block(self.xp[r], self.zp[r], stand, strikes); Bh0 = hitter_basis(self.xp[r], self.zp[r], stand, strikes)
+        brk = np.isin(grp_, (3, 4))[:, None]; ofs = (grp_ == 5)[:, None]
+        Xs = np.hstack([Ls, (Bh0[:, :-1] * brk).astype(np.float32), (Bh0[:, :-1] * ofs).astype(np.float32), control_block(tt, np.zeros(n)), np.zeros((n, 1), np.float32)])
+        lo_s = self.m_s.decision_function(Xs).astype(np.float64)
+        Bs = family_basis(Bh0, grp_)
+        grp = np.zeros((n, 7), np.float32); grp[np.arange(n), np.clip(grp_, 0, 6)] = 1
+        Lw = location_block(self.xt[r], self.zt[r], stand, strikes)
+        plat = (stand == throw)[:, None].astype(np.float32)
+        Xw = np.hstack([Lw, grp, hats(v0, V_KNOTS), (strikes == 2)[:, None].astype(np.float32), np.zeros((n, 1), np.float32), plat])
+        lo_w = self.m_w.decision_function(Xw).astype(np.float64)
+        fam3 = np.column_stack([np.isin(grp_, (0, 1, 2)), np.isin(grp_, (3, 4)), np.isin(grp_, (5,))]).astype(np.float64)
+        Bw = np.hstack([hitter_basis(self.xt[r], self.zt[r], stand, strikes), fam3, hats(self.zt[r], (1.0, 2.0, 3.0, 4.0)).astype(np.float64)])
+        p_c = self.m_c.predict_proba(np.hstack([Lw, plat]))[:, 1]
+        p_f = self.m_f.predict_proba(Xw)[:, 1]
+        cnt = np.zeros((n, 12), np.float32); cnt[:, b * 3 + k] = 1
+        Xb = np.hstack([np.ones((n, 1), np.float32), Lw, grp, hats(v0, V_KNOTS), cnt, plat, np.zeros((n, 2), np.float32)])
+        v_b = Xb.astype(np.float64) @ self.beta_b
+        fam = np.where(np.isin(grp_, (0, 1, 2)), 0, np.where(np.isin(grp_, (3, 4)), 1, 2))
+        return {'lo_s': lo_s, 'Bs': Bs, 'lo_w': lo_w, 'Bw': Bw, 'c': p_c, 'f': p_f, 'v': v_b, 'fam': fam}
+
+    def pool(self, p: int, sd: int, max_per_group: int = 120):
+        """The pitcher's own pitches to a side (training rows), a sample per count group with the group's weight."""
+        key = (p, sd)
+        if key in self.cache:
+            return self.cache[key]
+        T = self.T; r = self.gp.get(p)
+        if r is None:
+            self.cache[key] = None; return None
+        r = r[T['stand_r'][r] == sd]
+        if len(r) < 150:
+            self.cache[key] = None; return None
+        c3 = np.where(T['strikes'][r] == 2, 2, np.where(T['balls'][r] > T['strikes'][r], 1, 0))
+        rows = []; cg = []
+        for c in (0, 1, 2):
+            rr = r[c3 == c]
+            if len(rr) > max_per_group:
+                rr = self.rng.choice(rr, max_per_group, replace=False)
+            rows.append(rr); cg.append(np.full(len(rr), c))
+        rows = np.concatenate(rows); cg = np.concatenate(cg)
+        blocks = {(b, k): self._blocks(rows, b, k) for b in range(4) for k in range(3)}
+        out = {'rows': rows, 'cg': cg, 'blocks': blocks, 'p_scalar': self.p_scalar.get(p, (0.0, self.lg_bip))}
+        self.cache[key] = out
+        return out
+
+    def probs(self, blk: dict, h: int | None, p_scalar, hs=None):
+        """(swing, whiff, called, foul, value, fam) for a block, for hitter h (maps) or the league plan (no maps); hs
+        overrides the hitter scalars (used by the actual-pitch evaluation, whose rows carry their own)."""
+        ps_, pw_, pb_ = hs if hs is not None else (self.h_scalar[h] if h is not None and h in self.h_scalar else (0.0, 0.0, self.lg_bip))
+        lo_s = blk['lo_s'] + self.w_prop_s * ps_ + self.w_prop_p * p_scalar[0]
+        lo_w = blk['lo_w'] + self.w_prop_w * pw_
+        v = blk['v'] + self.w_bip_b * (pb_ - self.lg_bip) + self.w_bip_p * (p_scalar[1] - self.lg_bip)
+        if h is not None and h in self.maps_s:
+            lo_s = lo_s + blk['Bs'] @ self.maps_s[h]
+            if h in self.maps_w:
+                lo_w = lo_w + blk['Bw'] @ self.maps_w[h]
+        return 1 / (1 + np.exp(-lo_s)), 1 / (1 + np.exp(-lo_w)), blk['c'], blk['f'], v, blk['fam']
+
+    def solve(self, P: dict, h: int | None, hs=None):
+        """Value iteration over counts and expectation states for one pitcher pool against one hitter. Returns the
+        optimal value, the actual-policy value (the pitcher's own mix in each count group) and the optimal action."""
+        nE = 1 + 3 * 4; pr = {}
+        for (b, k), blk in P['blocks'].items():
+            pr[(b, k)] = self.probs(blk, h, P['p_scalar'], hs)
+        cg = P['cg']; V = np.zeros((4, 3, nE)); Va = np.zeros((4, 3, nE)); act = {}
+        def q_of(b, k, e, s, w, c, f, v, fam):
+            # whiff adjustment: a repeat of the family after a called strike (SEQ-02)
+            if self.delta and e != E_NONE:
+                ef, ek = (e - 1) // 4, (e - 1) % 4
+                if ek == 1:
+                    w = np.where(fam == ef, 1 / (1 + np.exp(-(np.log(w / (1 - w)) + self.delta))), w)
+            idx_e = lambda kind: 1 + fam * 4 + kind
+            vK = LW7[1]; vBB = LW7[2]
+            q = s * (1 - w) * (1 - f) * v
+            q += s * w * (vK if k == 2 else V[b, k + 1][idx_e(3)])
+            q += s * (1 - w) * f * (V[b, 2][idx_e(2)] if k == 2 else V[b, k + 1][idx_e(2)])
+            q += (1 - s) * c * (vK if k == 2 else V[b, k + 1][idx_e(1)])
+            q += (1 - s) * (1 - c) * (vBB if b == 3 else V[b + 1, k][idx_e(0)])
+            return q
+        for total in range(5, -1, -1):
+            for b in range(4):
+                k = total - b
+                if k < 0 or k > 2:
+                    continue
+                s, w, c, f, v, fam = pr[(b, k)]
+                c3 = 2 if k == 2 else (1 if b > k else 0); wts = (cg == c3).astype(np.float64); wts = wts / max(wts.sum(), 1e-9)
+                for _ in range(40 if k == 2 else 1):
+                    for e in range(nE):
+                        q = q_of(b, k, e, s, w, c, f, v, fam)
+                        j = int(np.argmin(q)); V[b, k, e] = q[j]; act[(b, k, e)] = j
+                        Va[b, k, e] = float(np.dot(wts, q)) if wts.sum() > 0 else q.mean()
+        return V, Va, act
+
+
+def plan_study(T: dict, params: dict, stage) -> dict:
+    """PLAN-01. The plate appearance as a sequential decision problem: states are the count and what the hitter just
+    saw (family and outcome of the previous pitch), actions are the pitcher's own pitches (type and spot), the
+    transition model is the credited pieces, and the value is the plate appearance's run value. Solved backward from
+    the end of the plate appearance for each hitter-pitcher pair, with the hitter's maps (hitter-specific plan) and
+    without them (league plan, which still knows his swing, miss and contact levels). Claims: the runs per plate
+    appearance the hitter-specific plan saves over the league plan, and over the pitcher's own mix. Test (the natural
+    experiment, as VALUE-08): on the test seasons' actual pitches, the hitter-specific advantage of the pitch actually
+    thrown (its Q under the hitter's plan minus the pool average, minus the same under the league plan) against the
+    pitch's realized run value (count-state values from the training seasons); pitchers do not aim at the maps, so the
+    slope measures whether the plan's hitter-specific differences are real; placebo with another hitter's maps."""
+    import pandas as pd
+    res = {}
+    train = tuple(int(v) for v in params.get('train', (2023, 2024))); tests = tuple(int(v) for v in params.get('tests', (2025, 2026)))
+    T = take(T, np.isin(T['season'], train + tests))
+    F = rebuild(T)
+    keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
+    T = take(T, keep)
+    order = np.lexsort((T['pitch_no'], T['ab'], T['game'])); T = take(T, order)
+    tr = np.isin(T['season'], train)
+    rng = np.random.default_rng(int(params.get('seed', 11)))
+    M = PAModels(T, tr, rng, params, stage)
+    n = len(T['call'])
+    # realized pitch values: count-state values from the training seasons (mean final value of plate appearances passing through the count)
+    pak = T['game'].astype(np.int64) * 1000 + T['ab'].astype(np.int64)
+    first = np.r_[True, pak[1:] != pak[:-1]]; pa_id = np.cumsum(first) - 1
+    last_idx = np.flatnonzero(T['last_in_pa'] == 1)
+    pa_final = np.full(pa_id.max() + 1, np.nan)
+    pa_final[pa_id[last_idx]] = np.where(T['out7'][last_idx] >= 0, LW7[np.clip(T['out7'][last_idx], 0, 6)], np.nan)
+    fin = pa_final[pa_id]
+    ci = np.clip(T['balls'], 0, 3) * 3 + np.clip(T['strikes'], 0, 2)
+    cv = np.zeros(12)
+    for c in range(12):
+        m = tr & (ci == c) & np.isfinite(fin); cv[c] = float(fin[m].mean()) if m.any() else 0.0
+    res['count_values'] = {f'{c // 3}-{c % 3}': round(float(cv[c]), 4) for c in range(12)}
+    # next state value of each pitch: the next pitch's count value in the same plate appearance, else the terminal value
+    nxt = np.r_[cv[ci[1:]], 0.0]; same_next = np.r_[pak[1:] == pak[:-1], False]
+    term = np.where(T['out7'] >= 0, LW7[np.clip(T['out7'], 0, 6)], np.nan)
+    realized = np.where(same_next, nxt, term) - cv[ci]
+    # the expectation state of each pitch from the previous pitch in the plate appearance
+    fam = np.where(np.isin(T['group'], (0, 1, 2)), 0, np.where(np.isin(T['group'], (3, 4)), 1, 2))
+    kind = np.where(T['call'] == 0, np.where(T['cs'] == 1, 1, 0), np.where(T['call'] == 2, 3, 2))
+    same_prev = np.r_[False, pak[1:] == pak[:-1]]
+    e_state = np.where(same_prev, 1 + np.r_[0, fam[:-1]] * 4 + np.r_[0, kind[:-1]], 0)
+    stage('states')
+    # pairs on the test seasons: hitters with maps against pitchers with pools, the most frequent pairs first
+    te = np.isin(T['season'], tests)
+    pair = T['batter'].astype(np.int64) * 1_000_000 + T['pitcher'].astype(np.int64)
+    up, cnt_p = np.unique(pair[te], return_counts=True)
+    order_p = np.argsort(-cnt_p); up = up[order_p]; cnt_p = cnt_p[order_p]
+    max_pairs = int(params.get('max_pairs', 3000)); min_pair = int(params.get('min_pair_pitches', 12))
+    chosen = [(int(k // 1_000_000), int(k % 1_000_000)) for k, c in zip(up, cnt_p) if c >= min_pair][:max_pairs]
+    stage(f'{len(chosen)} pairs')
+    values = []; adv_rows = []
+    sides = {}
+    t_pairs = 0
+    for h, p in chosen:
+        if h not in M.maps_s or h not in M.h_scalar:
+            continue
+        sd = M.side[h]; P = M.pool(p, sd)
+        if P is None:
+            continue
+        V_h, Va_h, act_h = M.solve(P, h); V_l, Va_l, act_l = M.solve(P, None, M.h_scalar[h])
+        # the league plan's actions evaluated under the hitter's models: follow act_l, value with h's probabilities
+        pr_h = {(b, k): M.probs(P['blocks'][(b, k)], h, P['p_scalar']) for (b, k) in P['blocks']}
+        V_lh = np.zeros_like(V_h); nE = V_h.shape[2]
+        for total in range(5, -1, -1):
+            for b in range(4):
+                k = total - b
+                if k < 0 or k > 2:
+                    continue
+                s, w, c, f, v, fm = pr_h[(b, k)]
+                for _ in range(40 if k == 2 else 1):
+                    for e in range(nE):
+                        j = act_l[(b, k, e)]
+                        ef = fm[j]; wj = w[j]
+                        if M.delta and e != E_NONE and (e - 1) % 4 == 1 and (e - 1) // 4 == ef:
+                            wj = 1 / (1 + np.exp(-(np.log(wj / (1 - wj)) + M.delta)))
+                        q = s[j] * (1 - wj) * (1 - f[j]) * v[j]
+                        q += s[j] * wj * (LW7[1] if k == 2 else V_lh[b, k + 1, 1 + ef * 4 + 3])
+                        q += s[j] * (1 - wj) * f[j] * (V_lh[b, 2, 1 + ef * 4 + 2] if k == 2 else V_lh[b, k + 1, 1 + ef * 4 + 2])
+                        q += (1 - s[j]) * c[j] * (LW7[1] if k == 2 else V_lh[b, k + 1, 1 + ef * 4 + 1])
+                        q += (1 - s[j]) * (1 - c[j]) * (LW7[2] if b == 3 else V_lh[b + 1, k, 1 + ef * 4 + 0])
+                        V_lh[b, k, e] = q
+        values.append((h, p, float(Va_h[0, 0, 0]), float(V_lh[0, 0, 0]), float(V_h[0, 0, 0])))
+        # the natural experiment: the actual test pitches of this pair
+        rows = np.flatnonzero(te & (T['batter'] == h) & (T['pitcher'] == p) & np.isfinite(realized))
+        if len(rows) == 0:
+            continue
+        blk_a = {}
+        for (b, k) in set(zip(T['balls'][rows].tolist(), T['strikes'][rows].tolist())):
+            rr = rows[(T['balls'][rows] == b) & (T['strikes'][rows] == k)]
+            blk = M._blocks(rr, int(b), int(k))
+            hs = (M.h_scalar[h][0], M.h_scalar[h][1], M.h_scalar[h][2])
+            for which, hh in (('h', h), ('l', None)):
+                s, w, c, f, v, fm = M.probs(blk, hh, P['p_scalar'], hs if which == 'l' else None)
+                Vuse = V_h if which == 'h' else V_l
+                for i_, ri in enumerate(rr):
+                    e = int(e_state[ri]); ef = int(fm[i_]); wj = float(w[i_])
+                    if M.delta and e != E_NONE and (e - 1) % 4 == 1 and (e - 1) // 4 == ef:
+                        wj = 1 / (1 + np.exp(-(np.log(wj / (1 - wj)) + M.delta)))
+                    q = s[i_] * (1 - wj) * (1 - f[i_]) * v[i_]
+                    q += s[i_] * wj * (LW7[1] if k == 2 else Vuse[b, k + 1, 1 + ef * 4 + 3])
+                    q += s[i_] * (1 - wj) * f[i_] * (Vuse[b, 2, 1 + ef * 4 + 2] if k == 2 else Vuse[b, k + 1, 1 + ef * 4 + 2])
+                    q += (1 - s[i_]) * c[i_] * (LW7[1] if k == 2 else Vuse[b, k + 1, 1 + ef * 4 + 1])
+                    q += (1 - s[i_]) * (1 - c[i_]) * (LW7[2] if b == 3 else Vuse[b + 1, k, 1 + ef * 4 + 0])
+                    base_q = (Va_h if which == 'h' else Va_l)[b, k, e]
+                    blk_a.setdefault(int(ri), {})[which] = float(q - base_q)
+        for ri, d in blk_a.items():
+            if 'h' in d and 'l' in d:
+                adv_rows.append((ri, d['h'], d['l'], h, p))
+        t_pairs += 1
+        if t_pairs % 200 == 0:
+            stage(f'pairs solved {t_pairs}')
+    stage(f'pairs solved {t_pairs}, pitches {len(adv_rows)}')
+    vals = np.asarray([v[2:] for v in values])
+    if len(vals):
+        pa_w = np.asarray([int(((T['batter'] == h) & (T['pitcher'] == p) & te & (T['last_in_pa'] == 1)).sum()) for h, p, *_ in values], float)
+        wavg = lambda x: float(np.average(x, weights=np.maximum(pa_w, 1)))
+        res['value_runs_per_pa'] = {'pairs': int(len(vals)), 'actual_mix': round(wavg(vals[:, 0]), 4), 'league_plan': round(wavg(vals[:, 1]), 4), 'hitter_plan': round(wavg(vals[:, 2]), 4),
+                                    'league_plan_over_actual': round(wavg(vals[:, 0] - vals[:, 1]), 4), 'hitter_plan_over_league_plan': round(wavg(vals[:, 1] - vals[:, 2]), 4),
+                                    'per_team_season_6100_pa': {'league_plan_over_actual': round(wavg(vals[:, 0] - vals[:, 1]) * 6100, 1), 'hitter_plan_over_league_plan': round(wavg(vals[:, 1] - vals[:, 2]) * 6100, 1)}}
+    if adv_rows:
+        A = np.asarray(adv_rows); ri = A[:, 0].astype(int); adv_h = A[:, 1]; adv_l = A[:, 2]; d = adv_h - adv_l; y = realized[ri]
+        games = T['game'][ri]
+        def reg(x1, x2, yy, cl):
+            X = np.column_stack([np.ones(len(x1)), x1, x2]); beta = np.linalg.lstsq(X, yy, rcond=None)[0]
+            ug, gi = np.unique(cl, return_inverse=True); draws = []
+            for _ in range(int(params.get('reps', 300))):
+                w = np.bincount(rng.integers(0, len(ug), len(ug)), minlength=len(ug))[gi].astype(float)
+                Xw = X * w[:, None]; draws.append(np.linalg.solve(Xw.T @ X + 1e-9 * np.eye(3), Xw.T @ yy))
+            draws = np.asarray(draws)
+            return {'hitter_specific_slope': [round(float(beta[1]), 3), round(float(np.percentile(draws[:, 1], 2.5)), 3), round(float(np.percentile(draws[:, 1], 97.5)), 3)],
+                    'league_advantage_slope': [round(float(beta[2]), 3), round(float(np.percentile(draws[:, 2], 2.5)), 3), round(float(np.percentile(draws[:, 2], 97.5)), 3)]}
+        res['natural_experiment'] = {}
+        for s_ in tests:
+            m = T['season'][ri] == s_
+            if m.sum() < 5000:
+                continue
+            out = reg(d[m], adv_l[m], y[m], games[m]); out['pitches'] = int(m.sum())
+            out['sd_hitter_specific_advantage_runs'] = round(float(d[m].std()), 4); out['sd_league_advantage_runs'] = round(float(adv_l[m].std()), 4)
+            res['natural_experiment'][str(s_)] = out
+        # placebo: the hitter-specific advantage recomputed with another hitter's maps of the same side (a shuffle of maps among the chosen hitters)
+        hs_ = sorted({int(v[0]) for v in values}); by_side = {0: [], 1: []}
+        for h in hs_:
+            by_side[M.side[h]].append(h)
+        perm = {}
+        for sd_, lst in by_side.items():
+            sh = list(lst); rng.shuffle(sh); perm.update(dict(zip(lst, sh)))
+        maps_s0, maps_w0 = M.maps_s, M.maps_w
+        M.maps_s = {h: maps_s0[perm[h]] for h in hs_ if perm[h] in maps_s0}; M.maps_w = {h: maps_w0[perm[h]] for h in hs_ if perm[h] in maps_w0}
+        d_pl = np.full(len(ri), np.nan)
+        # recompute the hitter-specific advantage under the shuffled maps for a sample of the pitches
+        sample = rng.choice(len(ri), min(len(ri), int(params.get('placebo_n', 150000))), replace=False)
+        cacheV = {}
+        for jj in sample:
+            h, p = int(A[jj, 3]), int(A[jj, 4]); key = (h, p)
+            if key not in cacheV:
+                P = M.pool(p, M.side[h]); V_h2, Va_h2, _ = M.solve(P, h); cacheV[key] = (P, V_h2, Va_h2)
+            P, V_h2, Va_h2 = cacheV[key]
+            r_ = np.array([ri[jj]]); b, k = int(T['balls'][ri[jj]]), int(T['strikes'][ri[jj]])
+            blk = M._blocks(r_, b, k); s, w, c, f, v, fm = M.probs(blk, h, P['p_scalar'])
+            e = int(e_state[ri[jj]]); ef = int(fm[0]); wj = float(w[0])
+            q = s[0] * (1 - wj) * (1 - f[0]) * v[0]
+            q += s[0] * wj * (LW7[1] if k == 2 else V_h2[b, k + 1, 1 + ef * 4 + 3])
+            q += s[0] * (1 - wj) * f[0] * (V_h2[b, 2, 1 + ef * 4 + 2] if k == 2 else V_h2[b, k + 1, 1 + ef * 4 + 2])
+            q += (1 - s[0]) * c[0] * (LW7[1] if k == 2 else V_h2[b, k + 1, 1 + ef * 4 + 1])
+            q += (1 - s[0]) * (1 - c[0]) * (LW7[2] if b == 3 else V_h2[b + 1, k, 1 + ef * 4 + 0])
+            d_pl[jj] = (q - Va_h2[b, k, e]) - adv_l[jj]
+        M.maps_s, M.maps_w = maps_s0, maps_w0
+        mp = np.isfinite(d_pl)
+        if mp.sum() > 5000:
+            res['placebo'] = reg(d_pl[mp], adv_l[mp], y[mp], games[mp]); res['placebo']['pitches'] = int(mp.sum())
+        stage('natural experiment')
+    return res
+
+
 # ---------------------------------------------------------------- EXPOSURE-01: does a hitter learn a pitch type within the game
 def exposure_study(T: dict, params: dict, stage) -> dict:
     """Times through the order, pitch by pitch: for each pitch, how many pitches of the same type this hitter has already
@@ -7432,6 +7797,8 @@ def main():
             receipt['results'] = surprise_study(T, params, stage)
         elif experiment == 'seq2':
             receipt['results'] = seq2_study(T, params, stage)
+        elif experiment == 'plan':
+            receipt['results'] = plan_study(T, params, stage)
         elif experiment == 'matchup_pa':
             receipt['results'] = matchup_pa(T, params, stage)
         elif experiment == 'exposure':
