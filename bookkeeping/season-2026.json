@@ -1,33 +1,94 @@
 {
  "schema": "brl.bookkeeping-season-receipt.v1",
- "status": "failed",
- "error": "HTTPError: HTTP Error 409: Conflict",
- "where": [
-  {
-   "file": "request.py",
-   "function": "open",
-   "line": 521
-  },
-  {
-   "file": "request.py",
-   "function": "http_response",
-   "line": 630
-  },
-  {
-   "file": "request.py",
-   "function": "error",
-   "line": 559
-  },
-  {
-   "file": "request.py",
-   "function": "_call_chain",
-   "line": 492
-  },
-  {
-   "file": "request.py",
-   "function": "http_error_default",
-   "line": 639
-  }
- ],
- "failed_at": "2026-10-09T15:35:29.026628+00:00"
+ "year": 2026,
+ "through": "2026-10-08",
+ "games": 2453,
+ "plate_appearances": 185608,
+ "with_pitch_list": 185186,
+ "with_contact": 167184,
+ "fetched_this_run": 0,
+ "failures": [],
+ "cipher_sha256": "c4ef71e0cfb3de33a289ef46d613d6676e3dee28df2a8733c7826956b87fa322",
+ "cipher_bytes": 5501693,
+ "plaintext_gzip_bytes": 5501657,
+ "sealed_at": "2026-10-09T16:01:25.773374+00:00",
+ "path": "private/bookkeeping/season-2026.enc",
+ "format": "AES-256-GCM; BRLAESG1 header; 12-byte nonce; AAD BRL:bookkeeping-season-2026; gzip JSON inside",
+ "study": {
+  "path": "private/statcast/season-2026.enc",
+  "purpose": "pitch-physics-season-2026",
+  "games": 2453,
+  "plate_appearances": 185608,
+  "pitches": 720343,
+  "with_hit_measurement": 125767,
+  "cipher_sha256": "ddbe381ca847cb751a114e8ccc97f872d6652d17a1be2b158c54e5b1c95896ad",
+  "cipher_bytes": 21662972,
+  "pitch_fields": [
+   "type",
+   "code",
+   "balls",
+   "strikes",
+   "start_speed",
+   "end_speed",
+   "spin_rate",
+   "pfx_x",
+   "pfx_z",
+   "plate_x",
+   "plate_z",
+   "release_x",
+   "release_z",
+   "extension",
+   "zone"
+  ],
+  "hit_fields": [
+   "launch_speed",
+   "launch_angle",
+   "distance",
+   "coord_x",
+   "coord_y",
+   "trajectory",
+   "hardness",
+   "location"
+  ]
+ },
+ "physics_table": {
+  "path": "private/statcast/physics-2026.enc",
+  "purpose": "physics-table-season-2026",
+  "rows": 185608,
+  "columns": [
+   "date_key",
+   "game_pk",
+   "at_bat_number",
+   "pitcher",
+   "batter",
+   "n",
+   "sw",
+   "wh",
+   "oz",
+   "ch",
+   "iz",
+   "izs",
+   "izc",
+   "cs",
+   "fb",
+   "velo",
+   "spin",
+   "ivb",
+   "hb",
+   "fb_sw",
+   "fb_wh",
+   "br_n",
+   "br_sw",
+   "br_wh",
+   "os_n",
+   "os_sw",
+   "os_wh",
+   "ev",
+   "la",
+   "outcome",
+   "run_value"
+  ],
+  "cipher_sha256": "82a4c4344e8fcf1164cfc04a4696f21d0899f5a2b9d5a06b90fcee669d75fec3",
+  "cipher_bytes": 4919428
+ }
 }
