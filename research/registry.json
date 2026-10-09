@@ -3505,14 +3505,17 @@
     "columns": {
      "ID": "VALUE-19",
      "Attempt": "Is the engine's structure calibrated against what happened? VALUE-18F's structural per-point value ran 38% above the realized-outcome regression's on the later-period months. Check (diagnostic, descriptive): on the test pitches, the realized telescoping value regressed on the structure's expected value of the same pitch (the hitter's swing chance times the swing value plus the take chance times the take value, each relative to the current count), overall, outside and inside the zone; the swing value against realized values on actual swings and the take value on actual takes, with their mean gaps outside the zone; the placebo's interval now read across reassignments. Development 2025 (maps 2023-2024) and the later-period months (maps 2023-2025). Synthetic reference (effect world, where the structure is true by construction): slope 0.94 overall, 0.90 outside, 0.86 for the swing value on swings, 1.01 for the take value on takes",
-     "Disposition and evidence": "Reading set in advance (no numeric prediction; diagnostic): a slope near the synthetic reference means the structure prices pitches as outcomes do and the 30 to 45 range stands; a slope well below it (under 0.75 outside) means the structure is overconfident and VALUE-20 registers an outcome-calibrated structural pricing (the structural value scaled by the measured slope) before the stated range changes. Receipts: research/discovery-value2-<run>.json",
-     "Delta corrected Brier, 2026": "diagnostic, registered"
+     "Disposition and evidence": "Reading set in advance (no numeric prediction; diagnostic): a slope near the synthetic reference means the structure prices pitches as outcomes do and the 30 to 45 range stands; a slope well below it (under 0.75 outside) means the structure is overconfident and VALUE-20 registers an outcome-calibrated structural pricing (the structural value scaled by the measured slope) before the stated range changes. Receipts: research/discovery-value2-<run>.json Results (runs 37977331791 development 2025, 617,627 test pitches; 37977374753 later-period months, 184,318): **the structure is calibrated against outcomes: realized value on the structure's expected value, slope 0.95 and 0.99 overall, 0.93 and 0.94 outside, 0.98 and 1.03 inside; the swing value on actual swings 1.09 and 1.07, the take value on actual takes 0.99 and 1.02** (synthetic reference 0.94, 0.90, 0.86, 1.01). Mean gaps outside the zone: the structure's swing value sits 0.0019 and 0.0030 runs above realized swings and its take value 0.0021 and 0.0046 below realized takes, so the realized swing-against-take difference on outside pitches is 3 to 6% larger than the structure's (-0.116), not smaller. The per-point gap (structure -0.00116 and -0.00116 against the regression's -0.00073 and -0.00085) is therefore not a miscalibrated structure; the regression's single coefficient averages over pitches where an extra swing costs more or less than at a hitter's own chase spots, and the synthetic worlds show regression pricing of a chosen set is unreliable in both directions (it priced the points choice 1.5 times too high and, by band, the structural choice at 0.46 of its true value in the effect world). The placebo read across reassignments: [-0.00008, +0.00008] and [-0.00005, +0.00019], both covering zero. **Reading under the rule: the 30 to 45 range stands, with the structural figure the better estimate of the structural choice's value and the regression's figure the better-anchored floor.**",
+     "Delta corrected Brier, 2026": "diagnostic: structure calibrated (slopes 0.93 to 1.03); the range stands"
     },
     "registered_before_run": false,
     "diagnostic": true,
-    "runs": [],
+    "runs": [
+     "37977331791",
+     "37977374753"
+    ],
     "frozen_commits": [],
-    "status": "diagnostic, registered"
+    "status": "diagnostic: structure calibrated (slopes 0.93 to 1.03); the range stands"
    }
   ],
   "TOTALS-04": [
