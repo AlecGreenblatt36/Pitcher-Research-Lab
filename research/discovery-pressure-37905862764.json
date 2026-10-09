@@ -1,0 +1,146 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "pressure",
+ "run_id": "37905862764",
+ "params": {
+  "experiment": "pressure",
+  "seasons": [
+   2023,
+   2024,
+   2025
+  ],
+  "reps": 60
+ },
+ "started_at": "2026-10-09T08:36:27.771045+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 7.5
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 15.0
+  },
+  {
+   "stage": "load plate-appearance states",
+   "at_seconds": 22.4
+  },
+  {
+   "stage": "maps 604",
+   "at_seconds": 46.8
+  },
+  {
+   "stage": "pressure",
+   "at_seconds": 51.5
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985
+ },
+ "results": {
+  "outside": {
+   "pitches": 305771,
+   "share_scoring_position": 0.235,
+   "share_late_close": 0.112,
+   "coefficients_logodds": {
+    "intercept": [
+     -0.272,
+     -0.2878,
+     -0.2564
+    ],
+    "scoring_position": [
+     0.1927,
+     0.1673,
+     0.2191
+    ],
+    "late_and_close": [
+     0.0678,
+     0.0255,
+     0.096
+    ],
+    "two_outs": [
+     0.0034,
+     -0.0174,
+     0.0243
+    ],
+    "own_part": [
+     -0.0271,
+     -0.0492,
+     -0.0029
+    ],
+    "own_part_x_scoring_position": [
+     0.0052,
+     -0.0479,
+     0.0457
+    ],
+    "own_part_x_late_and_close": [
+     0.0024,
+     -0.0645,
+     0.0626
+    ]
+   },
+   "points_at_mean": {
+    "scoring_position": 2.58,
+    "late_and_close": 0.91,
+    "two_outs": 0.05
+   }
+  },
+  "inside": {
+   "pitches": 311856,
+   "share_scoring_position": 0.221,
+   "share_late_close": 0.11,
+   "coefficients_logodds": {
+    "intercept": [
+     0.0118,
+     0.0005,
+     0.0235
+    ],
+    "scoring_position": [
+     0.2455,
+     0.222,
+     0.262
+    ],
+    "late_and_close": [
+     -0.0095,
+     -0.0381,
+     0.0197
+    ],
+    "two_outs": [
+     0.0136,
+     -0.0092,
+     0.036
+    ],
+    "own_part": [
+     -0.1613,
+     -0.1943,
+     -0.1418
+    ],
+    "own_part_x_scoring_position": [
+     0.0124,
+     -0.0357,
+     0.057
+    ],
+    "own_part_x_late_and_close": [
+     -0.1256,
+     -0.1701,
+     -0.0669
+    ]
+   },
+   "points_at_mean": {
+    "scoring_position": 3.83,
+    "late_and_close": -0.15,
+    "two_outs": 0.21
+   }
+  },
+  "matched_share": 1.0
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T08:37:19.242191+00:00",
+ "seconds": 51.5
+}
