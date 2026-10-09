@@ -6571,6 +6571,13 @@ def main():
         untouched = (T['season'] == 2026) & (T['day'] >= date(2026, 8, 1).toordinal())
         if params.get('final_eval'):
             receipt['final_eval'] = {'frozen_commit': params.get('frozen_commit'), 'untouched_rows': int(untouched.sum())}
+        elif params.get('product_through') and params.get('experiment') == 'scout':
+            # product export only (SCOUT-03): the August-September regular-season months, scored already, are fitted;
+            # postseason pitches never enter (only regular-season rows up to the date are kept)
+            pt = date.fromisoformat(str(params['product_through'])).toordinal()
+            keep_p = ~untouched | ((T['post'] == 0) & (T['day'] <= pt))
+            receipt['product_export'] = {'through': str(params['product_through']), 'august_on_rows': int((untouched & keep_p).sum())}
+            T = take(T, keep_p)
         else:
             T = take(T, ~untouched)                       # the matchup program's untouched set never enters development runs
         receipt['seasons_rows'] = {int(s): int((T['season'] == s).sum()) for s in np.unique(T['season'])}
