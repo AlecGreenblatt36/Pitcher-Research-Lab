@@ -45,7 +45,24 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
-### In flight (updated 3:45 p.m. Eastern October 9; earlier stamps in this section ran ahead of the clock)
+### In flight (updated 5:15 p.m. Eastern October 9 by the clock; earlier stamps in this section ran ahead of it)
+
+- Evening of October 9: VALUE-18I held (in-zone aims priced structurally came within 2 to 6% of the truth of their own
+  choices in every structured synthetic world; null read zero), so the Report tab shows strike spots (squares; he lets it
+  go, or swings to little effect) and the site states the in-zone part (about 23 runs per team-season) beside the
+  outside range of 30 to 45. Each hitter card now carries his own cost: his swing decisions against the average hitter
+  his side on the pitches he saw, runs per 600 plate appearances, with the cells where it costs him most. VALUE-18J
+  (map-noise draws in the structural interval) is running as a diagnostic in the small and noisy worlds.
+- The report workflow's schedule (13:20 and 20:35 UTC) has not fired once since it was added; every run so far came
+  from a push to diag/report. A manual run now also builds the day's reports (workflow_dispatch input daily=true), but
+  this session's token cannot dispatch workflows, so today's reports were built by a push with {"dates": [yesterday,
+  today], "publish": true}. If the schedule still has not fired by October 10, trigger the daily build from the live
+  slate workflow (permissions actions: write, then gh workflow run brl-report.yml -f daily=true at the two times), or
+  push the two-date parameters from a scheduled task.
+- The rebuild loop died once with a shell (a timed-out command killed its process group); it was restarted as
+  scratch report/backfill_loop3.sh (remaining months of 2026 and 2025, then a second pass over October 1 to 7,
+  September, August, July, June and May 2026 so every month carries strike spots and the by-group tallies). Keep waits
+  inside tool calls short: a command that hits its timeout takes background loops with it.
 
 - The afternoon of October 9 settled the aiming edge's pricing. VALUE-17 (80 synthetic worlds with known truth,
   tools/brl_synth.py, lane experiment 'value_synth'): the old headline method (regression coefficient times fitted gain)
