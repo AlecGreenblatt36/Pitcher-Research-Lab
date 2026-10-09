@@ -849,7 +849,12 @@ def main():
     t0 = time.time()
 
     def stage(name):
-        receipt['stages'].append({'stage': name, 'at_seconds': round(time.time() - t0, 1)}); print(name, round(time.time() - t0), 's', flush=True)
+        try:
+            import resource
+            rss = round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024)        # peak resident set so far, MB (Linux reports KB)
+        except Exception:
+            rss = None
+        receipt['stages'].append({'stage': name, 'at_seconds': round(time.time() - t0, 1), 'peak_rss_mb': rss}); print(name, round(time.time() - t0), 's', rss, 'MB', flush=True)
     try:
         years = {int(d[:4]) for d in dates}
         seasons = sorted(years | {y - 1 for y in years} | set(int(s) for s in params.get('seasons', ())))
@@ -886,6 +891,11 @@ def main():
                 put(repo, token, f'public/reports/{day}/index.json', json.dumps(clean(summary), separators=(',', ':')), branch, f'BRL report {day} summary (as of {a})')
             receipt['reports'][day] = {'games': len(rep['games']), 'bytes': total, 'asof': a, 'graded': sum(1 for g in rep['games'].values() if g.get('grade'))}
             stage(f'report {day}')
+            del rep, summary
+            if params.get('publish', True):
+                # progress so far (a run the runner kills leaves its stages and memory behind; the final receipt replaces this)
+                receipt['status'] = 'in progress'
+                put(repo, token, f'research/report-{run_id}.json', json.dumps(receipt, indent=1), branch, f'BRL report progress {run_id}')
         if params.get('players') or os.environ.get('BRL_REPORT_DAILY'):
             # league-wide player cards as of the latest report date (the same fitted pieces the day's reports used)
             a_last = sorted(fits)[-1] if fits else None
