@@ -85,7 +85,10 @@ def record_from(days: dict) -> dict:
                 if k in rec['bins']:
                     for kk in ('pairs', 'outside', 'chases', 'league', 'map'):
                         rec['bins'][k][kk] += bn.get(kk, 0)
-            for gk, gv in (gr.get('by_group') or {}).items():
+            groups_ = dict(gr.get('by_group') or {})
+            if 'chases' in gr:
+                groups_[f'season:{day[:4]}'] = {'outside': gr.get('outside_pitches', 0), 'chases': gr['chases'], 'league': gr.get('chases_expected_league', 0.0), 'map': gr.get('chases_expected_map', 0.0)}
+            for gk, gv in groups_.items():
                 g_ = rec.setdefault('by_group', {}).setdefault(gk, {'outside': 0, 'chases': 0, 'league': 0.0, 'map': 0.0})
                 for kk in ('outside', 'chases', 'league', 'map'):
                     g_[kk] += gv.get(kk, 0)
@@ -646,7 +649,11 @@ def build_report(fit: Fitted, T_all: dict, day: str, asof: str, stage, max_relie
                         tot['in_recommended'] += gr['in_recommended_cells']; tot['usual_expected'] += gr['usual_share_in_cells'] * gr['outside']
                     bn = tot['bins'][bin_of(pr['chase_points'])]
                     bn['pairs'] += 1; bn['outside'] += gr['outside']; bn['chases'] += gr['chases']; bn['league'] += gr['chases_expected_league']; bn['map'] += gr['chases_expected_map']
-                    for gk, gv in (gr.get('by_group') or {}).items():
+                    groups_ = dict(gr.get('by_group') or {})
+                    lvl = (pr.get('evidence') or {}).get('level')
+                    if lvl and 'chases' in gr:          # coverage: how much the hitter's map and the pitcher's spots rest on
+                        groups_[f'coverage:{lvl}'] = {'outside': gr['outside'], 'chases': gr['chases'], 'league': gr['chases_expected_league'], 'map': gr['chases_expected_map']}
+                    for gk, gv in groups_.items():
                         g_ = tot.setdefault('by_group', {}).setdefault(gk, {'outside': 0, 'chases': 0, 'league': 0.0, 'map': 0.0})
                         for kk in ('outside', 'chases', 'league', 'map'):
                             g_[kk] += gv[kk]
