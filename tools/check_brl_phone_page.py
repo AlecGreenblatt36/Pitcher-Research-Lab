@@ -152,6 +152,39 @@ def main():
                 assert 'regular-season habits' in page.inner_text('#app')
                 assert 'pitch-by-pitch' in page.inner_text('#app')
                 design_check('how');page.screenshot(path=str(out/f'how_{width}.png'),full_page=True)
+                # Players pages and the matchup report read model outputs from the data branch: recorded, with the design checks applied when they load; only page errors fail.
+                try:
+                    go('#/players');loaded=False
+                    for _ in range(15):
+                        page.wait_for_timeout(1000)
+                        if page.locator('.pl-list li').count()>=20:loaded=True;break
+                    info={'list_rows':page.locator('.pl-list li').count(),'loaded':loaded}
+                    if loaded:
+                        design_check('players');page.screenshot(path=str(out/f'players_{width}.png'),full_page=True)
+                        href=page.locator('.pl-list a').first.get_attribute('href');go(href)
+                        for _ in range(15):
+                            page.wait_for_timeout(1000)
+                            if page.locator('.rp-grid').count():break
+                        info.update(card=href,card_grids=page.locator('.rp-grid').count(),card_text=re.sub(r'\s+',' ',page.inner_text('#app')[:240]))
+                        if page.locator('.rp-grid').count():design_check('player_card');page.screenshot(path=str(out/f'player_card_{width}.png'),full_page=True)
+                    receipt.setdefault('players',[]).append({'width':width,**info})
+                except Exception as exc:
+                    receipt.setdefault('players',[]).append({'width':width,'error':type(exc).__name__+': '+str(exc)[:200]})
+                try:
+                    f=next(iter(latest.values()))[1] if latest else None
+                    if f:
+                        go(f'#/game/{f["game_pk"]}/report');loaded=False
+                        for _ in range(15):
+                            page.wait_for_timeout(1000)
+                            if page.locator('table.mu').count() or 'No matchup report' in page.inner_text('#app'):loaded=True;break
+                        info={'game':f['game_pk'],'loaded':loaded,'tables':page.locator('table.mu').count(),'now_strip':page.locator('.rp-now').count()}
+                        if page.locator('table.mu').count():
+                            page.locator('td.rp-cell[style]').first.click();page.wait_for_timeout(300)
+                            info['plan_grids']=page.locator('.rp-grid').count()
+                            design_check('report');page.screenshot(path=str(out/f'report_{width}.png'),full_page=True)
+                        receipt.setdefault('report',[]).append({'width':width,**info})
+                except Exception as exc:
+                    receipt.setdefault('report',[]).append({'width':width,'error':type(exc).__name__+': '+str(exc)[:200]})
                 # Past dates: the season replay's cards come from the page's own files; the game opens from MLB's feed.
                 go('#/day/2026-07-04');page.wait_for_timeout(2500)
                 assert page.locator('nav.dstrip').count()==1,'Missing date strip'
@@ -191,7 +224,7 @@ def main():
                                 if 'Live from MLB' in text or 'Final from the official feed' in text:seen=True;break
                             feed.update(browser_feed_seen=seen,win_chart='Win chance through the game' in text,
                                         scoring_plays='Scoring plays so far' in text or 'Scoring plays' in text,
-                                        hero=re.sub(r'\s+',' ',text[:600]))
+                                        this_at_bat=page.locator('.rp-now').count(),hero=re.sub(r'\s+',' ',text[:600]))
                             page.screenshot(path=str(out/'live_game_390.png'),full_page=True)
                         receipt['browser_feed']=feed
                     except Exception as exc:

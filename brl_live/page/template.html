@@ -374,23 +374,24 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .pl-list .who { min-width: 0; } .pl-list .who small { color: var(--muted); margin-left: 6px; }
 .pl-list b { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .pl-list .good { color: var(--good); } .pl-list .bad { color: var(--bad); }
+.pl-back { display: inline-block; padding: 12px 4px; margin: -12px -4px; min-height: 44px; box-sizing: border-box; }
 .rp-card { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 12px; min-width: 0; }
 .rp-card h4 { margin: 0 0 6px; font-size: 16px; }
-.rp-card h4 small { font-weight: 400; color: var(--muted); font-size: 13px; }
-.rp-card .lbl { font-size: 13px; color: var(--muted); margin: 6px 0 4px; }
+.rp-card h4 small { font-weight: 400; color: var(--muted); font-size: 14px; }
+.rp-card .lbl { font-size: 14px; color: var(--muted); margin: 6px 0 4px; }
 .rp-grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 10px 0; }
 .rp-grade div { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 10px 12px; }
 .rp-grade b { display: block; font-size: 22px; }
-.rp-grade span { font-size: 13px; color: var(--muted); }
+.rp-grade span { font-size: 14px; color: var(--muted); }
 .rp-now { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 12px 0 14px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid var(--live); border-radius: 10px; }
 .rp-now .pill { margin: 0; }
 .rp-now-who { flex: 1 1 220px; min-width: 0; font-size: 16px; line-height: 1.35; }
 .rp-now-who small { display: block; color: var(--muted); font-size: 14px; }
-.rp-now .rp-follow { display: inline-flex; align-items: center; min-height: 40px; padding: 6px 14px; border-radius: 8px; border: 1px solid var(--rule-strong); background: var(--surface); font: inherit; font-size: 15px; font-weight: 700; color: var(--ink); text-decoration: none; cursor: pointer; }
+.rp-now .rp-follow { display: inline-flex; align-items: center; min-height: 44px; padding: 6px 14px; border-radius: 8px; border: 1px solid var(--rule-strong); background: var(--surface); font: inherit; font-size: 15px; font-weight: 700; color: var(--ink); text-decoration: none; cursor: pointer; }
 .rp-now .rp-follow[aria-pressed="true"] { background: var(--board); color: var(--chalk); border-color: var(--board); }
-.rp-now .rp-deck { border: 0; padding: 0; background: none; font: inherit; color: var(--ink); text-decoration: underline; cursor: pointer; }
+.rp-now .rp-deck { border: 0; padding: 12px 4px; margin: -12px -2px; min-height: 44px; background: none; font: inherit; color: var(--ink); text-decoration: underline; cursor: pointer; }
 .rp-now-miss { flex: 1 1 100%; color: var(--muted); font-size: 14px; }
-.sec h3 .pill { font-size: 13px; line-height: 20px; vertical-align: 3px; }
+.sec h3 .pill { font-size: 14px; line-height: 20px; vertical-align: 3px; }
 .mu td.rp-sel { outline: 3px solid var(--ink); outline-offset: -3px; }
 .mu td.rp-cell { cursor: pointer; }
 
@@ -2596,7 +2597,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var show = function (doc) {
         var x = doc.players[id];
         if (!x) { app.innerHTML = '<div class="wrap"><div class="page-head"><h1>Players</h1></div><p class="empty">No card for this player.</p></div>'; return; }
-        var h = '<div class="wrap"><div class="page-head"><h1>' + esc(x.name) + '</h1><p>' + esc(x.team) + (x.team ? ", " : "") + (x.kind === "hitter" ? "bats " + esc(x.side) : "throws " + esc(x.throws)) + ", " + Number(x.pitches).toLocaleString() + " pitches behind the card, as of " + esc(dateLabel(doc.asof)) + '. <a href="#/players">All players</a></p></div>';
+        var h = '<div class="wrap"><div class="page-head"><h1>' + esc(x.name) + '</h1><p>' + esc(x.team) + (x.team ? ", " : "") + (x.kind === "hitter" ? "bats " + esc(x.side) : "throws " + esc(x.throws)) + ", " + Number(x.pitches).toLocaleString() + " pitches behind the card, as of " + esc(dateLabel(doc.asof)) + '. <a class="pl-back" href="#/players">All players</a></p></div>';
         if (x.kind === "hitter") {
           var oc = x.own_cost;
           if (oc) h += '<p class="note">His swing decisions against the average hitter his side, on the pitches he actually saw: <b>' + fmtCost(oc.runs_per_600_pa) + " runs per 600 plate appearances</b> (" + fmtCost(oc.outside_runs_per_600_pa) + " outside the zone, " + fmtCost(oc.inside_runs_per_600_pa) + " inside)" +

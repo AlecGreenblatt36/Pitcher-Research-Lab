@@ -48,7 +48,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           test -f phone-check/receipt.json || exit 0
-          python -c "import json; r=json.load(open('phone-check/receipt.json')); json.dump({k: r.get(k) for k in ('started_at', 'finished_at', 'status', 'error', 'browser_feed', 'past_games', 'checks', 'scored_games')}, open('phone-check/summary.json', 'w'), indent=1)"
+          python -c "import json; r=json.load(open('phone-check/receipt.json')); json.dump({k: r.get(k) for k in ('started_at', 'finished_at', 'status', 'error', 'browser_feed', 'past_games', 'players', 'report', 'checks', 'scored_games')}, open('phone-check/summary.json', 'w'), indent=1)"
           python tools/brl_record_diagnostic.py "diagnostics/phone_check_latest.json" phone-check/summary.json || true
       - name: Record the page-check receipt on the ledger branch when the check fails
         if: failure()
