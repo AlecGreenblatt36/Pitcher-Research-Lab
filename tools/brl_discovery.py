@@ -2378,7 +2378,7 @@ def pitcher_propensity(t: dict, k: float = 600.0) -> np.ndarray:
     return swing_propensity(tt, k)
 
 
-def matchup_swing(T: dict, params: dict, stage) -> dict:
+def matchup_swing(T: dict, params: dict, stage, positions: dict | None = None) -> dict:
     """Does each hitter's own swing map, read at the decision moment, predict his swings (and his chases against a given
     pitcher) beyond the league map and additive hitter and pitcher terms? Train 2023-2024, choose the shrinkage on the
     second half of 2024, score 2025 (2026 is left out: its plate locations use a different reference)."""
@@ -2399,6 +2399,20 @@ def matchup_swing(T: dict, params: dict, stage) -> dict:
         hgt = np.clip(top_b - bot_b, 1.2, 2.8)
         zn_ = lambda z_: 1.5 + 2.0 * (z_ - bot_b) / hgt          # the batter's zone mapped onto the fixed 1.5 to 3.5 ft
         reps = {'percept': (xp, zp), 'percept_zone': (xp, zn_(zp))}
+    brel = positions is not None                  # MATCHUP-09: the sideways position measured partly from the batter (STANCE-01)
+    if brel:
+        offs = np.array([positions.get(int(h_), np.nan) for h_ in np.unique(T['batter'])])
+        mean_off = float(np.nanmean(offs)) if np.isfinite(offs).any() else 28.0
+        lut = {int(h_): v_ for h_, v_ in zip(np.unique(T['batter']), offs)}
+        dlt = np.array([lut.get(int(h_), np.nan) for h_ in T['batter']]); has_pos = np.isfinite(dlt)
+        dlt = np.where(has_pos, (dlt - mean_off) / 12.0, 0.0)          # ft farther off the plate than the average hitter
+        sgn = np.where(T['stand_r'] == 1, 1.0, -1.0)                     # x grows away from a right-handed hitter, toward a left-handed one
+        weights = [float(w_) for w_ in params.get('body_weights', (0.25, 0.5, 1.0))]
+        reps = {'percept': (xp, zp)}
+        for w_ in weights:
+            reps[f'percept_body_{w_:g}'] = (xp + sgn * w_ * dlt, zp)
+        res['positions'] = {'hitters_with_position': int(np.isfinite(offs).sum()), 'mean_off_plate_in': round(mean_off, 2),
+                            'decisions_with_position_share': round(float(has_pos.mean()), 4), 'weights': weights}
     C = np.hstack([control_block(T, swing_propensity(T)), pitcher_propensity(T)[:, None].astype(np.float32)])
     stage('features')
     test_season = seasons[-1]
@@ -2420,6 +2434,7 @@ def matchup_swing(T: dict, params: dict, stage) -> dict:
             return m.decision_function(X)
         off_a = league(fit_a)                     # league model without the validation half, for choosing shrinkage
         off = league(tr)                          # league model on all training pitches, for the test
+        val_league_ll = float(logloss_vec(1 / (1 + np.exp(-off_a[val])), swing[val]).mean())
         Bm = hitter_basis(x, z, T['stand_r'], T['strikes'])
         bat = T['batter']
         def groups(rows):
@@ -2456,14 +2471,26 @@ def matchup_swing(T: dict, params: dict, stage) -> dict:
         lo_te = lo_all[te]; covered = covered[te]
         p_league = 1 / (1 + np.exp(-off[te])); p_hit = 1 / (1 + np.exp(-lo_te))
         preds[name] = (p_league, p_hit)
-        out[name] = {'shrinkage_chosen': best, 'validation_logloss': {str(k): round(v, 5) for k, v in val_ll.items()},
+        out[name] = {'shrinkage_chosen': best, 'validation_logloss': {str(k): round(v, 5) for k, v in val_ll.items()}, 'validation_league_logloss': round(val_league_ll, 6),
                      'test_logloss_league': round(float(logloss_vec(p_league, yt).mean()), 5), 'test_logloss_hitter_maps': round(float(logloss_vec(p_hit, yt).mean()), 5),
                      'test_share_with_hitter_map': round(float(covered.mean()), 4)}
         stage('representation ' + name)
     cc = lambda d: [round(v * 1000, 3) for v in clustered_ci(d, games)]
     res['representations'] = out
     lp, hp = [logloss_vec(p, yt) for p in preds['percept']]
-    if zrel:
+    if brel:
+        # the weight is chosen on the validation half by the league model's log loss (the plate frame is weight 0)
+        body = [k_ for k_ in out if k_.startswith('percept_body_')]
+        res['body_weight_validation_league_logloss'] = {k_: out[k_]['validation_league_logloss'] for k_ in body + ['percept']}
+        chosen = min(body, key=lambda k_: out[k_]['validation_league_logloss'])
+        res['body_weight_chosen'] = chosen
+        g_ = {}
+        for k_ in body:
+            lb, hb_ = [logloss_vec(p, yt) for p in preds[k_]]
+            g_[k_] = {'body_over_plate_league': cc(lp - lb), 'body_over_plate_hitter_maps': cc(hp - hb_)}
+        res['gain_nats_per_1000_decisions'] = {'chosen': g_[chosen], 'by_weight': g_, 'hitter_maps_over_league_plate': cc(lp - hp)}
+        preds['percept_zone'] = preds[chosen]
+    elif zrel:
         lz, hz = [logloss_vec(p, yt) for p in preds['percept_zone']]
         res['gain_nats_per_1000_decisions'] = {'zone_over_fixed_league': cc(lp - lz), 'zone_over_fixed_hitter_maps': cc(hp - hz),
                                                'hitter_maps_over_league_fixed': cc(lp - hp), 'hitter_maps_over_league_zone': cc(lz - hz)}
@@ -5224,7 +5251,7 @@ def _bat_intrinsic(S: dict, seasons, min_swings: int = 150) -> tuple[dict, dict]
     return out, check
 
 
-def _batter_positions(S: dict, seasons, min_swings: int = 150) -> tuple[dict, dict]:
+def _batter_positions(S: dict, seasons, min_swings: int = 150, params_grid_lo: float = -1.5) -> tuple[dict, dict]:
     """STANCE-01: where each hitter stands, from bat tracking. Savant's intercept fields give the ball's position minus
     the batter's (his center of mass) when the bat meets the ball, sideways (ix) and toward the pitcher (iy). The ball's
     position along its fitted flight is known at any distance from the plate, so for one hitter-season his position
@@ -5249,7 +5276,7 @@ def _batter_positions(S: dict, seasons, min_swings: int = 150) -> tuple[dict, di
         ok &= np.isfinite(S[k].astype(np.float64))
     stand_r = stand == 'R'
     bat = S['batter'].astype(np.int64); gpk = S['game_pk'].astype(np.int64)
-    grid = np.round(np.arange(-1.5, 4.0001, 0.05), 3)
+    grid = np.round(np.arange(float(params_grid_lo), 4.0001, 0.05), 3)
     out, check = {}, {'grid_ft': [float(grid[0]), float(grid[-1])], 'by_season': {}}
     for ssn in seasons:
         m = ok & (yr == ssn)
@@ -7133,7 +7160,26 @@ def main():
         elif experiment == 'zone_audit':
             receipt['results'] = zone_audit(T, params, stage)
         elif experiment == 'matchup_swing':
-            receipt['results'] = matchup_swing(T, params, stage)
+            positions = None
+            if params.get('body_relative'):
+                import importlib.util
+                spec = importlib.util.spec_from_file_location('brl_matchup', ROOT / 'tools' / 'brl_matchup.py')
+                mx = importlib.util.module_from_spec(spec); spec.loader.exec_module(mx)
+                pos_seasons = [int(v) for v in params.get('position_seasons', (2025,))]
+                got = []
+                for year in pos_seasons:
+                    stage(f'load savant {year}')
+                    got.extend(load_savant(repo, token, branch, key, int(year)))
+                S = mx.merge(got); del got
+                keep_s = S['day'] < date(2026, 8, 1).toordinal()             # the untouched months stay out
+                S = {k: (v[keep_s] if not k.endswith('__vocab') else v) for k, v in S.items()}
+                pos, pos_check = _batter_positions(S, pos_seasons, int(params.get('min_swings', 150)), float(params.get('grid_lo', -3.0)))
+                receipt['position_check'] = pos_check; del S
+                positions = {}
+                for (b_, s_), v_ in sorted(pos.items(), key=lambda kv: kv[0][1]):
+                    positions[b_] = v_['off_plate_in']                       # the latest position season wins
+                stage(f'positions {len(positions)}')
+            receipt['results'] = matchup_swing(T, params, stage, positions)
         elif experiment == 'fatigue':
             receipt['results'] = fatigue(T, params, stage)
         elif experiment == 'surprise':
