@@ -378,3 +378,60 @@ def main(params: dict | None = None, stage=None):
 if __name__ == '__main__':
     rec = main()
     print(json.dumps({k: v['summary'] for k, v in rec['results'].items()}, indent=1))
+
+
+# ---------------------------------------------------------------- PLAN-02S: the planner priced by the generator
+def true_probs_for_pool(G: dict, M, P: dict, h: int, p: int):
+    """The generator's probabilities for every pool pitch of pitcher p against hitter h at every count: {(b, k): (s, w, c, f, v, fam)}."""
+    T = M.T; rows = P['rows']; b_ = np.full(len(rows), h - 5000); p_ = np.full(len(rows), p - 1000); sr = np.full(len(rows), (h - 5000) % 2)
+    px, pz = T['px'][rows].astype(np.float64), T['pz'][rows].astype(np.float64)
+    t_ = np.vectorize(TYPE_OF.get)(T['group'][rows]); fam = np.where(t_ == 0, 0, np.where(t_ == 1, 1, 2))
+    out = {}
+    for b in range(4):
+        for k in range(3):
+            pr = probs(G, b_, p_, sr, px, pz, t_, np.full(len(rows), k))
+            out[(b, k)] = (pr['p_sw'], pr['p_w'], pr['p_c'], pr['p_f'], pr['vb'], fam)
+    return out
+
+
+def policy_value(pr: dict, act, cg=None, optimal=False):
+    """Value iteration over counts and expectation states with the probabilities pr; the policy is act[(b, k, e)] (a pool index),
+    or the pool mix of the count group (cg weights) when act is None, or the best action when optimal. Returns V[0, 0, 0] and
+    the value table."""
+    nE = 13; V = np.zeros((4, 3, nE)); best = {}
+    for total in range(5, -1, -1):
+        for b in range(4):
+            k = total - b
+            if k < 0 or k > 2:
+                continue
+            s, w, c, f, v, fam = pr[(b, k)]
+            c3 = 2 if k == 2 else (1 if b > k else 0)
+            wts = None
+            if act is None and not optimal:
+                wts = (cg == c3).astype(np.float64); wts = wts / max(wts.sum(), 1e-9)
+            for _ in range(40 if k == 2 else 1):
+                for e in range(nE):
+                    idx_e = lambda kind: 1 + fam * 4 + kind
+                    q = s * (1 - w) * (1 - f) * v
+                    q = q + s * w * (LW7[1] if k == 2 else V[b, k + 1][idx_e(3)])
+                    q = q + s * (1 - w) * f * (V[b, 2][idx_e(2)] if k == 2 else V[b, k + 1][idx_e(2)])
+                    q = q + (1 - s) * c * (LW7[1] if k == 2 else V[b, k + 1][idx_e(1)])
+                    q = q + (1 - s) * (1 - c) * (LW7[2] if b == 3 else V[b + 1, k][idx_e(0)])
+                    if optimal:
+                        j = int(np.argmin(q)); V[b, k, e] = q[j]; best[(b, k, e)] = j
+                    elif act is None:
+                        V[b, k, e] = float(np.dot(wts, q))
+                    else:
+                        V[b, k, e] = float(q[act[(b, k, e)]])
+    return float(V[0, 0, 0]), V, best
+
+
+def planner_truth(G: dict, M, P: dict, h: int, p: int, act_h, act_l):
+    """True values (runs per plate appearance from 0-0, the hitter's perspective, lower is better for the pitcher) of the actual mix,
+    the league plan, the hitter plan and the oracle, under the generator."""
+    pr = true_probs_for_pool(G, M, P, h, p)
+    v_mix, _, _ = policy_value(pr, None, P['cg'])
+    v_l, _, _ = policy_value(pr, act_l)
+    v_h, _, _ = policy_value(pr, act_h)
+    v_o, _, _ = policy_value(pr, None, None, optimal=True)
+    return {'actual_mix': v_mix, 'league_plan': v_l, 'hitter_plan': v_h, 'oracle': v_o}
