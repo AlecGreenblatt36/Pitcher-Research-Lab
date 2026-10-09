@@ -1,0 +1,630 @@
+{
+ "schema": "brl.discovery-receipt.v1",
+ "experiment": "swingmap",
+ "run_id": "37932692432",
+ "params": {
+  "experiment": "swingmap",
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "map_seasons": [
+   2025,
+   2026
+  ],
+  "min_pitches": 500,
+  "min_swings": 150,
+  "stance": true
+ },
+ "started_at": "2026-10-09T12:50:53.164283+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 9.7
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 19.2
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 28.9
+  },
+  {
+   "stage": "load savant 2025",
+   "at_seconds": 39.1
+  },
+  {
+   "stage": "load savant 2026",
+   "at_seconds": 44.7
+  },
+  {
+   "stage": "league model",
+   "at_seconds": 82.3
+  },
+  {
+   "stage": "maps 2025: 417",
+   "at_seconds": 82.9
+  },
+  {
+   "stage": "maps 2026: 370",
+   "at_seconds": 83.3
+  },
+  {
+   "stage": "stance",
+   "at_seconds": 89.0
+  },
+  {
+   "stage": "bat measures 902",
+   "at_seconds": 89.0
+  },
+  {
+   "stage": "correlations",
+   "at_seconds": 95.0
+  }
+ ],
+ "seasons_rows": {
+  "2023": 717003,
+  "2024": 708425,
+  "2025": 708985,
+  "2026": 484833
+ },
+ "savant_rows": 1199591,
+ "results": {
+  "attack_direction_orientation": {
+   "R": {
+    "corr_raw_with_pull_spray": -0.44,
+    "balls_in_play": 107911
+   },
+   "L": {
+    "corr_raw_with_pull_spray": -0.423,
+    "balls_in_play": 90541
+   }
+  },
+  "stance_check": {
+   "grid_ft": [
+    -1.5,
+    4.0
+   ],
+   "by_season": {
+    "2025": {
+     "swings": 318247,
+     "convention": {
+      "R": {
+       "median_x_ball_minus_ix_ft": -3.051,
+       "median_x_ball_plus_ix_ft": 3.156,
+       "sign_used": 1.0
+      },
+      "L": {
+       "median_x_ball_minus_ix_ft": -3.143,
+       "median_x_ball_plus_ix_ft": 2.984,
+       "sign_used": -1.0
+      }
+     },
+     "hitters": 354,
+     "edge_share": 0.2333,
+     "off_plate_in_percentiles": [
+      23.91,
+      26.32,
+      27.99,
+      29.26,
+      31.56
+     ],
+     "depth_in_percentiles": [
+      18.2,
+      25.4,
+      28.1,
+      31.4,
+      34.4
+     ],
+     "split_half_r": {
+      "off_plate": 0.994,
+      "depth": 0.587
+     },
+     "split_half_hitters": 311
+    },
+    "2026": {
+     "swings": 216480,
+     "convention": {
+      "R": {
+       "median_x_ball_minus_ix_ft": -3.037,
+       "median_x_ball_plus_ix_ft": 3.131,
+       "sign_used": 1.0
+      },
+      "L": {
+       "median_x_ball_minus_ix_ft": -3.107,
+       "median_x_ball_plus_ix_ft": 2.964,
+       "sign_used": -1.0
+      }
+     },
+     "hitters": 310,
+     "edge_share": 0.2619,
+     "off_plate_in_percentiles": [
+      24.01,
+      26.21,
+      27.88,
+      29.45,
+      31.57
+     ],
+     "depth_in_percentiles": [
+      17.87,
+      24.8,
+      29.0,
+      32.0,
+      33.8
+     ],
+     "split_half_r": {
+      "off_plate": 0.994,
+      "depth": 0.584
+     },
+     "split_half_hitters": 258
+    }
+   }
+  },
+  "hitter_seasons": {
+   "2025": 417,
+   "2026": 370
+  },
+  "by_season": {
+   "2025": {
+    "off_plate_in__away_minus_inside": {
+     "n": 322,
+     "r": [
+      -0.266,
+      -0.364,
+      -0.16
+     ],
+     "slope_points_per_unit": -0.7483
+    },
+    "depth_in__outside_level": {
+     "n": 322,
+     "r": [
+      -0.059,
+      -0.17,
+      0.052
+     ],
+     "slope_points_per_unit": -0.0287
+    },
+    "off_plate_in__outside_level": {
+     "n": 322,
+     "r": [
+      0.074,
+      -0.027,
+      0.173
+     ],
+     "slope_points_per_unit": 0.0737
+    },
+    "depth_in__away_minus_inside": {
+     "n": 322,
+     "r": [
+      -0.002,
+      -0.107,
+      0.109
+     ],
+     "slope_points_per_unit": -0.0025
+    },
+    "off_plate_in__high_minus_low": {
+     "n": 322,
+     "r": [
+      0.195,
+      0.08,
+      0.31
+     ],
+     "slope_points_per_unit": 0.4783
+    },
+    "depth_in__high_minus_low": {
+     "n": 322,
+     "r": [
+      0.058,
+      -0.049,
+      0.167
+     ],
+     "slope_points_per_unit": 0.0701
+    },
+    "attack_angle__high_minus_low": {
+     "n": 417,
+     "r": [
+      0.056,
+      -0.045,
+      0.154
+     ],
+     "slope_points_per_unit": 0.0879
+    },
+    "swing_path_tilt__high_minus_low": {
+     "n": 417,
+     "r": [
+      -0.002,
+      -0.109,
+      0.102
+     ],
+     "slope_points_per_unit": -0.0028
+    },
+    "attack_direction_pull__away_minus_inside": {
+     "n": 417,
+     "r": [
+      0.102,
+      -0.003,
+      0.203
+     ],
+     "slope_points_per_unit": 0.1515
+    },
+    "contact_depth_in__away_minus_inside": {
+     "n": 417,
+     "r": [
+      0.047,
+      -0.048,
+      0.147
+     ],
+     "slope_points_per_unit": 0.0951
+    },
+    "bat_speed__outside_level": {
+     "n": 417,
+     "r": [
+      0.124,
+      0.02,
+      0.222
+     ],
+     "slope_points_per_unit": 0.1117
+    },
+    "swing_length__outside_level": {
+     "n": 417,
+     "r": [
+      0.097,
+      -0.006,
+      0.2
+     ],
+     "slope_points_per_unit": 0.5764
+    },
+    "attack_angle__outside_level": {
+     "n": 417,
+     "r": [
+      -0.035,
+      -0.122,
+      0.056
+     ],
+     "slope_points_per_unit": -0.023
+    },
+    "contact_depth_in__high_minus_low": {
+     "n": 417,
+     "r": [
+      -0.078,
+      -0.17,
+      0.014
+     ],
+     "slope_points_per_unit": -0.1426
+    },
+    "attack_angle__high_minus_low__R": {
+     "n": 227,
+     "r": [
+      0.066,
+      -0.087,
+      0.205
+     ],
+     "slope_points_per_unit": 0.1091
+    },
+    "off_plate_in__away_minus_inside__R": {
+     "n": 193,
+     "r": [
+      -0.306,
+      -0.426,
+      -0.176
+     ],
+     "slope_points_per_unit": -0.9542
+    },
+    "attack_angle__high_minus_low__L": {
+     "n": 190,
+     "r": [
+      0.042,
+      -0.092,
+      0.172
+     ],
+     "slope_points_per_unit": 0.0633
+    },
+    "off_plate_in__away_minus_inside__L": {
+     "n": 129,
+     "r": [
+      -0.225,
+      -0.398,
+      -0.043
+     ],
+     "slope_points_per_unit": -0.5525
+    }
+   },
+   "2026": {
+    "off_plate_in__away_minus_inside": {
+     "n": 268,
+     "r": [
+      -0.304,
+      -0.407,
+      -0.185
+     ],
+     "slope_points_per_unit": -0.7652
+    },
+    "depth_in__outside_level": {
+     "n": 268,
+     "r": [
+      -0.052,
+      -0.176,
+      0.072
+     ],
+     "slope_points_per_unit": -0.0237
+    },
+    "off_plate_in__outside_level": {
+     "n": 268,
+     "r": [
+      0.126,
+      -0.009,
+      0.264
+     ],
+     "slope_points_per_unit": 0.1221
+    },
+    "depth_in__away_minus_inside": {
+     "n": 268,
+     "r": [
+      -0.072,
+      -0.189,
+      0.051
+     ],
+     "slope_points_per_unit": -0.0853
+    },
+    "off_plate_in__high_minus_low": {
+     "n": 268,
+     "r": [
+      0.102,
+      -0.024,
+      0.222
+     ],
+     "slope_points_per_unit": 0.2508
+    },
+    "depth_in__high_minus_low": {
+     "n": 268,
+     "r": [
+      0.068,
+      -0.055,
+      0.189
+     ],
+     "slope_points_per_unit": 0.079
+    },
+    "attack_angle__high_minus_low": {
+     "n": 370,
+     "r": [
+      -0.034,
+      -0.133,
+      0.069
+     ],
+     "slope_points_per_unit": -0.056
+    },
+    "swing_path_tilt__high_minus_low": {
+     "n": 370,
+     "r": [
+      0.032,
+      -0.076,
+      0.138
+     ],
+     "slope_points_per_unit": 0.0509
+    },
+    "attack_direction_pull__away_minus_inside": {
+     "n": 370,
+     "r": [
+      0.106,
+      -0.005,
+      0.209
+     ],
+     "slope_points_per_unit": 0.1344
+    },
+    "contact_depth_in__away_minus_inside": {
+     "n": 370,
+     "r": [
+      0.05,
+      -0.053,
+      0.152
+     ],
+     "slope_points_per_unit": 0.0888
+    },
+    "bat_speed__outside_level": {
+     "n": 370,
+     "r": [
+      0.079,
+      -0.017,
+      0.179
+     ],
+     "slope_points_per_unit": 0.0696
+    },
+    "swing_length__outside_level": {
+     "n": 370,
+     "r": [
+      0.011,
+      -0.097,
+      0.12
+     ],
+     "slope_points_per_unit": 0.0626
+    },
+    "attack_angle__outside_level": {
+     "n": 370,
+     "r": [
+      -0.015,
+      -0.12,
+      0.091
+     ],
+     "slope_points_per_unit": -0.0097
+    },
+    "contact_depth_in__high_minus_low": {
+     "n": 370,
+     "r": [
+      -0.068,
+      -0.176,
+      0.04
+     ],
+     "slope_points_per_unit": -0.1243
+    },
+    "attack_angle__high_minus_low__R": {
+     "n": 181,
+     "r": [
+      -0.07,
+      -0.213,
+      0.08
+     ],
+     "slope_points_per_unit": -0.1139
+    },
+    "off_plate_in__away_minus_inside__R": {
+     "n": 150,
+     "r": [
+      -0.389,
+      -0.519,
+      -0.246
+     ],
+     "slope_points_per_unit": -1.1896
+    },
+    "attack_angle__high_minus_low__L": {
+     "n": 189,
+     "r": [
+      0.003,
+      -0.135,
+      0.139
+     ],
+     "slope_points_per_unit": 0.0054
+    },
+    "off_plate_in__away_minus_inside__L": {
+     "n": 118,
+     "r": [
+      -0.225,
+      -0.4,
+      -0.032
+     ],
+     "slope_points_per_unit": -0.4387
+    }
+   }
+  },
+  "change": {
+   "hitters": 297,
+   "off_plate_in__away_minus_inside": {
+    "n": 196,
+    "r": [
+     -0.311,
+     -0.446,
+     -0.186
+    ],
+    "slope_points_per_unit": -1.3175
+   },
+   "depth_in__outside_level": {
+    "n": 196,
+    "r": [
+     -0.028,
+     -0.163,
+     0.122
+    ],
+    "slope_points_per_unit": -0.0157
+   },
+   "off_plate_in__outside_level": {
+    "n": 196,
+    "r": [
+     -0.021,
+     -0.159,
+     0.121
+    ],
+    "slope_points_per_unit": -0.0431
+   },
+   "depth_in__away_minus_inside": {
+    "n": 196,
+    "r": [
+     -0.018,
+     -0.172,
+     0.123
+    ],
+    "slope_points_per_unit": -0.0202
+   }
+  },
+  "repeat": {
+   "high_minus_low": {
+    "n": 297,
+    "r": [
+     0.685,
+     0.621,
+     0.742
+    ],
+    "slope_points_per_unit": 0.7077
+   },
+   "away_minus_inside": {
+    "n": 297,
+    "r": [
+     0.722,
+     0.664,
+     0.779
+    ],
+    "slope_points_per_unit": 0.6654
+   },
+   "outside_level": {
+    "n": 297,
+    "r": [
+     0.416,
+     0.32,
+     0.511
+    ],
+    "slope_points_per_unit": 0.4294
+   },
+   "attack_angle": {
+    "n": 297,
+    "r": [
+     0.892,
+     0.862,
+     0.913
+    ],
+    "slope_points_per_unit": 0.8703
+   },
+   "swing_path_tilt": {
+    "n": 297,
+    "r": [
+     0.945,
+     0.93,
+     0.957
+    ],
+    "slope_points_per_unit": 0.9478
+   },
+   "attack_direction_pull": {
+    "n": 297,
+    "r": [
+     0.93,
+     0.913,
+     0.944
+    ],
+    "slope_points_per_unit": 0.9555
+   },
+   "contact_depth_in": {
+    "n": 297,
+    "r": [
+     0.871,
+     0.838,
+     0.899
+    ],
+    "slope_points_per_unit": 0.8979
+   },
+   "off_plate_in": {
+    "n": 196,
+    "r": [
+     0.891,
+     0.85,
+     0.922
+    ],
+    "slope_points_per_unit": 0.942
+   },
+   "depth_in": {
+    "n": 196,
+    "r": [
+     0.599,
+     0.475,
+     0.7
+    ],
+    "slope_points_per_unit": 0.6018
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-09T12:52:28.140384+00:00",
+ "seconds": 95.0
+}
