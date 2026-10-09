@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches-ignore: ['diag/**', 'tmp-**']      # lane triggers carry commits CI already checked on their source branch
+    paths-ignore: ['LEDGER.md', 'HANDOFF.md', 'discovery/**', 'tools/discovery_params.json']   # research notes and lane params only; the next code push scans the whole tree
   pull_request:
 
 permissions:

@@ -2799,6 +2799,191 @@ def matchup_pa(T: dict, params: dict, stage) -> dict:
     return res
 
 
+# ---------------------------------------------------------------- ENGINE-01: a pitch-by-pitch plate appearance from the two clocks
+def _count_chain(sw, wh, cs, fo):
+    """P(strikeout), P(walk), P(ball in play) of a plate appearance from 0-0, given per-count chances (dicts keyed by
+    (balls, strikes)): swing, whiff on a swing, called strike on a take, foul on contact."""
+    from functools import lru_cache
+    @lru_cache(None)
+    def go(b, k):
+        if k >= 3:
+            return (1.0, 0.0, 0.0)
+        if b >= 4:
+            return (0.0, 1.0, 0.0)
+        s, w, c, f = sw[(b, k)], wh[(b, k)], cs[(b, k)], fo[(b, k)]
+        p_strike = s * w + (1 - s) * c + (s * (1 - w) * f if k < 2 else 0.0)
+        p_ball = (1 - s) * (1 - c)
+        p_stay = s * (1 - w) * f if k == 2 else 0.0
+        p_bip = s * (1 - w) * (1 - f)
+        ks, bs, ips = go(b, k + 1); kb, bb, ipb = go(b + 1, k)
+        tot = 1 - p_stay
+        return ((p_strike * ks + p_ball * kb) / tot, (p_strike * bs + p_ball * bb) / tot, (p_bip + p_strike * ips + p_ball * ipb) / tot)
+    return go(0, 0)
+
+
+def engine_pa(T: dict, params: dict, stage) -> dict:
+    """Each 2025 hitter-pitcher pair played pitch by pitch from earlier seasons only: the pitcher's 2024 pitches in each
+    count (his arsenal), the hitter's swing map at the decision moment (MATCHUP-01) and his whiff map on the true crossing
+    (MATCHUP-03), league models for called strikes and fouls; a count-by-count chain gives the pair's strikeout and walk
+    chances, with the hitter's maps and with the league maps plus his additive terms. Does the difference (the matchup
+    the engine sees) predict the pair's 2025 strikeouts and walks beyond both players' rates?"""
+    res = {}
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))
+    F = rebuild(T)
+    keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
+    Tk = take(T, keep); Fk = {k: v[keep] for k, v in F.items()}
+    swing = ((Tk['call'] == 1) | (Tk['call'] == 2)).astype(np.float64); whiff = (Tk['call'] == 2).astype(np.float64)
+    take_ = Tk['call'] == 0; cs = (Tk['cs'] == 1).astype(np.float64)
+    contact = Tk['call'] == 1
+    foul = (contact & (Tk['last_in_pa'] == 0)).astype(np.float64)        # contact that did not end the plate appearance
+    xp, zp = projected(Tk, Fk, None, 'straight', 0.26)
+    xt, zt = Tk['px'].astype(np.float64), Tk['pz'].astype(np.float64)
+    tr = np.isin(Tk['season'], (2023, 2024))
+    rng = np.random.default_rng(11)
+    def sample(rows, n=600000):
+        idx = np.flatnonzero(rows); return rng.choice(idx, min(len(idx), n), replace=False) if len(idx) > n else idx
+    # swing: league + hitter maps at the decision moment
+    Cs = np.hstack([control_block(Tk, swing_propensity(Tk)), pitcher_propensity(Tk)[:, None].astype(np.float32)])
+    Xs = np.hstack([location_block(xp, zp, Tk['stand_r'], Tk['strikes']), Cs])
+    i = sample(tr); off_s = fit_logistic(Xs[i], swing[i]).decision_function(Xs)
+    Bs = hitter_basis(xp, zp, Tk['stand_r'], Tk['strikes'])
+    maps_s = _hitter_maps(Bs, swing, off_s, _groups(Tk['batter'], tr), 10.0, 300)
+    stage(f'swing maps {len(maps_s)}')
+    # whiff: league + hitter maps on the true crossing, on swings
+    tw = dict(Tk); tw['call'] = np.where(whiff == 1, 1, np.where(swing == 1, 0, 3))
+    prop_w = swing_propensity(tw, 200.0)
+    grp = np.zeros((len(swing), 7), np.float32); grp[np.arange(len(swing)), np.clip(Tk['group'], 0, 6)] = 1
+    Cw = np.hstack([grp, hats(Tk['v0'].astype(np.float64), V_KNOTS), (Tk['strikes'] == 2)[:, None], prop_w[:, None], (Tk['stand_r'] == Tk['throw_r'])[:, None]]).astype(np.float32)
+    Xw = np.hstack([location_block(xt, zt, Tk['stand_r'], Tk['strikes']), Cw])
+    sw_rows = tr & (swing == 1)
+    i = sample(sw_rows); off_w = fit_logistic(Xw[i], whiff[i]).decision_function(Xw)
+    fam = np.column_stack([np.isin(Tk['group'], (0, 1, 2)), np.isin(Tk['group'], (3, 4)), np.isin(Tk['group'], (5,))]).astype(np.float64)
+    Bw = np.hstack([hitter_basis(xt, zt, Tk['stand_r'], Tk['strikes']), fam, hats(zt, (1.0, 2.0, 3.0, 4.0)).astype(np.float64)])
+    maps_w = _hitter_maps(Bw, whiff, off_w, _groups(Tk['batter'], sw_rows), 30.0, 250)
+    stage(f'whiff maps {len(maps_w)}')
+    # each hitter's map as a constant: its average log-odds shift over his own training pitches (swings for whiffs)
+    g_s, g_w = _groups(Tk['batter'], tr), _groups(Tk['batter'], sw_rows)
+    lev_s = {h: float((Bs[g_s[h]] @ b).mean()) for h, b in maps_s.items()}
+    lev_w = {h: float((Bw[g_w[h]] @ b).mean()) for h, b in maps_w.items()}
+    # league called strikes on takes and fouls on contact
+    Xc = np.hstack([location_block(xt, zt, Tk['stand_r'], Tk['strikes']), (Tk['stand_r'] == Tk['throw_r'])[:, None].astype(np.float32)])
+    i = sample(tr & take_); p_cs = fit_logistic(Xc[i], cs[i]).predict_proba(Xc)[:, 1]
+    i = sample(tr & contact); p_fo = fit_logistic(Xw[i], foul[i]).predict_proba(Xw)[:, 1]
+    stage('called strikes and fouls')
+    # arsenals: each pitcher's 2024 pitches
+    ars = {pid: r for pid, r in _groups(Tk['pitcher'], Tk['season'] == 2024).items() if len(r) >= 400}
+    P = take(T, (T['season'] == 2025) & (T['pitch_no'] == 0) & (T['out7'] >= 0))
+    pairs = {}
+    for b_, p_, st in set(zip(P['batter'].tolist(), P['pitcher'].tolist(), P['stand_r'].tolist())):
+        if b_ in maps_s and b_ in maps_w and p_ in ars:
+            pairs[(b_, p_, st)] = None
+    stage(f'pairs {len(pairs)}')
+    sig = lambda v: 1 / (1 + np.exp(-v))
+    def chain_from(ps, pw, pcs, pfo, ci):
+        # per-count chances over the arsenal's pitches in that count (the strike count when fewer than 15 pitches)
+        use_c = np.bincount(ci, minlength=12) >= 15; ki = ci % 3
+        def agg(w):
+            return np.where(use_c, np.bincount(ci, weights=w, minlength=12), np.bincount(ki, weights=w, minlength=3)[np.arange(12) % 3])
+        n_ = agg(np.ones(len(ps))); s_ = agg(ps); sw_ = agg(ps * pw); t_ = agg(1 - ps); tc_ = agg((1 - ps) * pcs)
+        c_ = agg(ps * (1 - pw)); cf_ = agg(ps * (1 - pw) * pfo)
+        d = lambda v: {(b, k): float(v[b * 3 + k]) for b in range(4) for k in range(3)}
+        return _count_chain(d(s_ / np.maximum(n_, 1e-9)), d(sw_ / np.maximum(s_, 1e-9)), d(tc_ / np.maximum(t_, 1e-9)), d(cf_ / np.maximum(c_, 1e-9)))
+    cidx = (Tk['balls'].astype(np.int64) * 3 + Tk['strikes'].astype(np.int64))
+    arsenal_cache = {}
+    for key in list(pairs):
+        b_, p_, st = key
+        if (p_, st) not in arsenal_cache:
+            r = ars[p_]
+            side = Tk['stand_r'][r] == st
+            if side.sum() >= 150:
+                r = r[side]
+            A = {'r': r, 'ci': cidx[r], 'pcs': p_cs[r], 'pfo': p_fo[r], 'os': off_s[r], 'ow': off_w[r], 'Bs': Bs[r], 'Bw': Bw[r]}
+            A['league'] = chain_from(sig(A['os']), sig(A['ow']), A['pcs'], A['pfo'], A['ci'])
+            arsenal_cache[(p_, st)] = A
+        A = arsenal_cache[(p_, st)]
+        hit = chain_from(sig(A['os'] + A['Bs'] @ maps_s[b_]), sig(A['ow'] + A['Bw'] @ maps_w[b_]), A['pcs'], A['pfo'], A['ci'])
+        lev = chain_from(sig(A['os'] + lev_s[b_]), sig(A['ow'] + lev_w[b_]), A['pcs'], A['pfo'], A['ci'])
+        lg = A['league']
+        pairs[key] = (hit[0] - lg[0], hit[1] - lg[1], lg[0], lg[1], lev[0] - lg[0], lev[1] - lg[1])
+    stage('chains')
+    # 2025 plate appearances: outcome on rates plus the engine's matchup deviation
+    y7 = P['out7'].astype(int); K = (y7 == 1).astype(float); BB = (y7 == 2).astype(float)
+    PA_all = take(T, (T['pitch_no'] == 0) & (T['out7'] >= 0))
+    def rate(key_all, key_p, cls, k):
+        yy = (PA_all['out7'] == cls).astype(float)
+        nn, ss = _prior_by_day(np.r_[key_all, key_p].astype(np.int64), np.r_[PA_all['day'], P['day']].astype(np.int64),
+                               np.r_[yy, np.zeros(len(key_p))], np.r_[np.ones(len(key_all), bool), np.zeros(len(key_p), bool)])
+        nn, ss = nn[len(key_all):], ss[len(key_all):]
+        lg = yy.mean(); rr = (ss + k * lg) / (nn + k)
+        return np.log(rr / (1 - rr))
+    kb, kp = rate(PA_all['batter'], P['batter'], 1, 150.0), rate(PA_all['pitcher'], P['pitcher'], 1, 300.0)
+    bb_b, bb_p = rate(PA_all['batter'], P['batter'], 2, 150.0), rate(PA_all['pitcher'], P['pitcher'], 2, 300.0)
+    dk, db, lk, lb, ck, cb = (np.full(len(y7), np.nan) for _ in range(6))
+    for j, key in enumerate(zip(P['batter'].tolist(), P['pitcher'].tolist(), P['stand_r'].tolist())):
+        v = pairs.get(key)
+        if v is not None:
+            dk[j], db[j], lk[j], lb[j], ck[j], cb[j] = v
+    have = np.isfinite(dk)
+    res['rows'] = {'plate_appearances': int(len(y7)), 'with_engine': int(have.sum()), 'pairs': len(pairs),
+                   'engine_k_dev_sd_points': round(float(np.nanstd(dk) * 100), 3), 'engine_bb_dev_sd_points': round(float(np.nanstd(db) * 100), 3),
+                   'chain_level_check': {'league_chain_k': round(float(np.nanmean(lk)), 4), 'observed_k': round(float(K[have].mean()), 4),
+                                         'league_chain_bb': round(float(np.nanmean(lb)), 4), 'observed_bb': round(float(BB[have].mean()), 4)}}
+    from sklearn.linear_model import LogisticRegression
+    games = P['game'][have]; plat = (P['stand_r'] == P['throw_r']).astype(float)
+    hit_id, pit_id = P['batter'][have], P['pitcher'][have]
+
+    def two_way(v, a, b, iters=12):
+        # v = grand mean + hitter part + pitcher part + pair remainder (backfitting over the 2025 plate appearances)
+        ua, ia = np.unique(a, return_inverse=True); ub, ib = np.unique(b, return_inverse=True)
+        na, nb = np.bincount(ia), np.bincount(ib); mu = float(v.mean()); ea = np.zeros(len(ua)); eb = np.zeros(len(ub))
+        for _ in range(iters):
+            ea = np.bincount(ia, weights=v - mu - eb[ib]) / na
+            eb = np.bincount(ib, weights=v - mu - ea[ia]) / nb
+        return ea[ia], eb[ib], v - mu - ea[ia] - eb[ib]
+
+    def crossfit(Xa, Xb_, yy):
+        par = games % 2 == 0; la = np.zeros(len(yy)); lb_ = np.zeros(len(yy))
+        for side in (True, False):
+            fr, pr = par == side, par != side
+            ma = LogisticRegression(C=1e4, max_iter=500).fit(Xa[fr], yy[fr]); mb = LogisticRegression(C=1e4, max_iter=500).fit(Xb_[fr], yy[fr])
+            la[pr] = logloss_vec(ma.predict_proba(Xa[pr])[:, 1], yy[pr]); lb_[pr] = logloss_vec(mb.predict_proba(Xb_[pr])[:, 1], yy[pr])
+        return [round(v * 1000, 3) for v in clustered_ci(la - lb_, games)]
+
+    def boot_coefs(X, yy, cols):
+        ug = np.unique(games); gi = np.searchsorted(ug, games); bs = []
+        for _ in range(int(params.get('reps', 100))):
+            w = np.bincount(rng.integers(0, len(ug), len(ug)), minlength=len(ug))[gi]; sel = np.repeat(np.arange(len(yy)), w)
+            bs.append(LogisticRegression(C=1e4, max_iter=300).fit(X[sel], yy[sel]).coef_[0][cols])
+        full = LogisticRegression(C=1e4, max_iter=500).fit(X, yy).coef_[0][cols]
+        bs = np.asarray(bs)
+        return [[round(float(full[i]), 4), round(float(np.percentile(bs[:, i], 2.5)), 4), round(float(np.percentile(bs[:, i], 97.5)), 4)] for i in range(len(cols))]
+
+    out = {}
+    for name, y, base, dev, devc in (('strikeout', K, np.column_stack([kb, kp, plat]), dk, ck), ('walk', BB, np.column_stack([bb_b, bb_p, plat]), db, cb)):
+        Xb = base[have]; yy = y[have]
+        d = dev[have] * 100                                   # engine deviation in points of probability
+        h_part, p_part, pair = two_way(d, hit_id, pit_id)
+        # the pair part split: what the count chain makes of the hitter's tendencies as constants (no map shape), and
+        # what the shape of his maps adds against this pitcher's arsenal
+        pair_chain = two_way(devc[have] * 100, hit_id, pit_id)[2]; pair_shape = pair - pair_chain
+        X_raw = np.column_stack([Xb, d]); X_lv = np.column_stack([Xb, h_part, p_part]); X_all = np.column_stack([X_lv, pair])
+        X_ch = np.column_stack([X_lv, pair_chain]); X_split = np.column_stack([X_lv, pair_chain, pair_shape])
+        q = np.nanpercentile(pair, [20, 40, 60, 80]); qi = np.searchsorted(q, pair)
+        p_lv = LogisticRegression(C=1e4, max_iter=500).fit(X_lv, yy).predict_proba(X_lv)[:, 1]
+        out[name] = {'sd_points': {'raw': round(float(d.std()), 3), 'hitter_part': round(float(h_part.std()), 3), 'pitcher_part': round(float(p_part.std()), 3),
+                                   'pair_part': round(float(pair.std()), 3), 'pair_chain': round(float(pair_chain.std()), 3), 'pair_shape': round(float(pair_shape.std()), 3)},
+                     'gain_nats_per_1000_pa': {'pair_over_levels': crossfit(X_lv, X_all, yy), 'shape_over_levels_and_chain': crossfit(X_ch, X_split, yy),
+                                               'levels_over_rates': crossfit(Xb, X_lv, yy), 'raw_over_rates': crossfit(Xb, X_raw, yy)},
+                     'coef_per_point': dict(zip(('hitter_part', 'pitcher_part', 'pair_part'), boot_coefs(X_all, yy, [-3, -2, -1]))),
+                     'coef_split_per_point': dict(zip(('pair_chain', 'pair_shape'), boot_coefs(X_split, yy, [-2, -1]))),
+                     'coef_raw_per_point': boot_coefs(X_raw, yy, [-1])[0],
+                     'by_pair_quintile': [{'pair_points': round(float(pair[qi == j].mean()), 3), 'observed': round(float(yy[qi == j].mean()), 4),
+                                           'levels_model': round(float(p_lv[qi == j].mean()), 4), 'pa': int((qi == j).sum())} for j in range(5)]}
+        stage('outcome ' + name)
+    res['outcomes'] = out
+    return res
+
+
 # ---------------------------------------------------------------- matchup tables for the simulator
 def matchup_pairs(T: dict, train_seasons, arsenal_season: int, target_pairs, params: dict, stage) -> dict:
     """{(batter, pitcher): (chase points, zone-swing points)} for the target pairs: hitter maps and the league map at
@@ -3481,6 +3666,8 @@ def main():
             receipt['results'] = exposure_study(T, params, stage)
         elif experiment == 'matchup_whiff':
             receipt['results'] = matchup_whiff(T, params, stage)
+        elif experiment == 'engine_pa':
+            receipt['results'] = engine_pa(T, params, stage)
         elif experiment == 'steer':
             receipt['results'] = steer_profile(T, params, stage)
         elif experiment == 'matchup_final':
