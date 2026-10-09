@@ -385,3 +385,190 @@ def contact_decompose(sv, cols: dict, params: dict, stage) -> dict:
     res['rows'] = {'train': int(tr.sum()), 'test': int(te.sum()), 'late_plane_change_deg_sd': round(float(np.nanstd(dvaa[0.11][te])), 3)}
     stage('parametric')
     return res
+
+
+# ---------------------------------------------------------------- TIMING-01: timing carried from one pitch to the next
+def flight_time(sv, cols: dict) -> np.ndarray:
+    """Seconds from release (60.5 ft minus extension) to the front of the plate along each pitch's fitted flight."""
+    c = {k: cols[k].astype(np.float64) for k in ('vy0', 'ay')}
+    return sv._time_to(c, sv.FRONT) - sv._time_to(c, 60.5 - cols['release_extension'].astype(np.float64))
+
+
+def _previous(cols: dict, lag: int = 1) -> np.ndarray:
+    """Index of the pitch `lag` pitches earlier in the same plate appearance (-1 when there is none)."""
+    n = len(cols['day'])
+    o = np.lexsort((cols['pitch_number'], cols['at_bat_number'], cols['game_pk']))
+    g, ab, pn = cols['game_pk'][o], cols['at_bat_number'][o], cols['pitch_number'][o]
+    prev = np.full(n, -1, np.int64)
+    if n > lag:
+        same = (g[lag:] == g[:-lag]) & (ab[lag:] == ab[:-lag]) & (pn[lag:] == pn[:-lag] + lag)
+        prev[o[lag:]] = np.where(same, o[:-lag], -1)
+    return prev
+
+
+def _ols(X, y, clusters, reps=200, seed=7):
+    """Least squares with a bootstrap over clusters: (coefficients, 2.5 and 97.5 percentiles)."""
+    b = np.linalg.lstsq(X, y, rcond=None)[0]
+    uc, inv = np.unique(clusters, return_inverse=True)
+    p = X.shape[1]; XtX = np.zeros((len(uc), p, p))
+    for j in range(p):
+        for k in range(j, p):
+            v = np.bincount(inv, weights=X[:, j] * X[:, k], minlength=len(uc)); XtX[:, j, k] = v; XtX[:, k, j] = v
+    Xty = np.column_stack([np.bincount(inv, weights=X[:, j] * y, minlength=len(uc)) for j in range(p)])
+    rng = np.random.default_rng(seed); draws = []
+    for _ in range(reps):
+        w = np.bincount(rng.integers(0, len(uc), len(uc)), minlength=len(uc)).astype(float)
+        draws.append(np.linalg.solve(np.tensordot(w, XtX, 1) + 1e-9 * np.eye(X.shape[1]), w @ Xty))
+    d = np.asarray(draws)
+    return b, np.percentile(d, 2.5, axis=0), np.percentile(d, 97.5, axis=0)
+
+
+def timing_study(sv, cols: dict, params: dict, stage) -> dict:
+    """TIMING-01. A hitter times his swing to the flight he expects. If part of that expectation is carried over from
+    the previous pitch of the plate appearance, a pitch slower than the one before (flight time longer by dt) finds him
+    early by a share alpha of dt, and contact is made farther in front of him by about u * alpha * dt, u the speed at
+    which the meeting point moves along the flight per unit of timing error (bat and ball speeds v_s, v_b:
+    u = v_s * v_b / (v_s + v_b), about 56 ft/s, 6.8 inches per 10 ms). Measured on contact swings from Savant's
+    contact depth (intercept, inches toward the pitcher) against dt, holding the pitch's own flight time, type,
+    location, count and platoon fixed and the hitter's usual depth removed: the slope per 10 ms over 6.8 is the share
+    of the previous pitch's timing carried into this swing. Then: after swings against after takes, two pitches back,
+    each hitter's own carryover (its reliability across halves of a season), and whether carryover and the contact
+    window (the spread of his contact depth, CONTACT-02) move misses on speed changes beyond a flexible model that
+    already sees the speed change. Fitted on 2025, checked on 2026 through July."""
+    res = {}
+    cols = guard(cols, params)
+    desc = label(cols, 'description')
+    swing = np.isin(desc, WHIFF + CONTACT); whiff = np.isin(desc, WHIFF); contact = np.isin(desc, CONTACT)
+    batter = cols['batter'].astype(np.int64); day = cols['day'].astype(np.int64)
+    G = geometry(sv, cols)
+    year = G['year']
+    ft = flight_time(sv, cols) * 1000.0                                   # ms
+    p1, p2 = _previous(cols, 1), _previous(cols, 2)
+    has1, has2 = p1 >= 0, p2 >= 0
+    dt1 = np.where(has1, ft - ft[np.maximum(p1, 0)], np.nan); dt2 = np.where(has2, ft - ft[np.maximum(p2, 0)], np.nan)
+    prev_swing = np.where(has1, swing[np.maximum(p1, 0)], False)
+    ptype = label(cols, 'pitch_type'); grp = np.asarray([GROUPS.get(t, 6) for t in ptype])
+    prev_grp = np.where(has1, grp[np.maximum(p1, 0)], -1)
+    stand_r = label(cols, 'stand') == 'R'; throw_r = label(cols, 'p_throws') == 'R'
+    u = np.where(stand_r, G['x'], -G['x']); z = G['z']
+    iy = cols['intercept_ball_minus_batter_pos_y_inches'].astype(np.float64)
+    test_year = int(params.get('test_year', 2026)); train_year = int(params.get('train_year', 2025))
+    ci = contact & np.isfinite(iy)
+    n_y, s_y, q_y = prior_stats(batter, day, iy, ci)
+    lm = float(np.nanmean(iy[ci & (year == train_year)])); lv = float(np.nanvar(iy[ci & (year == train_year)]))
+    mu_y = (s_y + 50 * lm) / (n_y + 50)
+    with np.errstate(invalid='ignore', divide='ignore'):
+        var_h = np.where(n_y > 1, (q_y - s_y * s_y / np.maximum(n_y, 1)) / np.maximum(n_y - 1, 1), lv)
+    sig_y = np.sqrt((np.maximum(n_y - 1, 0) * var_h + 50 * lv) / (np.maximum(n_y - 1, 0) + 50))
+    stage('sequence and priors')
+    ok = ci & has1 & np.isfinite(dt1) & np.isfinite(ft) & np.isfinite(u) & np.isfinite(z) & (n_y >= 20)
+    def design(rows, extra):
+        gd = np.column_stack([(grp[rows] == g_).astype(float) for g_ in range(1, 7)])
+        base = np.column_stack([np.ones(rows.sum()), (ft[rows] - 400.0) / 10.0, gd, u[rows], np.abs(u[rows]), z[rows] - 2.5, (z[rows] - 2.5) ** 2,
+                                cols['balls'][rows], cols['strikes'][rows], (stand_r == throw_r)[rows].astype(float)])
+        return np.column_stack([base] + extra)
+    U_IN_PER_10MS = float(params.get('u_ft_s', 56.0)) * 12.0 * 0.01
+    depth = {}
+    for yr in (train_year, test_year):
+        r = ok & (year == yr)
+        if r.sum() < 5000:
+            continue
+        y = iy[r] - mu_y[r]
+        X = design(r, [dt1[r][:, None] / 10.0])
+        b, lo, hi = _ols(X, y, cols['game_pk'][r])
+        Xs = design(r, [dt1[r][:, None] / 10.0, (dt1[r] * prev_swing[r])[:, None] / 10.0])
+        bs, los, his = _ols(Xs, y, cols['game_pk'][r])
+        r2 = r & has2 & np.isfinite(dt2)
+        X2 = design(r2, [dt1[r2][:, None] / 10.0, (dt2[r2] - dt1[r2])[:, None] / 10.0])
+        b2, lo2, hi2 = _ols(X2, iy[r2] - mu_y[r2], cols['game_pk'][r2])
+        depth[yr] = {'contacts': int(r.sum()), 'dt_sd_ms': round(float(np.std(dt1[r])), 2),
+                     'slope_in_per_10ms': [round(float(b[-1]), 3), round(float(lo[-1]), 3), round(float(hi[-1]), 3)],
+                     'carryover_share': [round(float(b[-1] / U_IN_PER_10MS), 4), round(float(lo[-1] / U_IN_PER_10MS), 4), round(float(hi[-1] / U_IN_PER_10MS), 4)],
+                     'own_flight_time_slope_in_per_10ms': round(float(b[1]), 3),
+                     'after_take_slope': [round(float(bs[-2]), 3), round(float(los[-2]), 3), round(float(his[-2]), 3)],
+                     'after_swing_extra_slope': [round(float(bs[-1]), 3), round(float(los[-1]), 3), round(float(his[-1]), 3)],
+                     'two_back': {'contacts': int(r2.sum()), 'slope_previous': round(float(b2[-2]), 3),
+                                  'slope_two_back_beyond_previous': [round(float(b2[-1]), 3), round(float(lo2[-1]), 3), round(float(hi2[-1]), 3)]}}
+        stage(f'depth {yr}')
+    res['contact_depth'] = depth
+    if train_year not in depth:
+        res['error'] = 'too few contact swings'; return res
+    # each hitter's own carryover: shrunk slope of his depth residuals on dt (pooled controls), reliability across halves
+    r = ok & (year == train_year)
+    X = design(r, [dt1[r][:, None] / 10.0]); y = iy[r] - mu_y[r]
+    b = np.linalg.lstsq(X, y, rcond=None)[0]; resid = y - X @ b; x = dt1[r] / 10.0
+    s2 = float(np.var(resid))
+    hit = batter[r]
+    mid = date(train_year, 7, 1).toordinal(); half = day[r] >= mid
+    def slopes(sel):
+        uh, ih = np.unique(hit[sel], return_inverse=True)
+        sxx = np.bincount(ih, weights=x[sel] ** 2, minlength=len(uh)); sxr = np.bincount(ih, weights=x[sel] * resid[sel], minlength=len(uh))
+        nn = np.bincount(ih, minlength=len(uh))
+        return uh, sxx, sxr, nn
+    uh, sxx, sxr, nn = slopes(np.ones(len(x), bool))
+    big = nn >= 100
+    raw = sxr[big] / sxx[big]; se2 = s2 / sxx[big]
+    tau2 = max(float(np.var(raw) - np.mean(se2)), 1e-4)
+    lam = s2 / tau2
+    beta_h = {int(h): float(b[-1] + sxr[i] / (sxx[i] + lam)) for i, h in enumerate(uh)}
+    rel = {}
+    a_, b_ = slopes(~half), slopes(half)
+    da = {int(h): (a_[2][i] / (a_[1][i] + lam), a_[3][i]) for i, h in enumerate(a_[0])}
+    db = {int(h): (b_[2][i] / (b_[1][i] + lam), b_[3][i]) for i, h in enumerate(b_[0])}
+    common = [h for h in da if h in db and da[h][1] >= 60 and db[h][1] >= 60]
+    if len(common) > 20:
+        va = np.asarray([da[h][0] for h in common]); vb = np.asarray([db[h][0] for h in common])
+        rel = {'hitters': len(common), 'corr_halves': round(float(np.corrcoef(va, vb)[0, 1]), 3)}
+    res['hitter_carryover'] = {'hitters_with_100_contacts': int(big.sum()), 'between_hitter_sd_in_per_10ms': round(float(np.sqrt(tau2)), 3),
+                               'shrinkage_lambda': round(float(lam), 1), 'reliability': rel}
+    stage('hitter carryover')
+    # misses on speed changes: flexible base that sees the speed change, then carryover and window interactions
+    sw_ok = swing & has1 & np.isfinite(dt1) & np.isfinite(ft) & np.isfinite(u) & np.isfinite(z) & np.isfinite(cols['release_speed']) & (n_y >= 20)
+    n_w, s_w, _ = prior_stats(batter, day, whiff.astype(float), swing)
+    lw = float(whiff[swing & (year == train_year)].mean()); wr = (s_w + 200 * lw) / (n_w + 200)
+    X_pitch = np.column_stack([cols['release_speed'], cols['pfx_x'] * np.where(throw_r, 1, -1), cols['pfx_z'], u, z, G['vaa'], G['haa'] * np.where(stand_r, 1, -1),
+                               cols['release_spin_rate'], cols['release_extension'], cols['release_pos_z'], cols['balls'], cols['strikes'], grp,
+                               (stand_r == throw_r).astype(float), ft, dt1, np.abs(dt1), prev_grp, prev_swing.astype(float), np.log(wr / (1 - wr))])
+    bh = np.asarray([beta_h.get(int(h_), np.nan) for h_ in batter])
+    tr = sw_ok & (year == train_year) & np.isfinite(bh); te = sw_ok & (year == test_year) & np.isfinite(bh)
+    res['swings'] = {'train': int(tr.sum()), 'test': int(te.sum())}
+    if tr.sum() < 20000 or te.sum() < 5000:
+        res['error'] = 'too few swings'; return res
+    from sklearn.ensemble import HistGradientBoostingClassifier
+    yv = whiff.astype(float)
+    hp = dict(max_iter=int(params.get('gbm_iter', 300)), learning_rate=0.08, max_leaf_nodes=48, min_samples_leaf=200, l2_regularization=1.0, random_state=11)
+    oof = np.full(len(yv), np.nan); par = cols['game_pk'] % 2 == 0
+    for side in (True, False):
+        fr, pr = tr & (par == side), tr & (par != side)
+        oof[pr] = HistGradientBoostingClassifier(**hp).fit(X_pitch[fr], yv[fr]).predict_proba(X_pitch[pr])[:, 1]
+    p_te = HistGradientBoostingClassifier(**hp).fit(X_pitch[tr], yv[tr]).predict_proba(X_pitch[te])[:, 1]
+    lo_tr = np.log(np.clip(oof[tr], 1e-6, 1 - 1e-6) / np.clip(1 - oof[tr], 1e-6, 1)); lo_te = np.log(np.clip(p_te, 1e-6, 1 - 1e-6) / np.clip(1 - p_te, 1e-6, 1))
+    stage('whiff base')
+    adt = np.abs(dt1) / 10.0
+    # the base model sees neither the hitter's carryover nor his window: each enters with its own main term and its
+    # product with the size of the speed change
+    terms = {'carryover': bh - b[-1], 'carryover_x_speed_change': (bh - b[-1]) * adt,
+             'window': (sig_y - math.sqrt(lv)) / 10.0, 'window_x_speed_change': (sig_y - math.sqrt(lv)) / 10.0 * adt}
+    yt = yv[te]; games = cols['game_pk'][te]; base_ll = logloss(p_te, yt)
+    out = {}
+    for name, cols_ in (('carryover', ['carryover', 'carryover_x_speed_change']), ('window', ['window', 'window_x_speed_change']), ('both', list(terms))):
+        Ttr = np.column_stack([terms[k][tr] for k in cols_]); Tte = np.column_stack([terms[k][te] for k in cols_])
+        bb = offset_fit(lo_tr, Ttr, yv[tr])
+        pt = 1 / (1 + np.exp(-(lo_te + bb[0] + Tte @ bb[1:])))
+        # coefficient interval: refit on bootstrap resamples of training games
+        tg = np.unique(cols['game_pk'][tr]); gi = np.searchsorted(tg, cols['game_pk'][tr]); bsd = []
+        rng = np.random.default_rng(5)
+        for _ in range(int(params.get('reps', 60))):
+            w = np.bincount(rng.integers(0, len(tg), len(tg)), minlength=len(tg))[gi]; sel = np.repeat(np.arange(int(tr.sum())), w)
+            bsd.append(offset_fit(lo_tr[sel], Ttr[sel], yv[tr][sel], iters=20)[1:])
+        bsd = np.asarray(bsd)
+        out[name] = {'coefs': {k: [round(float(bb[1 + j]), 4), round(float(np.percentile(bsd[:, j], 2.5)), 4), round(float(np.percentile(bsd[:, j], 97.5)), 4)] for j, k in enumerate(cols_)},
+                     'gain_nats_per_1000_swings': clustered(base_ll - logloss(pt, yt), games)}
+    res['whiffs_on_speed_changes'] = out
+    # observed whiff rate by speed change and the hitter's carryover (top against bottom third), against the base model
+    qb = np.nanpercentile(bh[te], [33.3, 66.7]); hi_c = bh[te] >= qb[1]; lo_c = bh[te] <= qb[0]
+    big_dt = np.abs(dt1[te]) >= 30
+    res['table_big_speed_change'] = {nm: {'swings': int((m & big_dt).sum()), 'observed': round(float(yt[m & big_dt].mean()), 4), 'base_model': round(float(p_te[m & big_dt].mean()), 4)}
+                                     for nm, m in (('high_carryover', hi_c), ('low_carryover', lo_c))}
+    stage('whiffs')
+    return res

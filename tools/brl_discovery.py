@@ -3597,7 +3597,11 @@ def main():
                 got.extend(parts)
             cols = mx.merge(got); del got
             receipt['rows'] = int(len(cols['day']))
-            receipt['results'] = (mx.contact_decompose if params.get('decompose') else mx.contact_study)(sv, cols, params, stage)
+            study = params.get('study') or ('decompose' if params.get('decompose') else 'contact')
+            run_study = {'contact': mx.contact_study, 'decompose': mx.contact_decompose, 'timing': mx.timing_study}.get(study)
+            if run_study is None and hasattr(mx, study + '_study'):
+                run_study = getattr(mx, study + '_study')
+            receipt['results'] = run_study(sv, cols, params, stage)
             raise StopIteration
         if experiment in ('challenges', 'scarcity'):
             stage('fetch the 2026 play-by-play')
