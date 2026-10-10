@@ -323,6 +323,20 @@ def location_block(x: np.ndarray, z: np.ndarray, stand_r: np.ndarray, strikes: n
     return np.hstack(blocks).astype(np.float32)
 
 
+CROSS_KNOTS = (-1.0, -0.5, -0.25, 0.0, 0.25, 0.5, 1.0, 2.0)
+
+
+def cross_block(xt: np.ndarray, zt: np.ndarray, stand_r: np.ndarray, group: np.ndarray) -> np.ndarray:
+    """SWING-CROSS-01: where the pitch crossed, for the league swing model (the second clock). The signed distance to the
+    nearest zone edge at the true crossing (negative inside), hat basis, by family (fastball, breaking, offspeed): 24 columns.
+    CAL-01 found the decision-moment model over-calling swings on pitches that end outside, more the farther outside."""
+    u = np.where(stand_r == 1, xt, -xt)
+    e = np.maximum(np.maximum(np.abs(u) - ZONE_HALF, zt - ZONE_TOP), ZONE_BOT - zt)
+    H = hats(e, CROSS_KNOTS)
+    fam = (np.isin(group, (0, 1, 2, 6)), np.isin(group, (3, 4)), group == 5)
+    return np.hstack([H * f[:, None] for f in fam]).astype(np.float32)
+
+
 def control_block(t: dict, prop: np.ndarray) -> np.ndarray:
     n = len(t['balls'])
     cnt = np.zeros((n, 12), np.float32); cnt[np.arange(n), np.clip(t['balls'], 0, 3) * 3 + np.clip(t['strikes'], 0, 2)] = 1
@@ -7425,7 +7439,9 @@ class PAModels:
         # swing model: location at the decision moment with the league's family part, controls, pitcher propensity
         Ls = location_block(self.xp, self.zp, T['stand_r'], T['strikes']); Bh0 = hitter_basis(self.xp, self.zp, T['stand_r'], T['strikes']); nh = Bh0.shape[1] - 1
         brk = np.isin(T['group'], (3, 4))[:, None]; ofs = (T['group'] == 5)[:, None]
-        Xs = np.hstack([Ls, (Bh0[:, :-1] * brk).astype(np.float32), (Bh0[:, :-1] * ofs).astype(np.float32), control_block(T, self.prop_s), self.prop_p[:, None].astype(np.float32)])
+        self.swing_cross = bool(params.get('swing_cross'))
+        Xs = np.hstack([Ls, (Bh0[:, :-1] * brk).astype(np.float32), (Bh0[:, :-1] * ofs).astype(np.float32), control_block(T, self.prop_s), self.prop_p[:, None].astype(np.float32)] +
+                       ([cross_block(self.xt, self.zt, T['stand_r'], T['group'])] if self.swing_cross else []))
         idx = np.flatnonzero(tr); idx = rng.choice(idx, min(len(idx), int(params.get('league_n', 600000))), replace=False)
         self.m_s = fit_logistic(Xs[idx], swing[idx]); self.off_s = self.m_s.decision_function(Xs)
         self.nL, self.nh = Ls.shape[1], nh
@@ -7469,7 +7485,8 @@ class PAModels:
         self.gp = gp_tr
         # the coefficients the per-hitter scalars multiply
         cs_ = self.m_s.coef_[0].astype(np.float64); i_prop_s = self.nL + 2 * nh + 32   # control_block: 12 count + 7 group + 7 group x two strikes + 6 speed = 32, then prop
-        self.w_prop_s = float(cs_[i_prop_s]); self.w_prop_p = float(cs_[-1])
+        # control_block ends with prop, side and platoon (35 columns), then the pitcher propensity; the crossing block, when on, comes after it
+        self.w_prop_s = float(cs_[i_prop_s]); self.w_prop_p = float(cs_[i_prop_s + 3])
         cw_ = self.m_w.coef_[0].astype(np.float64); self.w_prop_w = float(cw_[-2])
         self.w_bip_b = float(self.beta_b[-2]); self.w_bip_p = float(self.beta_b[-1])
         self.delta = float(params.get('delta_repeat_after_called', 0.0))     # SEQ-02's log-odds on a repeat after a called strike
@@ -7489,7 +7506,8 @@ class PAModels:
         tt = {'balls': balls, 'strikes': strikes, 'group': grp_, 'v0': v0, 'stand_r': stand, 'throw_r': throw}
         Ls = location_block(xp, zp, stand, strikes); Bh0 = hitter_basis(xp, zp, stand, strikes)
         brk = np.isin(grp_, (3, 4))[:, None]; ofs = (grp_ == 5)[:, None]
-        Xs = np.hstack([Ls, (Bh0[:, :-1] * brk).astype(np.float32), (Bh0[:, :-1] * ofs).astype(np.float32), control_block(tt, np.zeros(n)), np.zeros((n, 1), np.float32)])
+        Xs = np.hstack([Ls, (Bh0[:, :-1] * brk).astype(np.float32), (Bh0[:, :-1] * ofs).astype(np.float32), control_block(tt, np.zeros(n)), np.zeros((n, 1), np.float32)] +
+                       ([cross_block(xt, zt, stand, grp_)] if getattr(self, 'swing_cross', False) else []))
         lo_s = self.m_s.decision_function(Xs).astype(np.float64)
         Bs = family_basis(Bh0, grp_)
         grp = np.zeros((n, 7), np.float32); grp[np.arange(n), np.clip(grp_, 0, 6)] = 1

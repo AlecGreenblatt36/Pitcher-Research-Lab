@@ -45,6 +45,7 @@ GU = np.array([-1.25, -0.83, -0.42, 0.0, 0.42, 0.83, 1.25]); GZ = np.array([1.0,
 FAMILIES = (('fastball', (0, 1, 2, 6), 0, 94.0), ('breaking', (3, 4), 3, 85.0), ('offspeed', (5,), 5, 86.0))
 B_OUT_FAMILY, N_OUT = -0.000657, 1.876          # VALUE-08F (family maps): runs per point of the own part, outside pitches per plate appearance
 STRUCTURAL = True                                # VALUE-18: aims chosen and priced by the engine's components (whiff, called strike, foul, contact value, count values)
+SWING_CROSS = False                              # SWING-CROSS-01: the league swing model also reads where the pitch crossed (set from params)
 STRIKE_SPOTS = True
 POOL_CACHE = 800            # pools kept in memory at once (pitcher, side, count group, type group, zone); see Fitted._pool                              # VALUE-18I: in-zone aims priced the same way (strike spots); its synthetic verdict held on October 9, 2026
 N_IN = 2.04                                      # inside pitches per plate appearance (VALUE-18F)
@@ -190,12 +191,14 @@ class Fitted:
         self.Ls = D.location_block(self.xp, self.zp, T['stand_r'], T['strikes'])
         self.Bh0 = D.hitter_basis(self.xp, self.zp, T['stand_r'], T['strikes']); nh = self.nh = self.Bh0.shape[1] - 1
         lf = [(self.Bh0[:, :-1] * np.isin(T['group'], (3, 4))[:, None]).astype(np.float32), (self.Bh0[:, :-1] * (T['group'] == 5)[:, None]).astype(np.float32)]
-        Xs = np.hstack([self.Ls] + lf + [D.control_block(T, prop_s), prop_p[:, None].astype(np.float32)]); del lf
+        Xs = np.hstack([self.Ls] + lf + [D.control_block(T, prop_s), prop_p[:, None].astype(np.float32)] +
+                       ([D.cross_block(self.xt, self.zt, T['stand_r'], T['group'])] if SWING_CROSS else [])); del lf
         self.i_ps = self.Ls.shape[1] + 2 * nh + 32
         idx = np.flatnonzero(tr); idx = rng.choice(idx, min(len(idx), 600000), replace=False)
         self.m_s = D.fit_logistic(Xs[idx], swing[idx]); self.off_s = self.m_s.decision_function(Xs); del Xs
         cf_ = self.m_s.coef_[0].astype(np.float64); nL = self.Ls.shape[1]
         self.wL, self.wB, self.wO = cf_[:nL], cf_[nL:nL + nh], cf_[nL + nh:nL + 2 * nh]
+        self.wC = cf_[-24:] if SWING_CROSS else None              # SWING-CROSS-01: the crossing block's weights (the last 24 columns)
         self.Bs = D.family_basis(self.Bh0, T['group'])
         stage('league swing model')
         gb_tr = self.gb_tr = D._groups(T['batter'], tr)
@@ -252,7 +255,7 @@ class Fitted:
         # VALUE-18: the engine's components for pricing aims (the planner's fitted pieces) and the training count values
         self.PM = None
         if STRUCTURAL:
-            self.PM = D.PAModels(T, tr, rng, {'league_n': 500000, 'min_pitches': min_pitches, 'min_swings': min_swings}, stage)
+            self.PM = D.PAModels(T, tr, rng, {'league_n': 500000, 'min_pitches': min_pitches, 'min_swings': min_swings, 'swing_cross': SWING_CROSS}, stage)
             ci_all = np.clip(T['balls'], 0, 3) * 3 + np.clip(T['strikes'], 0, 2)
             fin_all = np.where(T['out7'] >= 0, D.LW7[np.clip(T['out7'], 0, 6)], np.nan)
             self.cv = np.array([float(np.nanmean(fin_all[tr & (ci_all == c_)])) if (tr & (ci_all == c_) & np.isfinite(fin_all)).any() else 0.0 for c_ in range(12)])
@@ -380,6 +383,11 @@ class Fitted:
         sj = np.repeat(np.full(len(r), sd), K); kj = np.repeat(T['strikes'][r], K); gj = np.repeat(T['group'][r], K)
         Bj0 = D.hitter_basis(xj, zj, sj, kj)
         offj = np.repeat(self.off_s[r] - lb0, K) + self.league_loc(D.location_block(xj, zj, sj, kj), Bj0, gj)
+        if self.wC is not None:
+            # the scattered pitch crosses where it lands: swap the crossing part of the league swing logit
+            xtj_ = xj - np.repeat(self.xp[r] - self.xt[r], K); ztj_ = zj - np.repeat(self.zp[r] - self.zt[r], K)
+            c0 = D.cross_block(self.xt[r], self.zt[r], T['stand_r'][r], T['group'][r]).astype(np.float64) @ self.wC
+            offj = offj - np.repeat(c0, K) + D.cross_block(xtj_, ztj_, sj, gj).astype(np.float64) @ self.wC
         uu_ = np.where(sd == 1, self.xt[r], -self.xt[r])
         cell = np.argmin(np.abs(uu_[:, None] - GU[None, :]), 1) + len(GU) * np.argmin(np.abs(self.zt[r][:, None] - GZ[None, :]), 1)
         struct = None
@@ -878,11 +886,16 @@ def calibration(fit) -> dict:
     has_map = np.isfinite(ph)
     out = {}
 
+    y = fit.swing
+    ll_l = D.logloss_vec(p, y); ll_m = np.where(has_map, D.logloss_vec(np.where(has_map, ph, 0.5), y), 0.0)
+
     def add(key, m):
         mm = m & has_map
         out[key] = {'n': int(m.sum()), 'swings': int(fit.swing[m].sum()), 'league': round(float(p[m].sum()), 1),
-                    'n_map': int(mm.sum()), 'swings_map_rows': int(fit.swing[mm].sum()), 'league_map_rows': round(float(p[mm].sum()), 1), 'map': round(float(ph[mm].sum()), 1)}
+                    'n_map': int(mm.sum()), 'swings_map_rows': int(fit.swing[mm].sum()), 'league_map_rows': round(float(p[mm].sum()), 1), 'map': round(float(ph[mm].sum()), 1),
+                    'll_league': round(float(ll_l[m].sum()), 2), 'll_league_map_rows': round(float(ll_l[mm].sum()), 2), 'll_map': round(float(ll_m[mm].sum()), 2)}
     for split, m0 in (('train', tr), ('test', te)):
+        add(f'{split}|all|all', m0)
         for zone, mz in (('outside', fit.outside), ('inside', ~fit.outside)):
             add(f'{split}|{zone}|all', m0 & mz)
             for k, nm in enumerate(names):
@@ -924,6 +937,8 @@ def main():
         today_et = now_et.date()
         params = {'publish': True, 'dates': [(today_et - timedelta(days=1)).isoformat(), today_et.isoformat(), (today_et + timedelta(days=1)).isoformat()],
                   'asof_for': {(today_et + timedelta(days=1)).isoformat(): today_et.isoformat()}}
+    global SWING_CROSS
+    SWING_CROSS = bool(params.get('swing_cross', SWING_CROSS))
     dates = params.get('dates') or [params.get('date') or now_et.date().isoformat()]
     asof = params.get('asof')                      # one as-of date for every report in the run (a backfilled month); default: each report's own date
     asof_for = params.get('asof_for') or {}        # a date's own as-of when it differs (tomorrow's early plan)
