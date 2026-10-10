@@ -1007,7 +1007,7 @@ def calibration_values(fit, chunk: int = 100000) -> dict:
     rng = np.random.default_rng(5)
     tr_idx = np.flatnonzero(tr); tr_idx = np.sort(rng.choice(tr_idx, min(len(tr_idx), 200000), replace=False))
     rows = np.concatenate([tr_idx, np.flatnonzero(~tr)])
-    n = len(rows); v_sw = np.empty(n); v_tk = np.empty(n); v_bip = np.empty(n)
+    n = len(rows); v_sw = np.empty(n); v_tk = np.empty(n); v_bip = np.empty(n); pw_all = np.empty(n); pf_all = np.empty(n)
     for i in range(0, n, chunk):
         r = rows[i:i + chunk]
         blk = PM.blocks_at(PM.xp[r], PM.zp[r], PM.xt[r], PM.zt[r], T['stand_r'][r], T['throw_r'][r], T['group'][r], T['v0'][r].astype(np.float64), T['balls'][r], T['strikes'][r])
@@ -1018,7 +1018,7 @@ def calibration_values(fit, chunk: int = 100000) -> dict:
         v_ball = np.where(b_ == 3, LW7[2], cv[np.clip((b_ + 1) * 3 + k_, 0, 11)])
         v_sw[i:i + len(r)] = p_w * v_strike + (1 - p_w) * (p_f * v_foul + (1 - p_f) * v)
         v_tk[i:i + len(r)] = p_c * v_strike + (1 - p_c) * v_ball
-        v_bip[i:i + len(r)] = v
+        v_bip[i:i + len(r)] = v; pw_all[i:i + len(r)] = p_w; pf_all[i:i + len(r)] = p_f
         del blk
     b = T['balls'][rows].astype(np.int64); k = T['strikes'][rows].astype(np.int64); call = T['call'][rows]; lip = T['last_in_pa'][rows] == 1
     out7 = T['out7'][rows]; fin = np.where(out7 >= 0, LW7[np.clip(out7, 0, 6)], np.nan)
@@ -1045,6 +1045,13 @@ def calibration_values(fit, chunk: int = 100000) -> dict:
         def add(key, m):
             m = m & dec & (ok | (nm_ == 'in_play'))
             d[key] = {'n': int(m.sum()), 'engine': round(float(val[m].sum()), 2), 'realized': round(float(y[m].sum()), 2)}
+            if nm_ == 'swing':
+                # CAL-03b: the pieces of a swing, expected against actual (miss, foul, ball in play and its value)
+                pin = (1 - pw_all[m]) * (1 - pf_all[m])
+                d[key].update({'whiff_exp': round(float(pw_all[m].sum()), 1), 'whiff': int((call[m] == 2).sum()),
+                               'foul_exp': round(float(((1 - pw_all[m]) * pf_all[m]).sum()), 1), 'foul': int(((call[m] == 1) & ~lip[m]).sum()),
+                               'bip_exp': round(float(pin.sum()), 1), 'bip': int(inplay[m].sum()),
+                               'bipv_exp': round(float((pin * v_bip[m]).sum()), 2), 'bipv': round(float(bipv[m].sum()), 2)})
         for sp, m0 in splits:
             add(f'{sp}|all', m0)
             for zn, mz in (('outside', e > 0), ('inside', e <= 0)):

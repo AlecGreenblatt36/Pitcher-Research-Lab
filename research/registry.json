@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 251,
- "rows": 254,
+ "experiments": 252,
+ "rows": 255,
  "records": {
   "ACC-01": [
    {
@@ -4125,7 +4125,25 @@
     "id": "CAL-03",
     "columns": {
      "ID": "CAL-03",
-     "Attempt": "Where the engine's price of a swing parts from what swings produce (diagnostic, descriptive). VALUE-18F, 18X and 18Y all found the engine pricing an extra swing on an outside pitch about 35% higher than the realized outcomes show (-0.00118 against -0.00087 runs per point); CAL-02 found the whiff and foul models calibrated and the called-strike model off at the edge (now PROD-05). This checks the whole chain the plans are priced with: the engine's value of a swing (whiff, foul, the run value of a ball in play, the count values) and of a take (called strike, the count values), against the value of the state each swing and take actually led to (the next count, or the plate appearance's result when it ended), on the same pitches, and the ball-in-play value alone on balls in play. League level with each row's own hitter and pitcher scalars, no maps. Report lane, tools/brl_report.py calibration_values (params calibration_values), as of 2025-07-01 and 2026-08-01, calibration only, sums only, the season strike profile on. Smoke test on a synthetic world (scratch cross/smoke_cal3.py): runs; there the swing value is 10 to 13% less costly to the hitter than what the swings produced, in sample and later, so part of any gap can come from multiplying calibrated pieces. What I expect, written before the runs: on outside pitches the engine's swing value is more costly to the hitter than what the swings produced, by 10% or more, with the ball-in-play value as the main source (the linear in-play model does not know a chase put in play often finds a hole); the take value within 5%; the in-play value within 3% overall. A piece off by more than 5% overall or 10% outside gets its own registered fix.",
+     "Attempt": "Where the engine's price of a swing parts from what swings produce (diagnostic, descriptive). VALUE-18F, 18X and 18Y all found the engine pricing an extra swing on an outside pitch about 35% higher than the realized outcomes show (-0.00118 against -0.00087 runs per point); CAL-02 found the whiff and foul models calibrated and the called-strike model off at the edge (now PROD-05). This checks the whole chain the plans are priced with: the engine's value of a swing (whiff, foul, the run value of a ball in play, the count values) and of a take (called strike, the count values), against the value of the state each swing and take actually led to (the next count, or the plate appearance's result when it ended), on the same pitches, and the ball-in-play value alone on balls in play. League level with each row's own hitter and pitcher scalars, no maps. Report lane, tools/brl_report.py calibration_values (params calibration_values), as of 2025-07-01 and 2026-08-01, calibration only, sums only, the season strike profile on. Smoke test on a synthetic world (scratch cross/smoke_cal3.py): runs; there the swing value is 10 to 13% less costly to the hitter than what the swings produced, in sample and later, so part of any gap can come from multiplying calibrated pieces. What I expect, written before the runs: on outside pitches the engine's swing value is more costly to the hitter than what the swings produced, by 10% or more, with the ball-in-play value as the main source (the linear in-play model does not know a chase put in play often finds a hole); the take value within 5%; the in-play value within 3% overall. A piece off by more than 5% overall or 10% outside gets its own registered fix. **Results (runs 38070193906 as of 2025-07-01 and 38070209581 as of 2026-08-01; engine against realized, runs per 100 decisions on the later rows):** (1) outside pitches, where the aiming value lives, are priced right: swings -8.86 against -9.01 (2025) and -9.04 against -9.26 (2026), takes +3.30 against +3.29 and +3.82 against +3.83, so the engine's swing-minus-take value there, about -0.12 runs per extra swing, is what the average outside swing and take produce. The expectation was wrong: the 35% gap to the realized-outcome regression is not a miscalibrated piece; it says the swings a hitter's own tendency adds cost him less than the average chase there (one reading, not tested: a hitter who chases a spot more also handles it better), which is why the stated range carries both figures. (2) Inside the zone the engine prices swings as worse for the hitter than they were: -1.92 against -1.28 (2025) and -2.06 against -1.68 (2026), the same on the training rows (-1.96 against -1.50 and -2.01 against -1.47), all of it in counts with fewer than two strikes (2025 even or ahead -2.52 against -1.47, behind +2.11 against +2.87; two strikes -3.85 against -3.79) and most in the heart of the plate (more than half a foot inside +0.39 against +1.45). Since it shows in sample, it is structure, not drift. (3) Takes inside are close (-3.90 against -4.08 and -3.54 against -3.73). (4) The value of a ball in play moves with the period: 4.69 against 5.01 per 100 balls in play in July to September 2025 (6% low) and 4.60 against 4.26 in August and September 2026 (8% high), while in sample it matches (4.53 against 4.40 and 4.69 against 4.60). Both (2) and (4) are past the row's bar and get their own work: CAL-03b finds which piece makes (2) (whiff, foul or in play, by count), and the in-play level by period is a separate fix.",
+     "Disposition and evidence": "diagnostic; outside priced right; inside swings and the in-play level off"
+    },
+    "registered_before_run": false,
+    "diagnostic": true,
+    "runs": [
+     "38070193906",
+     "38070209581"
+    ],
+    "frozen_commits": [],
+    "status": "diagnostic; outside priced right; inside swings and the in-play level off"
+   }
+  ],
+  "CAL-03b": [
+   {
+    "id": "CAL-03b",
+    "columns": {
+     "ID": "CAL-03b",
+     "Attempt": "Which piece makes CAL-03's inside-swing gap (diagnostic, descriptive): CAL-03's runs repeated with the swing's pieces summed on the same rows, expected against actual: misses (the whiff model), fouls ((1 - miss) times the foul model), balls in play ((1 - miss) times (1 - foul)) and their value, by zone, family, count group and edge band (tools/brl_report.py calibration_values). Smoke test on a synthetic world: runs; there the whiff sum matches in sample (8,327 against 8,327) but fouls come out 11% short and balls in play 8% long, so multiplying a calibrated miss model by a foul model fit only on contact can miss even in sample. What I expect, written before the runs: the same pattern on real pitches, fouls short and balls in play long in counts with fewer than two strikes, which is CAL-03's gap (a foul there costs the hitter a strike, a ball in play pays him).",
      "Disposition and evidence": "registered, running"
     },
     "registered_before_run": false,
