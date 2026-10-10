@@ -97,6 +97,14 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   content_hash(box) against the publication, so slimming a final box needs its score rows cached first (computed
   once, while the full box verifies) and both scorers reading the cache for slimmed boxes. The published
   box_forecasts/<id>.json keeps the full box for anyone re-checking.
+- Repository size (October 10, 5:50 p.m.): GitHub reports 4.5 GB (it recommends under 5 GB). Of the data branch's
+  4.3 GB packed, 2.9 GB is old copies of three sealed 2026 season files (private/statcast/season-2026.enc 20.7 MB,
+  bookkeeping 5.2 MB, physics 4.7 MB) that every report run resealed even with nothing new (91 to 112 copies in three
+  days, most of them today's rebuild runs); fixed in 02ab686a0 (a run that adds no game writes nothing). Still about
+  30 MB per game day through the World Series. For 2027: keep the season tables out of git history (base plus a
+  small addendum of new games, or release assets, which do not count toward the repository); eight readers use
+  study_path, season_path and physics_path (report, replay, fit, research, discovery, live bookkeeping). Report days
+  are 0.66 GB over 21,912 versions (rebuilds); avoid full rebuilds unless the model changes.
 
 - October 10, 3:35 p.m.: the rebuild loop's busy check read only the last 10 report runs, so with the calibration runs in
   between, batches overlapped (seven rebuild runs at once) and GitHub's secondary write limit failed April 2026 (run
