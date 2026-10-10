@@ -957,7 +957,8 @@ def build_report(fit: Fitted, T_all: dict, day: str, asof: str, stage, max_relie
                 # recent hitters off the bench
                 last, src_ = LU.project(prior_games.get(tid, []), d0.toordinal(), hand_of(starter))
                 last = last or []
-                base = lineup or (last + [x for x in rec_h.get(tid, []) if x not in last])
+                first9 = lineup or last              # then the bench: the team's other recent hitters (pinch hitters too)
+                base = first9 + [x for x in rec_h.get(tid, []) if x not in first9]
                 hitters = [x for x in base if x in fit.maps_s][:12]
                 spots = {x: i + 1 for i, x in enumerate((lineup or last)[:9])}
                 pens = rec_p.get(fid, [])[:max_relievers]
