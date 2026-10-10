@@ -882,7 +882,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       f.away.abbr + " " + lv.projected_final.away + ", " + f.home.abbr + " " + lv.projected_final.home + "." : "";
     var src = lv.win_source === "sim" ? "Win chance from playing out this exact spot thousands of times, tied to the pregame number and the league's record from the same spot." : lv.win_source === "table" ? "Win chance moves with every play, from this game's 10,000 pregame simulations at the current spot, tied to the pregame number and the league's record from the same spot." : "";
     var when = lv._client && lv.fetched_at ? "Live from MLB, " + timeET(lv.fetched_at) + " ET." : "Live." + (lv.updated_at ? " Updated " + timeET(lv.updated_at) + " ET." : "");
-    return (when + " " + src + sim + " " + pre).replace(/\s+/g, " ");
+    return (when + " " + src + sim).replace(/\s+/g, " ");          /* the pregame number is already on the line above */
   }
   /* Runners as a small diamond for the slate cards (nothing between innings or after the final). */
   function miniBases(lv) {
