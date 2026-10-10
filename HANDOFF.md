@@ -92,7 +92,11 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   Known risk, not fixed: ledger.json is 12.6 MB, almost all box_scores (34 boxes, about 380 KB each, also published
   as box_forecasts/<id>.json). Every persist() reads and writes all of it, and it grows by about 0.4 MB a version
   through the postseason. A slimmer ledger (scored boxes kept as references) needs care with render_page and the
-  scoring of past days.
+  scoring of past days. Design sketch, not built: 62% of a box is 'samples' (five example games), and the day archive
+  (box_page.lean_box) needs only the first; score_player_boxes and score_skill_boxes recompute every run and check
+  content_hash(box) against the publication, so slimming a final box needs its score rows cached first (computed
+  once, while the full box verifies) and both scorers reading the cache for slimmed boxes. The published
+  box_forecasts/<id>.json keeps the full box for anyone re-checking.
 
 - October 10, 3:35 p.m.: the rebuild loop's busy check read only the last 10 report runs, so with the calibration runs in
   between, batches overlapped (seven rebuild runs at once) and GitHub's secondary write limit failed April 2026 (run
