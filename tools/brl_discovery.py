@@ -3950,13 +3950,16 @@ def value2_study(T: dict, params: dict, stage) -> dict:
     Bh = hitter_basis(xp, zp, T['stand_r'], T['strikes']); nh = Bh.shape[1] - 1
     lf = bool(params.get('league_family'))                # VALUE-07: the league model gets the maps' family-by-location part
     fam_parts = [(Bh[:, :-1] * np.isin(T['group'], (3, 4))[:, None]).astype(np.float32), (Bh[:, :-1] * (T['group'] == 5)[:, None]).astype(np.float32)] if lf else []
-    X = np.hstack([LB] + fam_parts + [control_block(T, swing_propensity(T)), pitcher_propensity(T)[:, None].astype(np.float32)]); del fam_parts
+    sx = bool(params.get('swing_cross'))                  # VALUE-18X: the league swing model reads where the pitch crossed (SWING-CROSS-01)
+    X = np.hstack([LB] + fam_parts + [control_block(T, swing_propensity(T)), pitcher_propensity(T)[:, None].astype(np.float32)] +
+                  ([cross_block(T['px'].astype(np.float64), T['pz'].astype(np.float64), T['stand_r'], T['group'])] if sx else [])); del fam_parts
     tr = np.isin(T['season'], (2023, 2024, 2025)) if final else np.isin(T['season'], tuple(int(v) for v in params.get('map_seasons', (2023, 2024))))   # VALUE-10: map_seasons
     test_season = 2026 if final else dev_test
     rng = np.random.default_rng(11)
     idx = np.flatnonzero(tr); idx = rng.choice(idx, min(len(idx), 600000), replace=False)
     league = fit_logistic(X[idx], swing[idx]); off = league.decision_function(X); del X
     cf_ = league.coef_[0].astype(np.float64); wL = cf_[:nL]
+    wC = cf_[-24:] if sx else None
     wB, wO = (cf_[nL:nL + nh], cf_[nL + nh:nL + 2 * nh]) if lf else (None, None)
 
     def league_loc(LBm, Bh_m, g):
@@ -4238,7 +4241,7 @@ def value2_study(T: dict, params: dict, stage) -> dict:
             lam_draws[zn_] = np.asarray(dl)
         res['own_part_calibration'] = {zn_: {'slope': round(lam[zn_], 4), 'interval': [round(float(np.percentile(lam_draws[zn_], q)), 4) for q in (2.5, 97.5)]} for zn_ in lam}
         res['own_part_calibration']['note'] = 'test-season swing residual (actual minus the league with the shared shape) regressed on the own part in probability units; 1 means a fitted point is a real point'
-        PM = PAModels(T, tr, np.random.default_rng(23), {'league_n': int(params.get('league_n', 500000)), 'min_pitches': 300}, stage)
+        PM = PAModels(T, tr, np.random.default_rng(23), {'league_n': int(params.get('league_n', 500000)), 'min_pitches': 300, 'swing_cross': sx}, stage)
         xoff_all, zoff_all = xp - T['px'].astype(np.float64), zp - T['pz'].astype(np.float64)   # decision-moment projection minus crossing, per pitch
         # VALUE-18J: the maps' own noise in the interval. Maps refitted on training games resampled with replacement (the league model and the
         # engine held fixed), each draw with its own shared shape and calibration; the structural figure is recomputed per draw in the aiming loop
@@ -4371,6 +4374,11 @@ def value2_study(T: dict, params: dict, stage) -> dict:
                         sj = np.repeat(np.full(len(prow), sd), K); kj = np.repeat(T['strikes'][prow], K); gj = np.repeat(T['group'][prow], K)
                         Bj = hitter_basis(xj, zj, sj, kj)
                         offj = np.repeat(off[prow] - lb0, K) + league_loc(location_block(xj, zj, sj, kj), Bj, gj)
+                        if wC is not None:
+                            # the scattered pitch crosses where it lands: swap the crossing part of the league swing logit
+                            xtc = (T['px'][prow].astype(np.float64)[:, None] + sg * jit[None, :, 0]).ravel(); ztc = (T['pz'][prow].astype(np.float64)[:, None] + sg * jit[None, :, 1]).ravel()
+                            c0 = cross_block(T['px'][prow].astype(np.float64), T['pz'][prow].astype(np.float64), T['stand_r'][prow], T['group'][prow]).astype(np.float64) @ wC
+                            offj = offj - np.repeat(c0, K) + cross_block(xtc, ztc, sj, gj).astype(np.float64) @ wC
                         if fam:
                             Bj = family_basis(Bj, gj)
                         xtj = ztj = coef_side = coef_band = band_j = None
