@@ -216,6 +216,8 @@ details.more[open] summary::before { content: "\2212"; }
 
 /* Tabs */
 .tabs { position: sticky; top: 0; z-index: 5; background: var(--paper); border-bottom: 1px solid var(--rule); }
+[id^="rp-detail-"] { scroll-margin-top: 108px; }   /* a tapped hitter's plan opens below the sticky tabs (two rows on a phone) */
+@media (min-width: 600px) { [id^="rp-detail-"] { scroll-margin-top: 62px; } }
 .tabs .wrap { display: flex; gap: 2px; overflow-x: auto; }
 .tab { border: 0; background: none; padding: 12px 12px 10px; min-height: 48px; font-weight: 700; color: var(--muted); border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap; }
 .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--board); }
@@ -2473,7 +2475,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     ["fastball", "breaking", "offspeed"].forEach(function (fam) {
       var own = hc.own_chase && hc.own_chase[fam], mix = pc && pc.mix && pc.mix[fam];
       if (!own) return;
-      h += '<div class="rp-card"><h4>' + PITCH_NAME[fam] + (mix ? " <small>" + pct(mix.share) + " of his pitches, " + mix.speed + " mph</small>" : "") + "</h4>" + rpGrid(doc, own.grid, plan[fam], PITCH_NAME[fam] + ": plan", 0.8, stPlan[fam]) +
+      h += '<div class="rp-card"><h4>' + PITCH_NAME[fam] + (mix ? " <small>" + pct(mix.share) + " of his pitches, " + Math.round(mix.speed) + " mph</small>" : "") + "</h4>" + rpGrid(doc, own.grid, plan[fam], PITCH_NAME[fam] + ": plan", 0.8, stPlan[fam]) +
         (plan[fam] && plan[fam].length ? '<div class="lbl">Out of the zone: ' + esc(spotList(plan[fam], function (c) { return c[2] === "take" ? " (to steal a strike)" : ""; }, true).join("; ")) + "</div>" : '<div class="lbl">He rarely throws this pitch out of the zone to this side.</div>') +
         (stPlan[fam] && stPlan[fam].length ? '<div class="lbl">Strikes: ' + esc(spotList(stPlan[fam], function (c) { return c[2] === "weak" ? " (weak swings)" : " (takes it)"; }).join("; ")) + "</div>" : "") + "</div>";
     });
@@ -2671,7 +2673,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     h += '<p class="pd-line">' + esc(planLine(pr2)) + "</p>";
     var tags = hitterTags(hc, doc.league);
     if (hc) h += '<p class="note">' + esc(lastName(nm(ids[0]))) + " chases " + (hc.chase_rate != null ? pct(hc.chase_rate) : "–") + " of pitches out of the zone (league " + pct(doc.league.chase_rate) + ") and misses on " + (hc.whiff_rate != null ? pct(hc.whiff_rate) : "–") + " of his swings (league " + pct(doc.league.whiff_rate) + ")." + (tags.length ? " " + esc(tags.join(". ")) + "." : "") + "</p>";
-    if (pc && pc.mix) h += '<p class="note">' + esc(lastName(nm(ids[1]))) + " throws " + ["fastball", "breaking", "offspeed"].filter(function (f) { return pc.mix[f]; }).map(function (f) { return PITCH_NAME[f].toLowerCase() + " " + pct(pc.mix[f].share) + " (" + pc.mix[f].speed + " mph)"; }).join(", ") + ".</p>";
+    if (pc && pc.mix) h += '<p class="note">' + esc(lastName(nm(ids[1]))) + " throws " + ["fastball", "breaking", "offspeed"].filter(function (f) { return pc.mix[f] && pc.mix[f].share >= 0.005; }).map(function (f) { return PITCH_NAME[f].toLowerCase() + " " + pct(pc.mix[f].share) + (pc.mix[f].speed != null ? " (" + Math.round(pc.mix[f].speed) + " mph)" : ""); }).join(", ") + ".</p>";
     if (pr2.evidence && pr2.evidence.level === "thin") h += '<p class="note">Small sample: ' + Number(pr2.evidence.hitter_pitches).toLocaleString() + " pitches seen by the hitter, " + Number(pr2.evidence.pitcher_pitches_to_side).toLocaleString() + " thrown by the pitcher to " + (hc && hc.side === "L" ? "lefties" : "righties") + ". Treat it as a lean.</p>";
     if (pr2.aim && hc) {
       var counts = [["all", "All counts"], ["even_or_ahead", "Ahead or even"], ["behind", "Behind"], ["two_strikes", "Two strikes"]], bc = pr2.aim.by_count || {};
@@ -2694,7 +2696,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         if (!own) return;
         var cloud = state.rpCloud && ck === "all" && pr2.aim.dangerous_miss && pr2.aim.dangerous_miss[fam] ? pr2.aim.dangerous_miss[fam].cloud : null;
         var dm = ck === "all" && pr2.aim.dangerous_miss && pr2.aim.dangerous_miss[fam] && pr2.aim.dangerous_miss[fam].runs_per_100_pa >= 0.05 ? pr2.aim.dangerous_miss[fam] : null;
-        h += '<div class="rp-card"><h4>' + PITCH_NAME[fam] + (mix ? " <small>" + pct(mix.share) + " of his pitches, " + mix.speed + " mph</small>" : "") + "</h4>" + rpGrid(doc, own.grid, plan[fam], PITCH_NAME[fam] + (cloud ? ": where the pitches end up" : ": plan"), 0.8, stPlan[fam], cloud) +
+        h += '<div class="rp-card"><h4>' + PITCH_NAME[fam] + (mix ? " <small>" + pct(mix.share) + " of his pitches, " + Math.round(mix.speed) + " mph</small>" : "") + "</h4>" + rpGrid(doc, own.grid, plan[fam], PITCH_NAME[fam] + (cloud ? ": where the pitches end up" : ": plan"), 0.8, stPlan[fam], cloud) +
           (cloud ? '<div class="lbl">Where these pitches end up with normal command. Darker means more of them.</div>' : "") +
           (plan[fam] && plan[fam].length ? '<div class="lbl">Out of the zone: ' + esc(spotList(plan[fam], function (c) { return c[2] === "take" ? " (to steal a strike)" : ""; }, true).join("; ")) + "</div>" : '<div class="lbl">He rarely throws this pitch out of the zone to this side.</div>') +
           (stPlan[fam] && stPlan[fam].length ? '<div class="lbl">Strikes: ' + esc(spotList(stPlan[fam], function (c) { return c[2] === "weak" ? " (weak swings)" : " (takes it)"; }).join("; ")) + "</div>" : "") +
@@ -3070,7 +3072,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
             };
             if (m.to_righties && m.to_righties.length) to.push("To righties: " + goes(m.to_righties) + ".");
             if (m.to_lefties && m.to_lefties.length) to.push("To lefties: " + goes(m.to_lefties) + ".");
-            h += '<div class="pt"><h4>' + PITCH_NAME[fam] + "<span>" + pct(m.share) + ", " + m.speed + " mph</span></h4>" + (bits.length ? "<p>" + esc(bits.join(" ")) + "</p>" : "") + (to.length ? "<p>" + esc(to.join(" ")) + "</p>" : "") + "</div>";
+            h += '<div class="pt"><h4>' + PITCH_NAME[fam] + "<span>" + pct(m.share) + ", " + Math.round(m.speed) + " mph</span></h4>" + (bits.length ? "<p>" + esc(bits.join(" ")) + "</p>" : "") + (to.length ? "<p>" + esc(to.join(" ")) + "</p>" : "") + "</div>";
           });
           h += "</div>";
           h += '<p class="note">For his plan against each hitter, open one of his games and tap Game plan.</p>';
