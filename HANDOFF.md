@@ -72,6 +72,12 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   - Record page also has Team by team for the latest season (wins against what our pregame numbers added up to).
   - A check-in is scheduled for 14:10 UTC October 10 (daily build: tomorrow's game plans, pitcher lines; early calls for
     October 11; phone check).
+  - Check-in, 14:10 UTC October 10: the daily build ran at 13:32 (dispatched by the chain's fallback; the 13:20 cron did
+    not fire) and wrote 2026-10-11/849809 (LAD at MIL, Brewers starter not named) and player cards with the new pitcher
+    fields; the early pass skips 849809 until both starters are named; phone check passed at 13:50. The container
+    restarted overnight and loop4 died after September 2025 (done); August 2025's second attempt was pushed at 14:13
+    (run 38058777902). Then: "No number yet" cards for today and tomorrow open the game's plan (past-game view, Game plan
+    tab only until first pitch); early plans say they were built the day before; a team with no starter named says so.
   - Worth a look (research): on the 4,991 graded games, actual chases 152,037 against 169,053 expected by the league swing
     model and 167,365 by the maps; both run about 10% high, so the chase expectation has a level offset (the maps' gain,
     21.9 nats per 1,000 swing decisions on 261,032, is relative and unaffected). Check the outside-zone definition and the
