@@ -46,7 +46,18 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
-### In flight (updated 12:55 p.m. Eastern October 10, by `date -u`)
+### In flight (updated 1:45 p.m. Eastern October 10, by `date -u`)
+
+- October 10, 1:40 p.m.: CAL-03 checked the whole priced chain against what the pitches produced. Outside pitches were
+  priced right (so the 35% gap behind the 30-to-40 range is about which swings a hitter's tendency adds, not a broken
+  piece). Inside swings were not, and CAL-03b found two engine errors: the foul model evaluated at a zero whiff propensity
+  (FOUL-01) and two-strike foul-tip strikeouts priced as balls in play (FOUL-02). Both are on (FOUL_FIX true; their joint
+  check held: training rows within 0.05 runs per 100 swings). VALUE-18Z (discovery run 38072843478, frozen df01e156f)
+  re-prices the aiming value; restate under its row's rule. Still open: the in-play value level by period (6% low in late
+  2025, 8% high in late 2026), and the report's own count chain still uses the old foul label (its K and BB scales absorb a
+  constant). Plans: the lineup before one is posted is the team's last lineup in batting order with the bench marked;
+  the plan page opens from our own plan if MLB's feed fails. Rebuild of every backfilled report with all of it:
+  scratch report/rebuild_all.sh (started 17:43 UTC at df01e156f; log report/rebuild_cross.log).
 
 - October 10, 12:50 p.m.: the called-strike model. CAL-02 found it calling far too many strikes just off the plate
   (mixed seasons; the calls move each season). CS-SEASON-01 (each season's edge profile) and CS-SEASON-02 (the same,
