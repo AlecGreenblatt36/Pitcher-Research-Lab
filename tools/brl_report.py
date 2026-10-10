@@ -897,7 +897,41 @@ def build_players(fit: Fitted, asof: str, stage) -> tuple[dict, dict]:
     return index, shards
 
 
-def build_report(fit: Fitted, T_all: dict, day: str, asof: str, stage, max_relievers=4) -> dict:
+def sim_relievers(repo: str, token: str, branch: str) -> dict:
+    """game_pk -> {side: relief arms, most likely to pitch first}, from the simulator's latest saved box for each game on
+    the public prediction file (each pitcher's chance to appear in its 10,000 games), so a plan's bullpen is the one
+    the simulator and the Matchups tab expect. Empty when the file cannot be read."""
+    try:
+        raw = D.read_blob(repo, token, 'public/predictions.json', branch)
+        doc = json.loads(raw) if raw else {}
+    except Exception as exc:
+        print('no simulator bullpens:', type(exc).__name__, flush=True)
+        return {}
+    latest = {}
+    for fid, f in (doc.get('forecasts') or {}).items():
+        pk = f.get('game_pk')
+        if pk is None:
+            continue
+        key = (int(f.get('version') or 0), str(f.get('saved_at') or ''))
+        if pk not in latest or key > latest[pk][0]:
+            latest[pk] = (key, fid)
+    boxes = doc.get('box_scores') or {}
+    out = {}
+    for pk, (_, fid) in latest.items():
+        b = boxes.get(fid)
+        if not b:
+            continue
+        sides = {}
+        for side in ('away', 'home'):
+            rows = ((b.get('teams') or {}).get(side) or {}).get('pitching') or []
+            pen = [r for r in rows if r.get('role') != 'starter' and r.get('player_id')]
+            pen.sort(key=lambda r: -float(r.get('appearance_probability') or 0))
+            sides[side] = [int(r['player_id']) for r in pen]
+        out[int(pk)] = sides
+    return out
+
+
+def build_report(fit: Fitted, T_all: dict, day: str, asof: str, stage, max_relievers=4, sim_pens=None) -> dict:
     """The date's report: a summary document and one document per game (each with the players it needs)."""
     games = schedule(day)
     rep = {'schema': SCHEMA, 'date': day, 'asof': asof, 'built_at': datetime.now(timezone.utc).isoformat(), 'training_pitches': fit.n_train,
@@ -961,10 +995,13 @@ def build_report(fit: Fitted, T_all: dict, day: str, asof: str, stage, max_relie
                 base = first9 + [x for x in rec_h.get(tid, []) if x not in first9]
                 hitters = [x for x in base if x in fit.maps_s][:12]
                 spots = {x: i + 1 for i, x in enumerate((lineup or last)[:9])}
-                pens = rec_p.get(fid, [])[:max_relievers]
+                # the simulator's likeliest relievers when it has a saved box for the game, else the team's most used
+                pens = ((sim_pens or {}).get(int(pk)) or {}).get(fld_side) or rec_p.get(fid, [])
                 source = 'posted lineup' if lineup else (src_ if last else 'recent games')
             staff = ([starter] if starter else []) + [x for x in pens if x != starter]
             staff = [x for x in staff if x in fit.gp and len(fit.gp[x]) >= 150]
+            if not box:                         # a game to come: the starter and the likeliest relievers with enough pitches
+                staff = [x for x in staff if x == starter] + [x for x in staff if x != starter][:max_relievers]
             side_entry = {'lineup_source': source, 'hitters': hitters, 'spots': {str(x): v for x, v in spots.items() if x in hitters},
                           'pitchers': [{'id': x, 'role': 'starter' if x == starter else 'reliever'} for x in staff], 'pairs': {}}
             need_names.update(hitters); need_names.update(staff)
@@ -1320,6 +1357,7 @@ def main():
             receipt['lineup_study'] = lineup_study(T, stage, params['lineup_study'])
             dates = []
         fits = {}
+        sim_pens = None
         for day in sorted(dates):
             a = asof_for.get(day) or asof or day
             if a > day:
@@ -1336,7 +1374,9 @@ def main():
                         receipt.setdefault('calibration_maps', {})[a] = calibration_maps(fits[a]); stage('calibration of the chase price by own part')
             if params.get('calibration_only'):
                 continue
-            rep = build_report(fits[a], T, day, a, stage, int(params.get('max_relievers', 4)))
+            if sim_pens is None:
+                sim_pens = sim_relievers(repo, token, branch); stage('simulator bullpens')
+            rep = build_report(fits[a], T, day, a, stage, int(params.get('max_relievers', 4)), sim_pens=sim_pens)
             total = 0
             summary = {k: v for k, v in rep.items() if k != 'games'}
             summary['games'] = {}

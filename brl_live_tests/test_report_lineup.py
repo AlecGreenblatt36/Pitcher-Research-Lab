@@ -66,3 +66,21 @@ def test_no_last_lineup_without_nine_batters():
     T = {k: v[keep] for k, v in T.items()}
     _, _, last = B.recent_players(T, {1: [11]}, {(11, 1): 'home'})
     assert 1 not in last
+
+
+def test_simulator_bullpens_rank_relievers_by_chance_to_pitch(monkeypatch):
+    import json
+    B = _report()
+    pred = {'forecasts': {'a': {'game_pk': 5, 'version': 1, 'saved_at': '2026-10-10T01:00:00Z'},
+                          'b': {'game_pk': 5, 'version': 2, 'saved_at': '2026-10-10T05:00:00Z'}},
+            'box_scores': {'a': {'teams': {'away': {'pitching': [{'player_id': '1', 'role': 'starter', 'appearance_probability': 1.0}]}}},
+                           'b': {'teams': {'away': {'pitching': [{'player_id': '1', 'role': 'starter', 'appearance_probability': 1.0},
+                                                                 {'player_id': '7', 'role': 'reliever', 'appearance_probability': 0.2},
+                                                                 {'player_id': '8', 'role': 'closer', 'appearance_probability': 0.5},
+                                                                 {'player_id': '9', 'role': 'long', 'appearance_probability': 0.3}]},
+                                           'home': {'pitching': []}}}}}
+    monkeypatch.setattr(B.D, 'read_blob', lambda *a, **k: json.dumps(pred).encode())
+    out = B.sim_relievers('r', 't', 'b')
+    assert out == {5: {'away': [8, 9, 7], 'home': []}}
+    monkeypatch.setattr(B.D, 'read_blob', lambda *a, **k: (_ for _ in ()).throw(OSError('down')))
+    assert B.sim_relievers('r', 't', 'b') == {}
