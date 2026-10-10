@@ -683,20 +683,29 @@ def boxscore_players(game_pk: int) -> dict:
     return out
 
 
-def recent_players(T: dict, game_pks_by_team: dict, team_games: dict) -> tuple[dict, dict]:
-    """From the pitch table: each team's hitters (by plate appearances) and relievers (by appearances) in its recent games."""
-    hitters, relievers = {}, {}
+def recent_players(T: dict, game_pks_by_team: dict, team_games: dict) -> tuple[dict, dict, dict]:
+    """From the pitch table: each team's hitters (by plate appearances) and relievers (by appearances) in its recent games,
+    and the batting order of its latest game in the table (the simulator projects a lineup the same way: the team's most
+    recent lineup)."""
+    hitters, relievers, last_order = {}, {}, {}
     starters_of = {}
-    g = T['game']; h = T['half']; b = T['batter']; p = T['pitcher']; ab = T['ab']; pn = T['pitch_no']
+    g = T['game']; h = T['half']; b = T['batter']; p = T['pitcher']; ab = T['ab']; pn = T['pitch_no']; dy = T['day']
     first = pn == 0
     for tid, pks in game_pks_by_team.items():
-        hc = {}; pc = {}
+        hc = {}; pc = {}; latest = None
         for pk in pks:
             side = team_games[(pk, tid)]            # 'away' or 'home'
             bat_half = 0 if side == 'away' else 1; fld_half = 1 - bat_half
             m = (g == pk) & (h == bat_half) & first
             for x in b[m]:
                 hc[int(x)] = hc.get(int(x), 0) + 1
+            if m.any():
+                key = (int(dy[m].max()), int(pk))
+                if latest is None or key > latest[0]:
+                    o = np.argsort(ab[m], kind='stable')
+                    latest = (key, list(dict.fromkeys(int(x) for x in b[m][o]))[:9])
+        if latest is not None and len(latest[1]) == 9:
+            last_order[tid] = latest[1]
             m2 = (g == pk) & (h == fld_half)
             if m2.any():
                 order = np.argsort(ab[m2] * 100 + pn[m2], kind='stable'); ps = p[m2][order]
@@ -706,7 +715,7 @@ def recent_players(T: dict, game_pks_by_team: dict, team_games: dict) -> tuple[d
                         pc[int(x)] = pc.get(int(x), 0) + 1
         hitters[tid] = sorted(hc, key=lambda k: -hc[k])[:13]
         relievers[tid] = sorted(pc, key=lambda k: -pc[k])[:6]
-    return hitters, relievers
+    return hitters, relievers, last_order
 
 
 def names_for(ids: set, teams: bool = False) -> dict:
@@ -790,7 +799,7 @@ def build_report(fit: Fitted, T_all: dict, day: str, asof: str, stage, max_relie
                 tid = int((((g.get('teams') or {}).get(side) or {}).get('team') or {}).get('id') or 0)
                 if tid:
                     by_team.setdefault(tid, []).append(pk); team_games[(pk, tid)] = side
-    rec_h, rec_p = recent_players(fit.T, by_team, team_games)
+    rec_h, rec_p, rec_o = recent_players(fit.T, by_team, team_games)
     stage('recent players')
     need_names = set()
     for g in games:
@@ -808,17 +817,24 @@ def build_report(fit: Fitted, T_all: dict, day: str, asof: str, stage, max_relie
             if box:
                 order = box[bat_side]['battingOrder'] or box[bat_side]['batters']
                 hitters = [x for x in order if x in fit.maps_s][:12]
+                spots = {x: i + 1 for i, x in enumerate((box[bat_side]['battingOrder'] or [])[:9])}
                 pitchers = [x for x in box[fld_side]['pitchers']]
                 starter = pitchers[0] if pitchers else None
                 pens = pitchers[1:]
+                source = 'box score'
             else:
                 lineup = g['lineups'].get(bat_side) or []
-                hitters = [x for x in (lineup or rec_h.get(tid, [])) if x in fit.maps_s][:12]
+                # no posted lineup: the team's last lineup, then the rest of its recent hitters off the bench
+                last = rec_o.get(tid) or []
+                base = lineup or (last + [x for x in rec_h.get(tid, []) if x not in last])
+                hitters = [x for x in base if x in fit.maps_s][:12]
+                spots = {x: i + 1 for i, x in enumerate((lineup or last)[:9])}
                 starter = g['teams'][fld_side]['probable']
                 pens = rec_p.get(fid, [])[:max_relievers]
+                source = 'posted lineup' if lineup else ('last game' if last else 'recent games')
             staff = ([starter] if starter else []) + [x for x in pens if x != starter]
             staff = [x for x in staff if x in fit.gp and len(fit.gp[x]) >= 150]
-            side_entry = {'lineup_source': 'box score' if box else ('posted lineup' if g['lineups'].get(bat_side) else 'recent games'), 'hitters': hitters,
+            side_entry = {'lineup_source': source, 'hitters': hitters, 'spots': {str(x): v for x, v in spots.items() if x in hitters},
                           'pitchers': [{'id': x, 'role': 'starter' if x == starter else 'reliever'} for x in staff], 'pairs': {}}
             need_names.update(hitters); need_names.update(staff)
             for h in hitters:
