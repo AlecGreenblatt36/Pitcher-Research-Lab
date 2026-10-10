@@ -4272,7 +4272,8 @@ def value2_study(T: dict, params: dict, stage) -> dict:
             lam_draws[zn_] = np.asarray(dl)
         res['own_part_calibration'] = {zn_: {'slope': round(lam[zn_], 4), 'interval': [round(float(np.percentile(lam_draws[zn_], q)), 4) for q in (2.5, 97.5)]} for zn_ in lam}
         res['own_part_calibration']['note'] = 'test-season swing residual (actual minus the league with the shared shape) regressed on the own part in probability units; 1 means a fitted point is a real point'
-        PM = PAModels(T, tr, np.random.default_rng(23), {'league_n': int(params.get('league_n', 500000)), 'min_pitches': 300, 'swing_cross': sx}, stage)
+        PM = PAModels(T, tr, np.random.default_rng(23), {'league_n': int(params.get('league_n', 500000)), 'min_pitches': 300, 'swing_cross': sx,
+                                                          'cs_season': bool(params.get('cs_season'))}, stage)   # VALUE-18Y: the called-strike model's season profile (PROD-05)
         xoff_all, zoff_all = xp - T['px'].astype(np.float64), zp - T['pz'].astype(np.float64)   # decision-moment projection minus crossing, per pitch
         # VALUE-18J: the maps' own noise in the interval. Maps refitted on training games resampled with replacement (the league model and the
         # engine held fixed), each draw with its own shared shape and calibration; the structural figure is recomputed per draw in the aiming loop

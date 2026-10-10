@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 248,
- "rows": 251,
+ "experiments": 250,
+ "rows": 253,
  "records": {
   "ACC-01": [
    {
@@ -4073,7 +4073,40 @@
     "id": "CS-SEASON-02",
     "columns": {
      "ID": "CS-SEASON-02",
-     "Attempt": "CS-SEASON-01's season profile, unchanged (params cs_season), tested where no called-strike run has looked: the 2024 season. As of the 1st of April to September 2024 (each fit on 2023 and on 2024 before the date), called strikes expected against actual on the takes in the 30 days after each date, pooled; arms off and season (scratch cross/compare_recent.py, the same sums). Written after CS-RECENT-01's 2025 and 2026 windows and before any 2024 run; the tolerance for the far bands is set by what moves a plan, not by those windows' results. **Registered in the commit that added this row, before the runs.** Gate, season against off, 2024 pooled: overall within 0.98 to 1.02; the six bands from deep inside to a quarter foot outside each within the larger of 7% and three standard errors (3 times the square root of the actual count, bands with at least 100 called strikes); the two bands more than a quarter foot outside within 2 called strikes per 1,000 takes of actual (a strike called that far off the plate is rare enough that a smaller miss does not move a plan); log loss lower; each window's overall within 0.96 to 1.04. Prediction: season overall 0.99 to 1.01, within 0.1 ft outside 0.95 to 1.05, log loss lower by 0.5 to 5 nats per 1,000 takes (2024 is the old ball-strike world, so a smaller gain than 2026's); off overall 1.01 to 1.05. If it holds: the season profile goes on in the daily report and the engine (CS_SEASON), the backfilled reports are rebuilt with it, and the aiming value is re-priced (VALUE-18Y) before the figure is restated.",
+     "Attempt": "CS-SEASON-01's season profile, unchanged (params cs_season), tested where no called-strike run has looked: the 2024 season. As of the 1st of April to September 2024 (each fit on 2023 and on 2024 before the date), called strikes expected against actual on the takes in the 30 days after each date, pooled; arms off and season (scratch cross/compare_recent.py, the same sums). Written after CS-RECENT-01's 2025 and 2026 windows and before any 2024 run; the tolerance for the far bands is set by what moves a plan, not by those windows' results. **Registered in the commit that added this row, before the runs.** Gate, season against off, 2024 pooled: overall within 0.98 to 1.02; the six bands from deep inside to a quarter foot outside each within the larger of 7% and three standard errors (3 times the square root of the actual count, bands with at least 100 called strikes); the two bands more than a quarter foot outside within 2 called strikes per 1,000 takes of actual (a strike called that far off the plate is rare enough that a smaller miss does not move a plan); log loss lower; each window's overall within 0.96 to 1.04. Prediction: season overall 0.99 to 1.01, within 0.1 ft outside 0.95 to 1.05, log loss lower by 0.5 to 5 nats per 1,000 takes (2024 is the old ball-strike world, so a smaller gain than 2026's); off overall 1.01 to 1.05. If it holds: the season profile goes on in the daily report and the engine (CS_SEASON), the backfilled reports are rebuilt with it, and the aiming value is re-priced (VALUE-18Y) before the figure is restated. **Results (runs 38067711401 off and 38067725339 season):** gate not met, on log loss. Pooled over 2024's six windows: overall 0.994 (off 0.988); every band within its tolerance: within 0.1 ft outside 0.983 (off 0.961), 0.1 to 0.25 ft 0.996 (0.955), a quarter to half a foot 0.999 (0.909; misses of -0.02 and -1.23 called strikes per 1,000 takes), past half a foot +0.45 per 1,000 (off +0.32); each window within 0.986 to 1.007; but log loss higher by 0.03 nats per 1,000 takes (predicted lower by 0.5 to 5). In 2024 the mixed model was off in the other direction (too few strikes called off the plate) and only by 4 to 9%, and the season blocks cost about what their calibration gained. Not adopted under this gate; see PROD-05.",
+     "Disposition and evidence": "gate not met (log loss +0.03 nats per 1,000 takes); see PROD-05"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [
+     "38067711401",
+     "38067725339"
+    ],
+    "frozen_commits": [],
+    "status": "gate not met (log loss +0.03 nats per 1,000 takes); see PROD-05"
+   }
+  ],
+  "PROD-05": [
+   {
+    "id": "PROD-05",
+    "columns": {
+     "ID": "PROD-05",
+     "Attempt": "Product call, October 10 (Alec, October 10: make the calls). The called-strike model gets each season's edge profile (CS-SEASON-01's design) in the daily report and the engine, though no registered gate passed: CS-SEASON-01 failed on the 2026 band 0.1 to 0.25 ft outside over a two-month horizon (0.871), and CS-SEASON-02 failed on log loss in 2024 by 0.03 nats per 1,000 takes. The call rests on what all three seasons show on the 30 days after each monthly as-of date (CS-RECENT-01 and CS-SEASON-02's runs): log loss no worse in any season (2024 +0.03, 2025 -1.43, 2026 -3.73 nats per 1,000 takes) and the edge better calibrated in every season (within 0.1 ft outside: 2024 0.983 against 0.961, 2025 0.994 against 1.133, 2026 1.045 against 1.468; 0.1 to 0.25 ft outside: 0.996 against 0.955, 1.045 against 1.306, 1.015 against 1.859). Today's model calls far too many strikes just off the plate in 2026, so a plan that says to steal a strike off the plate is priced on calls that do not happen. No harm by log loss, a clear gain where plans are made. On from the next daily build (tools/brl_report.py CS_SEASON true); the backfilled reports rebuilt with it; the aiming value re-priced (VALUE-18Y) before its figure is restated.",
+     "Disposition and evidence": "taken as a product call (no gate passed)"
+    },
+    "registered_before_run": false,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "taken as a product call (no gate passed)"
+   }
+  ],
+  "VALUE-18Y": [
+   {
+    "id": "VALUE-18Y",
+    "columns": {
+     "ID": "VALUE-18Y",
+     "Attempt": "The aiming value re-priced with the called-strike model's season profile (PROD-05). VALUE-18X's run repeated exactly (value2_study, seasons 2023 to 2026, final_eval on August 1 to September 27, 2026, maps and the league from 2023-2025, 0.6 ft of scatter, within type, specific, pitch estimand, pool from training, reprice boundary, bands and structural, 200 resamples, five placebo draws, swing_cross true) with params cs_season true: the engine (PAModels) prices takes with the latest training season's edge profile (2025, since the study fits on 2023 to 2025). Reused validation months (rule 6); a re-pricing after a model change, not a new test. Smoke test on a synthetic world (scratch cross/smoke_value_cs.py): runs both ways (-46.7 and -46.8 there, where the seasons call strikes alike). **Registered in the commit that added this row, before the run.** Predictions: (1) the structural outside-only figure between -36 and -52 runs per 6,200 plate appearances (VALUE-18X -42.3): a take just off the plate is less often a strike, so getting a chase there is worth a little more; (2) the inside part between -14 and -24 (-22.7): a take on the corner is less often a strike than the mixed model said, so a stolen strike is worth less; (3) the own-part calibration slopes within 0.01 of 0.967 and 0.822 and the realized-outcome regression within 0.5 of -29.4 (neither uses the called-strike model). Decision rule: the stated aiming figure (site and METHODS.md) becomes this run's, the structural figure with the regression's beside it, as a range rounded to 5 runs, and the inside part restated; if (3) fails, the run is checked before anything is restated.",
      "Disposition and evidence": "registered, running"
     },
     "registered_before_run": true,

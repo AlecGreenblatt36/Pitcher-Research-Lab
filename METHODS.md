@@ -71,6 +71,16 @@ and the maps. The aiming value was re-priced with it (VALUE-18X): -42.3 [-45.2, 
 the engine's components against VALUE-18F's -43.5, the realized-outcome regression unchanged at -29.4, the inside part
 -22.7, the calibration slopes 0.967 and 0.822. The stated range is now about 30 to 40 (30 to 45 before, from rounding 43.5).
 
+From October 10, 2026 the called-strike model also carries each season's own profile at the zone edge (PROD-05, a
+product call; no registered gate passed). The model mixed seasons, and the calls at the edge move from season to season: on
+the 30 days after each monthly as-of date, the mixed model called 13% too many strikes within 0.1 ft outside the zone in
+2025, 47% too many in 2026 and 4% too few in 2024; with each season's profile those came within 2 to 5%, with log loss on
+the takes no worse in 2024 (+0.03 nats per 1,000) and lower in 2025 and 2026 (by 1.4 and 3.7). The gates it missed: a
+two-month horizon in 2026, where the 2026 profile fit through July called 13% too few strikes 0.1 to 0.25 ft outside in
+August and September (CS-SEASON-01), and log loss in 2024 (CS-SEASON-02). Weighting recent takes more (CS-RECENT-01) also
+missed, on the band a quarter to half a foot outside. The aiming value is re-priced with it (VALUE-18Y) before the figure
+is restated.
+
 The aiming value is estimated policy potential, not observed runs saved. It is stated as a range, about 30 to 40
 runs over a team's season from outside pitches alone on the later-period months (VALUE-18X; the description that follows
 is VALUE-18F's, whose figures the re-pricing moved by about a run): 43.5 [40.7, 46.6] when
