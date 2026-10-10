@@ -91,7 +91,8 @@ propensity, was evaluated with it at zero, so fouls came out 16 to 18% high and 
 two-strike foul tip that ends the at-bat, a strikeout, was priced as a ball in play (FOUL-02). With both corrected the
 training rows match within 0.05 runs per 100 swings and the later 2025 rows within 0.16. The value of a ball in play still
 moves with the period (6% low on July to September 2025, 8% high on August and September 2026), which shifts every
-swing alike and is left open.
+swing alike and is left open. Re-priced with both corrections (VALUE-18Z), the aiming value is -42.9 [-45.9, -40.0] by the
+engine's components and -23.9 inside; the stated range stays about 30 to 40, and about 24 inside.
 
 The aiming value is estimated policy potential, not observed runs saved. It is stated as a range, about 30 to 40
 runs over a team's season from outside pitches alone on the later-period months (VALUE-18X; the description that follows

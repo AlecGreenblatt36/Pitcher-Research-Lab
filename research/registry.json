@@ -4197,14 +4197,18 @@
     "id": "VALUE-18Z",
     "columns": {
      "ID": "VALUE-18Z",
-     "Attempt": "The aiming value re-priced with the foul corrections (FOUL-01 and FOUL-02) and the season strike profile. VALUE-18Y's run repeated exactly (value2_study, seasons 2023 to 2026, final_eval on August 1 to September 27, 2026, maps and the league from 2023-2025, 0.6 ft of scatter, within type, specific, pitch estimand, pool from training, reprice boundary, bands and structural, 200 resamples, five placebo draws, swing_cross and cs_season true) with params foul_prop and foul_tip true. Reused validation months (rule 6); a re-pricing after a correction, not a new test. **Registered in the commit that added this row, before the run.** Predictions: (1) the structural outside-only figure between -34 and -50 runs per 6,200 plate appearances (VALUE-18Y -42.6): outside swings were priced close to right before (CAL-03), so it should move little; (2) the inside part between -12 and -32 (-23.2): swings in the zone were priced 0.5 runs per 100 too costly to the hitter and now are not, which changes what a strike in the zone is worth against a swing there, direction not called; (3) the own-part calibration slopes and the realized-outcome regression unchanged (0.967, 0.822, -29.4; neither uses the engine). Decision rule: the stated figures (site and METHODS.md) become this run's under VALUE-18X's rounding rule; if (3) fails, the run is checked before anything is restated.",
-     "Disposition and evidence": "registered, running"
+     "Attempt": "The aiming value re-priced with the foul corrections (FOUL-01 and FOUL-02) and the season strike profile. VALUE-18Y's run repeated exactly (value2_study, seasons 2023 to 2026, final_eval on August 1 to September 27, 2026, maps and the league from 2023-2025, 0.6 ft of scatter, within type, specific, pitch estimand, pool from training, reprice boundary, bands and structural, 200 resamples, five placebo draws, swing_cross and cs_season true) with params foul_prop and foul_tip true. Reused validation months (rule 6); a re-pricing after a correction, not a new test. **Registered in the commit that added this row, before the run.** Predictions: (1) the structural outside-only figure between -34 and -50 runs per 6,200 plate appearances (VALUE-18Y -42.6): outside swings were priced close to right before (CAL-03), so it should move little; (2) the inside part between -12 and -32 (-23.2): swings in the zone were priced 0.5 runs per 100 too costly to the hitter and now are not, which changes what a strike in the zone is worth against a swing there, direction not called; (3) the own-part calibration slopes and the realized-outcome regression unchanged (0.967, 0.822, -29.4; neither uses the engine). Decision rule: the stated figures (site and METHODS.md) become this run's under VALUE-18X's rounding rule; if (3) fails, the run is checked before anything is restated. **Results (run 38072843478, frozen df01e156f, 184,318 test pitches, 412 hitters):** structural outside-only -42.9 runs per 6,200 plate appearances [-45.9, -40.0] (VALUE-18Y -42.6), inside -23.9 (-23.2); calibration slopes 0.967 and 0.822 and the regression -29.4 [-34.0, -25.1] unchanged; the structural choices priced by the band regression -25.1. (1), (2) and (3) held. Stated: about 30 to 40 runs from outside pitches (43 by the engine's components, 29 by realized outcomes), unchanged, and about 24 more inside (was 23).",
+     "Disposition and evidence": "(1), (2) and (3) held; inside stated as about 24"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
-    "frozen_commits": [],
-    "status": "registered, running"
+    "runs": [
+     "38072843478"
+    ],
+    "frozen_commits": [
+     "df01e156f"
+    ],
+    "status": "(1), (2) and (3) held; inside stated as about 24"
    }
   ],
   "BOX-01": [
