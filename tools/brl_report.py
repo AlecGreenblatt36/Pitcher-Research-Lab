@@ -151,6 +151,64 @@ def put(repo, token, path, text, branch, message, tries=14):
             time.sleep(random.uniform(2, 6) * (1 + attempt / 3))
 
 
+def _rate_wait(exc, limited: int):
+    """Seconds to wait out GitHub's rate limit for this error, or None when it is not a rate limit."""
+    if exc.code not in (403, 429):
+        return None
+    try:
+        body = exc.read().decode(errors='replace').lower()
+    except Exception:
+        body = ''
+    hdr = exc.headers or {}
+    if not ('rate limit' in body or hdr.get('Retry-After') or hdr.get('X-RateLimit-Remaining') == '0'):
+        return None
+    return float(hdr.get('Retry-After') or 0) or 60.0 * (1 + limited / 2)
+
+
+def put_many(repo, token, files: dict, branch, message, tries=16):
+    """Many files in one commit through the Git Data API, so a report day is one commit instead of one per game (fewer
+    commits on the ledger branch, fewer 409s for the live runs writing beside it). Each file becomes a blob (blobs do
+    not move the branch), then one tree on the branch head, one commit and a fast-forward of the branch; when another
+    writer moved the head in between (422 or 409) the tree goes on the new head. Rate limits are waited out."""
+    import random
+    from urllib.error import HTTPError
+    if not files:
+        return None
+    git = f'https://api.github.com/repos/{repo}/git'
+    limited = 0
+
+    def call(url, method='GET', payload=None, conflicts=False):
+        nonlocal limited
+        for attempt in range(tries):
+            try:
+                return D.api(url, token, method, payload)
+            except HTTPError as exc:
+                wait = _rate_wait(exc, limited)
+                if wait is not None and limited < 8:
+                    limited += 1
+                    print(f'write rate-limited ({exc.code}); waiting {wait:.0f}s', flush=True)
+                    time.sleep(min(wait, 300) + random.uniform(0, 10)); continue
+                if exc.code >= 500 and attempt < tries - 1:
+                    time.sleep(2 + 3 * attempt); continue
+                raise
+        raise RuntimeError('GitHub API kept failing: ' + url)
+
+    blobs = {path: call(f'{git}/blobs', 'POST', {'content': text, 'encoding': 'utf-8'})['sha'] for path, text in files.items()}
+    entries = [{'path': p_, 'mode': '100644', 'type': 'blob', 'sha': sha} for p_, sha in sorted(blobs.items())]
+    for attempt in range(tries):
+        head = call(f'{git}/ref/heads/{branch}')['object']['sha']
+        base_tree = call(f'{git}/commits/{head}')['tree']['sha']
+        tree = call(f'{git}/trees', 'POST', {'base_tree': base_tree, 'tree': entries})['sha']
+        commit = call(f'{git}/commits', 'POST', {'message': message, 'tree': tree, 'parents': [head]})['sha']
+        try:
+            call(f'{git}/refs/heads/{branch}', 'PATCH', {'sha': commit, 'force': False})
+            return commit
+        except HTTPError as exc:
+            if exc.code not in (409, 422) or attempt == tries - 1:
+                raise
+            time.sleep(random.uniform(0.5, 2.0) * (1 + attempt / 2))
+
+
 def rebuild_index(repo, token, branch) -> tuple[dict, dict]:
     """The reports index from what is on the branch (never a read-modify-write, which parallel backfills would race):
     every public/reports/<date>/index.json, as {date: summary} and the index document."""
@@ -1380,17 +1438,20 @@ def main():
             total = 0
             summary = {k: v for k, v in rep.items() if k != 'games'}
             summary['games'] = {}
+            day_files = {}
             for pk, entry in rep['games'].items():
                 doc = dict(entry); doc.update({'schema': SCHEMA, 'date': day, 'asof': a, 'game_pk': int(pk), 'grid': rep['grid'], 'training_pitches': fit_n(fits[a]), 'league': fits[a].league,
                                                'built_at': rep['built_at']})
                 text = json.dumps(clean(doc), separators=(',', ':')); total += len(text)
-                if params.get('publish', True):
-                    put(repo, token, f'public/reports/{day}/{pk}.json', text, branch, f'BRL report {day} game {pk} (as of {a})')
+                day_files[f'public/reports/{day}/{pk}.json'] = text
                 summary['games'][pk] = {'teams': {sd: {'id': entry['teams'][sd]['id'], 'name': entry['teams'][sd]['name'], 'abbr': entry['teams'][sd]['abbr']} for sd in ('away', 'home')},
                                         'status': entry['status'], 'final': entry['final'], 'start': entry['start'], 'grade': entry.get('grade'),
                                         'pairs': sum(len(se['pairs']) for se in entry['sides'].values())}
             if params.get('publish', True):
-                put(repo, token, f'public/reports/{day}/index.json', json.dumps(clean(summary), separators=(',', ':')), branch, f'BRL report {day} summary (as of {a})')
+                # the day's games and its summary in one commit
+                day_files[f'public/reports/{day}/index.json'] = json.dumps(clean(summary), separators=(',', ':'))
+                put_many(repo, token, day_files, branch, f'BRL report {day}: {len(rep["games"])} games and the summary (as of {a})')
+            del day_files
             receipt['reports'][day] = {'games': len(rep['games']), 'bytes': total, 'asof': a, 'graded': sum(1 for g in rep['games'].values() if g.get('grade'))}
             stage(f'report {day}')
             del rep, summary
@@ -1404,16 +1465,16 @@ def main():
             if a_last is not None:
                 pidx, pshards = build_players(fits[a_last], a_last, stage)
                 if params.get('publish', True):
-                    for k, shard in sorted(pshards.items()):
-                        put(repo, token, f'public/reports/players/{k}.json', json.dumps(clean(shard), separators=(',', ':')), branch, f'BRL player cards {k} (as of {a_last})')
-                    put(repo, token, 'public/reports/players/index.json', json.dumps(clean(pidx), separators=(',', ':')), branch, f'BRL player index (as of {a_last})')
+                    pfiles = {f'public/reports/players/{k}.json': json.dumps(clean(shard), separators=(',', ':')) for k, shard in sorted(pshards.items())}
+                    pfiles['public/reports/players/index.json'] = json.dumps(clean(pidx), separators=(',', ':'))
+                    put_many(repo, token, pfiles, branch, f'BRL player cards and index (as of {a_last})')
                 receipt['players'] = {'hitters': len(pidx['hitters']), 'pitchers': len(pidx['pitchers']), 'asof': a_last, 'shards': len(pshards)}
         if params.get('publish', True):
             stage('index')
             idx, days = rebuild_index(repo, token, branch)
-            put(repo, token, 'public/reports/index.json', json.dumps(idx, separators=(',', ':'), sort_keys=True), branch, 'BRL reports index')
             rec = record_from(days)
-            put(repo, token, 'public/reports/record.json', json.dumps(clean(rec), separators=(',', ':')), branch, 'BRL reports record')
+            put_many(repo, token, {'public/reports/index.json': json.dumps(idx, separators=(',', ':'), sort_keys=True),
+                                   'public/reports/record.json': json.dumps(clean(rec), separators=(',', ':'))}, branch, 'BRL reports index and record')
             receipt['record'] = {k: rec[k] for k in ('games', 'dates', 'first_date', 'last_date', 'chases', 'chases_expected_league', 'chases_expected_map', 'in_recommended', 'usual_expected', 'outside_pitches')}
         receipt['status'] = 'completed'
     except Exception as exc:
