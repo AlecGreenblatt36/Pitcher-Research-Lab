@@ -431,6 +431,7 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .plan-list { list-style: none; margin: 8px 0 0; padding: 0; background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; }
 .plan-row { padding: 12px 14px; border-top: 1px solid var(--rule-soft); }
 .plan-row:first-child { border-top: 0; }
+.plan-checks { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 8px; }
 .plan-bench { padding: 10px 14px 6px; border-top: 1px solid var(--rule-soft); font-size: 14px; font-weight: 700; color: var(--muted); background: var(--hover); }
 .plan-row.rp-cell { cursor: pointer; }
 .plan-row.rp-cell:hover { background: var(--hover); }
@@ -2386,6 +2387,19 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     return '<div id="rp-' + pk + '"><p class="empty">Loading the game plan…</p></div>';
   }
   var RP_RECORD = null;
+  /* The plans' read on hitters, checked: chase rates of the hitters we read as chasers and as patient, against what an
+     average hitter would have done on the same pitches (record.json bins by the read's extra chases per 100). */
+  function planTierLines(R) {
+    var b = R && R.bins, hi = b && b["over 2"], lo = b && b["under -2"];
+    if (!hi || !lo || !hi.outside || !lo.outside) return [];
+    var r = function (x, k) { return (100 * x[k] / x.outside).toFixed(1) + "%"; };
+    return ["Hitters we read as chasers went after " + r(hi, "chases") + " of pitches out of the zone. An average hitter would have chased " + r(hi, "league") + " of those same pitches.",
+            "Hitters we read as patient chased " + r(lo, "chases") + ". An average hitter would have chased " + r(lo, "league") + "."];
+  }
+  function withPlanRecord(then) {
+    if (RP_RECORD) return then(RP_RECORD);
+    fetch(REPORTS + "record.json", { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : false; }).then(function (rec) { if (rec) RP_RECORD = rec; then(rec || null); }, function () { then(null); });
+  }
   function loadRecord(f, pk) {
     if (RP_RECORD !== null) return;
     RP_RECORD = false;
@@ -2785,6 +2799,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         (Math.abs(R.chases_expected_map - R.chases) < Math.abs(R.chases_expected_league - R.chases) ? ", closer to what happened." : ".") +
         (R.scored && R.scored.decisions >= 1000 && R.scored.map_gain_nats_per_1000 != null ? " Pitch by pitch, on " + Number(R.scored.decisions).toLocaleString() + " swing-or-take decisions, our read called them better than league averages " + (R.scored.map_gain_nats_per_1000 >= 5 ? "by a clear margin." : R.scored.map_gain_nats_per_1000 >= 0 ? "by a small margin." : "only some of the time; it trailed overall.") : "") + "</p>";
     }
+    if (RP_RECORD && RP_RECORD.games) planTierLines(RP_RECORD).forEach(function (t) { held += '<p class="note">' + esc(t) + "</p>"; });
     if (held) h += '<details class="more" data-keep="held"' + (state.rpOpen.held ? " open" : "") + "><summary>How these plans have held up</summary>" + held + "</details>";
     h += '<details class="more" data-keep="tip"' + (state.rpOpen.tip ? " open" : "") + '><summary>Pitch to pitch</summary><p class="note">After he takes a pitch, and even more after he swings through one, coming right back with the same pitch type gets more swings and misses and weaker contact than switching. Taking a little off the next one adds to it. After a foul ball it doesn\'t matter. That holds across the league; it isn\'t built into each hitter\'s plan yet.</p></details>';
     h += '<details class="more" data-keep="how"' + (state.rpOpen.how ? " open" : "") + '><summary>How the plan is built</summary><p class="note">For every hitter we map where he swings, read about a quarter second before the ball gets there, when he has to decide. We compare that to an average hitter on his side and to the spots this pitcher actually throws each pitch to. Each spot is scored by what usually happens there for this hitter: a chase, a take, a whiff, a foul or a ball in play, and what that does to the count. The spots on the plan are the best of the pitcher\'s usual spots, with normal command (pitches miss by about 7 inches). The run figures assume hitters don\'t adjust much. Every test, including the ones that failed, is in the project ledger.</p></details></section>';
@@ -3131,6 +3146,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       live.forEach(function (a) { var g = (a.baseline_score - a.model_score) / a.baseline_score; h += "<li><span>" + esc(a.label) + " <small>(" + a.n_games + (a.n_games === 1 ? " game" : " games") + ")</small></span><b>" + (g >= 0 ? "+" : "") + Math.round(g * 100) + "%</b></li>"; });
       h += "</ul></section>";
     }
+    h += '<section class="sec" id="plan-record" hidden></section>';
     h += '<section class="sec"><h2>Game by game</h2><ol class="games-list">';
     (rec.games || []).slice().reverse().forEach(function (g) {
       var call = function (label, p) {
@@ -3144,6 +3160,14 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     h += '</ol><p class="note">Green: the team we favored won.</p></section>';
     app.innerHTML = h + "</div>";
     fillSeasonChecks();
+    withPlanRecord(function (R) {
+      var el = document.getElementById("plan-record"), lines = planTierLines(R);
+      if (!el || !R || !R.games || !lines.length) return;
+      el.innerHTML = '<h2>Game plans</h2><p class="lede">Every game plan since ' + esc(dateLabel(R.first_date).replace(/^[A-Za-z]+, /, "") + ", " + R.first_date.slice(0, 4)) + " (" + Number(R.games).toLocaleString() +
+        " games), built before the game and checked after it. Pitchers were not throwing to our plans, so this checks the read on each hitter.</p><ul class=\"plan-checks\">" +
+        lines.map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + "</ul>";
+      el.hidden = false;
+    });
   }
   /* "When we say 60%, do they win 60%?" and month by month, from the two seasons re-run (days/season-YYYY.json). */
   function fillSeasonChecks() {
