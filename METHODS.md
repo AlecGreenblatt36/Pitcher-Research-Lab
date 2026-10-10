@@ -31,7 +31,9 @@ starter who throws with the same hand as today's starter, within 30 days, else i
 October 10, 2026; brl_live/lineups.py). On every 2025 and 2026 team-game it named 7.3 of the 9 starters against 6.8
 for the last lineup alone (+0.42 and +0.50, both 95% intervals above zero) and put more of them in the right spot;
 where the opposing starter's hand changed from the last game (40 to 44% of team-games) it named about one more. The
-team's usual lineup against that hand (LINEUP-02) named 0.1 more still but scrambled the batting order and stays off.
+team's usual lineup against that hand (LINEUP-02) named 0.1 more still but scrambled the batting order and stays off;
+putting a regular back in for a fill-in (LINEUP-03) named 0.07 more but put 0.1 fewer in the right spot and missed its
+gate. On 2024, which no lineup rule was chosen on, the same-hand lineup named 0.45 more starters than the last lineup.
 The graded forecast is the last version before first pitch, which nearly always has the posted lineups, so this
 changes the early versions and the plans built before lineups come out.
 
