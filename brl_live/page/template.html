@@ -537,7 +537,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   var DATA_URL = "predictions.json";
   var D = null;
   var app = document.getElementById("app");
-  var state = { variant: {}, boxSide: {}, playSide: {}, muMetric: "obp", rpMetric: "chase", rpPair: {}, rpCount: "all", rpFollow: {} };
+  var state = { variant: {}, boxSide: {}, playSide: {}, muMetric: "obp", rpMetric: "chase", rpPair: {}, rpCount: "all", rpFollow: {}, rpCloud: false };
   var REPORTS = "https://raw.githubusercontent.com/AlecGreenblatt36/Pitcher-Research-Lab/brl-live-data/public/reports/";
   var TOTAL_TAUGHT = { sim: 0.32, line: 0.78, shift: -0.543, from: "2026-10-10" };   /* TOTALS-03: expected total taught by results, fixed cross-season weights */
   var RP = {};
@@ -2163,18 +2163,20 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var bg = edge >= 0 ? "rgba(46,125,154," + a.toFixed(3) + ")" : "rgba(240,178,58," + a.toFixed(3) + ")";
     return '<td class="rp-cell' + (sel ? " rp-sel" : "") + '" data-rp="' + key + '" style="background:' + bg + '">' + m.fmt(v) + "</td>";
   }
-  function rpGrid(doc, grid, aim, label, scale, strike) {
+  function rpGrid(doc, grid, aim, label, scale, strike, cloud) {
     var gu = doc.grid.side_ft, gz = doc.grid.height_ft, h = '<div class="rp-grid" role="img" aria-label="' + esc(label) + '">';
+    var cmax = cloud ? Math.max.apply(null, cloud.concat([0.001])) : 0;
     for (var r = gz.length - 1; r >= 0; r--) for (var c = 0; c < gu.length; c++) {
       var k = r * gu.length + c, v = grid ? grid[k] : 0, a = Math.min(0.85, Math.abs(v) / scale);
       var bg = v >= 0 ? "rgba(240,178,58," + a.toFixed(3) + ")" : "rgba(46,125,154," + a.toFixed(3) + ")";
+      if (cloud) { v = Math.round(100 * cloud[k]); bg = "rgba(23,35,28," + (0.85 * cloud[k] / cmax).toFixed(3) + ")"; }
       var inz = Math.abs(gu[c]) < 0.83 && gz[r] > 1.5 && gz[r] < 3.5;
       var aimAt = (aim || []).filter(function (p) { return Math.abs(p[0] - gu[c]) < 0.01 && Math.abs(p[1] - gz[r]) < 0.01; })[0];
       var stAt = (strike || []).filter(function (p) { return Math.abs(p[0] - gu[c]) < 0.01 && Math.abs(p[1] - gz[r]) < 0.01; })[0];
       var isTake = aimAt && aimAt[2] === "take", isWeak = stAt && stAt[2] === "weak";
       var cls = (inz ? "z" : "") + (aimAt ? (isTake ? " aim take" : " aim") : "") + (stAt ? (isWeak ? " strike weak" : " strike") : "");
       var why = aimAt ? (isTake ? "; aim here: strikes he takes" : "; aim here: he chases") : stAt ? (isWeak ? "; strike spot: he swings to little effect" : "; strike spot: he lets it go") : "";
-      h += '<i class="' + cls + '" style="background:' + bg + '" title="' + esc(gu[c] + " ft, " + gz[r] + " ft: " + (v > 0 ? "+" : "") + v + why) + '"></i>';
+      h += '<i class="' + cls + '" style="background:' + bg + '" title="' + esc(gu[c] + " ft, " + gz[r] + " ft: " + (cloud ? v + "% of landings" : (v > 0 ? "+" : "") + v) + why) + '"></i>';
     }
     return h + "</div>";
   }
@@ -2323,6 +2325,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         var d = document.getElementById("rp-detail-" + pk); if (d) d.scrollIntoView({ behavior: "smooth", block: "nearest" });
       });
     });
+    host.querySelectorAll("[data-rpcloud]").forEach(function (b) { b.addEventListener("click", function () { state.rpCloud = b.getAttribute("data-rpcloud") === "1"; loadReport(f, pk); var d = document.getElementById("rp-detail-" + pk); if (d) d.scrollIntoView({ behavior: "instant", block: "start" }); }); });
     host.querySelectorAll("[data-rpdeck]").forEach(function (b) { b.addEventListener("click", function () { stop(); state.rpPair[pk] = b.getAttribute("data-rpdeck"); state.rpCount = "all"; loadReport(f, pk); var d = document.getElementById("rp-detail-" + pk); if (d) d.scrollIntoView({ behavior: "smooth", block: "nearest" }); }); });
     host.querySelectorAll("[data-rpfollow]").forEach(function (b) { b.addEventListener("click", function () { state.rpFollow[pk] = state.rpFollow[pk] === false; loadReport(f, pk); if (state.rpFollow[pk]) { var d = document.getElementById("rp-detail-" + pk); if (d) d.scrollIntoView({ behavior: "smooth", block: "nearest" }); } }); });
   }
@@ -2399,6 +2402,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
             "Where to put outside pitches (dots): the best of the spots this pitcher actually throws that family to, by the hitter\'s own chase map (gold is where he chases more than the average hitter his side, blue less).") +
             " The outlined cells are the heart of the strike zone, the ring around them its edges, seen from the catcher with the hitter's side on the left.</p>";
           h += '<div class="seg" role="group" aria-label="Which count">' + counts.filter(function (c) { return c[0] === "all" || bc[c[0]]; }).map(function (c) { return '<button data-rpcount="' + c[0] + '" aria-pressed="' + (c[0] === ck) + '">' + c[1] + "</button>"; }).join("") + "</div>";
+          var hasCloud = ck === "all" && pr2.aim.dangerous_miss && Object.keys(pr2.aim.dangerous_miss).some(function (fam) { return pr2.aim.dangerous_miss[fam].cloud; });
+          if (hasCloud) h += ' <div class="seg" role="group" aria-label="What the grid shows"><button data-rpcloud="0" aria-pressed="' + !state.rpCloud + '">His map</button><button data-rpcloud="1" aria-pressed="' + !!state.rpCloud + '">Where the aims land</button></div>';
           if (ck !== "all") h += '<p class="note">' + esc(counts.filter(function (c) { return c[0] === ck; })[0][1]) + ": " + (bc[ck].runs_per_100_pa != null ? "the best third of his spots saves " + (-bc[ck].runs_per_100_pa).toFixed(2) + " runs per 100 plate appearances over his usual spots" : "the best third of his spots gains " + bc[ck].gain_points.toFixed(1) + " points of chase over his usual spots") + ", on " + Number(bc[ck].pitches).toLocaleString() + " such pitches.</p>";
           var fl = famLine(ck === "all" ? pr2.aim.by_family : bc[ck].by_family);
           if (fl) h += '<p class="note">' + esc(fl) + "</p>";
@@ -2413,7 +2418,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
             var own = hc.own_chase && hc.own_chase[fam], mix = pc && pc.mix && pc.mix[fam];
             if (!own) return;
             var stPlan = pr2.strike ? (ck === "all" ? pr2.strike.cells : (pr2.strike.by_count && pr2.strike.by_count[ck] ? pr2.strike.by_count[ck].cells : {})) : {};
-            h += '<div class="rp-card"><h4>' + fam.charAt(0).toUpperCase() + fam.slice(1) + (mix ? " <small>" + pct(mix.share) + " of his pitches, " + mix.speed + " mph</small>" : "") + "</h4>" + rpGrid(doc, own.grid, plan[fam], fam + " aim plan", 0.8, stPlan[fam]) +
+            var cloud = state.rpCloud && ck === "all" && pr2.aim.dangerous_miss && pr2.aim.dangerous_miss[fam] ? pr2.aim.dangerous_miss[fam].cloud : null;
+            h += '<div class="rp-card"><h4>' + fam.charAt(0).toUpperCase() + fam.slice(1) + (mix ? " <small>" + pct(mix.share) + " of his pitches, " + mix.speed + " mph</small>" : "") + "</h4>" + rpGrid(doc, own.grid, plan[fam], fam + (cloud ? " landing cloud" : " aim plan"), 0.8, stPlan[fam], cloud) +
+              (cloud ? '<div class="lbl">Where the chosen aims land with typical command (0.6 ft of scatter): darker is more of the landings.</div>' : "") +
               (plan[fam] && plan[fam].length ? '<div class="lbl">' + esc(plan[fam].map(rpWords).join("; ")) + "</div>" : '<div class="lbl">He rarely throws this family out of the zone to this side.</div>') +
               (stPlan[fam] && stPlan[fam].length ? '<div class="lbl">Strike spots (squares): ' + esc(stPlan[fam].map(rpWords).join("; ")) + "</div>" : "") +
               (ck === "all" && pr2.aim.dangerous_miss && pr2.aim.dangerous_miss[fam] && pr2.aim.dangerous_miss[fam].runs_per_100_pa >= 0.05 ? '<div class="lbl">Dangerous miss: ' + esc(rpWords(pr2.aim.dangerous_miss[fam].cell)) + ", where " + pct(pr2.aim.dangerous_miss[fam].share) + " of these throws land with typical command; it gives back " + pr2.aim.dangerous_miss[fam].runs_per_100_pa.toFixed(2) + " runs per 100 PA.</div>" : "") + "</div>";
