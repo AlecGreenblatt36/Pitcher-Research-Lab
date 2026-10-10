@@ -62,6 +62,14 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   live run deployed it, and brl_live_tests/test_page_script.py now runs node --check on the template and a rendered page.
   Live page: the simulated game folds while MLB's plays have not come in; an at-bat with no plan links the hitter's card.
   Record page says the at-bat model was tuned on 2025, so 2026 is the fairer test.
+- October 10, 4:50 p.m.: write contention. With four rebuild months committing every second, the live run's writes
+  failed with 409 six times running and Game 5 was "blocked" at 20:24 UTC (ledger.json status). The runs could not be
+  cancelled from here (the token has no actions write), so the loop was stopped and they run out. Fixes: the live
+  store retries a 409 sixteen times with a random spread (9814fe326); the report lane writes a day's plans, the player
+  cards, and the index with the record as one commit each (put_many, Git Data API, rebasing on a moved head), on
+  claude/live-v2 at ca870d819 and tried first on the October 1 to 8 rebuild (diag/report 3757b4a62). Push it to main
+  only after that run's receipt says completed and the days look right. Plans for games to come take their bullpen from
+  the simulator's saved box (chance to pitch); plans built after a lineup is posted keep the bench.
 
 - October 10, 3:35 p.m.: the rebuild loop's busy check read only the last 10 report runs, so with the calibration runs in
   between, batches overlapped (seven rebuild runs at once) and GitHub's secondary write limit failed April 2026 (run
