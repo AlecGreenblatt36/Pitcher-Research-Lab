@@ -12,15 +12,20 @@ Rules:
   freq  its usual lineup against that hand: over its last FREQ_GAMES games against that hand within FREQ_DAYS, the nine
         with the most starts (among hitters who batted in one of the team's last FREQ_ACTIVE games or started the latest
         of those games), in their average batting spot; else 'last'.
+  swap  'hand', with a fill-in (at most SWAP_FILL of those games started) giving his spot to a regular left out (at
+        least SWAP_REGULAR, and batted in one of the last FREQ_ACTIVE games), the least-started first (LINEUP-03).
 """
 from __future__ import annotations
 
 RULE = 'hand'          # LINEUP-01 passed (October 10, 2026, run 38082910875); LINEUP-02 ('freq') missed on batting spots
-RULES = ('last', 'hand', 'freq')
+RULES = ('last', 'hand', 'freq', 'swap')
 HAND_DAYS = 30
 FREQ_GAMES = 10
 FREQ_DAYS = 45
 FREQ_ACTIVE = 5
+SWAP_MIN_GAMES = 5         # LINEUP-03: games against the hand needed before a swap
+SWAP_FILL = 0.3            # a hitter who started at most this share of them is a fill-in
+SWAP_REGULAR = 0.6         # one who started at least this share is a regular
 
 
 def _who(hand: str) -> str:
@@ -43,6 +48,28 @@ def project(prior, today: int, hand: str | None, rule: str | None = None):
         recent = [g for g in same if g[0] >= today - HAND_DAYS]
         return (list(recent[-1][2]), 'last game against ' + _who(hand)) if recent else (last, 'last game')
     window = [g for g in same if g[0] >= today - FREQ_DAYS][-FREQ_GAMES:]
+    if rule == 'swap':
+        recent = [g for g in same if g[0] >= today - HAND_DAYS]
+        if not recent:
+            return last, 'last game'
+        base = list(recent[-1][2]); n = len(window)
+        if n < SWAP_MIN_GAMES:
+            return base, 'last game against ' + _who(hand)
+        active = set()
+        for g in games[-FREQ_ACTIVE:]:
+            active.update(g[4])
+        starts = {}
+        for g in window:
+            for pid in g[2]:
+                starts[pid] = starts.get(pid, 0) + 1
+        regulars = sorted((q for q in starts if q not in base and q in active and starts[q] >= SWAP_REGULAR * n), key=lambda q: (-starts[q], q))
+        out = list(base); swapped = False
+        for i, pid in sorted(enumerate(base), key=lambda x: (starts.get(x[1], 0), x[0])):
+            if not regulars:
+                break
+            if starts.get(pid, 0) <= SWAP_FILL * n:
+                out[i] = regulars.pop(0); swapped = True
+        return out, 'last game against ' + _who(hand) + (', regulars back in' if swapped else '')
     if not window:
         return last, 'last game'
     active = set(window[-1][2])

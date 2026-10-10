@@ -851,7 +851,7 @@ def lineup_study(T: dict, stage, spec: dict) -> dict:
     sides = team_sides(int(T['day'].min()), int(T['day'].max())); stage('schedule')
     by_team = team_game_rows(T, sides); stage('team games')
     rng = np.random.default_rng(20261010)
-    pairs = (('hand', 'last'), ('freq', 'hand'), ('freq', 'last'))
+    pairs = (('hand', 'last'), ('freq', 'hand'), ('freq', 'last'), ('swap', 'hand'))
 
     def summarize(rows):
         n = len(rows)
@@ -874,7 +874,8 @@ def lineup_study(T: dict, stage, spec: dict) -> dict:
                                       'clusters': len(keys)}
         return out
 
-    res = {'rules': list(LU.RULES), 'settings': {'hand_days': LU.HAND_DAYS, 'freq_games': LU.FREQ_GAMES, 'freq_days': LU.FREQ_DAYS, 'freq_active': LU.FREQ_ACTIVE},
+    res = {'rules': list(LU.RULES), 'settings': {'hand_days': LU.HAND_DAYS, 'freq_games': LU.FREQ_GAMES, 'freq_days': LU.FREQ_DAYS, 'freq_active': LU.FREQ_ACTIVE,
+                                                 'swap_min_games': LU.SWAP_MIN_GAMES, 'swap_fill': LU.SWAP_FILL, 'swap_regular': LU.SWAP_REGULAR},
            'cluster': 'team and calendar month (bootstrap, 4,000 draws)', 'seasons': {}}
     for season in evaluate:
         rows = []

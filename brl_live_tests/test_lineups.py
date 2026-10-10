@@ -75,3 +75,16 @@ def test_study_counts_starters_named_by_each_rule(monkeypatch):
     assert s['hand_minus_last']['overlap'] > 0
     changed = out['seasons']['2026']['opposing_hand_changed']
     assert changed['team_games'] > 0 and changed['last']['overlap'] == 6.0
+
+
+def test_swap_rule_puts_a_regular_back_in_his_fill_ins_spot():
+    rested = [1, 2, 3, 4, 5, 6, 7, 8, 29]                  # the regular number 9 sat in the latest game against a righty
+    prior = [_g(d, d, VS_R, 'R') for d in range(1, 7)] + [_g(7, 7, rested, 'R', extra=[9])]
+    order, src = LU.project(prior, 8, 'R', 'swap')
+    assert order == VS_R and src == 'last game against a righty, regulars back in'
+    # too few games against the hand: the last lineup against it as it was
+    few = [_g(1, 1, VS_R, 'R'), _g(2, 2, rested, 'R', extra=[9])]
+    assert LU.project(few, 3, 'R', 'swap') == (rested, 'last game against a righty')
+    # a regular who has not batted lately (injured list) is not put back
+    gone = [_g(d, d, VS_R, 'R') for d in range(1, 7)] + [_g(d, d, rested, 'R') for d in range(7, 13)]
+    assert LU.project(gone, 13, 'R', 'swap')[0] == rested
