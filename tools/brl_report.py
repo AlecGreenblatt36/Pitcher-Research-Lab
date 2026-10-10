@@ -50,7 +50,7 @@ CS_SEASON = True                                 # PROD-05 (product call October
 CS_RECENT = None                                 # CS-RECENT-01: the called-strike model fit on every training take weighted toward the latest days, half-life in days (params cs_recent)
 FOUL_FIX = True                                   # FOUL-01 and FOUL-02 (check held October 10, 2026): the engine's foul model reads the hitter's whiff propensity, and a two-strike foul tip ending the at-bat is a strikeout (params foul_fix false turns them off)
 LAM_W = 30.0                                      # shrinkage of the hitter whiff maps toward the league (report and engine; params lam_w; WHIFF-LAM-01: 10 did not pass)
-WHIFF_OWN = False                                 # WHIFF-OWN-01: the engine's whiff model reads the hitter's own swing tendency at the pitch (params whiff_own)
+WHIFF_OWN = 0                                     # WHIFF-OWN-01 (1, gate not met) and -02 (2: one weight out of the zone, one inside): the engine's whiff model reads the hitter's own swing tendency at the pitch (params whiff_own)
 STRIKE_SPOTS = True
 POOL_CACHE = 800            # pools kept in memory at once (pitcher, side, count group, type group, zone); see Fitted._pool                              # VALUE-18I: in-zone aims priced the same way (strike spots); its synthetic verdict held on October 9, 2026
 N_IN = 2.04                                      # inside pitches per plate appearance (VALUE-18F)
@@ -1158,7 +1158,7 @@ def main():
     CS_RECENT = params.get('cs_recent', CS_RECENT) or None
     FOUL_FIX = bool(params.get('foul_fix', FOUL_FIX))
     LAM_W = float(params.get('lam_w', LAM_W))
-    WHIFF_OWN = bool(params.get('whiff_own', WHIFF_OWN))
+    WHIFF_OWN = int(params.get('whiff_own', WHIFF_OWN) or 0)
     dates = params.get('dates') or [params.get('date') or now_et.date().isoformat()]
     asof = params.get('asof')                      # one as-of date for every report in the run (a backfilled month); default: each report's own date
     asof_for = params.get('asof_for') or {}        # a date's own as-of when it differs (tomorrow's early plan)

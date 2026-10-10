@@ -7505,7 +7505,8 @@ class PAModels:
         Lw = location_block(self.xt, self.zt, T['stand_r'], T['strikes'])
         # WHIFF-OWN-01: the hitter's own swing tendency at the pitch (his swing map's part, logit) as an input, first column;
         # a hitter who swings more at a spot misses less there than his location maps say (CAL-04, WHIFF-LAM-01)
-        self.whiff_own = bool(params.get('whiff_own', False))
+        # WHIFF-OWN-02 (params whiff_own 2): one weight out of the zone and one inside, at the true crossing
+        self.whiff_own = int(params.get('whiff_own', 0) or 0)
         own_col = []
         if self.whiff_own:
             own_s = np.zeros(n)
@@ -7513,7 +7514,11 @@ class PAModels:
                 m_ = self.maps_s.get(h_)
                 if m_ is not None:
                     own_s[r_] = self.Bs[r_] @ m_
-            own_col = [own_s[:, None].astype(np.float32)]
+            if self.whiff_own == 2:
+                out_ = (edge_distance(self.xt, self.zt, T['stand_r']) > 0).astype(np.float64)
+                own_col = [(own_s * out_)[:, None].astype(np.float32), (own_s * (1 - out_))[:, None].astype(np.float32)]
+            else:
+                own_col = [own_s[:, None].astype(np.float32)]
         Xw = np.hstack(own_col + [Lw, grp, hats(T['v0'].astype(np.float64), V_KNOTS), (T['strikes'] == 2)[:, None].astype(np.float32), self.prop_w[:, None].astype(np.float32),
                         (T['stand_r'] == T['throw_r'])[:, None].astype(np.float32)])
         sw_tr = tr & (swing == 1); idx = np.flatnonzero(sw_tr); idx = rng.choice(idx, min(len(idx), int(params.get('league_n', 600000))), replace=False)
@@ -7565,8 +7570,11 @@ class PAModels:
         # control_block ends with prop, side and platoon (35 columns), then the pitcher propensity; the crossing block, when on, comes after it
         self.w_prop_s = float(cs_[i_prop_s]); self.w_prop_p = float(cs_[i_prop_s + 3])
         cw_ = self.m_w.coef_[0].astype(np.float64); self.w_prop_w = float(cw_[-2])
-        self.w_own_w = float(cw_[0]) if self.whiff_own else 0.0                     # WHIFF-OWN-01
-        self.w_own_f = float(self.m_f.coef_[0].astype(np.float64)[0]) if self.whiff_own else 0.0
+        cf0_ = self.m_f.coef_[0].astype(np.float64)
+        self.w_own_w = float(cw_[0]) if self.whiff_own else 0.0                     # WHIFF-OWN-01 (out of the zone with WHIFF-OWN-02)
+        self.w_own_f = float(cf0_[0]) if self.whiff_own else 0.0
+        self.w_own_w_in = float(cw_[1]) if self.whiff_own == 2 else self.w_own_w    # WHIFF-OWN-02: inside the zone
+        self.w_own_f_in = float(cf0_[1]) if self.whiff_own == 2 else self.w_own_f
         # FOUL-01: the foul model was fit with the hitter's whiff propensity (the same column as the whiff model's); blocks_at
         # evaluates it at zero (a hitter who misses half his swings), so the hitter's propensity goes back in with its own weight
         self.foul_prop = bool(params.get('foul_prop', True))
@@ -7596,7 +7604,7 @@ class PAModels:
         grp = np.zeros((n, 7), np.float32); grp[np.arange(n), np.clip(grp_, 0, 6)] = 1
         Lw = location_block(xt, zt, stand, strikes)
         plat = (stand == throw)[:, None].astype(np.float32)
-        Xw = np.hstack(([np.zeros((n, 1), np.float32)] if getattr(self, 'whiff_own', False) else []) +
+        Xw = np.hstack(([np.zeros((n, int(getattr(self, 'whiff_own', 0))), np.float32)] if getattr(self, 'whiff_own', 0) else []) +
                        [Lw, grp, hats(v0, V_KNOTS), (strikes == 2)[:, None].astype(np.float32), np.zeros((n, 1), np.float32), plat])
         lo_w = self.m_w.decision_function(Xw).astype(np.float64)
         fam3 = np.column_stack([np.isin(grp_, (0, 1, 2)), np.isin(grp_, (3, 4)), np.isin(grp_, (5,))]).astype(np.float64)
@@ -7610,7 +7618,8 @@ class PAModels:
         Xb = np.hstack([np.ones((n, 1), np.float32), Lw, grp, hats(v0, V_KNOTS), cnt, plat, np.zeros((n, 2), np.float32)])
         v_b = Xb.astype(np.float64) @ self.beta_b
         fam = np.where(np.isin(grp_, (0, 1, 2)), 0, np.where(np.isin(grp_, (3, 4)), 1, 2))
-        return {'lo_s': lo_s, 'Bs': Bs, 'lo_w': lo_w, 'Bw': Bw, 'c': p_c, 'lo_f': lo_f, 'v': v_b, 'fam': fam}
+        out_z = (edge_distance(xt, zt, stand) > 0).astype(np.float64)
+        return {'lo_s': lo_s, 'Bs': Bs, 'lo_w': lo_w, 'Bw': Bw, 'c': p_c, 'lo_f': lo_f, 'v': v_b, 'fam': fam, 'out': out_z}
 
     def swing_minus_take(self, blk: dict, h: int | None, p_scalar, balls, strikes, cv: np.ndarray):
         """VALUE-18: the value of the plate appearance if the hitter swings minus if he takes, at these pitches, for hitter h against a
@@ -7673,8 +7682,11 @@ class PAModels:
         ps_, pw_, pb_ = hs if hs is not None else (self.h_scalar[h] if h is not None and h in self.h_scalar else (0.0, 0.0, self.lg_bip))
         own_h = blk['Bs'] @ self.maps_s[h] if h is not None and h in self.maps_s else 0.0
         lo_s = blk['lo_s'] + self.w_prop_s * ps_ + self.w_prop_p * p_scalar[0]
-        lo_w = blk['lo_w'] + self.w_prop_w * pw_ + getattr(self, 'w_own_w', 0.0) * own_h                     # WHIFF-OWN-01
-        p_f = 1 / (1 + np.exp(-(blk['lo_f'] + getattr(self, 'w_prop_f', 0.0) * pw_ + getattr(self, 'w_own_f', 0.0) * own_h)))     # FOUL-01, WHIFF-OWN-01
+        o_ = blk.get('out', 1.0)
+        ww_ = getattr(self, 'w_own_w', 0.0) * o_ + getattr(self, 'w_own_w_in', getattr(self, 'w_own_w', 0.0)) * (1 - o_)      # WHIFF-OWN-01/02
+        wf_ = getattr(self, 'w_own_f', 0.0) * o_ + getattr(self, 'w_own_f_in', getattr(self, 'w_own_f', 0.0)) * (1 - o_)
+        lo_w = blk['lo_w'] + self.w_prop_w * pw_ + ww_ * own_h
+        p_f = 1 / (1 + np.exp(-(blk['lo_f'] + getattr(self, 'w_prop_f', 0.0) * pw_ + wf_ * own_h)))     # FOUL-01, WHIFF-OWN-01/02
         v = blk['v'] + self.w_bip_b * (pb_ - self.lg_bip) + self.w_bip_p * (p_scalar[1] - self.lg_bip)
         if h is not None and h in self.maps_s:
             lo_s = lo_s + own_h

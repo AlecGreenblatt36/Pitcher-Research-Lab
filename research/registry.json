@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 258,
- "rows": 261,
+ "experiments": 259,
+ "rows": 262,
  "records": {
   "ACC-01": [
    {
@@ -4254,15 +4254,32 @@
     "id": "WHIFF-OWN-01",
     "columns": {
      "ID": "WHIFF-OWN-01",
-     "Attempt": "The hitter's own swing tendency at the pitch as an input to the engine's whiff model (CAL-04 and WHIFF-LAM-01: a hitter who swings more at a spot misses less there than any location map says, in and out of the zone). One column, the hitter's swing map's part at the pitch in logit units (zero for a hitter without a map), in the league whiff model and in the foul model that shares its inputs; the whiff maps are fit on top of it, and plans price a hitter's swings with his own part at each spot (tools/brl_discovery.py PAModels whiff_own; tools/brl_report.py WHIFF_OWN, params whiff_own). The report's own count chain and the player cards keep the location-only whiff model. Smoke test on a synthetic world (scratch cross/smoke_wo.py): runs, and the weight comes out near zero there (+0.004), where no such link was built in. **Registered in the commit that added this row, before the runs.** Measured with CAL-04's split as of 2025-07-01 and 2026-08-01, against WHIFF-LAM-01's runs with penalty 30 (38077001415, 38077031101; the code without the input is unchanged). Gate, in both runs: (1) whiff log loss of the maps on the later swings lower, out of the zone and over all swings; (2) misses expected against actual in the two extreme bins out of the zone within 0.95 to 1.05 (from 0.901 and 0.905 under -10, 1.035 and 1.062 over 10). Prediction: the input's weight negative; log loss lower by 1 to 5 nats per 1,000 swings out of the zone and 0.5 to 3 over all; the extreme bins 0.95 to 1.00 and 1.00 to 1.04. If it holds: on in the engine, the aiming value re-priced, the reports rebuilt.",
-     "Disposition and evidence": "registered, running"
+     "Attempt": "The hitter's own swing tendency at the pitch as an input to the engine's whiff model (CAL-04 and WHIFF-LAM-01: a hitter who swings more at a spot misses less there than any location map says, in and out of the zone). One column, the hitter's swing map's part at the pitch in logit units (zero for a hitter without a map), in the league whiff model and in the foul model that shares its inputs; the whiff maps are fit on top of it, and plans price a hitter's swings with his own part at each spot (tools/brl_discovery.py PAModels whiff_own; tools/brl_report.py WHIFF_OWN, params whiff_own). The report's own count chain and the player cards keep the location-only whiff model. Smoke test on a synthetic world (scratch cross/smoke_wo.py): runs, and the weight comes out near zero there (+0.004), where no such link was built in. **Registered in the commit that added this row, before the runs.** Measured with CAL-04's split as of 2025-07-01 and 2026-08-01, against WHIFF-LAM-01's runs with penalty 30 (38077001415, 38077031101; the code without the input is unchanged). Gate, in both runs: (1) whiff log loss of the maps on the later swings lower, out of the zone and over all swings; (2) misses expected against actual in the two extreme bins out of the zone within 0.95 to 1.05 (from 0.901 and 0.905 under -10, 1.035 and 1.062 over 10). Prediction: the input's weight negative; log loss lower by 1 to 5 nats per 1,000 swings out of the zone and 0.5 to 3 over all; the extreme bins 0.95 to 1.00 and 1.00 to 1.04. If it holds: on in the engine, the aiming value re-priced, the reports rebuilt. **Results (runs 38077717228 as of 2025-07-01 and 38077734656 as of 2026-08-01, against 38077001415 and 38077031101):** gate not met, on (1). Out of the zone it does what it should: log loss -0.88 and -1.12 nats per 1,000 swings, the extreme bins 0.979 and 0.985 (2025), 0.990 and 1.001 (2026), and the engine's swing value now follows what the swings produced across the bins (2026 under -10: -0.111 against -0.115 realized, was -0.105; over 10: -0.086 against -0.086, was -0.090). Inside the zone one shared weight overcorrects: the low bins go from 0.905 and 0.950 to 1.046 and 1.107, and over all swings log loss is slightly worse (+0.10 and +0.04). The link between swinging more and missing less is stronger out of the zone than in it. Not adopted. Follow-up: WHIFF-OWN-02, one weight out of the zone and one inside, gated on windows these runs have not seen.",
+     "Disposition and evidence": "gate not met; not adopted"
     },
     "registered_before_run": true,
     "diagnostic": false,
     "runs": [
      "38077001415",
-     "38077031101"
+     "38077031101",
+     "38077717228",
+     "38077734656"
     ],
+    "frozen_commits": [],
+    "status": "gate not met; not adopted"
+   }
+  ],
+  "WHIFF-OWN-02": [
+   {
+    "id": "WHIFF-OWN-02",
+    "columns": {
+     "ID": "WHIFF-OWN-02",
+     "Attempt": "WHIFF-OWN-01 with one weight for pitches that cross out of the zone and one for pitches that cross in it (two columns, the hitter's swing map's part times each zone indicator; params whiff_own 2), in the league whiff model and the foul model that shares its inputs; plans price each spot with the weight for where it crosses. Smoke test on a synthetic world (scratch cross/smoke_wo.py): runs; settings 0 and 1 reproduce the earlier numbers exactly. **Registered in the commit that added this row, before the runs.** Gated on windows WHIFF-OWN-01 did not use: as of 2024-07-01 (a season no whiff run has looked at) and 2026-06-01, CAL-04's split, the input on (2) against off (0) with everything else the same (four calibration-only runs). Gate, in both runs: (1) whiff log loss of the maps on the later swings lower, out of the zone and over all swings; (2) misses expected against actual in the two extreme bins out of the zone within 0.95 to 1.05; (3) the two extreme bins inside the zone within 0.92 to 1.08. Prediction: the weight out of the zone negative and larger than inside; log loss lower by 0.5 to 1.5 nats per 1,000 swings out of the zone and 0.1 to 1.0 over all; the extreme bins out of the zone 0.96 to 1.03, inside 0.93 to 1.07. If it holds: on in the engine (WHIFF_OWN 2), the aiming value re-priced, the reports rebuilt.",
+     "Disposition and evidence": "registered, running"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
     "frozen_commits": [],
     "status": "registered, running"
    }
