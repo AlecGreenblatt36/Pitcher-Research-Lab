@@ -15,7 +15,7 @@ Rules:
 """
 from __future__ import annotations
 
-RULE = 'last'
+RULE = 'hand'          # LINEUP-01 passed (October 10, 2026, run 38082910875); LINEUP-02 ('freq') missed on batting spots
 RULES = ('last', 'hand', 'freq')
 HAND_DAYS = 30
 FREQ_GAMES = 10

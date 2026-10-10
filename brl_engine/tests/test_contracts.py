@@ -172,3 +172,26 @@ def test_team_results_schedule_documents(tmp_path):
     (tmp_path / 'team_results_2026.json.gz').write_bytes(gzip.compress(json.dumps(doc).encode()))
     rows, meta = load_results(tmp_path)
     assert rows == [{'game_pk': 1, 'date': '2026-04-01', 'away_id': 119, 'home_id': 144, 'away_runs': 3, 'home_runs': 5}]
+
+
+def test_projected_lineup_follows_the_opposing_starters_hand():
+    """LINEUP-01: before the lineup is posted, the team's last lineup against a starter of today's hand (within 30 days)."""
+    base = history()
+    extra = []
+    for g, date, hand, lineup in ((20, '2026-09-20', 'L', range(211, 220)), (21, '2026-09-25', 'R', range(201, 210))):
+        for half, (lu, pit, th) in enumerate([(range(101, 110), 401, 'R'), (lineup, 311, hand)]):
+            for i, b in enumerate(lu):
+                extra.append({'game_pk': g, 'date_key': date, 'at_bat_number': half * 9 + i + 1, 'batter': b, 'pitcher': pit,
+                              'inning': 1 + i // 3, 'inning_topbot': 'Top' if half == 0 else 'Bot', 'home_team': 'HOM', 'away_team': 'AWY',
+                              'p_throws': th, 'outcome': 'K', 'stand': 'R'})
+    hist = pd.concat([base, pd.DataFrame(extra)], ignore_index=True)
+    receipt = {'finished_at': '2026-10-07T18:00:00+00:00'}
+    feed = pregame_feed()                                   # the away starter, 301, throws left in the feed
+    _, m, notes, statuses, _ = live_inputs(feed, receipt, hist)
+    assert statuses['home'] == 'projected'
+    assert [p.player_id for p in m.home.lineup] == [str(i) for i in range(211, 220)]
+    assert notes['lineup_source']['home'] == "team's last game against a lefty in the prior-date history"
+    feed['gameData']['players']['ID301']['pitchHand'] = {'code': 'R'}
+    _, m2, notes2, _, _ = live_inputs(feed, receipt, hist)
+    assert [p.player_id for p in m2.home.lineup] == [str(i) for i in range(201, 210)]
+    assert notes2['lineup_source']['home'] == "team's last game against a righty in the prior-date history"
