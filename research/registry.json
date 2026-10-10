@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 253,
- "rows": 256,
+ "experiments": 254,
+ "rows": 257,
  "records": {
   "ACC-01": [
    {
@@ -4161,7 +4161,25 @@
     "id": "FOUL-01",
     "columns": {
      "ID": "FOUL-01",
-     "Attempt": "A correction in the engine (tools/brl_discovery.py PAModels): the foul model is fit on contact with the hitter's whiff propensity as an input (the logit of his miss rate, about -1.2 for an average hitter), but wherever plans are priced it was evaluated with that input at zero, a hitter who misses half his swings, so fouls came out 16 to 18% high and balls in play 15 to 17% low even on the training rows (CAL-03b). The propensity now goes back in with the foul model's own weight, as the whiff model's already did (params foul_prop, on by default). Smoke test on a synthetic world (scratch cross/smoke_cal3.py, smoke_value_foul.py): the training-row fouls and balls in play match (9,291 against 9,291 and 12,671 against 12,670; were 8,299 and 13,663), the swing value -1,331 against -1,334 realized (was -1,182), and the aiming value there moves from -46.7 to -46.9. A correction, not a model choice: it goes on once the real-data check confirms it. **Registered in the commit that added this row, before the runs.** Check, CAL-03b's runs repeated with the fix (as of 2025-07-01 and 2026-08-01): (1) fouls and balls in play on the training rows within 3% of actual; (2) the inside swing value on the later rows within 0.25 runs per 100 swings of realized (from -0.64 and -0.38); (3) the outside swing value still within 0.30 (+0.15 and +0.21 now). Then the aiming value is re-priced (VALUE-18Z) and the reports rebuilt.",
+     "Attempt": "A correction in the engine (tools/brl_discovery.py PAModels): the foul model is fit on contact with the hitter's whiff propensity as an input (the logit of his miss rate, about -1.2 for an average hitter), but wherever plans are priced it was evaluated with that input at zero, a hitter who misses half his swings, so fouls came out 16 to 18% high and balls in play 15 to 17% low even on the training rows (CAL-03b). The propensity now goes back in with the foul model's own weight, as the whiff model's already did (params foul_prop, on by default). Smoke test on a synthetic world (scratch cross/smoke_cal3.py, smoke_value_foul.py): the training-row fouls and balls in play match (9,291 against 9,291 and 12,671 against 12,670; were 8,299 and 13,663), the swing value -1,331 against -1,334 realized (was -1,182), and the aiming value there moves from -46.7 to -46.9. A correction, not a model choice: it goes on once the real-data check confirms it. **Registered in the commit that added this row, before the runs.** Check, CAL-03b's runs repeated with the fix (as of 2025-07-01 and 2026-08-01): (1) fouls and balls in play on the training rows within 3% of actual; (2) the inside swing value on the later rows within 0.25 runs per 100 swings of realized (from -0.64 and -0.38); (3) the outside swing value still within 0.30 (+0.15 and +0.21 now). Then the aiming value is re-priced (VALUE-18Z) and the reports rebuilt. **Check (runs 38071722898 as of 2025-07-01 and 38071738092 as of 2026-08-01):** (1) held: training-row fouls 37,514 against 37,384 and 37,511 against 37,574, balls in play 36,029 against 35,264 and 36,042 against 35,171 (2.2% and 2.5% high). (2) held in 2025 (inside +0.10 runs per 100 swings, from -0.64) but not in 2026 (+0.46, from -0.38). (3) missed in both (outside +0.34 and +0.43). What is left sits at two strikes (2026 inside +0.86, outside +0.73; 2025 inside +0.57) and shows in sample (+0.28 and +0.29): a two-strike foul tip that ends the at-bat is a strikeout, and the engine priced it as a ball in play (about 320 of 28,520 outside swings in sample, worth +0.30 per 100 swings, the whole outside gap). In 2026 the value of a ball in play also runs 11% high on the later rows (CAL-03's level by period). Not on by itself: the default is off (params foul_prop) and FOUL-02 takes both together.",
+     "Disposition and evidence": "check partly held; off until FOUL-02"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [
+     "38071722898",
+     "38071738092"
+    ],
+    "frozen_commits": [],
+    "status": "check partly held; off until FOUL-02"
+   }
+  ],
+  "FOUL-02": [
+   {
+    "id": "FOUL-02",
+    "columns": {
+     "ID": "FOUL-02",
+     "Attempt": "The second half of the foul correction. A two-strike foul tip caught by the catcher ends the at-bat as a strikeout; the engine's foul model counted as fouls only the ones that kept the at-bat alive, so those strikeouts sat on the ball-in-play side and were priced as balls in play. Now contact that is not a ball in play is a foul, and at two strikes the foul branch is a strikeout with the training share of two-strike fouls that ended the at-bat (tools/brl_discovery.py PAModels foul_tip and foul_value; the plans' pricing, the value iteration and CAL-03's check use it). Both corrections are switched together in the report (tools/brl_report.py FOUL_FIX, params foul_fix). Smoke test on a synthetic world (scratch cross/smoke_foul2.py): runs; that world has no foul-tip strikeouts, so only FOUL-01 moves anything there. **Registered in the commit that added this row, before the runs.** Check, CAL-03b's runs repeated with both on (as of 2025-07-01 and 2026-08-01): (1) fouls and balls in play on the training rows within 3% of actual; (2) the swing value on the training rows within 0.15 runs per 100 swings of realized, inside and outside, in both runs (in sample only the pieces can miss); (3) on the 2025 later rows, inside and outside within 0.30; the 2026 later rows are reported beside their in-play level (the 11% period effect, which these corrections do not touch) and not gated. If (1) to (3) hold: on in the daily report and the engine (FOUL_FIX true; foul_prop and foul_tip on by default), the aiming value re-priced (VALUE-18Z), and the reports rebuilt.",
      "Disposition and evidence": "registered, running"
     },
     "registered_before_run": true,

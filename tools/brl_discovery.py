@@ -4273,7 +4273,8 @@ def value2_study(T: dict, params: dict, stage) -> dict:
         res['own_part_calibration'] = {zn_: {'slope': round(lam[zn_], 4), 'interval': [round(float(np.percentile(lam_draws[zn_], q)), 4) for q in (2.5, 97.5)]} for zn_ in lam}
         res['own_part_calibration']['note'] = 'test-season swing residual (actual minus the league with the shared shape) regressed on the own part in probability units; 1 means a fitted point is a real point'
         PM = PAModels(T, tr, np.random.default_rng(23), {'league_n': int(params.get('league_n', 500000)), 'min_pitches': 300, 'swing_cross': sx,
-                                                          'cs_season': bool(params.get('cs_season')), 'foul_prop': bool(params.get('foul_prop', True))}, stage)   # VALUE-18Y: the season profile (PROD-05); FOUL-01
+                                                          'cs_season': bool(params.get('cs_season')), 'foul_prop': bool(params.get('foul_prop', False)),
+                                                          'foul_tip': bool(params.get('foul_tip', False))}, stage)   # VALUE-18Y: the season profile (PROD-05); FOUL-01 and FOUL-02
         xoff_all, zoff_all = xp - T['px'].astype(np.float64), zp - T['pz'].astype(np.float64)   # decision-moment projection minus crossing, per pitch
         # VALUE-18J: the maps' own noise in the interval. Maps refitted on training games resampled with replacement (the league model and the
         # engine held fixed), each draw with its own shared shape and calibration; the structural figure is recomputed per draw in the aiming loop
@@ -7466,6 +7467,14 @@ class PAModels:
         self.swing, self.whiff = swing, whiff
         contact = (T['call'] == 1); foul = (contact & (T['last_in_pa'] == 0)).astype(np.float64); take_ = T['call'] == 0
         self.inplay = contact & (T['last_in_pa'] == 1) & np.isin(T['out7'], (0, 3, 4, 5, 6))
+        # FOUL-02: contact that is not a ball in play is a foul, including a two-strike foul tip that ends the at-bat (a
+        # strikeout); the foul branch at two strikes is then a strikeout with the training share of those
+        self.foul_tip = bool(params.get('foul_tip', False))
+        self.q_ft = 0.0
+        if self.foul_tip:
+            foul = (contact & ~self.inplay).astype(np.float64)
+            nip2 = tr & contact & ~self.inplay & (T['strikes'] == 2)
+            self.q_ft = float((T['last_in_pa'][nip2] == 1).mean()) if nip2.any() else 0.0
         self.bip_value = np.where(self.inplay, LW7[np.clip(T['out7'], 0, 6)], 0.0)
         # hitter and pitcher levels from earlier dates (the rows' own propensities) and as scalars per player (training rows)
         self.prop_s = swing_propensity(T); self.prop_p = pitcher_propensity(T)
@@ -7547,7 +7556,7 @@ class PAModels:
         cw_ = self.m_w.coef_[0].astype(np.float64); self.w_prop_w = float(cw_[-2])
         # FOUL-01: the foul model was fit with the hitter's whiff propensity (the same column as the whiff model's); blocks_at
         # evaluates it at zero (a hitter who misses half his swings), so the hitter's propensity goes back in with its own weight
-        self.foul_prop = bool(params.get('foul_prop', True))
+        self.foul_prop = bool(params.get('foul_prop', False))
         self.w_prop_f = float(self.m_f.coef_[0].astype(np.float64)[-2]) if self.foul_prop else 0.0
         self.w_bip_b = float(self.beta_b[-2]); self.w_bip_p = float(self.beta_b[-1])
         self.delta = float(params.get('delta_repeat_after_called', 0.0))     # SEQ-02's log-odds on a repeat after a called strike
@@ -7595,11 +7604,17 @@ class PAModels:
         _, p_w, p_c, p_f, v, _ = self.probs(blk, h, p_scalar)
         balls = np.asarray(balls, np.int64); strikes = np.asarray(strikes, np.int64)
         v_strike = np.where(strikes == 2, LW7[1], cv[np.clip(balls * 3 + strikes + 1, 0, 11)])
-        v_foul = np.where(strikes == 2, cv[np.clip(balls * 3 + 2, 0, 11)], cv[np.clip(balls * 3 + strikes + 1, 0, 11)])
+        v_foul = self.foul_value(balls, strikes, cv)
         v_ball = np.where(balls == 3, LW7[2], cv[np.clip((balls + 1) * 3 + strikes, 0, 11)])
         v_swing = p_w * v_strike + (1 - p_w) * (p_f * v_foul + (1 - p_f) * v)
         v_take = p_c * v_strike + (1 - p_c) * v_ball
         return v_swing - v_take
+
+    def foul_value(self, balls, strikes, cv: np.ndarray):
+        """The value after a foul: the next count, or at two strikes the same count, except the share of two-strike fouls that
+        are foul tips ending the at-bat (FOUL-02; zero when off)."""
+        balls = np.asarray(balls, np.int64); strikes = np.asarray(strikes, np.int64); q = getattr(self, 'q_ft', 0.0)
+        return np.where(strikes == 2, (1 - q) * cv[np.clip(balls * 3 + 2, 0, 11)] + q * LW7[1], cv[np.clip(balls * 3 + strikes + 1, 0, 11)])
 
     def expected_value(self, blk: dict, h: int | None, p_scalar, balls, strikes, cv: np.ndarray):
         """The structural expectation of a pitch's realized (telescoping) value: swing chance times the swing value plus take chance times the take
@@ -7607,7 +7622,7 @@ class PAModels:
         p_s, p_w, p_c, p_f, v, _ = self.probs(blk, h, p_scalar)
         balls = np.asarray(balls, np.int64); strikes = np.asarray(strikes, np.int64)
         v_strike = np.where(strikes == 2, LW7[1], cv[np.clip(balls * 3 + strikes + 1, 0, 11)])
-        v_foul = np.where(strikes == 2, cv[np.clip(balls * 3 + 2, 0, 11)], cv[np.clip(balls * 3 + strikes + 1, 0, 11)])
+        v_foul = self.foul_value(balls, strikes, cv)
         v_ball = np.where(balls == 3, LW7[2], cv[np.clip((balls + 1) * 3 + strikes, 0, 11)])
         v_now = cv[np.clip(balls * 3 + strikes, 0, 11)]
         v_swing = p_w * v_strike + (1 - p_w) * (p_f * v_foul + (1 - p_f) * v) - v_now
@@ -7669,7 +7684,8 @@ class PAModels:
             vK = LW7[1]; vBB = LW7[2]
             q = s * (1 - w) * (1 - f) * v
             q += s * w * (vK if k == 2 else V[b, k + 1][idx_e(3)])
-            q += s * (1 - w) * f * (V[b, 2][idx_e(2)] if k == 2 else V[b, k + 1][idx_e(2)])
+            q_ft = getattr(self, 'q_ft', 0.0)      # FOUL-02: a two-strike foul tip ends the at-bat
+            q += s * (1 - w) * f * (((1 - q_ft) * V[b, 2][idx_e(2)] + q_ft * vK) if k == 2 else V[b, k + 1][idx_e(2)])
             q += (1 - s) * c * (vK if k == 2 else V[b, k + 1][idx_e(1)])
             q += (1 - s) * (1 - c) * (vBB if b == 3 else V[b + 1, k][idx_e(0)])
             return q

@@ -48,6 +48,7 @@ STRUCTURAL = True                                # VALUE-18: aims chosen and pri
 SWING_CROSS = True                               # SWING-CROSS-01 (gate passed October 10, 2026): the league swing model also reads where the pitch crossed; params swing_cross false turns it off
 CS_SEASON = True                                 # PROD-05 (product call October 10, 2026; CS-SEASON-01 and -02 gates not met): each season's own edge profile for the called-strike model (params cs_season false turns it off)
 CS_RECENT = None                                 # CS-RECENT-01: the called-strike model fit on every training take weighted toward the latest days, half-life in days (params cs_recent)
+FOUL_FIX = False                                  # FOUL-01 and FOUL-02 (on together once their check holds): the engine's foul model reads the hitter's whiff propensity, and a two-strike foul tip ending the at-bat is a strikeout (params foul_fix)
 STRIKE_SPOTS = True
 POOL_CACHE = 800            # pools kept in memory at once (pitcher, side, count group, type group, zone); see Fitted._pool                              # VALUE-18I: in-zone aims priced the same way (strike spots); its synthetic verdict held on October 9, 2026
 N_IN = 2.04                                      # inside pitches per plate appearance (VALUE-18F)
@@ -279,7 +280,7 @@ class Fitted:
         self.PM = None
         if STRUCTURAL:
             self.PM = D.PAModels(T, tr, rng, {'league_n': 500000, 'min_pitches': min_pitches, 'min_swings': min_swings, 'swing_cross': SWING_CROSS,
-                                               'cs_season': CS_SEASON, 'cs_target': self.cs_target, 'cs_recent': CS_RECENT}, stage)
+                                               'cs_season': CS_SEASON, 'cs_target': self.cs_target, 'cs_recent': CS_RECENT, 'foul_prop': FOUL_FIX, 'foul_tip': FOUL_FIX}, stage)
             ci_all = np.clip(T['balls'], 0, 3) * 3 + np.clip(T['strikes'], 0, 2)
             fin_all = np.where(T['out7'] >= 0, D.LW7[np.clip(T['out7'], 0, 6)], np.nan)
             self.cv = np.array([float(np.nanmean(fin_all[tr & (ci_all == c_)])) if (tr & (ci_all == c_) & np.isfinite(fin_all)).any() else 0.0 for c_ in range(12)])
@@ -1014,7 +1015,7 @@ def calibration_values(fit, chunk: int = 100000) -> dict:
         _, p_w, p_c, p_f, v, _ = PM.probs(blk, None, (PM.prop_p[r], PM.bip_p[r]), hs=(PM.prop_s[r], PM.prop_w[r], PM.bip_b[r]))
         b_ = T['balls'][r].astype(np.int64); k_ = T['strikes'][r].astype(np.int64)
         v_strike = np.where(k_ == 2, LW7[1], cv[np.clip(b_ * 3 + k_ + 1, 0, 11)])
-        v_foul = np.where(k_ == 2, cv[np.clip(b_ * 3 + 2, 0, 11)], cv[np.clip(b_ * 3 + k_ + 1, 0, 11)])
+        v_foul = PM.foul_value(b_, k_, cv)
         v_ball = np.where(b_ == 3, LW7[2], cv[np.clip((b_ + 1) * 3 + k_, 0, 11)])
         v_sw[i:i + len(r)] = p_w * v_strike + (1 - p_w) * (p_f * v_foul + (1 - p_f) * v)
         v_tk[i:i + len(r)] = p_c * v_strike + (1 - p_c) * v_ball
@@ -1049,7 +1050,7 @@ def calibration_values(fit, chunk: int = 100000) -> dict:
                 # CAL-03b: the pieces of a swing, expected against actual (miss, foul, ball in play and its value)
                 pin = (1 - pw_all[m]) * (1 - pf_all[m])
                 d[key].update({'whiff_exp': round(float(pw_all[m].sum()), 1), 'whiff': int((call[m] == 2).sum()),
-                               'foul_exp': round(float(((1 - pw_all[m]) * pf_all[m]).sum()), 1), 'foul': int(((call[m] == 1) & ~lip[m]).sum()),
+                               'foul_exp': round(float(((1 - pw_all[m]) * pf_all[m]).sum()), 1), 'foul': int(((call[m] == 1) & (~lip[m] if not PM.foul_tip else ~inplay[m])).sum()),
                                'bip_exp': round(float(pin.sum()), 1), 'bip': int(inplay[m].sum()),
                                'bipv_exp': round(float((pin * v_bip[m]).sum()), 2), 'bipv': round(float(bipv[m].sum()), 2)})
         for sp, m0 in splits:
@@ -1091,10 +1092,11 @@ def main():
         today_et = now_et.date()
         params = {'publish': True, 'dates': [(today_et - timedelta(days=1)).isoformat(), today_et.isoformat(), (today_et + timedelta(days=1)).isoformat()],
                   'asof_for': {(today_et + timedelta(days=1)).isoformat(): today_et.isoformat()}}
-    global SWING_CROSS, CS_SEASON, CS_RECENT
+    global SWING_CROSS, CS_SEASON, CS_RECENT, FOUL_FIX
     SWING_CROSS = bool(params.get('swing_cross', SWING_CROSS))
     CS_SEASON = bool(params.get('cs_season', CS_SEASON))
     CS_RECENT = params.get('cs_recent', CS_RECENT) or None
+    FOUL_FIX = bool(params.get('foul_fix', FOUL_FIX))
     dates = params.get('dates') or [params.get('date') or now_et.date().isoformat()]
     asof = params.get('asof')                      # one as-of date for every report in the run (a backfilled month); default: each report's own date
     asof_for = params.get('asof_for') or {}        # a date's own as-of when it differs (tomorrow's early plan)
