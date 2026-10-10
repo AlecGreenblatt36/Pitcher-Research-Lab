@@ -387,7 +387,7 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .mu thead th small { display: block; font-weight: 400; color: var(--muted); }
 .mu td { font-size: 18px; font-weight: 600; min-width: 52px; }
 .mu .mu-who { position: sticky; left: 0; z-index: 1; background: var(--surface); text-align: left; font-family: var(--body); font-size: 15px; font-weight: 700; padding-left: 12px; }
-.mu .mu-who .spot { display: inline-block; width: 18px; color: var(--muted); font-weight: 400; }
+.mu .mu-who .spot { display: inline-block; width: 22px; color: var(--muted); font-weight: 400; }
 .mu .mu-who small { color: var(--muted); font-weight: 400; }
 .rp-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; width: 100%; max-width: 230px; aspect-ratio: 1; }
 .rp-grid i { display: block; border-radius: 3px; background: var(--surface); border: 1px solid transparent; position: relative; }
@@ -2737,9 +2737,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       h += '<div class="mu-wrap"><table class="mu num"><thead><tr><th scope="col" class="mu-who">Hitter</th>';
       se.pitchers.forEach(function (pt) { h += '<th scope="col"><span>' + esc(lastName(nm(pt.id))) + "</span><small>" + (pt.role === "starter" ? "Starter" : "Bullpen") + "</small></th>"; });
       h += "</tr></thead><tbody>";
+      var short = shortNames(se.hitters.map(function (x) { return { player_id: x, name: nm(x) }; }));
       se.hitters.forEach(function (hid, i) {
         var card = players[String(hid)] && players[String(hid)].hitter;
-        h += '<tr><th scope="row" class="mu-who"><span class="spot">' + (i + 1) + "</span>" + esc(lastName(nm(hid))) + (card ? " <small>" + esc(card.side) + "</small>" : "") + "</th>";
+        var spot = se.spots ? se.spots[String(hid)] : i + 1;
+        h += '<tr><th scope="row" class="mu-who"><span class="spot">' + (spot || "") + "</span>" + esc(short[String(hid)] || lastName(nm(hid))) + (card ? " <small>" + esc(card.side) + "</small>" : "") + (se.spots && !spot ? ' <small class="bench">bench</small>' : "") + "</th>";
         se.pitchers.forEach(function (pt) { var k2 = hid + ":" + pt.id, pr = se.pairs[k2]; h += rpCell(pr ? m.f(pr) : null, m, side + "|" + k2, sel === side + "|" + k2); });
         h += "</tr>";
       });
@@ -2755,7 +2757,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     }
     if (RP_RECORD && RP_RECORD.games) {
       var R = RP_RECORD;
-      held += '<p class="note">Every game since ' + esc(shortDate(R.first_date)) + " (" + Number(R.games).toLocaleString() + " games, each plan built before the game): hitters chased " + Number(R.chases).toLocaleString() + " times. League averages said " + Number(Math.round(R.chases_expected_league)).toLocaleString() + "; our read on each hitter said " + Number(Math.round(R.chases_expected_map)).toLocaleString() +
+      held += '<p class="note">Every game since ' + esc(R.first_date ? dateLabel(R.first_date).replace(/^[A-Za-z]+, /, "") + ", " + R.first_date.slice(0, 4) : "") + " (" + Number(R.games).toLocaleString() + " games, each plan built before the game): hitters chased " + Number(R.chases).toLocaleString() + " times. League averages said " + Number(Math.round(R.chases_expected_league)).toLocaleString() + "; our read on each hitter said " + Number(Math.round(R.chases_expected_map)).toLocaleString() +
         (Math.abs(R.chases_expected_map - R.chases) < Math.abs(R.chases_expected_league - R.chases) ? ", closer to what happened." : ".") +
         (R.scored && R.scored.decisions >= 1000 && R.scored.map_gain_nats_per_1000 != null ? " Pitch by pitch, on " + Number(R.scored.decisions).toLocaleString() + " swing-or-take decisions, our read called them better than league averages " + (R.scored.map_gain_nats_per_1000 >= 5 ? "by a clear margin." : R.scored.map_gain_nats_per_1000 >= 0 ? "by a small margin." : "only some of the time; it trailed overall.") : "") + "</p>";
     }
