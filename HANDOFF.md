@@ -66,7 +66,12 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
     from the next report build); Game plan chase spots on the edge read "just off the corner" and stolen strikes are
     named where they land.
   - First early passes failed at the player-line baseline check (it required the game's date); fixed in 48af30186. Each
-    early game takes about 8 to 9 minutes (500 s), so a 20-minute pass does two or three games.
+    early game takes about 8 to 9 minutes (500 s), so a 20-minute pass does two or three games. Confirmed working: game
+    849831 (CWS at CLE, October 10) saved as version 1 at 03:58 UTC with projected lineups; the phone check passed with
+    it on the page; at 04:01 the pass for October 11 skipped 849809 (starters not announced), as it should.
+  - Record page also has Team by team for the latest season (wins against what our pregame numbers added up to).
+  - A check-in is scheduled for 14:10 UTC October 10 (daily build: tomorrow's game plans, pitcher lines; early calls for
+    October 11; phone check).
   - Worth a look (research): on the 4,991 graded games, actual chases 152,037 against 169,053 expected by the league swing
     model and 167,365 by the maps; both run about 10% high, so the chase expectation has a level offset (the maps' gain,
     21.9 nats per 1,000 swing decisions on 261,032, is relative and unaffected). Check the outside-zone definition and the
