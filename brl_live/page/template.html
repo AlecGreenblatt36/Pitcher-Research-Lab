@@ -1520,7 +1520,19 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     }
     var feed = PASTFEED[pk], gd = feed ? feed.gameData || {} : {};
     var f = g ? pastForecast(g) : bareForecast(pk, day, gd.teams ? { away: { team: gd.teams.away }, home: { team: gd.teams.home } } : null, (gd.datetime || {}).dateTime, (gd.game || {}).type);
-    if (!f.away.abbr && !g) { app.innerHTML = '<div class="wrap"><p class="empty">That game could not be loaded from MLB. <a href="#/day/' + esc(day) + '">Back to ' + esc(dateLabel(day)) + "</a></p></div>"; return; }
+    if (!f.away.abbr && !g) {
+      /* MLB's feed did not answer: our own game plan still knows the teams and the start, so show it rather than nothing */
+      if (!RP[pk] && !(RP_MISS[pk] && Date.now() - RP_MISS[pk] < 600000)) {
+        app.innerHTML = '<div class="wrap"><p class="empty">Loading the game plan\u2026</p></div>';
+        withReportDoc({ date: day }, pk, function () { var h = location.hash.replace(/^#\/?/, "").split("/"); if (h[0] === "past" && h[2] === String(pk)) renderPastGame(day, pk, h[3] || tab); });
+        return;
+      }
+      var rd = RP[pk];
+      if (!(rd && rd.teams && rd.teams.away && rd.teams.home)) { app.innerHTML = '<div class="wrap"><p class="empty">That game could not be loaded from MLB. <a href="#/day/' + esc(day) + '">Back to ' + esc(dateLabel(day)) + "</a></p></div>"; return; }
+      var rteam = function (s) { return { team: { abbreviation: rd.teams[s].abbr, name: rd.teams[s].name } }; };
+      f = bareForecast(pk, day, { away: rteam("away"), home: rteam("home") }, rd.start, rd.game_type);
+      ["away", "home"].forEach(function (s) { if (rd.teams[s].probable_name) f[s].starter = { name: rd.teams[s].probable_name }; });
+    }
     if (!g) ["away", "home"].forEach(function (s) { var pp = (gd.probablePitchers || {})[s]; if (pp && pp.fullName && !f[s].starter) f[s].starter = { name: pp.fullName }; });
     var tc = teamColors(f), sit = feed ? lcSituation(feed) : null, real = null;
     if (feed) {
