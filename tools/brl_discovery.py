@@ -7506,23 +7506,41 @@ class PAModels:
         # WHIFF-OWN-01: the hitter's own swing tendency at the pitch (his swing map's part, logit) as an input, first column;
         # a hitter who swings more at a spot misses less there than his location maps say (CAL-04, WHIFF-LAM-01)
         # WHIFF-OWN-02 (params whiff_own 2): one weight out of the zone and one inside, at the true crossing
+        # WHIFF-OWN-03 (3): the same, with the weights fit on each half of a hitter's training games read by the swing map
+        # fit on the other half (cross-fitting), so a map's in-sample fit does not inflate them; plans use the full maps
         self.whiff_own = int(params.get('whiff_own', 0) or 0)
-        own_col = []
+        own_col = []; own_col_fit = None
         if self.whiff_own:
             own_s = np.zeros(n)
             for h_, r_ in _groups(T['batter'], np.ones(n, bool)).items():
                 m_ = self.maps_s.get(h_)
                 if m_ is not None:
                     own_s[r_] = self.Bs[r_] @ m_
-            if self.whiff_own == 2:
+            own_fit = own_s
+            if self.whiff_own == 3:
+                half = (T['game'] % 2) == 0; own_fit = np.zeros(n)
+                for fit_rows, read_rows in ((tr & half, ~half), (tr & ~half, half)):
+                    maps_half = _hitter_maps(self.Bs, swing, self.off_s, _groups(T['batter'], fit_rows), float(params.get('lam_s', 10.0)), max(100, int(params.get('min_pitches', 300)) // 2))
+                    for h_, r_ in _groups(T['batter'], read_rows).items():
+                        m_ = maps_half.get(h_)
+                        if m_ is not None:
+                            own_fit[r_] = self.Bs[r_] @ m_
+                stage('cross-fit swing maps')
+            if self.whiff_own in (2, 3):
                 out_ = (edge_distance(self.xt, self.zt, T['stand_r']) > 0).astype(np.float64)
-                own_col = [(own_s * out_)[:, None].astype(np.float32), (own_s * (1 - out_))[:, None].astype(np.float32)]
+                cols = lambda o: [(o * out_)[:, None].astype(np.float32), (o * (1 - out_))[:, None].astype(np.float32)]
             else:
-                own_col = [own_s[:, None].astype(np.float32)]
-        Xw = np.hstack(own_col + [Lw, grp, hats(T['v0'].astype(np.float64), V_KNOTS), (T['strikes'] == 2)[:, None].astype(np.float32), self.prop_w[:, None].astype(np.float32),
-                        (T['stand_r'] == T['throw_r'])[:, None].astype(np.float32)])
+                cols = lambda o: [o[:, None].astype(np.float32)]
+            own_col = cols(own_s)
+            if self.whiff_own == 3:
+                own_col_fit = cols(own_fit)
+        rest_w = [Lw, grp, hats(T['v0'].astype(np.float64), V_KNOTS), (T['strikes'] == 2)[:, None].astype(np.float32), self.prop_w[:, None].astype(np.float32),
+                  (T['stand_r'] == T['throw_r'])[:, None].astype(np.float32)]
+        Xw = np.hstack(own_col + rest_w)
+        Xw_fit = np.hstack(own_col_fit + rest_w) if own_col_fit is not None else Xw
+        del rest_w
         sw_tr = tr & (swing == 1); idx = np.flatnonzero(sw_tr); idx = rng.choice(idx, min(len(idx), int(params.get('league_n', 600000))), replace=False)
-        self.m_w = fit_logistic(Xw[idx], whiff[idx]); self.off_w = self.m_w.decision_function(Xw)
+        self.m_w = fit_logistic(Xw_fit[idx], whiff[idx]); self.off_w = self.m_w.decision_function(Xw)
         fam3 = np.column_stack([np.isin(T['group'], (0, 1, 2)), np.isin(T['group'], (3, 4)), np.isin(T['group'], (5,))]).astype(np.float64)
         self.Bw = np.hstack([hitter_basis(self.xt, self.zt, T['stand_r'], T['strikes']), fam3, hats(self.zt, (1.0, 2.0, 3.0, 4.0)).astype(np.float64)])
         self.maps_w = _hitter_maps(self.Bw, whiff, self.off_w, _groups(T['batter'], sw_tr), float(params.get('lam_w', 30.0)), int(params.get('min_swings', 200)))
@@ -7548,7 +7566,8 @@ class PAModels:
             Xc = np.hstack([Lw, plat_])
             self.m_c = fit_logistic(Xc[idx], (T['cs'] == 1).astype(np.float64)[idx]); self.p_c = self.m_c.predict_proba(Xc)[:, 1]
         ct = tr & contact; idx = np.flatnonzero(ct); idx = rng.choice(idx, min(len(idx), 400000), replace=False)
-        self.m_f = fit_logistic(Xw[idx], foul[idx]); self.p_f = self.m_f.predict_proba(Xw)[:, 1]
+        self.m_f = fit_logistic(Xw_fit[idx], foul[idx]); self.p_f = self.m_f.predict_proba(Xw)[:, 1]
+        del Xw_fit
         # the run value of a ball in play: linear on location, group, speed, count, platoon and both players' contact values
         cnt = np.zeros((n, 12), np.float32); cnt[np.arange(n), np.clip(T['balls'], 0, 3) * 3 + np.clip(T['strikes'], 0, 2)] = 1
         Xb = np.hstack([np.ones((n, 1), np.float32), Lw, grp, hats(T['v0'].astype(np.float64), V_KNOTS), cnt, (T['stand_r'] == T['throw_r'])[:, None].astype(np.float32),
@@ -7573,8 +7592,8 @@ class PAModels:
         cf0_ = self.m_f.coef_[0].astype(np.float64)
         self.w_own_w = float(cw_[0]) if self.whiff_own else 0.0                     # WHIFF-OWN-01 (out of the zone with WHIFF-OWN-02)
         self.w_own_f = float(cf0_[0]) if self.whiff_own else 0.0
-        self.w_own_w_in = float(cw_[1]) if self.whiff_own == 2 else self.w_own_w    # WHIFF-OWN-02: inside the zone
-        self.w_own_f_in = float(cf0_[1]) if self.whiff_own == 2 else self.w_own_f
+        self.w_own_w_in = float(cw_[1]) if self.whiff_own in (2, 3) else self.w_own_w    # WHIFF-OWN-02/03: inside the zone
+        self.w_own_f_in = float(cf0_[1]) if self.whiff_own in (2, 3) else self.w_own_f
         # FOUL-01: the foul model was fit with the hitter's whiff propensity (the same column as the whiff model's); blocks_at
         # evaluates it at zero (a hitter who misses half his swings), so the hitter's propensity goes back in with its own weight
         self.foul_prop = bool(params.get('foul_prop', True))
@@ -7604,7 +7623,7 @@ class PAModels:
         grp = np.zeros((n, 7), np.float32); grp[np.arange(n), np.clip(grp_, 0, 6)] = 1
         Lw = location_block(xt, zt, stand, strikes)
         plat = (stand == throw)[:, None].astype(np.float32)
-        Xw = np.hstack(([np.zeros((n, int(getattr(self, 'whiff_own', 0))), np.float32)] if getattr(self, 'whiff_own', 0) else []) +
+        Xw = np.hstack(([np.zeros((n, 2 if getattr(self, 'whiff_own', 0) in (2, 3) else 1), np.float32)] if getattr(self, 'whiff_own', 0) else []) +
                        [Lw, grp, hats(v0, V_KNOTS), (strikes == 2)[:, None].astype(np.float32), np.zeros((n, 1), np.float32), plat])
         lo_w = self.m_w.decision_function(Xw).astype(np.float64)
         fam3 = np.column_stack([np.isin(grp_, (0, 1, 2)), np.isin(grp_, (3, 4)), np.isin(grp_, (5,))]).astype(np.float64)

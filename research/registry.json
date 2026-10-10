@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 259,
- "rows": 262,
+ "experiments": 260,
+ "rows": 263,
  "records": {
   "ACC-01": [
    {
@@ -4274,7 +4274,27 @@
     "id": "WHIFF-OWN-02",
     "columns": {
      "ID": "WHIFF-OWN-02",
-     "Attempt": "WHIFF-OWN-01 with one weight for pitches that cross out of the zone and one for pitches that cross in it (two columns, the hitter's swing map's part times each zone indicator; params whiff_own 2), in the league whiff model and the foul model that shares its inputs; plans price each spot with the weight for where it crosses. Smoke test on a synthetic world (scratch cross/smoke_wo.py): runs; settings 0 and 1 reproduce the earlier numbers exactly. **Registered in the commit that added this row, before the runs.** Gated on windows WHIFF-OWN-01 did not use: as of 2024-07-01 (a season no whiff run has looked at) and 2026-06-01, CAL-04's split, the input on (2) against off (0) with everything else the same (four calibration-only runs). Gate, in both runs: (1) whiff log loss of the maps on the later swings lower, out of the zone and over all swings; (2) misses expected against actual in the two extreme bins out of the zone within 0.95 to 1.05; (3) the two extreme bins inside the zone within 0.92 to 1.08. Prediction: the weight out of the zone negative and larger than inside; log loss lower by 0.5 to 1.5 nats per 1,000 swings out of the zone and 0.1 to 1.0 over all; the extreme bins out of the zone 0.96 to 1.03, inside 0.93 to 1.07. If it holds: on in the engine (WHIFF_OWN 2), the aiming value re-priced, the reports rebuilt.",
+     "Attempt": "WHIFF-OWN-01 with one weight for pitches that cross out of the zone and one for pitches that cross in it (two columns, the hitter's swing map's part times each zone indicator; params whiff_own 2), in the league whiff model and the foul model that shares its inputs; plans price each spot with the weight for where it crosses. Smoke test on a synthetic world (scratch cross/smoke_wo.py): runs; settings 0 and 1 reproduce the earlier numbers exactly. **Registered in the commit that added this row, before the runs.** Gated on windows WHIFF-OWN-01 did not use: as of 2024-07-01 (a season no whiff run has looked at) and 2026-06-01, CAL-04's split, the input on (2) against off (0) with everything else the same (four calibration-only runs). Gate, in both runs: (1) whiff log loss of the maps on the later swings lower, out of the zone and over all swings; (2) misses expected against actual in the two extreme bins out of the zone within 0.95 to 1.05; (3) the two extreme bins inside the zone within 0.92 to 1.08. Prediction: the weight out of the zone negative and larger than inside; log loss lower by 0.5 to 1.5 nats per 1,000 swings out of the zone and 0.1 to 1.0 over all; the extreme bins out of the zone 0.96 to 1.03, inside 0.93 to 1.07. If it holds: on in the engine (WHIFF_OWN 2), the aiming value re-priced, the reports rebuilt. **Results (2024-07-01: runs 38078219957 off, 38078235263 on; 2026-06-01: 38078251696, 38078267690):** gate not met, on (2). (1) held: log loss -0.44 and -1.10 nats per 1,000 swings out of the zone, -0.01 and -0.32 over all. (3) held: inside extremes 1.074 and 1.070 (2024), 0.997 and 1.064 (2026). (2) did not: out of the zone the low bin is now right (1.038, 1.026, from 0.905 and 0.878) but the high bin overshoots (0.945 and 0.922, from 1.040 and 1.029). In run values the engine now follows what the swings produced across the bins much more closely (2026 under -10: -0.114 against -0.112 realized, was -0.103; over 10: -0.084 against -0.086, was -0.090). The weight is fit on the training rows with each hitter's swing map from those same rows, which likely overstates it; not adopted. Follow-up: WHIFF-OWN-03, the weight fit with each half of a hitter's training games read by the map from the other half.",
+     "Disposition and evidence": "gate not met; not adopted"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [
+     "38078219957",
+     "38078235263",
+     "38078251696",
+     "38078267690"
+    ],
+    "frozen_commits": [],
+    "status": "gate not met; not adopted"
+   }
+  ],
+  "WHIFF-OWN-03": [
+   {
+    "id": "WHIFF-OWN-03",
+    "columns": {
+     "ID": "WHIFF-OWN-03",
+     "Attempt": "WHIFF-OWN-02 with the weights fit by cross-fitting: each hitter's training games split by game number into two halves, each half's rows read by the swing map fit on the other half, so a map's in-sample fit does not inflate the weights; plans and later rows still use the full maps, and the whiff maps are fit on top of the full-map offset (params whiff_own 3). Smoke test on a synthetic world (scratch cross/smoke_wo.py): runs; settings 0 and 2 reproduce their earlier numbers. **Registered in the commit that added this row, before the runs.** Gated on windows no whiff run has used: as of 2024-09-01 and 2025-05-01, CAL-04's split, on (3) against off (0), four calibration-only runs. Gate, in both runs: (1) whiff log loss of the maps on the later swings lower, out of the zone and over all swings; (2) the two extreme bins out of the zone within 0.95 to 1.05; (3) the two extreme bins inside within 0.92 to 1.08. Prediction: weights smaller than WHIFF-OWN-02's in size; log loss lower by 0.3 to 1.2 nats per 1,000 swings out of the zone and 0 to 0.5 over all; the extreme bins out of the zone 0.96 to 1.04. If it holds: on in the engine (WHIFF_OWN 3), the aiming value re-priced, the reports rebuilt.",
      "Disposition and evidence": "registered, running"
     },
     "registered_before_run": true,
