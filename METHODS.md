@@ -94,6 +94,14 @@ moves with the period (6% low on July to September 2025, 8% high on August and S
 swing alike and is left open. Re-priced with both corrections (VALUE-18Z), the aiming value is -42.9 [-45.9, -40.0] by the
 engine's components and -23.9 inside; the stated range stays about 30 to 40, and about 24 inside.
 
+Why the engine's figure sits above the realized-outcome one was then traced (CAL-04): splitting pitches out of the zone by
+the hitter's own swing tendency at the pitch, the swing maps are right in every group, but the whiff maps are too flat:
+a hitter who rarely chases a spot misses more when he does swing there than his map says (about 10%), and a hitter who
+chases a spot misses a little less (4 to 6%). So the engine prices the extra chases a hitter's tendency adds as costlier
+than they are. Looser whiff maps (WHIFF-LAM-01) and the swing tendency as an input to the whiff model (WHIFF-OWN-01 to
+03) each fixed the low end, but overcorrected the heavy chasers or cost accuracy inside the zone, and none met its gate;
+the engine keeps the location-only whiff model and the stated range keeps both figures.
+
 The aiming value is estimated policy potential, not observed runs saved. It is stated as a range, about 30 to 40
 runs over a team's season from outside pitches alone on the later-period months (VALUE-18X; the description that follows
 is VALUE-18F's, whose figures the re-pricing moved by about a run): 43.5 [40.7, 46.6] when
