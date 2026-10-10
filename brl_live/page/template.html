@@ -2487,7 +2487,10 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       (now.deck && (now.deck.name || players[now.deck.id]) ? ". On deck: " + (now.deck.pair && !onSummary ? '<button class="rp-deck" data-rpdeck="' + esc(now.deck.key) + '">' + esc(lastName(nm(now.deck.id, now.deck.name))) + "</button>" : esc(lastName(nm(now.deck.id, now.deck.name)))) : "") + "</small></div>";
     if (onSummary) h += '<a class="rp-follow" href="#/game/' + esc(pk) + '/report">Game plan</a>';
     else if (now.pair) h += '<button class="rp-follow" data-rpfollow aria-pressed="' + fol + '">' + (fol ? "Following the at-bat" : "Follow the at-bat") + "</button>";
-    if (!now.pair) h += '<small class="rp-now-miss">' + (doc.sides && doc.sides[now.side] && doc.sides[now.side].hitters.map(String).indexOf(now.hid) >= 0 ? "No plan for this one: he isn't one of the pitchers we planned for." : "No plan for this one: he wasn't in the lineup we planned for.") + "</small>";
+    if (!now.pair) {
+      var hn = nm(now.hid, now.hitter), card = hn && hn !== String(now.hid) ? ' <a href="#/players/' + encodeURIComponent(hn) + '">' + esc(lastName(hn)) + "'s card</a> shows where he chases." : "";
+      h += '<small class="rp-now-miss">' + (doc.sides && doc.sides[now.side] && doc.sides[now.side].hitters.map(String).indexOf(now.hid) >= 0 ? "No plan for this one: he isn't one of the pitchers we planned for." : "No plan for this one: he wasn't in the lineup we planned for.") + card + "</small>";
+    }
     var ul = umpireLine(now.lv);
     if (ul) h += '<small class="rp-now-miss">' + ul + "</small>";
     return h + "</div>";
