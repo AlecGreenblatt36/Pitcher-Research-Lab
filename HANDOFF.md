@@ -46,7 +46,16 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
-### In flight (updated 3:40 p.m. Eastern October 10, by `date -u`)
+### In flight (updated 4:15 p.m. Eastern October 10, by `date -u`)
+
+- October 10, 4:15 p.m.: the container restarted at 19:56 UTC and took the rebuild loop with it. The rest of the rebuild
+  runs from scratch report/rebuild_rest.sh (pushes every month not yet logged as pushed, four at a time; then October 1
+  to 8 with player cards; same log). May and June 2026 finished; April 2026 (redo), July, August and September 2026
+  pushed at 20:07 UTC. Fixed: plans listed relievers from the team's last game only (recent_players counted the bullpen
+  after its game loop); now games in relief over the last 16 days, then batters faced, then recency. Strike-spot words
+  say what the model measures ("takes it more than most", "can't do much with it"). Registered LINEUP-01 and LINEUP-02
+  (the lineup before one is posted, by the opposing starter's hand; brl_live/lineups.py is shared by the simulator and
+  the plans, rule still 'last'); study run 38082910875 (receipt research/report-38082910875.json, key lineup_study).
 
 - October 10, 3:35 p.m.: the rebuild loop's busy check read only the last 10 report runs, so with the calibration runs in
   between, batches overlapped (seven rebuild runs at once) and GitHub's secondary write limit failed April 2026 (run
