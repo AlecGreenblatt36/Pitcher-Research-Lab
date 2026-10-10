@@ -1,0 +1,186 @@
+{
+ "schema": "brl.report-receipt.v1",
+ "run_id": "38063202452",
+ "params": {
+  "dates": [
+   "2025-06-01",
+   "2025-06-02",
+   "2025-06-03",
+   "2025-06-04",
+   "2025-06-05",
+   "2025-06-06",
+   "2025-06-07",
+   "2025-06-08",
+   "2025-06-09",
+   "2025-06-10",
+   "2025-06-11",
+   "2025-06-12",
+   "2025-06-13",
+   "2025-06-14",
+   "2025-06-15",
+   "2025-06-16",
+   "2025-06-17",
+   "2025-06-18",
+   "2025-06-19",
+   "2025-06-20",
+   "2025-06-21",
+   "2025-06-22",
+   "2025-06-23",
+   "2025-06-24",
+   "2025-06-25",
+   "2025-06-26",
+   "2025-06-27",
+   "2025-06-28",
+   "2025-06-29",
+   "2025-06-30"
+  ],
+  "asof": "2025-06-01",
+  "publish": true
+ },
+ "started_at": "2026-10-10T15:21:29.229635+00:00",
+ "stages": [
+  {
+   "stage": "load 2024",
+   "at_seconds": 7.1,
+   "peak_rss_mb": 1059
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 14.2,
+   "peak_rss_mb": 1227
+  },
+  {
+   "stage": "league swing model",
+   "at_seconds": 27.9,
+   "peak_rss_mb": 3291
+  },
+  {
+   "stage": "hitter swing maps 535",
+   "at_seconds": 28.6,
+   "peak_rss_mb": 3291
+  },
+  {
+   "stage": "whiff maps 501",
+   "at_seconds": 51.7,
+   "peak_rss_mb": 4553
+  },
+  {
+   "stage": "swing model, 535 maps",
+   "at_seconds": 73.7,
+   "peak_rss_mb": 6592
+  },
+  {
+   "stage": "models fitted",
+   "at_seconds": 99.2,
+   "peak_rss_mb": 9179
+  },
+  {
+   "stage": "fitted",
+   "at_seconds": 99.3,
+   "peak_rss_mb": 9179
+  },
+  {
+   "stage": "recent players",
+   "at_seconds": 100.6,
+   "peak_rss_mb": 9179
+  },
+  {
+   "stage": "game 777678",
+   "at_seconds": 101.9,
+   "peak_rss_mb": 9179
+  },
+  {
+   "stage": "game 777692",
+   "at_seconds": 103.1,
+   "peak_rss_mb": 9179
+  },
+  {
+   "stage": "game 777684",
+   "at_seconds": 104.3,
+   "peak_rss_mb": 9179
+  },
+  {
+   "stage": "game 777688",
+   "at_seconds": 105.8,
+   "peak_rss_mb": 9179
+  },
+  {
+   "stage": "game 777685",
+   "at_seconds": 107.3,
+   "peak_rss_mb": 9179
+  },
+  {
+   "stage": "game 777683",
+   "at_seconds": 108.5,
+   "peak_rss_mb": 9179
+  },
+  {
+   "stage": "game 777686",
+   "at_seconds": 109.5,
+   "peak_rss_mb": 9179
+  },
+  {
+   "stage": "game 777689",
+   "at_seconds": 111.0,
+   "peak_rss_mb": 9179
+  },
+  {
+   "stage": "game 777677",
+   "at_seconds": 112.2,
+   "peak_rss_mb": 9179
+  },
+  {
+   "stage": "game 777690",
+   "at_seconds": 113.5,
+   "peak_rss_mb": 9179
+  },
+  {
+   "stage": "game 777687",
+   "at_seconds": 114.9,
+   "peak_rss_mb": 9179
+  },
+  {
+   "stage": "game 777679",
+   "at_seconds": 116.0,
+   "peak_rss_mb": 9179
+  },
+  {
+   "stage": "game 777680",
+   "at_seconds": 117.2,
+   "peak_rss_mb": 9179
+  },
+  {
+   "stage": "game 777681",
+   "at_seconds": 118.7,
+   "peak_rss_mb": 9179
+  },
+  {
+   "stage": "game 777682",
+   "at_seconds": 120.0,
+   "peak_rss_mb": 9179
+  },
+  {
+   "stage": "report 2025-06-01",
+   "at_seconds": 176.8,
+   "peak_rss_mb": 9179
+  }
+ ],
+ "reports": {
+  "2025-06-01": {
+   "games": 15,
+   "bytes": 4058403,
+   "asof": "2025-06-01",
+   "graded": 15
+  }
+ },
+ "environment": {
+  "python": "3.12.15",
+  "commit": "7880039683c69304cd06f1b0b3bab73ec7258dac",
+  "numpy": "2.5.3",
+  "scipy": "1.18.1",
+  "scikit-learn": "1.9.1",
+  "pandas": "3.0.6",
+  "cryptography": "46.0.4"
+ },
+ "status": "in progress"
+}
