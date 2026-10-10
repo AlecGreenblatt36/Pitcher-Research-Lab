@@ -2647,6 +2647,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     return "Lean on the " + PITCH_NAME[order[0]].toLowerCase() + (order.length > 1 ? ", then the " + order.slice(1).map(function (f) { return PITCH_NAME[f].toLowerCase(); }).join(", then the ") : "") + ".";
   }
   function lineupWords(src) {
+    if (src && src.indexOf("last game against ") === 0) return "Lineup not posted yet: this is their last lineup against " + src.slice(18) + ".";
+    if (src && src.indexOf("usual lineup against ") === 0) return "Lineup not posted yet: this is their usual lineup against " + src.slice(21) + ".";
     return src === "box score" ? "Lineup from the box score." : src === "posted lineup" ? "Posted lineup." : src === "last game" ? "Lineup not posted yet: this is their last game's lineup." : "Lineup projected from recent games.";
   }
   /* The order the plan shows: the plan's own lineup, or, when MLB has posted the lineup since the plan was built, the

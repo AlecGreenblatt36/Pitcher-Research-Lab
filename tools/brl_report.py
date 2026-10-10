@@ -740,6 +740,102 @@ def recent_players(T: dict, game_pks_by_team: dict, team_games: dict) -> tuple[d
     return hitters, relievers, last_order
 
 
+def team_sides(first_day: int, last_day: int) -> dict:
+    """game_pk -> ({'away': team id, 'home': team id}, game type), from the public schedule, a month a call."""
+    out = {}
+    d = date.fromordinal(int(first_day)).replace(day=1); end = date.fromordinal(int(last_day))
+    while d <= end:
+        nxt = (d.replace(day=28) + timedelta(days=4)).replace(day=1)
+        doc = mlb(f'https://statsapi.mlb.com/api/v1/schedule?sportId=1&startDate={d.isoformat()}&endDate={(nxt - timedelta(days=1)).isoformat()}&gameType=R,F,D,L,W')
+        for dd in doc.get('dates', []):
+            for g in dd.get('games', []):
+                tm = g.get('teams') or {}
+                ids = {s_: int((((tm.get(s_) or {}).get('team')) or {}).get('id') or 0) for s_ in ('away', 'home')}
+                if ids['away'] and ids['home']:
+                    out[int(g['gamePk'])] = (ids, g.get('gameType'))
+        d = nxt
+    return out
+
+
+def team_game_rows(T: dict, sides: dict, pks=None) -> dict:
+    """team id -> its games in the pitch table as brl_live.lineups prior games (day, game_pk, nine starters in batting
+    order, the opposing starter's hand, everyone who batted), with the game type and season after them."""
+    keep = np.isin(T['game'], np.fromiter(pks, dtype=np.int64)) if pks is not None else np.ones(len(T['game']), bool)
+    g = T['game'][keep]; h = T['half'][keep]; b = T['batter'][keep]; ab = T['ab'][keep]; pn = T['pitch_no'][keep]
+    dy = T['day'][keep]; tr = T['throw_r'][keep]; ss = T['season'][keep]
+    o = np.lexsort((pn, ab, h, g))
+    key = g[o].astype(np.int64) * 2 + h[o]
+    starts = np.flatnonzero(np.r_[True, key[1:] != key[:-1]]) if len(o) else np.array([], int)
+    ends = np.r_[starts[1:], len(o)]
+    out = {}
+    for s_, e_ in zip(starts, ends):
+        i0 = o[s_]; pk = int(g[i0])
+        if pk not in sides:
+            continue
+        ids, gtype = sides[pk]
+        bb = [int(x) for x in b[o[s_:e_]]]
+        out.setdefault(ids['away' if int(h[i0]) == 0 else 'home'], []).append(
+            (int(dy[i0]), pk, list(dict.fromkeys(bb))[:9], 'R' if int(tr[i0]) == 1 else 'L', set(bb), gtype, int(ss[i0])))
+    return out
+
+
+def lineup_study(T: dict, stage, spec: dict) -> dict:
+    """LINEUP-01 and LINEUP-02 (LEDGER): for every team-game of the evaluated seasons, how many of the nine starters each
+    pre-lineup rule names (and how many in the right spot), from the team's games on earlier days only. Aggregates only."""
+    from brl_live import lineups as LU
+    evaluate = sorted(int(x) for x in (spec.get('evaluate') or (2025, 2026)))
+    sides = team_sides(int(T['day'].min()), int(T['day'].max())); stage('schedule')
+    by_team = team_game_rows(T, sides); stage('team games')
+    rng = np.random.default_rng(20261010)
+    pairs = (('hand', 'last'), ('freq', 'hand'), ('freq', 'last'))
+
+    def summarize(rows):
+        n = len(rows)
+        if not n:
+            return {'team_games': 0}
+        out = {'team_games': n}
+        for rule in LU.RULES:
+            ov = np.array([r[rule][0] for r in rows]); sp = np.array([r[rule][1] for r in rows])
+            out[rule] = {'overlap': round(float(ov.mean()), 4), 'spots': round(float(sp.mean()), 4), 'all_nine': round(float((ov == 9).mean()), 4)}
+        cl = {}
+        for r in rows:
+            cl.setdefault(r['cluster'], []).append(r)
+        keys = sorted(cl)
+        for a_, b_ in pairs:
+            C = np.array([[len(cl[k]), sum(r[a_][0] - r[b_][0] for r in cl[k]), sum(r[a_][1] - r[b_][1] for r in cl[k])] for k in keys], float)
+            idx = rng.integers(0, len(C), size=(4000, len(C)))
+            bo = C[idx, 1].sum(1) / C[idx, 0].sum(1); bs = C[idx, 2].sum(1) / C[idx, 0].sum(1)
+            out[f'{a_}_minus_{b_}'] = {'overlap': round(float(C[:, 1].sum() / C[:, 0].sum()), 4), 'overlap_ci95': [round(float(np.percentile(bo, 2.5)), 4), round(float(np.percentile(bo, 97.5)), 4)],
+                                      'spots': round(float(C[:, 2].sum() / C[:, 0].sum()), 4), 'spots_ci95': [round(float(np.percentile(bs, 2.5)), 4), round(float(np.percentile(bs, 97.5)), 4)],
+                                      'clusters': len(keys)}
+        return out
+
+    res = {'rules': list(LU.RULES), 'settings': {'hand_days': LU.HAND_DAYS, 'freq_games': LU.FREQ_GAMES, 'freq_days': LU.FREQ_DAYS, 'freq_active': LU.FREQ_ACTIVE},
+           'cluster': 'team and calendar month (bootstrap, 4,000 draws)', 'seasons': {}}
+    for season in evaluate:
+        rows = []
+        for tid, games in by_team.items():
+            games = sorted(games, key=lambda x: (x[0], x[1]))
+            for i, gm in enumerate(games):
+                if gm[6] != season or len(gm[2]) != 9:
+                    continue
+                prior = [x for x in games[max(0, i - 90):i] if x[0] < gm[0]]
+                if not prior:
+                    continue
+                aset = set(gm[2]); last_hand = max(prior, key=lambda x: (x[0], x[1]))[3]
+                r = {'cluster': (tid, date.fromordinal(gm[0]).month), 'post': gm[5] not in ('R', None), 'changed': last_hand != gm[3]}
+                for rule in LU.RULES:
+                    order, _ = LU.project(prior, gm[0], gm[3], rule)
+                    order = order or []
+                    r[rule] = (len(aset & set(order)), sum(1 for a_, q_ in zip(gm[2], order) if a_ == q_))
+                rows.append(r)
+        res['seasons'][str(season)] = {'all': summarize(rows), 'opposing_hand_changed': summarize([r for r in rows if r['changed']]),
+                                       'opposing_hand_same': summarize([r for r in rows if not r['changed']]),
+                                       'regular_season': summarize([r for r in rows if not r['post']]), 'postseason': summarize([r for r in rows if r['post']])}
+        stage(f'lineup study {season}')
+    return res
+
+
 def names_for(ids: set, teams: bool = False) -> dict:
     """Names (and, when asked, current team abbreviations) from the public MLB people endpoint, a hundred ids a call."""
     out = {}
@@ -808,21 +904,31 @@ def build_report(fit: Fitted, T_all: dict, day: str, asof: str, stage, max_relie
            'grid': {'side_ft': GU.tolist(), 'height_ft': GZ.tolist()}, 'games': {}, 'players': {}, 'pricing': 'structural' if fit.PM is not None else 'regression'}
     if not games:
         return rep
-    # recent games per team (last 14 days before the report date) from the public schedule
+    # recent games per team from the public schedule: the last 16 days for the bench and the bullpen, the last 46 for
+    # the lineup before one is posted (brl_live/lineups.py, the rule the simulator uses)
+    from brl_live import lineups as LU
     d0 = date.fromisoformat(day)
-    sched = mlb(f'https://statsapi.mlb.com/api/v1/schedule?sportId=1&startDate={(d0 - timedelta(days=16)).isoformat()}&endDate={(d0 - timedelta(days=1)).isoformat()}&gameType=R,F,D,L,W')
-    by_team = {}; team_games = {}
+    sched = mlb(f'https://statsapi.mlb.com/api/v1/schedule?sportId=1&startDate={(d0 - timedelta(days=46)).isoformat()}&endDate={(d0 - timedelta(days=1)).isoformat()}&gameType=R,F,D,L,W')
+    by_team = {}; team_games = {}; sides_46 = {}
     for d in sched.get('dates', []):
         for g in d.get('games', []):
             if (g.get('status') or {}).get('abstractGameState') != 'Final':
                 continue
-            pk = int(g['gamePk'])
+            pk = int(g['gamePk']); ids = {}
             for side in ('away', 'home'):
                 tid = int((((g.get('teams') or {}).get(side) or {}).get('team') or {}).get('id') or 0)
-                if tid:
+                ids[side] = tid
+                if tid and d.get('date', '') >= (d0 - timedelta(days=16)).isoformat():
                     by_team.setdefault(tid, []).append(pk); team_games[(pk, tid)] = side
+            if ids['away'] and ids['home']:
+                sides_46[pk] = (ids, g.get('gameType'))
     rec_h, rec_p, rec_o = recent_players(fit.T, by_team, team_games)
+    prior_games = team_game_rows(T_all, sides_46, pks=set(sides_46)) if sides_46 else {}
     stage('recent players')
+
+    def hand_of(pid):
+        rows_ = fit.gp.get(pid) if pid else None
+        return None if rows_ is None or not len(rows_) else ('R' if int(fit.T['throw_r'][rows_[0]]) == 1 else 'L')
     need_names = set()
     for g in games:
         pk = g['game_pk']
@@ -846,14 +952,16 @@ def build_report(fit: Fitted, T_all: dict, day: str, asof: str, stage, max_relie
                 source = 'box score'
             else:
                 lineup = g['lineups'].get(bat_side) or []
-                # no posted lineup: the team's last lineup, then the rest of its recent hitters off the bench
-                last = rec_o.get(tid) or []
+                starter = g['teams'][fld_side]['probable']
+                # no posted lineup: the lineup the simulator projects (brl_live/lineups.py), then the rest of the team's
+                # recent hitters off the bench
+                last, src_ = LU.project(prior_games.get(tid, []), d0.toordinal(), hand_of(starter))
+                last = last or []
                 base = lineup or (last + [x for x in rec_h.get(tid, []) if x not in last])
                 hitters = [x for x in base if x in fit.maps_s][:12]
                 spots = {x: i + 1 for i, x in enumerate((lineup or last)[:9])}
-                starter = g['teams'][fld_side]['probable']
                 pens = rec_p.get(fid, [])[:max_relievers]
-                source = 'posted lineup' if lineup else ('last game' if last else 'recent games')
+                source = 'posted lineup' if lineup else (src_ if last else 'recent games')
             staff = ([starter] if starter else []) + [x for x in pens if x != starter]
             staff = [x for x in staff if x in fit.gp and len(fit.gp[x]) >= 150]
             side_entry = {'lineup_source': source, 'hitters': hitters, 'spots': {str(x): v for x, v in spots.items() if x in hitters},
@@ -1207,6 +1315,9 @@ def main():
             tables.append(D.pitch_table(doc, int(year), ('R', 'F', 'D', 'L', 'W'))); del doc, raw
             stage(f'load {year}')
         T = D.concat(tables); del tables
+        if params.get('lineup_study'):
+            receipt['lineup_study'] = lineup_study(T, stage, params['lineup_study'])
+            dates = []
         fits = {}
         for day in sorted(dates):
             a = asof_for.get(day) or asof or day

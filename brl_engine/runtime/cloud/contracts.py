@@ -67,21 +67,22 @@ def _throws(feed, pid, fallback='R'):
     return (((_player(feed, pid).get('pitchHand') or {}).get('code') or fallback)[:1]).upper()
 
 
-def projected_order(feed: dict, side: str, history: pd.DataFrame) -> list:
-    """The team's batting order from its most recent game in the prior-date history."""
+def projected_order(feed: dict, side: str, history: pd.DataFrame, hand: str | None = None) -> tuple[list, str]:
+    """The team's batting order before its lineup is posted, from the prior-date history, by the rule in force
+    (brl_live/lineups.py RULE): its most recent lineup, or the lineup it uses against a starter of today's opposing
+    starter's hand. Returns (order, source words)."""
+    from brl_live import lineups
     abbr = str(feed['gameData']['teams'][side].get('abbreviation') or '').upper()
     if not abbr:
         raise Blocked('Team abbreviation missing')
-    bats = history[(history['home_team'] == abbr) & (history['inning_topbot'].astype(str).str.lower().str.startswith('bot'))
-                   | (history['away_team'] == abbr) & (history['inning_topbot'].astype(str).str.lower().str.startswith('top'))]
-    if bats.empty:
+    prior = lineups.games_from_history(history, abbr)
+    if not prior:
         raise Blocked('No prior lineup for ' + abbr)
-    last = bats.sort_values(['date_key', 'game_pk', 'at_bat_number']).iloc[-1]
-    game = bats[bats['game_pk'] == last['game_pk']].sort_values('at_bat_number')
-    order = list(dict.fromkeys(int(b) for b in game['batter'].tolist()))[:9]
-    if len(order) != 9:
+    today = pd.Timestamp(str(feed['gameData']['datetime']['officialDate'])[:10]).toordinal()
+    order, source = lineups.project(prior, today, hand)
+    if order is None or len(order) != 9:
         raise Blocked('Prior lineup incomplete for ' + abbr)
-    return order
+    return [int(x) for x in order], source
 
 
 def likely_opener(app: pd.DataFrame, pool: list, date: str):
@@ -135,6 +136,7 @@ def live_inputs(feed: dict, receipt: dict, history: pd.DataFrame, names: dict | 
     teams, game_teams, statuses, notes = {}, {}, {}, {'history_through_used': str(hist['date_key'].max()) if len(hist) else None,
                                                      'lineup_source': {}, 'bullpen_source': {}}
     probable = gd.get('probablePitchers') or {}
+    sps, assumed_by = {}, {}
     for side in ('away', 'home'):
         t = gd['teams'][side]
         sp = (probable.get(side) or {}).get('id')
@@ -157,13 +159,17 @@ def live_inputs(feed: dict, receipt: dict, history: pd.DataFrame, names: dict | 
             assumed = sp
             statuses[side + '_starter'] = 'assumed'
             notes.setdefault('starter_source', {})[side] = 'no probable starter announced; bullpen game assumed, opened by the most likely opener'
-        sp = int(sp)
+        sps[side] = int(sp); assumed_by[side] = assumed
+    for side in ('away', 'home'):
+        t = gd['teams'][side]
+        sp = sps[side]; assumed = assumed_by[side]
+        opp = sps['home' if side == 'away' else 'away']
         order = [int(x) for x in ((box.get(side) or {}).get('battingOrder') or [])]
         if len(order) == 9 and len(set(order)) == 9:
             statuses[side] = 'official'; notes['lineup_source'][side] = 'official pregame lineup'
         else:
-            order = projected_order(feed, side, hist); statuses[side] = 'projected'
-            notes['lineup_source'][side] = "team's most recent lineup in the prior-date history"
+            order, source = projected_order(feed, side, hist, _throws(feed, opp, throws_hist.get(opp, 'R'))); statuses[side] = 'projected'
+            notes['lineup_source'][side] = {'last game': "team's most recent lineup in the prior-date history"}.get(source, "team's " + source + ' in the prior-date history')
         lineup = tuple(PlayerProfile(str(pid), _name(feed, pid, names), _bats(feed, pid, stands.get(pid))) for pid in order)
         starter = starter_profile(app, sp, _throws(feed, sp, throws_hist.get(sp, 'R')), _name(feed, sp, names), date)
         if assumed is not None:
