@@ -3188,7 +3188,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var aggs = (D.skill_scores && D.skill_scores.aggregates) || [];
     var live = aggs.filter(function (a) { return a.n_games && a.model_score != null && a.baseline_score != null; });
     if (live.length) {
-      h += '<section class="sec"><h2>Box score calls</h2><p class="lede">How much closer our projected box score lands than a plain average. Plus is better.</p><ul class="compare">';
+      var most = Math.max.apply(null, live.map(function (a) { return a.n_games; }));
+      h += '<section class="sec"><h2>Box score calls</h2><p class="lede">How much closer our projected box score lands than a plain average. Plus is better.' +
+        (most < 50 ? " " + most + (most === 1 ? " game is" : " games are") + " far too few to judge; one blowout swings these." : "") + '</p><ul class="compare">';
       live.forEach(function (a) { var g = (a.baseline_score - a.model_score) / a.baseline_score; h += "<li><span>" + esc(a.label) + " <small>(" + a.n_games + (a.n_games === 1 ? " game" : " games") + ")</small></span><b>" + (g >= 0 ? "+" : "") + Math.round(g * 100) + "%</b></li>"; });
       h += "</ul></section>";
     }
