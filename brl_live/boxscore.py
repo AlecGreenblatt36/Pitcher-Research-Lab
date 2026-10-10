@@ -615,39 +615,50 @@ def parse_actual_box(feed,game_pk,fetched_at):
     except Exception as exc:out['plays']=[];out['plays_error']=type(exc).__name__+': '+str(exc)[:200]
     return out
 
-def score_player_boxes(boxes,publications,actuals):
+def player_box_version(ident,box,pub,actual):
+    """One saved box against its game's final box: (version, None), or (None, reason) when it cannot count."""
     from app.common import timestamp,content_hash
     import re
+    if (not pub or not re.fullmatch(r'[0-9a-f]{40}',str(pub.get('commit','')))
+            or pub.get('box_sha256')!=content_hash(box)
+            or not timestamp(box['saved_at'])<=timestamp(pub['published_at'])<timestamp(actual['first_pitch_observed_at'])):
+        return None,'Player distributions were not publicly saved before first pitch'
+    if box['team_ids']!=actual['team_ids']:
+        return None,'Player actual team mismatch'
+    rows=[]
+    for s in SIDE:
+        for kind,metrics in [('batting',('H','HR','K')),('pitching',('K','outs'))]:
+            actual_index={r['player_id']:r for r in actual[kind][s]}
+            for p in box['teams'][s][kind]:
+                a=actual_index.get(p['player_id'])
+                for metric in metrics:
+                    # In a FINAL, complete MLB participant listing, absent
+                    # projected participants have zero realized opportunity.
+                    obs=0 if a is None else a[metric]
+                    if obs is None:continue
+                    d=p['distributions'][metric]
+                    rows.append({'side':s,'kind':kind,'player_id':p['player_id'],'name':p['name'],
+                                 'metric':'IP' if metric=='outs' else metric,
+                                 'expected':p['means'][metric]/(3 if metric=='outs' else 1),
+                                 'actual':obs/(3 if metric=='outs' else 1),
+                                 'crps':fair_crps(d,obs)/(3 if metric=='outs' else 1),
+                                 'event_brier':corrected_brier(d,obs) if kind=='batting' and metric in ('H','HR') else None})
+    return {'forecast_id':ident,'game_pk':box['game_pk'],'saved_at':box['saved_at'],'rows':rows},None
+
+def score_player_boxes(boxes,publications,actuals,cache=None):
+    """cache: ledger['box_cache'], the scores of boxes archived after their game (brl_live/box_runner.py
+    archive_old_boxes), worked out while the full box still verified against its publication."""
     per_version=[];excluded={};latest={}
     for ident,box in boxes.items():
         actual=actuals.get(str(box['game_pk']))
         if actual is None:continue
-        pub=publications.get(ident)
-        if (not pub or not re.fullmatch(r'[0-9a-f]{40}',str(pub.get('commit','')))
-                or pub.get('box_sha256')!=content_hash(box)
-                or not timestamp(box['saved_at'])<=timestamp(pub['published_at'])<timestamp(actual['first_pitch_observed_at'])):
-            excluded[ident]='Player distributions were not publicly saved before first pitch';continue
-        if box['team_ids']!=actual['team_ids']:
-            excluded[ident]='Player actual team mismatch';continue
-        rows=[]
-        for s in SIDE:
-            for kind,metrics in [('batting',('H','HR','K')),('pitching',('K','outs'))]:
-                actual_index={r['player_id']:r for r in actual[kind][s]}
-                for p in box['teams'][s][kind]:
-                    a=actual_index.get(p['player_id'])
-                    for metric in metrics:
-                        # In a FINAL, complete MLB participant listing, absent
-                        # projected participants have zero realized opportunity.
-                        obs=0 if a is None else a[metric]
-                        if obs is None:continue
-                        d=p['distributions'][metric]
-                        rows.append({'side':s,'kind':kind,'player_id':p['player_id'],'name':p['name'],
-                                     'metric':'IP' if metric=='outs' else metric,
-                                     'expected':p['means'][metric]/(3 if metric=='outs' else 1),
-                                     'actual':obs/(3 if metric=='outs' else 1),
-                                     'crps':fair_crps(d,obs)/(3 if metric=='outs' else 1),
-                                     'event_brier':corrected_brier(d,obs) if kind=='batting' and metric in ('H','HR') else None})
-        version={'forecast_id':ident,'game_pk':box['game_pk'],'saved_at':box['saved_at'],'rows':rows}
+        hit=(cache or {}).get(ident) if box.get('archived') else None
+        if hit is not None and 'player' in hit:
+            version,reason=hit['player'].get('version'),hit['player'].get('excluded')
+        else:
+            version,reason=player_box_version(ident,box,publications.get(ident),actual)
+        if reason is not None:
+            excluded[ident]=reason;continue
         per_version.append(version)
         if box['game_pk'] not in latest or latest[box['game_pk']]['saved_at']<box['saved_at']:latest[box['game_pk']]=version
     groups=defaultdict(list)

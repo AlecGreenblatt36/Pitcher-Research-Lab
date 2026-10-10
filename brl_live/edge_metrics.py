@@ -331,24 +331,40 @@ def aggregate_rows(versions):
     return output
 
 
-def score_skill_boxes(boxes, publications, actuals):
+def skill_box_outcome(box, pub, actual):
+    """One saved box against its game's final box: (why it is not a publication, why it is not eligible, the score
+    before its identity fields); each reason None when that check passes. score_one's own errors are raised, as before."""
+    try:
+        _published(box, pub, actual)
+    except (ValueError, KeyError, TypeError) as exc:
+        return str(exc), None, None
+    try:
+        _eligible(box, pub, actual)
+    except (ValueError, KeyError, TypeError) as exc:
+        return None, str(exc), None
+    return None, None, score_one(box, actual)
+
+
+def score_skill_boxes(boxes, publications, actuals, cache=None):
     # Select the last eligible publication before inspecting skill fields. Missing
     # new fields in a later published box cannot silently revive an older score.
+    # cache: ledger['box_cache'], the outcomes of boxes archived after their game, worked out while the full box
+    # still verified against its publication (brl_live/box_runner.py archive_old_boxes).
     excluded = {}; scored = []; newest = {}; by_id = {}
     for ident, box in sorted(boxes.items(), key=lambda pair:(pair[1]['saved_at'],pair[0])):
         actual = actuals.get(str(box['game_pk']))
         if actual is None: continue
-        pub = publications.get(ident)
-        try:
-            _published(box, pub, actual)
-        except (ValueError, KeyError, TypeError) as exc:
-            excluded[ident] = str(exc); continue
+        hit = (cache or {}).get(ident) if box.get('archived') else None
+        if hit is not None and 'skill' in hit:
+            not_published, not_eligible, raw = hit['skill'].get('published'), hit['skill'].get('eligible'), hit['skill'].get('result')
+        else:
+            not_published, not_eligible, raw = skill_box_outcome(box, publications.get(ident), actual)
+        if not_published is not None:
+            excluded[ident] = not_published; continue
         newest[box['game_pk']] = ident
-        try:
-            _eligible(box, pub, actual)
-        except (ValueError, KeyError, TypeError) as exc:
-            excluded[ident] = str(exc); continue
-        result = score_one(box, actual)
+        if not_eligible is not None:
+            excluded[ident] = not_eligible; continue
+        result = dict(raw)
         result.update(forecast_id=ident, game_pk=box['game_pk'], saved_at=box['saved_at'])
         scored.append(result); by_id[ident] = result
     latest = [by_id[ident] for ident in newest.values() if ident in by_id]
