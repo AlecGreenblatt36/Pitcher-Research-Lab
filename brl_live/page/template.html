@@ -207,6 +207,14 @@ details.more[open] summary::before { content: "\2212"; }
 .tabs .wrap { display: flex; gap: 2px; overflow-x: auto; }
 .tab { border: 0; background: none; padding: 12px 12px 10px; min-height: 48px; font-weight: 700; color: var(--muted); border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap; }
 .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--board); }
+@media (max-width: 560px) {
+  .tabs .wrap { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; overflow: visible; }
+  .tab { padding: 10px 4px 8px; min-height: 44px; font-size: 15px; text-align: center; }
+}
+.hero-call { margin: 10px 0 0; font-size: 16px; color: var(--chalk-dim); }
+.hero-call b { color: var(--chalk); }
+.hero-call.hit b { color: #8FD3A8; }
+.hero-call.miss b { color: #F2A0A3; }
 .panel { padding: 18px 0 40px; }
 .panel[hidden] { display: none; }
 
@@ -406,6 +414,29 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .rp-now-miss { flex: 1 1 100%; color: var(--muted); font-size: 14px; }
 .sec h3 .pill { font-size: 14px; line-height: 20px; vertical-align: 3px; }
 .mu td.rp-sel { outline: 3px solid var(--ink); outline-offset: -3px; }
+.plan-list { list-style: none; margin: 8px 0 0; padding: 0; background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; }
+.plan-row { padding: 12px 14px; border-top: 1px solid var(--rule-soft); }
+.plan-row:first-child { border-top: 0; }
+.plan-row.rp-cell { cursor: pointer; }
+.plan-row.rp-cell:hover { background: var(--hover); }
+.plan-row.rp-sel { box-shadow: inset 4px 0 0 var(--board); background: var(--good-tint); }
+.pl-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.pl-top b { font-size: 17px; min-width: 0; }
+.pl-top b small { font-weight: 400; color: var(--muted); font-size: 14px; margin-left: 4px; }
+.pl-top .spot { display: inline-block; width: 22px; color: var(--muted); font-weight: 400; }
+.pl-edge { flex: 0 0 auto; font-size: 14px; font-weight: 700; white-space: nowrap; border-radius: 999px; padding: 2px 10px; }
+.pl-edge.big { background: var(--board); color: var(--chalk); }
+.pl-edge.some { background: var(--good-tint); color: var(--good); border: 1px solid var(--rule); }
+.pl-edge.small { color: var(--muted); border: 1px solid var(--rule); }
+.pl-txt { margin: 4px 0 0 22px; font-size: 16px; line-height: 1.45; }
+.pl-tags { margin: 6px 0 0 22px; display: flex; flex-wrap: wrap; gap: 6px; }
+.pl-tags span { font-size: 14px; color: var(--muted); border: 1px solid var(--rule); border-radius: 999px; padding: 1px 8px; }
+.pd-line { font-size: 17px; line-height: 1.45; margin: 6px 0 10px; }
+.pair-detail { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 14px; }
+.pair-detail h3 { font-family: var(--display); font-size: 22px; margin: 0 0 4px; }
+.seg.arms { display: flex; flex-wrap: wrap; overflow: visible; }
+.seg.arms button { flex: 1 1 auto; }
+.seg.arms small { font-weight: 400; font-size: 14px; opacity: .8; }
 .mu td.rp-cell { cursor: pointer; }
 
 /* Odds */
@@ -548,7 +579,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   var DATA_URL = "predictions.json";
   var D = null;
   var app = document.getElementById("app");
-  var state = { variant: {}, boxSide: {}, playSide: {}, muMetric: "obp", rpMetric: "chase", rpPair: {}, rpCount: "all", rpFollow: {}, rpCloud: false };
+  var state = { variant: {}, boxSide: {}, playSide: {}, muMetric: "obp", rpMetric: "chase", rpPair: {}, rpCount: "all", rpFollow: {}, rpCloud: false, rpOpen: {} };
   var REPORTS = "https://raw.githubusercontent.com/AlecGreenblatt36/Pitcher-Research-Lab/brl-live-data/public/reports/";
   var TOTAL_TAUGHT = { sim: 0.32, line: 0.78, shift: -0.543, from: "2026-10-10" };   /* TOTALS-03: expected total taught by results, fixed cross-season weights */
   var RP = {};
@@ -714,6 +745,17 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   /* The game's state as a pill ahead of the context line; a game in progress gets a slow pulse. */
   function statusPill(st, text, pulsing) {
     return '<span class="pill ' + esc(st) + '">' + (pulsing ? "<i></i>" : "") + esc(text) + "</span>";
+  }
+  /* Our pick in one line under the score: before the game, during it, and after the final whether we called it. */
+  function callLine(f, actual, lv, replay) {
+    var fav = favorite(f), p = winProb(f, fav), who = esc(nickname(f[fav].name)) + " " + pct(p);
+    if (actual && actual.home != null) {
+      var won = actual.home > actual.away ? "home" : "away", hit = won === fav;
+      if (p < 0.52) return '<p class="hero-call"><b>Coin flip.</b> ' + (replay ? "The replay had " : "We had ") + who + (replay ? "." : " before first pitch.") + "</p>";
+      return '<p class="hero-call ' + (hit ? "hit" : "miss") + '"><b>' + (hit ? "\u2713 Called it" : "\u2717 Missed") + "</b> " + (replay ? "The replay had " : "We had ") + who + (replay ? "." : " before first pitch.") + "</p>";
+    }
+    if (lv && !lv._final) return '<p class="hero-call">Before first pitch we had ' + who + ".</p>";
+    return '<p class="hero-call">Our pick: <b>' + who + "</b></p>";
   }
   /* The win chance as one bar in the team colors, the away share from the left. */
   function heroBar(f, hp) {
@@ -1436,16 +1478,17 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       html += '<div class="hero-row' + (fav === side ? " fav" : "") + '"><span class="abbr"><i class="chip" style="background:var(--' + side + ')"></i>' + esc(t.abbr) + '</span><span class="team-name">' + esc(nickname(t.name)) +
         (sp ? "<small>" + esc(sp) + "</small>" : "") + '</span><span class="big num">' + (fin ? esc(fin[side]) : "") + '</span><span class="pct num">' + (g ? pct(winProb(f, side)) : "") + "</span></div>";
     });
-    if (g) html += heroBar(f, homeProb(f));
+    if (g) html += heroBar(f, homeProb(f)) + callLine(f, fin, null, true);
     html += '</div><div class="hero-side">';
     if (real && Object.keys(real.innings.away).length) html += lineScore(f, real);
     html += '<p class="hero-note">' + (g ? "Re-run after the season with only what was known before this game. The line score, box score and plays are the real game." :
       "No model numbers for this game. The line score, box score and plays are the real game from MLB.") + "</p></div></div></div></section>";
-    var tabs = [["summary", "Summary"], ["box", "Box score"], ["plays", "Plays"], ["odds", "Odds"]];
+    var tabs = [["summary", "Summary"], ["report", "Game plan"], ["box", "Box score"], ["plays", "Plays"], ["odds", "Odds"]];
     if (!g) tabs.pop();
     html += '<nav class="tabs"><div class="wrap" role="tablist">' + tabs.map(function (t) { return '<button class="tab" role="tab" data-tab="' + t[0] + '" aria-selected="' + (t[0] === tab) + '">' + t[1] + "</button>"; }).join("") + "</div></nav>";
     html += '<div class="wrap"><div class="panel tab-' + tab + '">';
-    if (!real && tab !== "odds") html += '<p class="empty">MLB\'s game feed could not be reached, so the box score and plays are not available right now.</p>';
+    if (tab === "report") html += reportTab(f, pk);
+    else if (!real && tab !== "odds") html += '<p class="empty">MLB\'s game feed could not be reached, so the box score and plays are not available right now.</p>';
     else if (tab === "box") html += boxTab(f, real, null, pk, "Actual", true);
     else if (tab === "plays") html += playsTab(f, real) + '<p class="note">The real game from the official play-by-play.</p>';
     else if (tab === "odds" && g) html += pastOddsTab(f, g);
@@ -1453,6 +1496,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     html += "</div></div></div>";
     app.innerHTML = html;
     if (!keep) window.scrollTo(0, 0);
+    if (tab === "report") loadReport(f, pk);
     app.querySelectorAll("[data-tab]").forEach(function (b) {
       b.addEventListener("click", function () { history.replaceState(null, "", "#/past/" + day + "/" + pk + "/" + b.getAttribute("data-tab")); renderPastGame(day, pk, b.getAttribute("data-tab")); });
     });
@@ -1520,7 +1564,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       html += '<div class="hero-row' + (isFav ? " fav" : "") + '"><span class="abbr"><i class="chip" style="background:var(--' + side + ')"></i>' + esc(t.abbr) + '</span><span class="team-name">' + esc(nickname(t.name)) +
         (starter ? "<small>" + esc(starter) + "</small>" : "") + '</span><span class="big num">' + esc(score) + '</span><span class="pct num">' + pct(win) + "</span></div>";
     });
-    html += heroBar(f, lv && lv.home_win_probability != null ? lv.home_win_probability : homeProb(f)) + seriesLine(f) + '</div><div class="hero-side">';
+    html += heroBar(f, lv && lv.home_win_probability != null ? lv.home_win_probability : homeProb(f)) + callLine(f, actual, lv) + seriesLine(f) + '</div><div class="hero-side">';
     if (actual && actualBox && actualBox.innings) {
       html += lineScore(f, actualBox);
       html += '<p class="hero-note">' + (actualBox.plays && actualBox.plays.length ? "Final. The tabs show the real game and the game we projected before first pitch." : "The line score is the real game. The tabs show what we projected before first pitch.") + "</p>";
@@ -1532,38 +1576,41 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     html += "</div></div></div></section>";
 
     if (box && box.archived) html += '<div class="wrap"><p class="note">Archived day: the projected game is kept; the other simulated versions and player ranges are not.</p></div>';
+    /* The simulated versions of the game sit with the simulated views (summary, box score and plays), not above every tab. */
+    var versions = "";
     if (variants.length > 1) {
-      html += '<div class="wrap">' + (st === "live" || st === "final" ? '<p class="versions-cap">Simulated games for the Projected view in each tab</p>' : "") + '<div class="versions" role="group" aria-label="Simulated versions of this game">';
+      versions = '<p class="versions-cap">Simulated versions of this game</p><div class="versions" role="group" aria-label="Simulated versions of this game">';
       variants.forEach(function (x) {
         var sx = box.samples[x.i];
-        html += '<button class="ver" data-variant="' + x.key + '" aria-pressed="' + (x.key === v.key) + '"><b>' + esc(x.label) + "</b><span>" +
+        versions += '<button class="ver" data-variant="' + x.key + '" aria-pressed="' + (x.key === v.key) + '"><b>' + esc(x.label) + "</b><span>" +
           esc(f.away.abbr + " " + sx.score.away + ", " + f.home.abbr + " " + sx.score.home) + "</span></button>";
       });
-      html += "</div></div>";
+      versions += "</div>";
     }
 
-    var tabs = [["summary", "Summary"], ["box", "Box score"], ["plays", "Plays"], ["odds", "Odds"]];
+    var tabs = [["summary", "Summary"], ["report", "Game plan"], ["box", "Box score"], ["plays", "Plays"]];
     if (box && box.matchups && box.matchups.away && !box.matchups.error) tabs.push(["matchups", "Matchups"]);
-    tabs.push(["report", "Report"]);
+    tabs.push(["odds", "Odds"]);
     html += '<nav class="tabs"><div class="wrap" role="tablist">' + tabs.map(function (t) {
       return '<button class="tab" role="tab" data-tab="' + t[0] + '" aria-selected="' + (t[0] === tab) + '">' + t[1] + "</button>";
     }).join("") + "</div></nav>";
     html += '<div class="wrap"><div class="panel tab-' + tab + '">';
     /* The real plays show even when this cycle's continuation failed (the snapshot then has no win chance). */
     var real = realGame(st, lv || (D.live && D.live[pk]), actualBox);
-    if (!s) html += '<p class="empty">The full simulated game is still being built for this forecast.</p>';
-    else if (tab === "box") html += boxTab(f, s, real || actualBox, pk, real && real._live ? "Live" : "Actual");
+    if (tab === "report") html += reportTab(f, pk);
+    else if (tab === "odds") html += oddsTab(f, box);
+    else if (!s) html += '<p class="empty">The full simulated game is still being built for this forecast.</p>';
+    else if (tab === "box") html += ((!(real || actualBox) || state.boxSide[pk] === "proj") ? versions : "") + boxTab(f, s, real || actualBox, pk, real && real._live ? "Live" : "Actual");
     else if (tab === "plays") {
       var pside = state.playSide[pk] || (real ? "actual" : "proj");
       if (real) html += '<div class="seg" role="group" aria-label="Which plays"><button data-playside="actual" aria-pressed="' + (pside === "actual") + '">' + (real._live ? "Live" : "Actual") + '</button><button data-playside="proj" aria-pressed="' + (pside !== "actual") + '">Projected</button></div>';
+      if (pside !== "actual" || !real) html += versions;
       html += playsTab(f, pside === "actual" && real ? real : s);
       if (pside === "actual" && real) html += '<p class="note">The real game from the official play-by-play' + (real._live ? ", through the last completed plate appearance at the last check" : "") + ".</p>";
       else html += '<p class="note">The simulator decides how each at-bat ends. The pitches shown are borrowed from a real at-bat that ended the same way, for the look of it; they decide nothing.</p>';
     }
-    else if (tab === "odds") html += oddsTab(f, box);
     else if (tab === "matchups") html += matchupsTab(f, box);
-    else if (tab === "report") html += reportTab(f, pk);
-    else html += summaryTab(f, s, box, actual, actualBox, v, real, lv);
+    else html += summaryTab(f, s, box, actual, actualBox, v, real, lv, versions);
     html += "</div></div></div>";
     app.innerHTML = html;
     if (!keep) window.scrollTo(0, 0);
@@ -1992,10 +2039,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   }
 
   /* Summary tab */
-  function summaryTab(f, s, box, actual, actualBox, v, real, lv) {
+  function summaryTab(f, s, box, actual, actualBox, v, real, lv, versions) {
     var h0 = "";
     if (lv && !lv._final && lv.state) h0 += '<div id="rp-live-' + f.game_pk + '"></div>';
     if (real) h0 += realSummary(f, box, real, lv) + '<h2 class="divide">The projected game</h2>';
+    h0 += versions || "";
     return h0 + projectedSummary(f, s, box, actual, actualBox, v);
   }
   /* The real game's sections: win chance through the game, scoring plays, top performers, where the ball went. */
@@ -2211,10 +2259,10 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     return h;
   }
   var RP_METRICS = {
-    chase: { label: "Extra chases", unit: "per 100 outside pitches from his own map against this arsenal", f: function (p) { return p.chase_points; }, good: 1, scale: 2.5, fmt: function (v) { return (v > 0 ? "+" : "") + v.toFixed(1); } },
-    k: { label: "Strikeouts", unit: "points of strikeout chance against the league pairing", f: function (p) { return p.k_points; }, good: 1, scale: 1.5, fmt: function (v) { return (v > 0 ? "+" : "") + v.toFixed(1); } },
-    bb: { label: "Walks", unit: "points of walk chance against the league pairing", f: function (p) { return p.bb_points; }, good: -1, scale: 1.5, fmt: function (v) { return (v > 0 ? "+" : "") + v.toFixed(1); } },
-    aim: { label: "Runs saved", unit: "per 100 plate appearances by aiming at the spots that cost him most", f: function (p) { return p.aim ? -p.aim.runs_per_100_pa : null; }, good: 1, scale: 0.5, fmt: function (v) { return v.toFixed(2); } }
+    chase: { label: "Chases", unit: "extra chases per 100 pitches out of the zone, against an average hitter, with this pitcher's stuff", f: function (p) { return p.chase_points; }, good: 1, scale: 2.5, fmt: function (v) { return (v > 0 ? "+" : "") + v.toFixed(1); } },
+    k: { label: "Strikeouts", unit: "strikeout chance against the league, in points", f: function (p) { return p.k_points; }, good: 1, scale: 1.5, fmt: function (v) { return (v > 0 ? "+" : "") + v.toFixed(1); } },
+    bb: { label: "Walks", unit: "walk chance against the league, in points", f: function (p) { return p.bb_points; }, good: -1, scale: 1.5, fmt: function (v) { return (v > 0 ? "+" : "") + v.toFixed(1); } },
+    aim: { label: "Runs saved", unit: "runs saved per 100 plate appearances by following the plan out of the zone", f: function (p) { return p.aim ? -p.aim.runs_per_100_pa : null; }, good: 1, scale: 0.5, fmt: function (v) { return v.toFixed(2); } }
   };
   function rpCell(v, m, key, sel) {
     if (v == null) return '<td class="rp-cell" data-rp="' + key + '">–</td>';
@@ -2245,15 +2293,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var ht = z < 1.5 ? "below the zone" : z < 1.75 ? "at the knees" : z < 2.25 ? "low" : z < 2.75 ? "mid-height" : z < 3.25 ? "high" : z < 3.75 ? "at the letters" : "above the zone";
     return ht + ", " + side + (c[2] === "take" ? " (he lets it go)" : c[2] === "chase" ? " (he chases)" : c[2] === "weak" ? " (he swings to little effect)" : "");
   }
-  /* Which family to lean on: what aiming each family's outside pitches at its best third saves, per 100 such pitches (negative in the document is good for the pitcher). */
-  function famLine(bf) {
-    if (!bf) return "";
-    var order = ["fastball", "breaking", "offspeed"].filter(function (f) { return bf[f] && bf[f].pitches >= 30; }).sort(function (a, b) { return bf[a].runs_per_100_pitches - bf[b].runs_per_100_pitches; });
-    if (!order.length) return "";
-    return "Lean on: " + order.map(function (f, i) { return (i === 0 ? "" : "then ") + f + " (" + (-bf[f].runs_per_100_pitches).toFixed(2) + ")"; }).join(", ") + ". Runs saved per 100 pitches when each type goes to its best spots.";
-  }
   function reportTab(f, pk) {
-    return '<div id="rp-' + pk + '"><p class="empty">Loading the matchup report…</p></div>';
+    return '<div id="rp-' + pk + '"><p class="empty">Loading the game plan…</p></div>';
   }
   var RP_RECORD = null;
   function loadRecord(f, pk) {
@@ -2298,10 +2339,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var u = lv && lv.plate_umpire;
     if (!u) return "";
     var row = UMPS && UMPS.rows ? UMPS.rows[String(u.id)] : null, s = row && row.strikes_per_100 ? row.strikes_per_100 : null;
-    var sg = function (v) { return (v > 0 ? "+" : "") + v.toFixed(1); };
     if (!s || s.all_edges == null) return "Plate umpire: " + esc(u.name || u.id) + ".";
-    var parts = [["outside edge", s.outside], ["inside edge", s.inside], ["bottom", s.low], ["top", s.high]].filter(function (q) { return q[1] != null; }).map(function (q) { return q[0] + " " + sg(q[1]); });
-    return "Plate umpire: " + esc(u.name || u.id) + ". At the edges of the zone he calls " + (Math.abs(s.all_edges) < 0.5 ? "about the league's share of strikes" : Math.abs(s.all_edges).toFixed(1) + (s.all_edges > 0 ? " more" : " fewer") + " strikes per 100 takes than the league") + (parts.length ? " (" + parts.join(", ") + "; " : " (") + Number(row.games).toLocaleString() + " games in " + UMPS.season + "). A leaning that persists only partly from season to season; it changes no spot here.";
+    var big = [["the outside corner", s.outside], ["the inside corner", s.inside], ["the bottom of the zone", s.low], ["the top of the zone", s.high]].filter(function (q) { return q[1] != null && Math.abs(q[1]) >= 1.5; })
+      .sort(function (a, b) { return Math.abs(b[1]) - Math.abs(a[1]); }).slice(0, 2).map(function (q) { return (q[1] > 0 ? "gives " : "squeezes ") + q[0]; });
+    var all = Math.abs(s.all_edges) < 0.7 ? "calls the edges about like most umpires" : (s.all_edges > 0 ? "gives about " : "takes away about ") + Math.abs(s.all_edges).toFixed(0) + (Math.abs(s.all_edges) >= 1.5 ? " strikes" : " strike") + " per 100 close takes compared with most umpires";
+    return "Plate umpire: " + esc(u.name || u.id) + ". This year he " + all + (big.length ? ", and he " + big.join(" and ") : "") + ". That only partly carries over year to year, so the plan doesn't change for it.";
   }
   /* While the report follows the game, the selected pair and count move with every pitch; a tap on a cell or a count stops that. */
   function followLive(pk, now) {
@@ -2318,11 +2360,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   function liveNowStrip(f, pk, doc, now, onSummary) {
     var players = doc.players || {}, nm = function (id, fallback) { var p = players[String(id)]; return p && p.name ? p.name : (fallback || String(id)); };
     var st = now.lv.state, fol = following(pk, now);
-    var h = '<div class="rp-now"><span class="pill live"><i></i>' + (st.between_innings ? "Due up" : "Now batting") + '</span><div class="rp-now-who"><b>' + esc(nm(now.hid, now.hitter)) + "</b> against <b>" + esc(nm(now.pid, now.pitcher)) + "</b><small>" + esc(liveWhereCount(now.lv)) +
+    var h = '<div class="rp-now"><span class="pill live"><i></i>' + (st.between_innings ? "Due up" : "At bat") + '</span><div class="rp-now-who"><b>' + esc(nm(now.hid, now.hitter)) + "</b> vs <b>" + esc(nm(now.pid, now.pitcher)) + "</b><small>" + esc(liveWhereCount(now.lv)) +
       (now.deck && (now.deck.name || players[now.deck.id]) ? ". On deck: " + (now.deck.pair && !onSummary ? '<button class="rp-deck" data-rpdeck="' + esc(now.deck.key) + '">' + esc(lastName(nm(now.deck.id, now.deck.name))) + "</button>" : esc(lastName(nm(now.deck.id, now.deck.name)))) : "") + "</small></div>";
-    if (onSummary) h += '<a class="rp-follow" href="#/game/' + esc(pk) + '/report">Full plan</a>';
-    else if (now.pair) h += '<button class="rp-follow" data-rpfollow aria-pressed="' + fol + '">' + (fol ? "Following the game" : "Follow the game") + "</button>";
-    if (!now.pair) h += '<small class="rp-now-miss">' + (doc.sides && doc.sides[now.side] && doc.sides[now.side].hitters.map(String).indexOf(now.hid) >= 0 ? "This pitcher was not on the morning card, so there is no plan for the pair." : "This hitter was not in the morning lineup, so there is no plan for the pair.") + "</small>";
+    if (onSummary) h += '<a class="rp-follow" href="#/game/' + esc(pk) + '/report">Game plan</a>';
+    else if (now.pair) h += '<button class="rp-follow" data-rpfollow aria-pressed="' + fol + '">' + (fol ? "Following the at-bat" : "Follow the at-bat") + "</button>";
+    if (!now.pair) h += '<small class="rp-now-miss">' + (doc.sides && doc.sides[now.side] && doc.sides[now.side].hitters.map(String).indexOf(now.hid) >= 0 ? "No plan for this one: the pitcher wasn't on the morning card." : "No plan for this one: he wasn't in the morning lineup.") + "</small>";
     var ul = umpireLine(now.lv);
     if (ul) h += '<small class="rp-now-miss">' + ul + "</small>";
     return h + "</div>";
@@ -2334,22 +2376,21 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (!pr || !pr.aim || !hc) return h + "</section>";
     var bc = pr.aim.by_count || {}, ck = now.group !== "all" && bc[now.group] ? now.group : "all", plan = ck === "all" ? pr.aim.cells : bc[ck].cells;
     var stPlan = pr.strike ? (ck === "all" ? pr.strike.cells : (pr.strike.by_count && pr.strike.by_count[ck] ? pr.strike.by_count[ck].cells : {})) : {};
-    var cname = { even_or_ahead: "even or ahead in the count", behind: "behind in the count", two_strikes: "with two strikes" }[ck];
-    h += '<p class="note">' + (pr.aim.pricing === "structural" ? "Where to put the pitch" + (cname ? " " + cname : "") + ": the best of the spots this pitcher actually throws each family to, priced by what each spot does to this hitter with typical command. Filled dots where his extra chases cost him, hollow dots where the strikes he takes at the edge cost him; squares are strike spots (filled where he lets strikes go, hollow where he swings to little effect)." :
-      "Where to put outside pitches" + (cname ? " " + cname : "") + ", from the hitter's own chase map against the spots this pitcher actually throws to.") +
-      (ck !== "all" && bc[ck].runs_per_100_pa != null ? " In this count the best third of his spots saves " + (-bc[ck].runs_per_100_pa).toFixed(2) + " runs per 100 plate appearances over his usual spots, on " + Number(bc[ck].pitches).toLocaleString() + " such pitches." :
-        pr.aim.runs_per_100_pa != null ? " Aiming at his costliest spots saves " + (-pr.aim.runs_per_100_pa).toFixed(2) + " runs per 100 plate appearances over this pitcher's usual spots." : "") + (pr.evidence && pr.evidence.level === "thin" ? " Thin evidence: read it as a leaning." : "") + "</p>";
+    var cname = { even_or_ahead: "Ahead or even", behind: "Behind in the count", two_strikes: "Two strikes" }[ck];
+    var line = planSentence(planSpots(pr, plan, stPlan, ck === "all" ? pr.aim.by_family : bc[ck].by_family));
+    if (line) h += '<p class="pd-line">' + (cname ? esc(cname) + ": " + esc(line.charAt(0).toLowerCase() + line.slice(1)) : esc(line)) + "</p>";
     var fl2 = famLine(ck === "all" ? pr.aim.by_family : bc[ck].by_family);
-    if (fl2) h += '<p class="note">' + esc(fl2) + "</p>";
+    if (fl2) h += '<p class="pd-line">' + esc(fl2) + "</p>";
+    if (pr.evidence && pr.evidence.level === "thin") h += '<p class="note">Small sample. Treat it as a lean.</p>';
     h += '<div class="rp-cards">';
     ["fastball", "breaking", "offspeed"].forEach(function (fam) {
       var own = hc.own_chase && hc.own_chase[fam], mix = pc && pc.mix && pc.mix[fam];
       if (!own) return;
-      h += '<div class="rp-card"><h4>' + fam.charAt(0).toUpperCase() + fam.slice(1) + (mix ? " <small>" + pct(mix.share) + " of his pitches, " + mix.speed + " mph</small>" : "") + "</h4>" + rpGrid(doc, own.grid, plan[fam], fam + " aim plan", 0.8, stPlan[fam]) +
-        (plan[fam] && plan[fam].length ? '<div class="lbl">' + esc(plan[fam].map(rpWords).join("; ")) + "</div>" : '<div class="lbl">He rarely throws this pitch out of the zone to this side.</div>') +
-        (stPlan[fam] && stPlan[fam].length ? '<div class="lbl">Strike spots: ' + esc(stPlan[fam].map(rpWords).join("; ")) + "</div>" : "") + "</div>";
+      h += '<div class="rp-card"><h4>' + PITCH_NAME[fam] + (mix ? " <small>" + pct(mix.share) + " of his pitches, " + mix.speed + " mph</small>" : "") + "</h4>" + rpGrid(doc, own.grid, plan[fam], PITCH_NAME[fam] + ": plan", 0.8, stPlan[fam]) +
+        (plan[fam] && plan[fam].length ? '<div class="lbl">Out of the zone: ' + esc(spotList(plan[fam], function (c) { return c[2] === "take" ? " (takes it)" : ""; }).join("; ")) + "</div>" : '<div class="lbl">He rarely throws this pitch out of the zone to this side.</div>') +
+        (stPlan[fam] && stPlan[fam].length ? '<div class="lbl">Strikes: ' + esc(spotList(stPlan[fam], function (c) { return c[2] === "weak" ? " (weak swings)" : " (takes it)"; }).join("; ")) + "</div>" : "") + "</div>";
     });
-    return h + "</div></section>";
+    return h + '</div><p class="note">Circles: pitches out of the zone (filled, he chases; open, he takes). Squares: strikes (filled, he lets them go; open, weak swings). Catcher\'s view.</p></section>';
   }
   function loadLiveCard(f, pk) {
     var host = document.getElementById("rp-live-" + pk);
@@ -2365,7 +2406,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (!host) return;
     loadRecord(f, pk);
     withReportDoc(f, pk, function (doc) {
-      if (!doc) { host.innerHTML = '<p class="empty">No report for this game yet. Reports are built each morning from pitches thrown before that day; finished games get graded.</p>'; return; }
+      if (!doc) { host.innerHTML = '<p class="empty">No game plan for this game yet. Plans go up each morning, built from every pitch thrown before that day.</p>'; return; }
       var now = liveReportNow(pk, doc);
       followLive(pk, now);
       host.innerHTML = reportHtml(f, pk, doc, now); wireReport(f, pk);
@@ -2379,57 +2420,216 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     host.querySelectorAll("[data-rpmetric]").forEach(function (b) { b.addEventListener("click", function () { state.rpMetric = b.getAttribute("data-rpmetric"); loadReport(f, pk); }); });
     host.querySelectorAll("[data-rpcount]").forEach(function (b) { b.addEventListener("click", function () { stop(); state.rpCount = b.getAttribute("data-rpcount"); loadReport(f, pk); var d = document.getElementById("rp-detail-" + pk); if (d) d.scrollIntoView({ behavior: "instant", block: "start" }); }); });
     host.querySelectorAll("[data-rp]").forEach(function (td) {
+      td.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); td.click(); } });
       td.addEventListener("click", function () {
         stop(); state.rpPair[pk] = td.getAttribute("data-rp"); loadReport(f, pk);
         var d = document.getElementById("rp-detail-" + pk); if (d) d.scrollIntoView({ behavior: "smooth", block: "nearest" });
       });
     });
+    host.querySelectorAll("details[data-keep]").forEach(function (d) { d.addEventListener("toggle", function () { state.rpOpen[d.getAttribute("data-keep")] = d.open; }); });
     host.querySelectorAll("[data-rpcloud]").forEach(function (b) { b.addEventListener("click", function () { state.rpCloud = b.getAttribute("data-rpcloud") === "1"; loadReport(f, pk); var d = document.getElementById("rp-detail-" + pk); if (d) d.scrollIntoView({ behavior: "instant", block: "start" }); }); });
     host.querySelectorAll("[data-rpdeck]").forEach(function (b) { b.addEventListener("click", function () { stop(); state.rpPair[pk] = b.getAttribute("data-rpdeck"); state.rpCount = "all"; loadReport(f, pk); var d = document.getElementById("rp-detail-" + pk); if (d) d.scrollIntoView({ behavior: "smooth", block: "nearest" }); }); });
     host.querySelectorAll("[data-rpfollow]").forEach(function (b) { b.addEventListener("click", function () { state.rpFollow[pk] = state.rpFollow[pk] === false; loadReport(f, pk); if (state.rpFollow[pk]) { var d = document.getElementById("rp-detail-" + pk); if (d) d.scrollIntoView({ behavior: "smooth", block: "nearest" }); } }); });
   }
+  /* ---------- Game plan (the matchup report) in a coach's words ----------
+     Grid cells are seen from the catcher with the hitter's side on the left: a negative side value is inside, positive is away. */
+  var SPOT_COLS = [-1.25, -0.83, -0.42, 0, 0.42, 0.83, 1.25], SPOT_ROWS = [4.0, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0];
+  var SPOT_WORDS = [
+    ["up and in", "up and in", "up out of the zone", "up out of the zone", "up out of the zone", "up and away", "up and away"],
+    ["up and in off the plate", "up and in on the corner", "at the letters on the inner half", "at the letters", "at the letters on the outer half", "up and away on the corner", "up and away off the plate"],
+    ["in off the plate", "in on the hands", "up on the inner half", "up in the zone", "up on the outer half", "up and away on the corner", "off the plate away"],
+    ["in off the plate", "on the inside corner", "on the inner half", "middle-middle", "on the outer half", "on the outside corner", "off the plate away"],
+    ["down and in off the plate", "down and in on the corner", "down on the inner half", "down in the zone", "down on the outer half", "down and away on the corner", "down and away off the plate"],
+    ["down and in off the plate", "at the knees on the inside corner", "at the knees on the inner half", "at the knees", "at the knees on the outer half", "at the knees on the outside corner", "down and away off the plate"],
+    ["below the knees and in", "below the knees and in", "below the knees", "below the knees", "below the knees", "below the knees and away", "below the knees and away"]
+  ];
+  var PITCH_PL = { fastball: "fastballs", breaking: "breaking balls", offspeed: "offspeed" };
+  function spotRegion(c) { return (c[1] >= 3.0 ? "up" : c[1] <= 2.0 ? "down" : "mid") + (c[0] <= -0.83 ? "in" : c[0] >= 0.83 ? "away" : "mid"); }
+  /* Spot words for a list, the same place said once. */
+  function spotList(cells, mark) {
+    var seen = {}, out = [];
+    (cells || []).forEach(function (c) { var w = spotPhrase(c), r = spotRegion(c) + (mark ? mark(c) : ""); if (seen[r]) return; seen[r] = 1; out.push(w + (mark ? mark(c) : "")); });
+    return out;
+  }
+  var PITCH_NAME = { fastball: "Fastball", breaking: "Breaking ball", offspeed: "Offspeed" };
+  function spotPhrase(c) {
+    var ci = 0, ri = 0, bu = 9, bz = 9;
+    SPOT_COLS.forEach(function (u, i) { if (Math.abs(u - c[0]) < bu) { bu = Math.abs(u - c[0]); ci = i; } });
+    SPOT_ROWS.forEach(function (z, i) { if (Math.abs(z - c[1]) < bz) { bz = Math.abs(z - c[1]); ri = i; } });
+    return SPOT_WORDS[ri][ci];
+  }
+  /* What the plan is worth for one hitter against one arm, out of the zone and in it together. */
+  function planValue(pr) {
+    if (!pr || !pr.aim || pr.aim.runs_per_100_pa == null) return null;
+    return -(pr.aim.runs_per_100_pa + (pr.strike && pr.strike.runs_per_100_pa != null ? pr.strike.runs_per_100_pa : 0));
+  }
+  function edgeTag(pr) {
+    var v = planValue(pr);
+    return v == null ? "" : v >= 1.35 ? "Big edge" : v >= 0.85 ? "Some edge" : "Small edge";
+  }
+  function hitterTags(card, lg) {
+    var t = [];
+    if (!card || !lg) return t;
+    if (card.chase_rate != null && lg.chase_rate != null) { if (card.chase_rate >= lg.chase_rate + 0.04) t.push("Chases a lot"); else if (card.chase_rate <= lg.chase_rate - 0.06) t.push("Patient"); }
+    if (card.whiff_rate != null && lg.whiff_rate != null) { if (card.whiff_rate >= lg.whiff_rate + 0.05) t.push("Swings and misses"); else if (card.whiff_rate <= lg.whiff_rate - 0.07) t.push("Puts the bat on the ball"); }
+    return t;
+  }
+  /* The spots for one pair, sorted for a sentence: pitches out of the zone he chases, edges and strikes he takes, strikes he can't do much with. */
+  function planSpots(pr, cells, strikeCells, byFamily) {
+    var bf = byFamily || {}, chase = [], take = [], weak = [];
+    var order = ["fastball", "breaking", "offspeed"].filter(function (f) { return cells && cells[f] && cells[f].length; });
+    order.sort(function (a, b) { return ((bf[a] || {}).runs_per_100_pitches || 0) - ((bf[b] || {}).runs_per_100_pitches || 0); });
+    order.forEach(function (f) { cells[f].forEach(function (c) { (c[2] === "take" ? take : chase).push([f, c]); }); });
+    ["fastball", "breaking", "offspeed"].forEach(function (f) { ((strikeCells || {})[f] || []).forEach(function (c) { (c[2] === "weak" ? weak : take).push([f, c]); }); });
+    return { chase: chase, take: take, weak: weak };
+  }
+  /* "Chases breaking balls below the knees and away and fastballs up." The same words never repeat; two pitch types when there are two. */
+  function planSentence(sp) {
+    var byPitch = [], idx = {}, out = [];
+    sp.chase.forEach(function (x) {
+      if (idx[x[0]] == null) { idx[x[0]] = byPitch.length; byPitch.push({ f: x[0], w: [], r: [] }); }
+      var b = byPitch[idx[x[0]]], r = spotRegion(x[1]), w = spotPhrase(x[1]);
+      var same = b.w.some(function (v) { return v.indexOf(w) === 0 || w.indexOf(v) === 0; });
+      if (b.r.indexOf(r) < 0 && !same && b.w.length < 2) { b.r.push(r); b.w.push(w); }
+    });
+    var parts = [];
+    if (byPitch.length >= 2) parts = [PITCH_PL[byPitch[0].f] + " " + byPitch[0].w[0], PITCH_PL[byPitch[1].f] + " " + byPitch[1].w[0]];
+    else if (byPitch.length === 1) parts = [PITCH_PL[byPitch[0].f] + " " + byPitch[0].w.join(" or ")];
+    if (parts.length) out.push("Chases " + parts.join(" and ") + ".");
+    var tk = sp.take.filter(function (x) { return spotPhrase(x[1]) !== "middle-middle" && !byPitch.some(function (b) { return b.f === x[0] && b.r.indexOf(spotRegion(x[1])) >= 0; }); });
+    var wk = sp.weak.filter(function (x) { return spotPhrase(x[1]) !== "middle-middle"; });
+    if (tk.length) out.push("Takes " + PITCH_PL[tk[0][0]] + " " + spotPhrase(tk[0][1]) + ", so steal a strike there.");
+    else if (wk.length) out.push("Can't do much with " + PITCH_PL[wk[0][0]] + " " + spotPhrase(wk[0][1]) + ". Go right at him there.");
+    return out.join(" ");
+  }
+  function planLine(pr) {
+    if (!pr) return "";
+    if (!pr.aim || !pr.aim.cells) return "He rarely sees this pitcher's stuff out of the zone. Work him in the zone.";
+    return planSentence(planSpots(pr, pr.aim.cells, pr.strike && pr.strike.cells, pr.aim.by_family)) || "No clear spot to attack.";
+  }
+  /* Which pitch to lean on, from what each pitch type is worth at its best spots. */
+  function famLine(bf) {
+    if (!bf) return "";
+    var order = ["fastball", "breaking", "offspeed"].filter(function (f) { return bf[f] && bf[f].pitches >= 30; }).sort(function (a, b) { return bf[a].runs_per_100_pitches - bf[b].runs_per_100_pitches; });
+    if (!order.length) return "";
+    return "Lean on the " + PITCH_NAME[order[0]].toLowerCase() + (order.length > 1 ? ", then the " + order.slice(1).map(function (f) { return PITCH_NAME[f].toLowerCase(); }).join(", then the ") : "") + ".";
+  }
+  function lineupWords(src) {
+    return src === "box score" ? "Lineup from the box score." : src === "posted lineup" ? "Posted lineup." : "Lineup projected from recent games.";
+  }
+  /* The plan sheet: every hitter in lineup order against the starter, one line each; tap a hitter for his full plan. */
+  function planSheet(doc, side, sel) {
+    var se = doc.sides && doc.sides[side], players = doc.players || {}, other = side === "away" ? "home" : "away";
+    var nm = function (id) { var p = players[String(id)]; return p && p.name ? p.name : String(id); };
+    if (!se || !se.hitters.length || !se.pitchers.length) return "";
+    var starter = se.pitchers.filter(function (p) { return p.role === "starter"; })[0] || se.pitchers[0];
+    var h = '<h3 class="team-h ' + side + '-c">How to pitch the ' + esc(nickname(doc.teams[side].name)) + '</h3><p class="note">' + esc(nm(starter.id)) + (starter.role === "starter" ? " starting" : "") + " for the " + esc(nickname(doc.teams[other].name)) + ". " + lineupWords(se.lineup_source) + " Tap a hitter for his full plan, the counts and the bullpen.</p><ol class=\"plan-list\">";
+    se.hitters.forEach(function (hid, i) {
+      var key = side + "|" + hid + ":" + starter.id, pr = se.pairs[hid + ":" + starter.id], card = players[String(hid)] && players[String(hid)].hitter;
+      var tags = hitterTags(card, doc.league), edge = edgeTag(pr), thin = pr && pr.evidence && pr.evidence.level === "thin";
+      h += "<li" + (pr ? ' class="plan-row rp-cell' + (sel === key ? " rp-sel" : "") + '" data-rp="' + key + '" tabindex="0"' : ' class="plan-row"') + '><div class="pl-top"><b><span class="spot">' + (i + 1) + "</span>" + esc(nm(hid)) + (card ? " <small>" + esc(card.side === "L" ? "bats left" : "bats right") + "</small>" : "") + "</b>" +
+        (edge ? '<span class="pl-edge ' + edge.split(" ")[0].toLowerCase() + '">' + edge + "</span>" : "") + "</div>" +
+        '<div class="pl-txt">' + esc(pr ? planLine(pr) : "Not enough pitches to say yet.") + "</div>" +
+        (tags.length || thin ? '<div class="pl-tags">' + tags.concat(thin ? ["Small sample"] : []).map(function (x) { return "<span>" + esc(x) + "</span>"; }).join("") + "</div>" : "") + "</li>";
+    });
+    return h + "</ol>";
+  }
+  /* One hitter against one arm: the full plan with the grids, by count. */
+  function pairDetail(doc, pk, sel, now) {
+    var players = doc.players || {}, nm = function (id) { var p = players[String(id)]; return p && p.name ? p.name : String(id); };
+    var parts = sel.split("|"), se2 = doc.sides[parts[0]], pr2 = se2 && se2.pairs[parts[1]], ids = parts[1].split(":");
+    if (!pr2) return "";
+    var hc = players[ids[0]] && players[ids[0]].hitter, pc = players[ids[1]] && players[ids[1]].pitcher, isNow = now && now.key === sel;
+    var h = '<section class="sec wide pair-detail" id="rp-detail-' + pk + '"><h3>' + esc(nm(ids[0])) + " vs " + esc(nm(ids[1])) + (isNow ? ' <span class="pill live"><i></i>' + (now.lv.state.between_innings ? "Due up" : "At bat, " + (now.lv.state.balls || 0) + "-" + (now.lv.state.strikes || 0)) + "</span>" : "") + "</h3>";
+    var arms = (se2.pitchers || []).filter(function (pt) { return se2.pairs[ids[0] + ":" + pt.id]; });
+    if (arms.length > 1) h += '<div class="seg arms" role="group" aria-label="Pitcher">' + arms.map(function (pt) { var k_ = parts[0] + "|" + ids[0] + ":" + pt.id; return '<button data-rp="' + k_ + '" aria-pressed="' + (k_ === sel) + '">' + esc(lastName(nm(pt.id))) + (pt.role === "starter" ? " <small>SP</small>" : "") + "</button>"; }).join("") + "</div>";
+    h += '<p class="pd-line">' + esc(planLine(pr2)) + "</p>";
+    var tags = hitterTags(hc, doc.league);
+    if (hc) h += '<p class="note">' + esc(lastName(nm(ids[0]))) + " chases " + (hc.chase_rate != null ? pct(hc.chase_rate) : "–") + " of pitches out of the zone (league " + pct(doc.league.chase_rate) + ") and misses on " + (hc.whiff_rate != null ? pct(hc.whiff_rate) : "–") + " of his swings (league " + pct(doc.league.whiff_rate) + ")." + (tags.length ? " " + esc(tags.join(". ")) + "." : "") + "</p>";
+    if (pc && pc.mix) h += '<p class="note">' + esc(lastName(nm(ids[1]))) + " throws " + ["fastball", "breaking", "offspeed"].filter(function (f) { return pc.mix[f]; }).map(function (f) { return PITCH_NAME[f].toLowerCase() + " " + pct(pc.mix[f].share) + " (" + pc.mix[f].speed + " mph)"; }).join(", ") + ".</p>";
+    if (pr2.evidence && pr2.evidence.level === "thin") h += '<p class="note">Small sample: ' + Number(pr2.evidence.hitter_pitches).toLocaleString() + " pitches seen by the hitter, " + Number(pr2.evidence.pitcher_pitches_to_side).toLocaleString() + " thrown by the pitcher to " + (hc && hc.side === "L" ? "lefties" : "righties") + ". Treat it as a lean.</p>";
+    if (pr2.aim && hc) {
+      var counts = [["all", "All counts"], ["even_or_ahead", "Ahead or even"], ["behind", "Behind"], ["two_strikes", "Two strikes"]], bc = pr2.aim.by_count || {};
+      var ck = state.rpCount && (state.rpCount === "all" || bc[state.rpCount]) ? state.rpCount : "all";
+      var plan = ck === "all" ? pr2.aim.cells : bc[ck].cells;
+      var stPlan = pr2.strike ? (ck === "all" ? pr2.strike.cells : (pr2.strike.by_count && pr2.strike.by_count[ck] ? pr2.strike.by_count[ck].cells : {})) : {};
+      h += '<div class="seg" role="group" aria-label="Count">' + counts.filter(function (c) { return c[0] === "all" || bc[c[0]]; }).map(function (c) { return '<button data-rpcount="' + c[0] + '" aria-pressed="' + (c[0] === ck) + '">' + c[1] + "</button>"; }).join("") + "</div>";
+      if (ck !== "all") {
+        var line = planSentence(planSpots(pr2, plan, stPlan, bc[ck].by_family));
+        if (line) h += '<p class="pd-line">' + esc(counts.filter(function (c) { return c[0] === ck; })[0][1]) + ": " + esc(line.charAt(0).toLowerCase() + line.slice(1)) + "</p>";
+      }
+      var fl = famLine(ck === "all" ? pr2.aim.by_family : bc[ck].by_family);
+      if (fl) h += '<p class="pd-line">' + esc(fl) + "</p>";
+      h += '<p class="note">Circles are pitches out of the zone to throw him: filled where he chases, open where he takes a strike on the edge. Squares are strikes: filled where he lets them go, open where he swings and does little. Gold is where he swings more than most hitters, blue less. Catcher\'s view.</p>';
+      var hasCloud = ck === "all" && pr2.aim.dangerous_miss && Object.keys(pr2.aim.dangerous_miss).some(function (fam) { return pr2.aim.dangerous_miss[fam].cloud; });
+      if (hasCloud) h += '<div class="seg" role="group" aria-label="What the grid shows"><button data-rpcloud="0" aria-pressed="' + !state.rpCloud + '">His swings</button><button data-rpcloud="1" aria-pressed="' + !!state.rpCloud + '">Where the pitches end up</button></div>';
+      h += '<div class="rp-cards">';
+      ["fastball", "breaking", "offspeed"].forEach(function (fam) {
+        var own = hc.own_chase && hc.own_chase[fam], mix = pc && pc.mix && pc.mix[fam];
+        if (!own) return;
+        var cloud = state.rpCloud && ck === "all" && pr2.aim.dangerous_miss && pr2.aim.dangerous_miss[fam] ? pr2.aim.dangerous_miss[fam].cloud : null;
+        var dm = ck === "all" && pr2.aim.dangerous_miss && pr2.aim.dangerous_miss[fam] && pr2.aim.dangerous_miss[fam].runs_per_100_pa >= 0.05 ? pr2.aim.dangerous_miss[fam] : null;
+        h += '<div class="rp-card"><h4>' + PITCH_NAME[fam] + (mix ? " <small>" + pct(mix.share) + " of his pitches, " + mix.speed + " mph</small>" : "") + "</h4>" + rpGrid(doc, own.grid, plan[fam], PITCH_NAME[fam] + (cloud ? ": where the pitches end up" : ": plan"), 0.8, stPlan[fam], cloud) +
+          (cloud ? '<div class="lbl">Where these pitches end up with normal command. Darker means more of them.</div>' : "") +
+          (plan[fam] && plan[fam].length ? '<div class="lbl">Out of the zone: ' + esc(spotList(plan[fam], function (c) { return c[2] === "take" ? " (takes it)" : ""; }).join("; ")) + "</div>" : '<div class="lbl">He rarely throws this pitch out of the zone to this side.</div>') +
+          (stPlan[fam] && stPlan[fam].length ? '<div class="lbl">Strikes: ' + esc(spotList(stPlan[fam], function (c) { return c[2] === "weak" ? " (weak swings)" : " (takes it)"; }).join("; ")) + "</div>" : "") +
+          (dm ? '<div class="lbl">Don\'t miss ' + esc(spotPhrase(dm.cell)) + ". About " + pct(dm.share) + " of these pitches end up there.</div>" : "") + "</div>";
+      });
+      h += "</div>";
+      if (ck === "all") {
+        var layoff = [], dontTake = [];
+        ["fastball", "breaking", "offspeed"].forEach(function (fam) { (pr2.aim.cells[fam] || []).slice(0, 2).forEach(function (c) { var w = PITCH_PL[fam] + " " + spotPhrase(c), into = c[2] === "take" ? dontTake : layoff; if (into.indexOf(w) < 0) into.push(w); }); });
+        if (layoff.length || dontTake.length) h += '<p class="note">If you coach the hitter: ' + (layoff.length ? "lay off " + esc(layoff.slice(0, 3).join(", ")) + ". " : "") + (dontTake.length ? "Don't take " + esc(dontTake.slice(0, 2).join(" or ")) + "." : "") + "</p>";
+      }
+    }
+    if (pr2.miss_spots) {
+      var ms_ = ["fastball", "breaking", "offspeed"].filter(function (fam) { return pr2.miss_spots[fam] && pr2.miss_spots[fam].cells.length; });
+      if (ms_.length) h += '<p class="note">Two strikes, to get a swing and miss: ' + esc(ms_.map(function (fam) { return PITCH_PL[fam] + " " + spotPhrase(pr2.miss_spots[fam].cells[0]); }).join(", ")) + ".</p>";
+    }
+    if (hc && hc.whiff_grid) h += '<div class="rp-cards" style="margin-top:14px"><div class="rp-card"><h4>Where he swings and misses</h4><div class="lbl">Gold: more than most hitters. Blue: less.</div>' + rpGrid(doc, hc.whiff_grid, null, "where he swings and misses", 0.5) + "</div>" +
+      (hc.zone_top_ft != null ? '<div class="rp-card"><h4>His strike zone</h4><div class="lbl">Top ' + hc.zone_top_ft + " ft, bottom " + hc.zone_bottom_ft + " ft, from the umpires' calls on him. " + Number(hc.pitches).toLocaleString() + " pitches seen.</div></div>" : "") + "</div>";
+    var v = planValue(pr2);
+    h += '<details class="more"><summary>The numbers</summary><ul class="compare">' +
+      "<li><span>Chases vs an average hitter, per 100 pitches out of the zone</span><b>" + RP_METRICS.chase.fmt(pr2.chase_points) + "</b></li>" +
+      "<li><span>Strikeout chance vs the league</span><b>" + RP_METRICS.k.fmt(pr2.k_points) + " pts</b></li><li><span>Walk chance vs the league</span><b>" + RP_METRICS.bb.fmt(pr2.bb_points) + " pts</b></li>" +
+      (v != null ? "<li><span>Runs saved per 100 plate appearances following the plan</span><b>" + v.toFixed(2) + "</b></li>" : "") +
+      (hc && hc.own_cost ? "<li><span>What his swing decisions cost him, runs per 600 plate appearances</span><b>" + (hc.own_cost.runs_per_600_pa >= 0 ? "+" : "") + hc.own_cost.runs_per_600_pa.toFixed(1) + "</b></li>" : "") + "</ul></details>";
+    if (pr2.grade) {
+      var gr = pr2.grade;
+      h += '<h4 style="margin-top:14px">How it went</h4><ul class="compare"><li><span>Pitches he saw, out of the zone</span><b>' + gr.pitches + ", " + gr.outside + "</b></li>";
+      if (gr.chases != null) h += "<li><span>Chases (an average hitter: " + gr.chases_expected_league.toFixed(1) + "; our read on him: " + gr.chases_expected_map.toFixed(1) + ")</span><b>" + gr.chases + "</b></li>";
+      if (gr.in_recommended_cells != null) h += "<li><span>Pitches out of the zone that went to our spots</span><b>" + gr.in_recommended_cells + "</b></li>";
+      if (gr.results) h += "<li><span>His trips to the plate</span><b>" + esc(gr.results.map(function (r) { return ({ BIP_OUT: "out", K: "K", BB_HBP: "BB", "1B": "1B", "2B_3B": "XBH", HR: "HR", OTHER_REACH: "reached" })[r] || r; }).join(", ")) + "</b></li>";
+      h += "</ul>";
+    }
+    return h + "</section>";
+  }
   function reportHtml(f, pk, doc, now) {
     var key = RP_METRICS[state.rpMetric] ? state.rpMetric : "chase", m = RP_METRICS[key];
     var players = doc.players || {}, nm = function (id) { var p = players[String(id)]; return p && p.name ? p.name : String(id); };
-    var retro = doc.asof && doc.date && doc.asof < doc.date;
-    var h = '<section class="sec wide"><h2>Matchup report</h2><p class="lede">Each hitter against the pitchers he will face. The maps read where a hitter decides to swing: where the pitch looks like it is going about a quarter second out, not where it ends up. Built from ' +
-      Number(doc.training_pitches).toLocaleString() + " pitches thrown before " + esc(doc.asof) + "; nothing from this game or later." + (retro ? " A look back: the maps use only earlier pitches, but the method is from October 2026." : "") + " Blue is good for the pitcher.</p>";
+    var retro = doc.asof && doc.date && doc.asof < doc.date, sel = state.rpPair[pk], selSide = sel ? sel.split("|")[0] : null;
+    var h = '<section class="sec wide"><h2>Game plan</h2><p class="lede">How to pitch every hitter in both lineups, from ' + (Number(doc.training_pitches) / 1e6).toFixed(1) + " million pitches thrown before " + esc(shortDate(doc.asof)) + ". Nothing from this game goes in." + (retro ? " This is a look back built the same way." : "") + "</p>";
     if (now) h += liveNowStrip(f, pk, doc, now, false);
-    var top = h, liveSel = !!(now && now.pair && now.key === state.rpPair[pk]);
-    h = "";
-    if (doc.grade && doc.grade.pairs) {
-      var g = doc.grade;
-      h += "<h3>How the report held up</h3><div class=\"rp-grade\">" +
-        "<div><b>" + g.chases + "</b><span>chases by these hitters; the league rates expected " + g.chases_expected_league.toFixed(1) + ", their own maps " + g.chases_expected_map.toFixed(1) + " (prediction quality)</span></div>" +
-        "<div><b>" + g.in_recommended + " of " + g.outside_pitches + "</b><span>outside pitches landed in the recommended spots; the pitchers' usual rate would give " + Math.round(g.usual_expected) + " (location alignment, not proof of intent)</span></div></div>";
-    }
-    if (RP_RECORD && RP_RECORD.games) {
-      var R = RP_RECORD, adh = R.outside_pitches ? (100 * R.in_recommended / R.outside_pitches).toFixed(1) : null, usu = R.outside_pitches ? (100 * R.usual_expected / R.outside_pitches).toFixed(1) : null;
-      h += '<h3>The record so far</h3><p class="note">' + Number(R.games).toLocaleString() + ' games called before they were played (' + esc(shortDate(R.first_date)) + ' to ' + esc(shortDate(R.last_date)) + '). Hitters chased ' + Number(R.chases).toLocaleString() + ' times. The league rates said ' + Number(Math.round(R.chases_expected_league)).toLocaleString() + '; their own maps said ' + Number(Math.round(R.chases_expected_map)).toLocaleString() + '. ' +
-        (adh != null ? 'Staffs hit the spots we marked ' + adh + '% of the time with pitches out of the zone, against ' + usu + '% at their usual rates.' : '');
-      if (R.scored && R.scored.decisions >= 1000 && R.scored.map_gain_nats_per_1000 != null) h += ' Pitch by pitch, the hitters\' own maps ' + (R.scored.map_gain_nats_per_1000 >= 0 ? 'beat' : 'trail') + ' the league rates on ' + Number(R.scored.decisions).toLocaleString() + ' swing decisions in ' + Number(R.scored.games).toLocaleString() + ' games (by ' + Math.abs(R.scored.map_gain_nats_per_1000).toFixed(1) + ' per 1,000 on the log score; anything past 5 is a clear win).';
-      h += '</p><details class="more"><summary>By count, pitch type, side and more</summary><p class="note">';
-      var bins = R.bins || {}, parts = [];
-      ["under -2", "-2 to 0", "0 to 2", "over 2"].forEach(function (k2) { var bn = bins[k2]; if (bn && bn.outside >= 200) parts.push(k2 + ': ' + (100 * bn.chases / bn.outside).toFixed(1) + '% chased, league ' + (100 * bn.league / bn.outside).toFixed(1) + '%, map ' + (100 * bn.map / bn.outside).toFixed(1) + '%'); });
-      if (parts.length) h += ' By the extra chases the map predicted for the pair: ' + esc(parts.join('; ')) + '.';
-      var bpz = R.by_pricing || {}, bparts = [];
-      [["structural", "spots chosen by expected runs (from October 9, 2026)"], ["regression", "spots chosen by chase points (earlier reports)"]].forEach(function (q) { var b = bpz[q[0]]; if (b && b.outside_pitches >= 200) bparts.push(q[1] + ': ' + (100 * b.in_recommended / b.outside_pitches).toFixed(1) + '% of outside pitches in the recommended spots against ' + (100 * b.usual_expected / b.outside_pitches).toFixed(1) + '% usual, ' + Number(b.games).toLocaleString() + ' games'); });
-      if (bparts.length > 1) h += ' By how the spots were chosen: ' + esc(bparts.join('; ')) + '.';
-      var bg_ = R.by_group || {}, gparts = [];
-      [["count:even_or_ahead", "even or ahead"], ["count:behind", "behind"], ["count:two_strikes", "two strikes"], ["family:fastball", "fastballs"], ["family:breaking", "breaking balls"], ["family:offspeed", "offspeed"], ["side:R", "right-handed hitters"], ["side:L", "left-handed hitters"], ["coverage:ok", "pairs with full evidence"], ["coverage:thin", "pairs with thin evidence"], ["season:2025", "2025 games"], ["season:2026", "2026 games"]].forEach(function (q) { var b = bg_[q[0]]; if (b && b.outside >= 300) gparts.push(q[1] + ' ' + (100 * b.chases / b.outside).toFixed(1) + '% chased, league ' + (100 * b.league / b.outside).toFixed(1) + '%, map ' + (100 * b.map / b.outside).toFixed(1) + '%'); });
-      if (gparts.length) h += ' By count, pitch type, side, sample and season (the map should land between the league figure and what happened, and closer to what happened): ' + esc(gparts.join('; ')) + '.';
-      h += '</p></details>';
-    }
+    h += "</section>";
+    var liveSel = !!(now && now.pair && now.key === sel), detail = sel ? pairDetail(doc, pk, sel, now) : "";
+    if (liveSel) h += detail;
+    ["away", "home"].forEach(function (side) {
+      var sheet = planSheet(doc, side, sel);
+      if (!sheet) return;
+      h += '<section class="sec wide">' + sheet + "</section>";
+      if (!liveSel && selSide === side) h += detail;
+    });
+    // every hitter against every arm, as numbers
+    h += '<section class="sec wide"><details class="more" data-keep="numbers"' + (state.rpOpen.numbers ? " open" : "") + '><summary>Every hitter against every arm</summary>';
     h += '<div class="seg" role="group" aria-label="Which number">' + Object.keys(RP_METRICS).map(function (k2) {
       return '<button data-rpmetric="' + k2 + '" aria-pressed="' + (k2 === key) + '">' + RP_METRICS[k2].label + "</button>";
-    }).join("") + '</div><p class="note">' + esc(m.label + ": " + m.unit) + ". Tap a cell for the plan.</p></section>";
-    var sel = state.rpPair[pk];
+    }).join("") + '</div><p class="note">' + esc(m.label + ": " + m.unit) + ". Blue is good for the pitcher. Tap a cell for that matchup.</p>";
     ["away", "home"].forEach(function (side) {
       var se = doc.sides && doc.sides[side], other = side === "away" ? "home" : "away";
       if (!se || !se.hitters.length || !se.pitchers.length) return;
-      h += '<section class="sec wide"><h3 class="team-h ' + side + '-c">' + esc(nickname(doc.teams[side].name)) + " hitters against the " + esc(nickname(doc.teams[other].name)) + ' staff</h3><p class="note">Lineup from ' + esc(se.lineup_source) + ".</p>";
+      h += '<h3 class="team-h ' + side + '-c" style="margin-top:14px">' + esc(nickname(doc.teams[side].name)) + " hitters vs the " + esc(nickname(doc.teams[other].name)) + " staff</h3>";
       h += '<div class="mu-wrap"><table class="mu num"><thead><tr><th scope="col" class="mu-who">Hitter</th>';
-      se.pitchers.forEach(function (pt) { h += '<th scope="col"><span>' + esc(lastName(nm(pt.id))) + "</span><small>" + (pt.role === "starter" ? "Starter" : "Reliever") + "</small></th>"; });
+      se.pitchers.forEach(function (pt) { h += '<th scope="col"><span>' + esc(lastName(nm(pt.id))) + "</span><small>" + (pt.role === "starter" ? "Starter" : "Bullpen") + "</small></th>"; });
       h += "</tr></thead><tbody>";
       se.hitters.forEach(function (hid, i) {
         var card = players[String(hid)] && players[String(hid)].hitter;
@@ -2437,87 +2637,24 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         se.pitchers.forEach(function (pt) { var k2 = hid + ":" + pt.id, pr = se.pairs[k2]; h += rpCell(pr ? m.f(pr) : null, m, side + "|" + k2, sel === side + "|" + k2); });
         h += "</tr>";
       });
-      h += "</tbody></table></div></section>";
+      h += "</tbody></table></div>";
     });
-    var mid = h;
-    h = "";
-    if (sel) {
-      var parts = sel.split("|"), se2 = doc.sides[parts[0]], pr2 = se2 && se2.pairs[parts[1]], ids = parts[1].split(":");
-      if (pr2) {
-        var hc = players[ids[0]] && players[ids[0]].hitter, pc = players[ids[1]] && players[ids[1]].pitcher;
-        var isNow = now && now.key === sel;
-        h += '<section class="sec wide" id="rp-detail-' + pk + '"><h3>' + esc(nm(ids[0])) + " against " + esc(nm(ids[1])) + (isNow ? ' <span class="pill live"><i></i>' + (now.lv.state.between_innings ? "Due up" : "Now batting, " + (now.lv.state.balls || 0) + "-" + (now.lv.state.strikes || 0)) + "</span>" : "") + "</h3>";
-        if (pr2.evidence) h += '<p class="note">' + (pr2.evidence.level === "thin" ? "Thin sample: " : "Sample: ") + Number(pr2.evidence.hitter_pitches).toLocaleString() + " pitches behind the hitter's map" + (pr2.evidence.whiff_map ? "" : " (no whiff map yet)") + ", " + Number(pr2.evidence.pitcher_pitches_to_side).toLocaleString() + " behind the pitcher's spots to this side." + (pr2.evidence.level === "thin" ? " Take it as a lean, not a measurement." : "") + "</p>";
-        h += '<ul class="compare"><li><span>Extra chases per 100 pitches out of the zone</span><b>' + RP_METRICS.chase.fmt(pr2.chase_points) + "</b></li>" +
-          "<li><span>Strikeout chance vs the league</span><b>" + RP_METRICS.k.fmt(pr2.k_points) + " pts</b></li><li><span>Walk chance vs the league</span><b>" + RP_METRICS.bb.fmt(pr2.bb_points) + " pts</b></li>" +
-          (pr2.aim ? "<li><span>Runs saved per 100 PA, pitches out of the zone at his worst spots</span><b>" + (-pr2.aim.runs_per_100_pa).toFixed(2) + "</b></li>" : "") +
-          (pr2.strike ? "<li><span>Runs saved per 100 PA, strikes where he takes or swings weak</span><b>" + (-pr2.strike.runs_per_100_pa).toFixed(2) + "</b></li>" : "") + "</ul>";
-        if (pc && pc.looks_in_ends_out != null && doc.league) h += '<p class="note">' + esc(lastName(nm(ids[1]))) + ": " + pct(pc.looks_in_ends_out) + " of his pitches look like strikes when the hitter has to decide and finish out of the zone (league " + pct(doc.league.looks_in_ends_out) + "). Hitters chase " + pct(pc.chase_rate_against) + " of his pitches out of the zone (league " + pct(doc.league.chase_rate) + ").</p>";
-        if (pr2.aim && hc) {
-          var counts = [["all", "All counts"], ["even_or_ahead", "Even or ahead"], ["behind", "Behind"], ["two_strikes", "Two strikes"]], bc = pr2.aim.by_count || {};
-          var ck = state.rpCount && (state.rpCount === "all" || bc[state.rpCount]) ? state.rpCount : "all";
-          var plan = ck === "all" ? pr2.aim.cells : bc[ck].cells;
-          h += '<p class="note">Dots: where to put pitches out of the zone. Squares: where to put strikes. Gold: he chases more than most hitters on his side; blue, less. Catcher\'s view, hitter on the left.</p><details class="more"><summary>What the marks mean</summary><p class="note">' + (pr2.aim.pricing === "structural" ?
-            "The spots are the best of the ones this pitcher actually throws each pitch to, priced by what the spot does to this hitter with normal command. Filled dot: he chases there. Hollow dot: he takes strikes there. Filled square: a strike he lets go by. Hollow square: a strike he swings at and does little with." :
-            "The spots are the best of the ones this pitcher actually throws each pitch to, by the hitter\'s own chase map.") +
-            " The outlined box is the heart of the zone.</p></details>";
-          h += '<div class="seg" role="group" aria-label="Which count">' + counts.filter(function (c) { return c[0] === "all" || bc[c[0]]; }).map(function (c) { return '<button data-rpcount="' + c[0] + '" aria-pressed="' + (c[0] === ck) + '">' + c[1] + "</button>"; }).join("") + "</div>";
-          var hasCloud = ck === "all" && pr2.aim.dangerous_miss && Object.keys(pr2.aim.dangerous_miss).some(function (fam) { return pr2.aim.dangerous_miss[fam].cloud; });
-          if (hasCloud) h += ' <div class="seg" role="group" aria-label="What the grid shows"><button data-rpcloud="0" aria-pressed="' + !state.rpCloud + '">His map</button><button data-rpcloud="1" aria-pressed="' + !!state.rpCloud + '">Where the aims land</button></div>';
-          if (ck !== "all") h += '<p class="note">' + esc(counts.filter(function (c) { return c[0] === ck; })[0][1]) + ": " + (bc[ck].runs_per_100_pa != null ? "hitting the best third of his spots instead of his usual ones saves " + (-bc[ck].runs_per_100_pa).toFixed(2) + " runs per 100 plate appearances" : "the best third of his spots gains " + bc[ck].gain_points.toFixed(1) + " points of chase over his usual spots") + " (" + Number(bc[ck].pitches).toLocaleString() + " pitches).</p>";
-          var fl = famLine(ck === "all" ? pr2.aim.by_family : bc[ck].by_family);
-          if (fl) h += '<p class="note">' + esc(fl) + "</p>";
-          if (ck === "all" && pr2.aim.pricing === "structural") {
-            // the hitter's side of the same spots: where to lay off and where not to let a strike go by
-            var layoff = [], dontTake = [];
-            ["fastball", "breaking", "offspeed"].forEach(function (fam) { (pr2.aim.cells[fam] || []).slice(0, 2).forEach(function (c) { var w = fam + " " + rpWords([c[0], c[1]]); if (c[2] === "take") dontTake.push(w); else layoff.push(w); }); });
-            if (layoff.length || dontTake.length) h += '<p class="note">For the hitter: ' + (layoff.length ? "lay off " + esc(layoff.join("; ")) + ". " : "") + (dontTake.length ? "Do not let a strike go by at " + esc(dontTake.join("; ")) + "." : "") + "</p>";
-          }
-          h += '<div class="rp-cards">';
-          ["fastball", "breaking", "offspeed"].forEach(function (fam) {
-            var own = hc.own_chase && hc.own_chase[fam], mix = pc && pc.mix && pc.mix[fam];
-            if (!own) return;
-            var stPlan = pr2.strike ? (ck === "all" ? pr2.strike.cells : (pr2.strike.by_count && pr2.strike.by_count[ck] ? pr2.strike.by_count[ck].cells : {})) : {};
-            var cloud = state.rpCloud && ck === "all" && pr2.aim.dangerous_miss && pr2.aim.dangerous_miss[fam] ? pr2.aim.dangerous_miss[fam].cloud : null;
-            h += '<div class="rp-card"><h4>' + fam.charAt(0).toUpperCase() + fam.slice(1) + (mix ? " <small>" + pct(mix.share) + " of his pitches, " + mix.speed + " mph</small>" : "") + "</h4>" + rpGrid(doc, own.grid, plan[fam], fam + (cloud ? " landing cloud" : " aim plan"), 0.8, stPlan[fam], cloud) +
-              (cloud ? '<div class="lbl">Where the chosen aims land with typical command (0.6 ft of scatter): darker is more of the landings.</div>' : "") +
-              (plan[fam] && plan[fam].length ? '<div class="lbl">' + esc(plan[fam].map(rpWords).join("; ")) + "</div>" : '<div class="lbl">He rarely throws this pitch out of the zone to this side.</div>') +
-              (stPlan[fam] && stPlan[fam].length ? '<div class="lbl">Strike spots (squares): ' + esc(stPlan[fam].map(rpWords).join("; ")) + "</div>" : "") +
-              (ck === "all" && pr2.aim.dangerous_miss && pr2.aim.dangerous_miss[fam] && pr2.aim.dangerous_miss[fam].runs_per_100_pa >= 0.05 ? '<div class="lbl">Dangerous miss: ' + esc(rpWords(pr2.aim.dangerous_miss[fam].cell)) + ", where " + pct(pr2.aim.dangerous_miss[fam].share) + " of these throws land with typical command; it gives back " + pr2.aim.dangerous_miss[fam].runs_per_100_pa.toFixed(2) + " runs per 100 PA.</div>" : "") + "</div>";
-          });
-          h += "</div>";
-        }
-        if (pr2.miss_spots) {
-          h += '<p class="note" style="margin-top:14px">Two-strike miss spots: where his own whiff map says he misses most, among the two-strike pitches this pitcher actually throws. Not priced in runs; scouting only.</p><ul class="compare">';
-          ["fastball", "breaking", "offspeed"].forEach(function (fam) {
-            var ms = pr2.miss_spots[fam];
-            if (!ms) return;
-            h += "<li><span>" + fam.charAt(0).toUpperCase() + fam.slice(1) + ": " + esc(ms.cells.map(rpWords).join("; ")) + "</span><b>" + (ms.own_whiff_points > 0 ? "+" : "") + ms.own_whiff_points.toFixed(1) + " pts</b></li>";
-          });
-          h += "</ul>";
-        }
-        if (hc && hc.whiff_grid) h += '<div class="rp-cards" style="margin-top:14px"><div class="rp-card"><h4>Where he misses</h4><div class="lbl">Where he swings and misses more than most hitters on his side (gold) or less (blue)</div>' + rpGrid(doc, hc.whiff_grid, null, "whiff map", 0.5) + "</div>" +
-          (hc.zone_top_ft != null ? '<div class="rp-card"><h4>His zone</h4><div class="lbl">Top ' + hc.zone_top_ft + " ft, bottom " + hc.zone_bottom_ft + ' ft (from the official zone calls)</div><div class="lbl">Chase rate ' + (hc.chase_rate != null ? pct(hc.chase_rate) : "–") + ", whiff rate " + (hc.whiff_rate != null ? pct(hc.whiff_rate) : "–") + " on " + Number(hc.pitches).toLocaleString() + " pitches</div></div>" : "") + "</div>";
-        if (hc && hc.own_cost) {
-          var oc = hc.own_cost, v_ = oc.runs_per_600_pa;
-          h += '<p class="note">His swing decisions against an average hitter from his side, on the same pitches: ' + (v_ >= 0 ? "+" : "") + v_.toFixed(1) + " runs per 600 plate appearances (" + (oc.outside_runs_per_600_pa >= 0 ? "+" : "") + oc.outside_runs_per_600_pa.toFixed(1) + " out of the zone, " + (oc.inside_runs_per_600_pa >= 0 ? "+" : "") + oc.inside_runs_per_600_pa.toFixed(1) + " in it)" +
-            (oc.cells && oc.cells.length ? ". Costs him most: " + esc(oc.cells.map(function (c) { return rpWords(c.slice(0, 2).concat([c[3]])) + " (" + c[2].toFixed(1) + ")"; }).join("; ")) : "") + ". Something to work on, not a prediction.</p>";
-        }
-        if (pr2.grade) {
-          var gr = pr2.grade;
-          h += '<h4 style="margin-top:14px">In this game</h4><ul class="compare"><li><span>Pitches, outside the zone</span><b>' + gr.pitches + ", " + gr.outside + "</b></li>";
-          if (gr.in_recommended_cells != null) h += "<li><span>Outside pitches in the recommended spots (his usual share " + (gr.usual_share_in_cells != null ? pct(gr.usual_share_in_cells) : "unknown") + ")</span><b>" + gr.in_recommended_cells + "</b></li>";
-          if (gr.chases != null) h += "<li><span>Chases; the league expected " + gr.chases_expected_league.toFixed(1) + ", his map " + gr.chases_expected_map.toFixed(1) + "</span><b>" + gr.chases + "</b></li>";
-          if (gr.results) h += "<li><span>Plate appearances</span><b>" + esc(gr.results.map(function (r) { return ({ BIP_OUT: "out", K: "K", BB_HBP: "BB", "1B": "1B", "2B_3B": "XBH", HR: "HR", OTHER_REACH: "reach" })[r] || r; }).join(", ")) + "</b></li>";
-          h += "</ul>";
-        }
-        h += "</section>";
-      }
+    h += "</details>";
+    // how the plans have held up: this game, then every game so far
+    var held = "";
+    if (doc.grade && doc.grade.pairs) {
+      var g = doc.grade;
+      held += '<p class="note">This game: hitters chased ' + g.chases + " times. An average hitter would have chased about " + Math.round(g.chases_expected_league) + "; our read on these hitters said " + Math.round(g.chases_expected_map) + ". " +
+        g.in_recommended + " of " + g.outside_pitches + " pitches out of the zone went to the spots on the plan, about what these pitchers usually do (" + Math.round(g.usual_expected) + "). Nobody was throwing to our plan; the point is whether the read on the hitters was right.</p>";
     }
-    /* When the pair at the plate is the selected one, its plan sits under the strip and the tables follow; otherwise the tables come first and the tapped pair's plan after them. */
-    h = top + (liveSel ? h + mid : mid + h);
-    h += '<section class="sec"><h3>Sequencing</h3><p class="note">After a take, and about twice as much after a swing and miss, going back to the same pitch type gets more misses and weaker contact than switching (2 to 3 points of whiff rate). A slower next pitch adds to it. After a foul ball nothing carries over. League-wide, measured on games the models never saw; not yet built into each hitter\'s plan.</p></section>';
-    h += '<section class="sec"><details class="more"><summary>How these numbers are made</summary><p class="note">Swing decisions are read where the pitch looks like it is headed about 260 milliseconds before the plate; that is where the model fits best, not a claim about eyesight. A hitter\'s own map read there beats a strong general model given the same pitch data on months the models never trained on. The run values are what the spots could be worth: they assume pitchers do not already aim at these spots (on average they do not), normal command (about 0.6 ft of scatter) and hitters who do not adjust much. They are not runs already saved. Strikeout and walk changes come from the count-by-count chain. Every number here is a model output; the ledger in the repository carries every test, including the ones that failed.</p></details></section>';
+    if (RP_RECORD && RP_RECORD.games) {
+      var R = RP_RECORD;
+      held += '<p class="note">Every game since ' + esc(shortDate(R.first_date)) + " (" + Number(R.games).toLocaleString() + " games, each plan built before the game): hitters chased " + Number(R.chases).toLocaleString() + " times. League averages said " + Number(Math.round(R.chases_expected_league)).toLocaleString() + "; our read on each hitter said " + Number(Math.round(R.chases_expected_map)).toLocaleString() + ", closer to what happened." +
+        (R.scored && R.scored.decisions >= 1000 && R.scored.map_gain_nats_per_1000 != null ? " Pitch by pitch, on " + Number(R.scored.decisions).toLocaleString() + " swing-or-take decisions, our read called them better than league averages " + (R.scored.map_gain_nats_per_1000 >= 5 ? "by a clear margin." : R.scored.map_gain_nats_per_1000 >= 0 ? "by a small margin." : "only some of the time; it trailed overall.") : "") + "</p>";
+    }
+    if (held) h += '<details class="more" data-keep="held"' + (state.rpOpen.held ? " open" : "") + "><summary>How these plans have held up</summary>" + held + "</details>";
+    h += '<details class="more" data-keep="tip"' + (state.rpOpen.tip ? " open" : "") + '><summary>Pitch to pitch</summary><p class="note">After he takes a pitch, and even more after he swings through one, coming right back with the same pitch type gets more swings and misses and weaker contact than switching. Taking a little off the next one adds to it. After a foul ball it doesn\'t matter. That holds across the league; it isn\'t built into each hitter\'s plan yet.</p></details>';
+    h += '<details class="more" data-keep="how"' + (state.rpOpen.how ? " open" : "") + '><summary>How the plan is built</summary><p class="note">For every hitter we map where he swings, read about a quarter second before the ball gets there, when he has to decide. We compare that to an average hitter on his side and to the spots this pitcher actually throws each pitch to. Each spot is scored by what usually happens there for this hitter: a chase, a take, a whiff, a foul or a ball in play, and what that does to the count. The spots on the plan are the best of the pitcher\'s usual spots, with normal command (pitches miss by about 7 inches). The run figures assume hitters don\'t adjust much. Every test, including the ones that failed, is in the project ledger.</p></details></section>';
     return h;
   }
   function oddsTab(f, box) {
@@ -2733,7 +2870,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
           ["fastball", "breaking", "offspeed"].forEach(function (fam) { if (mix[fam]) h += "<li><span>" + fam.charAt(0).toUpperCase() + fam.slice(1) + "</span><b>" + pct(mix[fam].share) + " of his pitches, " + mix[fam].speed + " mph</b></li>"; });
           h += "<li><span>Pitches that look like strikes at the decision moment and end out of the zone" + (doc.league && doc.league.looks_in_ends_out != null ? " (league " + pct(doc.league.looks_in_ends_out) + ")" : "") + "</span><b>" + (x.looks_in_ends_out != null ? pct(x.looks_in_ends_out) : "\u2013") + "</b></li>";
           h += "<li><span>Hitters chase his outside pitches" + (doc.league && doc.league.chase_rate != null ? " (league " + pct(doc.league.chase_rate) + ")" : "") + "</span><b>" + (x.chase_rate_against != null ? pct(x.chase_rate_against) : "\u2013") + "</b></li></ul>";
-          h += '<p class="note">For his plan against each hitter, open one of his games and tap Report.</p>';
+          h += '<p class="note">For his plan against each hitter, open one of his games and tap Game plan.</p>';
         }
         h += "</div>";
         app.innerHTML = h;

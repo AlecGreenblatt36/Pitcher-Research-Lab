@@ -176,10 +176,10 @@ def main():
                         go(f'#/game/{f["game_pk"]}/report');loaded=False
                         for _ in range(15):
                             page.wait_for_timeout(1000)
-                            if page.locator('table.mu').count() or 'No matchup report' in page.inner_text('#app'):loaded=True;break
-                        info={'game':f['game_pk'],'loaded':loaded,'tables':page.locator('table.mu').count(),'now_strip':page.locator('.rp-now').count()}
-                        if page.locator('table.mu').count():
-                            page.locator('td.rp-cell[style]').first.click();page.wait_for_timeout(300)
+                            if page.locator('.plan-row').count() or 'No game plan' in page.inner_text('#app'):loaded=True;break
+                        info={'game':f['game_pk'],'loaded':loaded,'plan_rows':page.locator('.plan-row').count(),'now_strip':page.locator('.rp-now').count()}
+                        if page.locator('.plan-row[data-rp]').count():
+                            page.locator('.plan-row[data-rp]').first.click();page.wait_for_timeout(300)
                             info['plan_grids']=page.locator('.rp-grid').count()
                             design_check('report');page.screenshot(path=str(out/f'report_{width}.png'),full_page=True)
                         receipt.setdefault('report',[]).append({'width':width,**info})
