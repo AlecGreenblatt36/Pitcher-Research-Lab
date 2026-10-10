@@ -4,8 +4,10 @@ The plate-appearance model knows the park only through the home team's code and 
 This table multiplies the seven outcome probabilities of every plate appearance in a game by exp(effect),
 then renormalizes (provider_adjust.EnvironmentAdjust). Effects were fitted on the model's own out-of-sample
 predictions (Poisson per outcome class with the model probability as offset): temperature, wind blowing out or
-in (Wrigley Field separately), roof closed, day game, and a shrunk residual per venue. They are centered so the
-average plate appearance of the fit is unchanged, which keeps the context offsets' level.
+in (Wrigley Field separately), roof closed and day game. They are centered so the average plate appearance of the
+fit is unchanged, which keeps the context offsets' level. The table no longer carries a residual per venue
+(env-v2-weather, from October 10, 2026): the two seasons' venue terms were uncorrelated, so a venue term fitted on
+one season is noise in the next (TOTALS-07, TOTALS-08); the park reaches the model through the home team.
 
 Conditions come from the official feed at forecast time (gameData.weather, venue, dayNight). When the weather is
 not posted yet, the venue's usual temperature for the month and its usual share of games with the roof closed

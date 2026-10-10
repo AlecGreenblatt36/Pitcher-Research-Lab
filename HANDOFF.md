@@ -18,7 +18,8 @@ October 7 checkpoint below still describes the machinery (lanes, privacy, schedu
 - Player model: pa-2026-v2-physics (brl_engine/model.json). Refits that were better per plate appearance did not help
   at the game level and stay sealed, not served: RETRAIN-02 (aging), RETRAIN-03 (548-day physics window).
 - Simulator settings (ADJUST in brl_live/boxscore.py): context offsets re-estimated on the simulator's own stack
-  (CTX-02, brl_live/context_offsets.json, 2025 and 2026 through 2026-09-27); run environment env-v2 (ENV-03); team
+  (CTX-02, brl_live/context_offsets.json, 2025 and 2026 through 2026-09-27); run environment env-v2-weather from October 10
+  (PROD-04; env-v2 of ENV-03 without the venue term); team
   offsets centered on the league (TEAM-05, CENTER-01); steals and runner speed (RUN-01, RUN-02); postseason starter usage
   x0.91; base running after each outcome from every 2023-2026 play (TRANS-01, brl_live/transitions.json);
   running plays between plate appearances built but off (TRANS-02, replays running, see below).
@@ -45,7 +46,12 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
-### In flight (updated 11:25 p.m. Eastern October 9, 03:25 UTC October 10, by `date -u`)
+### In flight (updated 10:45 a.m. Eastern October 10, by `date -u`)
+
+- October 10, 10:34 a.m.: Alec said to make the calls I was asking him about. Taken: PROD-04, the run environment without
+  its venue term (brl_live/environment.json is env-v2-weather; TOTALS-08's do-no-harm product call). The headline refit
+  on the weather replays reproduced taught-v5 (no new version); the taught total's weights and intercept unchanged; the
+  season archives rebuilt from v2-prod3-weather-ps-1000. The How page says the park adjustment is out and why.
 
 - Alec, 10:43 p.m.: explain things simply; the site's words must sound like baseball people, not AI; layouts still bad;
   he wants to look at future and past games and see the model overall. Shipped at 03:22 UTC (commit 2c577df45c6):
