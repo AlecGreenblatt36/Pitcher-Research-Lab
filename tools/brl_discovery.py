@@ -392,13 +392,21 @@ def swing_propensity(t: dict, k: float = 300.0) -> np.ndarray:
     return out
 
 
-def fit_logistic(X: np.ndarray, y: np.ndarray, C: float = 1.0, warm=None):
+def fit_logistic(X: np.ndarray, y: np.ndarray, C: float = 1.0, warm=None, w=None):
     from sklearn.linear_model import LogisticRegression
     m = LogisticRegression(C=C, max_iter=300, tol=1e-6, warm_start=warm is not None)
     if warm is not None:
         m.coef_ = warm[0].copy(); m.intercept_ = warm[1].copy(); m.classes_ = np.array([0, 1])
-    m.fit(X, y)
+    m.fit(X, y, sample_weight=w)
     return m
+
+
+def recency_weights(day: np.ndarray, half_life: float) -> np.ndarray:
+    """CS-RECENT-01: a take's weight halves every half_life days back from the latest training day, so the called-strike
+    model follows the umpires' recent calls (CS-SEASON-01 found the edge calls moving within a season, not only between
+    seasons). Only the relative weights matter, so the reference day is the latest row."""
+    d = np.asarray(day, np.float64)
+    return np.power(0.5, (d.max() - d) / float(half_life))
 
 
 def logloss_vec(p: np.ndarray, y: np.ndarray) -> np.ndarray:
@@ -7504,6 +7512,11 @@ class PAModels:
             Xc = np.hstack([Lw, plat_, cs_season_block(e_c, T['season'], self.cs_seasons)])
             self.m_c = fit_logistic(Xc[idx], (T['cs'] == 1).astype(np.float64)[idx])
             Xc[:, -len(self.cs_seasons) * len(E_KNOTS):] = cs_season_block(e_c, np.full(n, self.cs_target), self.cs_seasons)
+            self.p_c = self.m_c.predict_proba(Xc)[:, 1]
+        elif params.get('cs_recent'):
+            # CS-RECENT-01: every training take, weighted toward the latest days (half-life cs_recent days)
+            Xc = np.hstack([Lw, plat_]); ia = np.flatnonzero(tk)
+            self.m_c = fit_logistic(Xc[ia], (T['cs'] == 1).astype(np.float64)[ia], w=recency_weights(T['day'][ia], float(params['cs_recent'])))
             self.p_c = self.m_c.predict_proba(Xc)[:, 1]
         else:
             Xc = np.hstack([Lw, plat_])
