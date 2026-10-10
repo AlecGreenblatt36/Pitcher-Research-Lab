@@ -996,7 +996,7 @@ def sim_relievers(repo: str, token: str, branch: str) -> dict:
     return out
 
 
-def build_report(fit: Fitted, T_all: dict, day: str, asof: str, stage, max_relievers=4, sim_pens=None) -> dict:
+def build_report(fit: Fitted, T_all: dict, day: str, asof: str, stage, max_relievers=6, sim_pens=None) -> dict:
     """The date's report: a summary document and one document per game (each with the players it needs)."""
     games = schedule(day)
     rep = {'schema': SCHEMA, 'date': day, 'asof': asof, 'built_at': datetime.now(timezone.utc).isoformat(), 'training_pitches': fit.n_train,
@@ -1441,7 +1441,7 @@ def main():
                 continue
             if sim_pens is None:
                 sim_pens = sim_relievers(repo, token, branch); stage('simulator bullpens')
-            rep = build_report(fits[a], T, day, a, stage, int(params.get('max_relievers', 4)), sim_pens=sim_pens)
+            rep = build_report(fits[a], T, day, a, stage, int(params.get("max_relievers", 6)), sim_pens=sim_pens)
             total = 0
             summary = {k: v for k, v in rep.items() if k != 'games'}
             summary['games'] = {}

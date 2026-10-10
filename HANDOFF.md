@@ -39,7 +39,8 @@ October 7 checkpoint below still describes the machinery (lanes, privacy, schedu
   (SWING-CROSS-01), each season's called-strike edge (PROD-05) and the foul fixes (FOUL-01, FOUL-02), take a game's
   bullpen from the simulator's saved box (chance to pitch), keep the bench once a lineup is posted, and write each day
   as one commit (put_many); the live store retries 409s for minutes; the season top-up writes nothing when nothing is
-  new. Every report day from 2025-03-27 to 2026-10-08 was rebuilt with these.
+  new. Every report day from 2025-03-27 to 2026-10-08 was rebuilt with these. Product call (October 10, evening): a
+  plan for a game to come lists six relievers (was four), the simulator's likeliest; postseason teams use five or six.
 
 ### Evidence (full-season replays, 1,000 worlds per game, each season with tables from other seasons)
 
