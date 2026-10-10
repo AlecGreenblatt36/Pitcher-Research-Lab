@@ -45,7 +45,22 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
-### In flight (updated 10:25 p.m. Eastern October 9, by `date -u`; earlier stamps in this section ran ahead of the clock)
+### In flight (updated 11:25 p.m. Eastern October 9, 03:25 UTC October 10, by `date -u`)
+
+- Alec, 10:43 p.m.: explain things simply; the site's words must sound like baseball people, not AI; layouts still bad;
+  he wants to look at future and past games and see the model overall. Shipped at 03:22 UTC (commit 2c577df45c6):
+  - Tomorrow: after today's games, the live runner simulates tomorrow's games whose two starters are announced
+    (BoxRunner.early_iteration, projected lineups, at most 20 minutes and only inside the first 45 minutes of a run;
+    receipt in the ledger as early_receipt). The page keeps tomorrow's projected game lean (box_page.trim_boxes, EARLY_DAYS)
+    with a note that the game-day version is the one graded. The daily report build now adds tomorrow's game plan as of
+    today (tools/brl_report.py asof_for). Check after the next runs: early_receipt processed, tomorrow's day page shows
+    the early calls, public/reports/<tomorrow>/ exists after the 13:20 UTC daily build.
+  - Days: past days lead with "Our picks went X-Y. Vegas favorites went X-Y."; future days show early calls and "No
+    number yet" cards from MLB's schedule.
+  - Record page: "When we say 60%, do they win 60%?" (bins from the season archives) and a month-by-month table next to
+    Vegas. Players: big leaguers by default; hitter cards say where his decisions cost him, grouped by chasing, taking
+    strikes and weak swings. How page rewritten for coaches (phone-check anchors kept).
+  - Still to do on the site: game page summary is long on a phone; pitcher cards are thin (mix and two rates only).
 
 - Alec, 9:55 p.m.: the site's words sound like AI, the layouts are bad, and you cannot look at future or past games and
   see the model overall. Done the same night: the date strip and calendar run two weeks ahead; a day with no saved

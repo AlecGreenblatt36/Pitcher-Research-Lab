@@ -197,7 +197,7 @@ details.more[open] summary::before { content: "\2212"; }
 .line td.scored { color: var(--lamp); }
 
 /* Versions (other ways it could go) */
-.versions { display: flex; gap: 8px; overflow-x: auto; padding: 12px 0 2px; }
+.versions { display: flex; gap: 8px; overflow-x: auto; padding: 12px 0 2px; margin-bottom: 18px; }
 .versions-cap { margin: 12px 0 -8px; font-size: 14px; color: var(--muted); }
 .ver { flex: 0 0 auto; border: 1px solid var(--rule); background: var(--surface); border-radius: 8px; padding: 6px 12px; min-height: 48px; text-align: left; cursor: pointer; }
 .ver b { display: block; font-size: 14px; }
@@ -471,6 +471,9 @@ small { font-size: 14px; }
 .mark { font-weight: 700; }
 .mark.yes { color: var(--board); }
 .mark.no { color: var(--bad); }
+.mark.even { color: var(--muted); }
+.proj-fold { margin-top: 26px; }
+details.more.proj-fold > summary { font-family: var(--display); font-size: 21px; font-weight: 700; color: var(--ink); }
 
 /* Track record */
 .cal { list-style: none; margin: 0; padding: 0; }
@@ -1661,8 +1664,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (tab === "report") loadReport(f, pk);
     else if (tab === "summary" && lv && !lv._final) loadLiveCard(f, pk);
 
+    app.querySelectorAll("details[data-keep]").forEach(function (d) { d.addEventListener("toggle", function () { state.rpOpen[d.getAttribute("data-keep")] = d.open; }); });
     app.querySelectorAll("[data-variant]").forEach(function (b) {
-      b.addEventListener("click", function () { state.variant[pk] = b.getAttribute("data-variant"); renderGame(pk, tab); });
+      b.addEventListener("click", function () { state.variant[pk] = b.getAttribute("data-variant"); renderGame(pk, tab, !!b.closest("details")); });
     });
     app.querySelectorAll("[data-tab]").forEach(function (b) {
       b.addEventListener("click", function () { history.replaceState(null, "", "#/game/" + pk + "/" + b.getAttribute("data-tab")); renderGame(pk, b.getAttribute("data-tab")); });
@@ -2086,9 +2090,16 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   function summaryTab(f, s, box, actual, actualBox, v, real, lv, versions) {
     var h0 = "";
     if (lv && !lv._final && lv.state) h0 += '<div id="rp-live-' + f.game_pk + '"></div>';
-    if (real) h0 += realSummary(f, box, real, lv) + '<h2 class="divide">The projected game</h2>';
-    h0 += versions || "";
-    return h0 + projectedSummary(f, s, box, actual, actualBox, v);
+    if (!real) return h0 + (versions || "") + projectedSummary(f, s, box, actual, actualBox, v);
+    /* With the real game on: did we get it right first (after the final), then the real game, then the game we
+       projected folded under one line (its versions and the full simulated game open from there). */
+    if (actual && actualBox) h0 += howClose(f, box, actualBox, s);
+    h0 += realSummary(f, box, real, lv);
+    var pv = box && box.samples && box.samples.length ? variantsFor(box, f).filter(function (x) { return x.key === "proj"; })[0] : null;
+    var proj = pv ? box.samples[pv.i].score : null, open = state.rpOpen["proj-" + f.game_pk];
+    h0 += '<details class="more proj-fold" data-keep="proj-' + f.game_pk + '"' + (open ? " open" : "") + "><summary>The game we projected before first pitch" +
+      (proj ? ": " + esc(f.away.abbr + " " + proj.away + ", " + f.home.abbr + " " + proj.home) : "") + "</summary>";
+    return h0 + (versions || "") + projectedSummary(f, s, box, null, null, v) + "</details>";
   }
   /* The real game's sections: win chance through the game, scoring plays, top performers, where the ball went. */
   function realSummary(f, box, real, lv) {
@@ -2103,12 +2114,12 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       h0 += '<section class="sec"><h2>' + (real._final ? "Scoring plays" : "Scoring plays so far") + "</h2>";
       if (!realScoring.length) h0 += '<p class="empty">No runs yet.</p>';
       else {
-        h0 += '<ol class="moments">';
-        realScoring.forEach(function (p) {
+        var item = function (p) {
           var parts = playParts(p, rn, rs);
-          h0 += '<li><span class="inn">' + (p.half === "top" ? "Top " : "Bot ") + ordinal(p.inning) + '</span><span class="txt">' + esc(parts.text) + '<span class="sc num">' + esc(scoreText(f, p)) + "</span></span></li>";
-        });
-        h0 += "</ol>";
+          return '<li><span class="inn">' + (p.half === "top" ? "Top " : "Bot ") + ordinal(p.inning) + '</span><span class="txt">' + esc(parts.text) + '<span class="sc num">' + esc(scoreText(f, p)) + "</span></span></li>";
+        };
+        h0 += '<ol class="moments">' + realScoring.slice(0, 5).map(item).join("") + "</ol>";
+        if (realScoring.length > 5) h0 += '<details class="more" data-keep="sp-' + f.game_pk + '"' + (state.rpOpen["sp-" + f.game_pk] ? " open" : "") + "><summary>" + (realScoring.length - 5) + (realScoring.length - 5 === 1 ? " more scoring play" : " more scoring plays") + '</summary><ol class="moments">' + realScoring.slice(5).map(item).join("") + "</ol></details>";
       }
       h0 += "</section>";
       var perf = "";
@@ -2799,8 +2810,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
 
   /* How close (after the final) */
   function howClose(f, box, actualBox, s) {
-    var items = [], winner = actualBox.score.home > actualBox.score.away ? "home" : "away", fav = favorite(f);
-    items.push([winner === fav, (winner === fav ? "Called it. " : "Missed. ") + nickname(f[winner].name) + " won; the model had " + nickname(f[fav].name) + " at " + pct(winProb(f, fav)) + "."]);
+    var items = [], winner = actualBox.score.home > actualBox.score.away ? "home" : "away", fav = favorite(f), pf = winProb(f, fav);
+    if (pf < 0.52) items.push([null, "Coin flip. " + nickname(f[winner].name) + " won; we had it about even (" + nickname(f[fav].name) + " " + pct(pf) + ")."]);
+    else items.push([winner === fav, (winner === fav ? "Called it. " : "Missed. ") + nickname(f[winner].name) + " won; we had " + nickname(f[fav].name) + " at " + pct(pf) + "."]);
     ["away", "home"].forEach(function (side) {
       var c = box.team_run_distributions ? dist(box.team_run_distributions[side]) : null; if (!c) return;
       var lo = quant(c, .25), hi = quant(c, .75), got = actualBox.score[side];
@@ -2822,9 +2834,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       });
     });
     if (n) items.push([within / n >= .7, within + " of " + n + " hitters finished within one hit of their projection."]);
-    var right = items.filter(function (x) { return x[0]; }).length;
-    var h = '<section class="sec"><h2>How close</h2><p class="lede">' + right + " of " + items.length + " checks landed.</p><div class=\"close-card\"><ul>";
-    items.forEach(function (x) { h += '<li><span class="mark ' + (x[0] ? "yes" : "no") + '">' + (x[0] ? "Yes" : "No") + "</span><span>" + esc(x[1]) + "</span></li>"; });
+    var graded = items.filter(function (x) { return x[0] !== null; }), right = graded.filter(function (x) { return x[0]; }).length;
+    var h = '<section class="sec"><h2>How close</h2><p class="lede">What we said before first pitch against what happened: ' + right + " of " + graded.length + " landed.</p><div class=\"close-card\"><ul>";
+    items.forEach(function (x) { h += '<li><span class="mark ' + (x[0] === null ? "even" : x[0] ? "yes" : "no") + '">' + (x[0] === null ? "Even" : x[0] ? "Yes" : "No") + "</span><span>" + esc(x[1]) + "</span></li>"; });
     return h + "</ul></div></section>";
   }
 

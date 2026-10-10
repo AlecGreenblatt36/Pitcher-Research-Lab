@@ -130,6 +130,9 @@ def main():
                     assert 'Simulator alone' in page.inner_text('#app')
                     design_check('game_odds');page.screenshot(path=str(out/f'game_odds_{width}.png'),full_page=True)
                     page.locator('button[data-tab="summary"]').click();page.wait_for_timeout(150)
+                    # once the real game is on, the projected game sits folded under one line: open it to read its versions
+                    fold=page.locator('details.proj-fold')
+                    if fold.count() and not fold.first.evaluate('d=>d.open'):fold.first.locator('summary').click();page.wait_for_timeout(150)
                     for key in ('high','low','upset'):
                         b=page.locator(f'button[data-variant="{key}"]')
                         if not b.count():continue
