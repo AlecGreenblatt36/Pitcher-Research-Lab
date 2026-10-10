@@ -4314,14 +4314,19 @@
     "id": "WHIFF-OWN-04",
     "columns": {
      "ID": "WHIFF-OWN-04",
-     "Attempt": "The curved version of WHIFF-OWN-03: the hitter's swing tendency at the pitch enters the whiff and foul models with separate slopes below zero (a hitter who lays off the spot) and above zero (one who chases it), each separately out of the zone and in it (four columns), cross-fitted as in WHIFF-OWN-03 (params whiff_own 4). Smoke test on a synthetic world (scratch cross/smoke_wo.py): runs; settings 0 and 3 reproduce their earlier numbers. The last attempt in this line: if it misses, the whiff input stays out and the question is closed for this season. **Registered in the commit that added this row, before the runs.** Gated on windows no whiff run has used: as of 2024-05-01 and 2025-09-01, CAL-04's split, on (4) against off (0), four calibration-only runs. Gate, in both runs: (1) whiff log loss of the maps on the later swings lower, out of the zone and over all swings; (2) the two extreme bins out of the zone within 0.95 to 1.05; (3) the two extreme bins inside within 0.92 to 1.08. Prediction: the slope below zero out of the zone the largest in size; log loss lower by 0.5 to 2 nats per 1,000 swings out of the zone and 0 to 0.6 over all; the extreme bins out of the zone 0.96 to 1.04. If it holds: on in the engine (WHIFF_OWN 4), the aiming value re-priced, the reports rebuilt.",
-     "Disposition and evidence": "registered, running"
+     "Attempt": "The curved version of WHIFF-OWN-03: the hitter's swing tendency at the pitch enters the whiff and foul models with separate slopes below zero (a hitter who lays off the spot) and above zero (one who chases it), each separately out of the zone and in it (four columns), cross-fitted as in WHIFF-OWN-03 (params whiff_own 4). Smoke test on a synthetic world (scratch cross/smoke_wo.py): runs; settings 0 and 3 reproduce their earlier numbers. The last attempt in this line: if it misses, the whiff input stays out and the question is closed for this season. **Registered in the commit that added this row, before the runs.** Gated on windows no whiff run has used: as of 2024-05-01 and 2025-09-01, CAL-04's split, on (4) against off (0), four calibration-only runs. Gate, in both runs: (1) whiff log loss of the maps on the later swings lower, out of the zone and over all swings; (2) the two extreme bins out of the zone within 0.95 to 1.05; (3) the two extreme bins inside within 0.92 to 1.08. Prediction: the slope below zero out of the zone the largest in size; log loss lower by 0.5 to 2 nats per 1,000 swings out of the zone and 0 to 0.6 over all; the extreme bins out of the zone 0.96 to 1.04. If it holds: on in the engine (WHIFF_OWN 4), the aiming value re-priced, the reports rebuilt. **Results (2024-05-01: runs 38079508737 off, 38079523133 on; 2025-09-01: 38079538492, 38079555198):** gate not met, on (2) in both and (1) in 2024 (log loss -0.17 out of the zone but +0.08 over all; 2025: -0.91 and -0.17). The low bin out of the zone is fixed (1.028 and 1.001, from 0.909 and 0.891) but the high bin overshoots again (0.941 and 0.936, from 1.041 and 1.041), a separate slope notwithstanding. One likely reason: maps fit on half a hitter's games are shrunk more, so the cross-fitted weights are learned on smaller values than the full maps the plans use. In run values the engine with the input tracks what the swings produced at both ends (2025 under -10: -0.112 against -0.115 realized; over 10: -0.082 against -0.082), which is the part the aiming value depends on, but the registered gate was on misses. As written in the row, the line is closed for this season: the engine keeps the location-only whiff model, and the stated range keeps both figures.",
+     "Disposition and evidence": "gate not met; closed for the season"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38079508737",
+     "38079523133",
+     "38079538492",
+     "38079555198"
+    ],
     "frozen_commits": [],
-    "status": "registered, running"
+    "status": "gate not met; closed for the season"
    }
   ],
   "BOX-01": [
