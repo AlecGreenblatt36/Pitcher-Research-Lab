@@ -197,7 +197,13 @@ class BoxRunner(original.Runner):
             # switch produces a new saved version for every pending game and earlier versions stand.
             fingerprint=content_hash({'inputs':fingerprint,'pa_model':bridge.MODEL_NAME,'model_sha256':bridge.MODEL_SHA256})
         previous=original.fingerprint_from_forecasts(self.store,pk)
-        if any(f['snapshot_hash']==fingerprint and ident in self.store.ledger['box_scores'] and 'skill_baselines' in self.store.ledger['box_scores'][ident] for ident,f in previous):return
+        same=[ident for ident,f in previous if f['snapshot_hash']==fingerprint and ident in self.store.ledger['box_scores'] and 'skill_baselines' in self.store.ledger['box_scores'][ident]]
+        if same:
+            # Nothing new to forecast. A status left 'blocked' by an earlier run whose forecast did save (a write after it
+            # failed) is brought back to the saved version, so the ledger says what the page shows.
+            if (self.store.ledger['status'].get(str(pk)) or {}).get('state')=='blocked':
+                self.store.ledger['status'][str(pk)]={'state':'forecast_saved','date':game['date'],'forecast_id':same[-1],'checked_at':self.clock().isoformat()}
+            return
         self.store.private('inputs',content_hash({'receipt':receipt,'game':game}),
             {'source':feed,'receipt':receipt,'derived_game':game,'lineup_status':statuses,
              'history_sha256':self.sim.info['history_sha256'],'history_index_sha256':self.sim.info['index_sha256'],
