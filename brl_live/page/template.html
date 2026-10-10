@@ -899,6 +899,14 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     return Math.round(w.market * 100) + "% Vegas, " + Math.round(w.ours * 100) + "% our model";
   }
   /* Pregame card footnote: our independent model next to the market's line, once both exist. */
+  /* When the simulator by itself favors the other team, the projected score (a simulated game) can disagree with our
+     pick; the card says so. */
+  function simFoot(f) {
+    var hp = f.home_win_probability;
+    if (hp == null) return "";
+    var simFav = hp >= 0.5 ? "home" : "away";
+    return simFav === favorite(f) ? "" : ". Simulator alone " + f[simFav].abbr + " " + pct(simFav === "home" ? hp : 1 - hp);
+  }
   function marketFoot(f) {
     var mk = D.market && D.market[f.game_pk], pm = marketProb(mk);
     if (!taughtRecipe(f) || pm == null) return "";
@@ -1197,8 +1205,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var foot = actual && proj ? "Projected " + f.away.abbr + " " + proj.score.away + ", " + f.home.abbr + " " + proj.score.home
         : lv ? (lv._final ? "Final from the official feed" : lv.projected_final ? "Likely final " + f.away.abbr + " " + lv.projected_final.away + ", " + f.home.abbr + " " + lv.projected_final.home + ". " +
             (lv._client && lv.fetched_at ? "Live " + timeET(lv.fetched_at) : "Updated " + timeET(lv.updated_at)) + " ET" : "Live from MLB" + (lv.fetched_at ? ", " + timeET(lv.fetched_at) + " ET" : ""))
-        : f.date > D.date ? "Early call with projected lineups" + marketFoot(f)
-        : (f.lineup_status && f.lineup_status.away === "official" && f.lineup_status.home === "official" ? "Official lineups" : "Projected lineups") + marketFoot(f);
+        : f.date > D.date ? "Early call with projected lineups" + marketFoot(f) + simFoot(f)
+        : (f.lineup_status && f.lineup_status.away === "official" && f.lineup_status.home === "official" ? "Official lineups" : "Projected lineups") + marketFoot(f) + simFoot(f);
       html += '<div class="card-foot">' + esc(foot) + "</div></a></li>";
     });
     html += "</ol>";
