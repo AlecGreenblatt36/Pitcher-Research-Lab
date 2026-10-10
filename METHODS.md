@@ -64,6 +64,12 @@ corrected there (VALUE-01F and VALUE-02F were withdrawn and VALUE-08F replaced t
 horizon work inspected 2026, so a new registration cannot restore them as untouched. Forward confirmation: the 2026
 postseason and 2027, scored under predeclared rules.
 
+From October 10, 2026 the report's league swing model also reads where the pitch crossed (SWING-CROSS-01): the
+decision-moment model alone over-called swings on pitches that ended outside by about 8 to 11%, growing with distance
+outside (CAL-01), and the crossing term brought that within 1 to 2.4% on later months with lower log loss for the league
+and the maps. The aiming figures below were priced with the decision-moment model alone; they are being re-priced with
+the crossing term (VALUE-18X) and are not restated on the site until that run is in.
+
 The aiming value is estimated policy potential, not observed runs saved. It is stated as a range, about 30 to 45
 runs over a team's season from outside pitches alone on the later-period months (VALUE-18F): 43.5 [40.7, 46.6] when
 each aim is priced by the engine's own components (the hitter's calibrated own swing part times the value of a swing

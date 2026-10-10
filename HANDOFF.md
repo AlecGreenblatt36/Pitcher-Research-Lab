@@ -48,6 +48,13 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 
 ### In flight (updated 10:45 a.m. Eastern October 10, by `date -u`)
 
+- October 10, 11 a.m.: CAL-01 found the report's swing model over-calling swings on pitches that end outside (8 to 11%,
+  fastballs 15 to 19%, growing with distance outside; in sample as well, so structure, not drift). SWING-CROSS-01 (a
+  crossing-location block for the league swing model, tools/brl_discovery.py cross_block, in the report and the engine)
+  passed its registered gate in both runs and is on from the next daily build (tools/brl_report.py SWING_CROSS true).
+  The stated aiming figures (30 to 45 runs, 23 inside) were priced without it: the How page and METHODS.md say they are
+  being re-checked; VALUE-18X (value2_study with the crossing block) is the re-pricing to run next. Reports built before
+  the switch keep old grades until rebuilt (a month-by-month rebuild with the new model is worth queuing).
 - October 10, 10:34 a.m.: Alec said to make the calls I was asking him about. Taken: PROD-04, the run environment without
   its venue term (brl_live/environment.json is env-v2-weather; TOTALS-08's do-no-harm product call). The headline refit
   on the weather replays reproduced taught-v5 (no new version); the taught total's weights and intercept unchanged; the
