@@ -97,8 +97,8 @@ button { font: inherit; color: inherit; }
 .pl-next a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border-radius: 22px; border: 1px solid var(--rule-strong); background: var(--surface); font-weight: 700; color: var(--ink); text-decoration: none; }
 .pt-list { margin: 8px 0 4px; }
 .pt { border-top: 1px solid var(--rule); padding: 12px 0; }
-.pt h4 { margin: 0 0 4px; font-size: 18px; display: flex; justify-content: space-between; gap: 12px; }
-.pt h4 span { font-family: var(--display); font-weight: 600; white-space: nowrap; }
+.pt h4, .pt h2.card-h { margin: 0 0 4px; font-size: 18px; display: flex; justify-content: space-between; gap: 12px; }
+.pt h4 span, .pt h2.card-h span { font-family: var(--display); font-weight: 600; white-space: nowrap; }
 .pt p { margin: 2px 0 0; font-size: 15px; }
 .next-day { display: inline-flex; align-items: center; min-height: 44px; padding: 6px 16px; margin-top: 4px; border-radius: 8px; border: 1px solid var(--rule-strong); background: var(--surface); font-weight: 700; color: var(--ink); text-decoration: none; }
 .replay-note { font-size: 14px; color: var(--muted); margin: 12px 0 0; padding: 9px 12px; border-left: 3px solid var(--lamp); background: var(--surface); border-radius: 0 8px 8px 0; }
@@ -139,8 +139,8 @@ details.more[open] summary::before { content: "\2212"; }
 .team-row .big { font-family: var(--display); font-weight: 700; font-size: 30px; text-align: right; line-height: 1; }
 .team-row .pct { font-family: var(--display); font-weight: 600; font-size: 22px; text-align: right; color: var(--muted); }
 .team-row.fav .pct { color: var(--ink); }
-.away-c { color: var(--away); }
-.home-c { color: var(--home); }
+.away-c { color: var(--away-t, var(--away)); }
+.home-c { color: var(--home-t, var(--home)); }
 .card-foot { margin-top: 8px; font-size: 14px; color: var(--muted); }
 .card-foot.hit::before, .card-foot.miss::before { display: inline-block; width: 16px; font-weight: 700; }
 .card-foot.hit::before { content: "\2713"; color: var(--good); }
@@ -411,8 +411,8 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .pl-list .good { color: var(--good); } .pl-list .bad { color: var(--bad); }
 .pl-back { display: inline-block; padding: 12px 4px; margin: -12px -4px; min-height: 44px; box-sizing: border-box; }
 .rp-card { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 12px; min-width: 0; }
-.rp-card h4 { margin: 0 0 6px; font-size: 16px; }
-.rp-card h4 small { font-weight: 400; color: var(--muted); font-size: 14px; }
+.rp-card h4, .rp-card h2.card-h { margin: 0 0 6px; font-size: 16px; }
+.rp-card h4 small, .rp-card h2.card-h small { font-weight: 400; color: var(--muted); font-size: 14px; }
 .rp-card .lbl { font-size: 14px; color: var(--muted); margin: 6px 0 4px; }
 .rp-grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 10px 0; }
 .rp-grade div { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 10px 12px; }
@@ -666,8 +666,10 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var a = TEAM_COLORS[(f.away && f.away.abbr) || ""] || ["#2E5C9A", "#2E5C9A"], h = TEAM_COLORS[(f.home && f.home.abbr) || ""] || ["#B42A30", "#B42A30"];
     var ca = a[0], ch = h[0];
     if (colorGap(ca, ch) < 120) { if (colorGap(a[1], ch) >= 120) ca = a[1]; else if (colorGap(ca, h[1]) >= 120) ch = h[1]; }
-    return NIGHT ? { away: lift(ca), home: lift(ch) } : { away: ca, home: ch };
+    return NIGHT ? { away: lift(ca), home: lift(ch), awayT: lift(ca), homeT: lift(ch) } : { away: ca, home: ch, awayT: deepen(ca), homeT: deepen(ch) };
   }
+  /* The style that carries a game's club colors: fills use the colors as they are, text a version dark enough to read. */
+  function teamStyle(tc) { return "--away:" + tc.away + ";--home:" + tc.home + ";--away-t:" + (tc.awayT || tc.away) + ";--home-t:" + (tc.homeT || tc.home); }
   /* Night theme: club colors darker than a set brightness are mixed with white until they read on the dark field. */
   var NIGHT = !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
   function luminance(rgb) {
@@ -678,6 +680,13 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var rgb = hexRgb(hex), t = 0;
     while (luminance(rgb.map(function (v) { return v + (255 - v) * t; })) < 0.16 && t < 0.9) t += 0.05;
     var out = rgb.map(function (v) { return Math.round(v + (255 - v) * t); });
+    return "#" + out.map(function (v) { return (v < 16 ? "0" : "") + v.toString(16); }).join("");
+  }
+  /* Day theme: club colors too light to read as text on the page are mixed with black (contrast at least 4.5 to 1). */
+  function deepen(hex) {
+    var rgb = hexRgb(hex), t = 0;
+    while (luminance(rgb.map(function (v) { return v * (1 - t); })) > 0.16 && t < 0.9) t += 0.05;
+    var out = rgb.map(function (v) { return Math.round(v * (1 - t)); });
     return "#" + out.map(function (v) { return (v < 16 ? "0" : "") + v.toString(16); }).join("");
   }
   function dateLabel(ymd) {
@@ -996,6 +1005,15 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (arr.length <= 1) return arr.join("");
     return arr.slice(0, -1).join(", ") + " and " + arr[arr.length - 1];
   }
+  /* Spots that share a start read once: "below the knees" and "below the knees and in" become "below the knees, middle and in". */
+  function mergeSpots(arr) {
+    var out = arr.slice();
+    for (var i = 0; i < out.length; i++) for (var j = 0; j < out.length; j++) {
+      if (i === j || out[i] == null || out[j] == null) continue;
+      if (out[j].indexOf(out[i] + " and ") === 0) { out[i] = out[i] + ", middle and " + out[j].slice(out[i].length + 5); out[j] = null; }
+    }
+    return out.filter(function (x) { return x != null; });
+  }
 
   /* ---------- play wording ---------- */
   var HOMER = { 1: "homers", 2: "hits a two-run homer", 3: "hits a three-run homer", 4: "hits a grand slam" };
@@ -1198,7 +1216,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var fav = favorite(f);
       var ctx = contextFor(f.game_pk), ctxLine = contextLine(f, ctx, true);
       var tcl = teamColors(f);
-      html += '<li><a class="card" style="--away:' + tcl.away + ";--home:" + tcl.home + '" data-game="' + f.game_pk + '" href="#/game/' + f.game_pk + '"><div class="card-top"><span>' + esc(timeET(f.scheduled_start)) + '</span><span class="state ' + st + '">' + (lv ? miniBases(lv) + esc(liveWhere(lv)) : STATE_TEXT[st]) + "</span></div>";
+      html += '<li><a class="card" style="' + teamStyle(tcl) + '" data-game="' + f.game_pk + '" href="#/game/' + f.game_pk + '"><div class="card-top"><span>' + esc(timeET(f.scheduled_start)) + '</span><span class="state ' + st + '">' + (lv ? miniBases(lv) + esc(liveWhere(lv)) : STATE_TEXT[st]) + "</span></div>";
       if (ctxLine) html += '<div class="card-ctx">' + esc(ctxLine) + "</div>";
       html += '<div class="cols"><span></span><span>' + (actual ? "Final" : lv ? "Score" : "Proj") + "</span><span>Win</span></div>";
       ["away", "home"].forEach(function (side) {
@@ -1472,7 +1490,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var fin = g ? { away: g.fa, home: g.fh } : (s && s.teams && s.teams.away && s.teams.away.score != null ? { away: s.teams.away.score, home: s.teams.home.score } : null);
       var done = s ? /final/i.test(((s.status || {}).abstractGameState) || "") : true;
       var tc = teamColors(f);
-      html += '<li><a class="card" style="--away:' + tc.away + ";--home:" + tc.home + '" data-game="' + k + '" href="#/past/' + day + "/" + k + '"><div class="card-top"><span>' + esc(f.scheduled_start ? timeET(f.scheduled_start) : "") + '</span><span class="state ' + (done ? "final" : "") + '">' + (done && fin ? "Final" : esc(((s || {}).status || {}).detailedState || "")) + "</span></div>";
+      html += '<li><a class="card" style="' + teamStyle(tc) + '" data-game="' + k + '" href="#/past/' + day + "/" + k + '"><div class="card-top"><span>' + esc(f.scheduled_start ? timeET(f.scheduled_start) : "") + '</span><span class="state ' + (done ? "final" : "") + '">' + (done && fin ? "Final" : esc(((s || {}).status || {}).detailedState || "")) + "</span></div>";
       var venue = (s && s.venue && s.venue.name) || (g && g.v) || "";
       if (venue) html += '<div class="card-ctx">' + esc(venue) + "</div>";
       html += '<div class="cols"><span></span><span>' + (fin ? "Final" : "") + "</span><span>" + (g ? "Win" : "") + "</span></div>";
@@ -1514,7 +1532,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var st = String((s.status || {}).detailedState || "Scheduled");
       /* today's and tomorrow's games have a game plan before they have our number: the card opens it */
       var past = day < D.date, plan = day <= addDays(D.date, 1), tag = plan ? "a" : "div";
-      h += "<li><" + tag + ' class="card"' + (plan ? ' href="#/past/' + day + "/" + s.gamePk + (past ? "/summary" : "/report") + '"' : "") + ' style="--away:' + tc.away + ";--home:" + tc.home + '"><div class="card-top"><span>' + esc(f.scheduled_start ? timeET(f.scheduled_start) : "") + '</span><span class="state">' + esc(st) + "</span></div>";
+      h += "<li><" + tag + ' class="card"' + (plan ? ' href="#/past/' + day + "/" + s.gamePk + (past ? "/summary" : "/report") + '"' : "") + ' style="' + teamStyle(tc) + '"><div class="card-top"><span>' + esc(f.scheduled_start ? timeET(f.scheduled_start) : "") + '</span><span class="state">' + esc(st) + "</span></div>";
       var venue = (s.venue && s.venue.name) || "", sl = ser ? seriesLabelFor(ser, sg) : "";
       if (sl || venue) h += '<div class="card-ctx">' + esc([sl, venue].filter(Boolean).join(" at ")) + "</div>";
       h += '<div class="cols"><span></span><span></span><span>' + (ph != null ? "Win" : "") + "</span></div>";
@@ -1565,7 +1583,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var fin = real ? real.score : (g ? { away: g.fa, home: g.fh } : null), fav = g ? favorite(f) : null;
     var notStarted = !g && (!real || (!real.plays.length && !real._final));
     if (notStarted) fin = null;
-    var html = '<div class="game" style="--away:' + tc.away + ";--home:" + tc.home + '"><section class="hero"><div class="wrap"><a class="back" href="#/day/' + day + '">' + CHEV_LEFT + "Back to " + esc(dateLabel(day).replace(/^[A-Za-z]+, /, "")) + "</a>";
+    var html = '<div class="game" style="' + teamStyle(tc) + '"><section class="hero"><div class="wrap"><a class="back" href="#/day/' + day + '">' + CHEV_LEFT + "Back to " + esc(dateLabel(day).replace(/^[A-Za-z]+, /, "")) + "</a>" +
+      '<h1 class="visually-hidden">' + esc(nickname(f.away.name) + " at " + nickname(f.home.name) + ", " + dateLabel(day)) + "</h1>";
     html += '<div class="hero-grid"><div class="hero-main"><p class="hero-meta">' + (fin ? statusPill("final", "Final", false) : "") + esc([SERIES[f.game_type] || "", f.scheduled_start ? timeET(f.scheduled_start) + " ET" : ""].filter(Boolean).join(". ")) + "</p>";
     var venue = (gd.venue && gd.venue.name) || (g && g.v) || "", w = gd.weather || {};
     var wl = [w.temp ? w.temp + "\u00b0F" : "", w.condition || "", w.wind ? "wind " + w.wind : ""].filter(Boolean).join(", ");
@@ -1651,7 +1670,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var fav = favorite(f);
 
     var back = f.date && f.date !== D.date ? "#/day/" + f.date : "#/", tcg = teamColors(f);
-    var html = '<div class="game" style="--away:' + tcg.away + ";--home:" + tcg.home + '"><section class="hero"><div class="wrap"><a class="back" href="' + back + '">' + CHEV_LEFT + "Back to games</a>";
+    var html = '<div class="game" style="' + teamStyle(tcg) + '"><section class="hero"><div class="wrap"><a class="back" href="' + back + '">' + CHEV_LEFT + "Back to games</a>" +
+      '<h1 class="visually-hidden">' + esc(nickname(f.away.name) + " at " + nickname(f.home.name) + (f.date ? ", " + dateLabel(f.date) : "")) + "</h1>";
     var gctx = contextFor(f.game_pk), gline = contextLine(f, gctx, false) || SERIES[f.game_type], gw = weatherLine(gctx);
     html += '<div class="hero-grid"><div class="hero-main"><p class="hero-meta">' + statusPill(st, lv ? liveWhere(lv) : STATE_TEXT[st], lv && !lv._final) + esc([gline, timeET(f.scheduled_start) + " ET"].filter(Boolean).join(". ")) + "</p>";
     if (gctx && (gctx.venue || gw)) html += '<p class="hero-meta hero-venue">' + esc([gctx.venue, gw].filter(Boolean).join(". ")) + "</p>";
@@ -1745,7 +1765,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var played = s._played || Math.max(9, s.plays && s.plays.length ? samplePlayed(s) : Math.max.apply(null, keys.length ? keys : [9]));
     var h = '<div class="line-wrap"><table class="line num" aria-label="Line score of the game shown"><thead><tr><th class="team"><span class="visually-hidden">Team</span></th>';
     for (var i = 1; i <= played; i++) h += "<th>" + i + "</th>";
-    h += '<th class="gap"></th><th class="rh r">R</th><th class="rh h">H</th></tr></thead><tbody>';
+    h += '<td class="gap" aria-hidden="true"></td><th class="rh r">R</th><th class="rh h">H</th></tr></thead><tbody>';
     ["away", "home"].forEach(function (side) {
       var inn = s.innings[side] || {}, R = 0, H = 0;
       h += '<tr><th class="team">' + esc(f[side].abbr) + "</th>";
@@ -2267,7 +2287,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
 
   /* Box score tab */
   function boxTab(f, s, actualBox, pk, label, realOnly) {
-    var side = state.boxSide[pk] || (actualBox ? "actual" : "proj"), src = side === "actual" && actualBox ? actualBox : s, h = "";
+    var side = state.boxSide[pk] || (actualBox ? "actual" : "proj"), src = side === "actual" && actualBox ? actualBox : s, h = '<h2 class="visually-hidden">Box score</h2>';
     if (actualBox && !realOnly) {
       h += '<div class="seg" role="group" aria-label="Which box score"><button data-boxside="actual" aria-pressed="' + (side === "actual") + '">' + esc(label || "Actual") + '</button><button data-boxside="proj" aria-pressed="' + (side !== "actual") + '">Projected</button></div>';
     }
@@ -2360,7 +2380,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var g = mu[side], other = side === "away" ? "home" : "away";
       if (!g) return;
       h += '<section class="sec wide"><h3 class="team-h ' + side + '-c">' + esc(nickname(f[side].name)) + " hitters against the " + esc(nickname(f[other].name)) + " staff</h3>";
-      h += '<div class="mu-wrap"><table class="mu num"><thead><tr><th scope="col" class="mu-who">Hitter</th>';
+      h += '<div class="mu-wrap" tabindex="0" role="region" aria-label="' + esc(nickname(f[side].name)) + ' hitters against pitchers, scrolls sideways"><table class="mu num"><thead><tr><th scope="col" class="mu-who">Hitter</th>';
       g.pitchers.forEach(function (pt) {
         h += '<th scope="col"><span>' + esc(lastName(pt.name)) + "</span><small>" + (pt.role === "starter" ? "Starter" : pt.appear != null ? pct(pt.appear) + " to pitch" : "Reliever") + "</small></th>";
       });
@@ -2797,7 +2817,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var se = doc.sides && doc.sides[side], other = side === "away" ? "home" : "away";
       if (!se || !se.hitters.length || !se.pitchers.length) return;
       h += '<h3 class="team-h ' + side + '-c" style="margin-top:14px">' + esc(nickname(doc.teams[side].name)) + " hitters vs the " + esc(nickname(doc.teams[other].name)) + " staff</h3>";
-      h += '<div class="mu-wrap"><table class="mu num"><thead><tr><th scope="col" class="mu-who">Hitter</th>';
+      h += '<div class="mu-wrap" tabindex="0" role="region" aria-label="' + esc(nickname(doc.teams[side].name)) + ' hitters against pitchers, scrolls sideways"><table class="mu num"><thead><tr><th scope="col" class="mu-who">Hitter</th>';
       se.pitchers.forEach(function (pt) { h += '<th scope="col"><span>' + esc(lastName(nm(pt.id))) + "</span><small>" + (pt.role === "starter" ? "Starter" : "Bullpen") + "</small></th>"; });
       h += "</tr></thead><tbody>";
       var short = shortNames(se.hitters.map(function (x) { return { player_id: x, name: nm(x) }; })), po = planOrder(doc, side);
@@ -3086,11 +3106,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
           h += '<div class="rp-cards">';
           ["fastball", "breaking", "offspeed"].forEach(function (fam) {
             var own = x.own_chase && x.own_chase[fam]; if (!own) return;
-            var top = spotList(own.top || [], null, true);
-            h += '<div class="rp-card"><h4>' + PITCH_NAME[fam] + "</h4>" + rpGrid(doc, own.grid, null, PITCH_NAME[fam] + ": where he swings", 0.8) +
+            var top = mergeSpots(spotList(own.top || [], null, true));
+            h += '<div class="rp-card"><h2 class="card-h">' + PITCH_NAME[fam] + "</h2>" + rpGrid(doc, own.grid, null, PITCH_NAME[fam] + ": where he swings", 0.8) +
               (top.length ? '<div class="lbl">Chases it most ' + esc(listNames(top)) + ".</div>" : '<div class="lbl">Doesn\'t chase this pitch more than most hitters.</div>') + "</div>";
           });
-          if (x.whiff_grid) h += '<div class="rp-card"><h4>Where he swings and misses</h4><div class="lbl">Gold: more than most hitters on his side. Blue: less.</div>' + rpGrid(doc, x.whiff_grid, null, "where he swings and misses", 0.5) + "</div>";
+          if (x.whiff_grid) h += '<div class="rp-card"><h2 class="card-h">Where he swings and misses</h2><div class="lbl">Gold: more than most hitters on his side. Blue: less.</div>' + rpGrid(doc, x.whiff_grid, null, "where he swings and misses", 0.5) + "</div>";
           h += "</div>";
         } else {
           var mix = x.mix || {};
@@ -3099,7 +3119,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
           /* each pitch in a scout's line: how hard and how often, what it gets, and where it goes to each side */
           h += '<div class="pt-list">';
           ["fastball", "breaking", "offspeed"].forEach(function (fam) {
-            var m = mix[fam]; if (!m) return;
+            var m = mix[fam]; if (!m || m.share < 0.005) return;       /* a pitch he all but never throws gets no row */
             var bits = [];
             if (m.whiff_rate != null) bits.push("Misses on " + pct(m.whiff_rate) + " of swings.");
             if (m.chase_rate != null) bits.push("Chased " + pct(m.chase_rate) + " of the time out of the zone.");
@@ -3108,11 +3128,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
             var goes = function (cells) {
               var top = cells[0][2], keep = cells.filter(function (c, i) { return i === 0 || c[2] >= 0.75 * top; });
               var edge = keep.filter(function (c) { return spotPhrase(c) !== "middle-middle"; });
-              return edge.length ? listNames(spotList(edge).slice(0, 2)) : "over the middle";
+              return edge.length ? listNames(mergeSpots(spotList(edge).slice(0, 2))) : "over the middle";
             };
             if (m.to_righties && m.to_righties.length) to.push("To righties: " + goes(m.to_righties) + ".");
             if (m.to_lefties && m.to_lefties.length) to.push("To lefties: " + goes(m.to_lefties) + ".");
-            h += '<div class="pt"><h4>' + PITCH_NAME[fam] + "<span>" + pct(m.share) + ", " + Math.round(m.speed) + " mph</span></h4>" + (bits.length ? "<p>" + esc(bits.join(" ")) + "</p>" : "") + (to.length ? "<p>" + esc(to.join(" ")) + "</p>" : "") + "</div>";
+            h += '<div class="pt"><h2 class="card-h">' + PITCH_NAME[fam] + "<span>" + pct(m.share) + ", " + Math.round(m.speed) + " mph</span></h2>" + (bits.length ? "<p>" + esc(bits.join(" ")) + "</p>" : "") + (to.length ? "<p>" + esc(to.join(" ")) + "</p>" : "") + "</div>";
           });
           h += "</div>";
           h += '<p class="note">For his plan against each hitter, open one of his games and tap Game plan.</p>';
