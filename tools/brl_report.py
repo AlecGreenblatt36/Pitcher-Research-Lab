@@ -46,6 +46,7 @@ FAMILIES = (('fastball', (0, 1, 2, 6), 0, 94.0), ('breaking', (3, 4), 3, 85.0), 
 B_OUT_FAMILY, N_OUT = -0.000657, 1.876          # VALUE-08F (family maps): runs per point of the own part, outside pitches per plate appearance
 STRUCTURAL = True                                # VALUE-18: aims chosen and priced by the engine's components (whiff, called strike, foul, contact value, count values)
 SWING_CROSS = True                               # SWING-CROSS-01 (gate passed October 10, 2026): the league swing model also reads where the pitch crossed; params swing_cross false turns it off
+CS_SEASON = False                                # CS-SEASON-01: the called-strike model gets each season's edge profile (params cs_season)
 STRIKE_SPOTS = True
 POOL_CACHE = 800            # pools kept in memory at once (pitcher, side, count group, type group, zone); see Fitted._pool                              # VALUE-18I: in-zone aims priced the same way (strike spots); its synthetic verdict held on October 9, 2026
 N_IN = 2.04                                      # inside pitches per plate appearance (VALUE-18F)
@@ -227,9 +228,24 @@ class Fitted:
             sd_ = self.side.get(h, 1); Wsum[sd_] = Wsum[sd_] + m; Wn[sd_] += 1
         self.mbar_w = {h: (Wsum[self.side.get(h, 1)] - m) / max(Wn[self.side.get(h, 1)] - 1, 1) for h, m in self.maps_w.items()}
         # called strikes on takes and fouls on contact (league), for the count chain
-        Xc = np.hstack([Lw, (T['stand_r'] == T['throw_r'])[:, None].astype(np.float32)])
+        plat_ = (T['stand_r'] == T['throw_r'])[:, None].astype(np.float32)
         tk = tr & (T['call'] == 0); idx = np.flatnonzero(tk); idx = rng.choice(idx, min(len(idx), 400000), replace=False)
-        self.p_cs = D.fit_logistic(Xc[idx], (T['cs'] == 1).astype(np.float64)[idx]).predict_proba(Xc)[:, 1]
+        self.cs_target = None
+        if CS_SEASON:
+            # CS-SEASON-01: each season's own edge profile; the count chain prices today's pitches with the target season's,
+            # and the calibration check reads each row with its own season's
+            seas = sorted(set(int(v) for v in np.unique(T['season'][tk])))
+            self.cs_target = D.cs_target_season(T['season'], tk, date.fromordinal(asof_day).year)
+            e_c = D.edge_distance(self.xt, self.zt, T['stand_r'])
+            Xc = np.hstack([Lw, plat_, D.cs_season_block(e_c, T['season'], seas)])
+            m_c = D.fit_logistic(Xc[idx], (T['cs'] == 1).astype(np.float64)[idx])
+            self.p_cs_own = m_c.predict_proba(Xc)[:, 1]
+            Xc[:, -len(seas) * len(D.E_KNOTS):] = D.cs_season_block(e_c, np.full(len(e_c), self.cs_target), seas)
+            self.p_cs = m_c.predict_proba(Xc)[:, 1]
+        else:
+            Xc = np.hstack([Lw, plat_])
+            self.p_cs = D.fit_logistic(Xc[idx], (T['cs'] == 1).astype(np.float64)[idx]).predict_proba(Xc)[:, 1]
+            self.p_cs_own = self.p_cs
         ct = tr & (T['call'] == 1); foul = ((T['call'] == 1) & (T['last_in_pa'] == 0)).astype(np.float64)
         idx = np.flatnonzero(ct); idx = rng.choice(idx, min(len(idx), 400000), replace=False)
         self.p_fo = D.fit_logistic(Xw[idx], foul[idx]).predict_proba(Xw)[:, 1]
@@ -255,7 +271,8 @@ class Fitted:
         # VALUE-18: the engine's components for pricing aims (the planner's fitted pieces) and the training count values
         self.PM = None
         if STRUCTURAL:
-            self.PM = D.PAModels(T, tr, rng, {'league_n': 500000, 'min_pitches': min_pitches, 'min_swings': min_swings, 'swing_cross': SWING_CROSS}, stage)
+            self.PM = D.PAModels(T, tr, rng, {'league_n': 500000, 'min_pitches': min_pitches, 'min_swings': min_swings, 'swing_cross': SWING_CROSS,
+                                               'cs_season': CS_SEASON, 'cs_target': self.cs_target}, stage)
             ci_all = np.clip(T['balls'], 0, 3) * 3 + np.clip(T['strikes'], 0, 2)
             fin_all = np.where(T['out7'] >= 0, D.LW7[np.clip(T['out7'], 0, 6)], np.nan)
             self.cv = np.array([float(np.nanmean(fin_all[tr & (ci_all == c_)])) if (tr & (ci_all == c_) & np.isfinite(fin_all)).any() else 0.0 for c_ in range(12)])
@@ -927,7 +944,7 @@ def calibration_components(fit) -> dict:
     elab = ('in_0.5+', 'in_0.25-0.5', 'in_0.1-0.25', 'in_0-0.1', 'out_0-0.1', 'out_0.1-0.25', 'out_0.25-0.5', 'out_0.5+')
     call = T['call']; swing = (call == 1) | (call == 2); take = call == 0; contact = call == 1
     pieces = {'whiff': (swing, (call == 2).astype(float), sig(fit.off_w)),
-              'called_strike': (take, (T['cs'] == 1).astype(float), fit.p_cs),
+              'called_strike': (take, (T['cs'] == 1).astype(float), fit.p_cs_own),
               'foul': (contact, ((call == 1) & (T['last_in_pa'] == 0)).astype(float), fit.p_fo)}
     season = T['season'] if 'season' in T else np.zeros(len(call), np.int64)
     out = {}
@@ -977,8 +994,9 @@ def main():
         today_et = now_et.date()
         params = {'publish': True, 'dates': [(today_et - timedelta(days=1)).isoformat(), today_et.isoformat(), (today_et + timedelta(days=1)).isoformat()],
                   'asof_for': {(today_et + timedelta(days=1)).isoformat(): today_et.isoformat()}}
-    global SWING_CROSS
+    global SWING_CROSS, CS_SEASON
     SWING_CROSS = bool(params.get('swing_cross', SWING_CROSS))
+    CS_SEASON = bool(params.get('cs_season', CS_SEASON))
     dates = params.get('dates') or [params.get('date') or now_et.date().isoformat()]
     asof = params.get('asof')                      # one as-of date for every report in the run (a backfilled month); default: each report's own date
     asof_for = params.get('asof_for') or {}        # a date's own as-of when it differs (tomorrow's early plan)

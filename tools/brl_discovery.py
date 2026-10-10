@@ -337,6 +337,29 @@ def cross_block(xt: np.ndarray, zt: np.ndarray, stand_r: np.ndarray, group: np.n
     return np.hstack([H * f[:, None] for f in fam]).astype(np.float32)
 
 
+def edge_distance(xt: np.ndarray, zt: np.ndarray, stand_r: np.ndarray) -> np.ndarray:
+    """Signed distance from the true crossing to the nearest zone edge, feet (negative inside)."""
+    u = np.where(stand_r == 1, xt, -xt)
+    return np.maximum(np.maximum(np.abs(u) - ZONE_HALF, zt - ZONE_TOP), ZONE_BOT - zt)
+
+
+def cs_season_block(e: np.ndarray, season: np.ndarray, seasons) -> np.ndarray:
+    """CS-SEASON-01: each season's own called-strike profile at the zone edge (CAL-02 found the edge calls moving from one
+    season to the next, 12 to 38% fewer called strikes just off the plate in the latest season than the mixed model says):
+    hats on the signed edge distance, one block per season, zero outside the row's season."""
+    H = hats(e, E_KNOTS)
+    return np.hstack([H * (np.asarray(season) == s)[:, None] for s in seasons]).astype(np.float32)
+
+
+def cs_target_season(season: np.ndarray, takes_tr: np.ndarray, year: int, min_takes: int = 20000) -> int:
+    """The season whose edge profile prices today's pitches: the as-of year once it has enough training takes, else the latest earlier one."""
+    seas = sorted(set(int(v) for v in np.unique(season[takes_tr])))
+    if year in seas and int((takes_tr & (season == year)).sum()) >= min_takes:
+        return year
+    earlier = [s for s in seas if s < year]
+    return earlier[-1] if earlier else (seas[-1] if seas else year)
+
+
 def control_block(t: dict, prop: np.ndarray) -> np.ndarray:
     n = len(t['balls'])
     cnt = np.zeros((n, 12), np.float32); cnt[np.arange(n), np.clip(t['balls'], 0, 3) * 3 + np.clip(t['strikes'], 0, 2)] = 1
@@ -7470,9 +7493,21 @@ class PAModels:
         self.Bw = np.hstack([hitter_basis(self.xt, self.zt, T['stand_r'], T['strikes']), fam3, hats(self.zt, (1.0, 2.0, 3.0, 4.0)).astype(np.float64)])
         self.maps_w = _hitter_maps(self.Bw, whiff, self.off_w, _groups(T['batter'], sw_tr), float(params.get('lam_w', 30.0)), int(params.get('min_swings', 200)))
         # called strike on a take; foul on contact
-        Xc = np.hstack([Lw, (T['stand_r'] == T['throw_r'])[:, None].astype(np.float32)])
+        plat_ = (T['stand_r'] == T['throw_r'])[:, None].astype(np.float32)
         tk = tr & take_; idx = np.flatnonzero(tk); idx = rng.choice(idx, min(len(idx), 400000), replace=False)
-        self.m_c = fit_logistic(Xc[idx], (T['cs'] == 1).astype(np.float64)[idx]); self.p_c = self.m_c.predict_proba(Xc)[:, 1]
+        self.cs_season = bool(params.get('cs_season'))
+        if self.cs_season:
+            # CS-SEASON-01: each season's own edge profile; today's pitches are priced with the target season's
+            self.cs_seasons = sorted(set(int(v) for v in np.unique(T['season'][tk])))
+            self.cs_target = int(params.get('cs_target') or self.cs_seasons[-1])
+            e_c = edge_distance(self.xt, self.zt, T['stand_r'])
+            Xc = np.hstack([Lw, plat_, cs_season_block(e_c, T['season'], self.cs_seasons)])
+            self.m_c = fit_logistic(Xc[idx], (T['cs'] == 1).astype(np.float64)[idx])
+            Xc[:, -len(self.cs_seasons) * len(E_KNOTS):] = cs_season_block(e_c, np.full(n, self.cs_target), self.cs_seasons)
+            self.p_c = self.m_c.predict_proba(Xc)[:, 1]
+        else:
+            Xc = np.hstack([Lw, plat_])
+            self.m_c = fit_logistic(Xc[idx], (T['cs'] == 1).astype(np.float64)[idx]); self.p_c = self.m_c.predict_proba(Xc)[:, 1]
         ct = tr & contact; idx = np.flatnonzero(ct); idx = rng.choice(idx, min(len(idx), 400000), replace=False)
         self.m_f = fit_logistic(Xw[idx], foul[idx]); self.p_f = self.m_f.predict_proba(Xw)[:, 1]
         # the run value of a ball in play: linear on location, group, speed, count, platoon and both players' contact values
@@ -7525,7 +7560,10 @@ class PAModels:
         lo_w = self.m_w.decision_function(Xw).astype(np.float64)
         fam3 = np.column_stack([np.isin(grp_, (0, 1, 2)), np.isin(grp_, (3, 4)), np.isin(grp_, (5,))]).astype(np.float64)
         Bw = np.hstack([hitter_basis(xt, zt, stand, strikes), fam3, hats(zt, (1.0, 2.0, 3.0, 4.0)).astype(np.float64)])
-        p_c = self.m_c.predict_proba(np.hstack([Lw, plat]))[:, 1]
+        if getattr(self, 'cs_season', False):
+            p_c = self.m_c.predict_proba(np.hstack([Lw, plat, cs_season_block(edge_distance(xt, zt, stand), np.full(n, self.cs_target), self.cs_seasons)]))[:, 1]
+        else:
+            p_c = self.m_c.predict_proba(np.hstack([Lw, plat]))[:, 1]
         p_f = self.m_f.predict_proba(Xw)[:, 1]
         cnt = np.zeros((n, 12), np.float32); cnt[np.arange(n), np.clip(balls, 0, 3) * 3 + np.clip(strikes, 0, 2)] = 1
         Xb = np.hstack([np.ones((n, 1), np.float32), Lw, grp, hats(v0, V_KNOTS), cnt, plat, np.zeros((n, 2), np.float32)])
