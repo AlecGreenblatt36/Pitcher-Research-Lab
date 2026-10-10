@@ -70,6 +70,16 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   claude/live-v2 at ca870d819 and tried first on the October 1 to 8 rebuild (diag/report 3757b4a62). Push it to main
   only after that run's receipt says completed and the days look right. Plans for games to come take their bullpen from
   the simulator's saved box (chance to pitch); plans built after a lineup is posted keep the bench.
+  Outcome: the live runs from 19:57 to 20:49 UTC were all blocked by 409 (receipts diagnostics/v2_receipt.json), so the
+  site stayed at the 18:45 deploy; the 20:50 run (9814fe326) completed and deployed Game 5's official-lineup version
+  (v2, saved 20:23) and the LCS Game 1 hand-rule version (v2, 20:45). put_many's first trial lost every fast-forward
+  to the rebuild runs; it now falls back to one file at a time after eight tries (41894d57e), and the second trial
+  (run 38086104487, October 1 to 8) wrote one commit per day. Every 2026 rebuild month completed (receipts 38079203633,
+  38082446419, 38079260497, 38079291185, 38082476353, 38082504807, 38082535066).
+  Known risk, not fixed: ledger.json is 12.6 MB, almost all box_scores (34 boxes, about 380 KB each, also published
+  as box_forecasts/<id>.json). Every persist() reads and writes all of it, and it grows by about 0.4 MB a version
+  through the postseason. A slimmer ledger (scored boxes kept as references) needs care with render_page and the
+  scoring of past days.
 
 - October 10, 3:35 p.m.: the rebuild loop's busy check read only the last 10 report runs, so with the calibration runs in
   between, batches overlapped (seven rebuild runs at once) and GitHub's secondary write limit failed April 2026 (run
