@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 250,
- "rows": 253,
+ "experiments": 251,
+ "rows": 254,
  "records": {
   "ACC-01": [
    {
@@ -4118,6 +4118,21 @@
      "244c8962a"
     ],
     "status": "(1), (2) and (3) held; stated figures unchanged"
+   }
+  ],
+  "CAL-03": [
+   {
+    "id": "CAL-03",
+    "columns": {
+     "ID": "CAL-03",
+     "Attempt": "Where the engine's price of a swing parts from what swings produce (diagnostic, descriptive). VALUE-18F, 18X and 18Y all found the engine pricing an extra swing on an outside pitch about 35% higher than the realized outcomes show (-0.00118 against -0.00087 runs per point); CAL-02 found the whiff and foul models calibrated and the called-strike model off at the edge (now PROD-05). This checks the whole chain the plans are priced with: the engine's value of a swing (whiff, foul, the run value of a ball in play, the count values) and of a take (called strike, the count values), against the value of the state each swing and take actually led to (the next count, or the plate appearance's result when it ended), on the same pitches, and the ball-in-play value alone on balls in play. League level with each row's own hitter and pitcher scalars, no maps. Report lane, tools/brl_report.py calibration_values (params calibration_values), as of 2025-07-01 and 2026-08-01, calibration only, sums only, the season strike profile on. Smoke test on a synthetic world (scratch cross/smoke_cal3.py): runs; there the swing value is 10 to 13% less costly to the hitter than what the swings produced, in sample and later, so part of any gap can come from multiplying calibrated pieces. What I expect, written before the runs: on outside pitches the engine's swing value is more costly to the hitter than what the swings produced, by 10% or more, with the ball-in-play value as the main source (the linear in-play model does not know a chase put in play often finds a hole); the take value within 5%; the in-play value within 3% overall. A piece off by more than 5% overall or 10% outside gets its own registered fix.",
+     "Disposition and evidence": "registered, running"
+    },
+    "registered_before_run": false,
+    "diagnostic": true,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered, running"
    }
   ],
   "BOX-01": [

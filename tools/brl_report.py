@@ -993,6 +993,71 @@ def calibration_components(fit) -> dict:
                         add(f'{split}|{lab}|season{int(sv)}', m0 & (ebin == b) & (season == sv))
     return out
 
+def calibration_values(fit, chunk: int = 100000) -> dict:
+    """CAL-03 (diagnostic): the engine's value of a swing and of a take, the chain every plan is priced with (whiff, foul,
+    the run value of a ball in play, called strike, the count values), against what the swings and takes on the same
+    pitches produced: the value of the next state (the count after the pitch, or the plate appearance's result when it
+    ended). League level with each row's own hitter and pitcher scalars, no maps. Also the ball-in-play value alone on
+    balls in play. Splits: training rows (a sample), later rows, the 30 days after the as-of date; outside or inside;
+    family; signed distance to the zone edge; count group. Sums of run values; no player rows."""
+    PM = fit.PM
+    if PM is None:
+        return {}
+    T = fit.T; tr = fit.train; LW7 = D.LW7; cv = fit.cv
+    rng = np.random.default_rng(5)
+    tr_idx = np.flatnonzero(tr); tr_idx = np.sort(rng.choice(tr_idx, min(len(tr_idx), 200000), replace=False))
+    rows = np.concatenate([tr_idx, np.flatnonzero(~tr)])
+    n = len(rows); v_sw = np.empty(n); v_tk = np.empty(n); v_bip = np.empty(n)
+    for i in range(0, n, chunk):
+        r = rows[i:i + chunk]
+        blk = PM.blocks_at(PM.xp[r], PM.zp[r], PM.xt[r], PM.zt[r], T['stand_r'][r], T['throw_r'][r], T['group'][r], T['v0'][r].astype(np.float64), T['balls'][r], T['strikes'][r])
+        _, p_w, p_c, p_f, v, _ = PM.probs(blk, None, (PM.prop_p[r], PM.bip_p[r]), hs=(PM.prop_s[r], PM.prop_w[r], PM.bip_b[r]))
+        b_ = T['balls'][r].astype(np.int64); k_ = T['strikes'][r].astype(np.int64)
+        v_strike = np.where(k_ == 2, LW7[1], cv[np.clip(b_ * 3 + k_ + 1, 0, 11)])
+        v_foul = np.where(k_ == 2, cv[np.clip(b_ * 3 + 2, 0, 11)], cv[np.clip(b_ * 3 + k_ + 1, 0, 11)])
+        v_ball = np.where(b_ == 3, LW7[2], cv[np.clip((b_ + 1) * 3 + k_, 0, 11)])
+        v_sw[i:i + len(r)] = p_w * v_strike + (1 - p_w) * (p_f * v_foul + (1 - p_f) * v)
+        v_tk[i:i + len(r)] = p_c * v_strike + (1 - p_c) * v_ball
+        v_bip[i:i + len(r)] = v
+        del blk
+    b = T['balls'][rows].astype(np.int64); k = T['strikes'][rows].astype(np.int64); call = T['call'][rows]; lip = T['last_in_pa'][rows] == 1
+    out7 = T['out7'][rows]; fin = np.where(out7 >= 0, LW7[np.clip(out7, 0, 6)], np.nan)
+    nxt_strike = cv[np.clip(b * 3 + k + 1, 0, 11)]; nxt_ball = cv[np.clip((b + 1) * 3 + k, 0, 11)]; same = cv[np.clip(b * 3 + 2, 0, 11)]
+    realized = np.where(lip, fin, np.where(call == 0, np.where(T['cs'][rows] == 1, nxt_strike, nxt_ball),
+                                           np.where(call == 2, nxt_strike, np.where(k == 2, same, nxt_strike))))
+    swing = (call == 1) | (call == 2); take = call == 0; inplay = PM.inplay[rows]; bipv = PM.bip_value[rows]
+    ok = np.isfinite(realized)
+    u_t = np.where(T['stand_r'][rows] == 1, PM.xt[rows], -PM.xt[rows])
+    e = np.maximum.reduce([np.abs(u_t) - D.ZONE_HALF, PM.zt[rows] - D.ZONE_TOP, D.ZONE_BOT - PM.zt[rows]])
+    ebin = np.digitize(e, (-0.5, -0.25, -0.1, 0.0, 0.1, 0.25, 0.5))
+    elab = ('in_0.5+', 'in_0.25-0.5', 'in_0.1-0.25', 'in_0-0.1', 'out_0-0.1', 'out_0.1-0.25', 'out_0.25-0.5', 'out_0.5+')
+    g = T['group'][rows]; fam = np.where(np.isin(g, (0, 1, 2, 6)), 0, np.where(np.isin(g, (3, 4)), 1, 2)); names = ('fastball', 'breaking', 'offspeed')
+    cg = np.where(k == 2, 2, np.where(b > k, 1, 0)); cgn = ('even_or_ahead', 'behind', 'two_strikes')
+    is_tr = np.zeros(n, bool); is_tr[:len(tr_idx)] = True
+    day = T['day'][rows]
+    splits = (('train', is_tr), ('test', ~is_tr), ('next30', ~is_tr & (day < fit.asof_day + 30)))
+    out = {'note': 'engine = the expected value of the next state given the decision (count value, or the result when the plate appearance ends); realized = the value of the state the pitch actually led to; run values summed',
+           'count_values': [round(float(x), 4) for x in cv]}
+    for nm_, dec, val in (('swing', swing, v_sw), ('take', take, v_tk), ('in_play', inplay, v_bip)):
+        y = bipv if nm_ == 'in_play' else realized
+        d = out.setdefault(nm_, {})
+
+        def add(key, m):
+            m = m & dec & (ok | (nm_ == 'in_play'))
+            d[key] = {'n': int(m.sum()), 'engine': round(float(val[m].sum()), 2), 'realized': round(float(y[m].sum()), 2)}
+        for sp, m0 in splits:
+            add(f'{sp}|all', m0)
+            for zn, mz in (('outside', e > 0), ('inside', e <= 0)):
+                add(f'{sp}|{zn}', m0 & mz)
+                for j, fn_ in enumerate(names):
+                    add(f'{sp}|{zn}|{fn_}', m0 & mz & (fam == j))
+                for c3, cn in enumerate(cgn):
+                    add(f'{sp}|{zn}|{cn}', m0 & mz & (cg == c3))
+            for j, lab in enumerate(elab):
+                add(f'{sp}|{lab}', m0 & (ebin == j))
+    return out
+
+
 def environment_record() -> dict:
     """ENG-01: the versions a run used, kept in its receipt so a result can be reproduced (python, numpy, scipy, scikit-learn, pandas, the commit)."""
     import platform
@@ -1063,6 +1128,8 @@ def main():
                 if params.get('calibration_diag'):
                     receipt.setdefault('calibration', {})[a] = calibration(fits[a]); stage('calibration')
                     receipt.setdefault('calibration_components', {})[a] = calibration_components(fits[a]); stage('calibration of the other pieces')
+                    if params.get('calibration_values'):
+                        receipt.setdefault('calibration_values', {})[a] = calibration_values(fits[a]); stage('calibration of the swing and take values')
             if params.get('calibration_only'):
                 continue
             rep = build_report(fits[a], T, day, a, stage, int(params.get('max_relievers', 4)))
