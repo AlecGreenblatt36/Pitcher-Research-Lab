@@ -4273,8 +4273,8 @@ def value2_study(T: dict, params: dict, stage) -> dict:
         res['own_part_calibration'] = {zn_: {'slope': round(lam[zn_], 4), 'interval': [round(float(np.percentile(lam_draws[zn_], q)), 4) for q in (2.5, 97.5)]} for zn_ in lam}
         res['own_part_calibration']['note'] = 'test-season swing residual (actual minus the league with the shared shape) regressed on the own part in probability units; 1 means a fitted point is a real point'
         PM = PAModels(T, tr, np.random.default_rng(23), {'league_n': int(params.get('league_n', 500000)), 'min_pitches': 300, 'swing_cross': sx,
-                                                          'cs_season': bool(params.get('cs_season')), 'foul_prop': bool(params.get('foul_prop', False)),
-                                                          'foul_tip': bool(params.get('foul_tip', False))}, stage)   # VALUE-18Y: the season profile (PROD-05); FOUL-01 and FOUL-02
+                                                          'cs_season': bool(params.get('cs_season')), 'foul_prop': bool(params.get('foul_prop', True)),
+                                                          'foul_tip': bool(params.get('foul_tip', True))}, stage)   # VALUE-18Y: the season profile (PROD-05); FOUL-01 and FOUL-02
         xoff_all, zoff_all = xp - T['px'].astype(np.float64), zp - T['pz'].astype(np.float64)   # decision-moment projection minus crossing, per pitch
         # VALUE-18J: the maps' own noise in the interval. Maps refitted on training games resampled with replacement (the league model and the
         # engine held fixed), each draw with its own shared shape and calibration; the structural figure is recomputed per draw in the aiming loop
@@ -7469,7 +7469,7 @@ class PAModels:
         self.inplay = contact & (T['last_in_pa'] == 1) & np.isin(T['out7'], (0, 3, 4, 5, 6))
         # FOUL-02: contact that is not a ball in play is a foul, including a two-strike foul tip that ends the at-bat (a
         # strikeout); the foul branch at two strikes is then a strikeout with the training share of those
-        self.foul_tip = bool(params.get('foul_tip', False))
+        self.foul_tip = bool(params.get('foul_tip', True))
         self.q_ft = 0.0
         if self.foul_tip:
             foul = (contact & ~self.inplay).astype(np.float64)
@@ -7556,7 +7556,7 @@ class PAModels:
         cw_ = self.m_w.coef_[0].astype(np.float64); self.w_prop_w = float(cw_[-2])
         # FOUL-01: the foul model was fit with the hitter's whiff propensity (the same column as the whiff model's); blocks_at
         # evaluates it at zero (a hitter who misses half his swings), so the hitter's propensity goes back in with its own weight
-        self.foul_prop = bool(params.get('foul_prop', False))
+        self.foul_prop = bool(params.get('foul_prop', True))
         self.w_prop_f = float(self.m_f.coef_[0].astype(np.float64)[-2]) if self.foul_prop else 0.0
         self.w_bip_b = float(self.beta_b[-2]); self.w_bip_p = float(self.beta_b[-1])
         self.delta = float(params.get('delta_repeat_after_called', 0.0))     # SEQ-02's log-odds on a repeat after a called strike

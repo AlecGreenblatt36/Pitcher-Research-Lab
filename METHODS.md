@@ -82,6 +82,17 @@ missed, on the band a quarter to half a foot outside. Re-priced with it (VALUE-1
 [-45.5, -39.8] by the engine's components and -23.2 inside (the study fits on 2023 to 2025, so it prices with 2025's profile,
 close to the mixed one); the stated range stays about 30 to 40, and about 23 inside.
 
+The whole chain a plan is priced with was then checked against what the same pitches produced (CAL-03): the engine's
+value of a swing and of a take, from the miss, foul, called-strike and ball-in-play pieces and the count values, against
+the value of the state each swing and take led to. Outside pitches, where the aiming value lives, were priced right (within
+0.15 to 0.21 runs per 100 swings, 0.01 per 100 takes). Inside the zone swings were priced as too costly to the hitter, in
+sample as well, and the cause was two errors in the engine (CAL-03b): the foul model, fit with the hitter's whiff
+propensity, was evaluated with it at zero, so fouls came out 16 to 18% high and balls in play 15 to 17% low (FOUL-01); and a
+two-strike foul tip that ends the at-bat, a strikeout, was priced as a ball in play (FOUL-02). With both corrected the
+training rows match within 0.05 runs per 100 swings and the later 2025 rows within 0.16. The value of a ball in play still
+moves with the period (6% low on July to September 2025, 8% high on August and September 2026), which shifts every
+swing alike and is left open.
+
 The aiming value is estimated policy potential, not observed runs saved. It is stated as a range, about 30 to 40
 runs over a team's season from outside pitches alone on the later-period months (VALUE-18X; the description that follows
 is VALUE-18F's, whose figures the re-pricing moved by about a run): 43.5 [40.7, 46.6] when

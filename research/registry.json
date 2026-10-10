@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 254,
- "rows": 257,
+ "experiments": 255,
+ "rows": 258,
  "records": {
   "ACC-01": [
    {
@@ -4179,7 +4179,25 @@
     "id": "FOUL-02",
     "columns": {
      "ID": "FOUL-02",
-     "Attempt": "The second half of the foul correction. A two-strike foul tip caught by the catcher ends the at-bat as a strikeout; the engine's foul model counted as fouls only the ones that kept the at-bat alive, so those strikeouts sat on the ball-in-play side and were priced as balls in play. Now contact that is not a ball in play is a foul, and at two strikes the foul branch is a strikeout with the training share of two-strike fouls that ended the at-bat (tools/brl_discovery.py PAModels foul_tip and foul_value; the plans' pricing, the value iteration and CAL-03's check use it). Both corrections are switched together in the report (tools/brl_report.py FOUL_FIX, params foul_fix). Smoke test on a synthetic world (scratch cross/smoke_foul2.py): runs; that world has no foul-tip strikeouts, so only FOUL-01 moves anything there. **Registered in the commit that added this row, before the runs.** Check, CAL-03b's runs repeated with both on (as of 2025-07-01 and 2026-08-01): (1) fouls and balls in play on the training rows within 3% of actual; (2) the swing value on the training rows within 0.15 runs per 100 swings of realized, inside and outside, in both runs (in sample only the pieces can miss); (3) on the 2025 later rows, inside and outside within 0.30; the 2026 later rows are reported beside their in-play level (the 11% period effect, which these corrections do not touch) and not gated. If (1) to (3) hold: on in the daily report and the engine (FOUL_FIX true; foul_prop and foul_tip on by default), the aiming value re-priced (VALUE-18Z), and the reports rebuilt.",
+     "Attempt": "The second half of the foul correction. A two-strike foul tip caught by the catcher ends the at-bat as a strikeout; the engine's foul model counted as fouls only the ones that kept the at-bat alive, so those strikeouts sat on the ball-in-play side and were priced as balls in play. Now contact that is not a ball in play is a foul, and at two strikes the foul branch is a strikeout with the training share of two-strike fouls that ended the at-bat (tools/brl_discovery.py PAModels foul_tip and foul_value; the plans' pricing, the value iteration and CAL-03's check use it). Both corrections are switched together in the report (tools/brl_report.py FOUL_FIX, params foul_fix). Smoke test on a synthetic world (scratch cross/smoke_foul2.py): runs; that world has no foul-tip strikeouts, so only FOUL-01 moves anything there. **Registered in the commit that added this row, before the runs.** Check, CAL-03b's runs repeated with both on (as of 2025-07-01 and 2026-08-01): (1) fouls and balls in play on the training rows within 3% of actual; (2) the swing value on the training rows within 0.15 runs per 100 swings of realized, inside and outside, in both runs (in sample only the pieces can miss); (3) on the 2025 later rows, inside and outside within 0.30; the 2026 later rows are reported beside their in-play level (the 11% period effect, which these corrections do not touch) and not gated. If (1) to (3) hold: on in the daily report and the engine (FOUL_FIX true; foul_prop and foul_tip on by default), the aiming value re-priced (VALUE-18Z), and the reports rebuilt. **Check (runs 38072365177 as of 2025-07-01 and 38072379336 as of 2026-08-01):** held. (1) training-row fouls 1.004 and 0.999 of actual, balls in play 0.998 and 1.002. (2) the swing value on the training rows inside +0.01 and +0.05 runs per 100 swings, outside +0.03 and -0.01 (from +0.27 to +0.31 and +0.25 to +0.30 with FOUL-01 alone, and -0.45 to -0.54 inside before either). (3) 2025 later rows inside -0.16 and outside +0.07 (from -0.64 and +0.15 before either); every count group within 0.18. The 2026 later rows, not gated: inside +0.20, outside +0.16, with the value of a ball in play 8% high there (4.60 against 4.26 per 100) and 6% low in the 2025 later rows (4.69 against 5.01): the in-play level moves with the period, still open. On: FOUL_FIX true in the daily report, foul_prop and foul_tip on by default in the engine; VALUE-18Z re-prices the aiming value.",
+     "Disposition and evidence": "check held; on"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [
+     "38072365177",
+     "38072379336"
+    ],
+    "frozen_commits": [],
+    "status": "check held; on"
+   }
+  ],
+  "VALUE-18Z": [
+   {
+    "id": "VALUE-18Z",
+    "columns": {
+     "ID": "VALUE-18Z",
+     "Attempt": "The aiming value re-priced with the foul corrections (FOUL-01 and FOUL-02) and the season strike profile. VALUE-18Y's run repeated exactly (value2_study, seasons 2023 to 2026, final_eval on August 1 to September 27, 2026, maps and the league from 2023-2025, 0.6 ft of scatter, within type, specific, pitch estimand, pool from training, reprice boundary, bands and structural, 200 resamples, five placebo draws, swing_cross and cs_season true) with params foul_prop and foul_tip true. Reused validation months (rule 6); a re-pricing after a correction, not a new test. **Registered in the commit that added this row, before the run.** Predictions: (1) the structural outside-only figure between -34 and -50 runs per 6,200 plate appearances (VALUE-18Y -42.6): outside swings were priced close to right before (CAL-03), so it should move little; (2) the inside part between -12 and -32 (-23.2): swings in the zone were priced 0.5 runs per 100 too costly to the hitter and now are not, which changes what a strike in the zone is worth against a swing there, direction not called; (3) the own-part calibration slopes and the realized-outcome regression unchanged (0.967, 0.822, -29.4; neither uses the engine). Decision rule: the stated figures (site and METHODS.md) become this run's under VALUE-18X's rounding rule; if (3) fails, the run is checked before anything is restated.",
      "Disposition and evidence": "registered, running"
     },
     "registered_before_run": true,
