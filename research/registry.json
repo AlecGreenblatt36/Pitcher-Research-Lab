@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 252,
- "rows": 255,
+ "experiments": 253,
+ "rows": 256,
  "records": {
   "ACC-01": [
    {
@@ -4143,11 +4143,29 @@
     "id": "CAL-03b",
     "columns": {
      "ID": "CAL-03b",
-     "Attempt": "Which piece makes CAL-03's inside-swing gap (diagnostic, descriptive): CAL-03's runs repeated with the swing's pieces summed on the same rows, expected against actual: misses (the whiff model), fouls ((1 - miss) times the foul model), balls in play ((1 - miss) times (1 - foul)) and their value, by zone, family, count group and edge band (tools/brl_report.py calibration_values). Smoke test on a synthetic world: runs; there the whiff sum matches in sample (8,327 against 8,327) but fouls come out 11% short and balls in play 8% long, so multiplying a calibrated miss model by a foul model fit only on contact can miss even in sample. What I expect, written before the runs: the same pattern on real pitches, fouls short and balls in play long in counts with fewer than two strikes, which is CAL-03's gap (a foul there costs the hitter a strike, a ball in play pays him).",
-     "Disposition and evidence": "registered, running"
+     "Attempt": "Which piece makes CAL-03's inside-swing gap (diagnostic, descriptive): CAL-03's runs repeated with the swing's pieces summed on the same rows, expected against actual: misses (the whiff model), fouls ((1 - miss) times the foul model), balls in play ((1 - miss) times (1 - foul)) and their value, by zone, family, count group and edge band (tools/brl_report.py calibration_values). Smoke test on a synthetic world: runs; there the whiff sum matches in sample (8,327 against 8,327) but fouls come out 11% short and balls in play 8% long, so multiplying a calibrated miss model by a foul model fit only on contact can miss even in sample. What I expect, written before the runs: the same pattern on real pitches, fouls short and balls in play long in counts with fewer than two strikes, which is CAL-03's gap (a foul there costs the hitter a strike, a ball in play pays him). **Results (runs 38070947538 as of 2025-07-01 and 38070963183 as of 2026-08-01):** misses are right (training rows 22,160 expected against 22,258 and 21,993 against 22,015) but fouls come out long and balls in play short, on the training rows as much as later: fouls 43,506 expected against 37,384 and 44,367 against 37,574 (16 to 18% high), balls in play 30,038 against 35,264 and 29,186 against 35,171 (15 to 17% low); the in-play value given contact is close. That is CAL-03's inside gap: in counts with fewer than two strikes a foul costs the hitter a strike and a ball in play pays him. The direction was the reverse of the expectation, and the size points at a bug, not a fit: the foul model was fit with the hitter's whiff propensity as an input and the engine evaluates it at zero. Fix: FOUL-01.",
+     "Disposition and evidence": "diagnostic; fouls 16 to 18% high in the engine; FOUL-01"
     },
     "registered_before_run": false,
     "diagnostic": true,
+    "runs": [
+     "38070947538",
+     "38070963183"
+    ],
+    "frozen_commits": [],
+    "status": "diagnostic; fouls 16 to 18% high in the engine; FOUL-01"
+   }
+  ],
+  "FOUL-01": [
+   {
+    "id": "FOUL-01",
+    "columns": {
+     "ID": "FOUL-01",
+     "Attempt": "A correction in the engine (tools/brl_discovery.py PAModels): the foul model is fit on contact with the hitter's whiff propensity as an input (the logit of his miss rate, about -1.2 for an average hitter), but wherever plans are priced it was evaluated with that input at zero, a hitter who misses half his swings, so fouls came out 16 to 18% high and balls in play 15 to 17% low even on the training rows (CAL-03b). The propensity now goes back in with the foul model's own weight, as the whiff model's already did (params foul_prop, on by default). Smoke test on a synthetic world (scratch cross/smoke_cal3.py, smoke_value_foul.py): the training-row fouls and balls in play match (9,291 against 9,291 and 12,671 against 12,670; were 8,299 and 13,663), the swing value -1,331 against -1,334 realized (was -1,182), and the aiming value there moves from -46.7 to -46.9. A correction, not a model choice: it goes on once the real-data check confirms it. **Registered in the commit that added this row, before the runs.** Check, CAL-03b's runs repeated with the fix (as of 2025-07-01 and 2026-08-01): (1) fouls and balls in play on the training rows within 3% of actual; (2) the inside swing value on the later rows within 0.25 runs per 100 swings of realized (from -0.64 and -0.38); (3) the outside swing value still within 0.30 (+0.15 and +0.21 now). Then the aiming value is re-priced (VALUE-18Z) and the reports rebuilt.",
+     "Disposition and evidence": "registered, running"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
     "runs": [],
     "frozen_commits": [],
     "status": "registered, running"

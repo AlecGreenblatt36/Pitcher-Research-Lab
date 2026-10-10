@@ -4273,7 +4273,7 @@ def value2_study(T: dict, params: dict, stage) -> dict:
         res['own_part_calibration'] = {zn_: {'slope': round(lam[zn_], 4), 'interval': [round(float(np.percentile(lam_draws[zn_], q)), 4) for q in (2.5, 97.5)]} for zn_ in lam}
         res['own_part_calibration']['note'] = 'test-season swing residual (actual minus the league with the shared shape) regressed on the own part in probability units; 1 means a fitted point is a real point'
         PM = PAModels(T, tr, np.random.default_rng(23), {'league_n': int(params.get('league_n', 500000)), 'min_pitches': 300, 'swing_cross': sx,
-                                                          'cs_season': bool(params.get('cs_season'))}, stage)   # VALUE-18Y: the called-strike model's season profile (PROD-05)
+                                                          'cs_season': bool(params.get('cs_season')), 'foul_prop': bool(params.get('foul_prop', True))}, stage)   # VALUE-18Y: the season profile (PROD-05); FOUL-01
         xoff_all, zoff_all = xp - T['px'].astype(np.float64), zp - T['pz'].astype(np.float64)   # decision-moment projection minus crossing, per pitch
         # VALUE-18J: the maps' own noise in the interval. Maps refitted on training games resampled with replacement (the league model and the
         # engine held fixed), each draw with its own shared shape and calibration; the structural figure is recomputed per draw in the aiming loop
@@ -7545,6 +7545,10 @@ class PAModels:
         # control_block ends with prop, side and platoon (35 columns), then the pitcher propensity; the crossing block, when on, comes after it
         self.w_prop_s = float(cs_[i_prop_s]); self.w_prop_p = float(cs_[i_prop_s + 3])
         cw_ = self.m_w.coef_[0].astype(np.float64); self.w_prop_w = float(cw_[-2])
+        # FOUL-01: the foul model was fit with the hitter's whiff propensity (the same column as the whiff model's); blocks_at
+        # evaluates it at zero (a hitter who misses half his swings), so the hitter's propensity goes back in with its own weight
+        self.foul_prop = bool(params.get('foul_prop', True))
+        self.w_prop_f = float(self.m_f.coef_[0].astype(np.float64)[-2]) if self.foul_prop else 0.0
         self.w_bip_b = float(self.beta_b[-2]); self.w_bip_p = float(self.beta_b[-1])
         self.delta = float(params.get('delta_repeat_after_called', 0.0))     # SEQ-02's log-odds on a repeat after a called strike
         self.cache = {}
@@ -7578,12 +7582,12 @@ class PAModels:
             p_c = self.m_c.predict_proba(np.hstack([Lw, plat, cs_season_block(edge_distance(xt, zt, stand), np.full(n, self.cs_target), self.cs_seasons)]))[:, 1]
         else:
             p_c = self.m_c.predict_proba(np.hstack([Lw, plat]))[:, 1]
-        p_f = self.m_f.predict_proba(Xw)[:, 1]
+        lo_f = self.m_f.decision_function(Xw).astype(np.float64)
         cnt = np.zeros((n, 12), np.float32); cnt[np.arange(n), np.clip(balls, 0, 3) * 3 + np.clip(strikes, 0, 2)] = 1
         Xb = np.hstack([np.ones((n, 1), np.float32), Lw, grp, hats(v0, V_KNOTS), cnt, plat, np.zeros((n, 2), np.float32)])
         v_b = Xb.astype(np.float64) @ self.beta_b
         fam = np.where(np.isin(grp_, (0, 1, 2)), 0, np.where(np.isin(grp_, (3, 4)), 1, 2))
-        return {'lo_s': lo_s, 'Bs': Bs, 'lo_w': lo_w, 'Bw': Bw, 'c': p_c, 'f': p_f, 'v': v_b, 'fam': fam}
+        return {'lo_s': lo_s, 'Bs': Bs, 'lo_w': lo_w, 'Bw': Bw, 'c': p_c, 'lo_f': lo_f, 'v': v_b, 'fam': fam}
 
     def swing_minus_take(self, blk: dict, h: int | None, p_scalar, balls, strikes, cv: np.ndarray):
         """VALUE-18: the value of the plate appearance if the hitter swings minus if he takes, at these pitches, for hitter h against a
@@ -7640,12 +7644,13 @@ class PAModels:
         ps_, pw_, pb_ = hs if hs is not None else (self.h_scalar[h] if h is not None and h in self.h_scalar else (0.0, 0.0, self.lg_bip))
         lo_s = blk['lo_s'] + self.w_prop_s * ps_ + self.w_prop_p * p_scalar[0]
         lo_w = blk['lo_w'] + self.w_prop_w * pw_
+        p_f = 1 / (1 + np.exp(-(blk['lo_f'] + getattr(self, 'w_prop_f', 0.0) * pw_)))     # FOUL-01
         v = blk['v'] + self.w_bip_b * (pb_ - self.lg_bip) + self.w_bip_p * (p_scalar[1] - self.lg_bip)
         if h is not None and h in self.maps_s:
             lo_s = lo_s + blk['Bs'] @ self.maps_s[h]
             if h in self.maps_w:
                 lo_w = lo_w + blk['Bw'] @ self.maps_w[h]
-        return 1 / (1 + np.exp(-lo_s)), 1 / (1 + np.exp(-lo_w)), blk['c'], blk['f'], v, blk['fam']
+        return 1 / (1 + np.exp(-lo_s)), 1 / (1 + np.exp(-lo_w)), blk['c'], p_f, v, blk['fam']
 
     def solve(self, P: dict, h: int | None, hs=None):
         """Value iteration over counts and expectation states for one pitcher pool against one hitter. Returns the
