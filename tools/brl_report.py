@@ -165,11 +165,13 @@ def _rate_wait(exc, limited: int):
     return float(hdr.get('Retry-After') or 0) or 60.0 * (1 + limited / 2)
 
 
-def put_many(repo, token, files: dict, branch, message, tries=16):
+def put_many(repo, token, files: dict, branch, message, tries=16, fast_tries=8):
     """Many files in one commit through the Git Data API, so a report day is one commit instead of one per game (fewer
     commits on the ledger branch, fewer 409s for the live runs writing beside it). Each file becomes a blob (blobs do
     not move the branch), then one tree on the branch head, one commit and a fast-forward of the branch; when another
-    writer moved the head in between (422 or 409) the tree goes on the new head. Rate limits are waited out."""
+    writer moved the head in between (422 or 409) the tree goes on the new head. When the branch keeps moving faster
+    than that (other runs committing every second), the files go one at a time through put() after fast_tries.
+    Rate limits are waited out."""
     import random
     from urllib.error import HTTPError
     if not files:
@@ -195,7 +197,7 @@ def put_many(repo, token, files: dict, branch, message, tries=16):
 
     blobs = {path: call(f'{git}/blobs', 'POST', {'content': text, 'encoding': 'utf-8'})['sha'] for path, text in files.items()}
     entries = [{'path': p_, 'mode': '100644', 'type': 'blob', 'sha': sha} for p_, sha in sorted(blobs.items())]
-    for attempt in range(tries):
+    for attempt in range(fast_tries):
         head = call(f'{git}/ref/heads/{branch}')['object']['sha']
         base_tree = call(f'{git}/commits/{head}')['tree']['sha']
         tree = call(f'{git}/trees', 'POST', {'base_tree': base_tree, 'tree': entries})['sha']
@@ -204,9 +206,13 @@ def put_many(repo, token, files: dict, branch, message, tries=16):
             call(f'{git}/refs/heads/{branch}', 'PATCH', {'sha': commit, 'force': False})
             return commit
         except HTTPError as exc:
-            if exc.code not in (409, 422) or attempt == tries - 1:
+            if exc.code not in (409, 422):
                 raise
-            time.sleep(random.uniform(0.5, 2.0) * (1 + attempt / 2))
+            time.sleep(random.uniform(0.2, 1.0))
+    print(f'branch busy: writing {len(files)} files one at a time ({message})', flush=True)
+    for path, text in sorted(files.items(), key=lambda kv: kv[0].endswith('/index.json')):       # a day's index last
+        put(repo, token, path, text, branch, message, tries=tries)
+    return None
 
 
 def rebuild_index(repo, token, branch) -> tuple[dict, dict]:

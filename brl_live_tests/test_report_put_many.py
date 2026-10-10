@@ -58,3 +58,16 @@ def test_put_many_is_one_commit_and_rebases_on_a_moved_head(monkeypatch):
     assert final['public/reports/2026-10-10/1.json'] == '{"a":1}' and final['public/reports/2026-10-10/index.json'] == '{"games":{}}'
     assert len(fake.blobs) == 2                                              # blobs made once, reused on each try
     assert B.put_many('o/r', 't', {}, 'b', 'nothing') is None
+
+
+def test_put_many_falls_back_to_one_file_at_a_time_when_the_branch_keeps_moving(monkeypatch):
+    B = _report()
+    fake = FakeGit(moves=100)
+    monkeypatch.setattr(B.D, 'api', fake)
+    monkeypatch.setattr(B.time, 'sleep', lambda s: None)
+    wrote = []
+    monkeypatch.setattr(B.D, 'put_text', lambda repo, token, path, text, branch, message: wrote.append(path))
+    files = {'public/reports/d/index.json': '{}', 'public/reports/d/1.json': '{"a":1}', 'public/reports/d/2.json': '{"b":2}'}
+    assert B.put_many('o/r', 't', files, 'b', 'm', fast_tries=3) is None
+    assert fake.patches == 3
+    assert wrote == ['public/reports/d/1.json', 'public/reports/d/2.json', 'public/reports/d/index.json']   # the index last
