@@ -201,3 +201,9 @@ def test_missing_latest_baseline_cannot_revive_older_comparison():
     later.pop('skill_baselines')
     out=e.score_skill_boxes({'old':b,'new':later},{'old':pub(b),'new':pub(later)},{'20':a})
     assert out['n_games']==0 and len(out['versions'])==1
+
+
+def test_an_early_call_the_day_before_freezes_its_baseline():
+    b,a,h,t=specimen()
+    fit=e.freeze_skill_baselines(b,h,t,'2026-10-05T23:30:00Z')   # 7:30 p.m. Eastern the day before the game
+    assert fit['as_of']=='2026-10-05T23:30:00Z' and fit['n_prior_games']>=1

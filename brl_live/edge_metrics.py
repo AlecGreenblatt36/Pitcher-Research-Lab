@@ -150,8 +150,10 @@ baseline; team runs and high/low use the existing fair team's NB parameters.
     """
     from zoneinfo import ZoneInfo
     day = box['date']
-    if day != utc(as_of).astimezone(ZoneInfo('America/New_York')).date().isoformat():
-        raise ValueError('Baseline origin not on forecast date')
+    # Built on the game's date, or earlier for an early call the day before (it then rests on less history, never more);
+    # an origin after the game's date is refused.
+    if utc(as_of).astimezone(ZoneInfo('America/New_York')).date().isoformat() > day:
+        raise ValueError('Baseline origin after the forecast date')
     cases, seen = [], set()
     for row in prior_boxes:
         pk = row['box']['game_pk']
