@@ -92,6 +92,9 @@ button { font: inherit; color: inherit; }
 .day-sum { margin: 14px 0 0; font-size: 17px; }
 .day-sum b { font-family: var(--display); font-size: 23px; font-weight: 700; }
 .nw { white-space: nowrap; }
+.pl-next { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 4px 0 8px; }
+.pl-next span { font-weight: 700; color: var(--muted); }
+.pl-next a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border-radius: 22px; border: 1px solid var(--rule-strong); background: var(--surface); font-weight: 700; color: var(--ink); text-decoration: none; }
 .pt-list { margin: 8px 0 4px; }
 .pt { border-top: 1px solid var(--rule); padding: 12px 0; }
 .pt h4 { margin: 0 0 4px; font-size: 18px; display: flex; justify-content: space-between; gap: 12px; }
@@ -2900,7 +2903,39 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   }
   function fmtCost(v) { return v == null ? "\u2013" : (v >= 0 ? "+" : "") + v.toFixed(1); }
   var MLB_CLUBS = ["Arizona Diamondbacks", "Athletics", "Atlanta Braves", "Baltimore Orioles", "Boston Red Sox", "Chicago Cubs", "Chicago White Sox", "Cincinnati Reds", "Cleveland Guardians", "Colorado Rockies", "Detroit Tigers", "Houston Astros", "Kansas City Royals", "Los Angeles Angels", "Los Angeles Dodgers", "Miami Marlins", "Milwaukee Brewers", "Minnesota Twins", "New York Mets", "New York Yankees", "Philadelphia Phillies", "Pittsburgh Pirates", "San Diego Padres", "San Francisco Giants", "Seattle Mariners", "St. Louis Cardinals", "Tampa Bay Rays", "Texas Rangers", "Toronto Blue Jays", "Washington Nationals"];
+  /* The club's next game today or tomorrow: from our saved numbers first, else from MLB's schedule if it is loaded.
+     Returns {day, pk, opp, home, href} where href opens the game's plan. */
+  function nextGameFor(team) {
+    if (!team) return null;
+    var days = [D.date, addDays(D.date, 1)], best = null, fx = latestForecasts();
+    Object.keys(fx).forEach(function (k) {
+      var f = fx[k]; if (days.indexOf(f.date) < 0) return;
+      var side = f.home.name === team ? "home" : f.away.name === team ? "away" : null; if (!side) return;
+      if (gameState(f.game_pk) === "final") return;
+      var c = { day: f.date, start: f.scheduled_start || "", pk: f.game_pk, opp: f[side === "home" ? "away" : "home"].name, home: side === "home", href: "#/game/" + f.game_pk + "/report" };
+      if (!best || c.start < best.start) best = c;
+    });
+    if (best) return best;
+    days.forEach(function (d) {
+      (SCHED[d] || []).forEach(function (g) {
+        var t = g.teams || {}, a = ((t.away || {}).team || {}).name, h = ((t.home || {}).team || {}).name;
+        if (a !== team && h !== team) return;
+        if (/final/i.test(((g.status || {}).abstractGameState) || "")) return;
+        var c = { day: d, start: g.gameDate || "", pk: g.gamePk, opp: a === team ? h : a, home: h === team, href: "#/past/" + d + "/" + g.gamePk + "/report" };
+        if (!best || c.start < best.start) best = c;
+      });
+    });
+    return best;
+  }
+  /* Today's and tomorrow's schedules, loaded once, then the view is drawn again (for "playing next" and next-game links). */
+  function withNextSchedules(redraw) {
+    var t = D.date, n = addDays(D.date, 1);
+    if (SCHED[t] !== undefined && SCHED[n] !== undefined) return;
+    var at = location.hash;
+    withSchedule(t, function () { withSchedule(n, function () { if (location.hash === at) redraw(); }); });
+  }
   function renderPlayers(q) {
+    withNextSchedules(function () { renderPlayers(q); });
     withPlayers(function () {
       var P = PLAYERS, query = (q || "").trim().toLowerCase();
       var h = '<div class="wrap"><div class="page-head"><h1>Players</h1><p>Every hitter and pitcher we have enough pitches on, updated ' + esc(dateLabel(P.asof)) + '. Search a name or pick a team.</p></div>';
@@ -2912,6 +2947,12 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var teams = MLB_CLUBS.filter(function (k) { return teamCount[k]; });
       if (teams.length) h += '<select class="pl-team" id="pl-team" aria-label="Pick a team"><option value="">All teams</option>' + teams.map(function (k) { return '<option value="' + esc(k) + '"' + (query === k.toLowerCase() ? " selected" : "") + ">" + esc(k) + "</option>"; }).join("") + "</select>";
       h += "</div>";
+      if (!query) {
+        var fxn = latestForecasts(), playing = [];
+        Object.keys(fxn).forEach(function (k) { var f = fxn[k]; if ((f.date === D.date || f.date === addDays(D.date, 1)) && gameState(f.game_pk) !== "final") [f.away.name, f.home.name].forEach(function (nm) { if (playing.indexOf(nm) < 0) playing.push(nm); }); });
+        [D.date, addDays(D.date, 1)].forEach(function (d) { (SCHED[d] || []).forEach(function (g) { var t = g.teams || {}; [((t.away || {}).team || {}).name, ((t.home || {}).team || {}).name].forEach(function (nm) { if (nm && playing.indexOf(nm) < 0 && !/final/i.test(((g.status || {}).abstractGameState) || "")) playing.push(nm); }); }); });
+        if (playing.length) h += '<div class="pl-next"><span>Playing next:</span>' + playing.map(function (nm) { return '<a href="#/players/' + encodeURIComponent(nm) + '">' + esc(nickname(nm)) + "</a>"; }).join("") + "</div>";
+      }
       /* the default lists are big leaguers only; a search finds anyone */
       var match = function (x) { return query ? (x.name + " " + x.team).toLowerCase().indexOf(query) >= 0 : MLB_CLUBS.indexOf(x.team) >= 0; };
       hit = hit.filter(match); pit = pit.filter(match);
@@ -2933,6 +2974,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     });
   }
   function renderPlayer(kind, id) {
+    withNextSchedules(function () { renderPlayer(kind, id); });
     withPlayers(function () {
       var P = PLAYERS, shard = (kind === "h" ? "h-" : "p-") + (Number(id) % (P.shards || 16));
       var show = function (doc) {
@@ -2940,6 +2982,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         if (!x) { app.innerHTML = '<div class="wrap"><div class="page-head"><h1>Players</h1></div><p class="empty">No card for this player.</p></div>'; return; }
         var lg = doc.league || {};
         var h = '<div class="wrap"><div class="page-head"><h1>' + esc(x.name) + '</h1><p>' + esc(x.team) + (x.team ? ", " : "") + (x.kind === "hitter" ? (x.side === "L" ? "bats left" : "bats right") : (x.throws === "L" ? "throws left" : "throws right")) + ". From " + Number(x.pitches).toLocaleString() + " pitches, updated " + esc(dateLabel(doc.asof)) + '. <a class="pl-back" href="#/players">All players</a></p></div>';
+        var ng = nextGameFor(x.team);
+        if (ng) h += '<a class="next-day" href="' + ng.href + '">' + (ng.day === D.date ? "Tonight" : "Tomorrow") + ": " + (ng.home ? "vs " : "at ") + esc(nickname(ng.opp)) + ". Open the game plan</a>";
         if (x.kind === "hitter") {
           var oc = x.own_cost, tags = hitterTags(x, lg);
           h += '<p class="pd-line">Chases ' + (x.chase_rate != null ? pct(x.chase_rate) : "\u2013") + " of pitches out of the zone (league " + (lg.chase_rate != null ? pct(lg.chase_rate) : "\u2013") + "). Misses on " + (x.whiff_rate != null ? pct(x.whiff_rate) : "\u2013") + " of his swings (league " + (lg.whiff_rate != null ? pct(lg.whiff_rate) : "\u2013") + ").</p>";
