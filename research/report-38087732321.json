@@ -1,0 +1,1235 @@
+{
+ "schema": "brl.report-receipt.v1",
+ "run_id": "38087732321",
+ "params": {
+  "lineup_study": {
+   "evaluate": [
+    2024,
+    2025,
+    2026
+   ]
+  },
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "dates": [
+   "2026-10-01"
+  ],
+  "publish": false
+ },
+ "started_at": "2026-10-10T21:29:13.343792+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 7.3,
+   "peak_rss_mb": 1065
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 14.5,
+   "peak_rss_mb": 1228
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 21.5,
+   "peak_rss_mb": 1387
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 28.6,
+   "peak_rss_mb": 1541
+  },
+  {
+   "stage": "schedule",
+   "at_seconds": 39.0,
+   "peak_rss_mb": 1541
+  },
+  {
+   "stage": "team games",
+   "at_seconds": 39.8,
+   "peak_rss_mb": 1541
+  },
+  {
+   "stage": "lineup study 2024",
+   "at_seconds": 40.4,
+   "peak_rss_mb": 1541
+  },
+  {
+   "stage": "lineup study 2025",
+   "at_seconds": 41.1,
+   "peak_rss_mb": 1541
+  },
+  {
+   "stage": "lineup study 2026",
+   "at_seconds": 41.7,
+   "peak_rss_mb": 1541
+  }
+ ],
+ "reports": {},
+ "environment": {
+  "python": "3.12.15",
+  "commit": "2e3e2855a85738d57a4fe8727fe8398cda92c68e",
+  "numpy": "2.5.4",
+  "scipy": "1.18.1",
+  "scikit-learn": "1.9.1",
+  "pandas": "3.0.6",
+  "cryptography": "46.0.4"
+ },
+ "lineup_study": {
+  "rules": [
+   "last",
+   "hand",
+   "freq",
+   "swap"
+  ],
+  "settings": {
+   "hand_days": 30,
+   "freq_games": 10,
+   "freq_days": 45,
+   "freq_active": 5,
+   "swap_min_games": 5,
+   "swap_fill": 0.3,
+   "swap_regular": 0.6
+  },
+  "cluster": "team and calendar month (bootstrap, 4,000 draws)",
+  "seasons": {
+   "2024": {
+    "all": {
+     "team_games": 4944,
+     "last": {
+      "overlap": 6.8129,
+      "spots": 4.3726,
+      "all_nine": 0.0674
+     },
+     "hand": {
+      "overlap": 7.2648,
+      "spots": 4.9434,
+      "all_nine": 0.1141
+     },
+     "freq": {
+      "overlap": 7.375,
+      "spots": 3.9041,
+      "all_nine": 0.127
+     },
+     "swap": {
+      "overlap": 7.335,
+      "spots": 4.8404,
+      "all_nine": 0.1212
+     },
+     "hand_minus_last": {
+      "overlap": 0.4519,
+      "overlap_ci95": [
+       0.4075,
+       0.4955
+      ],
+      "spots": 0.5708,
+      "spots_ci95": [
+       0.4865,
+       0.6548
+      ],
+      "clusters": 222
+     },
+     "freq_minus_hand": {
+      "overlap": 0.1102,
+      "overlap_ci95": [
+       0.0703,
+       0.1481
+      ],
+      "spots": -1.0392,
+      "spots_ci95": [
+       -1.15,
+       -0.9277
+      ],
+      "clusters": 222
+     },
+     "freq_minus_last": {
+      "overlap": 0.5621,
+      "overlap_ci95": [
+       0.505,
+       0.6199
+      ],
+      "spots": -0.4684,
+      "spots_ci95": [
+       -0.5984,
+       -0.3374
+      ],
+      "clusters": 222
+     },
+     "swap_minus_hand": {
+      "overlap": 0.0702,
+      "overlap_ci95": [
+       0.0469,
+       0.0933
+      ],
+      "spots": -0.103,
+      "spots_ci95": [
+       -0.12,
+       -0.0865
+      ],
+      "clusters": 222
+     }
+    },
+    "opposing_hand_changed": {
+     "team_games": 2013,
+     "last": {
+      "overlap": 6.2534,
+      "spots": 3.2797,
+      "all_nine": 0.0164
+     },
+     "hand": {
+      "overlap": 7.3631,
+      "spots": 4.6816,
+      "all_nine": 0.1311
+     },
+     "freq": {
+      "overlap": 7.4014,
+      "spots": 3.691,
+      "all_nine": 0.1341
+     },
+     "swap": {
+      "overlap": 7.4218,
+      "spots": 4.5912,
+      "all_nine": 0.1401
+     },
+     "hand_minus_last": {
+      "overlap": 1.1098,
+      "overlap_ci95": [
+       1.0192,
+       1.1986
+      ],
+      "spots": 1.4019,
+      "spots_ci95": [
+       1.2227,
+       1.5892
+      ],
+      "clusters": 214
+     },
+     "freq_minus_hand": {
+      "overlap": 0.0383,
+      "overlap_ci95": [
+       -0.0087,
+       0.0836
+      ],
+      "spots": -0.9906,
+      "spots_ci95": [
+       -1.1294,
+       -0.852
+      ],
+      "clusters": 214
+     },
+     "freq_minus_last": {
+      "overlap": 1.148,
+      "overlap_ci95": [
+       1.0534,
+       1.2389
+      ],
+      "spots": 0.4113,
+      "spots_ci95": [
+       0.2163,
+       0.6078
+      ],
+      "clusters": 214
+     },
+     "swap_minus_hand": {
+      "overlap": 0.0586,
+      "overlap_ci95": [
+       0.0315,
+       0.0865
+      ],
+      "spots": -0.0904,
+      "spots_ci95": [
+       -0.1125,
+       -0.069
+      ],
+      "clusters": 214
+     }
+    },
+    "opposing_hand_same": {
+     "team_games": 2931,
+     "last": {
+      "overlap": 7.1972,
+      "spots": 5.1232,
+      "all_nine": 0.1024
+     },
+     "hand": {
+      "overlap": 7.1972,
+      "spots": 5.1232,
+      "all_nine": 0.1024
+     },
+     "freq": {
+      "overlap": 7.3569,
+      "spots": 4.0505,
+      "all_nine": 0.1221
+     },
+     "swap": {
+      "overlap": 7.2753,
+      "spots": 5.0116,
+      "all_nine": 0.1082
+     },
+     "hand_minus_last": {
+      "overlap": 0.0,
+      "overlap_ci95": [
+       0.0,
+       0.0
+      ],
+      "spots": 0.0,
+      "spots_ci95": [
+       0.0,
+       0.0
+      ],
+      "clusters": 217
+     },
+     "freq_minus_hand": {
+      "overlap": 0.1597,
+      "overlap_ci95": [
+       0.1112,
+       0.2046
+      ],
+      "spots": -1.0727,
+      "spots_ci95": [
+       -1.2,
+       -0.9508
+      ],
+      "clusters": 217
+     },
+     "freq_minus_last": {
+      "overlap": 0.1597,
+      "overlap_ci95": [
+       0.113,
+       0.2055
+      ],
+      "spots": -1.0727,
+      "spots_ci95": [
+       -1.1966,
+       -0.946
+      ],
+      "clusters": 217
+     },
+     "swap_minus_hand": {
+      "overlap": 0.0781,
+      "overlap_ci95": [
+       0.0467,
+       0.1067
+      ],
+      "spots": -0.1116,
+      "spots_ci95": [
+       -0.133,
+       -0.0898
+      ],
+      "clusters": 217
+     }
+    },
+    "regular_season": {
+     "team_games": 4858,
+     "last": {
+      "overlap": 6.7981,
+      "spots": 4.3543,
+      "all_nine": 0.0638
+     },
+     "hand": {
+      "overlap": 7.252,
+      "spots": 4.9257,
+      "all_nine": 0.1089
+     },
+     "freq": {
+      "overlap": 7.3606,
+      "spots": 3.8806,
+      "all_nine": 0.1223
+     },
+     "swap": {
+      "overlap": 7.3213,
+      "spots": 4.8228,
+      "all_nine": 0.1165
+     },
+     "hand_minus_last": {
+      "overlap": 0.4539,
+      "overlap_ci95": [
+       0.4096,
+       0.4995
+      ],
+      "spots": 0.5714,
+      "spots_ci95": [
+       0.4897,
+       0.6562
+      ],
+      "clusters": 210
+     },
+     "freq_minus_hand": {
+      "overlap": 0.1087,
+      "overlap_ci95": [
+       0.067,
+       0.1471
+      ],
+      "spots": -1.0451,
+      "spots_ci95": [
+       -1.1525,
+       -0.9378
+      ],
+      "clusters": 210
+     },
+     "freq_minus_last": {
+      "overlap": 0.5626,
+      "overlap_ci95": [
+       0.507,
+       0.6223
+      ],
+      "spots": -0.4737,
+      "spots_ci95": [
+       -0.6083,
+       -0.3442
+      ],
+      "clusters": 210
+     },
+     "swap_minus_hand": {
+      "overlap": 0.0694,
+      "overlap_ci95": [
+       0.0445,
+       0.093
+      ],
+      "spots": -0.1029,
+      "spots_ci95": [
+       -0.1201,
+       -0.086
+      ],
+      "clusters": 210
+     }
+    },
+    "postseason": {
+     "team_games": 86,
+     "last": {
+      "overlap": 7.6512,
+      "spots": 5.407,
+      "all_nine": 0.2674
+     },
+     "hand": {
+      "overlap": 7.9884,
+      "spots": 5.9419,
+      "all_nine": 0.407
+     },
+     "freq": {
+      "overlap": 8.186,
+      "spots": 5.2326,
+      "all_nine": 0.3953
+     },
+     "swap": {
+      "overlap": 8.1047,
+      "spots": 5.8372,
+      "all_nine": 0.3837
+     },
+     "hand_minus_last": {
+      "overlap": 0.3372,
+      "overlap_ci95": [
+       0.0416,
+       0.6635
+      ],
+      "spots": 0.5349,
+      "spots_ci95": [
+       -0.0893,
+       1.2532
+      ],
+      "clusters": 12
+     },
+     "freq_minus_hand": {
+      "overlap": 0.1977,
+      "overlap_ci95": [
+       -0.1077,
+       0.5352
+      ],
+      "spots": -0.7093,
+      "spots_ci95": [
+       -1.5073,
+       0.11
+      ],
+      "clusters": 12
+     },
+     "freq_minus_last": {
+      "overlap": 0.5349,
+      "overlap_ci95": [
+       0.3415,
+       0.7969
+      ],
+      "spots": -0.1744,
+      "spots_ci95": [
+       -1.0769,
+       0.7059
+      ],
+      "clusters": 12
+     },
+     "swap_minus_hand": {
+      "overlap": 0.1163,
+      "overlap_ci95": [
+       -0.0796,
+       0.3393
+      ],
+      "spots": -0.1047,
+      "spots_ci95": [
+       -0.2125,
+       0.0
+      ],
+      "clusters": 12
+     }
+    }
+   },
+   "2025": {
+    "all": {
+     "team_games": 4954,
+     "last": {
+      "overlap": 6.8674,
+      "spots": 4.3205,
+      "all_nine": 0.0711
+     },
+     "hand": {
+      "overlap": 7.2858,
+      "spots": 4.9425,
+      "all_nine": 0.1132
+     },
+     "freq": {
+      "overlap": 7.3904,
+      "spots": 3.9574,
+      "all_nine": 0.1124
+     },
+     "swap": {
+      "overlap": 7.3635,
+      "spots": 4.8563,
+      "all_nine": 0.113
+     },
+     "hand_minus_last": {
+      "overlap": 0.4184,
+      "overlap_ci95": [
+       0.3746,
+       0.4628
+      ],
+      "spots": 0.6219,
+      "spots_ci95": [
+       0.5422,
+       0.7036
+      ],
+      "clusters": 224
+     },
+     "freq_minus_hand": {
+      "overlap": 0.1046,
+      "overlap_ci95": [
+       0.0676,
+       0.1409
+      ],
+      "spots": -0.9851,
+      "spots_ci95": [
+       -1.0822,
+       -0.8886
+      ],
+      "clusters": 224
+     },
+     "freq_minus_last": {
+      "overlap": 0.523,
+      "overlap_ci95": [
+       0.4648,
+       0.5815
+      ],
+      "spots": -0.3631,
+      "spots_ci95": [
+       -0.489,
+       -0.2316
+      ],
+      "clusters": 224
+     },
+     "swap_minus_hand": {
+      "overlap": 0.0777,
+      "overlap_ci95": [
+       0.053,
+       0.1023
+      ],
+      "spots": -0.0862,
+      "spots_ci95": [
+       -0.103,
+       -0.0698
+      ],
+      "clusters": 224
+     }
+    },
+    "opposing_hand_changed": {
+     "team_games": 1993,
+     "last": {
+      "overlap": 6.3026,
+      "spots": 3.0958,
+      "all_nine": 0.0151
+     },
+     "hand": {
+      "overlap": 7.3427,
+      "spots": 4.6417,
+      "all_nine": 0.1199
+     },
+     "freq": {
+      "overlap": 7.4029,
+      "spots": 3.7948,
+      "all_nine": 0.1154
+     },
+     "swap": {
+      "overlap": 7.3979,
+      "spots": 4.5715,
+      "all_nine": 0.1204
+     },
+     "hand_minus_last": {
+      "overlap": 1.0401,
+      "overlap_ci95": [
+       0.9428,
+       1.1362
+      ],
+      "spots": 1.5459,
+      "spots_ci95": [
+       1.3616,
+       1.7414
+      ],
+      "clusters": 216
+     },
+     "freq_minus_hand": {
+      "overlap": 0.0602,
+      "overlap_ci95": [
+       0.0171,
+       0.1036
+      ],
+      "spots": -0.847,
+      "spots_ci95": [
+       -0.9648,
+       -0.7335
+      ],
+      "clusters": 216
+     },
+     "freq_minus_last": {
+      "overlap": 1.1004,
+      "overlap_ci95": [
+       1.0055,
+       1.1998
+      ],
+      "spots": 0.6989,
+      "spots_ci95": [
+       0.5219,
+       0.893
+      ],
+      "clusters": 216
+     },
+     "swap_minus_hand": {
+      "overlap": 0.0552,
+      "overlap_ci95": [
+       0.0274,
+       0.0844
+      ],
+      "spots": -0.0702,
+      "spots_ci95": [
+       -0.0895,
+       -0.0509
+      ],
+      "clusters": 216
+     }
+    },
+    "opposing_hand_same": {
+     "team_games": 2961,
+     "last": {
+      "overlap": 7.2476,
+      "spots": 5.1449,
+      "all_nine": 0.1087
+     },
+     "hand": {
+      "overlap": 7.2476,
+      "spots": 5.1449,
+      "all_nine": 0.1087
+     },
+     "freq": {
+      "overlap": 7.382,
+      "spots": 4.0669,
+      "all_nine": 0.1104
+     },
+     "swap": {
+      "overlap": 7.3404,
+      "spots": 5.048,
+      "all_nine": 0.1081
+     },
+     "hand_minus_last": {
+      "overlap": 0.0,
+      "overlap_ci95": [
+       0.0,
+       0.0
+      ],
+      "spots": 0.0,
+      "spots_ci95": [
+       0.0,
+       0.0
+      ],
+      "clusters": 223
+     },
+     "freq_minus_hand": {
+      "overlap": 0.1344,
+      "overlap_ci95": [
+       0.0821,
+       0.1828
+      ],
+      "spots": -1.078,
+      "spots_ci95": [
+       -1.2084,
+       -0.9426
+      ],
+      "clusters": 223
+     },
+     "freq_minus_last": {
+      "overlap": 0.1344,
+      "overlap_ci95": [
+       0.0853,
+       0.1835
+      ],
+      "spots": -1.078,
+      "spots_ci95": [
+       -1.206,
+       -0.9517
+      ],
+      "clusters": 223
+     },
+     "swap_minus_hand": {
+      "overlap": 0.0929,
+      "overlap_ci95": [
+       0.0604,
+       0.127
+      ],
+      "spots": -0.0969,
+      "spots_ci95": [
+       -0.1199,
+       -0.0749
+      ],
+      "clusters": 223
+     }
+    },
+    "regular_season": {
+     "team_games": 4860,
+     "last": {
+      "overlap": 6.8465,
+      "spots": 4.2961,
+      "all_nine": 0.0644
+     },
+     "hand": {
+      "overlap": 7.2687,
+      "spots": 4.9263,
+      "all_nine": 0.1058
+     },
+     "freq": {
+      "overlap": 7.3759,
+      "spots": 3.9399,
+      "all_nine": 0.1086
+     },
+     "swap": {
+      "overlap": 7.3475,
+      "spots": 4.8409,
+      "all_nine": 0.1078
+     },
+     "hand_minus_last": {
+      "overlap": 0.4222,
+      "overlap_ci95": [
+       0.3787,
+       0.4679
+      ],
+      "spots": 0.6302,
+      "spots_ci95": [
+       0.5523,
+       0.7124
+      ],
+      "clusters": 210
+     },
+     "freq_minus_hand": {
+      "overlap": 0.1072,
+      "overlap_ci95": [
+       0.0692,
+       0.1438
+      ],
+      "spots": -0.9864,
+      "spots_ci95": [
+       -1.0857,
+       -0.8858
+      ],
+      "clusters": 210
+     },
+     "freq_minus_last": {
+      "overlap": 0.5294,
+      "overlap_ci95": [
+       0.4674,
+       0.587
+      ],
+      "spots": -0.3562,
+      "spots_ci95": [
+       -0.4849,
+       -0.2293
+      ],
+      "clusters": 210
+     },
+     "swap_minus_hand": {
+      "overlap": 0.0788,
+      "overlap_ci95": [
+       0.0537,
+       0.1042
+      ],
+      "spots": -0.0854,
+      "spots_ci95": [
+       -0.1025,
+       -0.0685
+      ],
+      "clusters": 210
+     }
+    },
+    "postseason": {
+     "team_games": 94,
+     "last": {
+      "overlap": 7.9468,
+      "spots": 5.5851,
+      "all_nine": 0.4149
+     },
+     "hand": {
+      "overlap": 8.1702,
+      "spots": 5.7766,
+      "all_nine": 0.5
+     },
+     "freq": {
+      "overlap": 8.1383,
+      "spots": 4.8617,
+      "all_nine": 0.3085
+     },
+     "swap": {
+      "overlap": 8.1915,
+      "spots": 5.6489,
+      "all_nine": 0.383
+     },
+     "hand_minus_last": {
+      "overlap": 0.2234,
+      "overlap_ci95": [
+       0.0357,
+       0.4495
+      ],
+      "spots": 0.1915,
+      "spots_ci95": [
+       -0.1755,
+       0.5412
+      ],
+      "clusters": 22
+     },
+     "freq_minus_hand": {
+      "overlap": -0.0319,
+      "overlap_ci95": [
+       -0.2277,
+       0.2258
+      ],
+      "spots": -0.9149,
+      "spots_ci95": [
+       -1.5895,
+       -0.3879
+      ],
+      "clusters": 22
+     },
+     "freq_minus_last": {
+      "overlap": 0.1915,
+      "overlap_ci95": [
+       -0.11,
+       0.5186
+      ],
+      "spots": -0.7234,
+      "spots_ci95": [
+       -1.4855,
+       -0.16
+      ],
+      "clusters": 22
+     },
+     "swap_minus_hand": {
+      "overlap": 0.0213,
+      "overlap_ci95": [
+       -0.1262,
+       0.2192
+      ],
+      "spots": -0.1277,
+      "spots_ci95": [
+       -0.2159,
+       -0.0617
+      ],
+      "clusters": 22
+     }
+    }
+   },
+   "2026": {
+    "all": {
+     "team_games": 4906,
+     "last": {
+      "overlap": 6.8286,
+      "spots": 4.2181,
+      "all_nine": 0.0675
+     },
+     "hand": {
+      "overlap": 7.3274,
+      "spots": 4.916,
+      "all_nine": 0.1162
+     },
+     "freq": {
+      "overlap": 7.4488,
+      "spots": 3.8172,
+      "all_nine": 0.1247
+     },
+     "swap": {
+      "overlap": 7.4085,
+      "spots": 4.8241,
+      "all_nine": 0.1221
+     },
+     "hand_minus_last": {
+      "overlap": 0.4988,
+      "overlap_ci95": [
+       0.4574,
+       0.5407
+      ],
+      "spots": 0.6979,
+      "spots_ci95": [
+       0.6143,
+       0.784
+      ],
+      "clusters": 219
+     },
+     "freq_minus_hand": {
+      "overlap": 0.1215,
+      "overlap_ci95": [
+       0.0899,
+       0.1526
+      ],
+      "spots": -1.0989,
+      "spots_ci95": [
+       -1.215,
+       -0.9842
+      ],
+      "clusters": 219
+     },
+     "freq_minus_last": {
+      "overlap": 0.6203,
+      "overlap_ci95": [
+       0.5731,
+       0.6685
+      ],
+      "spots": -0.4009,
+      "spots_ci95": [
+       -0.5412,
+       -0.2545
+      ],
+      "clusters": 219
+     },
+     "swap_minus_hand": {
+      "overlap": 0.0811,
+      "overlap_ci95": [
+       0.0608,
+       0.0999
+      ],
+      "spots": -0.0919,
+      "spots_ci95": [
+       -0.1088,
+       -0.0763
+      ],
+      "clusters": 219
+     }
+    },
+    "opposing_hand_changed": {
+     "team_games": 2179,
+     "last": {
+      "overlap": 6.2263,
+      "spots": 3.0161,
+      "all_nine": 0.0115
+     },
+     "hand": {
+      "overlap": 7.3492,
+      "spots": 4.5874,
+      "all_nine": 0.1212
+     },
+     "freq": {
+      "overlap": 7.4397,
+      "spots": 3.6218,
+      "all_nine": 0.1235
+     },
+     "swap": {
+      "overlap": 7.4314,
+      "spots": 4.4989,
+      "all_nine": 0.1248
+     },
+     "hand_minus_last": {
+      "overlap": 1.123,
+      "overlap_ci95": [
+       1.0374,
+       1.2069
+      ],
+      "spots": 1.5714,
+      "spots_ci95": [
+       1.3929,
+       1.755
+      ],
+      "clusters": 209
+     },
+     "freq_minus_hand": {
+      "overlap": 0.0904,
+      "overlap_ci95": [
+       0.0536,
+       0.1282
+      ],
+      "spots": -0.9656,
+      "spots_ci95": [
+       -1.0875,
+       -0.844
+      ],
+      "clusters": 209
+     },
+     "freq_minus_last": {
+      "overlap": 1.2134,
+      "overlap_ci95": [
+       1.1308,
+       1.2988
+      ],
+      "spots": 0.6058,
+      "spots_ci95": [
+       0.4045,
+       0.7996
+      ],
+      "clusters": 209
+     },
+     "swap_minus_hand": {
+      "overlap": 0.0821,
+      "overlap_ci95": [
+       0.0572,
+       0.1059
+      ],
+      "spots": -0.0886,
+      "spots_ci95": [
+       -0.1075,
+       -0.0704
+      ],
+      "clusters": 209
+     }
+    },
+    "opposing_hand_same": {
+     "team_games": 2727,
+     "last": {
+      "overlap": 7.3099,
+      "spots": 5.1786,
+      "all_nine": 0.1122
+     },
+     "hand": {
+      "overlap": 7.3099,
+      "spots": 5.1786,
+      "all_nine": 0.1122
+     },
+     "freq": {
+      "overlap": 7.4562,
+      "spots": 3.9732,
+      "all_nine": 0.1258
+     },
+     "swap": {
+      "overlap": 7.3902,
+      "spots": 5.084,
+      "all_nine": 0.1199
+     },
+     "hand_minus_last": {
+      "overlap": 0.0,
+      "overlap_ci95": [
+       0.0,
+       0.0
+      ],
+      "spots": 0.0,
+      "spots_ci95": [
+       0.0,
+       0.0
+      ],
+      "clusters": 218
+     },
+     "freq_minus_hand": {
+      "overlap": 0.1463,
+      "overlap_ci95": [
+       0.1055,
+       0.1874
+      ],
+      "spots": -1.2054,
+      "spots_ci95": [
+       -1.3484,
+       -1.0555
+      ],
+      "clusters": 218
+     },
+     "freq_minus_last": {
+      "overlap": 0.1463,
+      "overlap_ci95": [
+       0.1045,
+       0.1872
+      ],
+      "spots": -1.2054,
+      "spots_ci95": [
+       -1.3504,
+       -1.0641
+      ],
+      "clusters": 218
+     },
+     "swap_minus_hand": {
+      "overlap": 0.0803,
+      "overlap_ci95": [
+       0.0517,
+       0.1066
+      ],
+      "spots": -0.0946,
+      "spots_ci95": [
+       -0.1172,
+       -0.073
+      ],
+      "clusters": 218
+     }
+    },
+    "regular_season": {
+     "team_games": 4858,
+     "last": {
+      "overlap": 6.8236,
+      "spots": 4.2155,
+      "all_nine": 0.0667
+     },
+     "hand": {
+      "overlap": 7.325,
+      "spots": 4.9181,
+      "all_nine": 0.1149
+     },
+     "freq": {
+      "overlap": 7.4461,
+      "spots": 3.817,
+      "all_nine": 0.1239
+     },
+     "swap": {
+      "overlap": 7.4047,
+      "spots": 4.8269,
+      "all_nine": 0.1212
+     },
+     "hand_minus_last": {
+      "overlap": 0.5014,
+      "overlap_ci95": [
+       0.4606,
+       0.5444
+      ],
+      "spots": 0.7026,
+      "spots_ci95": [
+       0.6164,
+       0.7867
+      ],
+      "clusters": 210
+     },
+     "freq_minus_hand": {
+      "overlap": 0.121,
+      "overlap_ci95": [
+       0.0882,
+       0.1518
+      ],
+      "spots": -1.1011,
+      "spots_ci95": [
+       -1.2135,
+       -0.9846
+      ],
+      "clusters": 210
+     },
+     "freq_minus_last": {
+      "overlap": 0.6225,
+      "overlap_ci95": [
+       0.5729,
+       0.6697
+      ],
+      "spots": -0.3985,
+      "spots_ci95": [
+       -0.5538,
+       -0.2483
+      ],
+      "clusters": 210
+     },
+     "swap_minus_hand": {
+      "overlap": 0.0797,
+      "overlap_ci95": [
+       0.0595,
+       0.099
+      ],
+      "spots": -0.0912,
+      "spots_ci95": [
+       -0.1078,
+       -0.0742
+      ],
+      "clusters": 210
+     }
+    },
+    "postseason": {
+     "team_games": 48,
+     "last": {
+      "overlap": 7.3333,
+      "spots": 4.4792,
+      "all_nine": 0.1458
+     },
+     "hand": {
+      "overlap": 7.5625,
+      "spots": 4.7083,
+      "all_nine": 0.25
+     },
+     "freq": {
+      "overlap": 7.7292,
+      "spots": 3.8333,
+      "all_nine": 0.2083
+     },
+     "swap": {
+      "overlap": 7.7917,
+      "spots": 4.5417,
+      "all_nine": 0.2083
+     },
+     "hand_minus_last": {
+      "overlap": 0.2292,
+      "overlap_ci95": [
+       -0.125,
+       0.6
+      ],
+      "spots": 0.2292,
+      "spots_ci95": [
+       -0.2791,
+       0.7827
+      ],
+      "clusters": 17
+     },
+     "freq_minus_hand": {
+      "overlap": 0.1667,
+      "overlap_ci95": [
+       -0.2223,
+       0.5091
+      ],
+      "spots": -0.875,
+      "spots_ci95": [
+       -1.7274,
+       -0.0816
+      ],
+      "clusters": 17
+     },
+     "freq_minus_last": {
+      "overlap": 0.3958,
+      "overlap_ci95": [
+       -0.1539,
+       0.925
+      ],
+      "spots": -0.6458,
+      "spots_ci95": [
+       -1.5814,
+       0.24
+      ],
+      "clusters": 17
+     },
+     "swap_minus_hand": {
+      "overlap": 0.2292,
+      "overlap_ci95": [
+       -0.0213,
+       0.4468
+      ],
+      "spots": -0.1667,
+      "spots_ci95": [
+       -0.3556,
+       0.0
+      ],
+      "clusters": 17
+     }
+    }
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-10T21:29:55.116291+00:00",
+ "seconds": 41.8
+}
