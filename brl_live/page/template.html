@@ -2735,7 +2735,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     }
     if (RP_RECORD && RP_RECORD.games) {
       var R = RP_RECORD;
-      held += '<p class="note">Every game since ' + esc(shortDate(R.first_date)) + " (" + Number(R.games).toLocaleString() + " games, each plan built before the game): hitters chased " + Number(R.chases).toLocaleString() + " times. League averages said " + Number(Math.round(R.chases_expected_league)).toLocaleString() + "; our read on each hitter said " + Number(Math.round(R.chases_expected_map)).toLocaleString() + ", closer to what happened." +
+      held += '<p class="note">Every game since ' + esc(shortDate(R.first_date)) + " (" + Number(R.games).toLocaleString() + " games, each plan built before the game): hitters chased " + Number(R.chases).toLocaleString() + " times. League averages said " + Number(Math.round(R.chases_expected_league)).toLocaleString() + "; our read on each hitter said " + Number(Math.round(R.chases_expected_map)).toLocaleString() +
+        (Math.abs(R.chases_expected_map - R.chases) < Math.abs(R.chases_expected_league - R.chases) ? ", closer to what happened." : ".") +
         (R.scored && R.scored.decisions >= 1000 && R.scored.map_gain_nats_per_1000 != null ? " Pitch by pitch, on " + Number(R.scored.decisions).toLocaleString() + " swing-or-take decisions, our read called them better than league averages " + (R.scored.map_gain_nats_per_1000 >= 5 ? "by a clear margin." : R.scored.map_gain_nats_per_1000 >= 0 ? "by a small margin." : "only some of the time; it trailed overall.") : "") + "</p>";
     }
     if (held) h += '<details class="more" data-keep="held"' + (state.rpOpen.held ? " open" : "") + "><summary>How these plans have held up</summary>" + held + "</details>";
