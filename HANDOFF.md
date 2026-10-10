@@ -46,7 +46,17 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
-### In flight (updated 1:45 p.m. Eastern October 10, by `date -u`)
+### In flight (updated 3:20 p.m. Eastern October 10, by `date -u`)
+
+- October 10, 3:20 p.m.: game-day plans follow the game. The live chain's report trigger (tools/brl_daily_report_trigger.py)
+  now also rebuilds today's and tomorrow's plans when a forecast for that date was saved after the plans (lineups posted,
+  a starter named), at most once per 45 minutes; when it dispatches, its output goes to diagnostics/report_trigger_latest.txt
+  on the ledger branch (run logs cannot be read from outside). On the page, a plan built before the lineup was posted
+  follows the posted lineup from our latest forecast and names any posted hitter it has no line for. Record page has a
+  Game plans section (chasers and patient hitters against an average hitter on the same pitches, from record.json bins).
+  Research: CAL-04 traced the engine-versus-realized aiming gap to whiff maps that are too flat for the hitter's own swing
+  tendency; WHIFF-LAM-01 and WHIFF-OWN-01 to 03 did not pass (windows used: 2025-07-01, 2026-08-01, 2024-07-01,
+  2026-06-01, 2024-09-01, 2025-05-01); a curved input is the open next step, on unused windows.
 
 - October 10, 1:40 p.m.: CAL-03 checked the whole priced chain against what the pitches produced. Outside pitches were
   priced right (so the 35% gap behind the 30-to-40 range is about which swings a hitter's tendency adds, not a broken
