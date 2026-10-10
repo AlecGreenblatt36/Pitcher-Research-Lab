@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 260,
- "rows": 263,
+ "experiments": 261,
+ "rows": 264,
  "records": {
   "ACC-01": [
    {
@@ -4307,6 +4307,21 @@
     ],
     "frozen_commits": [],
     "status": "gate not met; not adopted; open"
+   }
+  ],
+  "WHIFF-OWN-04": [
+   {
+    "id": "WHIFF-OWN-04",
+    "columns": {
+     "ID": "WHIFF-OWN-04",
+     "Attempt": "The curved version of WHIFF-OWN-03: the hitter's swing tendency at the pitch enters the whiff and foul models with separate slopes below zero (a hitter who lays off the spot) and above zero (one who chases it), each separately out of the zone and in it (four columns), cross-fitted as in WHIFF-OWN-03 (params whiff_own 4). Smoke test on a synthetic world (scratch cross/smoke_wo.py): runs; settings 0 and 3 reproduce their earlier numbers. The last attempt in this line: if it misses, the whiff input stays out and the question is closed for this season. **Registered in the commit that added this row, before the runs.** Gated on windows no whiff run has used: as of 2024-05-01 and 2025-09-01, CAL-04's split, on (4) against off (0), four calibration-only runs. Gate, in both runs: (1) whiff log loss of the maps on the later swings lower, out of the zone and over all swings; (2) the two extreme bins out of the zone within 0.95 to 1.05; (3) the two extreme bins inside within 0.92 to 1.08. Prediction: the slope below zero out of the zone the largest in size; log loss lower by 0.5 to 2 nats per 1,000 swings out of the zone and 0 to 0.6 over all; the extreme bins out of the zone 0.96 to 1.04. If it holds: on in the engine (WHIFF_OWN 4), the aiming value re-priced, the reports rebuilt.",
+     "Disposition and evidence": "registered, running"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered, running"
    }
   ],
   "BOX-01": [

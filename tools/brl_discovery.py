@@ -7517,7 +7517,7 @@ class PAModels:
                 if m_ is not None:
                     own_s[r_] = self.Bs[r_] @ m_
             own_fit = own_s
-            if self.whiff_own == 3:
+            if self.whiff_own in (3, 4):
                 half = (T['game'] % 2) == 0; own_fit = np.zeros(n)
                 for fit_rows, read_rows in ((tr & half, ~half), (tr & ~half, half)):
                     maps_half = _hitter_maps(self.Bs, swing, self.off_s, _groups(T['batter'], fit_rows), float(params.get('lam_s', 10.0)), max(100, int(params.get('min_pitches', 300)) // 2))
@@ -7529,10 +7529,15 @@ class PAModels:
             if self.whiff_own in (2, 3):
                 out_ = (edge_distance(self.xt, self.zt, T['stand_r']) > 0).astype(np.float64)
                 cols = lambda o: [(o * out_)[:, None].astype(np.float32), (o * (1 - out_))[:, None].astype(np.float32)]
+            elif self.whiff_own == 4:
+                # WHIFF-OWN-04: separate slopes below and above zero (a hitter who lays off a spot, one who chases it), by zone
+                out_ = (edge_distance(self.xt, self.zt, T['stand_r']) > 0).astype(np.float64)
+                cols = lambda o: [(np.minimum(o, 0) * out_)[:, None].astype(np.float32), (np.maximum(o, 0) * out_)[:, None].astype(np.float32),
+                                  (np.minimum(o, 0) * (1 - out_))[:, None].astype(np.float32), (np.maximum(o, 0) * (1 - out_))[:, None].astype(np.float32)]
             else:
                 cols = lambda o: [o[:, None].astype(np.float32)]
             own_col = cols(own_s)
-            if self.whiff_own == 3:
+            if self.whiff_own in (3, 4):
                 own_col_fit = cols(own_fit)
         rest_w = [Lw, grp, hats(T['v0'].astype(np.float64), V_KNOTS), (T['strikes'] == 2)[:, None].astype(np.float32), self.prop_w[:, None].astype(np.float32),
                   (T['stand_r'] == T['throw_r'])[:, None].astype(np.float32)]
@@ -7594,6 +7599,9 @@ class PAModels:
         self.w_own_f = float(cf0_[0]) if self.whiff_own else 0.0
         self.w_own_w_in = float(cw_[1]) if self.whiff_own in (2, 3) else self.w_own_w    # WHIFF-OWN-02/03: inside the zone
         self.w_own_f_in = float(cf0_[1]) if self.whiff_own in (2, 3) else self.w_own_f
+        # WHIFF-OWN-04: (out, below zero), (out, above), (in, below), (in, above)
+        self.w_own4_w = [float(x) for x in cw_[:4]] if self.whiff_own == 4 else None
+        self.w_own4_f = [float(x) for x in cf0_[:4]] if self.whiff_own == 4 else None
         # FOUL-01: the foul model was fit with the hitter's whiff propensity (the same column as the whiff model's); blocks_at
         # evaluates it at zero (a hitter who misses half his swings), so the hitter's propensity goes back in with its own weight
         self.foul_prop = bool(params.get('foul_prop', True))
@@ -7623,7 +7631,7 @@ class PAModels:
         grp = np.zeros((n, 7), np.float32); grp[np.arange(n), np.clip(grp_, 0, 6)] = 1
         Lw = location_block(xt, zt, stand, strikes)
         plat = (stand == throw)[:, None].astype(np.float32)
-        Xw = np.hstack(([np.zeros((n, 2 if getattr(self, 'whiff_own', 0) in (2, 3) else 1), np.float32)] if getattr(self, 'whiff_own', 0) else []) +
+        Xw = np.hstack(([np.zeros((n, {2: 2, 3: 2, 4: 4}.get(getattr(self, 'whiff_own', 0), 1)), np.float32)] if getattr(self, 'whiff_own', 0) else []) +
                        [Lw, grp, hats(v0, V_KNOTS), (strikes == 2)[:, None].astype(np.float32), np.zeros((n, 1), np.float32), plat])
         lo_w = self.m_w.decision_function(Xw).astype(np.float64)
         fam3 = np.column_stack([np.isin(grp_, (0, 1, 2)), np.isin(grp_, (3, 4)), np.isin(grp_, (5,))]).astype(np.float64)
@@ -7702,10 +7710,15 @@ class PAModels:
         own_h = blk['Bs'] @ self.maps_s[h] if h is not None and h in self.maps_s else 0.0
         lo_s = blk['lo_s'] + self.w_prop_s * ps_ + self.w_prop_p * p_scalar[0]
         o_ = blk.get('out', 1.0)
-        ww_ = getattr(self, 'w_own_w', 0.0) * o_ + getattr(self, 'w_own_w_in', getattr(self, 'w_own_w', 0.0)) * (1 - o_)      # WHIFF-OWN-01/02
-        wf_ = getattr(self, 'w_own_f', 0.0) * o_ + getattr(self, 'w_own_f_in', getattr(self, 'w_own_f', 0.0)) * (1 - o_)
-        lo_w = blk['lo_w'] + self.w_prop_w * pw_ + ww_ * own_h
-        p_f = 1 / (1 + np.exp(-(blk['lo_f'] + getattr(self, 'w_prop_f', 0.0) * pw_ + wf_ * own_h)))     # FOUL-01, WHIFF-OWN-01/02
+        if getattr(self, 'w_own4_w', None) is not None:          # WHIFF-OWN-04: piecewise by sign and zone
+            ng, ps = np.minimum(own_h, 0.0), np.maximum(own_h, 0.0); a_, b_ = self.w_own4_w, self.w_own4_f
+            add_w = (a_[0] * ng + a_[1] * ps) * o_ + (a_[2] * ng + a_[3] * ps) * (1 - o_)
+            add_f = (b_[0] * ng + b_[1] * ps) * o_ + (b_[2] * ng + b_[3] * ps) * (1 - o_)
+        else:
+            add_w = (getattr(self, 'w_own_w', 0.0) * o_ + getattr(self, 'w_own_w_in', getattr(self, 'w_own_w', 0.0)) * (1 - o_)) * own_h      # WHIFF-OWN-01/02/03
+            add_f = (getattr(self, 'w_own_f', 0.0) * o_ + getattr(self, 'w_own_f_in', getattr(self, 'w_own_f', 0.0)) * (1 - o_)) * own_h
+        lo_w = blk['lo_w'] + self.w_prop_w * pw_ + add_w
+        p_f = 1 / (1 + np.exp(-(blk['lo_f'] + getattr(self, 'w_prop_f', 0.0) * pw_ + add_f)))     # FOUL-01, WHIFF-OWN
         v = blk['v'] + self.w_bip_b * (pb_ - self.lg_bip) + self.w_bip_p * (p_scalar[1] - self.lg_bip)
         if h is not None and h in self.maps_s:
             lo_s = lo_s + own_h
