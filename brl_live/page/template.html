@@ -584,6 +584,17 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   .ladder .bar i.pos { background: var(--good); }
   .games-list .call.yes { border-color: var(--good); }
 }
+/* Paper: a game plan printed for the dugout. Light colors whatever the screen theme, no navigation or controls, the
+   folds and the plan rows kept whole. */
+@media print {
+  :root { --paper: #FFFFFF; --surface: #FFFFFF; --ink: #000000; --muted: #444444; --rule: #BBBBBB; --rule-soft: #DDDDDD;
+          --board: #FFFFFF; --board-slot: #F2F2F2; --board-line: #BBBBBB; --chalk: #000000; --chalk-dim: #444444; --hover: #FFFFFF; --tint: #FFFFFF; --good-tint: #F2F2F2; color-scheme: light; }
+  body { background: #FFFFFF; color: #000000; font-size: 11pt; }
+  header.top, .tabs, .back, .versions, .versions-cap, .seg, .hero-bar, .card-bar, .pl-tags { display: none !important; }
+  .hero { background-image: none; border-bottom: 1px solid #000000; }
+  .plan-row, .rp-card, .mu tr { break-inside: avoid; }
+  a { color: inherit; text-decoration: none; }
+}
 </style>
 </head>
 <body>
