@@ -911,6 +911,46 @@ def calibration(fit) -> dict:
 
 
 
+def calibration_components(fit) -> dict:
+    """CAL-02 (diagnostic): the other pieces the plans are priced with, expected against actual on the training rows and
+    the rows after the as-of date: misses on swings (whiff model), called strikes on takes, fouls on contact. Split by
+    season, by family, and by the signed distance from the true crossing to the nearest zone edge (negative inside).
+    Sums only; no player rows."""
+    T = fit.T; tr = fit.train; te = ~tr
+    g = T['group']
+    fam = np.where(np.isin(g, (0, 1, 2, 6)), 0, np.where(np.isin(g, (3, 4)), 1, 2))
+    names = ('fastball', 'breaking', 'offspeed')
+    u_t = np.where(T['stand_r'] == 1, fit.xt, -fit.xt)
+    e = np.maximum.reduce([np.abs(u_t) - D.ZONE_HALF, fit.zt - D.ZONE_TOP, D.ZONE_BOT - fit.zt])
+    edges = (-0.5, -0.25, -0.1, 0.0, 0.1, 0.25, 0.5)
+    ebin = np.digitize(e, edges)          # 0: deeper than half a foot inside ... 7: more than half a foot outside
+    elab = ('in_0.5+', 'in_0.25-0.5', 'in_0.1-0.25', 'in_0-0.1', 'out_0-0.1', 'out_0.1-0.25', 'out_0.25-0.5', 'out_0.5+')
+    call = T['call']; swing = (call == 1) | (call == 2); take = call == 0; contact = call == 1
+    pieces = {'whiff': (swing, (call == 2).astype(float), sig(fit.off_w)),
+              'called_strike': (take, (T['cs'] == 1).astype(float), fit.p_cs),
+              'foul': (contact, ((call == 1) & (T['last_in_pa'] == 0)).astype(float), fit.p_fo)}
+    season = T['season'] if 'season' in T else np.zeros(len(call), np.int64)
+    out = {}
+    for name, (base, y, pr) in pieces.items():
+        pr = np.asarray(pr, float); ll = D.logloss_vec(pr, y)
+        d = out.setdefault(name, {})
+
+        def add(key, m):
+            m = m & base
+            d[key] = {'n': int(m.sum()), 'actual': int(y[m].sum()), 'expected': round(float(pr[m].sum()), 1), 'll': round(float(ll[m].sum()), 2)}
+        for split, m0 in (('train', tr), ('test', te)):
+            add(f'{split}|all', m0)
+            for sv in np.unique(season[m0 & base]) if (m0 & base).any() else []:
+                add(f'{split}|season{int(sv)}', m0 & (season == sv))
+            for k, nm in enumerate(names):
+                add(f'{split}|{nm}', m0 & (fam == k))
+            for b, lab in enumerate(elab):
+                add(f'{split}|{lab}', m0 & (ebin == b))
+                if name == 'called_strike':
+                    for sv in np.unique(season[m0 & base]) if (m0 & base).any() else []:
+                        add(f'{split}|{lab}|season{int(sv)}', m0 & (ebin == b) & (season == sv))
+    return out
+
 def environment_record() -> dict:
     """ENG-01: the versions a run used, kept in its receipt so a result can be reproduced (python, numpy, scipy, scikit-learn, pandas, the commit)."""
     import platform
@@ -978,6 +1018,7 @@ def main():
                 fits[a] = Fitted(T, date.fromisoformat(a).toordinal(), stage, int(params.get('min_pitches', 300)), int(params.get('min_swings', 200)))
                 if params.get('calibration_diag'):
                     receipt.setdefault('calibration', {})[a] = calibration(fits[a]); stage('calibration')
+                    receipt.setdefault('calibration_components', {})[a] = calibration_components(fits[a]); stage('calibration of the other pieces')
             if params.get('calibration_only'):
                 continue
             rep = build_report(fits[a], T, day, a, stage, int(params.get('max_relievers', 4)))
