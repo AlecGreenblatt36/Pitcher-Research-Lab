@@ -52,6 +52,18 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
+### How to check a game night from outside (the run logs are not readable; everything is on the ledger branch)
+
+- `git fetch origin +brl-live-data:refs/remotes/origin/brl-live-data`, then: diagnostics/v2_receipt.json (each live
+  run: status, reason, live_updates, storage_read_audit); diagnostics/phone_check_latest.json (the deployed page in a
+  phone-sized browser: no script errors, plan rows, and browser_feed while a game is live: live_cards, win_chart,
+  this_at_bat); ledger.json status/live/actuals for the game; diagnostics/report_trigger_latest.txt (plan builds the
+  live chain dispatched); research/report-<run>.json (each plan build's receipt).
+- A version with the posted lineups appears in ledger.json forecasts (lineup_status official) a few minutes after MLB
+  posts them; the plans follow within about ten minutes (the trigger needs the forecast to be newer than the plans).
+- A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
+  again. Many in a row means something is committing every second (October 10: rebuild runs).
+
 ### In flight (updated 5:45 p.m. Eastern October 10, by `date -u`)
 
 - October 10, 5:45 p.m.: the rebuild with all of October 10's fixes is complete: every one of the 401 report days
