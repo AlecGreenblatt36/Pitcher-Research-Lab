@@ -60,7 +60,17 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   - Record page: "When we say 60%, do they win 60%?" (bins from the season archives) and a month-by-month table next to
     Vegas. Players: big leaguers by default; hitter cards say where his decisions cost him, grouped by chasing, taking
     strikes and weak swings. How page rewritten for coaches (phone-check anchors kept).
-  - Still to do on the site: game page summary is long on a phone; pitcher cards are thin (mix and two rates only).
+  - Later the same night: finished games open on How close and fold the projected game under one line (6,600 px to
+    3,300 on a phone); Odds tabs and the record ladder say Our pick / Our model alone / Simulator alone / Team ratings
+    alone / Vegas; pitcher cards get one scouting line per pitch (whiff, chase, zone rates and where it goes to each side,
+    from the next report build); Game plan chase spots on the edge read "just off the corner" and stolen strikes are
+    named where they land.
+  - First early passes failed at the player-line baseline check (it required the game's date); fixed in 48af30186. Each
+    early game takes about 8 to 9 minutes (500 s), so a 20-minute pass does two or three games.
+  - Worth a look (research): on the 4,991 graded games, actual chases 152,037 against 169,053 expected by the league swing
+    model and 167,365 by the maps; both run about 10% high, so the chase expectation has a level offset (the maps' gain,
+    21.9 nats per 1,000 swing decisions on 261,032, is relative and unaffected). Check the outside-zone definition and the
+    swing model's level before quoting extra chases in counts.
 
 - Alec, 9:55 p.m.: the site's words sound like AI, the layouts are bad, and you cannot look at future or past games and
   see the model overall. Done the same night: the date strip and calendar run two weeks ahead; a day with no saved

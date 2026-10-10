@@ -1472,12 +1472,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   /* Cards for a day we have no saved numbers for: MLB's schedule, with our series number where the series page has one. */
   function scheduleCards(day, sched, _unused) {
     var games = (sched || []).filter(function (s) { return "RFDLW".indexOf(s.gameType) >= 0; });
-    if (sched === null) return '<p class="empty">MLB\'s schedule could not be reached for this day. Try again in a moment.</p>';
-    if (!games.length) {
-      /* an off day points to the next day we have numbers for */
-      var fx = latestForecasts(), next = Object.keys(fx).map(function (k) { return fx[k].date; }).filter(function (d) { return d > day; }).sort()[0];
-      return '<p class="empty">No games on this day.</p>' + (next ? '<a class="next-day" href="#/day/' + next + '">Next games: ' + esc(dateLabel(next)) + "</a>" : "");
-    }
+    /* a day with nothing to show points to the next day we have numbers for */
+    var fx = latestForecasts(), next = Object.keys(fx).map(function (k) { return fx[k].date; }).filter(function (d) { return d > day; }).sort()[0];
+    var nextLink = next ? '<a class="next-day" href="#/day/' + next + '">Next games: ' + esc(dateLabel(next)) + "</a>" : "";
+    if (sched === null) return '<p class="empty">MLB\'s schedule could not be reached for this day. Try again in a moment.</p>' + nextLink;
+    if (!games.length) return '<p class="empty">No games on this day.</p>' + nextLink;
     var future = day > D.date;
     return '<p class="replay-note">' + (future ? "Our number for each game comes once both starters are announced, usually the day before. Series games show the series estimate until then." : "Our numbers for today come out a few hours before first pitch, once the starters and lineups are in.") + '</p><ol class="cards">' + scheduleItems(day, games) + "</ol>";
   }
