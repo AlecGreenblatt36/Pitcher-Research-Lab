@@ -2510,7 +2510,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         (plan[fam] && plan[fam].length ? '<div class="lbl">Out of the zone: ' + esc(spotList(plan[fam], function (c) { return c[2] === "take" ? " (to steal a strike)" : ""; }, true).join("; ")) + "</div>" : '<div class="lbl">He rarely throws this pitch out of the zone to this side.</div>') +
         (stPlan[fam] && stPlan[fam].length ? '<div class="lbl">Strikes: ' + esc(spotList(stPlan[fam], function (c) { return c[2] === "weak" ? " (can't do much with it)" : " (takes it more than most)"; }).join("; ")) + "</div>" : "") + "</div>";
     });
-    return h + '</div><p class="note">Circles: pitches out of the zone (filled, he chases; open, he takes). Squares: strikes (filled, he takes more than most hitters; open, he can't do much with it). Catcher\'s view.</p></section>';
+    return h + '</div><p class="note">Circles: pitches out of the zone (filled, he chases; open, he takes). Squares: strikes (filled, he takes more than most hitters; open, he can\'t do much with it). Catcher\'s view.</p></section>';
   }
   function loadLiveCard(f, pk) {
     var host = document.getElementById("rp-live-" + pk);
@@ -2720,7 +2720,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       }
       var fl = famLine(ck === "all" ? pr2.aim.by_family : bc[ck].by_family);
       if (fl) h += '<p class="pd-line">' + esc(fl) + "</p>";
-      h += '<p class="note">Circles are pitches out of the zone to throw him: filled where he chases, open where he takes a strike on the edge. Squares are strikes: filled where he takes more than most hitters, open where he swings but can't do much with it. Gold is where he swings more than most hitters, blue less. Catcher\'s view.</p>';
+      h += '<p class="note">Circles are pitches out of the zone to throw him: filled where he chases, open where he takes a strike on the edge. Squares are strikes: filled where he takes more than most hitters, open where he swings but can\'t do much with it. Gold is where he swings more than most hitters, blue less. Catcher\'s view.</p>';
       var hasCloud = ck === "all" && pr2.aim.dangerous_miss && Object.keys(pr2.aim.dangerous_miss).some(function (fam) { return pr2.aim.dangerous_miss[fam].cloud; });
       if (hasCloud) h += '<div class="seg" role="group" aria-label="What the grid shows"><button data-rpcloud="0" aria-pressed="' + !state.rpCloud + '">His swings</button><button data-rpcloud="1" aria-pressed="' + !!state.rpCloud + '">Where the pitches end up</button></div>';
       h += '<div class="rp-cards">';
