@@ -2616,16 +2616,38 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   function lineupWords(src) {
     return src === "box score" ? "Lineup from the box score." : src === "posted lineup" ? "Posted lineup." : src === "last game" ? "Lineup not posted yet: this is their last game's lineup." : "Lineup projected from recent games.";
   }
+  /* The order the plan shows: the plan's own lineup, or, when MLB has posted the lineup since the plan was built, the
+     posted one from our latest forecast (the hitters the plan covers in their posted spots, the rest of the plan's hitters
+     after them, and the posted hitters the plan has no line for named in the note). */
+  function planOrder(doc, side) {
+    var se = doc.sides[side], out = { hitters: se.hitters, spots: se.spots || null, posted: false, missing: [] };
+    if (se.lineup_source === "posted lineup" || se.lineup_source === "box score" || doc.game_pk == null) return out;
+    var f = latestForecasts()[doc.game_pk], b = boxFor(doc.game_pk);
+    if (!f || !b || !b.teams || !b.teams[side] || !(f.lineup_status && f.lineup_status[side] === "official")) return out;
+    var seen = {}, order = [], names = {};
+    (b.teams[side].batting || []).slice().sort(function (x, y) { return (x.spot || 0) - (y.spot || 0); }).forEach(function (x) {
+      if (x.spot >= 1 && x.spot <= 9 && !seen[x.spot]) { seen[x.spot] = 1; order.push(String(x.player_id)); names[String(x.player_id)] = x.name; }
+    });
+    if (order.length !== 9) return out;
+    var inPlan = {}; se.hitters.forEach(function (x) { inPlan[String(x)] = 1; });
+    out.hitters = order.filter(function (x) { return inPlan[x]; }).map(Number).concat(se.hitters.filter(function (x) { return order.indexOf(String(x)) < 0; }));
+    out.spots = {}; order.forEach(function (x, i) { out.spots[x] = i + 1; });
+    out.missing = order.filter(function (x) { return !inPlan[x]; }).map(function (x) { return names[x] || x; });
+    out.posted = true;
+    return out;
+  }
   /* The plan sheet: every hitter in lineup order against the starter, one line each; tap a hitter for his full plan. */
   function planSheet(doc, side, sel) {
     var se = doc.sides && doc.sides[side], players = doc.players || {}, other = side === "away" ? "home" : "away";
     var nm = function (id) { var p = players[String(id)]; return p && p.name ? p.name : String(id); };
     if (!se || !se.hitters.length || !se.pitchers.length) return "";
-    var starter = se.pitchers.filter(function (p) { return p.role === "starter"; })[0] || se.pitchers[0];
+    var starter = se.pitchers.filter(function (p) { return p.role === "starter"; })[0] || se.pitchers[0], po = planOrder(doc, side);
     var h = '<h3 class="team-h ' + side + '-c">How to pitch the ' + esc(nickname(doc.teams[side].name)) + '</h3><p class="note">' + (starter.role === "starter" ? esc(nm(starter.id)) + " starting for the " + esc(nickname(doc.teams[other].name)) + ". " :
-      "The " + esc(nickname(doc.teams[other].name)) + " haven't named a starter yet. These lines are against " + esc(nm(starter.id)) + " out of their bullpen. ") + lineupWords(se.lineup_source) + " Tap a hitter for his full plan, the counts and the bullpen.</p><ol class=\"plan-list\">";
-    var spots = se.spots || null, benchShown = false;
-    se.hitters.forEach(function (hid, i) {
+      "The " + esc(nickname(doc.teams[other].name)) + " haven't named a starter yet. These lines are against " + esc(nm(starter.id)) + " out of their bullpen. ") +
+      (po.posted ? "Posted lineup; the plan was built before it came out" + (po.missing.length ? ", so it has no line yet for " + esc(po.missing.join(" or ")) : "") + "." : lineupWords(se.lineup_source)) +
+      " Tap a hitter for his full plan, the counts and the bullpen.</p><ol class=\"plan-list\">";
+    var spots = po.spots, benchShown = false;
+    po.hitters.forEach(function (hid, i) {
       var key = side + "|" + hid + ":" + starter.id, pr = se.pairs[hid + ":" + starter.id], card = players[String(hid)] && players[String(hid)].hitter;
       var tags = hitterTags(card, doc.league), edge = edgeTag(pr), thin = pr && pr.evidence && pr.evidence.level === "thin";
       var spot = spots ? spots[String(hid)] : i + 1;
@@ -2737,11 +2759,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       h += '<div class="mu-wrap"><table class="mu num"><thead><tr><th scope="col" class="mu-who">Hitter</th>';
       se.pitchers.forEach(function (pt) { h += '<th scope="col"><span>' + esc(lastName(nm(pt.id))) + "</span><small>" + (pt.role === "starter" ? "Starter" : "Bullpen") + "</small></th>"; });
       h += "</tr></thead><tbody>";
-      var short = shortNames(se.hitters.map(function (x) { return { player_id: x, name: nm(x) }; }));
-      se.hitters.forEach(function (hid, i) {
+      var short = shortNames(se.hitters.map(function (x) { return { player_id: x, name: nm(x) }; })), po = planOrder(doc, side);
+      po.hitters.forEach(function (hid, i) {
         var card = players[String(hid)] && players[String(hid)].hitter;
-        var spot = se.spots ? se.spots[String(hid)] : i + 1;
-        h += '<tr><th scope="row" class="mu-who"><span class="spot">' + (spot || "") + "</span>" + esc(short[String(hid)] || lastName(nm(hid))) + (card ? " <small>" + esc(card.side) + "</small>" : "") + (se.spots && !spot ? ' <small class="bench">bench</small>' : "") + "</th>";
+        var spot = po.spots ? po.spots[String(hid)] : i + 1;
+        h += '<tr><th scope="row" class="mu-who"><span class="spot">' + (spot || "") + "</span>" + esc(short[String(hid)] || lastName(nm(hid))) + (card ? " <small>" + esc(card.side) + "</small>" : "") + (po.spots && !spot ? ' <small class="bench">bench</small>' : "") + "</th>";
         se.pitchers.forEach(function (pt) { var k2 = hid + ":" + pt.id, pr = se.pairs[k2]; h += rpCell(pr ? m.f(pr) : null, m, side + "|" + k2, sel === side + "|" + k2); });
         h += "</tr>";
       });
