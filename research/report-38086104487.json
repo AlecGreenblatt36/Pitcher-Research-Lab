@@ -1,0 +1,104 @@
+{
+ "schema": "brl.report-receipt.v1",
+ "run_id": "38086104487",
+ "params": {
+  "dates": [
+   "2026-10-01",
+   "2026-10-02",
+   "2026-10-03",
+   "2026-10-04",
+   "2026-10-05",
+   "2026-10-06",
+   "2026-10-07",
+   "2026-10-08"
+  ],
+  "asof": "2026-10-01",
+  "asof_for": {
+   "2026-10-06": "2026-10-06",
+   "2026-10-07": "2026-10-07",
+   "2026-10-08": "2026-10-08"
+  },
+  "publish": true
+ },
+ "started_at": "2026-10-10T21:04:27.605188+00:00",
+ "stages": [
+  {
+   "stage": "load 2025",
+   "at_seconds": 9.8,
+   "peak_rss_mb": 1053
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 18.9,
+   "peak_rss_mb": 1222
+  },
+  {
+   "stage": "league swing model",
+   "at_seconds": 44.4,
+   "peak_rss_mb": 3273
+  },
+  {
+   "stage": "hitter swing maps 616",
+   "at_seconds": 46.5,
+   "peak_rss_mb": 3273
+  },
+  {
+   "stage": "whiff maps 580",
+   "at_seconds": 88.2,
+   "peak_rss_mb": 4833
+  },
+  {
+   "stage": "swing model, 616 maps",
+   "at_seconds": 126.3,
+   "peak_rss_mb": 6601
+  },
+  {
+   "stage": "models fitted",
+   "at_seconds": 170.4,
+   "peak_rss_mb": 9405
+  },
+  {
+   "stage": "fitted",
+   "at_seconds": 170.5,
+   "peak_rss_mb": 9405
+  },
+  {
+   "stage": "simulator bullpens",
+   "at_seconds": 171.3,
+   "peak_rss_mb": 9405
+  },
+  {
+   "stage": "recent players",
+   "at_seconds": 173.5,
+   "peak_rss_mb": 9405
+  },
+  {
+   "stage": "game 849844",
+   "at_seconds": 178.0,
+   "peak_rss_mb": 9405
+  },
+  {
+   "stage": "report 2026-10-01",
+   "at_seconds": 180.7,
+   "peak_rss_mb": 9405
+  }
+ ],
+ "reports": {
+  "2026-10-01": {
+   "games": 1,
+   "bytes": 423064,
+   "asof": "2026-10-01",
+   "graded": 1
+  }
+ },
+ "environment": {
+  "python": "3.12.15",
+  "commit": "9f84028fb0ec44de227403273c3c7e1814f6b15a",
+  "numpy": "2.5.4",
+  "scipy": "1.18.1",
+  "scikit-learn": "1.9.1",
+  "pandas": "3.0.6",
+  "cryptography": "46.0.4"
+ },
+ "status": "in progress"
+}
