@@ -319,6 +319,22 @@ class Fitted:
             mm = np.isin(T['group'][r], groups)
             if mm.any():
                 mix[fname] = {'share': round(float(mm.mean()), 3), 'speed': round(float(np.nanmean(T['v0'][r][mm])), 1)}
+                # each pitch type in a scout's terms: misses per swing, chases, strikes by location, and where it goes to each side
+                rr = r[mm]; sw = self.swing[rr]; out = self.outside[rr]
+                if sw.sum() >= 25:
+                    mix[fname]['whiff_rate'] = round(float(self.whiff[rr].sum() / sw.sum()), 3)
+                if out.sum() >= 30:
+                    mix[fname]['chase_rate'] = round(float(sw[out].mean()), 3)
+                if len(rr) >= 40:
+                    mix[fname]['zone_rate'] = round(float((~out).mean()), 3)
+                for sd, key in ((1, 'to_righties'), (0, 'to_lefties')):
+                    m2 = T['stand_r'][rr] == sd
+                    if m2.sum() < 40:
+                        continue
+                    uu = np.where(sd == 1, self.xt[rr][m2], -self.xt[rr][m2]); zz = self.zt[rr][m2]
+                    cell = np.argmin(np.abs(uu[:, None] - GU[None, :]), 1) + len(GU) * np.argmin(np.abs(zz[:, None] - GZ[None, :]), 1)
+                    cnt = np.bincount(cell, minlength=len(GU) * len(GZ))
+                    mix[fname][key] = [[float(GU[k % len(GU)]), float(GZ[k // len(GU)]), round(float(cnt[k] / m2.sum()), 3)] for k in np.argsort(-cnt)[:3] if cnt[k] > 0]
         return {'throws': 'R' if T['throw_r'][r][0] == 1 else 'L', 'pitches': int(len(r)), 'mix': mix,
                 'chase_rate_against': round(float(self.swing[r][self.outside[r]].mean()), 3) if self.outside[r].any() else None,
                 'looks_in_ends_out': round(float(self.looks_in_ends_out[r].mean()), 3)}

@@ -92,6 +92,12 @@ button { font: inherit; color: inherit; }
 .day-sum { margin: 14px 0 0; font-size: 17px; }
 .day-sum b { font-family: var(--display); font-size: 23px; font-weight: 700; }
 .nw { white-space: nowrap; }
+.pt-list { margin: 8px 0 4px; }
+.pt { border-top: 1px solid var(--rule); padding: 12px 0; }
+.pt h4 { margin: 0 0 4px; font-size: 18px; display: flex; justify-content: space-between; gap: 12px; }
+.pt h4 span { font-family: var(--display); font-weight: 600; white-space: nowrap; }
+.pt p { margin: 2px 0 0; font-size: 15px; }
+.next-day { display: inline-flex; align-items: center; min-height: 44px; padding: 6px 16px; margin-top: 4px; border-radius: 8px; border: 1px solid var(--rule-strong); background: var(--surface); font-weight: 700; color: var(--ink); text-decoration: none; }
 .replay-note { font-size: 14px; color: var(--muted); margin: 12px 0 0; padding: 9px 12px; border-left: 3px solid var(--lamp); background: var(--surface); border-radius: 0 8px 8px 0; }
 .scorebar { display: flex; flex-wrap: wrap; gap: 1px; margin: 12px 0 4px; background: var(--board-line); border-radius: 12px; overflow: hidden; text-decoration: none; color: var(--chalk-dim); }
 .scorebar div { flex: 1 1 110px; min-width: 0; background: var(--board); padding: 10px 12px; }
@@ -1467,7 +1473,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   function scheduleCards(day, sched, _unused) {
     var games = (sched || []).filter(function (s) { return "RFDLW".indexOf(s.gameType) >= 0; });
     if (sched === null) return '<p class="empty">MLB\'s schedule could not be reached for this day. Try again in a moment.</p>';
-    if (!games.length) return '<p class="empty">No games on this day.</p>';
+    if (!games.length) {
+      /* an off day points to the next day we have numbers for */
+      var fx = latestForecasts(), next = Object.keys(fx).map(function (k) { return fx[k].date; }).filter(function (d) { return d > day; }).sort()[0];
+      return '<p class="empty">No games on this day.</p>' + (next ? '<a class="next-day" href="#/day/' + next + '">Next games: ' + esc(dateLabel(next)) + "</a>" : "");
+    }
     var future = day > D.date;
     return '<p class="replay-note">' + (future ? "Our number for each game comes once both starters are announced, usually the day before. Series games show the series estimate until then." : "Our numbers for today come out a few hours before first pitch, once the starters and lineups are in.") + '</p><ol class="cards">' + scheduleItems(day, games) + "</ol>";
   }
@@ -2935,10 +2945,22 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
           h += "</div>";
         } else {
           var mix = x.mix || {};
-          h += '<ul class="compare">';
-          ["fastball", "breaking", "offspeed"].forEach(function (fam) { if (mix[fam]) h += "<li><span>" + PITCH_NAME[fam] + "</span><b>" + pct(mix[fam].share) + ", " + mix[fam].speed + " mph</b></li>"; });
-          h += "<li><span>Looks like a strike when the hitter decides, ends up a ball" + (lg.looks_in_ends_out != null ? " (league " + pct(lg.looks_in_ends_out) + ")" : "") + "</span><b>" + (x.looks_in_ends_out != null ? pct(x.looks_in_ends_out) : "\u2013") + "</b></li>";
-          h += "<li><span>Hitters chase his pitches out of the zone" + (lg.chase_rate != null ? " (league " + pct(lg.chase_rate) + ")" : "") + "</span><b>" + (x.chase_rate_against != null ? pct(x.chase_rate_against) : "\u2013") + "</b></li></ul>";
+          h += '<p class="pd-line">Hitters chase ' + (x.chase_rate_against != null ? pct(x.chase_rate_against) : "\u2013") + " of his pitches out of the zone (league " + (lg.chase_rate != null ? pct(lg.chase_rate) : "\u2013") + "). " +
+            (x.looks_in_ends_out != null ? pct(x.looks_in_ends_out) + " of his pitches look like strikes when the hitter has to decide, then end up balls (league " + (lg.looks_in_ends_out != null ? pct(lg.looks_in_ends_out) : "\u2013") + ")." : "") + "</p>";
+          /* each pitch in a scout's line: how hard and how often, what it gets, and where it goes to each side */
+          h += '<div class="pt-list">';
+          ["fastball", "breaking", "offspeed"].forEach(function (fam) {
+            var m = mix[fam]; if (!m) return;
+            var bits = [];
+            if (m.whiff_rate != null) bits.push("Misses on " + pct(m.whiff_rate) + " of swings.");
+            if (m.chase_rate != null) bits.push("Chased " + pct(m.chase_rate) + " of the time out of the zone.");
+            if (m.zone_rate != null) bits.push(pct(m.zone_rate) + " in the zone.");
+            var to = [];
+            if (m.to_righties && m.to_righties.length) to.push("To righties: " + listNames(spotList(m.to_righties).slice(0, 2)) + ".");
+            if (m.to_lefties && m.to_lefties.length) to.push("To lefties: " + listNames(spotList(m.to_lefties).slice(0, 2)) + ".");
+            h += '<div class="pt"><h4>' + PITCH_NAME[fam] + "<span>" + pct(m.share) + ", " + m.speed + " mph</span></h4>" + (bits.length ? "<p>" + esc(bits.join(" ")) + "</p>" : "") + (to.length ? "<p>" + esc(to.join(" ")) + "</p>" : "") + "</div>";
+          });
+          h += "</div>";
           h += '<p class="note">For his plan against each hitter, open one of his games and tap Game plan.</p>';
         }
         h += "</div>";
