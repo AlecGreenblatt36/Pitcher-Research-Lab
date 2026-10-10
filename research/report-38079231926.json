@@ -193,6 +193,86 @@
    "stage": "report 2026-04-02",
    "at_seconds": 305.8,
    "peak_rss_mb": 9300
+  },
+  {
+   "stage": "recent players",
+   "at_seconds": 307.7,
+   "peak_rss_mb": 9300
+  },
+  {
+   "stage": "game 822758",
+   "at_seconds": 308.6,
+   "peak_rss_mb": 9300
+  },
+  {
+   "stage": "game 824299",
+   "at_seconds": 309.7,
+   "peak_rss_mb": 9300
+  },
+  {
+   "stage": "game 823568",
+   "at_seconds": 310.9,
+   "peak_rss_mb": 9300
+  },
+  {
+   "stage": "game 824786",
+   "at_seconds": 312.0,
+   "peak_rss_mb": 9300
+  },
+  {
+   "stage": "game 824621",
+   "at_seconds": 313.6,
+   "peak_rss_mb": 9300
+  },
+  {
+   "stage": "game 822919",
+   "at_seconds": 315.0,
+   "peak_rss_mb": 9300
+  },
+  {
+   "stage": "game 824458",
+   "at_seconds": 316.4,
+   "peak_rss_mb": 9300
+  },
+  {
+   "stage": "game 823732",
+   "at_seconds": 317.4,
+   "peak_rss_mb": 9300
+  },
+  {
+   "stage": "game 824377",
+   "at_seconds": 318.2,
+   "peak_rss_mb": 9300
+  },
+  {
+   "stage": "game 823406",
+   "at_seconds": 319.4,
+   "peak_rss_mb": 9300
+  },
+  {
+   "stage": "game 824056",
+   "at_seconds": 320.6,
+   "peak_rss_mb": 9300
+  },
+  {
+   "stage": "game 825026",
+   "at_seconds": 321.5,
+   "peak_rss_mb": 9300
+  },
+  {
+   "stage": "game 825103",
+   "at_seconds": 322.7,
+   "peak_rss_mb": 9300
+  },
+  {
+   "stage": "game 823240",
+   "at_seconds": 323.6,
+   "peak_rss_mb": 9300
+  },
+  {
+   "stage": "game 824134",
+   "at_seconds": 324.4,
+   "peak_rss_mb": 9300
   }
  ],
  "reports": {
@@ -218,5 +298,9 @@
   "pandas": "3.0.6",
   "cryptography": "46.0.4"
  },
- "status": "in progress"
+ "status": "failed",
+ "error": "HTTPError: HTTP Error 403: Forbidden",
+ "trace": "Traceback (most recent call last):\n  File \"/home/runner/work/Pitcher-Research-Lab/Pitcher-Research-Lab/tools/brl_report.py\", line 1153, in main\n    put(repo, token, f'public/reports/{day}/{pk}.json', text, branch, f'BRL report {day} game {pk} (as of {a})')\n  File \"/home/runner/work/Pitcher-Research-Lab/Pitcher-Research-Lab/tools/brl_report.py\", line 129, in put\n    return D.put_text(repo, token, path, text, branch, message)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/runner/work/Pitcher-Research-Lab/Pitcher-Research-Lab/tools/brl_discovery.py\", line 105, in put_text\n    return api(url, token, 'PUT', payload)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/runner/work/Pitcher-Research-Lab/Pitcher-Research-Lab/tools/brl_discovery.py\", line 42, in api\n    with urlopen(Request(url, headers=headers, data=body, method=method), timeout=120) as r:\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/hostedtoolcache/Python/3.12.15/x64/lib/python3.12/urllib/request.py\", line 215, in urlopen\n    return opener.open(url, data, timeout)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/hostedtoolcache/Python/3.12.15/x64/lib/python3.12/urllib/request.py\", line 521, in open\n    response = meth(req, response)\n               ^^^^^^^^^^^^^^^^^^^\n  File \"/opt/hostedtoolcache/Python/3.12.15/x64/lib/python3.12/urllib/request.py\", line 630, in http_response\n    response = self.parent.error(\n               ^^^^^^^^^^^^^^^^^^\n  File \"/opt/hostedtoolcache/Python/3.12.15/x64/lib/python3.12/urllib/request.py\", line 559, in error\n    return self._call_chain(*args)\n           ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/hostedtoolcache/Python/3.12.15/x64/lib/python3.12/urllib/request.py\", line 492, in _call_chain\n    result = func(*args)\n             ^^^^^^^^^^^\n  File \"/opt/hostedtoolcache/Python/3.12.15/x64/lib/python3.12/urllib/request.py\", line 639, in http_error_default\n    raise HTTPError(req.full_url, code, msg, hdrs, fp)\nurllib.error.HTTPError: HTTP Error 403: Forbidden\n",
+ "finished_at": "2026-10-10T19:27:34.276983+00:00",
+ "seconds": 438.9
 }
