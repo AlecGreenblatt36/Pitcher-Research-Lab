@@ -148,21 +148,36 @@ class GitStore:
 
     PUT_ATTEMPTS = 16
 
+    def sha_of(self, path: str):
+        """The file's blob sha on the ledger branch from the contents metadata (no blob download), or None."""
+        try:
+            value = self.request('/contents/' + quote(path, safe='/') + '?ref=' + BRANCH)
+        except HTTPError as exc:
+            if exc.code == 404:
+                return None
+            raise
+        if not isinstance(value, dict) or not isinstance(value.get('sha'), str):
+            raise Blocked('Git object is not a file')
+        return value['sha']
+
     def put(self, path: str, raw: bytes, immutable: bool = False):
         # Several jobs write to the ledger branch (live runs, backfills, research); a 409 means the
         # branch moved between reading the file's sha and writing, so re-read and try again. With report
         # runs committing every second (October 10, 2026: a game blocked by 409s), keep trying for a few
         # minutes, with a random spread so two writers do not retry in step.
+        # The file on the branch is compared by its blob sha, so a write never downloads what it replaces (the
+        # ledger is over 12 MB): the same sha means the same bytes, nothing to write.
+        own = hashlib.sha1(b'blob ' + str(len(raw)).encode('ascii') + b'\0' + raw).hexdigest()
         for attempt in range(self.PUT_ATTEMPTS):
-            existing = self.read(path)
-            if existing is not None:
-                if existing[0] == raw:
+            sha = self.sha_of(path)
+            if sha is not None:
+                if sha == own:
                     return None
                 if immutable:
                     raise Blocked('Immutable object conflict: ' + path)
             payload = {'message': 'BRL: save ' + path.split('/')[0], 'content': base64.b64encode(raw).decode(), 'branch': BRANCH}
-            if existing is not None:
-                payload['sha'] = existing[1]
+            if sha is not None:
+                payload['sha'] = sha
             try:
                 return self.request('/contents/' + quote(path, safe='/'), 'PUT', payload)
             except HTTPError as exc:
