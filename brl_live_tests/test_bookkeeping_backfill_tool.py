@@ -45,3 +45,21 @@ def test_physics_rows_carry_pitch_and_hit_measurements():
     assert r['pitches'][0] == ['SI', 'C', 0, 0, 93.5, 85.2, 2140, -8.12, 4.0, 0.12, 2.55, -1.5, 5.9, 6.31, 5]
     assert r['pitches'][1][:4] == ['CH', 'E', 0, 1] and r['pitches'][1][6] is None
     assert r['hit'] == [106.7, 27.5, 411, 60.1, 40.9, 'fly_ball', 'hard', '7']
+
+
+def test_nothing_new_writes_nothing(monkeypatch):
+    """With every completed game already sealed, the run reseals nothing (each reseal added about 30 MB of history)."""
+    import gzip, json
+    key = b'k' * 32
+    doc = {'schema': tool.SCHEMA, 'year': 2026, 'games': {'1': {'rows': [{'i': 0}]}}, 'through': '2026-10-08'}
+    study = {'schema': tool.STUDY_SCHEMA, 'year': 2026, 'games': {'1': {'rows': []}}, 'through': '2026-10-08'}
+    blobs = {tool.season_path(2026): tool.seal(gzip.compress(json.dumps(doc).encode()), key, tool.season_purpose(2026)),
+             tool.study_path(2026): tool.seal(gzip.compress(json.dumps(study).encode()), key, tool.study_purpose(2026))}
+    monkeypatch.setenv('GITHUB_REPOSITORY', 'o/r'); monkeypatch.setenv('GH_TOKEN', 't'); monkeypatch.setenv('BRL_SEASON', '2026')
+    monkeypatch.setattr(tool, 'key_bytes', lambda v: key); monkeypatch.setenv('BRL_PA_PACKAGE_KEY', 'x')
+    monkeypatch.setattr(tool, 'read_blob', lambda repo, token, path, branch: blobs.get(path))
+    monkeypatch.setattr(tool, 'completed_games', lambda year, through: [{'game_pk': 1}])
+    wrote = []
+    monkeypatch.setattr(tool, 'put', lambda *a, **k: wrote.append(a[2]))
+    tool.main()
+    assert wrote == []

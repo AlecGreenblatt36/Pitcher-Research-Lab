@@ -202,6 +202,7 @@ def main():
     todo = [g for g in games if str(g['game_pk']) not in doc['games'] or str(g['game_pk']) not in study['games']]
     print(json.dumps({'year': year, 'through': through, 'completed_games': len(games), 'already_sealed': len(doc['games']), 'to_fetch': len(todo)}))
     failures = []
+    added = 0
     with ThreadPoolExecutor(max_workers=WORKERS) as pool:
         for game, outcome in zip(todo, pool.map(lambda g: _safe(fetch_game, g), todo)):
             if isinstance(outcome, Exception):
@@ -211,6 +212,12 @@ def main():
             if value['rows']:
                 doc['games'][str(pk)] = value
                 study['games'][str(pk)] = research
+                added += 1
+    if added == 0 and existing is not None and existing_study is not None and not failures:
+        # Nothing new since the last seal: writing the same tables again would only add three sealed copies (about
+        # 30 MB that does not compress) to the branch history, which every report run did until October 10, 2026.
+        print(json.dumps({'year': year, 'through': through, 'unchanged': True, 'games': len(doc['games'])}))
+        return
     doc['through'] = through
     doc['sealed_at'] = datetime.now(timezone.utc).isoformat()
     plain = gzip.compress(json.dumps(doc, separators=(',', ':'), sort_keys=True).encode(), mtime=0)
