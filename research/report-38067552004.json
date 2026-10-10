@@ -1,0 +1,135 @@
+{
+ "schema": "brl.report-receipt.v1",
+ "run_id": "38067552004",
+ "params": {
+  "dates": [
+   "2025-09-30",
+   "2025-10-01",
+   "2025-10-02",
+   "2025-10-03",
+   "2025-10-04",
+   "2025-10-05",
+   "2025-10-06",
+   "2025-10-07",
+   "2025-10-08",
+   "2025-10-09",
+   "2025-10-10",
+   "2025-10-11",
+   "2025-10-12",
+   "2025-10-13",
+   "2025-10-14",
+   "2025-10-15",
+   "2025-10-16",
+   "2025-10-17",
+   "2025-10-18",
+   "2025-10-19",
+   "2025-10-20",
+   "2025-10-21",
+   "2025-10-22",
+   "2025-10-23",
+   "2025-10-24",
+   "2025-10-25",
+   "2025-10-26",
+   "2025-10-27",
+   "2025-10-28",
+   "2025-10-29",
+   "2025-10-30",
+   "2025-10-31",
+   "2025-11-01",
+   "2025-11-02"
+  ],
+  "asof": "2025-09-30",
+  "publish": true
+ },
+ "started_at": "2026-10-10T16:26:05.077486+00:00",
+ "stages": [
+  {
+   "stage": "load 2024",
+   "at_seconds": 9.0,
+   "peak_rss_mb": 1055
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 18.2,
+   "peak_rss_mb": 1222
+  },
+  {
+   "stage": "league swing model",
+   "at_seconds": 50.7,
+   "peak_rss_mb": 3297
+  },
+  {
+   "stage": "hitter swing maps 610",
+   "at_seconds": 53.1,
+   "peak_rss_mb": 3297
+  },
+  {
+   "stage": "whiff maps 575",
+   "at_seconds": 93.7,
+   "peak_rss_mb": 4587
+  },
+  {
+   "stage": "swing model, 610 maps",
+   "at_seconds": 135.5,
+   "peak_rss_mb": 6608
+  },
+  {
+   "stage": "models fitted",
+   "at_seconds": 177.5,
+   "peak_rss_mb": 9282
+  },
+  {
+   "stage": "fitted",
+   "at_seconds": 177.6,
+   "peak_rss_mb": 9282
+  },
+  {
+   "stage": "recent players",
+   "at_seconds": 178.9,
+   "peak_rss_mb": 9282
+  },
+  {
+   "stage": "game 813072",
+   "at_seconds": 181.1,
+   "peak_rss_mb": 9282
+  },
+  {
+   "stage": "game 813066",
+   "at_seconds": 184.2,
+   "peak_rss_mb": 9282
+  },
+  {
+   "stage": "game 813074",
+   "at_seconds": 187.3,
+   "peak_rss_mb": 9282
+  },
+  {
+   "stage": "game 813069",
+   "at_seconds": 189.9,
+   "peak_rss_mb": 9282
+  },
+  {
+   "stage": "report 2025-09-30",
+   "at_seconds": 200.3,
+   "peak_rss_mb": 9282
+  }
+ ],
+ "reports": {
+  "2025-09-30": {
+   "games": 4,
+   "bytes": 1292206,
+   "asof": "2025-09-30",
+   "graded": 4
+  }
+ },
+ "environment": {
+  "python": "3.12.15",
+  "commit": "caa6dad5a0102acd7ddfad84c32ccb0a73c407bc",
+  "numpy": "2.5.3",
+  "scipy": "1.18.1",
+  "scikit-learn": "1.9.1",
+  "pandas": "3.0.6",
+  "cryptography": "46.0.4"
+ },
+ "status": "in progress"
+}
