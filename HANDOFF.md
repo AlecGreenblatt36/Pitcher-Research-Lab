@@ -57,6 +57,9 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   in for a fill-in) missed its gate on 2024 by 0.003 on right spots; LINEUP-01 replicated on 2024 (+0.45). Pages: an
   axe-core pass fixed club-color text contrast, headings, the sideways tables; player cards merge overlapping spot
   phrases and drop a pitch thrown under half a percent.
+  Held for after Game 5 (branch pending-store-meta, commit f9e7571c6): the live store compares a write by the blob sha
+  from the contents metadata instead of downloading the file it replaces (the 12.6 MB ledger was read about eight times
+  a run). Tests pass; cherry-pick onto main once tonight's game is final.
 
 - October 10, 4:15 p.m.: the container restarted at 19:56 UTC and took the rebuild loop with it. The rest of the rebuild
   runs from scratch report/rebuild_rest.sh (pushes every month not yet logged as pushed, four at a time; then October 1
