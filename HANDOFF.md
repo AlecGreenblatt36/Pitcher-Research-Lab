@@ -46,7 +46,17 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
-### In flight (updated 4:15 p.m. Eastern October 10, by `date -u`)
+### In flight (updated 5:45 p.m. Eastern October 10, by `date -u`)
+
+- October 10, 5:45 p.m.: the rebuild with all of October 10's fixes is complete: every one of the 401 report days
+  (2025-03-27 to 2026-10-08) was written after 17:43 UTC. The 2025 postseason month had been missed (its 18:55 push
+  went out in the same second as a WHIFF-OWN push and only the latter ran); redone in run 38087141540, one commit per
+  day. record.json (4,991 games): chases expected against actual 1.029 (league) and 1.025 (maps), was about 1.05;
+  hitters read as chasers 33.8% against 31.0% for an average hitter on the same pitches (maps 34.6%), patient 24.1%
+  against 27.9% (maps 24.7%); months 1.00 to 1.03 after April, Aprils 1.06 to 1.08. LINEUP-03 ('swap', a regular back
+  in for a fill-in) missed its gate on 2024 by 0.003 on right spots; LINEUP-01 replicated on 2024 (+0.45). Pages: an
+  axe-core pass fixed club-color text contrast, headings, the sideways tables; player cards merge overlapping spot
+  phrases and drop a pitch thrown under half a percent.
 
 - October 10, 4:15 p.m.: the container restarted at 19:56 UTC and took the rebuild loop with it. The rest of the rebuild
   runs from scratch report/rebuild_rest.sh (pushes every month not yet logged as pushed, four at a time; then October 1
