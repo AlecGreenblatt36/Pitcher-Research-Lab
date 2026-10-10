@@ -34,6 +34,12 @@ October 7 checkpoint below still describes the machinery (lanes, privacy, schedu
 - Hitter chances on the page keep each lineup slot's hits with the starter's share of that slot's plate appearances
   (PLAYER-02, STARTER_SHARE in boxscore.py).
 - Live runs chain every 12 to 15 minutes; the phone check passed at 19:23 UTC October 8 (390 and 1440 px, no errors).
+- October 10 additions: projected lineups follow the opposing starter's hand (LINEUP-01, brl_live/lineups.py RULE
+  'hand', simulator and plans); game plans (tools/brl_report.py) use the swing model with the crossing term
+  (SWING-CROSS-01), each season's called-strike edge (PROD-05) and the foul fixes (FOUL-01, FOUL-02), take a game's
+  bullpen from the simulator's saved box (chance to pitch), keep the bench once a lineup is posted, and write each day
+  as one commit (put_many); the live store retries 409s for minutes; the season top-up writes nothing when nothing is
+  new. Every report day from 2025-03-27 to 2026-10-08 was rebuilt with these.
 
 ### Evidence (full-season replays, 1,000 worlds per game, each season with tables from other seasons)
 
