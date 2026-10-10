@@ -2395,16 +2395,10 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var stAt = (strike || []).filter(function (p) { return Math.abs(p[0] - gu[c]) < 0.01 && Math.abs(p[1] - gz[r]) < 0.01; })[0];
       var isTake = aimAt && aimAt[2] === "take", isWeak = stAt && stAt[2] === "weak";
       var cls = (inz ? "z" : "") + (aimAt ? (isTake ? " aim take" : " aim") : "") + (stAt ? (isWeak ? " strike weak" : " strike") : "");
-      var why = aimAt ? (isTake ? "; aim here: strikes he takes" : "; aim here: he chases") : stAt ? (isWeak ? "; strike spot: he swings to little effect" : "; strike spot: he lets it go") : "";
+      var why = aimAt ? (isTake ? "; aim here: strikes he takes" : "; aim here: he chases") : stAt ? (isWeak ? "; strike spot: he can't do much with it" : "; strike spot: he takes it more than most hitters") : "";
       h += '<i class="' + cls + '" style="background:' + bg + '" title="' + esc(gu[c] + " ft, " + gz[r] + " ft: " + (cloud ? v + "% of landings" : (v > 0 ? "+" : "") + v) + why) + '"></i>';
     }
     return h + "</div>";
-  }
-  function rpWords(c) {
-    var u = c[0], z = c[1];
-    var side = u < -0.83 ? "in off the plate" : u < -0.3 ? "inside edge" : u <= 0.3 ? "middle" : u <= 0.83 ? "outside edge" : "away off the plate";
-    var ht = z < 1.5 ? "below the zone" : z < 1.75 ? "at the knees" : z < 2.25 ? "low" : z < 2.75 ? "mid-height" : z < 3.25 ? "high" : z < 3.75 ? "at the letters" : "above the zone";
-    return ht + ", " + side + (c[2] === "take" ? " (he lets it go)" : c[2] === "chase" ? " (he chases)" : c[2] === "weak" ? " (he swings to little effect)" : "");
   }
   function reportTab(f, pk) {
     return '<div id="rp-' + pk + '"><p class="empty">Loading the game plan…</p></div>';
@@ -2514,9 +2508,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (!own || (mix && mix.share < 0.01 && !(plan[fam] && plan[fam].length) && !(stPlan[fam] && stPlan[fam].length))) return;   /* a pitch he does not throw */
       h += '<div class="rp-card"><h4>' + PITCH_NAME[fam] + (mix ? " <small>" + pct(mix.share) + " of his pitches, " + Math.round(mix.speed) + " mph</small>" : "") + "</h4>" + rpGrid(doc, own.grid, plan[fam], PITCH_NAME[fam] + ": plan", 0.8, stPlan[fam]) +
         (plan[fam] && plan[fam].length ? '<div class="lbl">Out of the zone: ' + esc(spotList(plan[fam], function (c) { return c[2] === "take" ? " (to steal a strike)" : ""; }, true).join("; ")) + "</div>" : '<div class="lbl">He rarely throws this pitch out of the zone to this side.</div>') +
-        (stPlan[fam] && stPlan[fam].length ? '<div class="lbl">Strikes: ' + esc(spotList(stPlan[fam], function (c) { return c[2] === "weak" ? " (weak swings)" : " (takes it)"; }).join("; ")) + "</div>" : "") + "</div>";
+        (stPlan[fam] && stPlan[fam].length ? '<div class="lbl">Strikes: ' + esc(spotList(stPlan[fam], function (c) { return c[2] === "weak" ? " (can't do much with it)" : " (takes it more than most)"; }).join("; ")) + "</div>" : "") + "</div>";
     });
-    return h + '</div><p class="note">Circles: pitches out of the zone (filled, he chases; open, he takes). Squares: strikes (filled, he lets them go; open, weak swings). Catcher\'s view.</p></section>';
+    return h + '</div><p class="note">Circles: pitches out of the zone (filled, he chases; open, he takes). Squares: strikes (filled, he takes more than most hitters; open, he can't do much with it). Catcher\'s view.</p></section>';
   }
   function loadLiveCard(f, pk) {
     var host = document.getElementById("rp-live-" + pk);
@@ -2724,7 +2718,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       }
       var fl = famLine(ck === "all" ? pr2.aim.by_family : bc[ck].by_family);
       if (fl) h += '<p class="pd-line">' + esc(fl) + "</p>";
-      h += '<p class="note">Circles are pitches out of the zone to throw him: filled where he chases, open where he takes a strike on the edge. Squares are strikes: filled where he lets them go, open where he swings and does little. Gold is where he swings more than most hitters, blue less. Catcher\'s view.</p>';
+      h += '<p class="note">Circles are pitches out of the zone to throw him: filled where he chases, open where he takes a strike on the edge. Squares are strikes: filled where he takes more than most hitters, open where he swings but can't do much with it. Gold is where he swings more than most hitters, blue less. Catcher\'s view.</p>';
       var hasCloud = ck === "all" && pr2.aim.dangerous_miss && Object.keys(pr2.aim.dangerous_miss).some(function (fam) { return pr2.aim.dangerous_miss[fam].cloud; });
       if (hasCloud) h += '<div class="seg" role="group" aria-label="What the grid shows"><button data-rpcloud="0" aria-pressed="' + !state.rpCloud + '">His swings</button><button data-rpcloud="1" aria-pressed="' + !!state.rpCloud + '">Where the pitches end up</button></div>';
       h += '<div class="rp-cards">';
@@ -2736,7 +2730,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         h += '<div class="rp-card"><h4>' + PITCH_NAME[fam] + (mix ? " <small>" + pct(mix.share) + " of his pitches, " + Math.round(mix.speed) + " mph</small>" : "") + "</h4>" + rpGrid(doc, own.grid, plan[fam], PITCH_NAME[fam] + (cloud ? ": where the pitches end up" : ": plan"), 0.8, stPlan[fam], cloud) +
           (cloud ? '<div class="lbl">Where these pitches end up with normal command. Darker means more of them.</div>' : "") +
           (plan[fam] && plan[fam].length ? '<div class="lbl">Out of the zone: ' + esc(spotList(plan[fam], function (c) { return c[2] === "take" ? " (to steal a strike)" : ""; }, true).join("; ")) + "</div>" : '<div class="lbl">He rarely throws this pitch out of the zone to this side.</div>') +
-          (stPlan[fam] && stPlan[fam].length ? '<div class="lbl">Strikes: ' + esc(spotList(stPlan[fam], function (c) { return c[2] === "weak" ? " (weak swings)" : " (takes it)"; }).join("; ")) + "</div>" : "") +
+          (stPlan[fam] && stPlan[fam].length ? '<div class="lbl">Strikes: ' + esc(spotList(stPlan[fam], function (c) { return c[2] === "weak" ? " (can't do much with it)" : " (takes it more than most)"; }).join("; ")) + "</div>" : "") +
           (dm ? '<div class="lbl">Don\'t miss ' + esc(spotPhrase(dm.cell)) + ". About " + pct(dm.share) + " of these pitches end up there.</div>" : "") + "</div>";
       });
       h += "</div>";
