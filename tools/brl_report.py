@@ -49,7 +49,8 @@ SWING_CROSS = True                               # SWING-CROSS-01 (gate passed O
 CS_SEASON = True                                 # PROD-05 (product call October 10, 2026; CS-SEASON-01 and -02 gates not met): each season's own edge profile for the called-strike model (params cs_season false turns it off)
 CS_RECENT = None                                 # CS-RECENT-01: the called-strike model fit on every training take weighted toward the latest days, half-life in days (params cs_recent)
 FOUL_FIX = True                                   # FOUL-01 and FOUL-02 (check held October 10, 2026): the engine's foul model reads the hitter's whiff propensity, and a two-strike foul tip ending the at-bat is a strikeout (params foul_fix false turns them off)
-LAM_W = 30.0                                      # shrinkage of the hitter whiff maps toward the league (report and engine; params lam_w; WHIFF-LAM-01 tests 10)
+LAM_W = 30.0                                      # shrinkage of the hitter whiff maps toward the league (report and engine; params lam_w; WHIFF-LAM-01: 10 did not pass)
+WHIFF_OWN = False                                 # WHIFF-OWN-01: the engine's whiff model reads the hitter's own swing tendency at the pitch (params whiff_own)
 STRIKE_SPOTS = True
 POOL_CACHE = 800            # pools kept in memory at once (pitcher, side, count group, type group, zone); see Fitted._pool                              # VALUE-18I: in-zone aims priced the same way (strike spots); its synthetic verdict held on October 9, 2026
 N_IN = 2.04                                      # inside pitches per plate appearance (VALUE-18F)
@@ -281,7 +282,7 @@ class Fitted:
         self.PM = None
         if STRUCTURAL:
             self.PM = D.PAModels(T, tr, rng, {'league_n': 500000, 'min_pitches': min_pitches, 'min_swings': min_swings, 'swing_cross': SWING_CROSS,
-                                               'cs_season': CS_SEASON, 'cs_target': self.cs_target, 'cs_recent': CS_RECENT, 'foul_prop': FOUL_FIX, 'foul_tip': FOUL_FIX, 'lam_w': LAM_W}, stage)
+                                               'cs_season': CS_SEASON, 'cs_target': self.cs_target, 'cs_recent': CS_RECENT, 'foul_prop': FOUL_FIX, 'foul_tip': FOUL_FIX, 'lam_w': LAM_W, 'whiff_own': WHIFF_OWN}, stage)
             ci_all = np.clip(T['balls'], 0, 3) * 3 + np.clip(T['strikes'], 0, 2)
             fin_all = np.where(T['out7'] >= 0, D.LW7[np.clip(T['out7'], 0, 6)], np.nan)
             self.cv = np.array([float(np.nanmean(fin_all[tr & (ci_all == c_)])) if (tr & (ci_all == c_) & np.isfinite(fin_all)).any() else 0.0 for c_ in range(12)])
@@ -1151,12 +1152,13 @@ def main():
         today_et = now_et.date()
         params = {'publish': True, 'dates': [(today_et - timedelta(days=1)).isoformat(), today_et.isoformat(), (today_et + timedelta(days=1)).isoformat()],
                   'asof_for': {(today_et + timedelta(days=1)).isoformat(): today_et.isoformat()}}
-    global SWING_CROSS, CS_SEASON, CS_RECENT, FOUL_FIX, LAM_W
+    global SWING_CROSS, CS_SEASON, CS_RECENT, FOUL_FIX, LAM_W, WHIFF_OWN
     SWING_CROSS = bool(params.get('swing_cross', SWING_CROSS))
     CS_SEASON = bool(params.get('cs_season', CS_SEASON))
     CS_RECENT = params.get('cs_recent', CS_RECENT) or None
     FOUL_FIX = bool(params.get('foul_fix', FOUL_FIX))
     LAM_W = float(params.get('lam_w', LAM_W))
+    WHIFF_OWN = bool(params.get('whiff_own', WHIFF_OWN))
     dates = params.get('dates') or [params.get('date') or now_et.date().isoformat()]
     asof = params.get('asof')                      # one as-of date for every report in the run (a backfilled month); default: each report's own date
     asof_for = params.get('asof_for') or {}        # a date's own as-of when it differs (tomorrow's early plan)

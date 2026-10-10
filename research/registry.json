@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 257,
- "rows": 260,
+ "experiments": 258,
+ "rows": 261,
  "records": {
   "ACC-01": [
    {
@@ -4247,6 +4247,24 @@
     ],
     "frozen_commits": [],
     "status": "gate not met; not adopted"
+   }
+  ],
+  "WHIFF-OWN-01": [
+   {
+    "id": "WHIFF-OWN-01",
+    "columns": {
+     "ID": "WHIFF-OWN-01",
+     "Attempt": "The hitter's own swing tendency at the pitch as an input to the engine's whiff model (CAL-04 and WHIFF-LAM-01: a hitter who swings more at a spot misses less there than any location map says, in and out of the zone). One column, the hitter's swing map's part at the pitch in logit units (zero for a hitter without a map), in the league whiff model and in the foul model that shares its inputs; the whiff maps are fit on top of it, and plans price a hitter's swings with his own part at each spot (tools/brl_discovery.py PAModels whiff_own; tools/brl_report.py WHIFF_OWN, params whiff_own). The report's own count chain and the player cards keep the location-only whiff model. Smoke test on a synthetic world (scratch cross/smoke_wo.py): runs, and the weight comes out near zero there (+0.004), where no such link was built in. **Registered in the commit that added this row, before the runs.** Measured with CAL-04's split as of 2025-07-01 and 2026-08-01, against WHIFF-LAM-01's runs with penalty 30 (38077001415, 38077031101; the code without the input is unchanged). Gate, in both runs: (1) whiff log loss of the maps on the later swings lower, out of the zone and over all swings; (2) misses expected against actual in the two extreme bins out of the zone within 0.95 to 1.05 (from 0.901 and 0.905 under -10, 1.035 and 1.062 over 10). Prediction: the input's weight negative; log loss lower by 1 to 5 nats per 1,000 swings out of the zone and 0.5 to 3 over all; the extreme bins 0.95 to 1.00 and 1.00 to 1.04. If it holds: on in the engine, the aiming value re-priced, the reports rebuilt.",
+     "Disposition and evidence": "registered, running"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [
+     "38077001415",
+     "38077031101"
+    ],
+    "frozen_commits": [],
+    "status": "registered, running"
    }
   ],
   "BOX-01": [
