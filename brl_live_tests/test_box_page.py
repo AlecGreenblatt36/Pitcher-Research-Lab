@@ -79,3 +79,23 @@ def test_only_the_latest_version_box_of_each_game_stays_on_the_page():
     assert 'skill_baselines' not in public['box_scores']['b'] and 'teams' in public['box_scores']['b']
     assert 'skill_baselines' in l['box_scores']['b']      # the ledger copy is untouched
     assert set(public['box_publications'])=={'b','yday'}
+
+
+def test_tomorrows_early_call_stays_on_the_page_lean():
+    from brl_live import box_page
+    l = ledger()
+    l['forecasts']['t'] = dict(l['forecasts']['a'], game_pk=5, date='2026-10-07', version=1)
+    l['forecasts']['far'] = dict(l['forecasts']['a'], game_pk=6, date='2026-10-08', version=1)
+    seen = []
+    real = box_page.lean_box
+    box_page.lean_box = lambda b: (seen.append(b['game_pk']), {'game_pk': b['game_pk'], 'date': b['date'], 'archived': True})[1]
+    try:
+        l['box_scores']['t'] = {'game_pk': 5, 'date': '2026-10-07', 'samples': ['big']}
+        l['box_scores']['far'] = {'game_pk': 6, 'date': '2026-10-08'}
+        l['box_publications']['t'] = {}; l['box_publications']['far'] = {}
+        public = public_payload(l, {'n_games': 0})
+    finally:
+        box_page.lean_box = real
+    assert set(public['box_scores']) == {'a', 'yday', 't'} and seen == [5]
+    assert public['box_scores']['t'] == {'game_pk': 5, 'date': '2026-10-07', 'early': True}
+    assert set(public['box_publications']) == {'a', 'yday', 't'}

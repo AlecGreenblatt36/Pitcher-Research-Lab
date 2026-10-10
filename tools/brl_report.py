@@ -860,10 +860,15 @@ def main():
     branch = os.environ.get('BRL_LEDGER_BRANCH', 'brl-live-data')
     params = json.loads((ROOT / 'tools' / 'report_params.json').read_text()) if (ROOT / 'tools' / 'report_params.json').exists() else {}
     now_et = datetime.now(timezone.utc).astimezone(ZoneInfo('America/New_York'))
-    if os.environ.get('BRL_REPORT_DAILY'):        # the scheduled runs: yesterday (now graded) and today, each as of its own date
-        params = {'publish': True, 'dates': [(now_et.date() - timedelta(days=1)).isoformat(), now_et.date().isoformat()]}
+    if os.environ.get('BRL_REPORT_DAILY'):
+        # the scheduled runs: yesterday (now graded) and today, each as of its own date, and tomorrow's early plan as of today
+        # (the same pitches: today's games are not in the pitch table yet), so a staff can prep the night before
+        today_et = now_et.date()
+        params = {'publish': True, 'dates': [(today_et - timedelta(days=1)).isoformat(), today_et.isoformat(), (today_et + timedelta(days=1)).isoformat()],
+                  'asof_for': {(today_et + timedelta(days=1)).isoformat(): today_et.isoformat()}}
     dates = params.get('dates') or [params.get('date') or now_et.date().isoformat()]
     asof = params.get('asof')                      # one as-of date for every report in the run (a backfilled month); default: each report's own date
+    asof_for = params.get('asof_for') or {}        # a date's own as-of when it differs (tomorrow's early plan)
     run_id = os.environ.get('GITHUB_RUN_ID', 'local')
     receipt = {'schema': 'brl.report-receipt.v1', 'run_id': run_id, 'params': params, 'started_at': datetime.now(timezone.utc).isoformat(), 'stages': [], 'reports': {}}
     receipt['environment'] = environment_record()
@@ -892,7 +897,9 @@ def main():
         T = D.concat(tables); del tables
         fits = {}
         for day in sorted(dates):
-            a = asof or day
+            a = asof_for.get(day) or asof or day
+            if a > day:
+                raise ValueError(f'report for {day} cannot be as of a later date ({a})')
             if a not in fits:
                 fits.clear()
                 fits[a] = Fitted(T, date.fromisoformat(a).toordinal(), stage, int(params.get('min_pitches', 300)), int(params.get('min_swings', 200)))

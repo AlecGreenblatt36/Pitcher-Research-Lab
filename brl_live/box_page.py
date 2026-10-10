@@ -29,13 +29,19 @@ PUBLIC_KEYS = ('date', 'forecasts', 'publications', 'actuals', 'status', 'box_sc
 BOX_DAYS = 2  # full simulated games stay on the page for the slate date and the day before
 
 
-def _recent_dates(date: str, days: int) -> set:
+def _recent_dates(date: str, days: int, ahead: int = 0) -> set:
+    """The slate date and the days before it; with ahead, only the days after it."""
     from datetime import date as _date, timedelta
     try:
         d = _date.fromisoformat(str(date))
     except ValueError:
         return set()
+    if ahead:
+        return {(d + timedelta(days=i)).isoformat() for i in range(1, ahead + 1)}
     return {(d - timedelta(days=i)).isoformat() for i in range(days)}
+
+
+EARLY_DAYS = 1  # tomorrow's early calls carry their projected game only (the full set comes with the game-day version)
 
 
 PAGE_BOX_DROP = ('skill_baselines',)   # scoring inputs the page never reads (kept in the ledger)
@@ -50,6 +56,7 @@ def trim_boxes(public: dict) -> dict:
     with the lineup changes that make new versions.
     """
     keep = _recent_dates(public.get('date'), BOX_DAYS)
+    ahead = _recent_dates(public.get('date'), 0, ahead=EARLY_DAYS)
     boxes = public.get('box_scores') or {}
     latest = {}
     for ident, f in (public.get('forecasts') or {}).items():
@@ -59,12 +66,17 @@ def trim_boxes(public: dict) -> dict:
             latest[pk] = (ident, rank)
     recent = {}
     for k, v in boxes.items():
-        if str(v.get('date')) not in keep:
+        d = str(v.get('date'))
+        if d not in keep and d not in ahead:
             continue
         pk = str(v.get('game_pk'))
         if pk in latest and latest[pk][0] != k:
             continue
-        recent[k] = {name: value for name, value in v.items() if name not in PAGE_BOX_DROP}
+        if d in ahead:
+            early = lean_box(v); early.pop('archived', None); early['early'] = True
+            recent[k] = early
+        else:
+            recent[k] = {name: value for name, value in v.items() if name not in PAGE_BOX_DROP}
     public['box_scores'] = recent
     public['live'] = {k: v for k, v in (public.get('live') or {}).items() if str(v.get('date')) in keep}
     public['box_publications'] = {k: v for k, v in (public.get('box_publications') or {}).items() if k in recent}

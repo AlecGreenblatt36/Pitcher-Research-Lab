@@ -105,8 +105,47 @@ def game_context(item,gd,now):
     return out
 
 LIVE_STATES=('In Progress','Manager challenge','Umpire review','Delayed')
+# Tomorrow's games get an early forecast once both probable starters are announced, inside this much time per run, so the
+# next day's slate never crowds out today's games. The early version is a normal saved version: the one scored is still the
+# last one published before first pitch, and the morning's history update makes a new version anyway.
+# A run that spent a long time on today's games gives the early pass only what is left of this much, so a full regular-season
+# morning never runs into the job's time limit.
+EARLY_BUDGET_SECONDS=1200
+EARLY_RUN_LIMIT_SECONDS=2700
+EARLY_SCHEDULE='https://statsapi.mlb.com/api/v1/schedule?sportId=1&date={date}&hydrate=probablePitcher'
 
 class BoxRunner(original.Runner):
+    def iteration(self):
+        import time
+        started=time.monotonic()
+        super().iteration()
+        budget=min(EARLY_BUDGET_SECONDS,max(0.0,EARLY_RUN_LIMIT_SECONDS-(time.monotonic()-started)))
+        try:self.early_iteration(budget=budget)
+        except Exception as exc:
+            self.store.ledger['early_receipt']={'error':type(exc).__name__+': '+str(exc)[:200],'at':self.clock().isoformat()}
+            self.store.persist()
+    def early_iteration(self,budget=EARLY_BUDGET_SECONDS):
+        """Tomorrow's games with both probable starters announced: forecast now, the same way as on game day."""
+        import time
+        from datetime import date as _date
+        started=time.monotonic();day=(_date.fromisoformat(self.today())+timedelta(days=1)).isoformat()
+        doc,_=self.net.json(EARLY_SCHEDULE.format(date=day))
+        done,skipped=[],{}
+        for d in doc.get('dates') or []:
+            for g in d.get('games') or []:
+                pk=int(g['gamePk']);teams=g.get('teams') or {}
+                if (g.get('status') or {}).get('abstractGameState')!='Preview':continue
+                if not all(((teams.get(s) or {}).get('probablePitcher') or {}).get('id') for s in ('away','home')):
+                    skipped[str(pk)]='probable starters not announced';continue
+                if time.monotonic()-started>budget:
+                    skipped[str(pk)]='left for the next run';continue
+                item={'game_pk':pk,'scheduled_start':g.get('gameDate'),'state':'Preview','game_type':g.get('gameType'),
+                      'away':((teams.get('away') or {}).get('team') or {}).get('name'),'home':((teams.get('home') or {}).get('team') or {}).get('name'),
+                      'context':original.schedule_context(g)}
+                try:self.process(pk,item);done.append(pk)
+                except Exception as exc:skipped[str(pk)]=type(exc).__name__+': '+str(exc)[:160]
+        self.store.ledger['early_receipt']={'date':day,'processed':done,'skipped':skipped,'at':self.clock().isoformat(),'seconds':round(time.monotonic()-started,1)}
+        self.store.persist()
     def live_update(self,pk,feed,date):
         # Never lets an in-game problem block pregame forecasts: errors are recorded, not raised.
         now=self.clock().isoformat()
