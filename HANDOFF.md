@@ -46,7 +46,19 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
-### In flight (updated 10:45 a.m. Eastern October 10, by `date -u`)
+### In flight (updated 12:55 p.m. Eastern October 10, by `date -u`)
+
+- October 10, 12:50 p.m.: the called-strike model. CAL-02 found it calling far too many strikes just off the plate
+  (mixed seasons; the calls move each season). CS-SEASON-01 (each season's edge profile) and CS-SEASON-02 (the same,
+  tested on 2024) missed their gates; CS-RECENT-01 (recent takes weighted more) missed too. On the 30 days after each
+  monthly as-of date the season profile is no worse by log loss in any season (2024 +0.03, 2025 -1.43, 2026 -3.73 nats
+  per 1,000 takes) and much better at the edge (2026 just off the plate 1.045 against 1.468), so it went on as a product
+  call, PROD-05 (tools/brl_report.py CS_SEASON true, report and engine). VALUE-18Y (discovery run 38069376029, frozen
+  244c8962a) re-prices the aiming value with it; restate the figure on the How page and in METHODS.md from its result
+  under the row's rule. The rebuild of every backfilled report now carries both fixes: scratch report/rebuild_both.sh
+  (started 16:52 UTC at 244c8962a; log report/rebuild_cross.log; skips months whose message is already logged).
+  Registry now reads two-part names (CS-SEASON-02, SWING-CROSS-01, EDGE-MEASURE-*). Plan page: announced starters in
+  the header for games still to come.
 
 - October 10, 11 a.m.: CAL-01 found the report's swing model over-calling swings on pitches that end outside (8 to 11%,
   fastballs 15 to 19%, growing with distance outside; in sample as well, so structure, not drift). SWING-CROSS-01 (a
