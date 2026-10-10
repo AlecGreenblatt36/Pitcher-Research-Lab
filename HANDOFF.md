@@ -97,6 +97,10 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   content_hash(box) against the publication, so slimming a final box needs its score rows cached first (computed
   once, while the full box verifies) and both scorers reading the cache for slimmed boxes. The published
   box_forecasts/<id>.json keeps the full box for anyone re-checking.
+- For next spring: hitters chase less early in the season (actual chase out of the zone 27.98% in April 2025 and 27.40%
+  in April 2026, about 29.0% by July), and the league swing model has no season-timing term, so April plans expect 6
+  to 8% too many chases (record.json by_month; relative reads unaffected). A registered test of a month-of-season (or
+  days-into-season) offset on the outside-pitch swing model belongs before April 2027.
 - Repository size (October 10, 5:50 p.m.): GitHub reports 4.5 GB (it recommends under 5 GB). Of the data branch's
   4.3 GB packed, 2.9 GB is old copies of three sealed 2026 season files (private/statcast/season-2026.enc 20.7 MB,
   bookkeeping 5.2 MB, physics 4.7 MB) that every report run resealed even with nothing new (91 to 112 copies in three
