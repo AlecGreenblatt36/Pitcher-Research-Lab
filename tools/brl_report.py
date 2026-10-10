@@ -1066,6 +1066,62 @@ def calibration_values(fit, chunk: int = 100000) -> dict:
     return out
 
 
+def calibration_maps(fit) -> dict:
+    """CAL-04 (diagnostic): where the engine's price of an extra chase parts from what chases produce. On the later rows'
+    pitches out of the zone, for hitters with maps, the engine's swing and take values with the hitter's own swing and
+    whiff maps, against what his swings and takes produced, split by the hitter's own part at the pitch (his map's swing
+    chance minus an average hitter's with his same levels, in points). Sums only; no player rows."""
+    PM = fit.PM
+    if PM is None:
+        return {}
+    T = fit.T; tr = fit.train; LW7 = D.LW7; cv = fit.cv
+    rows_all = np.flatnonzero(~tr & fit.outside)
+    bat = T['batter'][rows_all]
+    edges = (-0.10, -0.05, 0.0, 0.05, 0.10)
+    labels = ('own_under_-10', 'own_-10_to_-5', 'own_-5_to_0', 'own_0_to_5', 'own_5_to_10', 'own_over_10')
+    keys = ('n', 'own', 'swings', 'swings_map', 'swings_league', 'whiffs', 'whiffs_map', 'whiffs_league', 'swing_value_map', 'swing_value_league', 'swing_realized',
+            'takes', 'take_value', 'take_realized', 'bip', 'bip_value_engine', 'bip_value_realized')
+    acc = {lab: dict.fromkeys(keys, 0.0) for lab in labels}
+    hitters = 0
+    for h in np.unique(bat):
+        h = int(h)
+        if h not in PM.maps_s:
+            continue
+        r = rows_all[bat == h]; hitters += 1
+        b_ = T['balls'][r].astype(np.int64); k_ = T['strikes'][r].astype(np.int64)
+        blk = PM.blocks_at(PM.xp[r], PM.zp[r], PM.xt[r], PM.zt[r], T['stand_r'][r], T['throw_r'][r], T['group'][r], T['v0'][r].astype(np.float64), b_, k_)
+        hs = (PM.prop_s[r], PM.prop_w[r], PM.bip_b[r]); psc = (PM.prop_p[r], PM.bip_p[r])
+        s_h, w_h, c_, f_h, v_h, _ = PM.probs(blk, h, psc, hs=hs)
+        s_l, w_l, _, f_l, v_l, _ = PM.probs(blk, None, psc, hs=hs)
+        v_strike = np.where(k_ == 2, LW7[1], cv[np.clip(b_ * 3 + k_ + 1, 0, 11)])
+        v_foul = PM.foul_value(b_, k_, cv)
+        v_ball = np.where(b_ == 3, LW7[2], cv[np.clip((b_ + 1) * 3 + k_, 0, 11)])
+        vs_h = w_h * v_strike + (1 - w_h) * (f_h * v_foul + (1 - f_h) * v_h)
+        vs_l = w_l * v_strike + (1 - w_l) * (f_l * v_foul + (1 - f_l) * v_l)
+        vt = c_ * v_strike + (1 - c_) * v_ball
+        call = T['call'][r]; lip = T['last_in_pa'][r] == 1; out7 = T['out7'][r]
+        fin = np.where(out7 >= 0, LW7[np.clip(out7, 0, 6)], np.nan)
+        nxt_s = cv[np.clip(b_ * 3 + k_ + 1, 0, 11)]; nxt_b = cv[np.clip((b_ + 1) * 3 + k_, 0, 11)]; same = cv[np.clip(b_ * 3 + 2, 0, 11)]
+        real = np.where(lip, fin, np.where(call == 0, np.where(T['cs'][r] == 1, nxt_s, nxt_b), np.where(call == 2, nxt_s, np.where(k_ == 2, same, nxt_s))))
+        ok = np.isfinite(real); sw = ((call == 1) | (call == 2)) & ok; tk = (call == 0) & ok
+        inp = PM.inplay[r]; bipv = PM.bip_value[r]
+        own = s_h - s_l; bins = np.digitize(own, edges)
+        for j, lab in enumerate(labels):
+            m = bins == j
+            if not m.any():
+                continue
+            a = acc[lab]; ms = m & sw; mt = m & tk; mi = m & inp
+            a['n'] += int(m.sum()); a['own'] += float(own[m].sum())
+            a['swings'] += int(ms.sum()); a['swings_map'] += float(s_h[m].sum()); a['swings_league'] += float(s_l[m].sum())
+            a['whiffs'] += int((ms & (call == 2)).sum()); a['whiffs_map'] += float(w_h[ms].sum()); a['whiffs_league'] += float(w_l[ms].sum())
+            a['swing_value_map'] += float(vs_h[ms].sum()); a['swing_value_league'] += float(vs_l[ms].sum()); a['swing_realized'] += float(real[ms].sum())
+            a['takes'] += int(mt.sum()); a['take_value'] += float(vt[mt].sum()); a['take_realized'] += float(real[mt].sum())
+            a['bip'] += int(mi.sum()); a['bip_value_engine'] += float(v_h[mi].sum()); a['bip_value_realized'] += float(bipv[mi].sum())
+    out = {lab: {k: (round(v, 2) if isinstance(v, float) else v) for k, v in a.items()} for lab, a in acc.items()}
+    out['hitters'] = hitters
+    return out
+
+
 def environment_record() -> dict:
     """ENG-01: the versions a run used, kept in its receipt so a result can be reproduced (python, numpy, scipy, scikit-learn, pandas, the commit)."""
     import platform
@@ -1139,6 +1195,8 @@ def main():
                     receipt.setdefault('calibration_components', {})[a] = calibration_components(fits[a]); stage('calibration of the other pieces')
                     if params.get('calibration_values'):
                         receipt.setdefault('calibration_values', {})[a] = calibration_values(fits[a]); stage('calibration of the swing and take values')
+                    if params.get('calibration_maps'):
+                        receipt.setdefault('calibration_maps', {})[a] = calibration_maps(fits[a]); stage('calibration of the chase price by own part')
             if params.get('calibration_only'):
                 continue
             rep = build_report(fits[a], T, day, a, stage, int(params.get('max_relievers', 4)))

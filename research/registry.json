@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 255,
- "rows": 258,
+ "experiments": 256,
+ "rows": 259,
  "records": {
   "ACC-01": [
    {
@@ -4209,6 +4209,21 @@
      "df01e156f"
     ],
     "status": "(1), (2) and (3) held; inside stated as about 24"
+   }
+  ],
+  "CAL-04": [
+   {
+    "id": "CAL-04",
+    "columns": {
+     "ID": "CAL-04",
+     "Attempt": "Where the engine's price of an extra chase parts from what chases produce (diagnostic, descriptive). CAL-03 found the average outside swing and take priced right, so the gap behind the stated range (the engine's -0.00118 runs per point of swing chance against -0.00087 from realized outcomes, VALUE-18F to 18Z) is about which swings a hitter's own tendency adds. This splits the later rows' pitches out of the zone, for hitters with maps, by the hitter's own part at the pitch (his map's swing chance minus an average hitter's with his same levels: under -10, -10 to -5, -5 to 0, 0 to 5, 5 to 10, over 10 points) and sums, per bin: swings against the map's and the league's expectation, misses against the whiff maps' and the league's, the engine's swing value with his maps and without them against what the swings produced, the take value against what the takes produced, and the ball-in-play value. Report lane, tools/brl_report.py calibration_maps (params calibration_maps), as of 2025-07-01 and 2026-08-01, calibration only, every correction of October 10 on. Smoke test on a synthetic world (scratch cross/smoke_cal4.py): runs. What I expect, written before the runs: the swings are calibrated by the maps in every bin (the record's bins already show it); the engine's swing value with maps is close to realized in the low bins but more costly to the hitter than realized in the high bins (over 5 points), by 10 to 30%, because a hitter who chases a spot more also makes better contact there than his whiff map and his contact level say. If so, a registered fix follows (the hitter's contact by location in the engine).",
+     "Disposition and evidence": "registered, running"
+    },
+    "registered_before_run": false,
+    "diagnostic": true,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered, running"
    }
   ],
   "BOX-01": [
