@@ -1486,7 +1486,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var f = bareForecast(s.gamePk, day, s.teams, s.gameDate, s.gameType), tc = teamColors(f), ser = seriesOf(s.gamePk);
       var sg = ser ? ser.games.filter(function (x) { return String(x.game_pk) === String(s.gamePk); })[0] : null, ph = sg && sg.p_home != null ? sg.p_home : null;
       var st = String((s.status || {}).detailedState || "Scheduled");
-      h += '<li><div class="card" style="--away:' + tc.away + ";--home:" + tc.home + '"><div class="card-top"><span>' + esc(f.scheduled_start ? timeET(f.scheduled_start) : "") + '</span><span class="state">' + esc(st) + "</span></div>";
+      /* today's and tomorrow's games have a game plan before they have our number: the card opens it */
+      var past = day < D.date, plan = day <= addDays(D.date, 1), tag = plan ? "a" : "div";
+      h += "<li><" + tag + ' class="card"' + (plan ? ' href="#/past/' + day + "/" + s.gamePk + (past ? "/summary" : "/report") + '"' : "") + ' style="--away:' + tc.away + ";--home:" + tc.home + '"><div class="card-top"><span>' + esc(f.scheduled_start ? timeET(f.scheduled_start) : "") + '</span><span class="state">' + esc(st) + "</span></div>";
       var venue = (s.venue && s.venue.name) || "", sl = ser ? seriesLabelFor(ser, sg) : "";
       if (sl || venue) h += '<div class="card-ctx">' + esc([sl, venue].filter(Boolean).join(" at ")) + "</div>";
       h += '<div class="cols"><span></span><span></span><span>' + (ph != null ? "Win" : "") + "</span></div>";
@@ -1496,7 +1498,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         h += '<div class="team-row' + (w != null && w >= .5 ? " fav" : "") + '"><span class="abbr ' + side + '-c">' + esc(tm.abbr) + '</span><span class="team-name">' + esc(nickname(tm.name)) + "<small>" + esc(sp || "Starter not announced") + '</small></span><span class="big num"></span><span class="pct num">' + (w != null ? pct(w) : "") + "</span></div>";
       });
       if (ph != null) h += '<span class="card-bar" aria-hidden="true"><i style="width:' + ((1 - ph) * 100).toFixed(1) + '%;background:var(--away)"></i><i style="flex:1;background:var(--home)"></i></span>';
-      h += '<div class="card-foot">' + (ph != null ? "Series estimate until both starters are in." : "Our number comes once both starters are in.") + "</div></div></li>";
+      h += '<div class="card-foot">' + (past ? "No number for this game. Tap for the real game." : (ph != null ? "Series estimate until both starters are in." : "Our number comes once both starters are in.") + (plan ? " Tap for the game plan." : "")) + "</div></" + tag + "></li>";
     });
     return h;
   }
@@ -1522,6 +1524,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       real = { batting: bx.batting, pitching: bx.pitching, plays: lcPlays(feed), score: { away: sit.state.away_score, home: sit.state.home_score }, innings: inn, _real: true, _final: !!sit.final };
     }
     var fin = real ? real.score : (g ? { away: g.fa, home: g.fh } : null), fav = g ? favorite(f) : null;
+    var notStarted = !g && (!real || (!real.plays.length && !real._final));
+    if (notStarted) fin = null;
     var html = '<div class="game" style="--away:' + tc.away + ";--home:" + tc.home + '"><section class="hero"><div class="wrap"><a class="back" href="#/day/' + day + '">' + CHEV_LEFT + "Back to " + esc(dateLabel(day).replace(/^[A-Za-z]+, /, "")) + "</a>";
     html += '<div class="hero-grid"><div class="hero-main"><p class="hero-meta">' + (fin ? statusPill("final", "Final", false) : "") + esc([SERIES[f.game_type] || "", f.scheduled_start ? timeET(f.scheduled_start) + " ET" : ""].filter(Boolean).join(". ")) + "</p>";
     var venue = (gd.venue && gd.venue.name) || (g && g.v) || "", w = gd.weather || {};
@@ -1537,9 +1541,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     html += '</div><div class="hero-side">';
     if (real && Object.keys(real.innings.away).length) html += lineScore(f, real);
     html += '<p class="hero-note">' + (g ? "Re-run after the season with only what was known before this game. The line score, box score and plays are the real game." :
+      notStarted ? "No number yet: it comes once both starters are announced." :
       "No model numbers for this game. The line score, box score and plays are the real game from MLB.") + "</p></div></div></div></section>";
     var tabs = [["summary", "Summary"], ["report", "Game plan"], ["box", "Box score"], ["plays", "Plays"], ["odds", "Odds"]];
     if (!g) tabs.pop();
+    if (notStarted) { tabs = [["report", "Game plan"]]; tab = "report"; }
     html += '<nav class="tabs"><div class="wrap" role="tablist">' + tabs.map(function (t) { return '<button class="tab" role="tab" data-tab="' + t[0] + '" aria-selected="' + (t[0] === tab) + '">' + t[1] + "</button>"; }).join("") + "</div></nav>";
     html += '<div class="wrap"><div class="panel tab-' + tab + '">';
     if (tab === "report") html += reportTab(f, pk);
@@ -2599,7 +2605,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var nm = function (id) { var p = players[String(id)]; return p && p.name ? p.name : String(id); };
     if (!se || !se.hitters.length || !se.pitchers.length) return "";
     var starter = se.pitchers.filter(function (p) { return p.role === "starter"; })[0] || se.pitchers[0];
-    var h = '<h3 class="team-h ' + side + '-c">How to pitch the ' + esc(nickname(doc.teams[side].name)) + '</h3><p class="note">' + esc(nm(starter.id)) + (starter.role === "starter" ? " starting" : "") + " for the " + esc(nickname(doc.teams[other].name)) + ". " + lineupWords(se.lineup_source) + " Tap a hitter for his full plan, the counts and the bullpen.</p><ol class=\"plan-list\">";
+    var h = '<h3 class="team-h ' + side + '-c">How to pitch the ' + esc(nickname(doc.teams[side].name)) + '</h3><p class="note">' + (starter.role === "starter" ? esc(nm(starter.id)) + " starting for the " + esc(nickname(doc.teams[other].name)) + ". " :
+      "The " + esc(nickname(doc.teams[other].name)) + " haven't named a starter yet. These lines are against " + esc(nm(starter.id)) + " out of their bullpen. ") + lineupWords(se.lineup_source) + " Tap a hitter for his full plan, the counts and the bullpen.</p><ol class=\"plan-list\">";
     se.hitters.forEach(function (hid, i) {
       var key = side + "|" + hid + ":" + starter.id, pr = se.pairs[hid + ":" + starter.id], card = players[String(hid)] && players[String(hid)].hitter;
       var tags = hitterTags(card, doc.league), edge = edgeTag(pr), thin = pr && pr.evidence && pr.evidence.level === "thin";
@@ -2683,8 +2690,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   function reportHtml(f, pk, doc, now) {
     var key = RP_METRICS[state.rpMetric] ? state.rpMetric : "chase", m = RP_METRICS[key];
     var players = doc.players || {}, nm = function (id) { var p = players[String(id)]; return p && p.name ? p.name : String(id); };
-    var retro = doc.asof && doc.date && doc.asof < doc.date, sel = state.rpPair[pk], selSide = sel ? sel.split("|")[0] : null;
-    var h = '<section class="sec wide"><h2>Game plan</h2><p class="lede">How to pitch every hitter in both lineups, from ' + (Number(doc.training_pitches) / 1e6).toFixed(1) + " million pitches thrown before " + esc(shortDate(doc.asof)) + ". Nothing from this game goes in." + (retro ? " This is a look back built the same way." : "") + "</p>";
+    /* a look back is a plan built after its game; an early plan is built the day before and rebuilt on game day */
+    var built = String(doc.built_at || "").slice(0, 10), early = doc.date && (built ? built < doc.date : doc.date > D.date), retro = !early && doc.asof && doc.date && doc.asof < doc.date;
+    var sel = state.rpPair[pk], selSide = sel ? sel.split("|")[0] : null;
+    var h = '<section class="sec wide"><h2>Game plan</h2><p class="lede">How to pitch every hitter in both lineups, from ' + (Number(doc.training_pitches) / 1e6).toFixed(1) + " million pitches thrown before " + esc(shortDate(doc.asof)) + ". Nothing from this game goes in." +
+      (retro ? " This is a look back built the same way." : early ? " Built the day before; it is rebuilt on game day." : "") + "</p>";
     if (now) h += liveNowStrip(f, pk, doc, now, false);
     h += "</section>";
     var liveSel = !!(now && now.pair && now.key === sel), detail = sel ? pairDetail(doc, pk, sel, now) : "";
@@ -2967,8 +2977,13 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
             if (m.chase_rate != null) bits.push("Chased " + pct(m.chase_rate) + " of the time out of the zone.");
             if (m.zone_rate != null) bits.push(pct(m.zone_rate) + " in the zone.");
             var to = [];
-            if (m.to_righties && m.to_righties.length) to.push("To righties: " + listNames(spotList(m.to_righties).slice(0, 2)) + ".");
-            if (m.to_lefties && m.to_lefties.length) to.push("To lefties: " + listNames(spotList(m.to_lefties).slice(0, 2)) + ".");
+            var goes = function (cells) {
+              var top = cells[0][2], keep = cells.filter(function (c, i) { return i === 0 || c[2] >= 0.75 * top; });
+              var edge = keep.filter(function (c) { return spotPhrase(c) !== "middle-middle"; });
+              return edge.length ? listNames(spotList(edge).slice(0, 2)) : "over the middle";
+            };
+            if (m.to_righties && m.to_righties.length) to.push("To righties: " + goes(m.to_righties) + ".");
+            if (m.to_lefties && m.to_lefties.length) to.push("To lefties: " + goes(m.to_lefties) + ".");
             h += '<div class="pt"><h4>' + PITCH_NAME[fam] + "<span>" + pct(m.share) + ", " + m.speed + " mph</span></h4>" + (bits.length ? "<p>" + esc(bits.join(" ")) + "</p>" : "") + (to.length ? "<p>" + esc(to.join(" ")) + "</p>" : "") + "</div>";
           });
           h += "</div>";

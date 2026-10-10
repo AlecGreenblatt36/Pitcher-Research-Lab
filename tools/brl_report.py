@@ -924,7 +924,8 @@ def main():
             summary = {k: v for k, v in rep.items() if k != 'games'}
             summary['games'] = {}
             for pk, entry in rep['games'].items():
-                doc = dict(entry); doc.update({'schema': SCHEMA, 'date': day, 'asof': a, 'game_pk': int(pk), 'grid': rep['grid'], 'training_pitches': fit_n(fits[a]), 'league': fits[a].league})
+                doc = dict(entry); doc.update({'schema': SCHEMA, 'date': day, 'asof': a, 'game_pk': int(pk), 'grid': rep['grid'], 'training_pitches': fit_n(fits[a]), 'league': fits[a].league,
+                                               'built_at': rep['built_at']})
                 text = json.dumps(clean(doc), separators=(',', ':')); total += len(text)
                 if params.get('publish', True):
                     put(repo, token, f'public/reports/{day}/{pk}.json', text, branch, f'BRL report {day} game {pk} (as of {a})')
