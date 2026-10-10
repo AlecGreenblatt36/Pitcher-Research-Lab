@@ -433,9 +433,9 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .plan-row.rp-cell:hover { background: var(--hover); }
 .plan-row.rp-sel { box-shadow: inset 4px 0 0 var(--board); background: var(--good-tint); }
 .pl-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
-.pl-top b { font-size: 17px; min-width: 0; }
-.pl-top b small { font-weight: 400; color: var(--muted); font-size: 14px; margin-left: 4px; }
-.pl-top .spot { display: inline-block; width: 22px; color: var(--muted); font-weight: 400; }
+.pl-top b { font-size: 17px; min-width: 0; padding-left: 22px; text-indent: -22px; }
+.pl-top b small { font-weight: 400; color: var(--muted); font-size: 14px; margin-left: 4px; white-space: nowrap; }
+.pl-top .spot { display: inline-block; width: 22px; color: var(--muted); font-weight: 400; text-indent: 0; }
 .pl-edge { flex: 0 0 auto; font-size: 14px; font-weight: 700; white-space: nowrap; border-radius: 999px; padding: 2px 10px; }
 .pl-edge.big { background: var(--board); color: var(--chalk); }
 .pl-edge.some { background: var(--good-tint); color: var(--good); border: 1px solid var(--rule); }
@@ -1520,6 +1520,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var feed = PASTFEED[pk], gd = feed ? feed.gameData || {} : {};
     var f = g ? pastForecast(g) : bareForecast(pk, day, gd.teams ? { away: { team: gd.teams.away }, home: { team: gd.teams.home } } : null, (gd.datetime || {}).dateTime, (gd.game || {}).type);
     if (!f.away.abbr && !g) { app.innerHTML = '<div class="wrap"><p class="empty">That game could not be loaded from MLB. <a href="#/day/' + esc(day) + '">Back to ' + esc(dateLabel(day)) + "</a></p></div>"; return; }
+    if (!g) ["away", "home"].forEach(function (s) { var pp = (gd.probablePitchers || {})[s]; if (pp && pp.fullName && !f[s].starter) f[s].starter = { name: pp.fullName }; });
     var tc = teamColors(f), sit = feed ? lcSituation(feed) : null, real = null;
     if (feed) {
       var bx = lcBox((feed.liveData || {}).boxscore || {}), inn = { away: {}, home: {} };
@@ -1538,7 +1539,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     ["away", "home"].forEach(function (side) {
       var t = f[side], sp = (t.starter && t.starter.name) || "";
       html += '<div class="hero-row' + (fav === side ? " fav" : "") + '"><span class="abbr"><i class="chip" style="background:var(--' + side + ')"></i>' + esc(t.abbr) + '</span><span class="team-name">' + esc(nickname(t.name)) +
-        (sp ? "<small>" + esc(sp) + "</small>" : "") + '</span><span class="big num">' + (fin ? esc(fin[side]) : "") + '</span><span class="pct num">' + (g ? pct(winProb(f, side)) : "") + "</span></div>";
+        (sp ? "<small>" + esc(sp) + "</small>" : notStarted ? "<small>Starter not announced</small>" : "") + '</span><span class="big num">' + (fin ? esc(fin[side]) : "") + '</span><span class="pct num">' + (g ? pct(winProb(f, side)) : "") + "</span></div>";
     });
     if (g) html += heroBar(f, homeProb(f)) + callLine(f, fin, null, true);
     html += '</div><div class="hero-side">';
