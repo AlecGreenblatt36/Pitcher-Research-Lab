@@ -2974,7 +2974,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       });
       h += "</tbody></table></div>";
     });
-    return h + '</div><p class="note">Re-run numbers, not live calls. The weights that blend our pieces were set on one of these seasons and checked on the other. Games with no closing line (most Athletics games in 2025, and 2025 after August 16) are left out.</p></section>';
+    return h + '</div><p class="note">Re-run numbers, not live calls. The weights that blend our pieces were set on one of these seasons and checked on the other. The at-bat model was tuned on 2025, so 2026 is the fairer test. Games with no closing line (most Athletics games in 2025, and 2025 after August 16) are left out.</p></section>';
   }
   /* ---------- Players: league-wide cards from the matchup report's fitted pieces (public/reports/players/) ---------- */
   var PLAYERS = null, PLAYER_SHARDS = {};
@@ -3141,7 +3141,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var d = x.headline.better_than_coin_pct - x.market.better_than_coin_pct;
       parts.push("In " + y + " (" + Number(x.games).toLocaleString() + " games) our pick won " + x.headline.picks_right_pct.toFixed(0) + "% and the Vegas favorite " + x.market.picks_right_pct.toFixed(0) + "%. Our percentages were " + (Math.abs(d) < 0.15 ? "about as accurate as Vegas" : d > 0 ? "a little more accurate than Vegas" : "a little less accurate than Vegas"));
     });
-    if (parts.length) h += '<section class="sec"><h2>The bottom line</h2><p class="lede">' + esc(parts.join(". ")) + ". Nobody picks much more than 57% of baseball games; the best team in baseball still loses 4 out of 10. What separates a good model is whether its percentages hold up: when it says 60%, that team should win about 60% of the time.</p></section>";
+    if (parts.length) h += '<section class="sec"><h2>The bottom line</h2><p class="lede">' + esc(parts.join(". ")) + (years.indexOf("2025") >= 0 ? ". The at-bat model was tuned on 2025 games, so 2026 is the fairer test" : "") + ". Nobody picks much more than 57% of baseball games; the best team in baseball still loses 4 out of 10. What separates a good model is whether its percentages hold up: when it says 60%, that team should win about 60% of the time.</p></section>";
     h += '<div id="rec-seasons"><p class="empty">Loading the two seasons\u2026</p></div>';
     h += replaySeasons(rec);
     if (!n) {
