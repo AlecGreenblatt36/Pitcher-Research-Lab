@@ -69,7 +69,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           BRL_DISPATCH_TOKEN: ${{ secrets.BRL_DISPATCH_TOKEN }}
-        run: cd tools && python brl_daily_report_trigger.py
+        run: |
+          cd tools && python brl_daily_report_trigger.py | tee "$RUNNER_TEMP/report_trigger.txt"
+          if grep -q "dispatched" "$RUNNER_TEMP/report_trigger.txt"; then python brl_record_diagnostic.py diagnostics/report_trigger_latest.txt "$RUNNER_TEMP/report_trigger.txt" || true; fi
     outputs:
       pages_ready: ${{ steps.live.outputs.pages_ready }}
   publish:
