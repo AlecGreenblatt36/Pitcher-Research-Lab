@@ -4234,14 +4234,19 @@
     "id": "WHIFF-LAM-01",
     "columns": {
      "ID": "WHIFF-LAM-01",
-     "Attempt": "Less shrinkage for the hitter whiff maps (CAL-04 found them too flat). The whiff maps' penalty toward the league drops from 30 to 10 in the report and the engine (tools/brl_report.py LAM_W, params lam_w; the same maps feed the plans' pricing, the miss grids and the player cards). Measured with CAL-04's split, now over pitches in and out of the zone, as of 2025-07-01 and 2026-08-01, penalty 10 against 30 with every other piece the same (four calibration-only runs). Smoke test on a synthetic world: runs. **Registered in the commit that added this row, before the runs.** Gate, in both runs: (1) whiff log loss of the maps on the later swings lower with 10, on pitches out of the zone and on all pitches; (2) misses expected against actual on pitches out of the zone in the two extreme bins closer to 1 than with 30, the bin under -10 at 0.95 or above and the bin over 10 at 1.03 or below. Prediction: log loss lower by 1 to 5 nats per 1,000 swings out of the zone and by 0 to 3 on all swings; the extreme bins 0.94 to 0.98 and 1.00 to 1.03. If it holds: 10 on in the report and the engine, the aiming value re-priced, the reports rebuilt.",
-     "Disposition and evidence": "registered, running"
+     "Attempt": "Less shrinkage for the hitter whiff maps (CAL-04 found them too flat). The whiff maps' penalty toward the league drops from 30 to 10 in the report and the engine (tools/brl_report.py LAM_W, params lam_w; the same maps feed the plans' pricing, the miss grids and the player cards). Measured with CAL-04's split, now over pitches in and out of the zone, as of 2025-07-01 and 2026-08-01, penalty 10 against 30 with every other piece the same (four calibration-only runs). Smoke test on a synthetic world: runs. **Registered in the commit that added this row, before the runs.** Gate, in both runs: (1) whiff log loss of the maps on the later swings lower with 10, on pitches out of the zone and on all pitches; (2) misses expected against actual on pitches out of the zone in the two extreme bins closer to 1 than with 30, the bin under -10 at 0.95 or above and the bin over 10 at 1.03 or below. Prediction: log loss lower by 1 to 5 nats per 1,000 swings out of the zone and by 0 to 3 on all swings; the extreme bins 0.94 to 0.98 and 1.00 to 1.03. If it holds: 10 on in the report and the engine, the aiming value re-priced, the reports rebuilt. **Results (2025-07-01: runs 38077001415 with 30, 38077015748 with 10; 2026-08-01: 38077031101, 38077049003):** gate not met. Out of the zone the looser maps help (log loss -0.83 and -0.85 nats per 1,000 swings; the extreme bins 0.901 to 0.927 and 1.035 to 1.010, 0.905 to 0.937 and 1.062 to 1.035), but over all swings log loss is worse (+0.16 and +0.21), and the bin under -10 stays below 0.95. Inside the zone the same gradient shows (2026: under -10 at 0.950, over 10 at 1.127 with 30). So shrinkage is not the cause: the hitters who swing more at a spot miss less there than any location map says, in and out of the zone. Not adopted; the penalty stays 30. Follow-up: WHIFF-OWN-01 (the hitter's swing tendency at the pitch as an input to the whiff model).",
+     "Disposition and evidence": "gate not met; not adopted"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38077001415",
+     "38077015748",
+     "38077031101",
+     "38077049003"
+    ],
     "frozen_commits": [],
-    "status": "registered, running"
+    "status": "gate not met; not adopted"
    }
   ],
   "BOX-01": [
