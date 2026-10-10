@@ -55,7 +55,10 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   VALUE-18X re-priced the aiming value with it (run 38062560248): structural -42.3 [-45.2, -39.4] (was -43.5), regression
   -29.4 (same), inside -22.7, calibration 0.967 and 0.822 (constants kept); stated now as about 30 to 40 runs. Today's and
   tomorrow's plans and the player cards were rebuilt with the new model at 15:04 UTC (run 38062137847). Reports built
-  before the switch keep old grades until rebuilt (the month rebuild loop, scratch report/rebuild_cross.sh).
+  before the switch keep old grades until rebuilt: scratch report/rebuild_cross.sh (started 15:19 UTC, four months at a
+  time, then October 1 to 8 with player cards; log report/rebuild_cross.log). If the container restarts, relaunch it from
+  the first month not yet pushed. Players: "Playing next" club chips and a next-game link on each card (4a9be73f1).
+  Check-in scheduled 18:15 UTC (rebuild, Game 5's game-day version, the October 11 early call, phone check).
 - October 10, 10:34 a.m.: Alec said to make the calls I was asking him about. Taken: PROD-04, the run environment without
   its venue term (brl_live/environment.json is env-v2-weather; TOTALS-08's do-no-harm product call). The headline refit
   on the weather replays reproduced taught-v5 (no new version); the taught total's weights and intercept unchanged; the
