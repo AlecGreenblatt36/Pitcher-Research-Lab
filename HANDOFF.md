@@ -46,7 +46,15 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
-### In flight (updated 3:20 p.m. Eastern October 10, by `date -u`)
+### In flight (updated 3:40 p.m. Eastern October 10, by `date -u`)
+
+- October 10, 3:35 p.m.: the rebuild loop's busy check read only the last 10 report runs, so with the calibration runs in
+  between, batches overlapped (seven rebuild runs at once) and GitHub's secondary write limit failed April 2026 (run
+  38079231926, HTTP 403). Fixed: the report's put() waits out 403/429 rate limits; busy() reads the last 60 runs. The loop
+  was restarted at 9168a9f75 with April 2026 marked for redo in its log. Runs still going from before the restart use the
+  old put(); if any of them fails, mark its month "failed ..., redo:" in report/rebuild_cross.log and relaunch the loop.
+  Also: game plans print cleanly (print stylesheet); cards and the pregame header say when the simulator alone favors the
+  other team.
 
 - October 10, 3:20 p.m.: game-day plans follow the game. The live chain's report trigger (tools/brl_daily_report_trigger.py)
   now also rebuilds today's and tomorrow's plans when a forecast for that date was saved after the plans (lineups posted,
