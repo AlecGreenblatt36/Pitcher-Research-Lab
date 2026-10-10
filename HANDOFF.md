@@ -52,9 +52,10 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   fastballs 15 to 19%, growing with distance outside; in sample as well, so structure, not drift). SWING-CROSS-01 (a
   crossing-location block for the league swing model, tools/brl_discovery.py cross_block, in the report and the engine)
   passed its registered gate in both runs and is on from the next daily build (tools/brl_report.py SWING_CROSS true).
-  The stated aiming figures (30 to 45 runs, 23 inside) were priced without it: the How page and METHODS.md say they are
-  being re-checked; VALUE-18X (value2_study with the crossing block) is the re-pricing to run next. Reports built before
-  the switch keep old grades until rebuilt (a month-by-month rebuild with the new model is worth queuing).
+  VALUE-18X re-priced the aiming value with it (run 38062560248): structural -42.3 [-45.2, -39.4] (was -43.5), regression
+  -29.4 (same), inside -22.7, calibration 0.967 and 0.822 (constants kept); stated now as about 30 to 40 runs. Today's and
+  tomorrow's plans and the player cards were rebuilt with the new model at 15:04 UTC (run 38062137847). Reports built
+  before the switch keep old grades until rebuilt (the month rebuild loop, scratch report/rebuild_cross.sh).
 - October 10, 10:34 a.m.: Alec said to make the calls I was asking him about. Taken: PROD-04, the run environment without
   its venue term (brl_live/environment.json is env-v2-weather; TOTALS-08's do-no-harm product call). The headline refit
   on the weather replays reproduced taught-v5 (no new version); the taught total's weights and intercept unchanged; the
