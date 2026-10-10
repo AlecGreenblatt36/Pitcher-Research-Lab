@@ -43,6 +43,17 @@
    priced structurally (the engine's components times the calibrated own part) and carry the realized-outcome
    regression beside them as the check; the structure's calibration against outcomes is reported (VALUE-19).
 
+## Checkpoint, October 10, 2026, 7 p.m. Eastern
+
+Game plans (report lane) and the lineup before one is posted. Passed and on: SWING-CROSS-01 (the swing model's crossing
+term), FOUL-01 and FOUL-02 (the foul model's whiff propensity; two-strike foul tips as strikeouts; their joint check
+held), LINEUP-01 (the last lineup against a starter of today's hand: +0.42, +0.50 and, on 2024, +0.45 starters named
+per team-game). On as a product call with no gate passed: PROD-05 (each season's called-strike edge; CS-SEASON-01 and
+02, CS-RECENT-01 missed). Failed and off: LINEUP-02 (batting spots), LINEUP-03 (spots, by 0.003), WHIFF-LAM-01,
+WHIFF-OWN-01 to 04 (the whiff input line is closed for the season). Every report day from 2025-03-27 to 2026-10-08
+was rebuilt with the passed pieces; the plans record (4,991 games): chasers 33.8% against 31.0% for an average hitter
+(maps 34.6%), patient hitters 24.1% against 27.9% (maps 24.7%).
+
 ## Checkpoint, October 8, 2026, 6 a.m. Eastern
 
 Production simulator (pa-2026-v2-physics with ADJUST in brl_live/boxscore.py): context offsets, run environment (ENV-03),
