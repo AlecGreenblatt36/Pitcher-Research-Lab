@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 256,
- "rows": 259,
+ "experiments": 257,
+ "rows": 260,
  "records": {
   "ACC-01": [
    {
@@ -4216,11 +4216,29 @@
     "id": "CAL-04",
     "columns": {
      "ID": "CAL-04",
-     "Attempt": "Where the engine's price of an extra chase parts from what chases produce (diagnostic, descriptive). CAL-03 found the average outside swing and take priced right, so the gap behind the stated range (the engine's -0.00118 runs per point of swing chance against -0.00087 from realized outcomes, VALUE-18F to 18Z) is about which swings a hitter's own tendency adds. This splits the later rows' pitches out of the zone, for hitters with maps, by the hitter's own part at the pitch (his map's swing chance minus an average hitter's with his same levels: under -10, -10 to -5, -5 to 0, 0 to 5, 5 to 10, over 10 points) and sums, per bin: swings against the map's and the league's expectation, misses against the whiff maps' and the league's, the engine's swing value with his maps and without them against what the swings produced, the take value against what the takes produced, and the ball-in-play value. Report lane, tools/brl_report.py calibration_maps (params calibration_maps), as of 2025-07-01 and 2026-08-01, calibration only, every correction of October 10 on. Smoke test on a synthetic world (scratch cross/smoke_cal4.py): runs. What I expect, written before the runs: the swings are calibrated by the maps in every bin (the record's bins already show it); the engine's swing value with maps is close to realized in the low bins but more costly to the hitter than realized in the high bins (over 5 points), by 10 to 30%, because a hitter who chases a spot more also makes better contact there than his whiff map and his contact level say. If so, a registered fix follows (the hitter's contact by location in the engine).",
-     "Disposition and evidence": "registered, running"
+     "Attempt": "Where the engine's price of an extra chase parts from what chases produce (diagnostic, descriptive). CAL-03 found the average outside swing and take priced right, so the gap behind the stated range (the engine's -0.00118 runs per point of swing chance against -0.00087 from realized outcomes, VALUE-18F to 18Z) is about which swings a hitter's own tendency adds. This splits the later rows' pitches out of the zone, for hitters with maps, by the hitter's own part at the pitch (his map's swing chance minus an average hitter's with his same levels: under -10, -10 to -5, -5 to 0, 0 to 5, 5 to 10, over 10 points) and sums, per bin: swings against the map's and the league's expectation, misses against the whiff maps' and the league's, the engine's swing value with his maps and without them against what the swings produced, the take value against what the takes produced, and the ball-in-play value. Report lane, tools/brl_report.py calibration_maps (params calibration_maps), as of 2025-07-01 and 2026-08-01, calibration only, every correction of October 10 on. Smoke test on a synthetic world (scratch cross/smoke_cal4.py): runs. What I expect, written before the runs: the swings are calibrated by the maps in every bin (the record's bins already show it); the engine's swing value with maps is close to realized in the low bins but more costly to the hitter than realized in the high bins (over 5 points), by 10 to 30%, because a hitter who chases a spot more also makes better contact there than his whiff map and his contact level say. If so, a registered fix follows (the hitter's contact by location in the engine). **Results (runs 38076327570 as of 2025-07-01 and 38076342985 as of 2026-08-01; about 450 hitters, 159,000 and 103,000 later pitches out of the zone):** the swing maps are right in every bin (expected against actual swings within 1 to 5%). The whiff maps are too flat: hitters whose map says they lay off a spot miss more when they do swing there than the map says (under -10 points: 2,088 expected against 2,319 actual and 1,332 against 1,473, 10% short), and hitters whose map says they chase a spot miss less (over 10 points: 3,595 against 3,472 and 2,360 against 2,220, 4 to 6% long). So the realized value of a swing improves from the low bins to the high ones more than the engine's does (2025: realized -0.108 runs per swing under -10 to -0.087 over 10, engine with maps -0.101 to -0.089; 2026: -0.115 to -0.086 against -0.105 to -0.090). The take value is right in every bin (within 0.002). The expectation had the direction right but the size and shape wrong: the miss is a gradient across both ends, 7 to 9% at the low end and 0 to 9% at the high end, not 10 to 30% at the high end. It is in the whiff maps, not the contact value. Follow-up: WHIFF-LAM-01 (less shrinkage for the whiff maps).",
+     "Disposition and evidence": "diagnostic; swing maps right, whiff maps too flat"
     },
     "registered_before_run": false,
     "diagnostic": true,
+    "runs": [
+     "38076327570",
+     "38076342985"
+    ],
+    "frozen_commits": [],
+    "status": "diagnostic; swing maps right, whiff maps too flat"
+   }
+  ],
+  "WHIFF-LAM-01": [
+   {
+    "id": "WHIFF-LAM-01",
+    "columns": {
+     "ID": "WHIFF-LAM-01",
+     "Attempt": "Less shrinkage for the hitter whiff maps (CAL-04 found them too flat). The whiff maps' penalty toward the league drops from 30 to 10 in the report and the engine (tools/brl_report.py LAM_W, params lam_w; the same maps feed the plans' pricing, the miss grids and the player cards). Measured with CAL-04's split, now over pitches in and out of the zone, as of 2025-07-01 and 2026-08-01, penalty 10 against 30 with every other piece the same (four calibration-only runs). Smoke test on a synthetic world: runs. **Registered in the commit that added this row, before the runs.** Gate, in both runs: (1) whiff log loss of the maps on the later swings lower with 10, on pitches out of the zone and on all pitches; (2) misses expected against actual on pitches out of the zone in the two extreme bins closer to 1 than with 30, the bin under -10 at 0.95 or above and the bin over 10 at 1.03 or below. Prediction: log loss lower by 1 to 5 nats per 1,000 swings out of the zone and by 0 to 3 on all swings; the extreme bins 0.94 to 0.98 and 1.00 to 1.03. If it holds: 10 on in the report and the engine, the aiming value re-priced, the reports rebuilt.",
+     "Disposition and evidence": "registered, running"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
     "runs": [],
     "frozen_commits": [],
     "status": "registered, running"

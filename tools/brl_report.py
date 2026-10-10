@@ -49,6 +49,7 @@ SWING_CROSS = True                               # SWING-CROSS-01 (gate passed O
 CS_SEASON = True                                 # PROD-05 (product call October 10, 2026; CS-SEASON-01 and -02 gates not met): each season's own edge profile for the called-strike model (params cs_season false turns it off)
 CS_RECENT = None                                 # CS-RECENT-01: the called-strike model fit on every training take weighted toward the latest days, half-life in days (params cs_recent)
 FOUL_FIX = True                                   # FOUL-01 and FOUL-02 (check held October 10, 2026): the engine's foul model reads the hitter's whiff propensity, and a two-strike foul tip ending the at-bat is a strikeout (params foul_fix false turns them off)
+LAM_W = 30.0                                      # shrinkage of the hitter whiff maps toward the league (report and engine; params lam_w; WHIFF-LAM-01 tests 10)
 STRIKE_SPOTS = True
 POOL_CACHE = 800            # pools kept in memory at once (pitcher, side, count group, type group, zone); see Fitted._pool                              # VALUE-18I: in-zone aims priced the same way (strike spots); its synthetic verdict held on October 9, 2026
 N_IN = 2.04                                      # inside pitches per plate appearance (VALUE-18F)
@@ -225,7 +226,7 @@ class Fitted:
         self.m_w = D.fit_logistic(Xw[idx], whiff[idx]); self.off_w = self.m_w.decision_function(Xw)
         fam = np.column_stack([np.isin(T['group'], (0, 1, 2)), np.isin(T['group'], (3, 4)), np.isin(T['group'], (5,))]).astype(np.float64)
         self.Bw = np.hstack([D.hitter_basis(self.xt, self.zt, T['stand_r'], T['strikes']), fam, D.hats(self.zt, (1.0, 2.0, 3.0, 4.0)).astype(np.float64)])
-        self.maps_w = D._hitter_maps(self.Bw, whiff, self.off_w, D._groups(T['batter'], sw_tr), 30.0, min_swings)
+        self.maps_w = D._hitter_maps(self.Bw, whiff, self.off_w, D._groups(T['batter'], sw_tr), float(LAM_W), min_swings)
         Wsum = {0: 0.0, 1: 0.0}; Wn = {0: 0, 1: 0}
         for h, m in self.maps_w.items():
             sd_ = self.side.get(h, 1); Wsum[sd_] = Wsum[sd_] + m; Wn[sd_] += 1
@@ -280,7 +281,7 @@ class Fitted:
         self.PM = None
         if STRUCTURAL:
             self.PM = D.PAModels(T, tr, rng, {'league_n': 500000, 'min_pitches': min_pitches, 'min_swings': min_swings, 'swing_cross': SWING_CROSS,
-                                               'cs_season': CS_SEASON, 'cs_target': self.cs_target, 'cs_recent': CS_RECENT, 'foul_prop': FOUL_FIX, 'foul_tip': FOUL_FIX}, stage)
+                                               'cs_season': CS_SEASON, 'cs_target': self.cs_target, 'cs_recent': CS_RECENT, 'foul_prop': FOUL_FIX, 'foul_tip': FOUL_FIX, 'lam_w': LAM_W}, stage)
             ci_all = np.clip(T['balls'], 0, 3) * 3 + np.clip(T['strikes'], 0, 2)
             fin_all = np.where(T['out7'] >= 0, D.LW7[np.clip(T['out7'], 0, 6)], np.nan)
             self.cv = np.array([float(np.nanmean(fin_all[tr & (ci_all == c_)])) if (tr & (ci_all == c_) & np.isfinite(fin_all)).any() else 0.0 for c_ in range(12)])
@@ -1075,11 +1076,12 @@ def calibration_maps(fit) -> dict:
     if PM is None:
         return {}
     T = fit.T; tr = fit.train; LW7 = D.LW7; cv = fit.cv
-    rows_all = np.flatnonzero(~tr & fit.outside)
+    rows_all = np.flatnonzero(~tr)
     bat = T['batter'][rows_all]
     edges = (-0.10, -0.05, 0.0, 0.05, 0.10)
-    labels = ('own_under_-10', 'own_-10_to_-5', 'own_-5_to_0', 'own_0_to_5', 'own_5_to_10', 'own_over_10')
-    keys = ('n', 'own', 'swings', 'swings_map', 'swings_league', 'whiffs', 'whiffs_map', 'whiffs_league', 'swing_value_map', 'swing_value_league', 'swing_realized',
+    base_labels = ('own_under_-10', 'own_-10_to_-5', 'own_-5_to_0', 'own_0_to_5', 'own_5_to_10', 'own_over_10')
+    labels = base_labels + tuple('inside|' + x for x in base_labels)      # outside pitches keep CAL-04's names; inside pitches are prefixed
+    keys = ('n', 'own', 'swings', 'swings_map', 'swings_league', 'whiffs', 'whiffs_map', 'whiffs_league', 'whiff_ll_map', 'whiff_ll_league', 'swing_value_map', 'swing_value_league', 'swing_realized',
             'takes', 'take_value', 'take_realized', 'bip', 'bip_value_engine', 'bip_value_realized')
     acc = {lab: dict.fromkeys(keys, 0.0) for lab in labels}
     hitters = 0
@@ -1105,7 +1107,7 @@ def calibration_maps(fit) -> dict:
         real = np.where(lip, fin, np.where(call == 0, np.where(T['cs'][r] == 1, nxt_s, nxt_b), np.where(call == 2, nxt_s, np.where(k_ == 2, same, nxt_s))))
         ok = np.isfinite(real); sw = ((call == 1) | (call == 2)) & ok; tk = (call == 0) & ok
         inp = PM.inplay[r]; bipv = PM.bip_value[r]
-        own = s_h - s_l; bins = np.digitize(own, edges)
+        own = s_h - s_l; bins = np.digitize(own, edges) + np.where(fit.outside[r], 0, len(base_labels))
         for j, lab in enumerate(labels):
             m = bins == j
             if not m.any():
@@ -1114,6 +1116,7 @@ def calibration_maps(fit) -> dict:
             a['n'] += int(m.sum()); a['own'] += float(own[m].sum())
             a['swings'] += int(ms.sum()); a['swings_map'] += float(s_h[m].sum()); a['swings_league'] += float(s_l[m].sum())
             a['whiffs'] += int((ms & (call == 2)).sum()); a['whiffs_map'] += float(w_h[ms].sum()); a['whiffs_league'] += float(w_l[ms].sum())
+            yw = (call[ms] == 2).astype(float); a['whiff_ll_map'] += float(D.logloss_vec(w_h[ms], yw).sum()); a['whiff_ll_league'] += float(D.logloss_vec(w_l[ms], yw).sum())
             a['swing_value_map'] += float(vs_h[ms].sum()); a['swing_value_league'] += float(vs_l[ms].sum()); a['swing_realized'] += float(real[ms].sum())
             a['takes'] += int(mt.sum()); a['take_value'] += float(vt[mt].sum()); a['take_realized'] += float(real[mt].sum())
             a['bip'] += int(mi.sum()); a['bip_value_engine'] += float(v_h[mi].sum()); a['bip_value_realized'] += float(bipv[mi].sum())
@@ -1148,11 +1151,12 @@ def main():
         today_et = now_et.date()
         params = {'publish': True, 'dates': [(today_et - timedelta(days=1)).isoformat(), today_et.isoformat(), (today_et + timedelta(days=1)).isoformat()],
                   'asof_for': {(today_et + timedelta(days=1)).isoformat(): today_et.isoformat()}}
-    global SWING_CROSS, CS_SEASON, CS_RECENT, FOUL_FIX
+    global SWING_CROSS, CS_SEASON, CS_RECENT, FOUL_FIX, LAM_W
     SWING_CROSS = bool(params.get('swing_cross', SWING_CROSS))
     CS_SEASON = bool(params.get('cs_season', CS_SEASON))
     CS_RECENT = params.get('cs_recent', CS_RECENT) or None
     FOUL_FIX = bool(params.get('foul_fix', FOUL_FIX))
+    LAM_W = float(params.get('lam_w', LAM_W))
     dates = params.get('dates') or [params.get('date') or now_et.date().isoformat()]
     asof = params.get('asof')                      # one as-of date for every report in the run (a backfilled month); default: each report's own date
     asof_for = params.get('asof_for') or {}        # a date's own as-of when it differs (tomorrow's early plan)
