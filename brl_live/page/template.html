@@ -1675,7 +1675,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     } else if (s) {
       var simFav = f.home_win_probability == null ? null : f.home_win_probability >= 0.5 ? "home" : "away";
       var split = v && v.key === "proj" && simFav && simFav !== fav && sampleWinner(s) === simFav;
-      html += lineScore(f, s) + '<p class="hero-note">The line score is one simulated game, not a real score.' + (split ? " It follows the simulator, which by itself leans the " + esc(nickname(f[simFav].name)) + " (" + pct(simFav === "home" ? f.home_win_probability : 1 - f.home_win_probability) + "); with the team ratings and the betting line in, our pick is the " + esc(nickname(f[fav].name)) + "." : "") + "</p>";
+      html += lineScore(f, s) + '<p class="hero-note">The line score is one simulated game, not a real score.' + (split ? " It follows the simulator, which by itself leans the " + esc(nickname(f[simFav].name)) + " (" + pct(simFav === "home" ? f.home_win_probability : 1 - f.home_win_probability) + "); with the team ratings" + (taughtRecipe(f) && marketProb(D.market && D.market[f.game_pk]) != null ? " and the betting line" : "") + " in, our pick is the " + esc(nickname(f[fav].name)) + "." : "") + "</p>";
     }
     html += "</div></div></div></section>";
 
