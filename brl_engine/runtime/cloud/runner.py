@@ -9,7 +9,7 @@ Ledger layout on the data branch (unchanged from the inherited runtime):
 """
 from __future__ import annotations
 
-import base64, hashlib, json, os, time
+import base64, hashlib, json, os, random, time
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
@@ -146,10 +146,14 @@ class GitStore:
             raw = base64.b64decode(''.join(blob['content'].split()))
         return raw, value['sha']
 
+    PUT_ATTEMPTS = 16
+
     def put(self, path: str, raw: bytes, immutable: bool = False):
         # Several jobs write to the ledger branch (live runs, backfills, research); a 409 means the
-        # branch moved between reading the file's sha and writing, so re-read and try again.
-        for attempt in range(6):
+        # branch moved between reading the file's sha and writing, so re-read and try again. With report
+        # runs committing every second (October 10, 2026: a game blocked by 409s), keep trying for a few
+        # minutes, with a random spread so two writers do not retry in step.
+        for attempt in range(self.PUT_ATTEMPTS):
             existing = self.read(path)
             if existing is not None:
                 if existing[0] == raw:
@@ -162,9 +166,9 @@ class GitStore:
             try:
                 return self.request('/contents/' + quote(path, safe='/'), 'PUT', payload)
             except HTTPError as exc:
-                if exc.code != 409 or attempt == 5:
+                if exc.code != 409 or attempt == self.PUT_ATTEMPTS - 1:
                     raise
-                time.sleep(2 + 3 * attempt)
+                time.sleep(min(20.0, 1.0 + 2.0 * attempt) + random.random() * 3.0)
 
     def private(self, kind: str, ident: str, value: dict):
         purpose = 'private:' + kind + ':' + ident
