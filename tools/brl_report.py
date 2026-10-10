@@ -123,13 +123,29 @@ def record_from(days: dict) -> dict:
 
 
 def put(repo, token, path, text, branch, message, tries=14):
-    """put_text with patience: several backfills commit to the same branch at once, so a 409 is ordinary."""
+    """put_text with patience: several backfills commit to the same branch at once, so a 409 is ordinary; and many runs
+    writing at once can hit GitHub's secondary rate limit (403 or 429 with a retry hint), which is waited out."""
     import random
     from urllib.error import HTTPError
+    limited = 0
     for attempt in range(tries):
         try:
             return D.put_text(repo, token, path, text, branch, message)
         except HTTPError as exc:
+            if exc.code in (403, 429):
+                try:
+                    body = exc.read().decode(errors='replace').lower()
+                except Exception:
+                    body = ''
+                hdr = exc.headers or {}
+                rate = 'rate limit' in body or hdr.get('Retry-After') or hdr.get('X-RateLimit-Remaining') == '0'
+                if not rate or limited >= 8:
+                    raise
+                limited += 1
+                wait = float(hdr.get('Retry-After') or 0) or 60.0 * (1 + limited / 2)
+                print(f'write rate-limited ({exc.code}); waiting {wait:.0f}s', flush=True)
+                time.sleep(min(wait, 300) + random.uniform(0, 10))
+                continue
             if exc.code not in (409, 422) or attempt == tries - 1:
                 raise
             time.sleep(random.uniform(2, 6) * (1 + attempt / 3))
