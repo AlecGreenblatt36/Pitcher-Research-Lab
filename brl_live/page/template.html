@@ -2433,8 +2433,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var b = R && R.bins, hi = b && b["over 2"], lo = b && b["under -2"];
     if (!hi || !lo || !hi.outside || !lo.outside) return [];
     var r = function (x, k) { return (100 * x[k] / x.outside).toFixed(1) + "%"; };
-    return ["Hitters we read as chasers went after " + r(hi, "chases") + " of pitches out of the zone. An average hitter would have chased " + r(hi, "league") + " of those same pitches.",
-            "Hitters we read as patient chased " + r(lo, "chases") + ". An average hitter would have chased " + r(lo, "league") + "."];
+    var said = function (x) { return x.map != null ? " (we said " + r(x, "map") + ")" : ""; };
+    return ["Hitters we read as chasers went after " + r(hi, "chases") + " of pitches out of the zone" + said(hi) + ". An average hitter would have chased " + r(hi, "league") + " of those same pitches.",
+            "Hitters we read as patient chased " + r(lo, "chases") + said(lo) + ". An average hitter would have chased " + r(lo, "league") + "."];
   }
   function withPlanRecord(then) {
     if (RP_RECORD) return then(RP_RECORD);
