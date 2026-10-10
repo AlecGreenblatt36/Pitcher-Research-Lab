@@ -2452,7 +2452,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var own = hc.own_chase && hc.own_chase[fam], mix = pc && pc.mix && pc.mix[fam];
       if (!own) return;
       h += '<div class="rp-card"><h4>' + PITCH_NAME[fam] + (mix ? " <small>" + pct(mix.share) + " of his pitches, " + mix.speed + " mph</small>" : "") + "</h4>" + rpGrid(doc, own.grid, plan[fam], PITCH_NAME[fam] + ": plan", 0.8, stPlan[fam]) +
-        (plan[fam] && plan[fam].length ? '<div class="lbl">Out of the zone: ' + esc(spotList(plan[fam], function (c) { return c[2] === "take" ? " (takes it)" : ""; }).join("; ")) + "</div>" : '<div class="lbl">He rarely throws this pitch out of the zone to this side.</div>') +
+        (plan[fam] && plan[fam].length ? '<div class="lbl">Out of the zone: ' + esc(spotList(plan[fam], function (c) { return c[2] === "take" ? " (to steal a strike)" : ""; }, true).join("; ")) + "</div>" : '<div class="lbl">He rarely throws this pitch out of the zone to this side.</div>') +
         (stPlan[fam] && stPlan[fam].length ? '<div class="lbl">Strikes: ' + esc(spotList(stPlan[fam], function (c) { return c[2] === "weak" ? " (weak swings)" : " (takes it)"; }).join("; ")) + "</div>" : "") + "</div>";
     });
     return h + '</div><p class="note">Circles: pitches out of the zone (filled, he chases; open, he takes). Squares: strikes (filled, he lets them go; open, weak swings). Catcher\'s view.</p></section>';
@@ -2508,20 +2508,30 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     ["down and in off the plate", "at the knees on the inside corner", "at the knees on the inner half", "at the knees", "at the knees on the outer half", "at the knees on the outside corner", "down and away off the plate"],
     ["below the knees and in", "below the knees and in", "below the knees", "below the knees", "below the knees", "below the knees and away", "below the knees and away"]
   ];
+  /* The same grid for pitches out of the zone: an edge cell is "just off" the corner or the knees, never "on" it. */
+  var OFF_WORDS = [
+    ["up and in", "up and in", "up out of the zone", "up out of the zone", "up out of the zone", "up and away", "up and away"],
+    ["up and in off the plate", "up and in, just off the corner", "just above the zone", "just above the zone", "just above the zone", "up and away, just off the corner", "up and away off the plate"],
+    ["in off the plate", "just off the inside corner", "just above the zone", "just above the zone", "just above the zone", "just off the outside corner", "off the plate away"],
+    ["in off the plate", "just off the inside corner", "on the inner half", "middle-middle", "on the outer half", "just off the outside corner", "off the plate away"],
+    ["down and in off the plate", "down and just off the inside corner", "just below the zone", "just below the zone", "just below the zone", "down and just off the outside corner", "down and away off the plate"],
+    ["down and in off the plate", "down and in, just off the corner", "just below the knees", "just below the knees", "just below the knees", "down and away, just off the corner", "down and away off the plate"],
+    ["below the knees and in", "below the knees and in", "below the knees", "below the knees", "below the knees", "below the knees and away", "below the knees and away"]
+  ];
   var PITCH_PL = { fastball: "fastballs", breaking: "breaking balls", offspeed: "offspeed" };
   function spotRegion(c) { return (c[1] >= 3.0 ? "up" : c[1] <= 2.0 ? "down" : "mid") + (c[0] <= -0.83 ? "in" : c[0] >= 0.83 ? "away" : "mid"); }
   /* Spot words for a list, the same place said once. */
-  function spotList(cells, mark) {
+  function spotList(cells, mark, off) {
     var seen = {}, out = [];
-    (cells || []).forEach(function (c) { var w = spotPhrase(c), r = spotRegion(c) + (mark ? mark(c) : ""); if (seen[r]) return; seen[r] = 1; out.push(w + (mark ? mark(c) : "")); });
+    (cells || []).forEach(function (c) { var w = spotPhrase(c, off), r = spotRegion(c) + (mark ? mark(c) : ""); if (seen[r]) return; seen[r] = 1; out.push(w + (mark ? mark(c) : "")); });
     return out;
   }
   var PITCH_NAME = { fastball: "Fastball", breaking: "Breaking ball", offspeed: "Offspeed" };
-  function spotPhrase(c) {
+  function spotPhrase(c, off) {
     var ci = 0, ri = 0, bu = 9, bz = 9;
     SPOT_COLS.forEach(function (u, i) { if (Math.abs(u - c[0]) < bu) { bu = Math.abs(u - c[0]); ci = i; } });
     SPOT_ROWS.forEach(function (z, i) { if (Math.abs(z - c[1]) < bz) { bz = Math.abs(z - c[1]); ri = i; } });
-    return SPOT_WORDS[ri][ci];
+    return (off ? OFF_WORDS : SPOT_WORDS)[ri][ci];
   }
   /* What the plan is worth for one hitter against one arm, out of the zone and in it together. */
   function planValue(pr) {
@@ -2553,7 +2563,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var byPitch = [], idx = {}, out = [];
     sp.chase.forEach(function (x) {
       if (idx[x[0]] == null) { idx[x[0]] = byPitch.length; byPitch.push({ f: x[0], w: [], r: [] }); }
-      var b = byPitch[idx[x[0]]], r = spotRegion(x[1]), w = spotPhrase(x[1]);
+      var b = byPitch[idx[x[0]]], r = spotRegion(x[1]), w = spotPhrase(x[1], true);
       var same = b.w.some(function (v) { return v.indexOf(w) === 0 || w.indexOf(v) === 0; });
       if (b.r.indexOf(r) < 0 && !same && b.w.length < 2) { b.r.push(r); b.w.push(w); }
     });
@@ -2561,9 +2571,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (byPitch.length >= 2) parts = [PITCH_PL[byPitch[0].f] + " " + byPitch[0].w[0], PITCH_PL[byPitch[1].f] + " " + byPitch[1].w[0]];
     else if (byPitch.length === 1) parts = [PITCH_PL[byPitch[0].f] + " " + byPitch[0].w.join(" or ")];
     if (parts.length) out.push("Chases " + parts.join(" and ") + ".");
-    var tk = sp.take.filter(function (x) { return spotPhrase(x[1]) !== "middle-middle" && !byPitch.some(function (b) { return b.f === x[0] && b.r.indexOf(spotRegion(x[1])) >= 0; }); });
+    /* a strike he takes is worded where it lands: an aim just off the edge pays from the ones that catch the zone */
+    var edge = function (c) { return [Math.max(-0.83, Math.min(0.83, c[0])), Math.max(1.5, Math.min(3.5, c[1]))]; };
+    var tk = sp.take.filter(function (x) { return spotPhrase(edge(x[1])) !== "middle-middle" && !byPitch.some(function (b) { return b.f === x[0] && b.r.indexOf(spotRegion(x[1])) >= 0; }); });
     var wk = sp.weak.filter(function (x) { return spotPhrase(x[1]) !== "middle-middle"; });
-    if (tk.length) out.push("Takes " + PITCH_PL[tk[0][0]] + " " + spotPhrase(tk[0][1]) + ", so steal a strike there.");
+    if (tk.length) out.push("Takes " + PITCH_PL[tk[0][0]] + " " + spotPhrase(edge(tk[0][1])) + ", so steal a strike there.");
     else if (wk.length) out.push("Can't do much with " + PITCH_PL[wk[0][0]] + " " + spotPhrase(wk[0][1]) + ". Go right at him there.");
     return out.join(" ");
   }
@@ -2636,14 +2648,14 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         var dm = ck === "all" && pr2.aim.dangerous_miss && pr2.aim.dangerous_miss[fam] && pr2.aim.dangerous_miss[fam].runs_per_100_pa >= 0.05 ? pr2.aim.dangerous_miss[fam] : null;
         h += '<div class="rp-card"><h4>' + PITCH_NAME[fam] + (mix ? " <small>" + pct(mix.share) + " of his pitches, " + mix.speed + " mph</small>" : "") + "</h4>" + rpGrid(doc, own.grid, plan[fam], PITCH_NAME[fam] + (cloud ? ": where the pitches end up" : ": plan"), 0.8, stPlan[fam], cloud) +
           (cloud ? '<div class="lbl">Where these pitches end up with normal command. Darker means more of them.</div>' : "") +
-          (plan[fam] && plan[fam].length ? '<div class="lbl">Out of the zone: ' + esc(spotList(plan[fam], function (c) { return c[2] === "take" ? " (takes it)" : ""; }).join("; ")) + "</div>" : '<div class="lbl">He rarely throws this pitch out of the zone to this side.</div>') +
+          (plan[fam] && plan[fam].length ? '<div class="lbl">Out of the zone: ' + esc(spotList(plan[fam], function (c) { return c[2] === "take" ? " (to steal a strike)" : ""; }, true).join("; ")) + "</div>" : '<div class="lbl">He rarely throws this pitch out of the zone to this side.</div>') +
           (stPlan[fam] && stPlan[fam].length ? '<div class="lbl">Strikes: ' + esc(spotList(stPlan[fam], function (c) { return c[2] === "weak" ? " (weak swings)" : " (takes it)"; }).join("; ")) + "</div>" : "") +
           (dm ? '<div class="lbl">Don\'t miss ' + esc(spotPhrase(dm.cell)) + ". About " + pct(dm.share) + " of these pitches end up there.</div>" : "") + "</div>";
       });
       h += "</div>";
       if (ck === "all") {
         var layoff = [], dontTake = [];
-        ["fastball", "breaking", "offspeed"].forEach(function (fam) { (pr2.aim.cells[fam] || []).slice(0, 2).forEach(function (c) { var w = PITCH_PL[fam] + " " + spotPhrase(c), into = c[2] === "take" ? dontTake : layoff; if (into.indexOf(w) < 0) into.push(w); }); });
+        ["fastball", "breaking", "offspeed"].forEach(function (fam) { (pr2.aim.cells[fam] || []).slice(0, 2).forEach(function (c) { var w = PITCH_PL[fam] + " " + spotPhrase(c, true), into = c[2] === "take" ? dontTake : layoff; if (into.indexOf(w) < 0) into.push(w); }); });
         if (layoff.length || dontTake.length) h += '<p class="note">If you coach the hitter: ' + (layoff.length ? "lay off " + esc(layoff.slice(0, 3).join(", ")) + ". " : "") + (dontTake.length ? "Don't take " + esc(dontTake.slice(0, 2).join(" or ")) + "." : "") + "</p>";
       }
     }
@@ -2926,7 +2938,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
             /* where his decisions cost him, said once per spot and grouped by what he does there */
             var kinds = { chase: [], take: [], weak: [] }, why = [];
             (oc.cells || []).filter(function (c) { return c[2] < 0; }).forEach(function (c) { (kinds[c[3]] || kinds.weak).push(c); });
-            if (kinds.chase.length) why.push("chasing " + listNames(spotList(kinds.chase)));
+            if (kinds.chase.length) why.push("chasing " + listNames(spotList(kinds.chase, null, true)));
             if (kinds.take.length) why.push("taking strikes " + listNames(spotList(kinds.take)));
             if (kinds.weak.length) why.push("swinging at strikes he can't do much with " + listNames(spotList(kinds.weak)));
             var tot = oc.runs_per_600_pa;
@@ -2937,7 +2949,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
           h += '<div class="rp-cards">';
           ["fastball", "breaking", "offspeed"].forEach(function (fam) {
             var own = x.own_chase && x.own_chase[fam]; if (!own) return;
-            var top = spotList(own.top || []);
+            var top = spotList(own.top || [], null, true);
             h += '<div class="rp-card"><h4>' + PITCH_NAME[fam] + "</h4>" + rpGrid(doc, own.grid, null, PITCH_NAME[fam] + ": where he swings", 0.8) +
               (top.length ? '<div class="lbl">Chases it most ' + esc(listNames(top)) + ".</div>" : '<div class="lbl">Doesn\'t chase this pitch more than most hitters.</div>') + "</div>";
           });
