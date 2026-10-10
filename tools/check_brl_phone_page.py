@@ -143,14 +143,14 @@ def main():
                         assert 'How close' in page.inner_text('#app'),'Missing How close section after the final'
                         page.screenshot(path=str(out/f'how_close_{width}.png'))
                     break
-                go('#/record');assert 'Track record' in page.inner_text('#app')
+                go('#/record');assert 'Our record' in page.inner_text('#app')
                 rec=data.get('record') or {}
                 if rec.get('n_scored'):assert page.locator('.ladder li').count()>=5,'Missing record ladder'
-                else:assert page.locator('.empty-state').count()==1
+                else:assert page.locator('.empty, .empty-state').count()>=1
                 design_check('record');page.screenshot(path=str(out/f'record_{width}.png'),full_page=True)
                 go('#/how');assert 'How it works' in page.inner_text('#app')
-                assert 'regular-season habits' in page.inner_text('#app')
-                assert 'pitch-by-pitch' in page.inner_text('#app')
+                assert 'ten thousand times' in page.inner_text('#app')
+                assert 'Checking the work' in page.inner_text('#app')
                 design_check('how');page.screenshot(path=str(out/f'how_{width}.png'),full_page=True)
                 # Players pages and the matchup report read model outputs from the data branch: recorded, with the design checks applied when they load; only page errors fail.
                 try:

@@ -90,6 +90,17 @@ button { font: inherit; color: inherit; }
 .dstrip-pick svg { width: 20px; height: 20px; }
 .dstrip-pick input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
 .replay-note { font-size: 14px; color: var(--muted); margin: 12px 0 0; padding: 9px 12px; border-left: 3px solid var(--lamp); background: var(--surface); border-radius: 0 8px 8px 0; }
+.scorebar { display: flex; flex-wrap: wrap; gap: 1px; margin: 12px 0 4px; background: var(--board-line); border-radius: 12px; overflow: hidden; text-decoration: none; color: var(--chalk-dim); }
+.scorebar div { flex: 1 1 110px; min-width: 0; background: var(--board); padding: 10px 12px; }
+.scorebar b { display: block; font-family: var(--display); font-weight: 700; font-size: 28px; line-height: 1; color: var(--chalk); }
+.scorebar span { font-size: 14px; line-height: 1.25; display: block; margin-top: 3px; }
+.scorebar:hover div { background: var(--board-slot); }
+details.more { margin: 8px 0 0; }
+details.more summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--muted); list-style: none; }
+details.more summary::-webkit-details-marker { display: none; }
+details.more summary::before { content: "+"; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--rule-strong); font-size: 16px; line-height: 1; flex: 0 0 22px; }
+details.more[open] summary { color: var(--ink); }
+details.more[open] summary::before { content: "\2212"; }
 .cards { list-style: none; margin: 14px 0 32px; padding: 0; display: grid; gap: 12px; }
 .card { display: block; position: relative; overflow: hidden; text-decoration: none; background: var(--surface); border: 1px solid var(--rule); border-radius: 14px; padding: 12px 16px 16px; }
 .card:hover { border-color: var(--rule-strong); }
@@ -776,11 +787,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     return '<div class="situation" aria-label="' + esc(where + ", " + (st.outs || 0) + " outs") + '">' + d + '<div><div class="where">' + esc(where) + '<span class="outs" aria-hidden="true">' + outs + "</span>" + esc(count) + '</div><div class="who">' + who + "</div></div>" + ab + "</div>";
   }
   function liveNote(f, lv, fav) {
-    var pre = "Pregame win chance was " + f[fav].abbr + " " + pct(winProb(f, fav)) + ".";
-    if (lv._final) return "Final from the official feed. The Record page scores it after the next saved run. " + pre;
-    var sim = lv.projected_final && lv.updated_at ? " Last full re-simulation " + timeET(lv.updated_at) + " ET (" + Number(lv.n_worlds || 0).toLocaleString() + " continuations): likely final " +
+    var pre = "Before the game we had " + f[fav].abbr + " " + pct(winProb(f, fav)) + ".";
+    if (lv._final) return "Final. The Record page scores it after the next saved run. " + pre;
+    var sim = lv.projected_final && lv.updated_at ? " Last full re-run " + timeET(lv.updated_at) + " ET (" + Number(lv.n_worlds || 0).toLocaleString() + " times): likely final " +
       f.away.abbr + " " + lv.projected_final.away + ", " + f.home.abbr + " " + lv.projected_final.home + "." : "";
-    var src = lv.win_source === "sim" ? "Win chance from continuations of this exact situation, anchored to the pregame headline and averaged with the league's record from the same situation." : lv.win_source === "table" ? "Win chance moves with every play, read from this game's 10,000 pregame simulations at the current situation, anchored to the pregame headline and averaged with the league's record from the same situation." : "";
+    var src = lv.win_source === "sim" ? "Win chance from playing out this exact spot thousands of times, tied to the pregame number and the league's record from the same spot." : lv.win_source === "table" ? "Win chance moves with every play, from this game's 10,000 pregame simulations at the current spot, tied to the pregame number and the league's record from the same spot." : "";
     var when = lv._client && lv.fetched_at ? "Live from MLB, " + timeET(lv.fetched_at) + " ET." : "Live." + (lv.updated_at ? " Updated " + timeET(lv.updated_at) + " ET." : "");
     return (when + " " + src + sim + " " + pre).replace(/\s+/g, " ");
   }
@@ -1018,7 +1029,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     }
     else if (h[0] === "day" && /^\d{4}-\d{2}-\d{2}$/.test(h[1] || "")) {
       var dd = h[1];
-      if (isLiveDay(dd)) withDay(dd, function () { withWE(function () { renderSlate(dd); }); });
+      if (dd > D.date) withSchedule(dd, function () { renderPastSlate(dd); });
+      else if (isLiveDay(dd)) withDay(dd, function () { withWE(function () { renderSlate(dd); }); });
       else withSeason(seasonYear(dd), function () { withSchedule(dd, function () { renderPastSlate(dd); }); });
       mark("games");
     }
@@ -1073,12 +1085,12 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var series = games.length ? (SERIES[games[0].game_type] || "") : "";
     var stale = document.body.getAttribute("data-refresh-blocked") === "true";
     var html = '<div class="wrap"><div class="page-head"><h1>' + esc(dateLabel(day)) + "</h1><p>" +
-      esc(series ? series + ". " : "") + (D.view_scope === "historical_replay" ? "Historical replay. " : "") + (stale ? "Showing the last saved forecasts. " : "") + "All times Eastern." +
-      (D.generated_at ? " Updated " + esc(timeET(D.generated_at)) + " ET." : "") + "</p></div>" + dayNav(day);
+      esc(series ? series + ". " : "") + (D.view_scope === "historical_replay" ? "Historical replay. " : "") + (stale ? "Showing the last saved numbers. " : "") + "Times are Eastern." +
+      (D.generated_at ? " Updated " + esc(timeET(D.generated_at)) + " ET." : "") + "</p></div>" + dayNav(day) + scorebar();
     if (!games.length) {
-      html += '<p class="empty">No forecasts saved for this date yet. They appear a few hours before first pitch.</p></div>'; app.innerHTML = html;
-      wireDayNav();
-      return;
+      /* no numbers saved for this day yet: show the schedule (today before the morning run, or an off day) */
+      if (SCHED[day] === undefined) { app.innerHTML = html + '<p class="empty">Loading the schedule\u2026</p></div>'; withSchedule(day, function () { renderSlate(day); }); return; }
+      app.innerHTML = html + scheduleCards(day, SCHED[day], null) + "</div>"; wireDayNav(); return;
     }
     html += '<ol class="cards">';
     games.forEach(function (f) {
@@ -1165,7 +1177,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (!list.length) return "";
     list.sort(function (a, b) { return (a.now.done ? 1 : 0) - (b.now.done ? 1 : 0); });
     list = list.map(function (x) { return x.s; });
-    var h = '<section class="sec series"><h2>The series</h2><p class="lede">Chance to advance from the current score, with the game in progress at its live win chance.</p><ul class="sr-list">';
+    var h = '<section class="sec series"><h2>The series</h2><p class="lede">Who moves on, from where the series stands now. A game in progress counts at its live win chance.</p><ul class="sr-list">';
     list.forEach(function (s) {
       var now = seriesNow(s), col = seriesColors(s), adv = {};
       adv[s.high] = now.adv; adv[s.low] = 1 - now.adv;
@@ -1194,7 +1206,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       }
       h += "</li>";
     });
-    return h + '</ul><p class="note">Games not yet forecast use the average of our numbers in this series with the home edge taken out, plus or minus the league home edge for where the game is played.</p></section>';
+    return h + '</ul><p class="note">Games we have not called yet get the series average, with home field added for whoever is home.</p></section>';
   }
   /* One line for the game page: the series score and each team's chance to advance. */
   function seriesLine(f) {
@@ -1220,7 +1232,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (!rows.length) return "";
     rows.sort(function (a, b) { return Math.abs(b.gap) - Math.abs(a.gap); });
     var side = function (f, p) { var s = p >= .5 ? "home" : "away"; return esc(f[s].abbr) + " " + pct(s === "home" ? p : 1 - p); };
-    var h = '<section class="sec edges"><h2>Our number against the market</h2><p class="lede">Our model never sees the betting line of the game it forecasts; its weights were taught on past seasons\' closing lines. In replays of the 2025 and 2026 regular seasons, when the two differed by 2.5 points or more, the line moved toward our number about 7 times in 10 by first pitch. Replayed with only what was known when the line opened (the previous lineup and the probable starters, assumed known at the open; the opening line\'s time is the source\'s), it still did so 68% of the time in 2025 and 73% in 2026. These are development seasons; from October 2026 the record below is kept on actual opening snapshots as they are captured.</p><ul class="edge-list">';
+    var h = '<section class="sec edges"><h2>Us against the betting line</h2><p class="lede">Our model never sees the line for the game it is calling. When we and the line disagree, the line has moved our way by first pitch about 7 times in 10 across the two seasons we re-ran.</p><ul class="edge-list">';
     rows.forEach(function (r) {
       var big = Math.abs(r.gap) >= 0.025, fav = r.gap >= 0 ? "home" : "away", pts = Math.round(Math.abs(r.moved) * 100);
       var lean = big ? 'Our model leans <b class="' + fav + '-c">' + esc(r.f[fav].abbr) + " by " + Math.round(Math.abs(r.gap) * 100) + "</b> points. " +
@@ -1230,7 +1242,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         '</span><span class="eg-mkt"><small>Market</small>' + side(r.f, r.open) + " first, " + side(r.f, r.now) + ' now</span><span class="eg-gap">' + lean + "</span></a></li>";
     });
     var lm = D.record && D.record.line_moves;
-    h += "</ul>" + (lm && lm.n ? '<p class="note">Scored so far this October: in ' + lm.n + (lm.n === 1 ? " game" : " games") + " where our final number differed from the first line we read, the line moved toward ours " + lm.toward_ours + (lm.toward_ours === 1 ? " time." : " times.") + "</p>" : "") + "</section>";
+    h += "</ul>" + (lm && lm.n ? '<p class="note">This October: the line moved our way in ' + lm.toward_ours + " of " + lm.n + (lm.n === 1 ? " game" : " games") + " where we differed from the first line we saw.</p>" : "") + "</section>";
     return h;
   }
 
@@ -1239,9 +1251,25 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   function addDays(ymd, n) { var d = new Date(ymd + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
   function dayHref(d) { return d === D.date ? "#/" : "#/day/" + d; }
   function isLiveDay(d) { return d === D.date || availableDays().indexOf(d) >= 0 || archiveDates().indexOf(d) >= 0; }
+  function lastDay() { return addDays(D.date, 14); }      /* the schedule is shown two weeks ahead; our numbers come the morning of each game */
+  /* Our record in one strip: the two seasons re-run game by game, and the live games since the record began. */
+  function recordNumbers() {
+    var R = D.record || {}, rp = R.replay || {}, keys = Object.keys(rp).sort(), g = 0, r = 0, mg = 0, mr = 0;
+    keys.forEach(function (s) { var x = rp[s]; if (x.headline) { g += x.games; r += x.games * x.headline.picks_right_pct / 100; } if (x.market) { mg += x.games; mr += x.games * x.market.picks_right_pct / 100; } });
+    var games = R.games || [], live = R.n_scored || 0, right = games.filter(function (x) { return (x.p_blend >= .5) === x.home_won; }).length;
+    return { seasons: keys, replayed: g, replayPct: g ? Math.round(100 * r / g) : null, marketPct: mg ? Math.round(100 * mr / mg) : null, live: live, right: right, since: games.length ? games[0].date : null };
+  }
+  function scorebar() {
+    var n = recordNumbers(), h = '<a class="scorebar" href="#/record" aria-label="Our record">';
+    if (n.replayPct != null) h += "<div><b>" + n.replayPct + "%</b><span>winners picked, " + Number(n.replayed).toLocaleString() + " games of " + n.seasons.join(" and ") + " re-run</span></div>";
+    if (n.marketPct != null) h += "<div><b>" + n.marketPct + "%</b><span>the betting market, same games</span></div>";
+    h += "<div><b>" + n.right + "-" + (n.live - n.right) + "</b><span>live picks" + (n.since ? " since " + esc(shortDate(n.since)) : "") + "</span></div>";
+    return h + "</a>";
+  }
+  function shortDate(ymd) { if (!ymd) return ""; var d = new Date(ymd + "T12:00:00Z"); return d.toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric" }); }
   function dayNav(day) {
-    var start = addDays(day, -3);
-    if (addDays(start, 6) > D.date) start = addDays(D.date, -6);
+    var start = addDays(day, -3), LAST = lastDay();
+    if (addDays(start, 6) > LAST) start = addDays(LAST, -6);
     if (start < FIRST_DAY) start = FIRST_DAY;
     var cells = "";
     for (var i = 0; i < 7; i++) {
@@ -1249,13 +1277,13 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var wk = dt.toLocaleDateString("en-US", { timeZone: "UTC", weekday: "short" });
       cells += '<a class="dstrip-day' + (d === D.date ? " today" : "") + '" href="' + dayHref(d) + '"' + (d === day ? ' aria-current="date"' : "") + ' aria-label="' + esc((d === D.date ? "Today, " : "") + dateLabel(d)) + '"><small>' + esc(wk) + "</small><b>" + dt.getUTCDate() + "</b></a>";
     }
-    var prev = addDays(day, -7) < FIRST_DAY ? FIRST_DAY : addDays(day, -7), next = addDays(day, 7) > D.date ? D.date : addDays(day, 7);
+    var prev = addDays(day, -7) < FIRST_DAY ? FIRST_DAY : addDays(day, -7), next = addDays(day, 7) > LAST ? LAST : addDays(day, 7);
     var chev = function (dir) { return '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="' + (dir < 0 ? "M10 3 5 8l5 5" : "M6 3l5 5-5 5") + '" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'; };
     return '<nav class="dstrip" aria-label="Choose a day"><a class="dstrip-step" href="' + dayHref(prev) + '" aria-label="A week earlier">' + chev(-1) + "</a>" +
       '<div class="dstrip-days">' + cells + "</div>" +
-      '<a class="dstrip-step" href="' + dayHref(next) + '" aria-label="A week later"' + (day >= D.date ? ' aria-disabled="true"' : "") + ">" + chev(1) + "</a>" +
+      '<a class="dstrip-step" href="' + dayHref(next) + '" aria-label="A week later"' + (day >= LAST ? ' aria-disabled="true"' : "") + ">" + chev(1) + "</a>" +
       '<label class="dstrip-pick" title="Pick a date"><span class="visually-hidden">Pick a date</span><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="4.5" width="14" height="12.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 8.5h14M7 2.5v4M13 2.5v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>' +
-      '<input type="date" id="datePick" min="' + FIRST_DAY + '" max="' + D.date + '" value="' + day + '"></label></nav>';
+      '<input type="date" id="datePick" min="' + FIRST_DAY + '" max="' + LAST + '" value="' + day + '"></label></nav>';
   }
   function wireDayNav() {
     var inp = document.getElementById("datePick");
@@ -1314,12 +1342,14 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     order.sort(function (a, b) { return items[a].start < items[b].start ? -1 : items[a].start > items[b].start ? 1 : 0; });
     var types = order.map(function (k) { return items[k].s ? items[k].s.gameType : "R"; });
     var series = types.length ? SERIES[types[0]] || "" : "";
-    var html = '<div class="wrap"><div class="page-head"><h1>' + esc(dateLabel(day)) + "</h1><p>" + esc(series ? series + ". " : "") + "All times Eastern.</p></div>" + dayNav(day);
+    var future = day > D.date;
+    var html = '<div class="wrap"><div class="page-head"><h1>' + esc(dateLabel(day)) + "</h1><p>" + esc(series ? series + ". " : "") + "Times are Eastern.</p></div>" + dayNav(day) + scorebar();
     if (!order.length) {
       html += '<p class="empty">' + (sched === null && !arch.length ? "MLB's schedule could not be reached for this day. Try again in a moment." : "No games on this day.") + "</p></div>";
       app.innerHTML = html; wireDayNav(); return;
     }
-    if (arch.length) html += '<p class="replay-note">Before the live record began, the win chances here are a model replay: each game re-run after the season with only what was known before it. The Record page counts live forecasts only.</p>';
+    if (future) { app.innerHTML = html + scheduleCards(day, sched, null) + "</div>"; wireDayNav(); return; }
+    if (arch.length) html += '<p class="replay-note">These win chances are a replay: after the season we re-ran every game with only what was known before it. The live record on the Record page counts only games we called before first pitch.</p>';
     html += '<ol class="cards">';
     order.forEach(function (k) {
       var it = items[k], g = it.g, s = it.s, f = g ? pastForecast(g) : bareForecast(k, day, s && s.teams, s && s.gameDate, s && s.gameType);
@@ -1339,14 +1369,43 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (g) html += '<span class="card-bar" aria-hidden="true"><i style="width:' + ((1 - homeProb(f)) * 100).toFixed(1) + '%;background:var(--away)"></i><i style="flex:1;background:var(--home)"></i></span>';
       var foot = "";
       if (g && fin) {
-        foot = (fav === winner ? "Called it" : "Missed") + ". Model replay";
-        if (g.m != null) { var ms = g.m >= .5 ? "home" : "away"; foot += ". Our model " + f[oursProb(f) >= .5 ? "home" : "away"].abbr + " " + pct(oursProb(f) >= .5 ? oursProb(f) : 1 - oursProb(f)) + ", market " + f[ms].abbr + " " + pct(ms === "home" ? g.m : 1 - g.m); }
-      } else foot = "No model numbers for this game";
+        foot = (fav === winner ? "Called it" : "Missed") + ": we had " + f[fav].abbr + " " + pct(winProb(f, fav));
+        if (g.m != null) { var ms = g.m >= .5 ? "home" : "away"; foot += ", the market had " + f[ms].abbr + " " + pct(ms === "home" ? g.m : 1 - g.m); }
+        foot += ". Replay";
+      } else foot = "No numbers for this game";
       html += '<div class="card-foot' + (g && fin ? (fav === winner ? " hit" : " miss") : "") + '">' + esc(foot) + "</div></a></li>";
     });
     html += "</ol></div>";
     app.innerHTML = html;
     wireDayNav();
+  }
+  /* Cards for a day we have no saved numbers for: MLB's schedule, with our series number where the series page has one. */
+  function scheduleCards(day, sched, _unused) {
+    var games = (sched || []).filter(function (s) { return "RFDLW".indexOf(s.gameType) >= 0; }).sort(function (a, b) { return (a.gameDate || "") < (b.gameDate || "") ? -1 : 1; });
+    if (sched === null) return '<p class="empty">MLB\'s schedule could not be reached for this day. Try again in a moment.</p>';
+    if (!games.length) return '<p class="empty">No games on this day.</p>';
+    var future = day > D.date, h = '<p class="replay-note">' + (future ? "Our number for each game comes out the morning of the game, once the starters and lineups are in. Series games carry the series estimate until then." : "Our numbers for today come out a few hours before first pitch, once the starters and lineups are in.") + "</p><ol class=\"cards\">";
+    games.forEach(function (s) {
+      var f = bareForecast(s.gamePk, day, s.teams, s.gameDate, s.gameType), tc = teamColors(f), ser = seriesOf(s.gamePk);
+      var sg = ser ? ser.games.filter(function (x) { return String(x.game_pk) === String(s.gamePk); })[0] : null, ph = sg && sg.p_home != null ? sg.p_home : null;
+      var st = String((s.status || {}).detailedState || "Scheduled");
+      h += '<li><div class="card" style="--away:' + tc.away + ";--home:" + tc.home + '"><div class="card-top"><span>' + esc(f.scheduled_start ? timeET(f.scheduled_start) : "") + '</span><span class="state">' + esc(st) + "</span></div>";
+      var venue = (s.venue && s.venue.name) || "", sl = ser ? seriesLabelFor(ser, sg) : "";
+      if (sl || venue) h += '<div class="card-ctx">' + esc([sl, venue].filter(Boolean).join(" at ")) + "</div>";
+      h += '<div class="cols"><span></span><span></span><span>' + (ph != null ? "Win" : "") + "</span></div>";
+      ["away", "home"].forEach(function (side) {
+        var tm = f[side], sp = (s.teams && s.teams[side] && s.teams[side].probablePitcher && s.teams[side].probablePitcher.fullName) || "";
+        var w = ph == null ? null : side === "home" ? ph : 1 - ph;
+        h += '<div class="team-row' + (w != null && w >= .5 ? " fav" : "") + '"><span class="abbr ' + side + '-c">' + esc(tm.abbr) + '</span><span class="team-name">' + esc(nickname(tm.name)) + (sp ? "<small>" + esc(sp) + "</small>" : "") + '</span><span class="big num"></span><span class="pct num">' + (w != null ? pct(w) : "") + "</span></div>";
+      });
+      if (ph != null) h += '<span class="card-bar" aria-hidden="true"><i style="width:' + ((1 - ph) * 100).toFixed(1) + '%;background:var(--away)"></i><i style="flex:1;background:var(--home)"></i></span>';
+      h += '<div class="card-foot">' + (ph != null ? "Series estimate. Our number comes the morning of the game." : "Our number comes the morning of the game.") + "</div></div></li>";
+    });
+    return h + "</ol>";
+  }
+  function seriesLabelFor(ser, sg) {
+    var name = (SERIES[ser.game_type] || "Series"), n = sg && sg.n ? " Game " + sg.n : "";
+    return name + n;
   }
   function renderPastGame(day, pk, tab, keep) {
     var year = seasonYear(day), SE = year ? SEASONS[year] : null, g = SE ? SE.byPk[String(pk)] : null;
@@ -1380,7 +1439,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (g) html += heroBar(f, homeProb(f));
     html += '</div><div class="hero-side">';
     if (real && Object.keys(real.innings.away).length) html += lineScore(f, real);
-    html += '<p class="hero-note">' + (g ? "Model replay: the win chance is what the model gives this game when re-run with only information from before it. The line score, box score and plays are the real game from MLB." :
+    html += '<p class="hero-note">' + (g ? "Re-run after the season with only what was known before this game. The line score, box score and plays are the real game." :
       "No model numbers for this game. The line score, box score and plays are the real game from MLB.") + "</p></div></div></div></section>";
     var tabs = [["summary", "Summary"], ["box", "Box score"], ["plays", "Plays"], ["odds", "Odds"]];
     if (!g) tabs.pop();
@@ -1413,7 +1472,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   }
   function pastOddsTab(f, g) {
     var h = "", pa = winProb(f, "away"), ph = winProb(f, "home");
-    h += '<section class="sec"><h2>Win chance</h2><p class="lede">Model replay numbers for this game, next to the betting market\'s closing line. The headline combines our model with the market line the same way the live page does.</p>';
+    h += '<section class="sec"><h2>Win chance</h2><p class="lede">Our re-run numbers next to the closing line. The headline blends our model with the line, the same as on live games.</p>';
     h += '<div class="winbar" role="img" aria-label="' + esc(f.away.abbr + " " + pct(pa) + ", " + f.home.abbr + " " + pct(ph)) + '"><div class="a" style="width:' + (pa * 100).toFixed(1) + '%">' + esc(f.away.abbr) + " " + pct(pa) + '</div><div class="h" style="width:' + (ph * 100).toFixed(1) + '%">' + pct(ph) + " " + esc(f.home.abbr) + "</div></div>";
     var fmt = function (p) { return p >= .5 ? esc(f.home.abbr) + " " + pct(p) : esc(f.away.abbr) + " " + pct(1 - p); };
     h += '<ul class="compare"><li><span>Headline' + (g.m != null ? " (our model with the market line)" : "") + "</span><b>" + fmt(g.hl) + "</b></li>";
@@ -1429,10 +1488,10 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     }
     h += "</section>";
     var ra = histDist(g.ra), rh = histDist(g.rh);
-    h += '<section class="sec"><h2>Runs each team scores</h2><p class="lede">Half of the replayed games land in these ranges: ' + esc(f.away.abbr) + " " + quant(ra, .25) + " to " + quant(ra, .75) + ", " + esc(f.home.abbr) + " " + quant(rh, .25) + " to " + quant(rh, .75) + ".</p>";
+    h += '<section class="sec"><h2>Runs each team scores</h2><p class="lede">Half the time each team lands in these ranges: ' + esc(f.away.abbr) + " " + quant(ra, .25) + " to " + quant(ra, .75) + ", " + esc(f.home.abbr) + " " + quant(rh, .25) + " to " + quant(rh, .75) + ".</p>";
     h += '<div class="legend"><span><i class="key" style="background:var(--away)"></i>' + esc(nickname(f.away.name)) + '</span><span><i class="key" style="background:var(--home)"></i>' + esc(nickname(f.home.name)) + "</span></div>";
     h += '<div class="chart">' + runsChart(ra, rh) + "</div></section>";
-    if (g.ou != null) h += '<section class="sec"><h2>Total runs</h2><p class="lede">Expected ' + (mean(ra) + mean(rh)).toFixed(1) + " runs. Betting market total: " + g.ou + (g.po != null ? " (over " + pct(g.po) + ")" : "") + ". Final: " + (g.fa + g.fh) + ".</p></section>";
+    if (g.ou != null) h += '<section class="sec"><h2>Total runs</h2><p class="lede">We expected ' + (mean(ra) + mean(rh)).toFixed(1) + ". The book's total was " + g.ou + (g.po != null ? " (over " + pct(g.po) + ")" : "") + ". Final: " + (g.fa + g.fh) + ".</p></section>";
     return h;
   }
 
@@ -1464,7 +1523,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     html += heroBar(f, lv && lv.home_win_probability != null ? lv.home_win_probability : homeProb(f)) + seriesLine(f) + '</div><div class="hero-side">';
     if (actual && actualBox && actualBox.innings) {
       html += lineScore(f, actualBox);
-      html += '<p class="hero-note">' + (actualBox.plays && actualBox.plays.length ? "Final. The tabs show the real game and the projected game saved before first pitch." : "Line score is the real game. The tabs below show the projected game saved before first pitch.") + "</p>";
+      html += '<p class="hero-note">' + (actualBox.plays && actualBox.plays.length ? "Final. The tabs show the real game and the game we projected before first pitch." : "The line score is the real game. The tabs show what we projected before first pitch.") + "</p>";
     } else if (lv) {
       html += lineScore(f, liveLine(lv));
       if (lv.state && !lv._final) html += situation(f, lv);
@@ -1499,7 +1558,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (real) html += '<div class="seg" role="group" aria-label="Which plays"><button data-playside="actual" aria-pressed="' + (pside === "actual") + '">' + (real._live ? "Live" : "Actual") + '</button><button data-playside="proj" aria-pressed="' + (pside !== "actual") + '">Projected</button></div>';
       html += playsTab(f, pside === "actual" && real ? real : s);
       if (pside === "actual" && real) html += '<p class="note">The real game from the official play-by-play' + (real._live ? ", through the last completed plate appearance at the last check" : "") + ".</p>";
-      else html += '<p class="note">The simulator decides each plate appearance\'s result first. The pitches shown with it are borrowed from a real at-bat that ended the same way: they show what such an at-bat looks like, and they do not decide the result.</p>';
+      else html += '<p class="note">The simulator decides how each at-bat ends. The pitches shown are borrowed from a real at-bat that ended the same way, for the look of it; they decide nothing.</p>';
     }
     else if (tab === "odds") html += oddsTab(f, box);
     else if (tab === "matchups") html += matchupsTab(f, box);
@@ -1946,7 +2005,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var rn = nameMap(real), rs = shortMap(real);
       var chart = winChart(f, box, real, lv);
       if (chart) {
-        h0 += '<section class="sec wide"><h2>Win chance through the game</h2><p class="lede">' + (real._final ? "How the model's win chance moved with every play, from first pitch to the final." : "How the model's win chance has moved with every play so far.") + "</p>" + chart + biggestSwings(f, box, real, lv, rs) + "</section>";
+        h0 += '<section class="sec wide"><h2>Win chance through the game</h2><p class="lede">' + (real._final ? "Our win chance play by play, first pitch to final." : "Our win chance so far, play by play.") + "</p>" + chart + biggestSwings(f, box, real, lv, rs) + "</section>";
       }
       var realScoring = real.plays.filter(function (p) { return p.runs_scored > 0; });
       h0 += '<section class="sec"><h2>' + (real._final ? "Scoring plays" : "Scoring plays so far") + "</h2>";
@@ -2007,14 +2066,14 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     h += "</div></section>";
 
     var lu = f.lineup_status || {}, official = lu.away === "official" && lu.home === "official";
-    h += '<p class="note">' + (v && v.key === "proj" ? "One full simulated game, picked for sitting closest to the middle of all " + Number(f.n_simulations).toLocaleString() + ". " : "Another full simulated game from the same " + Number(f.n_simulations).toLocaleString() + ". ") +
+    h += '<p class="note">' + (v && v.key === "proj" ? "One full simulated game, the one closest to the middle of all " + Number(f.n_simulations).toLocaleString() + ". " : "Another full simulated game from the same " + Number(f.n_simulations).toLocaleString() + ". ") +
       (official ? "Official lineups." : "Projected lineups.") + " Saved " + esc(timeET(f.saved_at)) + " ET.</p>";
     return h;
   }
   /* Whole-number projected lines: the average over all simulated games, rounded. */
   function projectedLines(f, box) {
     if (!box || !box.teams) return "";
-    var h = '<section class="sec wide"><h2>Projected lines</h2><p class="lede">What the model expects from each hitter and starter tonight, averaged over all ' + Number(box.n_simulations || 10000).toLocaleString() + " simulated games and rounded to whole numbers. Hit and HR are each hitter's chance of at least one in his own plate appearances: the simulated lineup spot bats all game, so each chance allows for how often a starter in that spot gives way to a pinch hitter or a substitute (from 2% of the leadoff spot's plate appearances to 7% of the ninth's).</p><div class=\"lineups\">";
+    var h = '<section class="sec wide"><h2>Projected lines</h2><p class="lede">What we expect from each hitter and starter tonight, averaged over ' + Number(box.n_simulations || 10000).toLocaleString() + " simulated games. Hit and HR are each man's chance of at least one.</p><div class=\"lineups\">";
     ["away", "home"].forEach(function (side) {
       var bat = (box.teams[side].batting || []).slice().sort(function (a, b) { return (a.spot || 0) - (b.spot || 0); }), names = shortNames(bat);
       var sp = (box.teams[side].pitching || [])[0];
@@ -2128,7 +2187,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var mu = box && box.matchups;
     if (!mu || mu.error || !mu.away) return '<p class="empty">The hitter-against-pitcher grid is not part of this forecast.</p>';
     var key = MU_METRICS[state.muMetric] ? state.muMetric : "obp", m = MU_METRICS[key];
-    var h = '<section class="sec wide"><h2>Hitter against pitcher</h2><p class="lede">The model\'s chance for one plate appearance of each hitter against the starter and the relievers most likely to pitch, with the bases empty, nobody out and the score tied. ' +
+    var h = '<section class="sec wide"><h2>Hitter against pitcher</h2><p class="lede">Each hitter against the starter and the relievers most likely to pitch: our chance for one at-bat, bases empty, nobody out, tie game. ' +
       "Gold favors the hitter, blue the pitcher, against the league rate of " + (m.league < 0.05 ? (m.league * 100).toFixed(1) : Math.round(m.league * 100)) + "%.</p>";
     h += '<div class="seg" role="group" aria-label="Which chance">' + Object.keys(MU_METRICS).map(function (k2) {
       return '<button data-mumetric="' + k2 + '" aria-pressed="' + (k2 === key) + '">' + MU_METRICS[k2].label + "</button>";
@@ -2306,7 +2365,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (!host) return;
     loadRecord(f, pk);
     withReportDoc(f, pk, function (doc) {
-      if (!doc) { host.innerHTML = '<p class="empty">No matchup report for this game yet. Reports are built each morning from pitches thrown before that day, and finished games are graded.</p>'; return; }
+      if (!doc) { host.innerHTML = '<p class="empty">No report for this game yet. Reports are built each morning from pitches thrown before that day; finished games get graded.</p>'; return; }
       var now = liveReportNow(pk, doc);
       followLive(pk, now);
       host.innerHTML = reportHtml(f, pk, doc, now); wireReport(f, pk);
@@ -2333,8 +2392,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var key = RP_METRICS[state.rpMetric] ? state.rpMetric : "chase", m = RP_METRICS[key];
     var players = doc.players || {}, nm = function (id) { var p = players[String(id)]; return p && p.name ? p.name : String(id); };
     var retro = doc.asof && doc.date && doc.asof < doc.date;
-    var h = '<section class="sec wide"><h2>Matchup report</h2><p class="lede">Each hitter against the pitchers he faces, from where he chases pitches that appear headed off the plate 260 ms before they arrive, read against this pitcher\'s own pitches. Built from ' +
-      Number(doc.training_pitches).toLocaleString() + " pitches thrown before " + esc(doc.asof) + "; nothing from this game or later." + (retro ? " This is a retrospective reconstruction: the maps use only earlier pitches, but the method was chosen in October 2026." : "") + " Blue favors the pitcher.</p>";
+    var h = '<section class="sec wide"><h2>Matchup report</h2><p class="lede">Each hitter against the pitchers he will face. The maps read where a hitter decides to swing: where the pitch looks like it is going about a quarter second out, not where it ends up. Built from ' +
+      Number(doc.training_pitches).toLocaleString() + " pitches thrown before " + esc(doc.asof) + "; nothing from this game or later." + (retro ? " A look back: the maps use only earlier pitches, but the method is from October 2026." : "") + " Blue is good for the pitcher.</p>";
     if (now) h += liveNowStrip(f, pk, doc, now, false);
     var top = h, liveSel = !!(now && now.pair && now.key === state.rpPair[pk]);
     h = "";
@@ -2346,9 +2405,10 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     }
     if (RP_RECORD && RP_RECORD.games) {
       var R = RP_RECORD, adh = R.outside_pitches ? (100 * R.in_recommended / R.outside_pitches).toFixed(1) : null, usu = R.outside_pitches ? (100 * R.usual_expected / R.outside_pitches).toFixed(1) : null;
-      h += '<h3>The record so far</h3><p class="note">Across ' + Number(R.games).toLocaleString() + ' graded games (' + esc(R.first_date) + ' to ' + esc(R.last_date) + '), each reported before it was played: hitters chased ' + Number(R.chases).toLocaleString() + ' times where the league rates expected ' + Number(Math.round(R.chases_expected_league)).toLocaleString() + ' and their own maps ' + Number(Math.round(R.chases_expected_map)).toLocaleString() + '. ' +
-        (adh != null ? 'Staffs put ' + adh + '% of outside pitches in the recommended spots against ' + usu + '% at their usual rates.' : '');
-      if (R.scored && R.scored.decisions >= 1000 && R.scored.map_gain_nats_per_1000 != null) h += ' Scored decision by decision, the hitters\' own maps ' + (R.scored.map_gain_nats_per_1000 >= 0 ? 'beat' : 'trail') + ' the league swing model given the same pitch inputs by ' + Math.abs(R.scored.map_gain_nats_per_1000).toFixed(1) + ' nats per 1,000 swing decisions on ' + Number(R.scored.decisions).toLocaleString() + ' outside pitches in ' + Number(R.scored.games).toLocaleString() + ' graded games.';
+      h += '<h3>The record so far</h3><p class="note">' + Number(R.games).toLocaleString() + ' games called before they were played (' + esc(shortDate(R.first_date)) + ' to ' + esc(shortDate(R.last_date)) + '). Hitters chased ' + Number(R.chases).toLocaleString() + ' times. The league rates said ' + Number(Math.round(R.chases_expected_league)).toLocaleString() + '; their own maps said ' + Number(Math.round(R.chases_expected_map)).toLocaleString() + '. ' +
+        (adh != null ? 'Staffs hit the spots we marked ' + adh + '% of the time with pitches out of the zone, against ' + usu + '% at their usual rates.' : '');
+      if (R.scored && R.scored.decisions >= 1000 && R.scored.map_gain_nats_per_1000 != null) h += ' Pitch by pitch, the hitters\' own maps ' + (R.scored.map_gain_nats_per_1000 >= 0 ? 'beat' : 'trail') + ' the league rates on ' + Number(R.scored.decisions).toLocaleString() + ' swing decisions in ' + Number(R.scored.games).toLocaleString() + ' games (by ' + Math.abs(R.scored.map_gain_nats_per_1000).toFixed(1) + ' per 1,000 on the log score; anything past 5 is a clear win).';
+      h += '</p><details class="more"><summary>By count, pitch type, side and more</summary><p class="note">';
       var bins = R.bins || {}, parts = [];
       ["under -2", "-2 to 0", "0 to 2", "over 2"].forEach(function (k2) { var bn = bins[k2]; if (bn && bn.outside >= 200) parts.push(k2 + ': ' + (100 * bn.chases / bn.outside).toFixed(1) + '% chased, league ' + (100 * bn.league / bn.outside).toFixed(1) + '%, map ' + (100 * bn.map / bn.outside).toFixed(1) + '%'); });
       if (parts.length) h += ' By the extra chases the map predicted for the pair: ' + esc(parts.join('; ')) + '.';
@@ -2357,8 +2417,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (bparts.length > 1) h += ' By how the spots were chosen: ' + esc(bparts.join('; ')) + '.';
       var bg_ = R.by_group || {}, gparts = [];
       [["count:even_or_ahead", "even or ahead"], ["count:behind", "behind"], ["count:two_strikes", "two strikes"], ["family:fastball", "fastballs"], ["family:breaking", "breaking balls"], ["family:offspeed", "offspeed"], ["side:R", "right-handed hitters"], ["side:L", "left-handed hitters"], ["coverage:ok", "pairs with full evidence"], ["coverage:thin", "pairs with thin evidence"], ["season:2025", "2025 games"], ["season:2026", "2026 games"]].forEach(function (q) { var b = bg_[q[0]]; if (b && b.outside >= 300) gparts.push(q[1] + ' ' + (100 * b.chases / b.outside).toFixed(1) + '% chased, league ' + (100 * b.league / b.outside).toFixed(1) + '%, map ' + (100 * b.map / b.outside).toFixed(1) + '%'); });
-      if (gparts.length) h += ' By count, pitch family, side, evidence and season (the map should sit between the league figure and what happened, and closer to what happened): ' + esc(gparts.join('; ')) + '.';
-      h += '</p>';
+      if (gparts.length) h += ' By count, pitch type, side, sample and season (the map should land between the league figure and what happened, and closer to what happened): ' + esc(gparts.join('; ')) + '.';
+      h += '</p></details>';
     }
     h += '<div class="seg" role="group" aria-label="Which number">' + Object.keys(RP_METRICS).map(function (k2) {
       return '<button data-rpmetric="' + k2 + '" aria-pressed="' + (k2 === key) + '">' + RP_METRICS[k2].label + "</button>";
@@ -2387,24 +2447,24 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         var hc = players[ids[0]] && players[ids[0]].hitter, pc = players[ids[1]] && players[ids[1]].pitcher;
         var isNow = now && now.key === sel;
         h += '<section class="sec wide" id="rp-detail-' + pk + '"><h3>' + esc(nm(ids[0])) + " against " + esc(nm(ids[1])) + (isNow ? ' <span class="pill live"><i></i>' + (now.lv.state.between_innings ? "Due up" : "Now batting, " + (now.lv.state.balls || 0) + "-" + (now.lv.state.strikes || 0)) + "</span>" : "") + "</h3>";
-        if (pr2.evidence) h += '<p class="note">' + (pr2.evidence.level === "thin" ? "Thin evidence: " : "Evidence: ") + "the hitter's map rests on " + Number(pr2.evidence.hitter_pitches).toLocaleString() + " earlier pitches" + (pr2.evidence.whiff_map ? " (with a whiff map)" : " (no whiff map yet)") + ", the pitcher's spots on " + Number(pr2.evidence.pitcher_pitches_to_side).toLocaleString() + " pitches to this side." + (pr2.evidence.level === "thin" ? " Read the numbers as leanings, not measurements." : "") + "</p>";
+        if (pr2.evidence) h += '<p class="note">' + (pr2.evidence.level === "thin" ? "Thin sample: " : "Sample: ") + Number(pr2.evidence.hitter_pitches).toLocaleString() + " pitches behind the hitter's map" + (pr2.evidence.whiff_map ? "" : " (no whiff map yet)") + ", " + Number(pr2.evidence.pitcher_pitches_to_side).toLocaleString() + " behind the pitcher's spots to this side." + (pr2.evidence.level === "thin" ? " Take it as a lean, not a measurement." : "") + "</p>";
         h += '<ul class="compare"><li><span>Extra chases per 100 outside pitches from his own map</span><b>' + RP_METRICS.chase.fmt(pr2.chase_points) + "</b></li>" +
           "<li><span>Strikeout chance against the league pairing</span><b>" + RP_METRICS.k.fmt(pr2.k_points) + " pts</b></li><li><span>Walk chance</span><b>" + RP_METRICS.bb.fmt(pr2.bb_points) + " pts</b></li>" +
           (pr2.aim ? "<li><span>" + (pr2.aim.pricing === "structural" ? "Runs saved per 100 PA by aiming at his costliest spots (chases, or strikes he takes), typical command" : "Runs saved per 100 PA by aiming outside pitches at his spots, typical command") + "</span><b>" + (-pr2.aim.runs_per_100_pa).toFixed(2) + "</b></li>" : "") +
           (pr2.strike ? "<li><span>Runs saved per 100 PA by putting strikes where he lets them go or swings to little effect, typical command</span><b>" + (-pr2.strike.runs_per_100_pa).toFixed(2) + "</b></li>" : "") + "</ul>";
-        if (pc && pc.looks_in_ends_out != null && doc.league) h += '<p class="note">' + esc(lastName(nm(ids[1]))) + ": " + pct(pc.looks_in_ends_out) + " of his pitches look like strikes at the decision moment and end out of the zone (league " + pct(doc.league.looks_in_ends_out) + "); hitters chase " + pct(pc.chase_rate_against) + " of his outside pitches (league " + pct(doc.league.chase_rate) + ").</p>";
+        if (pc && pc.looks_in_ends_out != null && doc.league) h += '<p class="note">' + esc(lastName(nm(ids[1]))) + ": " + pct(pc.looks_in_ends_out) + " of his pitches look like strikes when the hitter has to decide and finish out of the zone (league " + pct(doc.league.looks_in_ends_out) + "). Hitters chase " + pct(pc.chase_rate_against) + " of his pitches out of the zone (league " + pct(doc.league.chase_rate) + ").</p>";
         if (pr2.aim && hc) {
           var counts = [["all", "All counts"], ["even_or_ahead", "Even or ahead"], ["behind", "Behind"], ["two_strikes", "Two strikes"]], bc = pr2.aim.by_count || {};
           var ck = state.rpCount && (state.rpCount === "all" || bc[state.rpCount]) ? state.rpCount : "all";
           var plan = ck === "all" ? pr2.aim.cells : bc[ck].cells;
           h += '<p class="note">' + (pr2.aim.pricing === "structural" ?
-            "Where to put pitches: the best of the spots this pitcher actually throws that family to, priced by what each spot does to this hitter with typical command. Dots are outside aims: a filled dot where his extra chases cost him, a hollow dot where the strikes he takes at the edge cost him. Squares are strike spots inside the zone: filled where he lets strikes go, hollow where he swings to little effect. Gold is where he chases more than the average hitter his side, blue less." :
-            "Where to put outside pitches (dots): the best of the spots this pitcher actually throws that family to, by the hitter\'s own chase map (gold is where he chases more than the average hitter his side, blue less).") +
-            " The outlined cells are the heart of the strike zone, the ring around them its edges, seen from the catcher with the hitter's side on the left.</p>";
+            "Where to put it: the best of the spots this pitcher actually throws each pitch to, priced by what the spot does to this hitter with normal command. Filled dot: he chases there. Hollow dot: he takes strikes there. Filled square: a strike he lets go by. Hollow square: a strike he swings at and does little with. Gold: he chases more than most hitters on his side. Blue: less." :
+            "Where to put pitches out of the zone (dots): the best of the spots this pitcher actually throws each pitch to, by the hitter\'s own chase map. Gold: he chases more than most hitters on his side. Blue: less.") +
+            " The outlined box is the heart of the zone, seen from the catcher, with the hitter's side on the left.</p>";
           h += '<div class="seg" role="group" aria-label="Which count">' + counts.filter(function (c) { return c[0] === "all" || bc[c[0]]; }).map(function (c) { return '<button data-rpcount="' + c[0] + '" aria-pressed="' + (c[0] === ck) + '">' + c[1] + "</button>"; }).join("") + "</div>";
           var hasCloud = ck === "all" && pr2.aim.dangerous_miss && Object.keys(pr2.aim.dangerous_miss).some(function (fam) { return pr2.aim.dangerous_miss[fam].cloud; });
           if (hasCloud) h += ' <div class="seg" role="group" aria-label="What the grid shows"><button data-rpcloud="0" aria-pressed="' + !state.rpCloud + '">His map</button><button data-rpcloud="1" aria-pressed="' + !!state.rpCloud + '">Where the aims land</button></div>';
-          if (ck !== "all") h += '<p class="note">' + esc(counts.filter(function (c) { return c[0] === ck; })[0][1]) + ": " + (bc[ck].runs_per_100_pa != null ? "the best third of his spots saves " + (-bc[ck].runs_per_100_pa).toFixed(2) + " runs per 100 plate appearances over his usual spots" : "the best third of his spots gains " + bc[ck].gain_points.toFixed(1) + " points of chase over his usual spots") + ", on " + Number(bc[ck].pitches).toLocaleString() + " such pitches.</p>";
+          if (ck !== "all") h += '<p class="note">' + esc(counts.filter(function (c) { return c[0] === ck; })[0][1]) + ": " + (bc[ck].runs_per_100_pa != null ? "hitting the best third of his spots instead of his usual ones saves " + (-bc[ck].runs_per_100_pa).toFixed(2) + " runs per 100 plate appearances" : "the best third of his spots gains " + bc[ck].gain_points.toFixed(1) + " points of chase over his usual spots") + " (" + Number(bc[ck].pitches).toLocaleString() + " pitches).</p>";
           var fl = famLine(ck === "all" ? pr2.aim.by_family : bc[ck].by_family);
           if (fl) h += '<p class="note">' + esc(fl) + "</p>";
           if (ck === "all" && pr2.aim.pricing === "structural") {
@@ -2440,8 +2500,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
           (hc.zone_top_ft != null ? '<div class="rp-card"><h4>His zone</h4><div class="lbl">Top ' + hc.zone_top_ft + " ft, bottom " + hc.zone_bottom_ft + ' ft (from the official zone calls)</div><div class="lbl">Chase rate ' + (hc.chase_rate != null ? pct(hc.chase_rate) : "–") + ", whiff rate " + (hc.whiff_rate != null ? pct(hc.whiff_rate) : "–") + " on " + Number(hc.pitches).toLocaleString() + " pitches</div></div>" : "") + "</div>";
         if (hc && hc.own_cost) {
           var oc = hc.own_cost, v_ = oc.runs_per_600_pa;
-          h += '<p class="note">His swing decisions against the average hitter his side, on the pitches he actually saw: ' + (v_ >= 0 ? "+" : "") + v_.toFixed(1) + " runs per 600 plate appearances (" + (oc.outside_runs_per_600_pa >= 0 ? "+" : "") + oc.outside_runs_per_600_pa.toFixed(1) + " outside the zone, " + (oc.inside_runs_per_600_pa >= 0 ? "+" : "") + oc.inside_runs_per_600_pa.toFixed(1) + " inside)" +
-            (oc.cells && oc.cells.length ? ". Where it costs him most: " + esc(oc.cells.map(function (c) { return rpWords(c.slice(0, 2).concat([c[3]])) + " (" + c[2].toFixed(1) + ")"; }).join("; ")) : "") + ". Same pricing as the plan, read from his side; a development target, not a prediction.</p>";
+          h += '<p class="note">His swing decisions against an average hitter from his side, on the same pitches: ' + (v_ >= 0 ? "+" : "") + v_.toFixed(1) + " runs per 600 plate appearances (" + (oc.outside_runs_per_600_pa >= 0 ? "+" : "") + oc.outside_runs_per_600_pa.toFixed(1) + " out of the zone, " + (oc.inside_runs_per_600_pa >= 0 ? "+" : "") + oc.inside_runs_per_600_pa.toFixed(1) + " in it)" +
+            (oc.cells && oc.cells.length ? ". Costs him most: " + esc(oc.cells.map(function (c) { return rpWords(c.slice(0, 2).concat([c[3]])) + " (" + c[2].toFixed(1) + ")"; }).join("; ")) : "") + ". Something to work on, not a prediction.</p>";
         }
         if (pr2.grade) {
           var gr = pr2.grade;
@@ -2456,22 +2516,22 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     }
     /* When the pair at the plate is the selected one, its plan sits under the strip and the tables follow; otherwise the tables come first and the tapped pair's plan after them. */
     h = top + (liveSel ? h + mid : mid + h);
-    h += '<section class="sec"><h3>Sequencing</h3><p class="note">Measured on data the models never saw: after a taken pitch, and about twice as much after a swing and miss, coming back with the same pitch family draws more misses than changing it (about 2 to 3 points of whiff rate beyond what the pitch itself predicts) and softer contact; a slower next pitch adds to it; after a foul nothing carries. This holds league-wide; it is not yet folded into the per-hitter plan.</p></section>';
-    h += '<section class="sec"><p class="note">Method: swing decisions are read where the pitch appears to be headed about 260 ms before the plate, an effective decision horizon under this model rather than a claim about vision. Each hitter\'s map read there adds about 3.6 nats per 1,000 decisions beyond a gradient-boosted model given the same pitch inputs, on later months the models were not fitted on (and +40 over a plain heat map in the same logistic model, the easier comparison). The run values are estimated policy potential: they assume that where a pitch lands on a hitter\'s map is as good as chance because pitchers do not aim at these spots on average, typical command (0.6 ft of scatter) and little hitter adaptation; they are not observed runs saved. Strikeout and walk changes come from the count-by-count chain at its measured calibration. Every number here is a model output; the ledger in the repository carries the tests, including the failed ones.</p></section>';
+    h += '<section class="sec"><h3>Sequencing</h3><p class="note">After a take, and about twice as much after a swing and miss, going back to the same pitch type gets more misses and weaker contact than switching (2 to 3 points of whiff rate). A slower next pitch adds to it. After a foul ball nothing carries over. League-wide, measured on games the models never saw; not yet built into each hitter\'s plan.</p></section>';
+    h += '<section class="sec"><details class="more"><summary>How these numbers are made</summary><p class="note">Swing decisions are read where the pitch looks like it is headed about 260 milliseconds before the plate; that is where the model fits best, not a claim about eyesight. A hitter\'s own map read there beats a strong general model given the same pitch data on months the models never trained on. The run values are what the spots could be worth: they assume pitchers do not already aim at these spots (on average they do not), normal command (about 0.6 ft of scatter) and hitters who do not adjust much. They are not runs already saved. Strikeout and walk changes come from the count-by-count chain. Every number here is a model output; the ledger in the repository carries every test, including the ones that failed.</p></details></section>';
     return h;
   }
   function oddsTab(f, box) {
     var h = "", pa = winProb(f, "away"), ph = winProb(f, "home");
     var taught = taughtRecipe(f), rc = recipeOf(f), withLine = !!(rc && /market/.test(rc.headline || ""));
     h += '<section class="sec"><h2>Win chance</h2><p class="lede">' + (taught ?
-      "The headline is the best number we have before first pitch: our own model, combined with the betting market\'s pregame line once one is posted. Our model never sees this game\'s line (its weights were taught on past seasons\' closing lines), so the two can disagree, and the Record page keeps score of who is right." :
-      "The headline averages the simulator with a team-strength model; on a full replayed season the average was more accurate than either alone.") + "</p>";
+      "The headline is our best number before first pitch: our model blended with the betting line once one is posted. Our model never sees the line for this game, so the two can disagree. The Record page keeps score." :
+      "The headline averages the simulator with a team-strength model; over a full season re-run, the average beat either one alone.") + "</p>";
     h += '<div class="winbar" role="img" aria-label="' + esc(f.away.abbr + " " + pct(pa) + ", " + f.home.abbr + " " + pct(ph)) + '"><div class="a" style="width:' + (pa * 100).toFixed(1) + '%">' + esc(f.away.abbr) + " " + pct(pa) + '</div><div class="h" style="width:' + (ph * 100).toFixed(1) + '%">' + pct(ph) + " " + esc(f.home.abbr) + "</div></div>";
     h += '<ul class="compare">';
     var fmt = function (p) { return p >= .5 ? esc(f.home.abbr) + " " + pct(p) : esc(f.away.abbr) + " " + pct(1 - p); };
     var po = oursProb(f);
-    h += "<li><span>" + (!taught ? "Headline (simulator and team model averaged)" : withLine ? "Headline (our model with the market line)" : "Headline (our model; no market line yet)") + "</span><b>" + fmt(homeProb(f)) + "</b></li>";
-    if (taught) h += "<li><span>Our model (taught on past closing lines; never sees this game's line)</span><b>" + fmt(po) + "</b></li>";
+    h += "<li><span>" + (!taught ? "Headline (simulator and team model averaged)" : withLine ? "Headline (our model blended with the line)" : "Headline (our model; no line yet)") + "</span><b>" + fmt(homeProb(f)) + "</b></li>";
+    if (taught) h += "<li><span>Our model (never sees this game's line)</span><b>" + fmt(po) + "</b></li>";
     h += "<li><span>Simulator alone, " + Number(f.n_simulations).toLocaleString() + " games</span><b>" + fmt(f.home_win_probability) + "</b></li>";
     var tmp = box && box.team_model && box.team_model.p_home != null ? box.team_model.p_home : f.team_baseline_probability;
     if (tmp != null) h += "<li><span>Team model alone</span><b>" + fmt(tmp) + "</b></li>";
@@ -2484,9 +2544,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     h += "</ul>";
     if (taught && pmk != null) {
       var gap = po - pmk, side = gap >= 0 ? "home" : "away", pts = Math.round(Math.abs(gap) * 100), wt = weightsText();
-      h += '<p class="note">' + (pts < 2 ? "Our model and the market agree on this game." + (wt ? " The headline is " + wt + "." : "") :
-        "Our model is " + pts + " points higher on the " + esc(nickname(f[side].name)) + " than the market. In 2025 and 2026 replays, when our model differed from the opening line, the line moved toward our number about 7 times in 10, and still about 7 in 10 using only what was known when the line opened." +
-        (wt ? " By first pitch the market is slightly sharper, so the headline is " + wt + "." : "")) + "</p>";
+      h += '<p class="note">' + (pts < 2 ? "We and the market agree on this game." + (wt ? " The headline is " + wt + "." : "") :
+        "We like the " + esc(nickname(f[side].name)) + " " + pts + " points more than the market does. Over the two seasons we re-ran, when we differed from the opening line it moved our way about 7 times in 10." +
+        (wt ? " By first pitch the market is a touch sharper, so the headline is " + wt + "." : "")) + "</p>";
     }
     h += "</section>";
 
@@ -2501,7 +2561,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var mkt2 = D.market && D.market[f.game_pk], mline = "";
       if (mkt2 && mkt2.over_under != null) mline = " Betting market total: " + mkt2.over_under + (mkt2.p_over != null ? " (over " + pct(mkt2.p_over) + ")" : "") + ".";
       var taughtTotal = (mkt2 && mkt2.over_under != null && f.date >= TOTAL_TAUGHT.from) ? (TOTAL_TAUGHT.sim * mean(tr) + TOTAL_TAUGHT.line * Number(mkt2.over_under) + TOTAL_TAUGHT.shift) : null;
-      h += '<section class="sec"><h2>Total runs</h2><p class="lede">' + (taughtTotal != null ? "Expected " + taughtTotal.toFixed(1) + " runs: our best number, the simulator\'s " + mean(tr).toFixed(1) + " combined with the market total (in replays of 2025 and 2026 the combination beat the market line on its own). " : "Expected " + mean(tr).toFixed(1) + " runs. ") +
+      h += '<section class="sec"><h2>Total runs</h2><p class="lede">' + (taughtTotal != null ? "We expect " + taughtTotal.toFixed(1) + " runs: the simulator\'s " + mean(tr).toFixed(1) + " blended with the book\'s total (over two seasons re-run, the blend beat the book\'s number on its own). " : "We expect " + mean(tr).toFixed(1) + " runs. ") +
         "Most likely " + mode(tr) + ". Half of games land between " + quant(tr, .25) + " and " + quant(tr, .75) + ". " + pct(probAtLeast(tr, 10)) + " reach 10 or more." + esc(mline) + "</p></section>";
     }
 
@@ -2593,7 +2653,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var rp = rec.replay || {}, years = Object.keys(rp).sort().reverse();
     if (!years.length) return "";
     var rowsR = [["headline", "Headline"], ["ours", "Our model"], ["market", "Market at the close"], ["market_open", "Market at the open"], ["simulator", "Simulator"], ["team", "Team model"]];
-    var h = '<section class="sec"><h2>Full seasons, replayed</h2><p class="lede">Every regular-season game re-run with only what was known before it, scored two ways: how much smaller the error of its win chances is than always saying 50-50 (the Brier score), and how often its favorite won.</p><div class="seasons">';
+    var h = '<section class="sec"><h2>Two seasons, re-run game by game</h2><p class="lede">Every regular-season game run again with only what was known before it. Two scores: how much less error the win chances have than a coin flip, and how often the favorite won.</p><div class="seasons">';
     years.forEach(function (y) {
       h += '<div class="tbl-wrap"><table class="box"><thead><tr><th scope="col">' + esc(y) + " <small>" + Number(rp[y].games).toLocaleString() + ' games</small></th><th scope="col">vs coin</th><th scope="col">Favorite won</th></tr></thead><tbody>';
       rowsR.forEach(function (r) {
@@ -2603,7 +2663,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       });
       h += "</tbody></table></div>";
     });
-    return h + '</div><p class="note">Replay numbers, not live forecasts. Our model\'s weights were fitted to closing lines from these seasons and checked on the season each fit did not see. Games without a closing line (most Athletics games of 2025, and 2025 after August 16) are left out.</p></section>';
+    return h + '</div><p class="note">Re-run numbers, not live calls. The weights that blend our pieces were set on one of these seasons and checked on the other. Games with no closing line (most Athletics games in 2025, and 2025 after August 16) are left out.</p></section>';
   }
   /* ---------- Players: league-wide cards from the matchup report's fitted pieces (public/reports/players/) ---------- */
   var PLAYERS = null, PLAYER_SHARDS = {};
@@ -2686,45 +2746,49 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   }
 
   function renderRecord() {
-    var rec = D.record || {}, n = rec.n_scored || 0;
-    var h = '<div class="wrap"><div class="page-head"><h1>Track record</h1><p>Every forecast is saved before first pitch and scored after the final.</p></div>';
+    var rec = D.record || {}, n = rec.n_scored || 0, N = recordNumbers();
+    var h = '<div class="wrap"><div class="page-head"><h1>Our record</h1><p>Two full seasons re-run game by game with only what was known before each game, plus every live call since ' + (N.since ? esc(shortDate(N.since)) : "the record began") + ", scored after the final.</p></div>";
+    h += '<div class="board-stats">' +
+      (N.replayPct != null ? '<div><b class="num">' + N.replayPct + "%</b><span>winners picked, " + Number(N.replayed).toLocaleString() + " games re-run</span></div>" : "") +
+      (N.marketPct != null ? '<div><b class="num">' + N.marketPct + "%</b><span>the betting market on the same games</span></div>" : "") +
+      '<div><b class="num">' + N.right + "-" + (N.live - N.right) + "</b><span>live picks" + (N.since ? " since " + esc(shortDate(N.since)) : "") + "</span></div></div>";
+    /* the bottom line, in words */
+    var rp = rec.replay || {}, years = Object.keys(rp).sort(), parts = [];
+    years.forEach(function (y) {
+      var x = rp[y]; if (!x.headline || !x.market) return;
+      var d = x.headline.better_than_coin_pct - x.market.better_than_coin_pct;
+      parts.push(y + ": " + Number(x.games).toLocaleString() + " games, our favorite won " + x.headline.picks_right_pct.toFixed(0) + "% of the time (the market's " + x.market.picks_right_pct.toFixed(0) + "%), and our win chances were " + (Math.abs(d) < 0.15 ? "as sharp as the market's" : d > 0 ? "a little sharper than the market's" : "a little less sharp than the market's"));
+    });
+    if (parts.length) h += '<section class="sec"><h2>The bottom line</h2><p class="lede">' + esc(parts.join(". ")) + ". Picking 57% of winners is where the best public models and the betting market sit; baseball is close to a coin flip game by game, so the edge shows up in the win chances being right, not in a high pick rate.</p></section>";
+    h += replaySeasons(rec);
     if (!n) {
-      h += '<div class="empty-state"><h2 class="team-h">No games scored yet</h2><p>The first scores post after tonight\'s finals. Each game adds to the ladder below: how much smaller each method\'s win-chance error is than always saying 50-50.</p></div>' + replaySeasons(rec) + "</div>";
+      h += '<section class="sec"><h2>Live games</h2><p class="empty">No live games scored yet. The first scores post after the next finals.</p></section></div>';
       app.innerHTML = h; return;
     }
-    var games = rec.games || [], right = games.filter(function (g) { return (g.p_blend >= .5) === g.home_won; }).length;
     var hl = (rec.ladder || []).filter(function (r) { return r.key === "blend"; })[0] || {}, mk = (rec.ladder || []).filter(function (r) { return r.key === "market"; })[0] || {};
-    h += '<div class="board-stats"><div><b class="num">' + n + "</b><span>" + (n === 1 ? "game scored" : "games scored") + '</span></div><div><b class="num">' + right + "-" + (n - right) + "</b><span>headline picks</span></div>" +
-      '<div><b class="num">' + (hl.better_than_coin_pct != null ? (hl.better_than_coin_pct >= 0 ? "+" : "") + hl.better_than_coin_pct.toFixed(1) + "%" : "") + "</b><span>less error than 50-50</span></div>" +
-      (mk.better_than_coin_pct != null && mk.n ? '<div><b class="num">' + (mk.better_than_coin_pct >= 0 ? "+" : "") + mk.better_than_coin_pct.toFixed(1) + "%</b><span>market, same games</span></div>" : "") + "</div>";
     var rows = (rec.ladder || []).filter(function (r) { return r.better_than_coin_pct != null; });
     var max = Math.max(1, Math.max.apply(null, rows.map(function (r) { return Math.abs(r.better_than_coin_pct); })));
-    h += '<div class="record-cols"><div><section class="sec"><h2>Error against a coin flip</h2><p class="lede">How much smaller each method\'s win-chance error (Brier score) is than always saying 50-50, over ' + n + " scored " + (n === 1 ? "game" : "games") + '. This is not the share of winners picked (that is the record above). Small samples swing a lot; judge after a few hundred.</p><ol class="ladder">';
+    h += '<section class="sec"><h2>Live games so far: ' + n + "</h2><p class=\"lede\">Each number we put up before first pitch, scored after the final. " + n + (n === 1 ? " game is" : " games are") + " not enough to judge anything; give it a few hundred.</p><ol class=\"ladder\">";
     rows.forEach(function (r) {
       var v = r.better_than_coin_pct, w = (Math.abs(v) / max * 50).toFixed(1);
       h += "<li" + (r.key === "blend" ? ' class="you"' : "") + "><span>" + esc(r.name) + '</span><span class="bar"><i class="' + (v >= 0 ? "pos" : "neg") + '" style="width:' + w + '%"></i></span><span class="v num">' + (v >= 0 ? "+" : "") + v.toFixed(1) + "%</span></li>";
     });
-    h += '</ol><p class="note">Right of the line means less error than a coin flip. From October 8 the headline combines our model with the market\'s pregame line; before that it averaged the simulator and the team model. Our model never sees this game\'s line (its weights were taught on past seasons\' closing lines), the simulator is trained on results alone, and every part is scored on its own.</p></section>';
+    h += '</ol><p class="note">How much less error each way of calling games has than a coin flip, on these games. Right of the line is better. The headline is our model blended with the market\'s pregame line (60/40); our model on its own never sees the line for the game it is calling.</p></section>';
     var dg = rec.disagreements, lm = rec.line_moves;
     if ((dg && dg.n) || (lm && lm.n)) {
-      h += '<section class="sec"><h2>Our model and the market</h2>';
-      if (lm && lm.n) h += '<p class="lede">Line movement: in ' + lm.n + (lm.n === 1 ? " game" : " games") + " where our final pregame number differed from the first line we saw, the line moved toward our number " +
-        lm.toward_ours + (lm.toward_ours === 1 ? " time" : " times") + " by first pitch. In replays of the 2025 and 2026 regular seasons it did so about 7 times in 10, and with only what was known when the line opened (no posted lineups) 68% of the time in 2025 and 73% in 2026.</p>";
-      if (dg && dg.n) h += '<p class="lede">Games where our model and the market\'s pregame line were ' + Math.round(dg.threshold * 100) + " or more points apart: " + dg.n + (dg.n === 1 ? " game" : " games") +
-        ". Our side won " + dg.our_side_won + ". Closer to the result on average: " + (dg.ours_brier < dg.market_brier ? "our model" : dg.ours_brier > dg.market_brier ? "the market" : "neither") + ".</p>";
+      h += '<section class="sec"><h2>Us and the betting market</h2>';
+      if (lm && lm.n) h += '<p class="lede">When our number differed from the first line we saw, the line moved our way by first pitch ' + lm.toward_ours + " of " + lm.n + (lm.n === 1 ? " time" : " times") + ". In the two seasons re-run it moved our way about 7 times in 10.</p>";
+      if (dg && dg.n) h += '<p class="lede">Games where we and the market were ' + Math.round(dg.threshold * 100) + " points or more apart: " + dg.n + ". Our side won " + dg.our_side_won + ". Closer to the result on average: " + (dg.ours_brier < dg.market_brier ? "us" : dg.ours_brier > dg.market_brier ? "the market" : "neither") + ".</p>";
       h += "</section>";
     }
     var aggs = (D.skill_scores && D.skill_scores.aggregates) || [];
     var live = aggs.filter(function (a) { return a.n_games && a.model_score != null && a.baseline_score != null; });
     if (live.length) {
-      h += '<section class="sec"><h2>Box score accuracy</h2><p class="lede">How much closer the model lands than a simple guess. Positive is better.</p><ul class="compare">';
+      h += '<section class="sec"><h2>Box score calls</h2><p class="lede">How much closer our projected box score lands than a plain average. Plus is better.</p><ul class="compare">';
       live.forEach(function (a) { var g = (a.baseline_score - a.model_score) / a.baseline_score; h += "<li><span>" + esc(a.label) + " <small>(" + a.n_games + (a.n_games === 1 ? " game" : " games") + ")</small></span><b>" + (g >= 0 ? "+" : "") + Math.round(g * 100) + "%</b></li>"; });
       h += "</ul></section>";
     }
-    /* Desktop: the live record on the left, the replayed seasons on the right; phones read them in that order. */
-    h += "</div><div>" + replaySeasons(rec) + "</div></div>";
     h += '<section class="sec"><h2>Game by game</h2><ol class="games-list">';
-    var shortDate = function (ymd) { if (!ymd) return ""; var d = new Date(ymd + "T12:00:00Z"); return d.toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric" }); };
     (rec.games || []).slice().reverse().forEach(function (g) {
       var call = function (label, p) {
         if (p == null) return "";
@@ -2734,28 +2798,26 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       h += '<li><div class="g-top"><b>' + esc(g.away + " at " + g.home) + "</b><span>" + esc(shortDate(g.date)) + '</span></div><div class="final num">Final: ' + esc(g.away) + " " + g.actual.away + ", " + esc(g.home) + " " + g.actual.home + '</div><div class="calls">' +
         call("Headline", g.p_blend) + (g.p_ours != null && Math.abs(g.p_ours - g.p_blend) >= 0.005 ? call("Our model", g.p_ours) : "") + call("Simulator", g.p_sim) + call("Team model", g.p_team) + call("Market", g.p_market) + "</div></li>";
     });
-    h += '</ol><p class="note">Green means the favored team won.</p></section>';
+    h += '</ol><p class="note">Green: the team we favored won.</p></section>';
     app.innerHTML = h + "</div>";
   }
 
   /* ---------- how it works ---------- */
   function renderHow() {
-    var fx = latestForecasts(), any = fx[Object.keys(fx)[0]] || {}, h = '<div class="wrap"><div class="page-head"><h1>How it works</h1></div><div class="prose">';
-    h += "<h2>One game, ten thousand times</h2><p>Before each game the engine plays it out ten thousand times, one plate appearance at a time. Every plate appearance uses the real hitter, the real pitcher and their history up to the day before. The simulator's win chance is the share of those games each team won.</p>";
+    var fx = latestForecasts(), any = fx[Object.keys(fx)[0]] || {}, h = '<div class="wrap"><div class="page-head"><h1>How it works</h1><p>Short version first. The details are under each section.</p></div><div class="prose">';
+    h += "<h2>One game, ten thousand times</h2><p>Before each game we play it out ten thousand times, one at-bat at a time, with the real hitters, the real pitchers and everything they have done up to the day before. The share of those games each team wins is the simulator's number.</p>";
     var physicsModel = Object.keys(fx).some(function (k) { return /physics/i.test(String(fx[k].model || "")); });
     if (physicsModel) {
-      h += "<h2>What the model knows about each player</h2><p>Each plate appearance is scored by a seven-outcome model fitted on 2023 and 2024, tuned on 2025 and tested on the whole 2026 season before it was used. Beyond a player's results (and his splits, recent form, park and age), it reads the official pitch physics of every prior game: for hitters, exit velocity, launch angle, hard-hit and barrel rates, the expected run value of the way they hit the ball, swing, whiff, chase and in-zone contact rates, and how the last 30 days differ from their norm; for pitchers, fastball velocity and how the last outing compared with it, spin and movement, whiff, chase, zone and called-strike-plus-whiff rates, contact quality and ground-ball share allowed, and the same 30-day form. On the 2026 holdout this cut the model's error against the results-only version with the whole season held out.</p>";
+      h += '<details class="more"><summary>What the model knows about each player</summary><p>Each at-bat is scored by a model that was fit on 2023 and 2024, tuned on 2025 and tested on all of 2026 before it was used. Besides a player\'s results, splits, recent form, park and age, it reads the pitch data from every prior game. Hitters: exit velocity, launch angle, hard-hit and barrel rates, the expected value of the contact, swing, whiff, chase and in-zone contact rates, and how the last 30 days compare with the norm. Pitchers: fastball velocity and how the last outing compared with it, spin and movement, whiff, chase, zone and called-strike-plus-whiff rates, contact quality and ground balls allowed, and the same 30-day form.</p></details>';
     }
-    h += "<h2>The headline number</h2><p>The win chance on each card is the best number we can give before first pitch. It starts from our own model, which combines the simulator with a team-strength model (runs scored and allowed, home field, recent form, and the starting pitchers: each starter's strikeout, walk and home-run rates against his team's usual rotation, weighted by how deep he usually goes). The weights were taught by the betting market: instead of fitting them to wins and losses, which are noisy, they were fitted to the market's closing lines on 4,140 regular-season games from 2025 and 2026, a far more precise target, then checked on real results from a season the fit never saw. Our model never sees a line when it makes a forecast.</p>";
-    h += "<p>Once the market's pregame line is posted, the headline combines the two on the log-odds scale, " + (weightsText() || "60% market, 40% our model") + ". The market's line is the average of up to eight sportsbooks when they can be read (DraftKings alone otherwise). In replays of 2025 and 2026, which were also used to choose the mix, it came out slightly more accurate than the closing line alone; the margin is within the noise of two seasons, so the real test is the games played from here on. Before a line is posted the headline is our model alone. The Odds tab shows every part and the Record page scores each one separately, including the games where our model and the market disagree.</p>";
-    h += "<p>What line movement does and does not show: when our model has differed from the opening line, the line has moved toward our number by first pitch about 7 times in 10 (replays of 2025 and 2026, each season checked with a model taught on the other). Our final number includes the posted lineups, which the opening line had not priced, so the replays were run again with only what was known at the open (the previous game's lineup and the probable starters): the line still moved toward our number 68% of the time in 2025 and 73% in 2026. The posted lineups explain only a few points of the figure. Line movement is not profit; we do not claim that betting on our number pays.</p>";
-    h += "<p>Changes to the recipe take effect from a stated time and never rewrite a game that has started. Through October 7, 2026 the headline was a plain average of the simulator and the team model.</p>";
-    h += "<h2>The matchup report</h2><p>Every game has a Report tab: each hitter against the pitchers he will face, built only from pitches thrown before that day. The idea behind it is that a hitter decides to swing on where the pitch appears to be headed about 260 milliseconds before it reaches the plate, not on where it ends up; his swing map read at that moment predicts his swings and takes about 8% better than the usual heat map, and it predicts how much he will chase against a specific pitcher's arsenal. Measured fairly against a gradient-boosted model given the same pitch inputs, the hitter-specific part of that still adds about 3.6 nats per 1,000 decisions on later months the models were not fitted on. We also measured that pitchers do not aim at these hitter-specific spots on average. Under the assumptions that this makes where a pitch lands on a hitter's map as good as chance, that command scatters pitches by about 0.6 ft, and that hitters do not adapt much, aiming at those spots is worth an estimated 30 to 45 runs over a team's season from outside pitches alone: about 44 when each spot is priced by the engine's own pieces (how often he swings there, misses, fouls off or puts the ball in play, and what each does to the count), about 29 when the same kind of choice is priced by what actually happened on such pitches. Strikes placed where a hitter lets them go or swings to little effect add about 23 more by the same pricing. That is estimated policy potential, not observed runs saved; the months it was measured on were looked at more than once while the pricing was corrected, and the method was tested in synthetic seasons with known answers before these figures replaced an earlier one of 32 that overstated what its own choices were worth. The report names the spots for each pitch family, the extra chases, and the strikeout and walk changes against the league pairing.</p><p>During a game the report follows the at-bat in progress from the official feed: the pair at the plate, priced for the count, moves with every pitch, and the Summary tab carries the same plan. The Players page lists every hitter with a swing map and every pitcher with 150 pitches, built from the same fitted pieces each day: a hitter's own cost (his swing decisions against the average hitter his side on the pitches he saw, runs per 600 plate appearances, with the spots where it costs him most) and a pitcher's deception rate (how often a pitch looks like a strike at the decision moment and ends out of the zone).</p>"
-      + "<p>Finished games are graded on the Report tab: how many outside pitches actually went to the recommended spots against the pitcher's usual rate, and how the hitters' chases compared with what the league rates and their own maps expected. Past games can be opened the same way: each backfilled report is a retrospective reconstruction, with the maps fitted only on pitches thrown before that month began but with a method chosen in October 2026, so a coach can judge the report against what happened without hindsight in the data, though not without hindsight in the method. The grade keeps three things apart: how well the chase predictions held (prediction quality), whether pitches landed where the report pointed (location alignment, which is not proof the pitcher intended it), and what following the plan would have been worth (policy value, which is not measured by a grade). The research behind it, with every test and its result, is in the repository's ledger.</p>";
+    h += "<h2>The number on the card</h2><p>It starts with our own model: the simulator plus a team-strength model (runs scored and allowed, home field, recent form, the starting pitchers). Once the betting line is posted, the card shows a blend, " + (weightsText() || "60% market, 40% our model") + ". Our model never sees the line for the game it is calling. The Odds tab shows every piece, and the Record page keeps score on each one.</p>";
+    h += '<details class="more"><summary>More on the number</summary><p>The weights inside our model were not fit to wins and losses, which bounce around; they were fit to the betting market\'s closing lines on 4,140 games from 2025 and 2026, a much steadier target, then checked on real results from a season the fit never saw. When we and the opening line disagree, the line has moved our way by first pitch about 7 times in 10 in those two seasons, and still about 7 in 10 when we only used what was known when the line opened. That is not a claim that betting on our number pays. Recipe changes take effect from a stated time and never rewrite a game that has started; through October 7, 2026 the number was a plain average of the simulator and the team model.</p></details>';
+    h += "<h2>The matchup report</h2><p>Every game has a Report tab: each hitter against the pitchers he will face, built only from pitches thrown before that day. The idea: a hitter decides to swing on where the pitch looks like it is going about a quarter second out, not where it ends up. Reading his swing map at that moment calls his swings and takes better than a regular heat map, and it tells you where he will chase against a given pitcher's stuff. The report marks the spots for each pitch type, says which pitch to lean on, and shows the strikeout and walk changes. During a game it follows the at-bat in progress.</p>";
+    h += '<details class="more"><summary>What the spots are worth, and what they are not</summary><p>Pitchers do not aim at these hitter-specific spots on average; we measured that. Taking that as a given, with normal command (about 0.6 ft of scatter) and hitters who do not adjust much, aiming at a hitter\'s spots is worth an estimated 30 to 45 runs over a team\'s season from pitches out of the zone, and strikes placed where he lets them go or swings and does little with them add about 23 more. Those are estimates of what the spots could be worth, not runs already saved. The method was tested in made-up seasons with known answers before these figures went up; an earlier figure of 32 overstated things and was replaced. Finished games are graded on the Report tab: did pitches go where we pointed, more than that staff usually does, and did the hitters chase the way their maps said. Past games can be opened the same way; their reports use only earlier pitches, with a method chosen in October 2026, so you can judge them against what happened. The Players page has every hitter and every pitcher, built from the same pieces each day. Every test, including the ones that failed, is in the repository\'s ledger.</p></details>';
     var adj = {};
     Object.keys(D.box_scores || {}).forEach(function (id) { var b = D.box_scores[id]; if (b.date === D.date && b.adjustments) b.adjustments.forEach(function (a) { adj[a] = 1; }); });
     if (Object.keys(adj).length) {
-      h += "<h2>Adjustments at simulation time</h2><p>The plate appearance model is fitted once and does not change during a season. These are layered on it when games are simulated, each measured on prior games before being switched on.</p><ul>";
+      h += '<details class="more"><summary>What gets layered on at game time</summary><p>The at-bat model is fit once and does not change during a season. These are layered on when games are simulated, each checked on prior games before it was switched on.</p><ul>';
       if (Object.keys(adj).some(function (a) { return /context offsets/.test(a); })) h += "<li><b>First inning.</b> Visiting hitters do worse in the top of the first (more strikeouts, fewer extra-base hits) and home hitters do better in the bottom of the first. The frozen model has no such effect, so fixed offsets measured on prior seasons are applied by inning and batting side. The same offsets set the overall level of strikeouts, walks and home runs: measured on the model as the simulator actually runs it, they raised strikeouts about 4% and brought starting pitchers' projected strikeouts to the real average in both 2025 and 2026.</li>";
       if (Object.keys(adj).some(function (a) { return /postseason/.test(a); })) h += "<li><b>Postseason starters.</b> In the Wild Card, Division and League Championship rounds, starters face about 87% of the batters they face in a regular-season start and a quarter of starts end before the lineup comes around twice (measured on 294 postseason starts, 2023 to 2026). The fitted starter hazard is driven by the expected batters faced, so that expectation is scaled down in those rounds; the World Series matches the regular season and is left alone.</li>";
       if (Object.keys(adj).some(function (a) { return /run environment/.test(a); })) h += "<li><b>Weather and ballpark.</b> The plate appearance model knows the park only through the home team and knows nothing about weather. Each game's plate appearances are adjusted for the temperature at first pitch (about 8% more home runs per 10 degrees), a closed roof, day games, the wind at Wrigley Field, and how each ballpark has played beyond what the model expects, measured on 2025 and 2026 plate appearances and checked on the season the fit did not see. When the weather is not posted yet, the park's usual temperature for the month stands in.</li>";
@@ -2763,15 +2825,15 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (Object.keys(adj).some(function (a) { return /stolen bases/.test(a); })) h += "<li><b>Base running.</b> Every runner moves at his own Statcast sprint speed, and runners steal second and third at their own rates, adjusted for how often the pitcher on the mound is run on and how often runners succeed against him. A caught stealing is an out for that pitcher. Measured on the full 2026 season, it brought the simulator closer to both the results and the betting market.</li>";
       if (Object.keys(adj).some(function (a) { return /play-by-play/.test(a); })) h += "<li><b>Runners after each play.</b> After every plate appearance, the runners move the way they do in MLB, drawn from every play of the 2023 to 2026 seasons in the official play-by-play for the same result, bases and outs: how often an out with a runner on first becomes a double play (23% with fewer than two out), how often the runner on third scores on an out with fewer than two out (54%), how often a runner scores from second on a single or from first on a double. Faster runners take the extra base more often and faster batters beat out more double plays, by the amounts measured on the same plays. Replayed on the full 2025 and 2026 seasons, it brought the simulated batters per game to the real number, and the win chances came out slightly more accurate in both seasons.</li>";
       if (Object.keys(adj).some(function (a) { return /talent noise/.test(a); })) h += "<li><b>Talent uncertainty.</b> Nobody knows a player's true level exactly. Each simulated game draws slightly different levels for every hitter and pitcher, sized by how much history they have, so the ranges shown are honest about what is unknown.</li>";
-      h += "</ul>";
+      h += "</ul></details>";
     }
-    h += "<h2>The projected game</h2><p>The projected game is one of the ten thousand simulated games: the one closest to the middle on team runs, team hits and each starter's innings and strikeouts, with the favorite winning in nine innings. It reads like a real box score, but it is one likely version of the night, not a promise. High-scoring, low-scoring and upset versions show the range.</p>";
-    h += "<h2>The real game</h2><p>While a game is on, the page reads MLB's public feed itself every 15 seconds, so the score, the situation and the plays are current without waiting for a saved run. In-game and after the final, the tabs show the real game from the official play-by-play, every plate appearance with its pitches (type, speed, result and where each one crossed the plate, from the catcher's view) and where the ball went, beside the projected one. The win chance chart reads each play's starting situation (inning, outs, runners, score) against the same ten thousand simulated games that made the forecast: the share of those games the home team went on to win from that situation, with these lineups, starters and bullpens. The in-game number in the header is exact, a fresh set of continuations from the current state at each check. Both start from the pregame headline: the gap between the headline and the simulator at first pitch is carried into the game and fades as the innings run out. Each is then averaged with how 2023 to 2025 games actually went from the same situation, anchored the same way: scored on every plate appearance of the 2025 and 2026 seasons, the average was more accurate than this game's simulations alone or the league's record alone.</p>";
-    h += "<h2>Past games</h2><p>Use the date strip or the calendar to open any day of the 2025 and 2026 seasons. Every game shows the real box score and play-by-play from MLB, next to the model's numbers. Days before the live record began show a model replay: each game re-run after the season with only what was known before it (lineups and starters as they played, history through the day before), so you can see how the model and the market would have called it. The replays are labeled, and the Record page scores live forecasts separately.</p>";
-    h += "<h2>Checking the work</h2><p>Every forecast is saved and published before first pitch and never edited. After the final, the Record page scores the last pregame version against a coin flip, always picking the home team, and the betting market's last pregame line. Nothing is backfilled.</p>";
-    h += "<h2>Current limits</h2><ul><li>Postseason bullpens keep their regular-season roles; only the starter's expected length changes.</li><li>The pitch lines under each simulated plate appearance are bookkeeping, not a pitch-by-pitch simulation: real count paths from prior official games for the same outcome, with the pitcher's own pitch types and speeds. Where a ball went (ground ball to shortstop, fly ball to center field) is drawn the same way from the batter's own prior balls in play, or the league's for his hand. None of it changes an outcome or a pitching decision.</li><li>Runner speed and team defense are league average for everyone; stolen bases and wild pitches are not simulated.</li><li>Bullpen use follows regular-season habits: a fitted rest and quality model was tested on the 2026 replay and did not beat it.</li><li>Player history runs through " + esc(any.history_through || "the day before") + ".</li></ul>";
+    h += "<h2>The projected game</h2><p>One of the ten thousand simulated games: the one closest to the middle on runs, hits and each starter's innings and strikeouts, with the favorite winning in nine. It reads like a box score, but it is one likely version of the night, not a promise. The high-scoring, low-scoring and upset versions show the range.</p>";
+    h += "<h2>The real game</h2><p>While a game is on, the page reads MLB's feed every 15 seconds: score, situation, plays, every pitch. The win chance moves with each play, read from the same ten thousand simulated games that made the pregame number, and from how real games went from the same spot.</p>";
+    h += "<h2>Past and future games</h2><p>Use the date strip or the calendar for any day of 2025 and 2026, or the next two weeks. Past games show the real box score and plays next to our numbers. Days before the live record began show a re-run: each game played again after the season with only what was known before it, so you can see how we and the market would have called it. Future days show the schedule; our number for a game comes out the morning of, once the starters and lineups are in.</p>";
+    h += "<h2>Checking the work</h2><p>Every number is saved and published before first pitch and never edited. After the final, the Record page scores the last pregame version against a coin flip, always picking the home team, and the betting line. Nothing is backfilled.</p>";
+    h += "<h2>What it does not do yet</h2><ul><li>Postseason bullpens keep their regular-season roles; only the starter's expected length changes.</li><li>The pitches under each simulated at-bat are for the look of it, borrowed from real at-bats that ended the same way. They decide nothing.</li><li>Wild pitches and passed balls are not simulated.</li><li>Player history runs through " + esc(any.history_through || "the day before") + ".</li></ul>";
     var modelNames = []; Object.keys(fx).forEach(function (k) { var m = String(fx[k].model || ""); if (m && modelNames.indexOf(m) < 0) modelNames.push(m); });
-    h += "<h2>Technical details</h2><p>Plate appearance model " + esc(modelNames.join(", ") || any.model || "") + ". " + Number(any.n_simulations || 0).toLocaleString() + " simulations per forecast. Earlier forecast versions are kept when lineups change. Source code is public; player data and model files stay private.</p>";
+    h += "<h2>Nuts and bolts</h2><p>At-bat model " + esc(modelNames.join(", ") || any.model || "") + ". " + Number(any.n_simulations || 0).toLocaleString() + " simulated games per forecast. Earlier versions are kept when lineups change. The code is public; the player data and model files are not.</p>";
     var vs = Object.keys(fx).map(function (k) { return fx[k]; }).filter(function (f) { return f.date === D.date; });
     vs.forEach(function (f) {
       var all = versionsFor(f.game_pk);
