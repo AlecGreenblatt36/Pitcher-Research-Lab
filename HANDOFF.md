@@ -45,7 +45,23 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
-### In flight (updated 7:40 p.m. Eastern October 9, by `date -u`; earlier stamps in this section ran ahead of the clock)
+### In flight (updated 8:45 p.m. Eastern October 9, by `date -u`; earlier stamps in this section ran ahead of the clock)
+
+- TOTALS-08 first pass: the venue term's removal did what the mechanism said (park reversal -0.45 to -0.03, squared
+  error -0.049 and -0.027, inside the registered range) but the pooled interval reaches zero. The tie-break, declared in
+  the row before its runs: the same comparison with paired streams, four replays queued at 00:35 UTC October 10 (tags
+  v2-prod3-ps-1000-<season> and v2-prod3-weather-ps-1000-<season>). Score: `python tools/replay_compare.py
+  v2-prod3-ps-1000 v2-prod3-weather-ps-1000 out.json`; gate in the row. If it passes: copy
+  brl_replay/environment_weather.json over brl_live/environment.json, refit the taught headline on the weather replays
+  (scratch harness/fit_headline3.py SCRATCH v2-prod3-weather-ps-1000-2025 v2-prod3-weather-ps-1000-2026) as taught-v6
+  with a new effective_from, refit TOTALS-03's totals weights the same way (harness/totals_taught.py), push main.
+- The report workflow's schedule fired for the first time at 00:17 UTC October 10 (the 20:35 entry, late); the chain's
+  fallback (tools/brl_daily_report_trigger.py) covers the misses. The report lane's memory is fixed: the pool and
+  arsenal caches are bounded (a run reached 14.8 GB of 16; the April 2025 run holds at 9.2 GB), so the August and
+  September 2025 deaths should not recur; after_loop3.sh re-pushes them when loop3 ends.
+- Forward scoring record live: record.json 'scored' (the maps' log-loss gain over the league swing model on graded
+  swing decisions; 20.7 nats per 1,000 on the first 45,433 decisions), stated on the Report tab from 1,000 decisions.
+- Every GitHub Action is pinned by commit (the audit's ENG item).
 
 - TOTALS-07 failed (the park prior is not the source of the cross-season park reversal; replays scored by
   tools/replay_compare.py, a general two-replay comparison paired by game). The source is the run-environment table's
