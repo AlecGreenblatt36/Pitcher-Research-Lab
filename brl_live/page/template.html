@@ -1309,7 +1309,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (!rows.length) return "";
     rows.sort(function (a, b) { return Math.abs(b.gap) - Math.abs(a.gap); });
     var side = function (f, p) { var s = p >= .5 ? "home" : "away"; return esc(f[s].abbr) + " " + pct(s === "home" ? p : 1 - p); };
-    var h = '<section class="sec edges"><h2>Us against the betting line</h2><p class="lede">Our model never sees the line for the game it is calling. When we and the line disagree, the line has moved our way by first pitch about 7 times in 10 across the two seasons we re-ran.</p><ul class="edge-list">';
+    var h = '<section class="sec edges"><h2>Us against Vegas</h2><p class="lede">Our model never sees the line for the game it is calling. When we and Vegas disagree, the line has moved our way by first pitch about 7 times in 10 across the two seasons we re-ran.</p><ul class="edge-list">';
     rows.forEach(function (r) {
       var big = Math.abs(r.gap) >= 0.025, fav = r.gap >= 0 ? "home" : "away", pts = Math.round(Math.abs(r.moved) * 100);
       var lean = big ? 'Our model leans <b class="' + fav + '-c">' + esc(r.f[fav].abbr) + " by " + Math.round(Math.abs(r.gap) * 100) + "</b> points. " +
@@ -3084,7 +3084,24 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var m = months[k], d = new Date(k + "-15T12:00:00Z");
       h += "<tr><td>" + esc(d.toLocaleDateString("en-US", { timeZone: "UTC", month: "short", year: "numeric" })) + "</td><td>" + m.n + "</td><td>" + Math.round(100 * m.hit / m.n) + "%</td><td>" + (m.mn ? Math.round(100 * m.mhit / m.mn) + "%" : "\u2013") + "</td></tr>";
     });
-    return h + '</tbody></table></div><p class="note">Vegas is the closing line, where we have it.</p></section>';
+    h += '</tbody></table></div><p class="note">Vegas is the closing line, where we have it.</p></section>';
+    /* team by team for the latest season: wins next to what our pregame numbers added up to */
+    var yr = years.map(Number).sort().reverse()[0], S2 = SEASONS[yr], teams = {};
+    if (S2 && S2.doc && S2.doc.games) S2.doc.games.forEach(function (g) {
+      if (g.hl == null || g.fa == null || g.fh == null || g.fa === g.fh) return;
+      [["a", 1 - g.hl, g.fa > g.fh], ["h", g.hl, g.fh > g.fa]].forEach(function (x) {
+        var ab = g[x[0]], T = teams[ab] || (teams[ab] = { ab: ab, name: g[x[0] + "n"], n: 0, exp: 0, won: 0 });
+        T.n++; T.exp += x[1]; if (x[2]) T.won++;
+      });
+    });
+    var tl = Object.keys(teams).map(function (k) { return teams[k]; }).filter(function (t) { return t.n >= 20; }).sort(function (a, b) { return (b.won - b.exp) - (a.won - a.exp); });
+    if (tl.length) {
+      h += '<section class="sec"><details class="more" data-keep="teams"' + (state.rpOpen.teams ? " open" : "") + "><summary>Team by team, " + yr + "</summary><p class=\"lede\">Each team's wins next to what our pregame numbers added up to over the same games. Plus means they won more than we expected.</p>" +
+        '<div class="tbl-wrap"><table class="box"><thead><tr><th scope="col">Team</th><th scope="col">Games</th><th scope="col">Won</th><th scope="col">We expected</th><th scope="col">+/-</th></tr></thead><tbody>';
+      tl.forEach(function (t) { var d = Math.round(t.won - t.exp); h += "<tr><td>" + esc(nickname(t.name || t.ab)) + "</td><td>" + t.n + "</td><td>" + t.won + "</td><td>" + Math.round(t.exp) + "</td><td>" + (d > 0 ? "+" + d : d < 0 ? "\u2212" + (-d) : "0") + "</td></tr>"; });
+      h += "</tbody></table></div></details></section>";
+    }
+    return h;
   }
 
   /* ---------- how it works ---------- */
