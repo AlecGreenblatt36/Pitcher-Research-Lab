@@ -206,7 +206,7 @@ def main():
                             page.locator('button[data-tab="box"]').click();page.wait_for_timeout(300)
                             info['box_rows']=page.locator('table.box tbody tr').count()
                             page.locator('button[data-tab="odds"]').click();page.wait_for_timeout(300)
-                            info['odds']='Betting market at the close' in page.inner_text('#app')
+                            info['odds']='Vegas, closing line' in page.inner_text('#app')
                         page.screenshot(path=str(out/'past_game_390.png'),full_page=True)
                         receipt['past_games']=info
                     except Exception as exc:

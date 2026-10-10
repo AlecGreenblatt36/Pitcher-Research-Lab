@@ -883,14 +883,14 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   function weightsText() {
     var w = D.record && D.record.headline_now;
     if (!w || w.market == null) return "";
-    return Math.round(w.market * 100) + "% market, " + Math.round(w.ours * 100) + "% our model";
+    return Math.round(w.market * 100) + "% Vegas, " + Math.round(w.ours * 100) + "% our model";
   }
   /* Pregame card footnote: our independent model next to the market's line, once both exist. */
   function marketFoot(f) {
     var mk = D.market && D.market[f.game_pk], pm = marketProb(mk);
     if (!taughtRecipe(f) || pm == null) return "";
     var po = oursProb(f), side = po >= .5 ? "home" : "away", mside = pm >= .5 ? "home" : "away";
-    return ". Our model " + f[side].abbr + " " + pct(side === "home" ? po : 1 - po) + ", market " + f[mside].abbr + " " + pct(mside === "home" ? pm : 1 - pm);
+    return ". Our model " + f[side].abbr + " " + pct(side === "home" ? po : 1 - po) + ", Vegas " + f[mside].abbr + " " + pct(mside === "home" ? pm : 1 - pm);
   }
   function recipeOf(f) { return D.record && D.record.recipe && f._id != null ? D.record.recipe[f._id] || null : null; }
   function taughtRecipe(f) { var r = recipeOf(f); return !!(r && r.version && r.version !== "equal-v1"); }
@@ -1308,9 +1308,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var big = Math.abs(r.gap) >= 0.025, fav = r.gap >= 0 ? "home" : "away", pts = Math.round(Math.abs(r.moved) * 100);
       var lean = big ? 'Our model leans <b class="' + fav + '-c">' + esc(r.f[fav].abbr) + " by " + Math.round(Math.abs(r.gap) * 100) + "</b> points. " +
         (pts >= 1 ? "The line has moved " + pts + (pts === 1 ? " point " : " points ") + (r.moved * r.gap > 0 ? "toward" : "away from") + " our number since we first read it." : "The line has not moved since we first read it.")
-        : "Within 2 points of the market.";
+        : "Within 2 points of Vegas.";
       h += '<li class="' + (big ? "big" : "") + '"><a href="#/game/' + r.f.game_pk + '"><span class="eg-game">' + esc(r.f.away.abbr + " at " + r.f.home.abbr) + '</span><span class="eg-ours"><small>Our model</small>' + side(r.f, r.po) +
-        '</span><span class="eg-mkt"><small>Market</small>' + side(r.f, r.open) + " first, " + side(r.f, r.now) + ' now</span><span class="eg-gap">' + lean + "</span></a></li>";
+        '</span><span class="eg-mkt"><small>Vegas</small>' + side(r.f, r.open) + " first, " + side(r.f, r.now) + ' now</span><span class="eg-gap">' + lean + "</span></a></li>";
     });
     var lm = D.record && D.record.line_moves;
     h += "</ul>" + (lm && lm.n ? '<p class="note">This October: the line moved our way in ' + lm.toward_ours + " of " + lm.n + (lm.n === 1 ? " game" : " games") + " where we differed from the first line we saw.</p>" : "") + "</section>";
@@ -1454,7 +1454,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var foot = "";
       if (g && fin) {
         foot = (fav === winner ? "Called it" : "Missed") + ": we had " + f[fav].abbr + " " + pct(winProb(f, fav));
-        if (g.m != null) { var ms = g.m >= .5 ? "home" : "away"; foot += ", the market had " + f[ms].abbr + " " + pct(ms === "home" ? g.m : 1 - g.m); }
+        if (g.m != null) { var ms = g.m >= .5 ? "home" : "away"; foot += ", Vegas had " + f[ms].abbr + " " + pct(ms === "home" ? g.m : 1 - g.m); }
         foot += ". Replay";
       } else foot = "No numbers for this game";
       html += '<div class="card-foot' + (g && fin ? (fav === winner ? " hit" : " miss") : "") + '">' + esc(foot) + "</div></a></li>";
@@ -1552,29 +1552,29 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (!g || !real) return "";
     var items = [], winner = real.score.home > real.score.away ? "home" : "away", fav = favorite(f);
     items.push([winner === fav, (winner === fav ? "Called it. " : "Missed. ") + nickname(f[winner].name) + " won; the model had " + nickname(f[fav].name) + " at " + pct(winProb(f, fav)) + "."]);
-    if (g.m != null) { var mf = g.m >= .5 ? "home" : "away"; items.push([winner === mf, "The market had " + nickname(f[mf].name) + " at " + pct(mf === "home" ? g.m : 1 - g.m) + " at the close."]); }
+    if (g.m != null) { var mf = g.m >= .5 ? "home" : "away"; items.push([winner === mf, "Vegas had " + nickname(f[mf].name) + " at " + pct(mf === "home" ? g.m : 1 - g.m) + " at the close."]); }
     var ma = mean(histDist(g.ra)), mh = mean(histDist(g.rh));
     items.push([null, "Expected runs: " + f.away.abbr + " " + ma.toFixed(1) + ", " + f.home.abbr + " " + mh.toFixed(1) + ". Actual: " + real.score.away + " and " + real.score.home + "."]);
-    if (g.ou != null) { var tot = real.score.away + real.score.home; items.push([null, "Market total " + g.ou + "; the game had " + tot + (tot > g.ou ? " (over)." : tot < g.ou ? " (under)." : " (push).")]); }
+    if (g.ou != null) { var tot = real.score.away + real.score.home; items.push([null, "Vegas total " + g.ou + "; the game had " + tot + (tot > g.ou ? " (over)." : tot < g.ou ? " (under)." : " (push).")]); }
     var h = '<section class="sec"><h2>How the pregame numbers did</h2><div class="close-card"><ul>';
     items.forEach(function (it) { h += '<li><span class="mark ' + (it[0] === true ? "yes" : it[0] === false ? "no" : "") + '">' + (it[0] === true ? "\u2713" : it[0] === false ? "\u2717" : "\u2022") + "</span><span>" + esc(it[1]) + "</span></li>"; });
     return h + "</ul></div></section>";
   }
   function pastOddsTab(f, g) {
     var h = "", pa = winProb(f, "away"), ph = winProb(f, "home");
-    h += '<section class="sec"><h2>Win chance</h2><p class="lede">Our re-run numbers next to the closing line. The headline blends our model with the line, the same as on live games.</p>';
+    h += '<section class="sec"><h2>Win chance</h2><p class="lede">Our re-run numbers next to Vegas. Our pick mixes our model with the closing line, the same way it does on live games.</p>';
     h += '<div class="winbar" role="img" aria-label="' + esc(f.away.abbr + " " + pct(pa) + ", " + f.home.abbr + " " + pct(ph)) + '"><div class="a" style="width:' + (pa * 100).toFixed(1) + '%">' + esc(f.away.abbr) + " " + pct(pa) + '</div><div class="h" style="width:' + (ph * 100).toFixed(1) + '%">' + pct(ph) + " " + esc(f.home.abbr) + "</div></div>";
     var fmt = function (p) { return p >= .5 ? esc(f.home.abbr) + " " + pct(p) : esc(f.away.abbr) + " " + pct(1 - p); };
-    h += '<ul class="compare"><li><span>Headline' + (g.m != null ? " (our model with the market line)" : "") + "</span><b>" + fmt(g.hl) + "</b></li>";
-    h += "<li><span>Our model (taught on past closing lines; never sees this game's line)</span><b>" + fmt(g.o) + "</b></li>";
+    h += '<ul class="compare"><li><span>Our pick' + (g.m != null ? " (with the line)" : "") + "</span><b>" + fmt(g.hl) + "</b></li>";
+    h += "<li><span>Our model alone (never sees this game's line)</span><b>" + fmt(g.o) + "</b></li>";
     h += "<li><span>Simulator alone, 1,000 games</span><b>" + fmt(g.s) + "</b></li>";
-    if (g.tm != null) h += "<li><span>Team model alone</span><b>" + fmt(g.tm) + "</b></li>";
-    if (g.m != null) h += "<li><span>Betting market at the close</span><b>" + fmt(g.m) + "</b></li>";
-    if (g.mo != null) h += "<li><span>Betting market at the open</span><b>" + fmt(g.mo) + "</b></li>";
+    if (g.tm != null) h += "<li><span>Team ratings alone</span><b>" + fmt(g.tm) + "</b></li>";
+    if (g.m != null) h += "<li><span>Vegas, closing line</span><b>" + fmt(g.m) + "</b></li>";
+    if (g.mo != null) h += "<li><span>Vegas, opening line</span><b>" + fmt(g.mo) + "</b></li>";
     h += "</ul>";
     if (g.m != null && g.mo != null && Math.abs(g.m - g.mo) >= .01) {
       var toward = (g.m - g.mo) * (g.o - g.mo) > 0;
-      h += '<p class="note">The line moved ' + Math.round(Math.abs(g.m - g.mo) * 100) + (Math.round(Math.abs(g.m - g.mo) * 100) === 1 ? " point" : " points") + " from open to close, " + (toward ? "toward" : "away from") + " our model's number.</p>";
+      h += '<p class="note">The line moved ' + Math.round(Math.abs(g.m - g.mo) * 100) + (Math.round(Math.abs(g.m - g.mo) * 100) === 1 ? " point" : " points") + " from open to close, " + (toward ? "toward" : "away from") + " our model.</p>";
     }
     h += "</section>";
     var ra = histDist(g.ra), rh = histDist(g.rh);
@@ -2716,29 +2716,29 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var h = "", pa = winProb(f, "away"), ph = winProb(f, "home");
     var taught = taughtRecipe(f), rc = recipeOf(f), withLine = !!(rc && /market/.test(rc.headline || ""));
     h += '<section class="sec"><h2>Win chance</h2><p class="lede">' + (taught ?
-      "The headline is our best number before first pitch: our model blended with the betting line once one is posted. Our model never sees the line for this game, so the two can disagree. The Record page keeps score." :
-      "The headline averages the simulator with a team-strength model; over a full season re-run, the average beat either one alone.") + "</p>";
+      "Our pick is our best number before first pitch: our model mixed with the Vegas line once one is posted. Our model never sees the line for this game, so the two can disagree. The Record page keeps score on each." :
+      "Our pick averages the simulator with the team ratings; over a full season re-run, the average beat either one alone.") + "</p>";
     h += '<div class="winbar" role="img" aria-label="' + esc(f.away.abbr + " " + pct(pa) + ", " + f.home.abbr + " " + pct(ph)) + '"><div class="a" style="width:' + (pa * 100).toFixed(1) + '%">' + esc(f.away.abbr) + " " + pct(pa) + '</div><div class="h" style="width:' + (ph * 100).toFixed(1) + '%">' + pct(ph) + " " + esc(f.home.abbr) + "</div></div>";
     h += '<ul class="compare">';
     var fmt = function (p) { return p >= .5 ? esc(f.home.abbr) + " " + pct(p) : esc(f.away.abbr) + " " + pct(1 - p); };
     var po = oursProb(f);
-    h += "<li><span>" + (!taught ? "Headline (simulator and team model averaged)" : withLine ? "Headline (our model blended with the line)" : "Headline (our model; no line yet)") + "</span><b>" + fmt(homeProb(f)) + "</b></li>";
-    if (taught) h += "<li><span>Our model (never sees this game's line)</span><b>" + fmt(po) + "</b></li>";
+    h += "<li><span>" + (!taught ? "Our pick (simulator and team ratings averaged)" : withLine ? "Our pick (with the line)" : "Our pick (no line yet)") + "</span><b>" + fmt(homeProb(f)) + "</b></li>";
+    if (taught) h += "<li><span>Our model alone (never sees this game's line)</span><b>" + fmt(po) + "</b></li>";
     h += "<li><span>Simulator alone, " + Number(f.n_simulations).toLocaleString() + " games</span><b>" + fmt(f.home_win_probability) + "</b></li>";
     var tmp = box && box.team_model && box.team_model.p_home != null ? box.team_model.p_home : f.team_baseline_probability;
-    if (tmp != null) h += "<li><span>Team model alone</span><b>" + fmt(tmp) + "</b></li>";
+    if (tmp != null) h += "<li><span>Team ratings alone</span><b>" + fmt(tmp) + "</b></li>";
     var mkt = D.market && D.market[f.game_pk], pmk = marketProb(mkt);
     if (mkt && mkt.p_home_cons != null && (mkt.n_books || 0) >= 3) {
-      h += "<li><span>Betting market, average of " + mkt.n_books + " books (" + esc(timeET(mkt.captured_at)) + " ET)</span><b>" + fmt(mkt.p_home_cons) + "</b></li>";
+      h += "<li><span>Vegas, average of " + mkt.n_books + " books (" + esc(timeET(mkt.captured_at)) + " ET)</span><b>" + fmt(mkt.p_home_cons) + "</b></li>";
       if (mkt.p_home != null) h += "<li><span>" + esc(mkt.provider || "Single book") + "</span><b>" + fmt(mkt.p_home) + "</b></li>";
-    } else if (mkt && mkt.p_home != null) h += "<li><span>Betting market, " + esc(mkt.provider || "") + " (" + esc(timeET(mkt.captured_at)) + " ET)</span><b>" + fmt(mkt.p_home) + "</b></li>";
-    else if (f.market_probability != null) { var mk = f.market_probability; h += "<li><span>Betting market</span><b>" + (mk >= .5 ? esc(f.home.abbr) + " " + pct(mk) : esc(f.away.abbr) + " " + pct(1 - mk)) + "</b></li>"; }
+    } else if (mkt && mkt.p_home != null) h += "<li><span>Vegas, " + esc(mkt.provider || "") + " (" + esc(timeET(mkt.captured_at)) + " ET)</span><b>" + fmt(mkt.p_home) + "</b></li>";
+    else if (f.market_probability != null) { var mk = f.market_probability; h += "<li><span>Vegas</span><b>" + (mk >= .5 ? esc(f.home.abbr) + " " + pct(mk) : esc(f.away.abbr) + " " + pct(1 - mk)) + "</b></li>"; }
     h += "</ul>";
     if (taught && pmk != null) {
       var gap = po - pmk, side = gap >= 0 ? "home" : "away", pts = Math.round(Math.abs(gap) * 100), wt = weightsText();
-      h += '<p class="note">' + (pts < 2 ? "We and the market agree on this game." + (wt ? " The headline is " + wt + "." : "") :
-        "We like the " + esc(nickname(f[side].name)) + " " + pts + " points more than the market does. Over the two seasons we re-ran, when we differed from the opening line it moved our way about 7 times in 10." +
-        (wt ? " By first pitch the market is a touch sharper, so the headline is " + wt + "." : "")) + "</p>";
+      h += '<p class="note">' + (pts < 2 ? "We and Vegas agree on this game." + (wt ? " Our pick is " + wt + "." : "") :
+        "We like the " + esc(nickname(f[side].name)) + " " + pts + " points more than Vegas does. Over the two seasons we re-ran, when we differed from the opening line it moved our way about 7 times in 10." +
+        (wt ? " By first pitch Vegas is a touch sharper, so our pick is " + wt + "." : "")) + "</p>";
     }
     h += "</section>";
 
@@ -2751,9 +2751,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var tr = box.total_run_distribution ? dist(box.total_run_distribution) : null;
     if (tr) {
       var mkt2 = D.market && D.market[f.game_pk], mline = "";
-      if (mkt2 && mkt2.over_under != null) mline = " Betting market total: " + mkt2.over_under + (mkt2.p_over != null ? " (over " + pct(mkt2.p_over) + ")" : "") + ".";
+      if (mkt2 && mkt2.over_under != null) mline = " Vegas total: " + mkt2.over_under + (mkt2.p_over != null ? " (over " + pct(mkt2.p_over) + ")" : "") + ".";
       var taughtTotal = (mkt2 && mkt2.over_under != null && f.date >= TOTAL_TAUGHT.from) ? (TOTAL_TAUGHT.sim * mean(tr) + TOTAL_TAUGHT.line * Number(mkt2.over_under) + TOTAL_TAUGHT.shift) : null;
-      h += '<section class="sec"><h2>Total runs</h2><p class="lede">' + (taughtTotal != null ? "We expect " + taughtTotal.toFixed(1) + " runs: the simulator\'s " + mean(tr).toFixed(1) + " blended with the book\'s total (over two seasons re-run, the blend beat the book\'s number on its own). " : "We expect " + mean(tr).toFixed(1) + " runs. ") +
+      h += '<section class="sec"><h2>Total runs</h2><p class="lede">' + (taughtTotal != null ? "We expect " + taughtTotal.toFixed(1) + " runs: the simulator\'s " + mean(tr).toFixed(1) + " mixed with the Vegas total (over two seasons re-run, the mix beat the Vegas total on its own). " : "We expect " + mean(tr).toFixed(1) + " runs. ") +
         "Most likely " + mode(tr) + ". Half of games land between " + quant(tr, .25) + " and " + quant(tr, .75) + ". " + pct(probAtLeast(tr, 10)) + " reach 10 or more." + esc(mline) + "</p></section>";
     }
 
@@ -2983,9 +2983,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     h += '</ol><p class="note">How much closer each one\'s percentages came to what happened than a 50-50 guess, on these games. Right of the line is better. Our pick blends our model with the Vegas line (60% Vegas, 40% ours); our model by itself never sees the line.</p></section>';
     var dg = rec.disagreements, lm = rec.line_moves;
     if ((dg && dg.n) || (lm && lm.n)) {
-      h += '<section class="sec"><h2>Us and the betting market</h2>';
+      h += '<section class="sec"><h2>Us and Vegas</h2>';
       if (lm && lm.n) h += '<p class="lede">When our number differed from the first line we saw, the line moved our way by first pitch ' + lm.toward_ours + " of " + lm.n + (lm.n === 1 ? " time" : " times") + ". In the two seasons re-run it moved our way about 7 times in 10.</p>";
-      if (dg && dg.n) h += '<p class="lede">Games where we and the market were ' + Math.round(dg.threshold * 100) + " points or more apart: " + dg.n + ". Our side won " + dg.our_side_won + ". Closer to the result on average: " + (dg.ours_brier < dg.market_brier ? "us" : dg.ours_brier > dg.market_brier ? "the market" : "neither") + ".</p>";
+      if (dg && dg.n) h += '<p class="lede">Games where we and Vegas were ' + Math.round(dg.threshold * 100) + " points or more apart: " + dg.n + ". Our side won " + dg.our_side_won + ". Closer to the result on average: " + (dg.ours_brier < dg.market_brier ? "us" : dg.ours_brier > dg.market_brier ? "Vegas" : "neither") + ".</p>";
       h += "</section>";
     }
     var aggs = (D.skill_scores && D.skill_scores.aggregates) || [];
@@ -3003,7 +3003,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         return '<div class="call ' + (hit ? "yes" : "no") + '"><small>' + label + "</small><b>" + esc(fav) + " " + pct(p >= .5 ? p : 1 - p) + "</b></div>";
       };
       h += '<li><div class="g-top"><b>' + esc(g.away + " at " + g.home) + "</b><span>" + esc(shortDate(g.date)) + '</span></div><div class="final num">Final: ' + esc(g.away) + " " + g.actual.away + ", " + esc(g.home) + " " + g.actual.home + '</div><div class="calls">' +
-        call("Headline", g.p_blend) + (g.p_ours != null && Math.abs(g.p_ours - g.p_blend) >= 0.005 ? call("Our model", g.p_ours) : "") + call("Simulator", g.p_sim) + call("Team model", g.p_team) + call("Market", g.p_market) + "</div></li>";
+        call("Our pick", g.p_blend) + (g.p_ours != null && Math.abs(g.p_ours - g.p_blend) >= 0.005 ? call("Our model", g.p_ours) : "") + call("Simulator", g.p_sim) + call("Team ratings", g.p_team) + call("Vegas", g.p_market) + "</div></li>";
     });
     h += '</ol><p class="note">Green: the team we favored won.</p></section>';
     app.innerHTML = h + "</div>";

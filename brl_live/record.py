@@ -154,8 +154,8 @@ def build_record(ledger: dict) -> dict:
         vals = [g[metric][key] for g in games if g[metric].get(key) is not None]
         return (sum(vals) / len(vals)) if vals else None
 
-    rows = [('coin', 'Coin flip'), ('home', 'Always pick the home team'), ('market', 'Betting market'), ('team', 'Team model'),
-            ('sim', 'Simulator (results only)'), ('ours', 'Our model (taught on past closing lines)'), ('blend', 'Headline (with the market line)')]
+    rows = [('coin', 'Coin flip'), ('home', 'Always pick the home team'), ('market', 'Vegas'), ('team', 'Team ratings alone'),
+            ('sim', 'Simulator alone'), ('ours', 'Our model alone'), ('blend', 'Our pick (with the line)')]
     ladder = []
     for key, name in rows:
         b = mean(key, 'brier')
