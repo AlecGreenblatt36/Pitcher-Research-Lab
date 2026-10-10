@@ -1,0 +1,1748 @@
+{
+ "schema": "brl.report-receipt.v1",
+ "run_id": "38078267690",
+ "params": {
+  "dates": [
+   "2026-06-01"
+  ],
+  "calibration_diag": true,
+  "calibration_only": true,
+  "calibration_maps": true,
+  "whiff_own": 2,
+  "publish": false
+ },
+ "started_at": "2026-10-10T19:04:58.807708+00:00",
+ "stages": [
+  {
+   "stage": "load 2025",
+   "at_seconds": 8.9,
+   "peak_rss_mb": 1054
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 17.8,
+   "peak_rss_mb": 1219
+  },
+  {
+   "stage": "league swing model",
+   "at_seconds": 41.8,
+   "peak_rss_mb": 3265
+  },
+  {
+   "stage": "hitter swing maps 542",
+   "at_seconds": 43.3,
+   "peak_rss_mb": 3265
+  },
+  {
+   "stage": "whiff maps 500",
+   "at_seconds": 79.1,
+   "peak_rss_mb": 4826
+  },
+  {
+   "stage": "swing model, 542 maps",
+   "at_seconds": 103.9,
+   "peak_rss_mb": 6595
+  },
+  {
+   "stage": "models fitted",
+   "at_seconds": 137.2,
+   "peak_rss_mb": 9376
+  },
+  {
+   "stage": "fitted",
+   "at_seconds": 137.3,
+   "peak_rss_mb": 9376
+  },
+  {
+   "stage": "calibration",
+   "at_seconds": 138.5,
+   "peak_rss_mb": 9376
+  },
+  {
+   "stage": "calibration of the other pieces",
+   "at_seconds": 139.6,
+   "peak_rss_mb": 9376
+  },
+  {
+   "stage": "calibration of the chase price by own part",
+   "at_seconds": 142.2,
+   "peak_rss_mb": 9376
+  }
+ ],
+ "reports": {},
+ "environment": {
+  "python": "3.12.15",
+  "commit": "97a2d77d2905b9bacbdb5f491e29ce2773341e44",
+  "numpy": "2.5.3",
+  "scipy": "1.18.1",
+  "scikit-learn": "1.9.1",
+  "pandas": "3.0.6",
+  "cryptography": "46.0.4"
+ },
+ "calibration": {
+  "2026-06-01": {
+   "train|all|all": {
+    "n": 976444,
+    "swings": 464966,
+    "league": 465477.5,
+    "n_map": 954977,
+    "swings_map_rows": 454265,
+    "league_map_rows": 454905.1,
+    "map": 454965.4,
+    "ll_league": 446545.19,
+    "ll_league_map_rows": 436414.5,
+    "ll_map": 409347.81
+   },
+   "train|outside|all": {
+    "n": 478339,
+    "swings": 135722,
+    "league": 136040.5,
+    "n_map": 468064,
+    "swings_map_rows": 132537,
+    "league_map_rows": 133004.5,
+    "map": 132502.0,
+    "ll_league": 204676.76,
+    "ll_league_map_rows": 200058.33,
+    "ll_map": 185002.97
+   },
+   "train|outside|fastball": {
+    "n": 231921,
+    "swings": 57610,
+    "league": 57954.6,
+    "n_map": 226928,
+    "swings_map_rows": 56266,
+    "league_map_rows": 56658.7,
+    "map": 56293.7,
+    "ll_league": 90332.79,
+    "ll_league_map_rows": 88306.15,
+    "ll_map": 80765.07
+   },
+   "train|outside|breaking": {
+    "n": 163674,
+    "swings": 50255,
+    "league": 50223.3,
+    "n_map": 160204,
+    "swings_map_rows": 49084,
+    "league_map_rows": 49129.9,
+    "map": 49259.4,
+    "ll_league": 76997.13,
+    "ll_league_map_rows": 75273.97,
+    "ll_map": 70820.41
+   },
+   "train|outside|offspeed": {
+    "n": 82744,
+    "swings": 27857,
+    "league": 27862.6,
+    "n_map": 80932,
+    "swings_map_rows": 27187,
+    "league_map_rows": 27215.9,
+    "map": 26948.9,
+    "ll_league": 37346.84,
+    "ll_league_map_rows": 36478.21,
+    "ll_map": 33417.49
+   },
+   "train|inside|all": {
+    "n": 498105,
+    "swings": 329244,
+    "league": 329437.0,
+    "n_map": 486913,
+    "swings_map_rows": 321728,
+    "league_map_rows": 321900.7,
+    "map": 322463.4,
+    "ll_league": 241868.43,
+    "ll_league_map_rows": 236356.17,
+    "ll_map": 224344.84
+   },
+   "train|inside|fastball": {
+    "n": 305616,
+    "swings": 199553,
+    "league": 199616.7,
+    "n_map": 298697,
+    "swings_map_rows": 194924,
+    "league_map_rows": 194976.0,
+    "map": 195614.8,
+    "ll_league": 149900.73,
+    "ll_league_map_rows": 146457.69,
+    "ll_map": 139689.38
+   },
+   "train|inside|breaking": {
+    "n": 138397,
+    "swings": 88457,
+    "league": 88560.9,
+    "n_map": 135276,
+    "swings_map_rows": 86451,
+    "league_map_rows": 86551.8,
+    "map": 86285.1,
+    "ll_league": 68854.88,
+    "ll_league_map_rows": 67273.14,
+    "ll_map": 63597.35
+   },
+   "train|inside|offspeed": {
+    "n": 54092,
+    "swings": 41234,
+    "league": 41259.4,
+    "n_map": 52940,
+    "swings_map_rows": 40353,
+    "league_map_rows": 40372.9,
+    "map": 40563.5,
+    "ll_league": 23112.82,
+    "ll_league_map_rows": 22625.34,
+    "ll_map": 21058.11
+   },
+   "train|outside|distance0": {
+    "n": 63982,
+    "swings": 31408,
+    "league": 31546.4,
+    "n_map": 62600,
+    "swings_map_rows": 30713,
+    "league_map_rows": 30850.3,
+    "map": 30676.3,
+    "ll_league": 34320.5,
+    "ll_league_map_rows": 33572.97,
+    "ll_map": 31303.51
+   },
+   "train|outside|distance1": {
+    "n": 92993,
+    "swings": 39191,
+    "league": 39290.8,
+    "n_map": 90891,
+    "swings_map_rows": 38267,
+    "league_map_rows": 38377.2,
+    "map": 38114.6,
+    "ll_league": 49172.69,
+    "ll_league_map_rows": 48072.0,
+    "ll_map": 44556.5
+   },
+   "train|outside|distance2": {
+    "n": 123964,
+    "swings": 38730,
+    "league": 38848.5,
+    "n_map": 121278,
+    "swings_map_rows": 37826,
+    "league_map_rows": 37992.4,
+    "map": 37711.0,
+    "ll_league": 60949.76,
+    "ll_league_map_rows": 59617.88,
+    "ll_map": 54825.63
+   },
+   "train|outside|distance3": {
+    "n": 134129,
+    "swings": 22866,
+    "league": 22785.0,
+    "n_map": 131340,
+    "swings_map_rows": 22306,
+    "league_map_rows": 22293.9,
+    "map": 22375.0,
+    "ll_league": 49116.48,
+    "ll_league_map_rows": 47975.02,
+    "ll_map": 44215.23
+   },
+   "train|outside|distance4": {
+    "n": 63271,
+    "swings": 3527,
+    "league": 3569.8,
+    "n_map": 61955,
+    "swings_map_rows": 3425,
+    "league_map_rows": 3490.7,
+    "map": 3625.0,
+    "ll_league": 11117.33,
+    "ll_league_map_rows": 10820.46,
+    "ll_map": 10102.09
+   },
+   "train|outside|looks_in": {
+    "n": 105277,
+    "swings": 52635,
+    "league": 53777.9,
+    "n_map": 102936,
+    "swings_map_rows": 51381,
+    "league_map_rows": 52565.4,
+    "map": 51920.5,
+    "ll_league": 57825.4,
+    "ll_league_map_rows": 56519.12,
+    "ll_map": 51408.17
+   },
+   "train|outside|looks_out": {
+    "n": 373062,
+    "swings": 83087,
+    "league": 82262.6,
+    "n_map": 365128,
+    "swings_map_rows": 81156,
+    "league_map_rows": 80439.0,
+    "map": 80581.5,
+    "ll_league": 146851.36,
+    "ll_league_map_rows": 143539.22,
+    "ll_map": 133594.8
+   },
+   "train|inside|looks_out": {
+    "n": 125301,
+    "swings": 59469,
+    "league": 60733.3,
+    "n_map": 122566,
+    "swings_map_rows": 58225,
+    "league_map_rows": 59383.3,
+    "map": 59665.1,
+    "ll_league": 71064.4,
+    "ll_league_map_rows": 69406.33,
+    "ll_map": 65811.25
+   },
+   "train|outside|count_even_or_ahead": {
+    "n": 226691,
+    "swings": 51836,
+    "league": 50481.8,
+    "n_map": 221732,
+    "swings_map_rows": 50569,
+    "league_map_rows": 49352.1,
+    "map": 49249.0,
+    "ll_league": 90799.39,
+    "ll_league_map_rows": 88695.74,
+    "ll_map": 82628.78
+   },
+   "train|outside|count_behind": {
+    "n": 86514,
+    "swings": 20142,
+    "league": 20514.5,
+    "n_map": 84852,
+    "swings_map_rows": 19707,
+    "league_map_rows": 20092.5,
+    "map": 19859.2,
+    "ll_league": 35244.53,
+    "ll_league_map_rows": 34530.52,
+    "ll_map": 32209.14
+   },
+   "train|outside|count_two_strikes": {
+    "n": 165134,
+    "swings": 63744,
+    "league": 65044.2,
+    "n_map": 161480,
+    "swings_map_rows": 62261,
+    "league_map_rows": 63559.9,
+    "map": 63393.8,
+    "ll_league": 78632.83,
+    "ll_league_map_rows": 76832.08,
+    "ll_map": 70165.05
+   },
+   "test|all|all": {
+    "n": 455847,
+    "swings": 218829,
+    "league": 220759.0,
+    "n_map": 402103,
+    "swings_map_rows": 192206,
+    "league_map_rows": 194114.5,
+    "map": 193624.9,
+    "ll_league": 208572.7,
+    "ll_league_map_rows": 183838.44,
+    "ll_map": 177867.76
+   },
+   "test|outside|all": {
+    "n": 217725,
+    "swings": 61494,
+    "league": 62651.1,
+    "n_map": 192340,
+    "swings_map_rows": 54013,
+    "league_map_rows": 55211.2,
+    "map": 54806.2,
+    "ll_league": 92930.68,
+    "ll_league_map_rows": 81826.32,
+    "ll_map": 78319.02
+   },
+   "test|outside|fastball": {
+    "n": 106511,
+    "swings": 26401,
+    "league": 27171.4,
+    "n_map": 94104,
+    "swings_map_rows": 23255,
+    "league_map_rows": 23928.1,
+    "map": 23704.8,
+    "ll_league": 41611.18,
+    "ll_league_map_rows": 36603.84,
+    "ll_map": 34354.23
+   },
+   "test|outside|breaking": {
+    "n": 71829,
+    "swings": 21831,
+    "league": 22136.7,
+    "n_map": 63766,
+    "swings_map_rows": 19287,
+    "league_map_rows": 19637.6,
+    "map": 19580.7,
+    "ll_league": 33432.23,
+    "ll_league_map_rows": 29591.11,
+    "ll_map": 29001.95
+   },
+   "test|outside|offspeed": {
+    "n": 39385,
+    "swings": 13262,
+    "league": 13343.0,
+    "n_map": 34470,
+    "swings_map_rows": 11471,
+    "league_map_rows": 11645.5,
+    "map": 11520.8,
+    "ll_league": 17887.27,
+    "ll_league_map_rows": 15631.37,
+    "ll_map": 14962.84
+   },
+   "test|inside|all": {
+    "n": 238122,
+    "swings": 157335,
+    "league": 158107.9,
+    "n_map": 209763,
+    "swings_map_rows": 138193,
+    "league_map_rows": 138903.2,
+    "map": 138818.7,
+    "ll_league": 115642.02,
+    "ll_league_map_rows": 102012.12,
+    "ll_map": 99548.74
+   },
+   "test|inside|fastball": {
+    "n": 148162,
+    "swings": 97134,
+    "league": 97721.0,
+    "n_map": 130449,
+    "swings_map_rows": 85173,
+    "league_map_rows": 85717.2,
+    "map": 85780.3,
+    "ll_league": 72791.15,
+    "ll_league_map_rows": 64206.42,
+    "ll_map": 62437.98
+   },
+   "test|inside|breaking": {
+    "n": 63569,
+    "swings": 40112,
+    "league": 40301.6,
+    "n_map": 56127,
+    "swings_map_rows": 35412,
+    "league_map_rows": 35579.4,
+    "map": 35403.1,
+    "ll_league": 31606.06,
+    "ll_league_map_rows": 27898.44,
+    "ll_map": 27387.76
+   },
+   "test|inside|offspeed": {
+    "n": 26391,
+    "swings": 20089,
+    "league": 20085.3,
+    "n_map": 23187,
+    "swings_map_rows": 17608,
+    "league_map_rows": 17606.7,
+    "map": 17635.3,
+    "ll_league": 11244.81,
+    "ll_league_map_rows": 9907.26,
+    "ll_map": 9723.01
+   },
+   "test|outside|distance0": {
+    "n": 30020,
+    "swings": 14754,
+    "league": 14871.8,
+    "n_map": 26511,
+    "swings_map_rows": 12969,
+    "league_map_rows": 13085.8,
+    "map": 12991.9,
+    "ll_league": 16052.75,
+    "ll_league_map_rows": 14158.85,
+    "ll_map": 13646.29
+   },
+   "test|outside|distance1": {
+    "n": 43213,
+    "swings": 17866,
+    "league": 18220.7,
+    "n_map": 38174,
+    "swings_map_rows": 15752,
+    "league_map_rows": 16077.7,
+    "map": 15903.1,
+    "ll_league": 22821.01,
+    "ll_league_map_rows": 20140.6,
+    "ll_map": 19266.45
+   },
+   "test|outside|distance2": {
+    "n": 56839,
+    "swings": 17350,
+    "league": 17792.4,
+    "n_map": 50253,
+    "swings_map_rows": 15231,
+    "league_map_rows": 15657.9,
+    "map": 15485.6,
+    "ll_league": 27583.83,
+    "ll_league_map_rows": 24289.82,
+    "ll_map": 23079.45
+   },
+   "test|outside|distance3": {
+    "n": 59801,
+    "swings": 9901,
+    "league": 10186.9,
+    "n_map": 52871,
+    "swings_map_rows": 8651,
+    "league_map_rows": 8997.9,
+    "map": 8992.4,
+    "ll_league": 21530.73,
+    "ll_league_map_rows": 18927.96,
+    "ll_map": 18087.55
+   },
+   "test|outside|distance4": {
+    "n": 27852,
+    "swings": 1623,
+    "league": 1579.3,
+    "n_map": 24531,
+    "swings_map_rows": 1410,
+    "league_map_rows": 1392.1,
+    "map": 1433.2,
+    "ll_league": 4942.36,
+    "ll_league_map_rows": 4309.1,
+    "ll_map": 4239.28
+   },
+   "test|outside|looks_in": {
+    "n": 48668,
+    "swings": 24200,
+    "league": 24909.6,
+    "n_map": 42883,
+    "swings_map_rows": 21175,
+    "league_map_rows": 21908.1,
+    "map": 21608.5,
+    "ll_league": 26815.06,
+    "ll_league_map_rows": 23539.51,
+    "ll_map": 21958.68
+   },
+   "test|outside|looks_out": {
+    "n": 169057,
+    "swings": 37294,
+    "league": 37741.4,
+    "n_map": 149457,
+    "swings_map_rows": 32838,
+    "league_map_rows": 33303.2,
+    "map": 33197.7,
+    "ll_league": 66115.62,
+    "ll_league_map_rows": 58286.81,
+    "ll_map": 56360.34
+   },
+   "test|inside|looks_out": {
+    "n": 59257,
+    "swings": 27855,
+    "league": 28942.1,
+    "n_map": 52325,
+    "swings_map_rows": 24682,
+    "league_map_rows": 25462.9,
+    "map": 25448.8,
+    "ll_league": 33600.84,
+    "ll_league_map_rows": 29503.07,
+    "ll_map": 28729.2
+   },
+   "test|outside|count_even_or_ahead": {
+    "n": 102873,
+    "swings": 23490,
+    "league": 23121.8,
+    "n_map": 90776,
+    "swings_map_rows": 20528,
+    "league_map_rows": 20355.7,
+    "map": 20183.6,
+    "ll_league": 41038.47,
+    "ll_league_map_rows": 36060.77,
+    "ll_map": 34779.88
+   },
+   "test|outside|count_behind": {
+    "n": 38720,
+    "swings": 8787,
+    "league": 9113.1,
+    "n_map": 34542,
+    "swings_map_rows": 7754,
+    "league_map_rows": 8107.5,
+    "map": 7982.7,
+    "ll_league": 15596.89,
+    "ll_league_map_rows": 13881.68,
+    "ll_map": 13381.82
+   },
+   "test|outside|count_two_strikes": {
+    "n": 76132,
+    "swings": 29217,
+    "league": 30416.2,
+    "n_map": 67022,
+    "swings_map_rows": 25731,
+    "league_map_rows": 26748.0,
+    "map": 26639.9,
+    "ll_league": 36295.33,
+    "ll_league_map_rows": 31883.86,
+    "ll_map": 30157.32
+   }
+  }
+ },
+ "calibration_components": {
+  "2026-06-01": {
+   "whiff": {
+    "train|all": {
+     "n": 464966,
+     "actual": 107844,
+     "expected": 107837.5,
+     "ll": 205209.73
+    },
+    "train|season2025": {
+     "n": 343237,
+     "actual": 79735,
+     "expected": 80163.8,
+     "ll": 151686.84
+    },
+    "train|season2026": {
+     "n": 121729,
+     "actual": 28109,
+     "expected": 27673.6,
+     "ll": 53522.89
+    },
+    "train|fastball": {
+     "n": 257163,
+     "actual": 43790,
+     "expected": 43785.8,
+     "ll": 104867.9
+    },
+    "train|breaking": {
+     "n": 138712,
+     "actual": 42926,
+     "expected": 42925.4,
+     "ll": 63965.06
+    },
+    "train|offspeed": {
+     "n": 69091,
+     "actual": 21128,
+     "expected": 21126.2,
+     "ll": 36376.77
+    },
+    "train|in_0.5+": {
+     "n": 95856,
+     "actual": 9991,
+     "expected": 10053.8,
+     "ll": 31242.97
+    },
+    "train|in_0.25-0.5": {
+     "n": 121971,
+     "actual": 16992,
+     "expected": 16946.6,
+     "ll": 47098.85
+    },
+    "train|in_0.1-0.25": {
+     "n": 67974,
+     "actual": 12602,
+     "expected": 12604.0,
+     "ll": 30578.64
+    },
+    "train|in_0-0.1": {
+     "n": 41787,
+     "actual": 9448,
+     "expected": 9404.9,
+     "ll": 20745.47
+    },
+    "train|out_0-0.1": {
+     "n": 33064,
+     "actual": 9237,
+     "expected": 9243.9,
+     "ll": 17971.63
+    },
+    "train|out_0.1-0.25": {
+     "n": 39191,
+     "actual": 13130,
+     "expected": 13186.0,
+     "ll": 22287.74
+    },
+    "train|out_0.25-0.5": {
+     "n": 38730,
+     "actual": 17656,
+     "expected": 17621.4,
+     "ll": 22904.33
+    },
+    "train|out_0.5+": {
+     "n": 26393,
+     "actual": 18788,
+     "expected": 18776.8,
+     "ll": 12380.11
+    },
+    "test|all": {
+     "n": 218829,
+     "actual": 50159,
+     "expected": 49394.9,
+     "ll": 95817.0
+    },
+    "test|season2026": {
+     "n": 218829,
+     "actual": 50159,
+     "expected": 49394.9,
+     "ll": 95817.0
+    },
+    "test|fastball": {
+     "n": 123535,
+     "actual": 21091,
+     "expected": 20586.4,
+     "ll": 50114.46
+    },
+    "test|breaking": {
+     "n": 61943,
+     "actual": 18995,
+     "expected": 18732.1,
+     "ll": 28250.46
+    },
+    "test|offspeed": {
+     "n": 33351,
+     "actual": 10073,
+     "expected": 10076.4,
+     "ll": 17452.08
+    },
+    "test|in_0.5+": {
+     "n": 46399,
+     "actual": 4712,
+     "expected": 4825.6,
+     "ll": 14863.78
+    },
+    "test|in_0.25-0.5": {
+     "n": 58563,
+     "actual": 8120,
+     "expected": 8056.8,
+     "ll": 22473.23
+    },
+    "test|in_0.1-0.25": {
+     "n": 32098,
+     "actual": 6178,
+     "expected": 5900.9,
+     "ll": 14722.7
+    },
+    "test|in_0-0.1": {
+     "n": 19396,
+     "actual": 4467,
+     "expected": 4329.1,
+     "ll": 9647.79
+    },
+    "test|out_0-0.1": {
+     "n": 15633,
+     "actual": 4474,
+     "expected": 4337.9,
+     "ll": 8504.99
+    },
+    "test|out_0.1-0.25": {
+     "n": 17866,
+     "actual": 6037,
+     "expected": 5928.2,
+     "ll": 10085.74
+    },
+    "test|out_0.25-0.5": {
+     "n": 17350,
+     "actual": 7935,
+     "expected": 7829.7,
+     "ll": 10232.7
+    },
+    "test|out_0.5+": {
+     "n": 11524,
+     "actual": 8236,
+     "expected": 8186.7,
+     "ll": 5286.06
+    },
+    "next30|all": {
+     "n": 54929,
+     "actual": 12630,
+     "expected": 12376.6,
+     "ll": 23984.63
+    },
+    "next30|season2026": {
+     "n": 54929,
+     "actual": 12630,
+     "expected": 12376.6,
+     "ll": 23984.63
+    },
+    "next30|fastball": {
+     "n": 30882,
+     "actual": 5321,
+     "expected": 5175.8,
+     "ll": 12561.92
+    },
+    "next30|breaking": {
+     "n": 16126,
+     "actual": 4994,
+     "expected": 4848.8,
+     "ll": 7372.73
+    },
+    "next30|offspeed": {
+     "n": 7921,
+     "actual": 2315,
+     "expected": 2351.9,
+     "ll": 4049.97
+    },
+    "next30|in_0.5+": {
+     "n": 11755,
+     "actual": 1210,
+     "expected": 1235.5,
+     "ll": 3793.88
+    },
+    "next30|in_0.25-0.5": {
+     "n": 14715,
+     "actual": 2017,
+     "expected": 2041.0,
+     "ll": 5633.49
+    },
+    "next30|in_0.1-0.25": {
+     "n": 8108,
+     "actual": 1572,
+     "expected": 1489.6,
+     "ll": 3742.54
+    },
+    "next30|in_0-0.1": {
+     "n": 4916,
+     "actual": 1163,
+     "expected": 1102.2,
+     "ll": 2452.11
+    },
+    "next30|out_0-0.1": {
+     "n": 3933,
+     "actual": 1119,
+     "expected": 1087.2,
+     "ll": 2132.06
+    },
+    "next30|out_0.1-0.25": {
+     "n": 4405,
+     "actual": 1482,
+     "expected": 1453.8,
+     "ll": 2462.11
+    },
+    "next30|out_0.25-0.5": {
+     "n": 4275,
+     "actual": 2040,
+     "expected": 1967.3,
+     "ll": 2490.77
+    },
+    "next30|out_0.5+": {
+     "n": 2822,
+     "actual": 2027,
+     "expected": 1999.9,
+     "ll": 1277.66
+    }
+   },
+   "called_strike": {
+    "train|all": {
+     "n": 511478,
+     "actual": 160131,
+     "expected": 160061.5,
+     "ll": 72999.35
+    },
+    "train|season2025": {
+     "n": 374833,
+     "actual": 117467,
+     "expected": 117310.7,
+     "ll": 55802.95
+    },
+    "train|season2026": {
+     "n": 136645,
+     "actual": 42664,
+     "expected": 42750.8,
+     "ll": 17196.4
+    },
+    "train|fastball": {
+     "n": 280374,
+     "actual": 100426,
+     "expected": 100543.2,
+     "ll": 45433.88
+    },
+    "train|breaking": {
+     "n": 163359,
+     "actual": 47972,
+     "expected": 47488.3,
+     "ll": 20817.48
+    },
+    "train|offspeed": {
+     "n": 67745,
+     "actual": 11733,
+     "expected": 12030.0,
+     "ll": 6747.98
+    },
+    "train|in_0.5+": {
+     "n": 32762,
+     "actual": 32753,
+     "expected": 32734.5,
+     "ll": 86.61
+    },
+    "train|in_0.5+|season2025": {
+     "n": 23431,
+     "actual": 23425,
+     "expected": 23411.7,
+     "ll": 58.09
+    },
+    "train|in_0.5+|season2026": {
+     "n": 9331,
+     "actual": 9328,
+     "expected": 9322.8,
+     "ll": 28.52
+    },
+    "train|in_0.25-0.5": {
+     "n": 56292,
+     "actual": 55545,
+     "expected": 55498.1,
+     "ll": 3438.47
+    },
+    "train|in_0.25-0.5|season2025": {
+     "n": 40465,
+     "actual": 39897,
+     "expected": 39867.8,
+     "ll": 2614.77
+    },
+    "train|in_0.25-0.5|season2026": {
+     "n": 15827,
+     "actual": 15648,
+     "expected": 15630.3,
+     "ll": 823.69
+    },
+    "train|in_0.1-0.25": {
+     "n": 43974,
+     "actual": 37538,
+     "expected": 37578.7,
+     "ll": 15824.78
+    },
+    "train|in_0.1-0.25|season2025": {
+     "n": 31621,
+     "actual": 27094,
+     "expected": 27068.5,
+     "ll": 11336.4
+    },
+    "train|in_0.1-0.25|season2026": {
+     "n": 12353,
+     "actual": 10444,
+     "expected": 10510.2,
+     "ll": 4488.38
+    },
+    "train|in_0-0.1": {
+     "n": 34332,
+     "actual": 19757,
+     "expected": 19769.8,
+     "ll": 20395.17
+    },
+    "train|in_0-0.1|season2025": {
+     "n": 24918,
+     "actual": 14923,
+     "expected": 14944.0,
+     "ll": 14902.72
+    },
+    "train|in_0-0.1|season2026": {
+     "n": 9414,
+     "actual": 4834,
+     "expected": 4825.8,
+     "ll": 5492.45
+    },
+    "train|out_0-0.1": {
+     "n": 34075,
+     "actual": 9642,
+     "expected": 9482.6,
+     "ll": 17884.68
+    },
+    "train|out_0-0.1|season2025": {
+     "n": 24858,
+     "actual": 7900,
+     "expected": 7712.6,
+     "ll": 13993.77
+    },
+    "train|out_0-0.1|season2026": {
+     "n": 9217,
+     "actual": 1742,
+     "expected": 1770.0,
+     "ll": 3890.91
+    },
+    "train|out_0.1-0.25": {
+     "n": 53802,
+     "actual": 4446,
+     "expected": 4508.6,
+     "ll": 12942.07
+    },
+    "train|out_0.1-0.25|season2025": {
+     "n": 39396,
+     "actual": 3838,
+     "expected": 3891.4,
+     "ll": 10852.7
+    },
+    "train|out_0.1-0.25|season2026": {
+     "n": 14406,
+     "actual": 608,
+     "expected": 617.2,
+     "ll": 2089.36
+    },
+    "train|out_0.25-0.5": {
+     "n": 85234,
+     "actual": 431,
+     "expected": 449.6,
+     "ll": 2247.8
+    },
+    "train|out_0.25-0.5|season2025": {
+     "n": 62648,
+     "actual": 376,
+     "expected": 390.4,
+     "ll": 1915.69
+    },
+    "train|out_0.25-0.5|season2026": {
+     "n": 22586,
+     "actual": 55,
+     "expected": 59.2,
+     "ll": 332.1
+    },
+    "train|out_0.5+": {
+     "n": 171007,
+     "actual": 19,
+     "expected": 39.6,
+     "ll": 179.77
+    },
+    "train|out_0.5+|season2025": {
+     "n": 127496,
+     "actual": 14,
+     "expected": 24.3,
+     "ll": 128.78
+    },
+    "train|out_0.5+|season2026": {
+     "n": 43511,
+     "actual": 5,
+     "expected": 15.3,
+     "ll": 50.99
+    },
+    "test|all": {
+     "n": 237018,
+     "actual": 73704,
+     "expected": 72883.8,
+     "ll": 29128.55
+    },
+    "test|season2026": {
+     "n": 237018,
+     "actual": 73704,
+     "expected": 72883.8,
+     "ll": 29128.55
+    },
+    "test|fastball": {
+     "n": 131138,
+     "actual": 46600,
+     "expected": 46072.6,
+     "ll": 18145.64
+    },
+    "test|breaking": {
+     "n": 73455,
+     "actual": 21686,
+     "expected": 21289.5,
+     "ll": 8270.8
+    },
+    "test|offspeed": {
+     "n": 32425,
+     "actual": 5418,
+     "expected": 5521.8,
+     "ll": 2712.12
+    },
+    "test|in_0.5+": {
+     "n": 15641,
+     "actual": 15640,
+     "expected": 15627.4,
+     "ll": 21.21
+    },
+    "test|in_0.5+|season2026": {
+     "n": 15641,
+     "actual": 15640,
+     "expected": 15627.4,
+     "ll": 21.21
+    },
+    "test|in_0.25-0.5": {
+     "n": 27265,
+     "actual": 27012,
+     "expected": 26925.6,
+     "ll": 1258.1
+    },
+    "test|in_0.25-0.5|season2026": {
+     "n": 27265,
+     "actual": 27012,
+     "expected": 26925.6,
+     "ll": 1258.1
+    },
+    "test|in_0.1-0.25": {
+     "n": 20829,
+     "actual": 17883,
+     "expected": 17706.2,
+     "ll": 7140.31
+    },
+    "test|in_0.1-0.25|season2026": {
+     "n": 20829,
+     "actual": 17883,
+     "expected": 17706.2,
+     "ll": 7140.31
+    },
+    "test|in_0-0.1": {
+     "n": 16313,
+     "actual": 8857,
+     "expected": 8381.0,
+     "ll": 9358.94
+    },
+    "test|in_0-0.1|season2026": {
+     "n": 16313,
+     "actual": 8857,
+     "expected": 8381.0,
+     "ll": 9358.94
+    },
+    "test|out_0-0.1": {
+     "n": 16005,
+     "actual": 3056,
+     "expected": 3045.5,
+     "ll": 6795.21
+    },
+    "test|out_0-0.1|season2026": {
+     "n": 16005,
+     "actual": 3056,
+     "expected": 3045.5,
+     "ll": 6795.21
+    },
+    "test|out_0.1-0.25": {
+     "n": 25347,
+     "actual": 1164,
+     "expected": 1068.3,
+     "ll": 3961.39
+    },
+    "test|out_0.1-0.25|season2026": {
+     "n": 25347,
+     "actual": 1164,
+     "expected": 1068.3,
+     "ll": 3961.39
+    },
+    "test|out_0.25-0.5": {
+     "n": 39489,
+     "actual": 88,
+     "expected": 103.0,
+     "ll": 536.01
+    },
+    "test|out_0.25-0.5|season2026": {
+     "n": 39489,
+     "actual": 88,
+     "expected": 103.0,
+     "ll": 536.01
+    },
+    "test|out_0.5+": {
+     "n": 76129,
+     "actual": 4,
+     "expected": 26.8,
+     "ll": 57.37
+    },
+    "test|out_0.5+|season2026": {
+     "n": 76129,
+     "actual": 4,
+     "expected": 26.8,
+     "ll": 57.37
+    },
+    "next30|all": {
+     "n": 59463,
+     "actual": 18532,
+     "expected": 18340.7,
+     "ll": 7447.12
+    },
+    "next30|season2026": {
+     "n": 59463,
+     "actual": 18532,
+     "expected": 18340.7,
+     "ll": 7447.12
+    },
+    "next30|fastball": {
+     "n": 32538,
+     "actual": 11567,
+     "expected": 11457.6,
+     "ll": 4541.74
+    },
+    "next30|breaking": {
+     "n": 19112,
+     "actual": 5645,
+     "expected": 5539.4,
+     "ll": 2204.41
+    },
+    "next30|offspeed": {
+     "n": 7813,
+     "actual": 1320,
+     "expected": 1343.7,
+     "ll": 700.96
+    },
+    "next30|in_0.5+": {
+     "n": 3873,
+     "actual": 3873,
+     "expected": 3869.6,
+     "ll": 3.42
+    },
+    "next30|in_0.5+|season2026": {
+     "n": 3873,
+     "actual": 3873,
+     "expected": 3869.6,
+     "ll": 3.42
+    },
+    "next30|in_0.25-0.5": {
+     "n": 6947,
+     "actual": 6875,
+     "expected": 6861.9,
+     "ll": 342.52
+    },
+    "next30|in_0.25-0.5|season2026": {
+     "n": 6947,
+     "actual": 6875,
+     "expected": 6861.9,
+     "ll": 342.52
+    },
+    "next30|in_0.1-0.25": {
+     "n": 5200,
+     "actual": 4468,
+     "expected": 4418.6,
+     "ll": 1806.43
+    },
+    "next30|in_0.1-0.25|season2026": {
+     "n": 5200,
+     "actual": 4468,
+     "expected": 4418.6,
+     "ll": 1806.43
+    },
+    "next30|in_0-0.1": {
+     "n": 4150,
+     "actual": 2242,
+     "expected": 2128.7,
+     "ll": 2395.46
+    },
+    "next30|in_0-0.1|season2026": {
+     "n": 4150,
+     "actual": 2242,
+     "expected": 2128.7,
+     "ll": 2395.46
+    },
+    "next30|out_0-0.1": {
+     "n": 3977,
+     "actual": 756,
+     "expected": 764.8,
+     "ll": 1727.2
+    },
+    "next30|out_0-0.1|season2026": {
+     "n": 3977,
+     "actual": 756,
+     "expected": 764.8,
+     "ll": 1727.2
+    },
+    "next30|out_0.1-0.25": {
+     "n": 6404,
+     "actual": 293,
+     "expected": 264.6,
+     "ll": 1010.38
+    },
+    "next30|out_0.1-0.25|season2026": {
+     "n": 6404,
+     "actual": 293,
+     "expected": 264.6,
+     "ll": 1010.38
+    },
+    "next30|out_0.25-0.5": {
+     "n": 9870,
+     "actual": 25,
+     "expected": 25.8,
+     "ll": 155.05
+    },
+    "next30|out_0.25-0.5|season2026": {
+     "n": 9870,
+     "actual": 25,
+     "expected": 25.8,
+     "ll": 155.05
+    },
+    "next30|out_0.5+": {
+     "n": 19042,
+     "actual": 0,
+     "expected": 6.7,
+     "ll": 6.65
+    },
+    "next30|out_0.5+|season2026": {
+     "n": 19042,
+     "actual": 0,
+     "expected": 6.7,
+     "ll": 6.65
+    }
+   },
+   "foul": {
+    "train|all": {
+     "n": 357122,
+     "actual": 181674,
+     "expected": 181678.5,
+     "ll": 241429.19
+    },
+    "train|season2025": {
+     "n": 263502,
+     "actual": 134083,
+     "expected": 134215.1,
+     "ll": 178065.76
+    },
+    "train|season2026": {
+     "n": 93620,
+     "actual": 47591,
+     "expected": 47463.4,
+     "ll": 63363.43
+    },
+    "train|fastball": {
+     "n": 213373,
+     "actual": 113459,
+     "expected": 113457.2,
+     "ll": 144242.47
+    },
+    "train|breaking": {
+     "n": 95786,
+     "actual": 46387,
+     "expected": 46391.4,
+     "ll": 64664.67
+    },
+    "train|offspeed": {
+     "n": 47963,
+     "actual": 21828,
+     "expected": 21829.8,
+     "ll": 32522.05
+    },
+    "train|in_0.5+": {
+     "n": 85865,
+     "actual": 39672,
+     "expected": 39676.1,
+     "ll": 58552.26
+    },
+    "train|in_0.25-0.5": {
+     "n": 104979,
+     "actual": 50691,
+     "expected": 50694.8,
+     "ll": 71555.15
+    },
+    "train|in_0.1-0.25": {
+     "n": 55372,
+     "actual": 28461,
+     "expected": 28453.9,
+     "ll": 37654.15
+    },
+    "train|in_0-0.1": {
+     "n": 32339,
+     "actual": 17213,
+     "expected": 17195.0,
+     "ll": 21912.11
+    },
+    "train|out_0-0.1": {
+     "n": 23827,
+     "actual": 13163,
+     "expected": 13165.2,
+     "ll": 15995.76
+    },
+    "train|out_0.1-0.25": {
+     "n": 26061,
+     "actual": 14869,
+     "expected": 14908.4,
+     "ll": 17320.11
+    },
+    "train|out_0.25-0.5": {
+     "n": 21074,
+     "actual": 12665,
+     "expected": 12642.2,
+     "ll": 13687.84
+    },
+    "train|out_0.5+": {
+     "n": 7605,
+     "actual": 4940,
+     "expected": 4942.9,
+     "ll": 4751.81
+    },
+    "test|all": {
+     "n": 168670,
+     "actual": 87043,
+     "expected": 85390.7,
+     "ll": 113928.04
+    },
+    "test|season2026": {
+     "n": 168670,
+     "actual": 87043,
+     "expected": 85390.7,
+     "ll": 113928.04
+    },
+    "test|fastball": {
+     "n": 102444,
+     "actual": 54858,
+     "expected": 54097.5,
+     "ll": 69037.46
+    },
+    "test|breaking": {
+     "n": 42948,
+     "actual": 21423,
+     "expected": 20740.9,
+     "ll": 29085.88
+    },
+    "test|offspeed": {
+     "n": 23278,
+     "actual": 10762,
+     "expected": 10552.3,
+     "ll": 15804.7
+    },
+    "test|in_0.5+": {
+     "n": 41687,
+     "actual": 19517,
+     "expected": 19267.4,
+     "ll": 28451.62
+    },
+    "test|in_0.25-0.5": {
+     "n": 50443,
+     "actual": 24712,
+     "expected": 24331.5,
+     "ll": 34436.64
+    },
+    "test|in_0.1-0.25": {
+     "n": 25920,
+     "actual": 13599,
+     "expected": 13281.2,
+     "ll": 17585.99
+    },
+    "test|in_0-0.1": {
+     "n": 14929,
+     "actual": 8102,
+     "expected": 7912.5,
+     "ll": 10057.06
+    },
+    "test|out_0-0.1": {
+     "n": 11159,
+     "actual": 6336,
+     "expected": 6139.5,
+     "ll": 7452.28
+    },
+    "test|out_0.1-0.25": {
+     "n": 11829,
+     "actual": 6923,
+     "expected": 6737.7,
+     "ll": 7775.47
+    },
+    "test|out_0.25-0.5": {
+     "n": 9415,
+     "actual": 5697,
+     "expected": 5612.1,
+     "ll": 6104.05
+    },
+    "test|out_0.5+": {
+     "n": 3288,
+     "actual": 2157,
+     "expected": 2108.7,
+     "ll": 2064.92
+    },
+    "next30|all": {
+     "n": 42299,
+     "actual": 21684,
+     "expected": 21404.0,
+     "ll": 28583.12
+    },
+    "next30|season2026": {
+     "n": 42299,
+     "actual": 21684,
+     "expected": 21404.0,
+     "ll": 28583.12
+    },
+    "next30|fastball": {
+     "n": 25561,
+     "actual": 13605,
+     "expected": 13492.8,
+     "ll": 17266.39
+    },
+    "next30|breaking": {
+     "n": 11132,
+     "actual": 5532,
+     "expected": 5376.9,
+     "ll": 7528.44
+    },
+    "next30|offspeed": {
+     "n": 5606,
+     "actual": 2547,
+     "expected": 2534.3,
+     "ll": 3788.29
+    },
+    "next30|in_0.5+": {
+     "n": 10545,
+     "actual": 4925,
+     "expected": 4872.1,
+     "ll": 7193.33
+    },
+    "next30|in_0.25-0.5": {
+     "n": 12698,
+     "actual": 6137,
+     "expected": 6130.2,
+     "ll": 8674.87
+    },
+    "next30|in_0.1-0.25": {
+     "n": 6536,
+     "actual": 3370,
+     "expected": 3350.3,
+     "ll": 4443.92
+    },
+    "next30|in_0-0.1": {
+     "n": 3753,
+     "actual": 2019,
+     "expected": 1991.3,
+     "ll": 2529.92
+    },
+    "next30|out_0-0.1": {
+     "n": 2814,
+     "actual": 1606,
+     "expected": 1551.8,
+     "ll": 1878.44
+    },
+    "next30|out_0.1-0.25": {
+     "n": 2923,
+     "actual": 1736,
+     "expected": 1665.7,
+     "ll": 1914.11
+    },
+    "next30|out_0.25-0.5": {
+     "n": 2235,
+     "actual": 1369,
+     "expected": 1332.5,
+     "ll": 1450.67
+    },
+    "next30|out_0.5+": {
+     "n": 795,
+     "actual": 522,
+     "expected": 510.1,
+     "ll": 497.88
+    }
+   }
+  }
+ },
+ "calibration_maps": {
+  "2026-06-01": {
+   "own_under_-10": {
+    "n": 17853.0,
+    "own": -2740.02,
+    "swings": 5432.0,
+    "swings_map": 5673.32,
+    "swings_league": 8413.35,
+    "whiffs": 2708.0,
+    "whiffs_map": 2777.83,
+    "whiffs_league": 2285.41,
+    "whiff_ll_map": 2986.99,
+    "whiff_ll_league": 3138.85,
+    "swing_value_map": -619.99,
+    "swing_value_league": -544.2,
+    "swing_realized": -608.59,
+    "takes": 12421.0,
+    "take_value": 388.11,
+    "take_realized": 396.44,
+    "bip": 974.0,
+    "bip_value_engine": -14.38,
+    "bip_value_realized": -9.27
+   },
+   "own_-10_to_-5": {
+    "n": 22479.0,
+    "own": -1616.92,
+    "swings": 6435.0,
+    "swings_map": 6499.05,
+    "swings_league": 8115.97,
+    "whiffs": 3067.0,
+    "whiffs_map": 3112.51,
+    "whiffs_league": 2823.26,
+    "whiff_ll_map": 3339.37,
+    "whiff_ll_league": 3424.89,
+    "swing_value_map": -626.17,
+    "swing_value_league": -587.34,
+    "swing_realized": -596.08,
+    "takes": 16044.0,
+    "take_value": 554.54,
+    "take_realized": 566.44,
+    "bip": 1257.0,
+    "bip_value_engine": -20.61,
+    "bip_value_realized": 7.4
+   },
+   "own_-5_to_0": {
+    "n": 68251.0,
+    "own": -1162.66,
+    "swings": 11150.0,
+    "swings_map": 11290.04,
+    "swings_league": 12452.69,
+    "whiffs": 5070.0,
+    "whiffs_map": 5017.49,
+    "whiffs_league": 4859.62,
+    "whiff_ll_map": 5708.36,
+    "whiff_ll_league": 5788.94,
+    "swing_value_map": -1007.26,
+    "swing_value_league": -985.79,
+    "swing_realized": -1082.17,
+    "takes": 57101.0,
+    "take_value": 2351.68,
+    "take_realized": 2359.77,
+    "bip": 2426.0,
+    "bip_value_engine": -41.63,
+    "bip_value_realized": -103.87
+   },
+   "own_0_to_5": {
+    "n": 47574.0,
+    "own": 853.49,
+    "swings": 12550.0,
+    "swings_map": 12681.27,
+    "swings_league": 11827.78,
+    "whiffs": 5001.0,
+    "whiffs_map": 4891.59,
+    "whiffs_league": 5221.4,
+    "whiff_ll_map": 6398.8,
+    "whiff_ll_league": 6570.76,
+    "swing_value_map": -1065.63,
+    "swing_value_league": -1114.34,
+    "swing_realized": -1055.18,
+    "takes": 35024.0,
+    "take_value": 1339.12,
+    "take_realized": 1334.44,
+    "bip": 3038.0,
+    "bip_value_engine": -44.55,
+    "bip_value_realized": -19.07
+   },
+   "own_5_to_10": {
+    "n": 17775.0,
+    "own": 1284.15,
+    "swings": 8259.0,
+    "swings_map": 8371.41,
+    "swings_league": 7087.26,
+    "whiffs": 3208.0,
+    "whiffs_map": 3101.91,
+    "whiffs_league": 3574.8,
+    "whiff_ll_map": 4352.19,
+    "whiff_ll_league": 4507.28,
+    "swing_value_map": -693.95,
+    "swing_value_league": -759.11,
+    "swing_realized": -702.54,
+    "takes": 9516.0,
+    "take_value": 307.03,
+    "take_realized": 301.8,
+    "bip": 1963.0,
+    "bip_value_engine": -27.25,
+    "bip_value_realized": -17.32
+   },
+   "own_over_10": {
+    "n": 18408.0,
+    "own": 3032.3,
+    "swings": 10187.0,
+    "swings_map": 10451.38,
+    "swings_league": 7419.08,
+    "whiffs": 3908.0,
+    "whiffs_map": 3602.98,
+    "whiffs_league": 4736.53,
+    "whiff_ll_map": 5529.62,
+    "whiff_ll_league": 5884.19,
+    "swing_value_map": -859.6,
+    "swing_value_league": -1002.88,
+    "swing_realized": -879.43,
+    "takes": 8221.0,
+    "take_value": 237.57,
+    "take_realized": 228.61,
+    "bip": 2463.0,
+    "bip_value_engine": -47.91,
+    "bip_value_realized": -25.72
+   },
+   "inside|own_under_-10": {
+    "n": 19630.0,
+    "own": -2969.49,
+    "swings": 8584.0,
+    "swings_map": 8190.67,
+    "swings_league": 11160.16,
+    "whiffs": 1635.0,
+    "whiffs_map": 1630.02,
+    "whiffs_league": 1411.87,
+    "whiff_ll_map": 3700.44,
+    "whiff_ll_league": 3775.65,
+    "swing_value_map": -165.92,
+    "swing_value_league": -129.78,
+    "swing_realized": -227.98,
+    "takes": 11046.0,
+    "take_value": -475.82,
+    "take_realized": -478.07,
+    "bip": 3322.0,
+    "bip_value_engine": 182.71,
+    "bip_value_realized": 121.12
+   },
+   "inside|own_-10_to_-5": {
+    "n": 24780.0,
+    "own": -1791.06,
+    "swings": 12619.0,
+    "swings_map": 12558.97,
+    "swings_league": 14350.03,
+    "whiffs": 2061.0,
+    "whiffs_map": 2116.16,
+    "whiffs_league": 1950.94,
+    "whiff_ll_map": 5029.53,
+    "whiff_ll_league": 5080.28,
+    "swing_value_map": -202.24,
+    "swing_value_league": -171.29,
+    "swing_realized": -221.53,
+    "takes": 12161.0,
+    "take_value": -450.81,
+    "take_realized": -466.07,
+    "bip": 5207.0,
+    "bip_value_engine": 290.42,
+    "bip_value_realized": 247.55
+   },
+   "inside|own_-5_to_0": {
+    "n": 54854.0,
+    "own": -1136.05,
+    "swings": 36694.0,
+    "swings_map": 36858.95,
+    "swings_league": 37995.01,
+    "whiffs": 5494.0,
+    "whiffs_map": 5465.04,
+    "whiffs_league": 5267.61,
+    "whiff_ll_map": 14305.64,
+    "whiff_ll_league": 14434.09,
+    "swing_value_map": -745.97,
+    "swing_value_league": -695.45,
+    "swing_realized": -702.0,
+    "takes": 18160.0,
+    "take_value": -576.73,
+    "take_realized": -621.52,
+    "bip": 15477.0,
+    "bip_value_engine": 890.15,
+    "bip_value_realized": 912.55
+   },
+   "inside|own_0_to_5": {
+    "n": 67118.0,
+    "own": 1346.74,
+    "swings": 51502.0,
+    "swings_map": 51959.33,
+    "swings_league": 50612.59,
+    "whiffs": 6864.0,
+    "whiffs_map": 6853.51,
+    "whiffs_league": 7184.5,
+    "whiff_ll_map": 18792.22,
+    "whiff_ll_league": 18929.44,
+    "swing_value_map": -838.81,
+    "swing_value_league": -927.48,
+    "swing_realized": -782.56,
+    "takes": 15616.0,
+    "take_value": -536.17,
+    "take_realized": -577.89,
+    "bip": 22407.0,
+    "bip_value_engine": 1299.96,
+    "bip_value_realized": 1406.38
+   },
+   "inside|own_5_to_10": {
+    "n": 25533.0,
+    "own": 1834.48,
+    "swings": 17279.0,
+    "swings_map": 17519.25,
+    "swings_league": 15684.77,
+    "whiffs": 2620.0,
+    "whiffs_map": 2611.56,
+    "whiffs_league": 2843.42,
+    "whiff_ll_map": 6840.27,
+    "whiff_ll_league": 6906.52,
+    "swing_value_map": -101.36,
+    "swing_value_league": -141.52,
+    "swing_realized": -36.38,
+    "takes": 8254.0,
+    "take_value": -275.05,
+    "take_realized": -304.06,
+    "bip": 7204.0,
+    "bip_value_engine": 440.34,
+    "bip_value_realized": 542.47
+   },
+   "inside|own_over_10": {
+    "n": 17848.0,
+    "own": 2712.51,
+    "swings": 11515.0,
+    "swings_map": 11997.85,
+    "swings_league": 9285.35,
+    "whiffs": 1741.0,
+    "whiffs_map": 1852.73,
+    "whiffs_league": 2136.45,
+    "whiff_ll_map": 4477.79,
+    "whiff_ll_league": 4604.13,
+    "swing_value_map": -42.8,
+    "swing_value_league": -80.67,
+    "swing_realized": 23.54,
+    "takes": 6333.0,
+    "take_value": -227.24,
+    "take_realized": -266.23,
+    "bip": 4744.0,
+    "bip_value_engine": 277.23,
+    "bip_value_realized": 353.95
+   },
+   "hitters": 455
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-10T19:07:20.997486+00:00",
+ "seconds": 142.2
+}
