@@ -78,8 +78,9 @@ the 30 days after each monthly as-of date, the mixed model called 13% too many s
 the takes no worse in 2024 (+0.03 nats per 1,000) and lower in 2025 and 2026 (by 1.4 and 3.7). The gates it missed: a
 two-month horizon in 2026, where the 2026 profile fit through July called 13% too few strikes 0.1 to 0.25 ft outside in
 August and September (CS-SEASON-01), and log loss in 2024 (CS-SEASON-02). Weighting recent takes more (CS-RECENT-01) also
-missed, on the band a quarter to half a foot outside. The aiming value is re-priced with it (VALUE-18Y) before the figure
-is restated.
+missed, on the band a quarter to half a foot outside. Re-priced with it (VALUE-18Y), the aiming value is -42.6
+[-45.5, -39.8] by the engine's components and -23.2 inside (the study fits on 2023 to 2025, so it prices with 2025's profile,
+close to the mixed one); the stated range stays about 30 to 40, and about 23 inside.
 
 The aiming value is estimated policy potential, not observed runs saved. It is stated as a range, about 30 to 40
 runs over a team's season from outside pitches alone on the later-period months (VALUE-18X; the description that follows

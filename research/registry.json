@@ -4106,14 +4106,18 @@
     "id": "VALUE-18Y",
     "columns": {
      "ID": "VALUE-18Y",
-     "Attempt": "The aiming value re-priced with the called-strike model's season profile (PROD-05). VALUE-18X's run repeated exactly (value2_study, seasons 2023 to 2026, final_eval on August 1 to September 27, 2026, maps and the league from 2023-2025, 0.6 ft of scatter, within type, specific, pitch estimand, pool from training, reprice boundary, bands and structural, 200 resamples, five placebo draws, swing_cross true) with params cs_season true: the engine (PAModels) prices takes with the latest training season's edge profile (2025, since the study fits on 2023 to 2025). Reused validation months (rule 6); a re-pricing after a model change, not a new test. Smoke test on a synthetic world (scratch cross/smoke_value_cs.py): runs both ways (-46.7 and -46.8 there, where the seasons call strikes alike). **Registered in the commit that added this row, before the run.** Predictions: (1) the structural outside-only figure between -36 and -52 runs per 6,200 plate appearances (VALUE-18X -42.3): a take just off the plate is less often a strike, so getting a chase there is worth a little more; (2) the inside part between -14 and -24 (-22.7): a take on the corner is less often a strike than the mixed model said, so a stolen strike is worth less; (3) the own-part calibration slopes within 0.01 of 0.967 and 0.822 and the realized-outcome regression within 0.5 of -29.4 (neither uses the called-strike model). Decision rule: the stated aiming figure (site and METHODS.md) becomes this run's, the structural figure with the regression's beside it, as a range rounded to 5 runs, and the inside part restated; if (3) fails, the run is checked before anything is restated.",
-     "Disposition and evidence": "registered, running"
+     "Attempt": "The aiming value re-priced with the called-strike model's season profile (PROD-05). VALUE-18X's run repeated exactly (value2_study, seasons 2023 to 2026, final_eval on August 1 to September 27, 2026, maps and the league from 2023-2025, 0.6 ft of scatter, within type, specific, pitch estimand, pool from training, reprice boundary, bands and structural, 200 resamples, five placebo draws, swing_cross true) with params cs_season true: the engine (PAModels) prices takes with the latest training season's edge profile (2025, since the study fits on 2023 to 2025). Reused validation months (rule 6); a re-pricing after a model change, not a new test. Smoke test on a synthetic world (scratch cross/smoke_value_cs.py): runs both ways (-46.7 and -46.8 there, where the seasons call strikes alike). **Registered in the commit that added this row, before the run.** Predictions: (1) the structural outside-only figure between -36 and -52 runs per 6,200 plate appearances (VALUE-18X -42.3): a take just off the plate is less often a strike, so getting a chase there is worth a little more; (2) the inside part between -14 and -24 (-22.7): a take on the corner is less often a strike than the mixed model said, so a stolen strike is worth less; (3) the own-part calibration slopes within 0.01 of 0.967 and 0.822 and the realized-outcome regression within 0.5 of -29.4 (neither uses the called-strike model). Decision rule: the stated aiming figure (site and METHODS.md) becomes this run's, the structural figure with the regression's beside it, as a range rounded to 5 runs, and the inside part restated; if (3) fails, the run is checked before anything is restated. **Results (run 38069376029, frozen 244c8962a, 184,318 test pitches, 412 hitters):** structural outside-only -42.6 runs per 6,200 plate appearances [-45.5, -39.8] (VALUE-18X -42.3), inside -23.2 (-22.7); own-part calibration slopes 0.967 and 0.822 (unchanged); the pitch-estimand regression -29.4 [-34.0, -25.1] (unchanged); the structural choices priced by the band regression -25.0. (1), (2) and (3) held. The season profile barely moves the figure here because the study fits on 2023 to 2025, so the engine prices with 2025's profile, which sits close to the mixed one; the 2026 profile the live plans now use is not in this study. Under the rule the stated figures stay about 30 to 40 runs from outside pitches (43 by the engine's components, 29 by realized outcomes) and about 23 more inside.",
+     "Disposition and evidence": "(1), (2) and (3) held; stated figures unchanged"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
-    "frozen_commits": [],
-    "status": "registered, running"
+    "runs": [
+     "38069376029"
+    ],
+    "frozen_commits": [
+     "244c8962a"
+    ],
+    "status": "(1), (2) and (3) held; stated figures unchanged"
    }
   ],
   "BOX-01": [
