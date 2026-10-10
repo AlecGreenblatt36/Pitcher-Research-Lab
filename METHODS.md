@@ -99,8 +99,10 @@ the hitter's own swing tendency at the pitch, the swing maps are right in every 
 a hitter who rarely chases a spot misses more when he does swing there than his map says (about 10%), and a hitter who
 chases a spot misses a little less (4 to 6%). So the engine prices the extra chases a hitter's tendency adds as costlier
 than they are. Looser whiff maps (WHIFF-LAM-01) and the swing tendency as an input to the whiff model (WHIFF-OWN-01 to
-03) each fixed the low end, but overcorrected the heavy chasers or cost accuracy inside the zone, and none met its gate;
-the engine keeps the location-only whiff model and the stated range keeps both figures.
+04, the last with separate slopes for laying off and chasing) each fixed the low end, but overcorrected the heavy chasers'
+misses or cost accuracy inside the zone, and none met its gate, though in run values the input tracked what the swings
+produced at both ends. The line is closed for this season: the engine keeps the location-only whiff model and the stated
+range keeps both figures.
 
 The aiming value is estimated policy potential, not observed runs saved. It is stated as a range, about 30 to 40
 runs over a team's season from outside pitches alone on the later-period months (VALUE-18X; the description that follows
