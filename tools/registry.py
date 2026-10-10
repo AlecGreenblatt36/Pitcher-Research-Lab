@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-ID_RE = re.compile(r'^\| ([A-Z][A-Z0-9]*-[0-9]+[A-Za-z0-9]*) \|')
+ID_RE = re.compile(r'^\| ([A-Z][A-Z0-9]*(?:-[A-Z][A-Z0-9]*)*-[0-9]+[A-Za-z0-9]*) \|')      # also two-part names such as CS-SEASON-01
 RUN_RE = re.compile(r'\b(3[0-9]{10})\b')
 COMMIT_RE = re.compile(r'\b([0-9a-f]{40}|[0-9a-f]{9,12})\b')
 REGISTERED_PHRASES = ('Registered in the commit that added this row', 'registered in the commit that added this row', 'Registered before', 'registered before the run',

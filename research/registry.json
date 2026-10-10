@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 235,
- "rows": 238,
+ "experiments": 248,
+ "rows": 251,
  "records": {
   "ACC-01": [
    {
@@ -3632,7 +3632,7 @@
     "columns": {
      "ID": "TOTALS-08",
      "Attempt": "The run-environment table without its venue residual (TOTALS-07's finding): the production replays repeated with the same tables minus the venue term, the center recomputed on the fit rows (brl_replay/environment_fit2025_weather.json for the 2026 replay, environment_fit2026_weather.json for 2025; the production candidate brl_replay/environment_weather.json is env-v2 fitted on both seasons without venues), PROD-03 recipe otherwise unchanged, 1,000 worlds, scored against v2-prod3-1000 by tools/replay_compare.py. **Registered in the commit that added this row, before the replays.** Prediction: the mean total's squared error improves by 0.02 to 0.06 runs squared in each season (the venue noise's variance is about 0.028); the cross-season correlation of park residuals rises from -0.45 to above -0.15; the win Brier moves by less than 0.0002 pooled; the P(over) Brier improves by up to 0.0005. Gate: the weather-only table replaces brl_live/environment.json (ADJUST['environment'] stays on) if the pooled squared-error improvement's interval excludes zero with neither season worse and the pooled win Brier is not worse than +0.0002; the taught headline is refitted on the new replays before the switch. **First result (replays 38004874163 and 38004938036 against v2-prod3-1000, independent streams):** mean-total squared error -0.049 [-0.111, +0.013] in 2025 and -0.027 [-0.091, +0.037] in 2026, pooled -0.038 [-0.080, +0.005]; the cross-season correlation of park residuals -0.449 to -0.026; win Brier -0.00008 and +0.00047 [+0.00015, +0.00079], pooled +0.00019 [-0.00004, +0.00042]; P(over) -0.00007 and -0.00039, pooled -0.00026. The predictions held (both squared-error points inside 0.02 to 0.06, the reversal gone, win Brier within 0.0002 pooled, P(over) better) but the pooled squared-error interval reaches zero, so the gate is not met on these runs; the per-game simulation noise of two independent 1,000-world runs is of the size of the effect. Declared before the runs: the same comparison is repeated with paired streams (METHOD-01, which cuts that noise by 71 to 84 percent), reference v2-prod3-ps-1000 (the PROD-03 recipe with streams) against v2-prod3-weather-ps-1000, both seasons, and the gate above is applied to that comparison. **Paired-streams result (runs 38009451097, 38009502287, 38009551022, 38009599322):** mean-total squared error -0.040 [-0.095, +0.016] in 2025 and -0.019 [-0.079, +0.039] in 2026, pooled -0.029 [-0.069, +0.011]; the park reversal -0.44 to -0.02; win Brier -0.00004 and -0.00005, pooled -0.00005 [-0.00019, +0.00009] (the pairing cut that noise as METHOD-01 says); P(over) +0.0002 and -0.0003, pooled -0.0001. The totals gain is in the predicted direction in both seasons and both runs, but its interval reaches zero again: the pairing removes simulation noise, not the noise of the games themselves, and 0.03 runs squared on 20 is below what two seasons can resolve. **Gate not met; nothing switched.** What is established: the venue term is one-season noise applied across seasons, it manufactures the park reversal, and removing it costs nothing on win chances or P(over). Removing it from the production table is a product call under the do-no-harm standard (rule 3, as PROD-03 was adopted), not an evidence-gated improvement; it waits for Alec.",
-     "Disposition and evidence": "gate not met; a do-no-harm product call is available"
+     "Disposition and evidence": "gate not met; taken as a do-no-harm product call on October 10 (PROD-04)"
     },
     "registered_before_run": true,
     "diagnostic": false,
@@ -3645,7 +3645,7 @@
      "38009599322"
     ],
     "frozen_commits": [],
-    "status": "gate not met; a do-no-harm product call is available"
+    "status": "gate not met; taken as a do-no-harm product call on October 10 (PROD-04)"
    }
   ],
   "UMP-01": [
@@ -3936,6 +3936,151 @@
     ],
     "frozen_commits": [],
     "status": "product"
+   }
+  ],
+  "PROD-04": [
+   {
+    "id": "PROD-04",
+    "columns": {
+     "ID": "PROD-04",
+     "Attempt": "The run-environment table without its venue term goes live (TOTALS-08's do-no-harm product call). Alec handed the call over on October 10, 2026 at 10:34 a.m. Eastern (\"If you are asking for my opinion you can make the call\"). brl_live/environment.json is now env-v2-weather (brl_replay/environment_weather.json: env-v2 fitted on both seasons without the venue residual, the center recomputed); ADJUST['environment'] stays on. Evidence, all from TOTALS-08's paired-streams runs (development seasons, cross-season tables): win Brier pooled -0.00005 [-0.00019, +0.00009] with neither season worse; mean-total squared error pooled -0.029 [-0.069, +0.011], better in both seasons; P(over) pooled -0.0001; the cross-season park reversal -0.44 to -0.02. The taught headline was refitted on the weather replays as the switch requires (scratch harness/taught_small.py, two inputs): our model 0.0405 + 0.5668 x_sim + 0.5177 x_team against 0.0406 + 0.5666 x_sim + 0.5176 x_team on the same-stream reference replays; the headline against the closing line 2026 -0.00030 [-0.00084, +0.00022] (reference -0.00029), 2025 -0.00098 [-0.00173, -0.00025] (reference -0.00099). taught-v5 stays in force: the refit moves no weight by more than 0.006 from it, which is the difference between two simulation runs of the same recipe. The taught total (TOTALS-03, fixed weights 0.32 and 0.78; scratch harness/totals_taught2.py): squared error against the line 2026 -0.267 [-0.417, -0.126] (reference -0.259), 2025 -0.152 [-0.403, +0.081] (reference -0.142); pooled intercept -0.545 against -0.543 in force, left unchanged. The season archives behind past days and the Record page were rebuilt from the weather replays (v2-prod3-weather-ps-1000); their headline Brier moved 0.24155 to 0.24145 (2025) and 0.24298 to 0.24301 (2026). Takes effect for every forecast simulated after the commit that adds this row; earlier saved versions stand. Under rule 3 this is a product call, not a gate passed: the totals gain's interval includes zero.",
+     "Disposition and evidence": "adopted as a product call (do-no-harm); live from October 10, 2026"
+    },
+    "registered_before_run": false,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "adopted as a product call (do-no-harm); live from October 10, 2026"
+   }
+  ],
+  "CAL-01": [
+   {
+    "id": "CAL-01",
+    "columns": {
+     "ID": "CAL-01",
+     "Attempt": "Why the swing model over-calls chases (diagnostic). On the 4,991 graded games, hitters chased 152,037 times against 169,053 expected by the league swing model and 167,365 by the hitter maps: about 11% high in both seasons, 18% on fastballs, 4% on breaking balls, 20% when the hitter is behind in the count. The league swing model reads the pitch at the decision moment (a straight-line projection 0.26 s out) while 'outside' is where the pitch crossed. Two explanations: (A) selection at the edge: among pitches that look alike at the decision moment, the ones that end outside are the ones hitters swing at less (hitters read more than the straight line), so any model on the decision-moment location over-calls swings on pitches that end outside and under-calls them on pitches that end inside, in sample as well as after; (B) drift: the model is right on the rows it was fit on and wrong on later rows. Measured in the report lane (tools/brl_report.py, params calibration_diag and calibration_only, no report built): expected against actual swings on the training rows and on the rows after the as-of date, by crossing zone, family, distance outside (0.1, 0.25, 0.5 and 1 ft bands), count group and whether the pitch looked like a strike at the decision moment, with the hitter maps alongside; as of 2025-07-01 (2024 and 2025 loaded) and 2026-08-01 (2025 and 2026). Sums only. **Registered in the commit that added this row, before the runs.** Prediction (A): on the training rows the league model's outside-zone expectation runs 5% to 15% above actual swings with fastballs highest, the excess largest within 0.25 ft of the edge and on pitches that looked like strikes, and the inside-zone expectation below actual; the rows after the as-of date look the same within 3 points. (B) is supported instead if the training rows' outside-zone expectation is within 2% of actual while the later rows are 8% or more high. Next step either way: (A) a league term for where the pitch crossed (zone side and distance outside, by family) in the report's swing model and the structural engine's, registered with its own gate on later months (level of expected chases within 3% in each season, swing log loss better, the maps' gain kept); (B) recency weighting of the league fit. **Results (runs 38060917628 and 38060946758):** (A) holds, with one part wrong. On the training rows the league model's expectation for pitches that end outside runs 8.2% (as of 2025-07-01) and 8.7% (2026-08-01) above actual swings, fastballs 15%, breaking balls 2%, offspeed 6%; pitches that end inside run 3.6% below; pitches that looked like strikes and ended outside 12 to 13% above. The rows after the as-of date look the same (8.6% and 10.9%), so it is the model's structure, not drift. The wrong part: the excess is not at the edge. It is about 1% within 0.1 ft of the edge and grows with distance: 4 to 5% at 0.1 to 0.25 ft, 10 to 11% at 0.25 to 0.5 ft and 20% at 0.5 to 1 ft. The hitter maps carry the same excess (they are fitted on the league's offset).",
+     "Disposition and evidence": "(A) holds; the excess grows with distance outside; SWING-CROSS-01 registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [
+     "38060917628",
+     "38060946758"
+    ],
+    "frozen_commits": [],
+    "status": "(A) holds; the excess grows with distance outside; SWING-CROSS-01 registered"
+   }
+  ],
+  "SWING-CROSS-01": [
+   {
+    "id": "SWING-CROSS-01",
+    "columns": {
+     "ID": "SWING-CROSS-01",
+     "Attempt": "The league swing model reads where the pitch crossed as well as where it looked at the decision moment (CAL-01's finding). A crossing block is added to the league swing model in the report (tools/brl_report.py, params swing_cross) and in the structural engine that prices aims (tools/brl_discovery.py PAModels, the same flag): the signed distance from the true crossing to the nearest zone edge (negative inside), hat basis at -1, -0.5, -0.25, 0, 0.25, 0.5, 1 and 2 ft, by family, 24 columns at the end of the design. The hitter maps stay on the decision moment and are refitted on the new offset. A scattered aim's crossing moves with it (the pool swaps the crossing part of the logit). Smoke test on a synthetic world (scratch cross/smoke.py): runs both ways, the pitcher-propensity weight read by its index rather than as the last column. Measured with CAL-01's diagnostic, now with log loss sums: as of 2025-07-01 and 2026-08-01, the term off and on (four report-lane runs, calibration only). **Registered in the commit that added this row, before the runs.** Prediction: with the term, on the rows after the as-of date, the expectation for pitches ending outside is 0.98 to 1.02 of actual swings in both runs (fastballs 0.96 to 1.04) and for pitches ending inside 0.98 to 1.02; the log loss over all later pitches improves by 1 to 15 nats per 1,000 for the league model and for the maps; the maps' gain over the league on later outside pitches stays within 70% to 110% of its value without the term. Gate, in both runs: outside 0.97 to 1.03 overall and 0.95 to 1.05 for each family, inside 0.97 to 1.03; the league's and the maps' log loss over all later pitches lower than without the term; the maps' outside gain at least 70% of its value without the term. If the gate holds, the term goes on in the daily report and the engine, and the aims are re-priced (VALUE-18's lane) before any run figure is stated again; the figures now on the site were priced with the decision-moment model alone. **Results (runs 38061589673 and 38061613146 as of 2025-07-01, 38061636214 and 38061660303 as of 2026-08-01; scratch cross/compare.py):** on the later rows the expectation for pitches ending outside went from 1.086 to 1.008 (2025) and 1.110 to 1.024 (2026) of actual swings; fastballs 1.157 to 1.010 and 1.194 to 1.040, breaking balls 1.018 to 1.003 and 1.037 to 1.016, offspeed 1.065 to 1.013 and 1.063 to 1.006; inside 0.973 to 1.009 and 0.975 to 1.011; the excess by distance outside is gone (half a foot to a foot out: 1.201 to 1.007 and 1.266 to 1.045). Log loss over all later pitches: league -7.47 and -6.74 nats per 1,000, maps -5.69 and -5.28; the maps' gain over the league on later outside pitches kept 86% and 89% (20.98 to 18.05, 22.08 to 19.66). The prediction held except the 2026 outside level (1.024 against the predicted 1.02 at most; inside the gate). **Gate passed in both runs: on in the daily report and the engine from October 10, 2026** (tools/brl_report.py SWING_CROSS true). The hitter cards' run figures and the plans are re-priced by the report itself at the next build; the stated aiming figures wait for VALUE-18X (the How page and METHODS.md say so). Reports built before the switch keep their old grades until they are rebuilt.",
+     "Disposition and evidence": "gate passed; adopted October 10, 2026"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [
+     "38061589673",
+     "38061613146",
+     "38061636214",
+     "38061660303"
+    ],
+    "frozen_commits": [],
+    "status": "gate passed; adopted October 10, 2026"
+   }
+  ],
+  "VALUE-18X": [
+   {
+    "id": "VALUE-18X",
+    "columns": {
+     "ID": "VALUE-18X",
+     "Attempt": "The aiming value re-priced with the corrected swing model (SWING-CROSS-01). VALUE-18F's run repeated exactly (value2_study, seasons 2023 to 2026, final_eval on the later-period months August 1 to September 27, 2026, maps and the league from 2023-2025, 0.6 ft of scatter, within type, specific, pitch estimand, pool from training, reprice boundary, bands and structural, 200 resamples, five placebo draws) with params swing_cross true: the study's league swing model and the engine (PAModels) both read where the pitch crossed, and a scattered aim's crossing moves with it. These months are reused validation (rule 6), not untouched; this is a re-pricing of a stated figure after a model fix, not a new test. Smoke test on a synthetic world (scratch cross/smoke_value.py): runs both ways. **Registered in the commit that added this row, before the run.** Predictions: (1) the structural outside-only figure between -30 and -48 runs per 6,200 plate appearances (VALUE-18F -43.5); (2) the own part's calibration slope outside between 0.88 and 1.05 (0.960); (3) the pitch-estimand regression figure (points, 0.6 ft) between -20 and -35 (-29.4). Decision rule: the aiming figure stated on the site and in METHODS.md becomes this run's, the structural figure with the regression's beside it, written as a range rounded to 5 runs, and the inside part re-priced the same way; if (1) falls under 30 the structural figure is stated all the same; the Report tool's calibration constants (0.95 outside, 0.82 inside) are replaced by the measured slopes if either differs by more than 0.05. **Results (run 38062560248, 184,318 test pitches, 412 hitters):** structural outside-only -42.3 runs per 6,200 plate appearances [-45.2, -39.4] (VALUE-18F -43.5), inside -22.7 (-23.3); own-part calibration slope 0.967 [0.928, 1.012] outside and 0.822 inside (0.960 and 0.830); the pitch-estimand regression's figure (points, 0.6 ft) -29.4 [-34.0, -25.1] (unchanged), by side -24.2; the structural choices priced by the band regression -25.0. The engine still prices an extra swing about 35% higher than the realized outcomes of these months (-0.00118 against -0.00087 per point). (1), (2) and (3) held. Under the rule the stated figure becomes about 30 to 40 runs over a team's season from outside pitches (42 by the engine's components, 29 by realized outcomes; the earlier 30 to 45 came from rounding 43.5 up), the inside part about 23; the calibration constants stay 0.95 and 0.82 (measured 0.967 and 0.822, within 0.05).",
+     "Disposition and evidence": "held: structural -42.3 [-45.2, -39.4]; stated as about 30 to 40"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [
+     "38062560248"
+    ],
+    "frozen_commits": [],
+    "status": "held: structural -42.3 [-45.2, -39.4]; stated as about 30 to 40"
+   }
+  ],
+  "CAL-02": [
+   {
+    "id": "CAL-02",
+    "columns": {
+     "ID": "CAL-02",
+     "Attempt": "The other pieces the plans are priced with, checked the way CAL-01 checked the swing model (diagnostic, descriptive): the whiff model on swings, the called-strike model on takes and the foul model on contact, expected against actual on the training rows and the rows after the as-of date, by season, family and the signed distance from the true crossing to the nearest zone edge (eight bands from half a foot inside to half a foot outside). Motivation: VALUE-18F and VALUE-18X found the engine pricing an extra swing about 35% higher than the realized outcomes show; a miscalibrated piece would be one source. Report lane, tools/brl_report.py calibration_components (with calibration_diag), as of 2025-07-01 and 2026-08-01, calibration only, sums only. What I expect, written before the runs: whiff and foul within 3% overall on the later rows; the called-strike model off by 5% or more in some edge band on 2026 rows, because 2026 locations are measured at the middle of the plate and the zone is the ABS zone (rule 5) while the model mixes seasons. A piece off by more than 3% overall or 8% in a band with at least 5,000 rows gets its own registered fix. **Results (runs 38064418743 as of 2025-07-01 and 38064444024 as of 2026-08-01):** the whiff and foul models are calibrated (later rows 0.991 and 0.996 whiff, 1.001 and 0.986 foul; every edge band within 4%). The called-strike model is not: it mixes seasons, and the edge calls move from season to season. On the later rows it calls 3.2% and 3.1% too many strikes overall, and in the bands just off the plate far too many: 1.117 (2025) and 1.382 (2026) within 0.1 ft outside, 1.298 and 1.568 at 0.1 to 0.25 ft, 1.06 within 0.1 ft inside; offspeed 1.07 and 1.09. On the training rows the same model is low on the earlier season and high on the later one in every edge band (2026 rows 1.380 against 2025 rows 0.829 just outside), so each newer season calls fewer strikes off the plate than the one before (2026: the ABS zone and the location measured at the middle of the plate, rule 5). This is a priced piece: a take just off the plate is valued as too likely a strike, which overprices takes and strike-stealing aims there and shifts the count chain's strikeouts and walks. Registered fix: CS-SEASON-01.",
+     "Disposition and evidence": "the called-strike model miscalibrated at the edges by season; CS-SEASON-01 registered"
+    },
+    "registered_before_run": false,
+    "diagnostic": true,
+    "runs": [
+     "38064418743",
+     "38064444024"
+    ],
+    "frozen_commits": [],
+    "status": "the called-strike model miscalibrated at the edges by season; CS-SEASON-01 registered"
+   }
+  ],
+  "CS-SEASON-01": [
+   {
+    "id": "CS-SEASON-01",
+    "columns": {
+     "ID": "CS-SEASON-01",
+     "Attempt": "Each season's own called-strike profile at the zone edge (CAL-02's finding). The called-strike model (report and engine) gets a block per season: hats on the signed edge distance at the true crossing (the location block's knots), zero outside the row's season (tools/brl_discovery.py cs_season_block, params cs_season). Today's pitches are priced with the target season's profile: the as-of year once it has 20,000 training takes, else the latest earlier season (cs_target_season); the calibration check reads each row with its own season's. Smoke test on a synthetic world (scratch cross/smoke_cs.py): runs, falls back to the earlier season early in a season. Measured with CAL-02's diagnostic as of 2025-07-01 and 2026-08-01 with the profile on, against CAL-02's runs (the off path is unchanged code). **Registered in the commit that added this row, before the runs.** Prediction: on the later rows, called strikes expected against actual within 0.95 to 1.05 just outside the edge (from 1.117 and 1.382), 0.90 to 1.10 at 0.1 to 0.25 ft outside (from 1.298 and 1.568), 0.98 to 1.02 overall (from 1.032 and 1.031); log loss on later takes lower by 2 to 15 nats per 1,000. Gate, in both runs: every edge band with at least 5,000 later takes within 0.92 to 1.08, overall within 0.98 to 1.02, log loss on later takes lower. If it holds: on in the daily report and the engine, and the aiming value re-priced (VALUE-18Y) before the figure is restated. **Results (runs 38065023351 as of 2025-07-01 and 38065048207 as of 2026-08-01, against CAL-02's runs 38064418743 and 38064444024):** the season profile takes out most of the miss, but the gate is not met. On the later takes: overall 0.997 and 0.994 (from 1.032 and 1.031); within 0.1 ft outside 0.977 and 1.021 (from 1.117 and 1.382); within 0.1 ft inside 0.989 and 0.966 (from 1.063 and 1.055); 0.1 to 0.25 ft outside 1.044 in 2025 but 0.871 in 2026 (from 1.298 and 1.568), so the 2026 profile, fit on 2026 takes through July, calls too few strikes there on the August and September takes (620 called strikes, 540 expected): the calls at that distance moved within 2026, not only between seasons; offspeed 1.021 and 1.032; log loss on later takes lower by 1.18 and 2.23 nats per 1,000 (predicted 2 to 15; the 2025 run fell short of that). The gate as written also fails in both runs on the band more than half a foot outside (62,533 and 39,123 takes with 8 and 3 called strikes against 16.8 and 10.6 expected): a band with a handful of strikes cannot land within 8%, so the gate should have counted expected strikes, not takes. That is a specification error, and it stands as written (rule 3). Not adopted: the called-strike model stays mixed-season (cs_season off).",
+     "Disposition and evidence": "gate not met (2026 at 0.1 to 0.25 ft outside: 0.871; the far-outside band as specified); not adopted"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [
+     "38064418743",
+     "38064444024",
+     "38065023351",
+     "38065048207"
+    ],
+    "frozen_commits": [],
+    "status": "gate not met (2026 at 0.1 to 0.25 ft outside: 0.871; the far-outside band as specified); not adopted"
+   }
+  ],
+  "CS-RECENT-01": [
+   {
+    "id": "CS-RECENT-01",
+    "columns": {
+     "ID": "CS-RECENT-01",
+     "Attempt": "The called-strike model follows the umpires' recent calls (CS-SEASON-01's finding: the 2026 calls at the edge moved within the season, not only between seasons). The model (report and engine) is fit on every training take, a take's weight halving for every 30 days before the latest training day (tools/brl_discovery.py recency_weights, params cs_recent: 30), with the same features as today (the location block at the true crossing and the platoon flag). Half-life set before the runs at 30 days: the calls at the edge move over weeks, and a month of games is about 60,000 takes. Smoke test on a synthetic world (scratch cross/smoke_recent.py): runs in the report and the engine. Measured the way a model refit every day is used: as of the 1st of April, May, June, July, August and September, in 2025 and in 2026, called strikes expected against actual on the takes in the 30 days after each as-of date (calibration_components 'next30'), pooled by season. Arms: off (today's model), recent (this), and CS-SEASON-01's season profile for reference (not gated). **Registered in the commit that added this row, before the runs.** Gate, recent against off, in both seasons: overall expected/actual within 0.98 to 1.02 on the pooled takes; every edge band with at least 100 called strikes within the larger of 7% and three standard errors (3 times the square root of the actual count); log loss on the pooled takes lower; each window's overall within 0.96 to 1.04. Prediction: recent overall within 0.99 to 1.01 in both seasons; within 0.1 ft outside 0.95 to 1.05; log loss lower by 3 to 15 nats per 1,000 takes in 2026 and 1 to 8 in 2025; off overall 1.02 to 1.04. If it holds: on in the daily report and the engine, the backfilled reports rebuilt, and the aiming value re-priced (VALUE-18Y) before the figure is restated. **Results (2025: runs 38066138518 off, 38066154644 recent, 38066171756 season; 2026: runs 38066186409, 38066201346, 38066218246):** gate not met in either season, on one band. Pooled over the six windows, recent against off: overall 1.001 and 1.001 (off 1.037 and 1.044); within 0.1 ft inside 1.006 and 0.985 (off 1.083 and 1.093); within 0.1 ft outside 0.999 and 1.050 (off 1.133 and 1.468); 0.1 to 0.25 ft outside 1.048 and 1.046 (off 1.306 and 1.859); every window within 0.988 to 1.027; log loss lower by 0.59 and 3.57 nats per 1,000 takes (predicted 1 to 8 and 3 to 15). The band a quarter to half a foot outside (355 and 128 called strikes in 59,047 and 58,621 takes) came in at 1.353 and 1.924, outside its tolerance of 57 and 34 strikes (off 1.875 and 2.505), and past half a foot (13 and 7 called strikes, too few to gate) recent expected 245 and 227 where off expected 42 and 39: most likely the fit's penalty, since with the weights the far tail rests on few takes and is pulled toward the middle. The season profile on the same windows (reference, not gated): overall 0.999 and 0.998; just outside 0.994 and 1.045; 0.1 to 0.25 ft 1.045 and 1.015; a quarter to half a foot 1.112 and 1.389; past half a foot 52 and 55 expected; log loss lower by 1.43 and 3.73 nats per 1,000 takes. Not adopted. Follow-up: CS-SEASON-02, the season profile tested on 2024, which none of these runs touched.",
+     "Disposition and evidence": "gate not met (a quarter to half a foot outside: 1.353 and 1.924); not adopted"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [
+     "38066138518",
+     "38066154644",
+     "38066171756",
+     "38066186409",
+     "38066201346",
+     "38066218246"
+    ],
+    "frozen_commits": [],
+    "status": "gate not met (a quarter to half a foot outside: 1.353 and 1.924); not adopted"
+   }
+  ],
+  "CS-SEASON-02": [
+   {
+    "id": "CS-SEASON-02",
+    "columns": {
+     "ID": "CS-SEASON-02",
+     "Attempt": "CS-SEASON-01's season profile, unchanged (params cs_season), tested where no called-strike run has looked: the 2024 season. As of the 1st of April to September 2024 (each fit on 2023 and on 2024 before the date), called strikes expected against actual on the takes in the 30 days after each date, pooled; arms off and season (scratch cross/compare_recent.py, the same sums). Written after CS-RECENT-01's 2025 and 2026 windows and before any 2024 run; the tolerance for the far bands is set by what moves a plan, not by those windows' results. **Registered in the commit that added this row, before the runs.** Gate, season against off, 2024 pooled: overall within 0.98 to 1.02; the six bands from deep inside to a quarter foot outside each within the larger of 7% and three standard errors (3 times the square root of the actual count, bands with at least 100 called strikes); the two bands more than a quarter foot outside within 2 called strikes per 1,000 takes of actual (a strike called that far off the plate is rare enough that a smaller miss does not move a plan); log loss lower; each window's overall within 0.96 to 1.04. Prediction: season overall 0.99 to 1.01, within 0.1 ft outside 0.95 to 1.05, log loss lower by 0.5 to 5 nats per 1,000 takes (2024 is the old ball-strike world, so a smaller gain than 2026's); off overall 1.01 to 1.05. If it holds: the season profile goes on in the daily report and the engine (CS_SEASON), the backfilled reports are rebuilt with it, and the aiming value is re-priced (VALUE-18Y) before the figure is restated.",
+     "Disposition and evidence": "registered, running"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered, running"
    }
   ],
   "BOX-01": [
@@ -4244,6 +4389,86 @@
     "runs": [],
     "frozen_commits": [],
     "status": "Not run / not run"
+   }
+  ],
+  "EDGE-MEASURE-01": [
+   {
+    "id": "EDGE-MEASURE-01",
+    "columns": {
+     "ID": "EDGE-MEASURE-01",
+     "Measurement work": "Seven-target proper scoring and frozen simple baselines",
+     "Disposition and observed evidence": "Kept as measurement instrumentation, not a model upgrade. Model count distributions use fair finite-ensemble CRPS; fitted PMFs use exact-distribution scores. All eligible pregame relief candidates remain, including zero appearances. Game-balanced summaries and paired date-block report utility implemented.",
+     "2025 effects across all targets": "Not run"
+    },
+    "registered_before_run": false,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "Not run"
+   }
+  ],
+  "EDGE-MEASURE-02": [
+   {
+    "id": "EDGE-MEASURE-02",
+    "columns": {
+     "ID": "EDGE-MEASURE-02",
+     "Measurement work": "Cloud tests and source verification",
+     "Disposition and observed evidence": "84 combined tests passed locally and in cloud run37543029616;12 final source digests matched; Python and JS compilation passed. CLI synthetic arithmetic oracle passed but supplies no baseball-accuracy evidence. Pytest cache warning under /dev was nonfatal.",
+     "2025 effects across all targets": "Not run"
+    },
+    "registered_before_run": false,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "Not run"
+   }
+  ],
+  "EDGE-MEASURE-03": [
+   {
+    "id": "EDGE-MEASURE-03",
+    "columns": {
+     "ID": "EDGE-MEASURE-03",
+     "Measurement work": "Live paired-target publication",
+     "Disposition and observed evidence": "Run37543284982 read/authenticated runtime, reused October5 history, assembled31 complete prior games for baselines, completed one new10000-world Brewers\u2013Padres forecast. v4 public6:57:27p.m. Eastern before9:30p.m. Existing8forecast/3box versions retained. Publication32770ae6a5179f328019e026ea77d6d8cfd14f68. No post-start Dodgers\u2013Braves backfill.",
+     "2025 effects across all targets": "Not run"
+    },
+    "registered_before_run": false,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "Not run"
+   }
+  ],
+  "EDGE-MEASURE-04": [
+   {
+    "id": "EDGE-MEASURE-04",
+    "columns": {
+     "ID": "EDGE-MEASURE-04",
+     "Measurement work": "Phone-facing How close and Track record",
+     "Disposition and observed evidence": "Kept and deployed. Run37543886020 passed normal HTTPS at390/1440, fonts/16px text/44px taps/no overflow/no JS errors, seven-target views and five sample-game openings. How tab explains score scales, sparse baseline support and separate in-game lane. No scored finals yet.",
+     "2025 effects across all targets": "Not run"
+    },
+    "registered_before_run": false,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "Not run"
+   }
+  ],
+  "EDGE-MEASURE-05": [
+   {
+    "id": "EDGE-MEASURE-05",
+    "columns": {
+     "ID": "EDGE-MEASURE-05",
+     "Measurement work": "Separate local full-repeat harness",
+     "Disposition and observed evidence": "Stopped after two setup failures: StreamingExecNotEnabledContainerError, then missing run_real_integration.py because the first command never ran. Fix: write and verify the file before a future nonstreaming launch. No new full-vector parity claim; the successful cloud forecast used a different input case.",
+     "2025 effects across all targets": "Not run"
+    },
+    "registered_before_run": false,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "Not run"
    }
   ]
  }
