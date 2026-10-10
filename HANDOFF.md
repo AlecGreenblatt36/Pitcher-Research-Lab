@@ -56,6 +56,12 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   say what the model measures ("takes it more than most", "can't do much with it"). Registered LINEUP-01 and LINEUP-02
   (the lineup before one is posted, by the opposing starter's hand; brl_live/lineups.py is shared by the simulator and
   the plans, rule still 'last'); study run 38082910875 (receipt research/report-38082910875.json, key lineup_study).
+  Result: LINEUP-01 passed (+0.42 and +0.50 starters named per team-game, 2025 and 2026), LINEUP-02 failed on batting
+  spots; RULE is 'hand' from 6fb5f8523 (simulator and plans; How page and METHODS.md say so). A strike-spot wording edit
+  (ee9f2943b) put an apostrophe inside a single-quoted JS string and broke the page script; fixed in bdcdecbdd before any
+  live run deployed it, and brl_live_tests/test_page_script.py now runs node --check on the template and a rendered page.
+  Live page: the simulated game folds while MLB's plays have not come in; an at-bat with no plan links the hitter's card.
+  Record page says the at-bat model was tuned on 2025, so 2026 is the fairer test.
 
 - October 10, 3:35 p.m.: the rebuild loop's busy check read only the last 10 report runs, so with the calibration runs in
   between, batches overlapped (seven rebuild runs at once) and GitHub's secondary write limit failed April 2026 (run
