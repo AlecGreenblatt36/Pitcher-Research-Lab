@@ -78,7 +78,11 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   phrases and drop a pitch thrown under half a percent.
   Held for after Game 5 (branch pending-store-meta, commit f9e7571c6): the live store compares a write by the blob sha
   from the contents metadata instead of downloading the file it replaces (the 12.6 MB ledger was read about eight times
-  a run). Tests pass; cherry-pick onto main once tonight's game is final.
+  a run). Tests pass; cherry-pick onto main once tonight's game is final. Also held: the status fix (a 'blocked'
+  status from a run whose forecast did save goes back to the saved version) and the ledger slimming (branch
+  pending-slim-ledger, archive_old_boxes; on the real ledger 14.3 MB to 7.9 MB with every score and page identical).
+  All three are combined on branch deploy-after-game5 (8d46efda5, 338 tests pass); to ship, cherry-pick its three
+  commits onto claude/live-v2 and push main.
 
 - October 10, 4:15 p.m.: the container restarted at 19:56 UTC and took the rebuild loop with it. The rest of the rebuild
   runs from scratch report/rebuild_rest.sh (pushes every month not yet logged as pushed, four at a time; then October 1
