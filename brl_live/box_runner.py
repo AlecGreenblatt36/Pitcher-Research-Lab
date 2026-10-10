@@ -244,6 +244,37 @@ def _prune_live(ledger):
     for pk in list(ledger.get('live',{})):
         if pk in ledger.get('actuals',{}):ledger['live'].pop(pk,None)
 
+ARCHIVE_AFTER_DAYS=2   # boxes stay whole for the slate date and the day before (box_page.BOX_DAYS), as the page shows them
+
+def archive_old_boxes(ledger,today):
+    """Keep the ledger from growing with every saved version: a box whose game finished ARCHIVE_AFTER_DAYS or more days
+    before the slate date keeps only what the day archive shows (box_page.lean_box, its 'archived' flag set), after its
+    player and skill scores are worked out once, while the whole box still verifies against its publication, and kept
+    in ledger['box_cache']. The whole box stays published in box_forecasts/<sha>.json. A box whose scoring raises is left
+    whole, so the run behaves as before. Returns how many boxes were archived."""
+    from datetime import date as _date
+    from .box_page import lean_box
+    from .boxscore import player_box_version
+    from .edge_metrics import skill_box_outcome
+    try:cutoff=(_date.fromisoformat(str(today))-timedelta(days=ARCHIVE_AFTER_DAYS-1)).isoformat()
+    except ValueError:return 0
+    cache=ledger.setdefault('box_cache',{});done=0
+    for ident,box in list((ledger.get('box_scores') or {}).items()):
+        if box.get('archived') or str(box.get('date'))>=cutoff:continue
+        actual=(ledger.get('actual_boxes') or {}).get(str(box.get('game_pk')))
+        if actual is None:continue
+        pub=(ledger.get('box_publications') or {}).get(ident)
+        try:
+            version,reason=player_box_version(ident,box,pub,actual)
+            not_published,not_eligible,raw=skill_box_outcome(box,pub,actual)
+        except Exception:
+            continue
+        cache[ident]={'player':{'version':version,'excluded':reason},
+                      'skill':{'published':not_published,'eligible':not_eligible,'result':raw},
+                      'actual_sha256':content_hash(actual),'archived_on':str(today)}
+        ledger['box_scores'][ident]=lean_box(box);done+=1
+    return done
+
 def main(public_dir):
     key=key_bytes(os.environ.get('BRL_PA_PACKAGE_KEY',''))
     store=VerifiedGitStore(os.environ['GITHUB_REPOSITORY'],os.environ['GH_TOKEN'],key)
@@ -294,9 +325,10 @@ def main(public_dir):
     try:runner.iteration()
     finally:
         ledger=store.ledger;_prune_live(ledger)
+        archive_old_boxes(ledger,ledger.get('date'))
         scores=score_versions(ledger['forecasts'],ledger['publications'],ledger['actuals'])
-        ledger['player_scores']=score_player_boxes(ledger['box_scores'],ledger['box_publications'],ledger['actual_boxes'])
-        ledger['skill_scores']=score_skill_boxes(ledger['box_scores'],ledger['box_publications'],ledger['actual_boxes'])
+        ledger['player_scores']=score_player_boxes(ledger['box_scores'],ledger['box_publications'],ledger['actual_boxes'],ledger.get('box_cache'))
+        ledger['skill_scores']=score_skill_boxes(ledger['box_scores'],ledger['box_publications'],ledger['actual_boxes'],ledger.get('box_cache'))
         store.persist();render_page(ledger,scores,public_dir)
     for name in ('index.html','predictions.json','.nojekyll'):store.put('public/'+name,(Path(public_dir)/name).read_bytes())
     # Day archives go to the ledger branch; the static season files live in the repository (brl_live/archive).
