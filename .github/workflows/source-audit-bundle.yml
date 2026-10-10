@@ -1,0 +1,44 @@
+name: Source audit bundle
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "feature/pa-model-v1"
+    paths:
+      - ".github/workflows/source-audit-bundle.yml"
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create source manifest
+        run: |
+          git rev-parse HEAD > SOURCE_COMMIT.txt
+          git ls-files > SOURCE_MANIFEST.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: baseball-research-lab-source
+          path: |
+            .github/
+            case_studies/
+            docs/
+            research_lab/
+            scripts/
+            static/
+            templates/
+            tests/
+            *.py
+            *.md
+            *.txt
+            *.sql
+            *.bat
+            pytest.ini
+            SOURCE_COMMIT.txt
+            SOURCE_MANIFEST.txt
+          retention-days: 30
+          if-no-files-found: error

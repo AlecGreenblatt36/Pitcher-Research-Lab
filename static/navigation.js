@@ -151,7 +151,9 @@ prepareStandaloneViews();
 document
     .querySelectorAll(".nav-item[data-view]")
     .forEach(button => {
-        button.addEventListener("click", () => {
+        button.type = "button";
+        button.addEventListener("click", event => {
+            event.preventDefault();
             openApplicationView(button.dataset.view);
         });
     });
@@ -159,7 +161,9 @@ document
 document
     .querySelectorAll("[data-view-link]")
     .forEach(button => {
-        button.addEventListener("click", () => {
+        button.type = "button";
+        button.addEventListener("click", event => {
+            event.preventDefault();
             openApplicationView(button.dataset.viewLink);
         });
     });

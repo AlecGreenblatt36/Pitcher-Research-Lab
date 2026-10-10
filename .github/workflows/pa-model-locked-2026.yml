@@ -1,0 +1,79 @@
+name: PA model locked 2026 holdout
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: pa-model-locked-2026
+  cancel-in-progress: false
+
+jobs:
+  locked-evaluation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt -r requirements-model.txt
+
+      - name: Run frozen 2026 chronological holdout
+        run: >-
+          python -m research_lab.pa_model.cli --verbose run-all
+          --start "2023-03-20"
+          --end "2026-10-03"
+          --work-dir model_runs/pa_locked_2026
+          --train-years "2023,2024"
+          --validation-years "2025"
+          --test-years "2026"
+          --evaluation-mode locked_final
+          --bootstrap-replicates 1000
+
+      - name: Verify coverage and compact receipts
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          import pandas as pd
+          result = json.loads(Path('model_runs/pa_locked_2026/artifacts/PA_BENCHMARK_RESULT.json').read_text())
+          assert result['schema'] == 'baseball_research_lab.pa_benchmark.v3'
+          assert result['claim_status'] == 'chronological_locked_final_holdout_executed'
+          assert result['config']['evaluation_mode'] == 'locked_final'
+          assert result['config']['train_years'] == [2023, 2024]
+          assert result['config']['validation_years'] == [2025]
+          assert result['config']['test_years'] == [2026]
+          assert result['source_commit_sha'] == os.environ['GITHUB_SHA']
+          assert result['data']['rows_test'] >= 170000
+          assert result['data']['games_test'] >= 2300
+          assert pd.Timestamp(result['data']['test_date_max']) >= pd.Timestamp('2026-09-20')
+          PY
+
+      - name: Publish compact result receipt only
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p benchmark_results
+          cp model_runs/pa_locked_2026/artifacts/PA_BENCHMARK_RESULT.json benchmark_results/pa_model_locked_2026.json
+          cp model_runs/pa_locked_2026/plate_appearances.csv.gz.receipt.json benchmark_results/pa_dataset_locked_2026_receipt.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add benchmark_results/pa_model_locked_2026.json benchmark_results/pa_dataset_locked_2026_receipt.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Record locked PA receipts for ${GITHUB_SHA::7} [skip ci]"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+
+      - name: Enforce private-data boundary
+        shell: bash
+        run: |
+          echo "Raw PA rows, model binaries, and row-level predictions are not uploaded to public Actions artifacts or caches."
+          echo "Move any reproducibility package to approved private storage out of band."
