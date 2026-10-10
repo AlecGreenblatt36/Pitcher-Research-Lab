@@ -37,7 +37,26 @@ def test_last_lineup_is_the_latest_game_in_batting_order():
     hitters, relievers, last = B.recent_players(_table(), {1: [10, 11]}, {(10, 1): 'away', (11, 1): 'home'})
     assert last[1] == [102, 101, 103, 104, 110, 106, 107, 108, 109]
     assert set(hitters[1]) == {101, 102, 103, 104, 105, 106, 107, 108, 109, 110}
-    assert relievers[1] == [701]
+    assert relievers[1] == [701, 801]          # one game each, same batters faced: the latest first
+
+
+def test_relievers_count_every_recent_game():
+    B = _report()
+    rows = []
+
+    def game(pk, day, half, pitchers_by_pa):
+        for ab, pit in enumerate(pitchers_by_pa, start=1):
+            for pn in range(2):
+                rows.append((pk, day, half, 100 + ab % 9, pit, ab, pn))
+    # team 1 fields the home half (1) in game 20 and the away half (0) in games 21 and 22
+    game(20, 1, 1, [500] * 20 + [601] * 3 + [602] * 3)
+    game(21, 2, 0, [510] * 20 + [601] * 2 + [603] * 6)
+    game(22, 3, 0, [520] * 20 + [604] * 3 + [603] * 1)
+    a = np.array(rows)
+    T = {'game': a[:, 0], 'day': a[:, 1], 'half': a[:, 2], 'batter': a[:, 3], 'pitcher': a[:, 4], 'ab': a[:, 5], 'pitch_no': a[:, 6]}
+    _, relievers, _ = B.recent_players(T, {1: [20, 21, 22]}, {(20, 1): 'away', (21, 1): 'home', (22, 1): 'home'})
+    # 603 and 601 pitched in two games (603 faced more batters); 604 and 602 in one (604 more recently)
+    assert relievers[1] == [603, 601, 604, 602]
 
 
 def test_no_last_lineup_without_nine_batters():

@@ -703,15 +703,16 @@ def boxscore_players(game_pk: int) -> dict:
 
 
 def recent_players(T: dict, game_pks_by_team: dict, team_games: dict) -> tuple[dict, dict, dict]:
-    """From the pitch table: each team's hitters (by plate appearances) and relievers (by appearances) in its recent games,
-    and the batting order of its latest game in the table (the simulator projects a lineup the same way: the team's most
-    recent lineup)."""
+    """From the pitch table: each team's hitters (by plate appearances) and relievers in its recent games, and the batting
+    order of its latest game in the table (the simulator projects a lineup the same way: the team's most recent lineup).
+    Relievers are every pitcher after a game's first one, ranked by games pitched in relief, then batters faced, then the
+    latest appearance (before October 10, 2026 only the last game in the list counted, so a plan showed whoever pitched
+    in relief the night before)."""
     hitters, relievers, last_order = {}, {}, {}
-    starters_of = {}
     g = T['game']; h = T['half']; b = T['batter']; p = T['pitcher']; ab = T['ab']; pn = T['pitch_no']; dy = T['day']
     first = pn == 0
     for tid, pks in game_pks_by_team.items():
-        hc = {}; pc = {}; latest = None
+        hc = {}; pc = {}; pbf = {}; plast = {}; latest = None
         for pk in pks:
             side = team_games[(pk, tid)]            # 'away' or 'home'
             bat_half = 0 if side == 'away' else 1; fld_half = 1 - bat_half
@@ -723,17 +724,19 @@ def recent_players(T: dict, game_pks_by_team: dict, team_games: dict) -> tuple[d
                 if latest is None or key > latest[0]:
                     o = np.argsort(ab[m], kind='stable')
                     latest = (key, list(dict.fromkeys(int(x) for x in b[m][o]))[:9])
-        if latest is not None and len(latest[1]) == 9:
-            last_order[tid] = latest[1]
             m2 = (g == pk) & (h == fld_half)
             if m2.any():
                 order = np.argsort(ab[m2] * 100 + pn[m2], kind='stable'); ps = p[m2][order]
-                starters_of[(pk, tid)] = int(ps[0])
-                for x in (np.unique(ps[1:]) if len(ps) > 1 else []):
-                    if int(x) != int(ps[0]):
-                        pc[int(x)] = pc.get(int(x), 0) + 1
+                st = int(ps[0]); day_ = int(dy[m2].max())
+                for x in {int(v) for v in ps} - {st}:
+                    pc[x] = pc.get(x, 0) + 1; plast[x] = max(plast.get(x, 0), day_)
+                for x in p[m2 & first]:
+                    if int(x) != st:
+                        pbf[int(x)] = pbf.get(int(x), 0) + 1
+        if latest is not None and len(latest[1]) == 9:
+            last_order[tid] = latest[1]
         hitters[tid] = sorted(hc, key=lambda k: -hc[k])[:13]
-        relievers[tid] = sorted(pc, key=lambda k: -pc[k])[:6]
+        relievers[tid] = sorted(pc, key=lambda k: (-pc[k], -pbf.get(k, 0), -plast.get(k, 0), k))[:6]
     return hitters, relievers, last_order
 
 
