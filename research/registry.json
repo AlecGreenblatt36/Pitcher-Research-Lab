@@ -4294,14 +4294,19 @@
     "id": "WHIFF-OWN-03",
     "columns": {
      "ID": "WHIFF-OWN-03",
-     "Attempt": "WHIFF-OWN-02 with the weights fit by cross-fitting: each hitter's training games split by game number into two halves, each half's rows read by the swing map fit on the other half, so a map's in-sample fit does not inflate the weights; plans and later rows still use the full maps, and the whiff maps are fit on top of the full-map offset (params whiff_own 3). Smoke test on a synthetic world (scratch cross/smoke_wo.py): runs; settings 0 and 2 reproduce their earlier numbers. **Registered in the commit that added this row, before the runs.** Gated on windows no whiff run has used: as of 2024-09-01 and 2025-05-01, CAL-04's split, on (3) against off (0), four calibration-only runs. Gate, in both runs: (1) whiff log loss of the maps on the later swings lower, out of the zone and over all swings; (2) the two extreme bins out of the zone within 0.95 to 1.05; (3) the two extreme bins inside within 0.92 to 1.08. Prediction: weights smaller than WHIFF-OWN-02's in size; log loss lower by 0.3 to 1.2 nats per 1,000 swings out of the zone and 0 to 0.5 over all; the extreme bins out of the zone 0.96 to 1.04. If it holds: on in the engine (WHIFF_OWN 3), the aiming value re-priced, the reports rebuilt.",
-     "Disposition and evidence": "registered, running"
+     "Attempt": "WHIFF-OWN-02 with the weights fit by cross-fitting: each hitter's training games split by game number into two halves, each half's rows read by the swing map fit on the other half, so a map's in-sample fit does not inflate the weights; plans and later rows still use the full maps, and the whiff maps are fit on top of the full-map offset (params whiff_own 3). Smoke test on a synthetic world (scratch cross/smoke_wo.py): runs; settings 0 and 2 reproduce their earlier numbers. **Registered in the commit that added this row, before the runs.** Gated on windows no whiff run has used: as of 2024-09-01 and 2025-05-01, CAL-04's split, on (3) against off (0), four calibration-only runs. Gate, in both runs: (1) whiff log loss of the maps on the later swings lower, out of the zone and over all swings; (2) the two extreme bins out of the zone within 0.95 to 1.05; (3) the two extreme bins inside within 0.92 to 1.08. Prediction: weights smaller than WHIFF-OWN-02's in size; log loss lower by 0.3 to 1.2 nats per 1,000 swings out of the zone and 0 to 0.5 over all; the extreme bins out of the zone 0.96 to 1.04. If it holds: on in the engine (WHIFF_OWN 3), the aiming value re-priced, the reports rebuilt. **Results (2024-09-01: runs 38078867274 off, 38078880836 on; 2025-05-01: 38078896258, 38078911772):** gate not met. 2024-09-01 passed every part (log loss -1.72 out of the zone and -0.35 over all; extremes out of the zone 0.982 and 0.955, inside 1.013 and 1.018). 2025-05-01 did not: log loss -0.20 out of the zone but +0.01 over all, the high bin out of the zone 0.942 and the high bin inside 1.081. Cross-fitting did not take out the overshoot at the high end. Across WHIFF-OWN-01 to 03 the pattern holds in every window: a hitter's swing tendency at a spot carries real information about his misses there, most at the low end (hitters who rarely chase a spot miss more when they do), but one straight-line weight on it overcorrects the heavy chasers. Not adopted; the engine keeps the location-only whiff model. The next step would give the input a curved shape, gated on windows not yet used; left open.",
+     "Disposition and evidence": "gate not met; not adopted; open"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38078867274",
+     "38078880836",
+     "38078896258",
+     "38078911772"
+    ],
     "frozen_commits": [],
-    "status": "registered, running"
+    "status": "gate not met; not adopted; open"
    }
   ],
   "BOX-01": [
