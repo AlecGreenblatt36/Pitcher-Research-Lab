@@ -45,7 +45,21 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
-### In flight (updated 8:45 p.m. Eastern October 9, by `date -u`; earlier stamps in this section ran ahead of the clock)
+### In flight (updated 10:25 p.m. Eastern October 9, by `date -u`; earlier stamps in this section ran ahead of the clock)
+
+- Alec, 9:55 p.m.: the site's words sound like AI, the layouts are bad, and you cannot look at future or past games and
+  see the model overall. Done the same night: the date strip and calendar run two weeks ahead; a day with no saved
+  numbers shows MLB's schedule with probable starters and the series estimate; a scoreboard strip (winners picked over
+  the two seasons re-run, the market on the same games, the live picks) sits on every day page and opens the Record
+  page, which now leads with the bottom line in words and the season tables; the explanatory text across the site was
+  rewritten in plain words with the long parts folded into expandable notes (details.more); the season archives were
+  rebuilt from the production replays (v2-prod3-1000) so past days and the tables show the model as it runs. Keep
+  going on wording and layout: anything that reads like a paper should be cut or folded away.
+- TOTALS-08 is closed: both runs (independent and paired streams) improve the totals in both seasons by about 0.03
+  runs squared, remove the park reversal, and leave win chances alone, but the gain is below what two seasons can
+  resolve, so the registered gate is not met. Removing the venue term from brl_live/environment.json is a do-no-harm
+  product call for Alec (brl_replay/environment_weather.json is the candidate; then refit the taught headline on
+  v2-prod3-weather-ps-1000 with harness/fit_headline3.py and TOTALS-03's weights with harness/totals_taught.py).
 
 - TOTALS-08 first pass: the venue term's removal did what the mechanism said (park reversal -0.45 to -0.03, squared
   error -0.049 and -0.027, inside the registered range) but the pooled interval reaches zero. The tie-break, declared in
