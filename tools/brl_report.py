@@ -855,6 +855,48 @@ def fit_n(fit):
     return fit.n_train
 
 
+def calibration(fit) -> dict:
+    """CAL-01 (diagnostic): the league swing model's expected swings against actual swings, on the training rows and on
+    the rows after the as-of date, split by where the pitch crossed (outside or inside the zone), pitch family, how far
+    outside, and whether it looked like a strike at the decision moment; the hitter maps' expectation alongside on the
+    rows of hitters with a map. Sums only (counts and expected counts); no player rows."""
+    T = fit.T; tr = fit.train; te = ~tr
+    p = sig(fit.off_s)
+    g = T['group']
+    fam = np.where(np.isin(g, (0, 1, 2, 6)), 0, np.where(np.isin(g, (3, 4)), 1, 2))
+    names = ('fastball', 'breaking', 'offspeed')
+    u_t = np.where(T['stand_r'] == 1, fit.xt, -fit.xt)
+    dist = np.maximum.reduce([np.abs(u_t) - D.ZONE_HALF, fit.zt - D.ZONE_TOP, D.ZONE_BOT - fit.zt])
+    dbin = np.digitize(dist, (0.1, 0.25, 0.5, 1.0))              # outside rows only: 0 = within 0.1 ft of the edge ... 4 = a foot or more
+    u_p = np.where(T['stand_r'] == 1, fit.xp, -fit.xp)
+    looks_in = ~((np.abs(u_p) > D.ZONE_HALF) | (fit.zp > D.ZONE_TOP) | (fit.zp < D.ZONE_BOT))
+    ph = np.full(len(p), np.nan)
+    for h, m in fit.maps_s.items():
+        r = np.flatnonzero(T['batter'] == h)
+        if len(r):
+            ph[r] = sig(fit.off_s[r] + fit.Bs[r] @ m)
+    has_map = np.isfinite(ph)
+    out = {}
+
+    def add(key, m):
+        mm = m & has_map
+        out[key] = {'n': int(m.sum()), 'swings': int(fit.swing[m].sum()), 'league': round(float(p[m].sum()), 1),
+                    'n_map': int(mm.sum()), 'swings_map_rows': int(fit.swing[mm].sum()), 'league_map_rows': round(float(p[mm].sum()), 1), 'map': round(float(ph[mm].sum()), 1)}
+    for split, m0 in (('train', tr), ('test', te)):
+        for zone, mz in (('outside', fit.outside), ('inside', ~fit.outside)):
+            add(f'{split}|{zone}|all', m0 & mz)
+            for k, nm in enumerate(names):
+                add(f'{split}|{zone}|{nm}', m0 & mz & (fam == k))
+        for b in range(5):
+            add(f'{split}|outside|distance{b}', m0 & fit.outside & (dbin == b))
+        add(f'{split}|outside|looks_in', m0 & fit.outside & looks_in)
+        add(f'{split}|outside|looks_out', m0 & fit.outside & ~looks_in)
+        add(f'{split}|inside|looks_out', m0 & ~fit.outside & ~looks_in)
+        for c3, cn in ((0, 'even_or_ahead'), (1, 'behind'), (2, 'two_strikes')):
+            add(f'{split}|outside|count_{cn}', m0 & fit.outside & (fit.cgrp == c3))
+    return out
+
+
 
 def environment_record() -> dict:
     """ENG-01: the versions a run used, kept in its receipt so a result can be reproduced (python, numpy, scipy, scikit-learn, pandas, the commit)."""
@@ -919,6 +961,10 @@ def main():
             if a not in fits:
                 fits.clear()
                 fits[a] = Fitted(T, date.fromisoformat(a).toordinal(), stage, int(params.get('min_pitches', 300)), int(params.get('min_swings', 200)))
+                if params.get('calibration_diag'):
+                    receipt.setdefault('calibration', {})[a] = calibration(fits[a]); stage('calibration')
+            if params.get('calibration_only'):
+                continue
             rep = build_report(fits[a], T, day, a, stage, int(params.get('max_relievers', 4)))
             total = 0
             summary = {k: v for k, v in rep.items() if k != 'games'}
