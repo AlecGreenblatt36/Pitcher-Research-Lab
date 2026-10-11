@@ -387,7 +387,10 @@ ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         'market_day_form':None,
         # POST-03 (queued for Alec, off): {'cuts': [0.1518, 0.1876], 'scale': [0.81, 0.89, 0.94]} by the starter's
         # strikeouts minus walks this season (postseason starts 2023-2026: 0.772, 0.846 and 0.900 of his regular length)
-        'postseason_starter_tiers':None}
+        'postseason_starter_tiers':None,
+        # LEASH-02 (off until its replays are read): the inning correction on the starter-exit hazard's log-odds, regular
+        # season only (brl_live/hazard_correction.json); the postseason keeps its measured usage on the plain hazard
+        'hazard_correction':False}
 
 TRANSITIONS_PATH=Path(__file__).resolve().parent/'transitions.json'
 RUNNING_EVENTS_PATH=Path(__file__).resolve().parent/'running_events.json'
@@ -404,6 +407,16 @@ def leash_for(settings):
         from research_lab.game_sim.starter_leash import Leash
         _KERNEL['l']=Leash(json.loads(LEASH_PATH.read_text()))
     return _KERNEL['l']
+
+HAZARD_CORRECTION_PATH=Path(__file__).resolve().parent/'hazard_correction.json'
+
+def hazard_correction_for(settings,game_type):
+    """LEASH-02's correction ({'terms','coef'}) for a regular-season game when switched on, else None."""
+    if not settings.get('hazard_correction') or str(game_type)!='R':return None
+    if 'hc' not in _KERNEL:
+        doc=json.loads(HAZARD_CORRECTION_PATH.read_text())
+        _KERNEL['hc']={'terms':doc['terms'],'coef':doc['coef']}
+    return _KERNEL['hc']
 
 def leash_pexp(leash,history,pexp,starters,date,league):
     """pexp with each of the game's starters moved by the leash table, from his regular-season appearances before the

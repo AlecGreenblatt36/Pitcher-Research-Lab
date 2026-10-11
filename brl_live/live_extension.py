@@ -113,9 +113,13 @@ def make_history_engine(parameters: dict, history_path: Path, physics_table=None
                 f = starter_tier_scale(tiers, season_kbb(history, sp, parameters['date']))
                 if f is not None and int(sp) in pexp:
                     pexp[int(sp)] = pexp[int(sp)] / scale * f
+    from .boxscore import ADJUST as _ADJ, hazard_correction_for
+    correction = hazard_correction_for(_ADJ, matchup.game_type)
     manager = PortableStarterPolicy(manager_doc, pexp, texp,
         {int(matchup.away.starter.player_id): matchup.away.team_id,
-         int(matchup.home.starter.player_id): matchup.home.team_id})
+         int(matchup.home.starter.player_id): matchup.home.team_id}, correction=correction)
+    if correction is not None:
+        leash_label = (leash_label + '; ' if leash_label else '') + 'starter exits by inning (LEASH-02)'
     if scale is not None:
         manager.league = float(manager.league) * scale
         manager.adjust_label = 'postseason starter usage (expected batters x%.2f)' % scale

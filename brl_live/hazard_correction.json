@@ -1,0 +1,135 @@
+{
+ "schema": "brl.hazard-correction.v1",
+ "terms": [
+  "i3e_behind",
+  "i3e_tied",
+  "i3e_ahead",
+  "i3m_behind",
+  "i3m_tied",
+  "i3m_ahead",
+  "i4e_behind",
+  "i4e_tied",
+  "i4e_ahead",
+  "i4m_behind",
+  "i4m_tied",
+  "i4m_ahead",
+  "i5e_behind",
+  "i5e_tied",
+  "i5e_ahead",
+  "i5m_behind",
+  "i5m_tied",
+  "i5m_ahead",
+  "i6e_behind",
+  "i6e_tied",
+  "i6e_ahead",
+  "i6m_behind",
+  "i6m_tied",
+  "i6m_ahead",
+  "i7e_behind",
+  "i7e_tied",
+  "i7e_ahead",
+  "i7m_behind",
+  "i7m_tied",
+  "i7m_ahead",
+  "i4m_quiet",
+  "i5m_scoreless"
+ ],
+ "coef": [
+  -0.15588,
+  -0.14075,
+  -0.30023,
+  0.49647,
+  -0.2963,
+  -0.18328,
+  -0.52461,
+  -0.4464,
+  -0.63064,
+  0.11195,
+  0.01963,
+  0.01579,
+  -0.10153,
+  -0.01033,
+  0.18961,
+  0.17613,
+  0.1226,
+  0.07904,
+  -0.16799,
+  -0.03907,
+  0.07457,
+  -0.28908,
+  -0.13137,
+  -0.05833,
+  0.4905,
+  0.27775,
+  0.63145,
+  -0.24121,
+  0.1831,
+  0.03615,
+  -0.35874,
+  -0.5818
+ ],
+ "lam": 10.0,
+ "train": [
+  2023,
+  2024
+ ],
+ "source": "LEASH-02: a correction on the live starter-exit hazard's log-odds, fitted on every 2023 and 2024 regular-season removal decision with the hazard's own chance as the offset (research run 38156674333, tools/brl_research.py hazard_fix); decision log loss on 2025 -0.00071 [-0.00097, -0.00046] and on 2026 -0.00042 [-0.00069, -0.00016]",
+ "by_season": {
+  "2023": {
+   "log_loss_plain": 0.104695,
+   "log_loss_corrected": 0.103676,
+   "log_loss_change": -0.001019,
+   "ci": [
+    -0.00126,
+    -0.000768
+   ],
+   "after_4th": {
+    "removals": 253,
+    "plain": 405.6,
+    "corrected": 272.7
+   }
+  },
+  "2024": {
+   "log_loss_plain": 0.102114,
+   "log_loss_corrected": 0.101152,
+   "log_loss_change": -0.000962,
+   "ci": [
+    -0.001199,
+    -0.000713
+   ],
+   "after_4th": {
+    "removals": 266,
+    "plain": 391.2,
+    "corrected": 262.3
+   }
+  },
+  "2025": {
+   "log_loss_plain": 0.103563,
+   "log_loss_corrected": 0.102853,
+   "log_loss_change": -0.000711,
+   "ci": [
+    -0.000969,
+    -0.000464
+   ],
+   "after_4th": {
+    "removals": 261,
+    "plain": 395.0,
+    "corrected": 263.6
+   }
+  },
+  "2026": {
+   "log_loss_plain": 0.109797,
+   "log_loss_corrected": 0.109379,
+   "log_loss_change": -0.000418,
+   "ci": [
+    -0.000688,
+    -0.000157
+   ],
+   "after_4th": {
+    "removals": 290,
+    "plain": 415.8,
+    "corrected": 280.4
+   }
+  }
+ }
+}
