@@ -76,6 +76,12 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   usage by count and put-away rates (count_tend, usage_by_count; rebuilt in 38106430325); hitter tags for first-pitch and
   two-strike habits. Checked and dropped: in-season re-anchoring of the run level (task 10): the simulator's monthly
   total bias is within noise and reverses between seasons (2025-08 -0.37, 2026-08 +0.26; standard errors about 0.22).
+  Later: ZONES-02 held (the Expected view is fine on every hand and pitch-type subset at the pooled m); pitcher cards
+  carry the arsenal by pitch type (pitcher_card['arsenal']: share, mph, spin, PITCHf/x movement with arm side
+  positive, misses, chases, zone, put-away); plans show the lineup at a glance against the starter's hand; box scores
+  carry earned runs for real games (real_game PIT_FIELDS and parse_actual_box mapping; simulated lines have none);
+  coaching lines from count habits (countPlan, usageLine). MATCHUPREAD-01 registered and run (a pitcher's locations
+  over a hitter's expected zones against league locations); its row says what the plan shows.
 
 - October 10, 9 p.m. (Game 5 in progress): Alec asked for hot zones and layouts like the standard market. Done:
   hitter cards in the plans and on the Players page carry MLB's 13 zones (1-9 the strike zone by thirds, 11-14 the
