@@ -35,6 +35,64 @@ def pick(d, keys):
 
 
 STAT_KEYS = ('gamesPlayed', 'gamesStarted', 'wins', 'losses', 'era', 'inningsPitched', 'strikeOuts', 'baseOnBalls', 'whip', 'saves', 'homeRuns')
+GL_PITCH = ('inningsPitched', 'hits', 'runs', 'earnedRuns', 'baseOnBalls', 'strikeOuts', 'homeRuns', 'numberOfPitches', 'wins', 'losses', 'saves',
+            'holds', 'blownSaves', 'gamesStarted', 'era', 'summary')
+GL_HIT = ('plateAppearances', 'atBats', 'runs', 'hits', 'doubles', 'triples', 'homeRuns', 'rbi', 'baseOnBalls', 'strikeOuts', 'stolenBases', 'avg', 'obp',
+          'slg', 'ops', 'summary')
+
+
+def game_log_shape(doc, keys, last=3):
+    """A game-log answer's shape: the stat types it holds, how many games, their date order, the keys a split and its stat
+    carry, and the last few games' public box facts. Both answer forms: {'stats': [...]} and {'people': [{'stats': [...]}]}."""
+    holders = (doc or {}).get('people') or [doc or {}]
+    seen, games = set(), []
+    for p in holders:
+        for st in p.get('stats') or []:
+            t = (st.get('type') or {}).get('displayName') or ''
+            seen.add(t)
+            for x in st.get('splits') or []:
+                if t == 'gameLog':
+                    games.append(x)
+    split_keys, stat_keys = set(), set()
+    for x in games:
+        split_keys.update(x.keys()); stat_keys.update((x.get('stat') or {}).keys())
+    dates = [x.get('date') for x in games]
+    tail = [{'date': x.get('date'), 'gameType': x.get('gameType'), 'isHome': x.get('isHome'), 'isWin': x.get('isWin'),
+             'team': (x.get('team') or {}).get('name'), 'opponent': (x.get('opponent') or {}).get('name'),
+             'opponent_id': (x.get('opponent') or {}).get('id'), 'game_pk': (x.get('game') or {}).get('gamePk'),
+             'stat': pick(x.get('stat') or {}, keys)} for x in games[-last:]]
+    return {'types': sorted(seen), 'n_games': len(games), 'first_dates': dates[:3], 'last_dates': dates[-3:],
+            'ascending': dates == sorted(d or '' for d in dates), 'split_keys': sorted(split_keys), 'stat_keys': sorted(stat_keys), 'last_games': tail}
+
+
+def game_log_checks(out, teams, season):
+    """Can a player page show his last games the way every player page does? The game-log answers for the two probable
+    starters (pitching) and one position player from each team (hitting), in the forms the page could ask for."""
+    pitchers = [teams[s]['probablePitcher']['id'] for s in ('away', 'home')]
+    hitters = []
+    for s in ('away', 'home'):
+        tid = ((teams.get(s) or {}).get('team') or {}).get('id')
+        info, doc = get(API + f'v1/teams/{tid}/roster?rosterType=active&season={season}')
+        out['checks'].setdefault('roster', {})[s] = info
+        for r in (doc or {}).get('roster') or []:
+            if ((r.get('position') or {}).get('type') or '') != 'Pitcher' and (r.get('person') or {}).get('id'):
+                hitters.append(r['person']['id']); break
+    asks = []
+    for pid in pitchers[:1]:
+        asks += [('gamelog_pitching', f'v1/people/{pid}/stats?stats=gameLog&group=pitching&season={season}', GL_PITCH),
+                 ('gamelog_pitching_post', f'v1/people/{pid}/stats?stats=gameLog&group=pitching&season={season}&gameType=P', GL_PITCH)]
+    asks.append(('gamelog_pitching_hydrate', 'v1/people?personIds=' + ','.join(str(i) for i in pitchers) + '&hydrate='
+                 + quote(f'stats(group=[pitching],type=[season,gameLog],season={season})', safe='()=,[]'), GL_PITCH))
+    for hid in hitters[:1]:
+        asks += [('gamelog_hitting', f'v1/people/{hid}/stats?stats=gameLog&group=hitting&season={season}', GL_HIT),
+                 ('gamelog_hitting_post', f'v1/people/{hid}/stats?stats=gameLog&group=hitting&season={season}&gameType=P', GL_HIT),
+                 ('gamelog_hitting_one', f'v1/people/{hid}?hydrate=' + quote(f'stats(group=[hitting],type=[season,gameLog],season={season})', safe='()=,[]'), GL_HIT),
+                 ('gamelog_hitting_one_rp', f'v1/people/{hid}?hydrate=' + quote(f'stats(group=[hitting],type=[gameLog],season={season},gameType=[R,P])', safe='()=,[]'), GL_HIT)]
+    out['gamelog_players'] = {'pitchers': pitchers, 'hitters': hitters}
+    for name, path, keys in asks:
+        info, doc = get(API + path)
+        info['shape'] = game_log_shape(doc, keys)
+        out['checks'][name] = info
 
 
 def main():
@@ -73,6 +131,10 @@ def main():
                                      'split_keys': sorted(sp.keys())})
             info['rows'] = rows
             out['checks'][name] = info
+        try:
+            game_log_checks(out, teams, season)
+        except Exception as exc:                      # the probe's other answers still land
+            out['gamelog_error'] = type(exc).__name__ + ': ' + str(exc)[:200]
         info, doc = get(API + f"v1.1/game/{game['gamePk']}/feed/live")
         if doc:
             bx = ((doc.get('liveData') or {}).get('boxscore') or {}).get('teams') or {}
