@@ -65,7 +65,19 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 8:00 a.m. Eastern October 11, by `date -u`)
+### In flight (updated 8:25 a.m. Eastern October 11, by `date -u`)
+
+- October 11, 8:25 a.m.: PLAYER-03 registered (d6fa2bb37) and its two replays running: the page's hitter chances (1+ hit,
+  2+ hits, HR, walk, strikeout) on the live engine, 2026 (run 38138601871) and 2025 (run 38138625455), tags
+  v2-prod4-hitters-1000-<season>; the harness now records each hitter's histograms of hits, home runs, walks and
+  strikeouts. Score them with `python3 tools/brl_player_cal.py --season 2025='<dir>/2025-*.jsonl.gz' --season
+  2026='<dir>/2026-*.jsonl.gz' --out <file>` (per-game files research/replay-v2-prod4-hitters-1000-<season>-<run>-s<k>of8.jsonl.gz)
+  and apply exactly the registered rule (a kind passes only if both seasons' Brier interval ends below zero and the
+  calibrated mean is within 0.5 points). PLAYER-04 (descriptive): starters' strikeout chances on the live engine are
+  calibrated (within 2.1 points at every line, both seasons), so the Odds tab lists each starter's strikeouts as a prop
+  ladder with fair prices (kLadder). PROD-13: the Odds tab's hitter table now gives each hitter's own chances
+  (ownAtLeast, PLAYER-02's share), the same numbers as the Summary's meters; the Record page's tag table fits a phone.
+  Barrel rate is on both percentile panels (cards rebuilt, run 38137780354: Ohtani 18.6%, 99th; Skubal 7.1% against).
 
 - October 11, 8:00 a.m.: PXSTATS-01 held (run 38136607768): for pitchers, expected AVG and SLG against from exit speed and
   launch angle predicted the next season better than the actual ones (unlike hitters, XSTATS-01), so pitcher pages and
