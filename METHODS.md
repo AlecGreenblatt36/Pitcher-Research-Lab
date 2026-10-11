@@ -254,6 +254,12 @@ too seldom, so the simulator used more relievers per out its starter missed than
 inning and batters faced, fitted on other seasons, cut that gap from 0.039 and 0.031 pitchers per out to 0.017 and 0.006
 with win chances and totals unchanged; it is on for regular-season games.
 
+The bullpen's chance to pitch was scored per reliever on the same replays (BULLPEN-03): right on average and within
+about 3 points below 60%, but the arms the simulator calls likeliest pitch far less often than it says (60% to 80%
+shown, about 53% pitched, in both seasons). The choice model itself is calibrated entry by entry, and unavailable arms
+explain little of it, so the miss is in how often the simulated games call for the top relievers. A straight calibration
+could not pull those chances down (BULLPEN-04), so the page keeps them and says so under the tables.
+
 ## The season's level, re-anchored in-season (October 11, 2026)
 
 Outcome levels move from season to season (more walks and fewer extra-base hits and home runs in 2026 than in 2025), and
