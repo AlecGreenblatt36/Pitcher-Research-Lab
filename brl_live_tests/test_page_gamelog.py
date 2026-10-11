@@ -144,3 +144,10 @@ def test_american_odds_from_a_win_chance():
     js = ("assert.equal(amOdds(0.5),'\\u2212100');assert.equal(amOdds(0.6),'\\u2212150');assert.equal(amOdds(0.4),'+150');assert.equal(amOdds(0.25),'+300');"
           "assert.equal(amOdds(null),'\\u2013');assert.equal(amOdds(1),'\\u2013');assert.equal(amText(-113),'\\u2212113');assert.equal(amText(105),'+105');assert.equal(amText(null),'\\u2013');")
     subprocess.run(['node', '-e', "const assert=require('assert');" + _fn(s, 'amOdds') + _fn(s, 'amText') + js], check=True)
+
+
+def test_hitter_season_line_text():
+    s = _script()
+    js = ("assert.equal(hlText({avg:'.274',homeRuns:22,ops:'.811',plateAppearances:540},'2026'),'2026: .274 AVG, 22 HR, .811 OPS in 540 PA');"
+          "assert.equal(hlText({avg:'.200',homeRuns:0},'2026'),'2026: .200 AVG, 0 HR, \\u2013 OPS');assert.equal(hlText(null,'2026'),'');assert.equal(hlText({homeRuns:3},'2026'),'');")
+    subprocess.run(['node', '-e', "const assert=require('assert');" + _fn(s, 'hlText') + js], check=True)

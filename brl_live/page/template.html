@@ -451,6 +451,8 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .ps-strip:empty, .ps-slot:empty { display: none; }
 .pm-sub { display: block; font-family: var(--body); font-size: 14px; color: var(--muted); }
 .pen-pct { display: inline-block; min-width: 38px; padding: 0 4px; border-radius: 4px; text-align: center; }
+.pl-season { font-size: 14px; color: var(--muted); margin: 0 0 2px; }
+.pl-season:empty { display: none; }
 .pen td:first-child, .pen th:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); }
 .board-wrap { max-width: 460px; margin-top: 12px; }
 .other-checks td { font-family: var(--body); font-size: 15px; text-align: left; white-space: normal; vertical-align: top; line-height: 1.4; }
@@ -966,6 +968,40 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         });
         paint();
       }, function () { ids.forEach(function (id) { SP_LINES[id + ":" + year] = { failed: true }; }); });
+    });
+  }
+  /* Each planned hitter's MLB season line (AVG, HR, OPS), the line every lineup card prints, read by the browser in
+     batches like the starters' lines (a traded player's whole season). Filled in place once it arrives. */
+  var HL_LINES = {};
+  function hlText(st, y) {
+    if (!st || st.avg == null) return "";
+    return y + ": " + st.avg + " AVG, " + (st.homeRuns || 0) + " HR, " + (st.ops || "\u2013") + " OPS" + (st.plateAppearances ? " in " + st.plateAppearances + " PA" : "");
+  }
+  function fillHitLines() {
+    var want = {};
+    var paint = function () {
+      app.querySelectorAll("[data-hl]").forEach(function (el) { var e = HL_LINES[el.getAttribute("data-hl") + ":" + el.getAttribute("data-year")]; if (e && e.stat) el.textContent = hlText(e.stat, el.getAttribute("data-year")); });
+    };
+    app.querySelectorAll("[data-hl]").forEach(function (el) {
+      var id = el.getAttribute("data-hl"), y = el.getAttribute("data-year");
+      if (HL_LINES[id + ":" + y]) return;
+      want[y] = want[y] || {}; want[y][id] = 1;
+    });
+    paint();
+    Object.keys(want).forEach(function (y) {
+      var ids = Object.keys(want[y]);
+      ids.forEach(function (id) { HL_LINES[id + ":" + y] = { pending: true }; });
+      for (var i = 0; i < ids.length; i += 40) (function (chunk) {
+        lcFetch(LIVE_API + "v1/people?personIds=" + chunk.join(",") + "&hydrate=stats(group=[hitting],type=[season],season=" + y + ")").then(function (doc) {
+          ((doc || {}).people || []).forEach(function (p) {
+            var sp = []; (p.stats || []).forEach(function (st) { (st.splits || []).forEach(function (x) { if (x && x.stat) sp.push(x); }); });
+            var tot = sp.filter(function (x) { return x.numTeams; })[0] || sp[sp.length - 1];
+            if (HL_LINES[p.id + ":" + y]) HL_LINES[p.id + ":" + y] = tot ? { stat: tot.stat } : { none: true };
+          });
+          chunk.forEach(function (id) { if (HL_LINES[id + ":" + y].pending) HL_LINES[id + ":" + y] = { none: true }; });
+          paint();
+        }, function () { chunk.forEach(function (id) { HL_LINES[id + ":" + y] = { failed: true }; }); });
+      })(ids.slice(i, i + 40));
     });
   }
   function recordText(f, c, side) {
@@ -3466,6 +3502,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   function wireReport(f, pk) {
     var host = document.getElementById("rp-" + pk);
     if (!host) return;
+    fillHitLines();
     var stop = function () { state.rpFollow[pk] = false; };
     host.querySelectorAll("[data-rpmetric]").forEach(function (b) { b.addEventListener("click", function () { state.rpMetric = b.getAttribute("data-rpmetric"); loadReport(f, pk); }); });
     host.querySelectorAll("[data-jump]").forEach(function (b) {
@@ -4098,7 +4135,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (spots && !spot && !benchShown) { h += '<li class="plan-bench">Off the bench</li>'; benchShown = true; }
       h += "<li" + (pr ? ' class="plan-row rp-cell' + (sel === key ? " rp-sel" : "") + '" data-rp="' + key + '" tabindex="0"' : ' class="plan-row"') + '><div class="pl-top"><b><span class="spot">' + (spot || "") + "</span>" + esc(nm(hid)) + (card ? " <small>" + esc(batsWords(card)) + "</small>" : "") + "</b>" +
         (edge ? '<span class="pl-edge ' + edge.split(" ")[0].toLowerCase() + '">' + edge + "</span>" : "") + "</div>" +
-        '<div class="pl-body' + (chart ? "" : " no-hz") + '"><div class="pl-main">' + hzStatLine(card, useHand, doc.league) + '<div class="pl-txt">' + esc(pr ? planLine(pr, players[String(starter.id)] && players[String(starter.id)].pitcher) : "Not enough pitches to say yet.") + "</div>" +
+        '<div class="pl-body' + (chart ? "" : " no-hz") + '"><div class="pl-main"><div class="pl-season" data-hl="' + esc(hid) + '" data-year="' + esc(String(doc.date || D.date).slice(0, 4)) + '"></div>' + hzStatLine(card, useHand, doc.league) + '<div class="pl-txt">' + esc(pr ? planLine(pr, players[String(starter.id)] && players[String(starter.id)].pitcher) : "Not enough pitches to say yet.") + "</div>" +
         "</div>" + chart + (tags.length || thin ? '<div class="pl-tags">' + tags.concat(thin ? ["Small sample"] : []).map(function (x) { return "<span>" + esc(x) + "</span>"; }).join("") + "</div>" : "") + "</div></li>";
     });
     return h + "</ol>";
