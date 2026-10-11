@@ -3194,6 +3194,16 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   }
   /* The bullpen card: each planned arm's pitches on the days before the game (days the plan's data covers), his hand
      and his fastball's speed. */
+  /* How he is used (two seasons): starter, closer (most relief outings start in the ninth or later), long man (seven or
+     more batters an outing), late or middle innings by the inning he usually comes in. */
+  function roleLabel(role) {
+    if (!role || !role.apps) return "";
+    if (role.starts >= role.apps * 0.5) return "Starter";
+    if (role.relief < 8 || role.ninth_share == null) return "Reliever";
+    if (role.ninth_share >= 0.45) return "Closer";
+    if (role.bf_per_relief >= 7) return "Long";
+    return role.entry_inning >= 7.3 ? "Late" : "Middle";
+  }
   function bullpenCard(doc, se, nm) {
     var arms = (se.pitchers || []).filter(function (p) { return p.recent; });
     if (!arms.length || !doc.date) return "";
@@ -3204,12 +3214,12 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var pc = players[String(p.id)] && players[String(p.id)].pitcher, fb = pc && pc.mix && pc.mix.fastball;
       var covered = function (k) { return !doc.asof || addDays(doc.date, -k) < doc.asof; }, last = 0;
       for (var k = 5; k >= 1; k--) if (covered(k) && p.recent[k - 1] > 0) last = k;
-      return "<tr><td>" + esc(lastName(nm(p.id))) + (p.role === "starter" ? " <small>SP</small>" : "") + "</td><td>" + esc(pc && pc.throws ? pc.throws : "") + "</td>" +
+      return "<tr><td>" + esc(lastName(nm(p.id))) + (p.role === "starter" ? " <small>SP</small>" : "") + "</td><td>" + esc(pc && pc.throws ? pc.throws : "") + "</td><td>" + esc(p.role === "starter" ? "Starter" : roleLabel(pc && pc.role) || "\u2013") + "</td>" +
         cols.map(function (d) { var k = Math.round((new Date(doc.date + "T12:00:00Z") - new Date(d + "T12:00:00Z")) / 864e5), n = p.recent[k - 1]; return "<td>" + (n ? n : "\u2013") + "</td>"; }).join("") +
         "<td>" + (last ? (last === 1 ? "1 day" : last + " days") : covered(1) ? "5+ days" : "\u2013") + "</td><td>" + (fb && fb.speed != null ? Math.round(fb.speed) : "\u2013") + "</td></tr>";
     }).join("");
-    return '<div class="tbl-wrap hz-types"><table class="box"><thead><tr><th scope="col">Pitcher</th><th scope="col">T</th>' + cols.map(function (d) { return '<th scope="col">' + esc(shortDate(d)) + "</th>"; }).join("") +
-      '<th scope="col">Since</th><th scope="col">FB</th></tr></thead><tbody>' + rows + '</tbody></table></div><p class="note">Pitches thrown on each day, a dash if he did not pitch. Since: days since he last pitched. FB: fastball speed.</p>';
+    return '<div class="tbl-wrap hz-types"><table class="box"><thead><tr><th scope="col">Pitcher</th><th scope="col">T</th><th scope="col">Role</th>' + cols.map(function (d) { return '<th scope="col">' + esc(shortDate(d)) + "</th>"; }).join("") +
+      '<th scope="col">Since</th><th scope="col">FB</th></tr></thead><tbody>' + rows + '</tbody></table></div><p class="note">Pitches thrown on each day, a dash if he did not pitch. Since: days since he last pitched. FB: fastball speed. Role: how he has been used over two seasons (closer: most outings start in the ninth or later).</p>';
   }
   /* The lineup at a glance against the starter's hand: its sides, and its line from the nine hitters' zone counts against
      the league's for the same mix of sides (the standard top of an advance sheet). */

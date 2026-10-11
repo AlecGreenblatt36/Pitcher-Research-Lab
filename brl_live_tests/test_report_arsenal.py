@@ -25,7 +25,8 @@ def test_pitcher_card_arsenal_by_pitch_type():
     T = {'group': group, 'sub': sub, 'v0': np.where(sub == 4, 86.0, 96.0) + rng.normal(0, 0.5, n),
          'spin': np.where(sub == 4, 2600.0, 2350.0), 'pfx_x': np.where(sub == 4, 5.0, -7.0), 'pfx_z': np.where(sub == 4, 1.0, 9.0),
          'throw_r': np.ones(n, int), 'stand_r': np.resize([0, 1], n), 'strikes': np.resize([0, 1, 2], n), 'balls': np.zeros(n, int),
-         'last_in_pa': np.resize([0, 0, 1], n), 'out7': np.resize([1, 0, 3], n), 'zone': np.resize([5, 14], n)}
+         'last_in_pa': np.resize([0, 0, 1], n), 'out7': np.resize([1, 0, 3], n), 'zone': np.resize([5, 14], n),
+         'game': np.repeat(np.arange(10), n // 10), 'inning': np.where(np.repeat(np.arange(10), n // 10) < 4, 1, 9)}
     swing = (np.arange(n) % 2 == 0).astype(float); whiff = (np.arange(n) % 6 == 0).astype(float)
     fake = SimpleNamespace(T=T, gp={77: np.arange(n)}, swing=swing, whiff=whiff, outside=np.resize([False, True], n),
                            xt=np.zeros(n), zt=np.full(n, 2.5), looks_in_ends_out=np.zeros(n, bool))
@@ -36,3 +37,6 @@ def test_pitcher_card_arsenal_by_pitch_type():
     assert abs(ff['share'] - 0.75) < 0.01 and abs(ff['speed'] - 96.0) < 0.2 and ff['spin'] == 2350
     assert ff['h_arm'] == 7.0 and sl['h_arm'] == -5.0                   # a righty's four-seamer runs to his arm side, his slider to his glove side
     assert ff['v_mov'] == 9.0 and sl['v_mov'] == 1.0
+
+    role = card['role']
+    assert role['apps'] == 10 and role['starts'] == 4 and role['relief'] == 6 and role['ninth_share'] == 1.0

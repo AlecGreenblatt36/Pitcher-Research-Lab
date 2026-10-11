@@ -577,7 +577,17 @@ class Fitted:
                             'zone_rate': round(float((~out).mean()), 3),
                             'putaway': round(float((two & (T['last_in_pa'][rr] == 1) & (T['out7'][rr] == 1)).sum() / two.sum()), 3) if two.sum() >= 30 else None})
         arsenal.sort(key=lambda a: -a['share'])
-        return {'throws': 'R' if T['throw_r'][r][0] == 1 else 'L', 'pitches': int(len(r)), 'mix': mix, 'arsenal': arsenal,
+        # how he is used, for the bullpen card: appearances, starts, the inning he comes in and batters per relief outing
+        games_ = T['game'][r]; inn_ = T['inning'][r]
+        ug, gi = np.unique(games_, return_inverse=True)
+        entry = np.full(len(ug), 99); np.minimum.at(entry, gi, inn_)
+        bf = np.bincount(gi, weights=(T['last_in_pa'][r] == 1).astype(np.float64), minlength=len(ug))
+        rel = entry > 1
+        role = {'apps': int(len(ug)), 'starts': int((~rel).sum()), 'relief': int(rel.sum())}
+        if rel.sum():
+            role.update({'ninth_share': round(float((entry[rel] >= 9).mean()), 3), 'entry_inning': round(float(entry[rel].mean()), 2),
+                         'bf_per_relief': round(float(bf[rel].mean()), 2)})
+        return {'throws': 'R' if T['throw_r'][r][0] == 1 else 'L', 'pitches': int(len(r)), 'mix': mix, 'arsenal': arsenal, 'role': role,
                 'chase_rate_against': round(float(self.swing[r][self.outside[r]].mean()), 3) if self.outside[r].any() else None,
                 'looks_in_ends_out': round(float(self.looks_in_ends_out[r].mean()), 3),
                 'zones': zone_split(T, r, self.swing, self.whiff, by='stand_r'),      # where he throws, by the batter's side
