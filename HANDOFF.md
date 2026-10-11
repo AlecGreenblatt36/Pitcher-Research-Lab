@@ -65,7 +65,18 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 8:48 a.m. Eastern October 11, by `date -u`)
+### In flight (updated 9:14 a.m. Eastern October 11, by `date -u`)
+
+- October 11, 9:14 a.m.: PLAYER-03 failed as registered (no kind passes; each replay's level comes from the other seasons'
+  tables, so a map from one season moved the other the wrong way); the page keeps the raw chances, and the Record page
+  says how close they came (hits within 1 point, home runs 0.6, walks about 2). Next season's item from it: re-anchor the
+  outcome levels in-season (RUNS-03 pointed the same way). RUNLINE-01, NRFI-01 and FIRST5-01 registered; their replays
+  run with the live settings (2026 run 38141799131, 2025 run 38141956435, tags v2-prod4-margins-1000-<season>; the
+  harness now records margin_hist, f5_margin_hist, f5_total_hist and first_inning). Score with tools/brl_runline_cal.py
+  and tools/brl_innings_cal.py, then set the page's MORE_MARKETS flags for whatever passed (the section is built and
+  tested, off). Boxes saved from now carry margin_distribution, f5_margin_distribution, f5_total_distribution and
+  first_inning. Lesson: the page is one scope, so a second function with an existing name silently replaces it (a new
+  runLine nearly replaced the running game's, a second ordinal() shipped); test_page_unique_functions.py now guards it.
 
 - October 11, 8:48 a.m.: BVP-01 (run 38139650184): every prediction failed; beyond each player's own level, a hitter's
   record against one pitcher carried between none and about 15% of a 20 plate-appearance record's on-base edge (2026's
