@@ -458,6 +458,9 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .other-checks td { font-family: var(--body); font-size: 15px; text-align: left; white-space: normal; vertical-align: top; line-height: 1.4; }
 .other-checks td:first-child { font-weight: 700; min-width: 9em; }
 .other-checks th { text-align: left; }
+.tag-checks td:first-child { white-space: normal; line-height: 1.3; }
+.tag-checks td:first-child small { display: block; color: var(--muted); font-size: 14px; }
+.tag-checks td { font-size: 16px; vertical-align: top; }
 .price-board th[scope="row"] { text-align: left; font-family: var(--body); font-size: 16px; font-weight: 700; color: var(--ink); border-bottom: 1px solid var(--rule-soft); white-space: nowrap; }
 .ps-h { font-size: 14px; font-weight: 700; color: var(--muted); }
 .ps-cells { display: grid; grid-template-columns: repeat(6, auto); justify-content: space-between; gap: 4px 10px; margin: 6px 0 0; }
@@ -673,6 +676,9 @@ small { font-size: 14px; }
 .range-list b { display: block; }
 .range-list .r { font-family: var(--display); font-size: 19px; font-weight: 600; }
 .range-list small { color: var(--muted); font-size: 14px; }
+.ladder-wrap { margin-top: 8px; max-width: 360px; }
+.ladder td small { display: block; font-family: var(--body); font-size: 14px; color: var(--muted); line-height: 1.2; }
+.ladder th[scope=row] { text-align: left; padding-left: 12px; font-family: var(--display); font-size: 18px; color: var(--ink); font-weight: 600; border-bottom: 1px solid var(--rule-soft); }
 
 /* How close */
 .close-card { background: var(--surface); border: 1px solid var(--rule); border-left: 5px solid var(--lamp); border-radius: 0; padding: 12px 16px; }
@@ -1022,6 +1028,30 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   }
   function probAtLeast(c, k) { var t = total(c), s = 0; c.counts.forEach(function (x) { if (x[0] >= k) s += x[1]; }); return s / t; }
   function mode(c) { var best = c.counts[0]; c.counts.forEach(function (x) { if (x[1] > best[1]) best = x; }); return best[0]; }
+  /* The hitter's own chance of at least k of his lineup slot's events: each is his with his spot's share of the slot's plate
+     appearances (pinch hitters and substitutes take the rest; PLAYER-02, the shares of brl_live/boxscore.py STARTER_SHARE from
+     2023-2025). The Summary's hit and home-run meters (the box's hit_probability and hr_probability) are this with k = 1. */
+  var SLOT_SHARE = [0.974, 0.976, 0.976, 0.977, 0.969, 0.962, 0.953, 0.942, 0.927];
+  function ownAtLeast(c, k, spot) {
+    var keep = SLOT_SHARE[Math.min(Math.max(Math.round(Number(spot)) || 1, 1), 9) - 1], t = 0, below = 0;
+    c.counts.forEach(function (x) {
+      var n = x[0], term = Math.pow(1 - keep, n), part = 0;
+      for (var j = 0; j < k && j <= n; j++) { part += term; term = term * (n - j) / (j + 1) * keep / (1 - keep); }
+      t += x[1]; below += x[1] * part;
+    });
+    return t ? 1 - below / t : 0;
+  }
+  /* A starter's strikeouts the way the prop market lists them: the chance of more than each half line near his middle, with
+     the fair price (PLAYER-04: on the live engine these chances came within 2.1 points of how often starters got there). */
+  function kLadder(c) {
+    var med = quant(c, 0.5), lines = [];
+    for (var L = Math.max(0.5, med - 1.5); L <= med + 1.5; L += 1) lines.push(L);
+    return '<table class="box ladder"><thead><tr><th scope="col">Strikeouts</th><th scope="col">Over</th><th scope="col">Under</th></tr></thead><tbody>' +
+      lines.map(function (L) {
+        var o = probAtLeast(c, L + 0.5);
+        return '<tr><th scope="row">' + L.toFixed(1) + "</th><td>" + pct(o) + "<small>" + amOdds(o) + "</small></td><td>" + pct(1 - o) + "<small>" + amOdds(1 - o) + "</small></td></tr>";
+      }).join("") + "</tbody></table>";
+  }
 
   /* ---------- data shaping ---------- */
   /* Forecast objects in window.BRL are never mutated; views work on copies that carry the id. */
@@ -4438,9 +4468,10 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       h += "<li><b>" + esc(p.name) + "</b>" +
         (d.K ? '<span class="r num">' + quant(d.K, .25) + " to " + quant(d.K, .75) + " strikeouts</span> <small>most likely " + mode(d.K) + "</small><br>" : "") +
         (d.outs ? '<span class="r num">' + ip(quant(d.outs, .25)) + " to " + ip(quant(d.outs, .75)) + " innings</span><br>" : "") +
-        (d.PC ? '<span class="r num">' + quant(d.PC, .25) + " to " + quant(d.PC, .75) + " pitches</span> <small>estimated</small>" : "") + "</li>";
+        (d.PC ? '<span class="r num">' + quant(d.PC, .25) + " to " + quant(d.PC, .75) + " pitches</span> <small>estimated</small>" : "") +
+        (d.K ? '<div class="tbl-wrap ladder-wrap">' + kLadder(d.K) + "</div>" : "") + "</li>";
     });
-    h += '</ul><p class="note">Ranges cover the middle half of simulated games.</p></section>';
+    h += '</ul><p class="note">Ranges cover the middle half of simulated games. Strikeouts: his chance of more than each line, with the fair price (no margin). Over two seasons re-run, these chances came within 2 points of how often starters actually got there.</p></section>';
 
     h += '<div class="pair wide">';
     ["away", "home"].forEach(function (side) {
@@ -4448,10 +4479,10 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       h += '<section class="sec"><h3 class="team-h ' + side + '-c">' + esc(nickname(f[side].name)) + ' hitters</h3><div class="tbl-wrap"><table class="box"><thead><tr><th scope="col">Batters</th><th>1+ hit</th><th>2+ hits</th><th>HR</th><th>Walk</th></tr></thead><tbody>';
       bat.forEach(function (b) {
         var d = b.distributions || {};
-        h += '<tr><td><span class="spot">' + (b.spot || "") + "</span>" + esc(bnames[String(b.player_id)]) + "</td><td>" + (d.H ? pct(probAtLeast(d.H, 1)) : "") + "</td><td>" + (d.H ? pct(probAtLeast(d.H, 2)) : "") +
-          "</td><td>" + (d.HR ? pct(probAtLeast(d.HR, 1)) : "") + "</td><td>" + (d.BB ? pct(probAtLeast(d.BB, 1)) : "") + "</td></tr>";
+        h += '<tr><td><span class="spot">' + (b.spot || "") + "</span>" + esc(bnames[String(b.player_id)]) + "</td><td>" + (d.H ? pct(ownAtLeast(d.H, 1, b.spot)) : "") + "</td><td>" + (d.H ? pct(ownAtLeast(d.H, 2, b.spot)) : "") +
+          "</td><td>" + (d.HR ? pct(ownAtLeast(d.HR, 1, b.spot)) : "") + "</td><td>" + (d.BB ? pct(ownAtLeast(d.BB, 1, b.spot)) : "") + "</td></tr>";
       });
-      h += "</tbody></table></div></section>";
+      h += '</tbody></table></div><p class="note">Each hitter\'s own chance: a pinch hitter or a substitute takes some of his spot\'s trips late in games, the same as the Summary\'s meters.</p></section>';
     });
     h += '</div><div class="pair wide">';
     ["away", "home"].forEach(function (side) {
@@ -5043,9 +5074,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     ["Pitcher: works inside with the fastball", "fastballs inside", 8.7, 8.8, 5.8, 5.8], ["Pitcher: works away with the fastball", "fastballs away", 9.0, 8.6, 5.8, 5.4]];
   function tagChecksHtml() {
     var f = function (v) { return (v > 0 ? "+" : "") + v.toFixed(1); };
-    return '<h3 class="hz-h">The tags, a season later</h3><p class="note">Tagged from two seasons, then checked on the next one. Points against the league on the same pitches; what we said first, what happened next.</p>' +
-      '<div class="tbl-wrap tag-checks" tabindex="0" role="region" aria-label="Hitter tags checked a season later, scrolls sideways"><table class="box"><thead><tr><th scope="col">Tag</th><th scope="col">Rate</th><th scope="col">Said</th><th scope="col">2026</th><th scope="col">Said</th><th scope="col">2025</th></tr></thead><tbody>' +
-      TAG_CHECKS.map(function (r) { return "<tr><td>" + esc(r[0]) + "</td><td>" + esc(r[1]) + "</td><td>" + f(r[2]) + "</td><td><b>" + f(r[4]) + "</b></td><td>" + f(r[3]) + "</td><td><b>" + f(r[5]) + "</b></td></tr>"; }).join("") +
+    return '<h3 class="hz-h">The tags, a season later</h3><p class="note">Tagged from two seasons, then checked on the next one. Points against the league on the same pitches: what we said, then what happened.</p>' +
+      '<div class="tbl-wrap tag-checks"><table class="box"><thead><tr><th scope="col">Tag</th><th scope="col">2026</th><th scope="col">2025</th></tr></thead><tbody>' +
+      TAG_CHECKS.map(function (r) { return "<tr><td>" + esc(r[0]) + "<small>" + esc(r[1]) + "</small></td><td>" + f(r[2]) + " \u2192 <b>" + f(r[4]) + "</b></td><td>" + f(r[3]) + " \u2192 <b>" + f(r[5]) + "</b></td></tr>"; }).join("") +
       '</tbody></table></div><p class="note">Every tag listed held in both seasons. Reads that did not hold up are not used: extra misses on hard fastballs, extra misses on the inside third, and for pitchers, falling behind first and allowing few chases.</p>' +
       '<h3 class="hz-h">Other things we checked before saying them</h3><div class="tbl-wrap other-checks"><table class="box"><thead><tr><th scope="col">The question</th><th scope="col">What we found</th></tr></thead><tbody>' +
       OTHER_CHECKS.map(function (r) { return "<tr><td>" + esc(r[0]) + "</td><td>" + esc(r[1]) + "</td></tr>"; }).join("") + "</tbody></table></div>" +

@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 303,
- "rows": 306,
+ "experiments": 304,
+ "rows": 307,
  "records": {
   "ACC-01": [
    {
@@ -5062,6 +5062,22 @@
     ],
     "frozen_commits": [],
     "status": "descriptive"
+   }
+  ],
+  "PROD-13": [
+   {
+    "id": "PROD-13",
+    "columns": {
+     "ID": "PROD-13",
+     "Attempt": "Product calls, October 11, 8:20 a.m. Eastern (display; one is a consistency fix). (1) The Odds tab's hitter table gives each hitter's own chances, each of his slot's hits, home runs and walks kept with his spot's share of the slot's plate appearances (PLAYER-02's rule, page ownAtLeast, the shares of brl_live/boxscore.py STARTER_SHARE), so its 1+ hit and HR agree with the Summary's meters; it had shown the slot's own chances, which PLAYER-02 found 1.6 points high on hits. (2) Each starter's strikeouts as the prop market lists them: the chance of more than each half line around his median with the fair price (page kLadder; PLAYER-04 is the evidence). (3) The Record page's tag table fits a phone: what we said and what happened in one cell per season, the rate under the tag's name",
+     "Disposition and evidence": "Done in the commit that added this row; tests (test_page_odds_props.py), axe light and dark, phone check",
+     "Delta corrected Brier, 2026": "display"
+    },
+    "registered_before_run": false,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "display"
    }
   ],
   "BOX-01": [
