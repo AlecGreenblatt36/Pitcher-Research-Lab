@@ -364,7 +364,10 @@ ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         'postseason_exp_scale':{'F':0.91,'D':0.91,'L':0.91,'W':1.0},
         'environment':True,'team_offsets':True,'steals':True,'transitions':True,'running_events':False,
         'reliever_choice':True,'leash':True,'base_state':False,'relief_exit':True,'relief_hooks':True,
-        'postseason_exit_offset':{'F':0.4,'D':0.4,'L':0.4,'W':0.0},'day_form_sigma':0.0}
+        'postseason_exit_offset':{'F':0.4,'D':0.4,'L':0.4,'W':0.0},'day_form_sigma':0.0,
+        # POST-03 (queued for Alec, off): {'cuts': [0.1518, 0.1876], 'scale': [0.81, 0.89, 0.94]} by the starter's
+        # strikeouts minus walks this season (postseason starts 2023-2026: 0.772, 0.846 and 0.900 of his regular length)
+        'postseason_starter_tiers':None}
 
 TRANSITIONS_PATH=Path(__file__).resolve().parent/'transitions.json'
 RUNNING_EVENTS_PATH=Path(__file__).resolve().parent/'running_events.json'

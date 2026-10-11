@@ -45,6 +45,33 @@ def postseason_scale(game_type: str):
     return float(value)
 
 
+def postseason_tiers_table():
+    """POST-03's tier table when switched on in ADJUST (None: off, every starter keeps the game type's factor)."""
+    from .boxscore import ADJUST
+    t = ADJUST.get('postseason_starter_tiers')
+    return t if t and t.get('cuts') and t.get('scale') else None
+
+
+def season_kbb(history: pd.DataFrame, pitcher_id, date: str):
+    """A pitcher's strikeouts minus walks (with hit batters) per plate appearance in this season's regular-season games
+    before the date, or None under 200 plate appearances."""
+    h = history[(history['pitcher'] == int(pitcher_id)) & (history['date_key'] < date) & (history['date_key'].astype(str).str[:4] == str(date)[:4])]
+    if 'game_type' in h.columns:
+        h = h[h['game_type'].astype(str) == 'R']
+    n = len(h)
+    if n < 200:
+        return None
+    return float(((h['outcome'] == 'K').sum() - (h['outcome'] == 'BB_HBP').sum()) / n)
+
+
+def starter_tier_scale(tiers: dict, kbb):
+    """The factor for a starter's tier: below the first cut, between, at or above the second."""
+    if kbb is None:
+        return None
+    cuts, scale = tiers['cuts'], tiers['scale']
+    return float(scale[0] if kbb < cuts[0] else scale[1] if kbb < cuts[1] else scale[2])
+
+
 def make_history_engine(parameters: dict, history_path: Path, physics_table=None):
     """Same coefficients, preprocessing and policies; explicit history dependency.
 
@@ -78,6 +105,14 @@ def make_history_engine(parameters: dict, history_path: Path, physics_table=None
         # and team's expected batters faced, so both are scaled by the measured postseason factor.
         pexp = {k: float(v) * scale for k, v in pexp.items()}
         texp = {k: float(v) * scale for k, v in texp.items()}
+        # POST-03 (off unless ADJUST['postseason_starter_tiers'] is set): good starters are kept in longer than weak ones,
+        # so each starter's own factor follows his regular-season strikeouts minus walks this season.
+        tiers = postseason_tiers_table()
+        if tiers:
+            for sp in (matchup.away.starter.player_id, matchup.home.starter.player_id):
+                f = starter_tier_scale(tiers, season_kbb(history, sp, parameters['date']))
+                if f is not None and int(sp) in pexp:
+                    pexp[int(sp)] = pexp[int(sp)] / scale * f
     manager = PortableStarterPolicy(manager_doc, pexp, texp,
         {int(matchup.away.starter.player_id): matchup.away.team_id,
          int(matchup.home.starter.player_id): matchup.home.team_id})
