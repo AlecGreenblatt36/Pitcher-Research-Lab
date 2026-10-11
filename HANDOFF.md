@@ -891,7 +891,14 @@ far and part of why simulated bullpens struck out fewer batters and allowed more
 - (October 11) Relievers per team-game: the simulator uses about 0.1 fewer pitchers than real teams (4.19 against 4.29 in
   2025, 4.15 against 4.28 in 2026, LEASH-02's replays) and its game-to-game differences run wide: actual on simulated
   slope 0.50 and 0.48; once the starter's real length is known, the simulated count adds little (0.11 and 0.07). The
-  team hooks (RELIEF-03) are the first suspect; it matters for the bullpen's chance-to-pitch table more than for wins.
+  team hooks (RELIEF-03) were the first suspect, but across teams the count is fine (slope 0.81 and 0.86); within a team,
+  70% of the simulated game-to-game spread follows the starter's simulated length, and the simulator adds relievers
+  faster per out the starter misses than real teams do (0.185 and 0.158 pitchers per starter out against 0.146 and
+  0.127 real). It matters for the bullpen's chance-to-pitch table more than for wins.
+- (October 11) The 2026 home-run overstatement for the top tenth is in established hitters: at 400 or more prior plate
+  appearances 0.0514 real against 0.0598 simulated per plate appearance (0.86), under 400 on level (1.00); in 2025 both
+  near level (0.98 and 0.93). Established power hitters fell off in 2026 beyond the league's 4% home-run drop, so the
+  next refit's aging and time decay (RETRAIN-02's idea) is where to look, with 2026 as a season the fit can learn from.
 - (October 11) The plate-appearance model's player differences run wide out of sample: by tenths of the simulated hit and
   home-run rate per plate appearance (PLAYER-06's replays, live settings), each step in the simulated rate came with 0.90
   (hits) and 0.82 (home runs) of that step in actual rates in 2026, the model's holdout season, against 0.95 and 0.97 in
