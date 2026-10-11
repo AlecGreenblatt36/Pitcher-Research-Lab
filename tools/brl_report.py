@@ -610,8 +610,8 @@ class Fitted:
                                  'pitchers': int(sum(1 for L in self.lines_p.values() if L['pa'] >= PCT_MIN))}
         # pitcher tag counts (PTAGS-01) on the training rows, and the league's rates
         ptc = pitcher_tag_counts(T, tr)
-        pkeys = [k for k in ('fps', 'zone', 'chase', 'fb_behind', 'fb_first', 'fb_up', 'fb_dn', 'br_dn', 'gb_against') if k in ptc]
-        self.ptags = {int(pid): {k: [int(ptc[k][0][i]), int(ptc[k][1][i])] for k in pkeys} for i, pid in enumerate(ptc['ids'])}
+        pkeys = [k for k in ('fps', 'zone', 'chase', 'fb_behind', 'fb_first', 'fb_up', 'fb_dn', 'br_dn', 'gb_against', 'fb_in', 'fb_away') if k in ptc]
+        self.ptags = {int(pid): {k: [int(round(float(ptc[k][0][i]))), int(ptc[k][1][i])] for k in pkeys} for i, pid in enumerate(ptc['ids'])}
         self.league['ptags'] = {k: round(float(ptc[k][0].sum() / max(ptc[k][1].sum(), 1)), 4) for k in pkeys}
         self.run_year, self.run_season = running_season(asof_day)
         if self.run_year:
@@ -1603,6 +1603,9 @@ PTAG_FLOORS_LOC = {'fb_up': 200, 'fb_dn': 200, 'br_dn': 150}
 # PTAGS-03: ground-ball and fly-ball pitchers (ground balls among batted balls against, 8 points either way of the league)
 PTAG_RULES_BB = (('Ground-ball pitcher', 'gb_against', 0.08), ('Fly-ball pitcher', 'gb_against', -0.08))
 PTAG_FLOORS_BB = {'gb_against': 150}
+# PTAGS-04: where his fastballs go across the plate, against the league for the matchups he faced (6 points over)
+PTAG_RULES_SIDE = (('Works inside with the fastball', 'fb_in', 0.06), ('Works away with the fastball', 'fb_away', 0.06))
+PTAG_FLOORS_SIDE = {'fb_in': 200, 'fb_away': 200}
 
 
 def pitcher_tag_counts(T: dict, mask) -> dict:
@@ -1630,6 +1633,22 @@ def pitcher_tag_counts(T: dict, mask) -> dict:
         # PTAGS-03: ground balls among the batted balls against him with a trajectory (ground balls, liners, flies, pop-ups)
         okb = np.isfinite(T['spray'][rows].astype(np.float64)); trj = T['traj'][rows]
         out['gb_against'] = (c(okb & (trj == 0)), c(okb & (trj >= 0) & (trj <= 3)))
+    if 'px' in T and 'stand_r' in T and 'throw_r' in T:
+        # PTAGS-04: fastballs on the inner third of the plate or further in, and on the outer third or further away, in the
+        # batter's frame (catcher's view: a righty stands at negative x). Inside and away depend on the matchup, so each
+        # pitcher's count is set against the league's rate for each pitcher hand and batter side he faced: the numerator
+        # carried is his count minus that expectation plus his fastballs at the window's overall rate, so its ratio minus
+        # the overall rate is his excess over his own mix of matchups.
+        px = T['px'][rows].astype(np.float64); okx = np.isfinite(px) & fb
+        rb = T['stand_r'][rows] == 1; rp = T['throw_r'][rows] == 1
+        xb = np.where(rb, -np.nan_to_num(px), np.nan_to_num(px))          # positive toward the batter
+        third = D.ZONE_HALF / 3.0                                            # the plate in thirds: 0.277 ft either side of the middle
+        cell = rp.astype(np.int64) * 2 + rb.astype(np.int64)
+        for key, hit in (('fb_in', okx & (xb > third)), ('fb_away', okx & (xb < -third))):
+            lg = np.array([hit[cell == k].sum() / max(okx[cell == k].sum(), 1) for k in range(4)])
+            n_fb = c(okx); k_fb = c(hit); e_fb = c(np.where(okx, lg[cell], 0.0))
+            flat = hit.sum() / max(okx.sum(), 1)
+            out[key] = (k_fb - e_fb + n_fb * flat, n_fb)
     return out
 
 
@@ -1642,11 +1661,13 @@ def pitcher_tag_study(T: dict, stage, spec: dict) -> dict:
     min_pitches = int(spec.get('min_pitches', 500)); min_test = int(spec.get('min_test', 300)); boot = int(spec.get('boot', 1000))
     rng = np.random.default_rng(int(spec.get('seed', 20261011)))
     floors = dict(PTAG_FLOORS)
-    rules = PTAG_RULES + (PTAG_RULES_LOC if spec.get('location') else ()) + (PTAG_RULES_BB if spec.get('batted') else ())
+    rules = PTAG_RULES + (PTAG_RULES_LOC if spec.get('location') else ()) + (PTAG_RULES_BB if spec.get('batted') else ()) + (PTAG_RULES_SIDE if spec.get('side') else ())
     if spec.get('location'):
         floors.update(PTAG_FLOORS_LOC)
     if spec.get('batted'):
         floors.update(PTAG_FLOORS_BB)
+    if spec.get('side'):
+        floors.update(PTAG_FLOORS_SIDE)
     out = {'splits': []}
     for split in spec.get('splits', [{'train': [2024, 2025], 'test': 2026, 'test_end': '2026-08-01'}, {'train': [2023, 2024], 'test': 2025}]):
         tr_m = ok & np.isin(T['season'], split['train']); te_m = ok & (T['season'] == int(split['test']))

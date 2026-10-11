@@ -31,19 +31,26 @@ def _season(rng, tr, season, n_pitch=1500):
     gb = rng.random(n) < np.clip(tr['gb'][pit], 0.05, 0.95)
     traj = np.where(inplay, np.where(gb, 0, rng.choice(np.array([1, 2, 3]), n)), -1)
     spray = np.where(inplay, rng.normal(0, 20, n), np.nan)
+    # across the plate: a righty batter stands at negative x (catcher's view); 'ins' moves fastballs toward the batter;
+    # lefty pitchers get more lefty batters, so the matchup mix differs by pitcher
+    throw_r = (tr['rhp'][pit] > 0).astype(int)
+    stand_r = (rng.random(n) < np.where(throw_r == 1, 0.6, 0.35)).astype(int)
+    toward = np.where(stand_r == 1, -1.0, 1.0)
+    px = np.where(fb, toward * (tr['ins'][pit] + np.where(stand_r == throw_r, 0.1, -0.1)), 0.0) + rng.normal(0, 0.55, n)
     return {'pitcher': pit + 500, 'season': np.full(n, season), 'day': np.full(n, 700000 + season * 400), 'post': np.zeros(n, int),
             'group': np.where(fb, 0, 3), 'call': call, 'cs': cs, 'balls': balls, 'strikes': strikes, 'zone': zone, 'pz': pz.astype(np.float32),
-            'traj': traj, 'spray': spray.astype(np.float32)}
+            'traj': traj, 'spray': spray.astype(np.float32), 'px': px.astype(np.float32), 'stand_r': stand_r, 'throw_r': throw_r}
 
 
 def _traits(rng, k):
     return {'zone': rng.normal(0.5, 0.06, k), 'fbb': rng.normal(0.6, 0.15, k), 'chase': rng.normal(0.28, 0.05, k),
-            'fbh': rng.normal(0.0, 0.25, k), 'brh': rng.normal(0.0, 0.25, k), 'gb': rng.normal(0.43, 0.07, k)}
+            'fbh': rng.normal(0.0, 0.25, k), 'brh': rng.normal(0.0, 0.25, k), 'gb': rng.normal(0.43, 0.07, k),
+            'ins': rng.normal(0.0, 0.2, k), 'rhp': rng.normal(0.3, 1.0, k)}
 
 
 def _world(persist, seed=5, k=150):
     rng = np.random.default_rng(seed)
-    t1 = _traits(rng, k); t2 = t1 if persist else _traits(rng, k)
+    t1 = _traits(rng, k); t2 = t1 if persist else dict(_traits(rng, k), rhp=t1['rhp'])      # a pitcher keeps his hand
     parts = [_season(rng, t1, 1), _season(rng, t1, 2), _season(rng, t2, 3)]
     return {key: np.concatenate([p[key] for p in parts]) for key in parts[0]}
 
@@ -88,3 +95,22 @@ def test_ground_ball_tags_hold_when_habits_carry_over():
     assert held['corr']['gb_against']['r'] > 0.6
     null = B.pitcher_tag_study(_world(False), lambda *a: None, spec)['splits'][0]
     assert not null['tags']['Ground-ball pitcher']['held'] and abs(null['corr']['gb_against']['r']) < 0.25
+
+
+def test_side_tags_hold_when_habits_carry_over_and_read_against_the_matchups():
+    # PTAGS-04: fastballs inside or away, against the league's rate for each pitcher hand and batter side he faced
+    B = _report()
+    spec = {'splits': [{'train': [1, 2], 'test': 3}], 'min_pitches': 500, 'min_test': 300, 'boot': 300, 'side': True}
+    held = B.pitcher_tag_study(_world(True), lambda *a: None, spec)['splits'][0]
+    for name in ('Works inside with the fastball', 'Works away with the fastball'):
+        t = held['tags'][name]
+        assert t['pitchers'] >= 5 and t['held'], (name, t)
+    assert held['corr']['fb_in']['r'] > 0.6 and held['corr']['fb_away']['r'] > 0.6
+    null = B.pitcher_tag_study(_world(False), lambda *a: None, spec)['splits'][0]
+    assert not null['tags']['Works inside with the fastball']['held'] and abs(null['corr']['fb_in']['r']) < 0.3
+    # the adjusted numerators keep the window's overall count
+    T = _world(True); m = T['season'] == 3
+    pc = B.pitcher_tag_counts(T, m)
+    k_, n_ = pc['fb_in']
+    fb = (T['group'][m] == 0) & np.isfinite(T['px'][m])
+    assert abs(k_.sum() - n_.sum() * (k_.sum() / n_.sum())) < 1e-6 and abs(n_.sum() - fb.sum()) < 1e-9
