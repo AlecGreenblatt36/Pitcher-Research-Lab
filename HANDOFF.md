@@ -65,7 +65,15 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 3:35 a.m. Eastern October 11, by `date -u`)
+### In flight (updated 4:30 a.m. Eastern October 11, by `date -u`)
+
+- October 11, 4:30 a.m.: PTAGS-03 held (run 38120710560; ground-ball share 0.75 and 0.82 a season later): Ground-ball
+  pitcher and Fly-ball pitcher are on the cards and starter folds. The pitching matchup on the Summary adds each
+  starter's three main pitches and his tags. The Odds tab gives the simulator's chance of the over against the Vegas
+  total (a push left out, as tools/replay_compare.py p_over scores it). The bullpen card's columns are the team's latest
+  game days within a week (recent_load now seven days). Pitcher cards carry arsenal_prev (last season's mix and speeds,
+  300 or more pitches) and the page says what changed (arsenalChanges: a pitch added or dropped, a fastball 1 mph faster
+  or slower, a pitch used 10 points more or less). Card rebuild for October 11 and the players at e954194f4.
 
 - October 11, 3:35 a.m.: a separate review of tonight's page changes found four issues, all fixed in a60bee37b: the
   next day's regrade of a game-day plan was labeled a look back (planWhen: a look back is built after its game day
