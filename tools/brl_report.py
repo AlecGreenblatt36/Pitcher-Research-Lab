@@ -1868,6 +1868,8 @@ def change_study(T: dict, stage, spec: dict) -> dict:
     reference; intervals from resampling hitters. Aggregates only."""
     reg = (T['post'] == 0) if 'post' in T else np.ones(len(T['season']), bool)
     boot = int(spec.get('boot', 2000)); min_pa = float(spec.get('min_pa', 200)); min_pa_test = float(spec.get('min_pa_test', 150))
+    se_mult = float(spec.get('se_mult', 3.0))                                     # HCHANGE-02: a looser rule
+    floors = {name: float(spec.get('floors', {}).get(name, floor)) for name, _, _, floor in CHANGE_RATES}
     rng = np.random.default_rng(int(spec.get('seed', 20261011)))
     call = T['call']; swing = ((call == 1) | (call == 2)).astype(np.float64); whiff = (call == 2)
     px, pz = T['px'].astype(np.float64), T['pz'].astype(np.float64)
@@ -1879,7 +1881,7 @@ def change_study(T: dict, stage, spec: dict) -> dict:
             m &= T['day'] < date.fromisoformat(spec['test_end']).toordinal()
         lines[int(y)] = player_lines(T, m, swing, whiff, outside, 'batter')
     stage('change study: lines')
-    out = {'windows': {}}
+    out = {'se_mult': se_mult, 'floors': floors, 'windows': {}}
     for label, (y0, y1, y2) in (('train', (2023, 2024, 2025)), ('test', (2024, 2025, 2026))):
         L0, L1, L2 = lines.get(y0, {}), lines.get(y1, {}), lines.get(y2, {})
         ids = [h for h in L1 if h in L0 and h in L2 and L0[h]['pa'] >= min_pa and L1[h]['pa'] >= min_pa and L2[h]['pa'] >= min_pa_test]
@@ -1893,7 +1895,7 @@ def change_study(T: dict, stage, spec: dict) -> dict:
                 p0, p1, p2 = L0[h][num] / n0, L1[h][num] / n1, L2[h][num] / n2
                 d = p1 - p0; se = np.sqrt(p1 * (1 - p1) / n1 + p0 * (1 - p0) / n0)
                 row = (np.sign(d) * (p2 - p0), abs(d), h)
-                (fl if abs(d) >= floor and abs(d) >= 3 * se else ref).append(row)
+                (fl if abs(d) >= floors[name] and abs(d) >= se_mult * se else ref).append(row)
             def held(rows):
                 if not rows:
                     return None

@@ -39,3 +39,12 @@ def test_lasting_changes_hold_and_reverting_ones_do_not():
     assert keep['n'] > 40 and keep['held'] > 0.8 and keep['ci'][0] > 0.6, keep
     back = B.change_study(_world(seed=2, persist=False), lambda *a: None, {'boot': 300})['windows']['test']['k']['flagged']
     assert back['n'] > 20 and back['held'] < 0.2, back
+
+
+def test_a_looser_rule_flags_more():
+    B = _report()
+    T = _world(seed=3)
+    strict = B.change_study(T, lambda *a: None, {'boot': 100})['windows']['test']['k']['flagged']['n']
+    loose = B.change_study(T, lambda *a: None, {'boot': 100, 'se_mult': 2.0, 'floors': {'k': 0.02}})
+    assert loose['se_mult'] == 2.0 and loose['floors']['k'] == 0.02 and loose['floors']['chase'] == 0.03
+    assert loose['windows']['test']['k']['flagged']['n'] > strict
