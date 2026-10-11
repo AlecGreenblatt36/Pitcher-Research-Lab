@@ -449,6 +449,7 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .roster th[scope="row"], .roster thead th:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); }
 .ps-strip { margin: 12px 0 14px; padding: 10px 12px 12px; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; }
 .ps-strip:empty, .ps-slot:empty { display: none; }
+.pm-sub { display: block; font-family: var(--body); font-size: 14px; color: var(--muted); }
 .ps-h { font-size: 14px; font-weight: 700; color: var(--muted); }
 .ps-cells { display: grid; grid-template-columns: repeat(6, auto); justify-content: space-between; gap: 4px 10px; margin: 6px 0 0; }
 .ps-cells div { min-width: 0; }
@@ -1988,6 +1989,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     app.innerHTML = html;
     if (!keep) window.scrollTo(0, 0);
     fillSpLines();
+    fillPlayerStats();
     if (tab === "summary") fillPitchingMatchup(f, pk, box);
     if (tab === "report") loadReport(f, pk);
     else if (tab === "summary" && lv && !lv._final) loadLiveCard(f, pk);
@@ -3951,19 +3953,21 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var rows = [["Season", function (c) { return spSpan(c.id, year, false, "wl") || "\u2013"; }],
                 ["Strikeout %", function (c) { return cell(c, "k"); }], ["Walk %", function (c) { return cell(c, "bb"); }],
                 ["Whiff %", function (c) { return cell(c, "whiff"); }], ["Hard-hit % against", function (c) { return cell(c, "hard"); }],
-                ["Average against", function (c) { return cell(c, "avg", "three"); }], ["Fastball", function (c) { return cell(c, "velo", "mph"); }],
+                ["Average against", function (c) { return cell(c, "avg", "three"); }],
+                ["Fastball", function (c) { var v = c.card && c.card.velo_last; return cell(c, "velo", "mph") + (v ? "<small class=\"pm-sub\">" + v.mph.toFixed(1) + " last start" + (Math.abs(v.delta) >= 1 ? " (" + (v.delta > 0 ? "+" : "") + v.delta.toFixed(1) + ")" : "") + "</small>" : ""); }],
+                ["Last 3 starts", function (c) { return c.id ? '<span class="ps-slot" data-ps="' + esc(c.id) + '" data-part="last3" data-grp="pitching" data-year="' + esc(year) + '">\u2013</span>' : "\u2013"; }],
                 ["Main pitches", arsenalCell], ["How he pitches", tagsCell],
                 ["Our projection", proj]];
     var h = '<section class="sec pm-sec"><h2>Pitching matchup</h2><div class="tbl-wrap pm-wrap"><table class="box pm"><thead><tr><th scope="col"><span class="visually-hidden">Stat</span></th>' +
       cols.map(function (c) { return '<th scope="col"><span class="abbr ' + c.side + '-c">' + esc(f[c.side].abbr) + "</span> " + esc(lastName(c.name)) + "</th>"; }).join("") + "</tr></thead><tbody>";
     rows.forEach(function (r) { h += '<tr><th scope="row">' + esc(r[0]) + "</th>" + cols.map(function (c) { return "<td>" + r[1](c) + "</td>"; }).join("") + "</tr>"; });
-    h += "</tbody></table></div><p class=\"note\">Season: MLB's regular-season line. The rates and the small percentile ranks (100 is the best) are from the last two seasons' pitches, as on the Players page. Our projection: the simulator's average for this game.</p></section>";
+    h += "</tbody></table></div><p class=\"note\">Season: MLB's regular-season line. Last 3 starts: from MLB's game logs, postseason included. The rates and the small percentile ranks (100 is the best) are from the last two seasons' pitches, as on the Players page. Our projection: the simulator's average for this game.</p></section>";
     return h;
   }
   function fillPitchingMatchup(f, pk, box) {
     var el = document.getElementById("pm-" + pk);
     if (!el || RP[pk]) return;
-    withReportDoc(f, pk, function (doc) { var e2 = document.getElementById("pm-" + pk); if (e2 && doc) { e2.innerHTML = pitchingMatchup(f, box, doc); fillSpLines(); } });
+    withReportDoc(f, pk, function (doc) { var e2 = document.getElementById("pm-" + pk); if (e2 && doc) { e2.innerHTML = pitchingMatchup(f, box, doc); fillSpLines(); fillPlayerStats(); } });
   }
   /* PROD-09: a runner to hold: 40 or more times on first, 8 or more steal tries, at 1.75 times the league's rate per time on first */
   function stealThreat(rn, lg) {
@@ -4681,9 +4685,16 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       " (in the postseason, through that game of the postseason); the last row's is over these games." +
       (H ? " Hot and cold stretches: in 2026 a hitter's last ten games said almost nothing about his next ten beyond his level in getting on base or slugging (about 2% of the difference carried over, within noise); strikeouts carried more, about 15%." : "") + "</p></section>";
   }
+  /* his last three starts from the game log, the line previews give: innings, earned runs, strikeouts, walks */
+  function psLast3(e) {
+    var st = glSorted(e.games).filter(function (x) { return glNum(x.stat.gamesStarted) > 0; }).slice(0, 3);
+    if (!st.length) return "\u2013";
+    var outs = st.reduce(function (a, x) { return a + glOuts(x.stat); }, 0), er = glSum(st, "earnedRuns");
+    return ip(outs) + " IP, " + er + " ER, " + glSum(st, "strikeOuts") + " K, " + glSum(st, "baseOnBalls") + " BB" + (outs ? " <small>" + (27 * er / outs).toFixed(2) + " ERA</small>" : "");
+  }
   function psPaint(el, e) {
     var part = el.getAttribute("data-part"), grp = el.getAttribute("data-grp");
-    el.innerHTML = e && e.games ? (part === "strip" ? psStrip(e, grp, el.getAttribute("data-year")) : glTable(e, grp)) : "";
+    el.innerHTML = e && e.games ? (part === "strip" ? psStrip(e, grp, el.getAttribute("data-year")) : part === "last3" ? psLast3(e) : glTable(e, grp)) : "";
   }
   function fillPlayerStats() {
     app.querySelectorAll("[data-ps]").forEach(function (el) {

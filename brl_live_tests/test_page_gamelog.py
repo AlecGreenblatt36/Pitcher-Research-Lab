@@ -112,3 +112,16 @@ def test_fastball_speed_by_game_and_the_last_start_note():
           "n=velLastNote({velo_last:{type:'SI',date:'2026-10-03',mph:95.4,base:94.2,delta:1.2}});assert.ok(n.indexOf('sinker')>0&&n.indexOf('above')>0&&n.indexOf('1.3 per 100')>0,n);"
           "assert.equal(velLastNote({velo_last:{type:'FF',date:'2026-10-03',mph:95.4,base:95.9,delta:-0.5}}),'');assert.equal(velLastNote({}),'');")
     subprocess.run(['node', '-e', prefix + consts + velo_read + _fn(s, 'velChart') + _fn(s, 'velLastNote') + js], check=True)
+
+
+def test_last_three_starts_line():
+    s = _script()
+    js = (GAME + "const st=function(o,er,k,bb,gs){return {outs:o,earnedRuns:er,strikeOuts:k,baseOnBalls:bb,gamesStarted:gs};};"
+          "const games=[g('2026-09-01','R',true,true,121,st(18,2,7,1,1)),g('2026-09-06','R',true,true,121,st(21,0,9,2,1)),g('2026-09-08','R',true,true,121,st(3,1,1,0,0)),"
+          "g('2026-09-12','R',true,true,121,st(15,3,5,3,1)),g('2026-10-03','D',true,true,144,st(18,1,7,2,1))];"
+          "const h=psLast3({games:games});"
+          "assert.ok(h.indexOf('18.0 IP, 4 ER, 21 K, 7 BB')===0,h);"        # Oct 3, Sep 12 and Sep 6: 54 outs; the relief outing left out
+          "assert.ok(h.indexOf('2.00 ERA')>0,h);assert.equal(psLast3({games:[]}),'\\u2013');")
+    fns = ''.join(_fn(s, n) for n in ('glNum', 'glAvg', 'glSorted', 'psLast3'))
+    prefix = ("const assert=require('assert');function ip(outs){outs=Math.round(outs);return Math.floor(outs/3)+'.'+(outs%3);}")
+    subprocess.run(['node', '-e', prefix + fns + js], check=True)
