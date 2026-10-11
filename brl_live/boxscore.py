@@ -388,9 +388,10 @@ ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         # POST-03 (queued for Alec, off): {'cuts': [0.1518, 0.1876], 'scale': [0.81, 0.89, 0.94]} by the starter's
         # strikeouts minus walks this season (postseason starts 2023-2026: 0.772, 0.846 and 0.900 of his regular length)
         'postseason_starter_tiers':None,
-        # LEASH-02 (off until its replays are read): the inning correction on the starter-exit hazard's log-odds, regular
-        # season only (brl_live/hazard_correction.json); the postseason keeps its measured usage on the plain hazard
-        'hazard_correction':False}
+        # LEASH-02 (on from October 11, 2026; its gates held on both seasons): the inning correction on the starter-exit
+        # hazard's log-odds, regular season only (brl_live/hazard_correction.json); the postseason keeps its measured usage
+        # on the plain hazard
+        'hazard_correction':True}
 
 TRANSITIONS_PATH=Path(__file__).resolve().parent/'transitions.json'
 RUNNING_EVENTS_PATH=Path(__file__).resolve().parent/'running_events.json'

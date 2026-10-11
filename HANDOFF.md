@@ -71,8 +71,16 @@ queue behind the shards (seen October 11 at 16:50 UTC). Check-only replays (n_si
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 12:50 p.m. Eastern October 11, by `date -u`)
+### In flight (updated 2:01 p.m. Eastern October 11, by `date -u`)
 
+- October 11, 2:01 p.m.: LEASH-02 held every gate (stage 2 runs 38156905239 and 38156881017): every outs line 12.5 to 20.5
+  within 2.4 points in both seasons, starts ending in the 4th right (11.1% against 10.9% and 11.5%), win Brier and totals
+  unchanged. **On for regular-season games** (ADJUST hazard_correction True; brl_live/hazard_correction.json; the live
+  starter policy adds it only when game_type is R and the box's adjustments then name "starter exits by inning
+  (LEASH-02)"). The outs ladder (OUTS_LADDER true) shows only for boxes with that label, so nothing changes on postseason
+  pages. Cost: starters run a little long in the middle (16.5 and 17.5 outs about 2 points high). LEVEL-03 replays (level
+  plus running plays, tags v2-prod4-lvrun-1000-<season>, runs started 17:34 and 17:44 UTC) score like LEVEL-02 against
+  v2-prod4-tb-1000.
 - October 11, 12:15 p.m.: LEVEL-01 held (in-season re-anchoring of each outcome's league level: +0.114 and +0.146 nats per
   1,000 real plate appearances at m 10,000, both intervals above zero; check-only runs 38152933999 and 38152908828). The
   layer is built (brl_live/provider_adjust.py LevelAdjust; per-date offsets brl_replay/level_offsets_<season>.json from

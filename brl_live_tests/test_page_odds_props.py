@@ -105,3 +105,18 @@ def test_outs_ladder_uses_the_same_rule_at_the_outs_lines():
     over = re.findall(r'<th scope="row">16.5</th><td>(\d+)%', html)[0]
     assert int(over) == round(100 * sum(c for k, c in counts if k >= 17) / n)
     assert _run('process.stdout.write(outsLadder({counts:[[1,500],[2,300],[3,200]]}));') == ''          # an opener: none
+
+
+def test_outs_ladder_only_for_boxes_simulated_with_the_exit_correction():
+    """LEASH-02 and PLAYER-07: the outs ladder held only with the corrected starter-exit hazard, so it shows for boxes whose
+    adjustments name it (regular-season games) and never for the plain hazard's (the postseason, earlier boxes)."""
+    s = _script()
+    fns = ''.join(_line(s, n) for n in ('pct', 'total', 'probAtLeast', 'kLadder', 'outsLadder', 'exitsByInning')) + ''.join(_fn(s, n) for n in ('quant', 'amOdds', 'propLadder', 'ladders'))
+    js = ("const assert=require('assert');"
+          "const d={K:{counts:[[3,100],[5,300],[7,100]]},outs:{counts:[[12,100],[15,200],[16,200],[18,300],[21,200]]}};"
+          "assert.ok(exitsByInning({adjustments:['context offsets','LEASH-01 leash; starter exits by inning (LEASH-02)']}));"
+          "assert.ok(!exitsByInning({adjustments:['postseason starter usage (expected batters x0.91)']}));assert.ok(!exitsByInning({}));assert.ok(!exitsByInning(null));"
+          "assert.ok(ladders(d,true).indexOf('>Outs<')>0 && ladders(d,true).indexOf('>Strikeouts<')>0);"
+          "assert.ok(ladders(d,false).indexOf('>Outs<')<0 && ladders(d,false).indexOf('>Strikeouts<')>0);")
+    subprocess.run(['node', '-e', fns + js], check=True)
+    assert re.search(r'\n  var OUTS_LADDER = true;\n', s)

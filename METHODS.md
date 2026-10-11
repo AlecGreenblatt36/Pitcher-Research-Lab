@@ -224,8 +224,13 @@ of the simulated rate, each step up in the simulated rate came with 0.90 of that
 against 0.95 and 0.97 in 2025, the season the model was tuned on).
 
 Starters' outs recorded (the pitcher-outs prop) were scored the same way (PLAYER-07): right on average and at the lines near
-each start's median, but the simulator ends too many starts in the 4th inning and too few in the 5th (more than 12.5 outs
-3.8 points short in 2025), so the outs ladder is built and stays off.
+each start's median, but the simulator ended too many starts in the 4th inning and too few in the 5th (more than 12.5 outs
+3.8 points short in 2025). The cause was the exit hazard: a logistic fit with the inning as one straight-line term cannot
+hold managers' habit of letting a starter finish the 5th, and after the 4th ends it expected about half again as many
+removals as happen, in every season (LEASH-02). A correction on its log-odds by inning, its end and the score, fitted on
+2023 and 2024 decisions, lowered the decision log loss on 2025 and 2026 and, in full replays of both seasons, put every
+outs line from 12.5 to 20.5 within 2.4 points with win chances and totals unchanged. It is on for regular-season games
+(the postseason keeps the plain hazard with its measured x0.91), and the outs ladder shows for boxes simulated with it.
 
 ## The season's level, re-anchored in-season (October 11, 2026)
 

@@ -106,11 +106,13 @@ def test_hazard_fix_recovers_a_planted_inning_habit_and_the_policy_applies_it(tm
     assert np.array_equal(z, zz)
 
 
-def test_live_correction_is_regular_season_only_and_off_by_default():
+def test_live_correction_is_regular_season_only():
+    """On since LEASH-02 held (October 11, 2026): regular-season games get the correction, postseason games the plain hazard."""
     from brl_live import boxscore as bx
     from research_lab.game_sim import starter_hazard as sh
-    assert bx.ADJUST['hazard_correction'] is False and bx.hazard_correction_for(bx.ADJUST, 'R') is None
-    on = dict(bx.ADJUST, hazard_correction=True)
+    assert bx.ADJUST['hazard_correction'] is True
+    assert bx.hazard_correction_for(dict(bx.ADJUST, hazard_correction=False), 'R') is None
+    on = bx.ADJUST
     c = bx.hazard_correction_for(on, 'R')
     assert tuple(c['terms']) == sh.CORRECTION_TERMS and len(c['coef']) == 32
     assert bx.hazard_correction_for(on, 'L') is None and bx.hazard_correction_for(on, 'W') is None
