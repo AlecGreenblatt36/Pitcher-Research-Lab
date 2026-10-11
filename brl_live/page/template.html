@@ -507,6 +507,11 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .hz-types .box th:first-child, .hz-types .box td:first-child { padding-left: 8px; font-size: 15px; }
 .hz-types .box th:last-child, .hz-types .box td:last-child { padding-right: 8px; }
 @media (min-width: 720px) { .pl-body { grid-template-columns: minmax(0, 1fr) 156px; gap: 20px; } }
+.pl-hz-f small { display: block; font-size: 14px; font-weight: 700; color: var(--muted); margin: 0 0 2px; }
+@media (min-width: 1000px) {
+  .pl-body { grid-template-columns: minmax(0, 1fr) auto; }
+  .pl-hz.wide { display: grid; grid-template-columns: repeat(4, 132px); gap: 12px; }
+}
 
 /* Odds */
 .winbar { display: flex; height: 48px; border-radius: 6px; overflow: hidden; }
@@ -2506,7 +2511,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   var HZ_FAMS = [["all", "All pitches"], ["fastball", "Fastballs"], ["breaking", "Breaking balls"], ["offspeed", "Offspeed"]];
   var HZ_CELL = { 1: [0, 0], 2: [1, 0], 3: [2, 0], 4: [0, 1], 5: [1, 1], 6: [2, 1], 7: [0, 2], 8: [1, 2], 9: [2, 2] };
   var HZ_OUT = { 11: ["M0 0H66V20H20V75H0Z", 33, 10.5, 10, 10], 12: ["M66 0H132V75H112V20H66Z", 99, 10.5, 122, 10], 13: ["M0 75H20V130H66V150H0Z", 33, 140, 10, 140], 14: ["M112 75H132V150H66V130H112Z", 99, 140, 122, 140] };
-  var HZ_UID = 0;
+  var HZ_UID = 0, HZ_MQ = null, HZ_MQ_PK = null;
   function hzMetric() { return HZ_METRICS[state.hzMetric] ? state.hzMetric : "avg"; }
   function hzFmt(m, v) { return m.three ? (v >= 1 ? v.toFixed(3) : v.toFixed(3).slice(1)) : Math.round(v * 100) + "%"; }
   function hzVal(m, c) { return c && c[m.den] >= m.min ? c[m.num] / c[m.den] : null; }
@@ -2803,6 +2808,10 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     host.querySelectorAll("details[data-keep]").forEach(function (d) { d.addEventListener("toggle", function () { state.rpOpen[d.getAttribute("data-keep")] = d.open; }); });
     /* hot-zone controls redraw in place: the page keeps its scroll position */
     var redraw = function () { var y = window.scrollY; loadReport(f, pk); window.scrollTo(0, y); };
+    try {
+      if (!HZ_MQ) { HZ_MQ = window.matchMedia("(min-width: 1000px)"); HZ_MQ.addEventListener("change", function () { if (HZ_MQ_PK && document.getElementById("rp-" + HZ_MQ_PK.pk)) loadReport(HZ_MQ_PK.f, HZ_MQ_PK.pk); }); }
+      HZ_MQ_PK = { f: f, pk: pk };
+    } catch (e) { /* an old browser keeps the layout it opened with */ }
     host.querySelectorAll("[data-hzmetric]").forEach(function (b) { b.addEventListener("click", function (e) { e.stopPropagation(); state.hzMetric = b.getAttribute("data-hzmetric"); redraw(); }); });
     host.querySelectorAll("[data-hzfam]").forEach(function (b) { b.addEventListener("click", function (e) { e.stopPropagation(); state.hzFam = b.getAttribute("data-hzfam"); redraw(); }); });
     host.querySelectorAll("[data-rpcloud]").forEach(function (b) { b.addEventListener("click", function () { state.rpCloud = b.getAttribute("data-rpcloud") === "1"; loadReport(f, pk); var d = document.getElementById("rp-detail-" + pk); if (d) d.scrollIntoView({ behavior: "instant", block: "start" }); }); });
@@ -2929,6 +2938,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     out.posted = true;
     return out;
   }
+  function hzWide() { try { return window.matchMedia("(min-width: 1000px)").matches; } catch (e) { return false; } }
   function hzSheetHand(doc, starter) {
     var pc = doc.players && doc.players[String(starter.id)] && doc.players[String(starter.id)].pitcher, any = null;
     Object.keys(doc.players || {}).some(function (id) { var c = doc.players[id].hitter; if (c && c.zones) { any = c.zones; return true; } return false; });
@@ -2947,13 +2957,19 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var spots = po.spots, benchShown = false;
     /* each hitter's hot zones against the starter's hand, for the number and pitch type picked above the sheets */
     var sc = players[String(starter.id)] && players[String(starter.id)].pitcher, hand = sc && sc.throws ? sc.throws : "all", k = hzMetric();
-    var fam = HZ_FAMS.filter(function (x) { return x[0] === state.hzFam; })[0] || HZ_FAMS[0];
+    var fam = HZ_FAMS.filter(function (x) { return x[0] === state.hzFam; })[0] || HZ_FAMS[0], wide = hzWide();
     po.hitters.forEach(function (hid, i) {
       var key = side + "|" + hid + ":" + starter.id, pr = se.pairs[hid + ":" + starter.id], card = players[String(hid)] && players[String(hid)].hitter;
       var tags = hitterTags(card, doc.league), edge = edgeTag(pr), thin = pr && pr.evidence && pr.evidence.level === "thin";
       var spot = spots ? spots[String(hid)] : i + 1;
-      var useHand = card && hzSplit(card.zones) ? hand : "all", cells = card ? hzCells(card.zones, useHand, fam[0]) : null;
-      var chart = cells ? '<div class="pl-hz">' + hzChart(cells, { metric: k, side: card.side, lg: hzLeague(doc.league, card.side, useHand, fam[0]), label: nm(hid) + ": " + HZ_METRICS[k].label + " by zone, " + fam[1].toLowerCase() + " from " + hzHandWords(useHand) }) + "</div>" : "";
+      var useHand = card && hzSplit(card.zones) ? hand : "all", chart = "";
+      /* a phone shows the picked pitch type; a wide screen shows all four side by side, like a scouting sheet */
+      (wide ? HZ_FAMS : [fam]).forEach(function (fm) {
+        var cells = card ? hzCells(card.zones, useHand, fm[0]) : null;
+        if (!cells) return;
+        chart += '<div class="pl-hz-f">' + (wide ? "<small>" + esc(fm[1]) + "</small>" : "") + hzChart(cells, { metric: k, side: card.side, lg: hzLeague(doc.league, card.side, useHand, fm[0]), label: nm(hid) + ": " + HZ_METRICS[k].label + " by zone, " + fm[1].toLowerCase() + " from " + hzHandWords(useHand) }) + "</div>";
+      });
+      if (chart) chart = '<div class="pl-hz' + (wide ? " wide" : "") + '">' + chart + "</div>";
       if (spots && !spot && !benchShown) { h += '<li class="plan-bench">Off the bench</li>'; benchShown = true; }
       h += "<li" + (pr ? ' class="plan-row rp-cell' + (sel === key ? " rp-sel" : "") + '" data-rp="' + key + '" tabindex="0"' : ' class="plan-row"') + '><div class="pl-top"><b><span class="spot">' + (spot || "") + "</span>" + esc(nm(hid)) + (card ? " <small>" + esc(card.side === "L" ? "bats left" : "bats right") + "</small>" : "") + "</b>" +
         (edge ? '<span class="pl-edge ' + edge.split(" ")[0].toLowerCase() + '">' + edge + "</span>" : "") + "</div>" +
@@ -3074,7 +3090,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (now) h += liveNowStrip(f, pk, doc, now, false);
     /* one set of hot-zone controls for both lineups */
     var anyZones = Object.keys(players).some(function (id) { return players[id].hitter && players[id].hitter.zones; });
-    if (anyZones) h += '<div class="hz-tools">' + hzMetricSeg() + hzSeg("hzfam", (HZ_FAMS.filter(function (x) { return x[0] === state.hzFam; })[0] || HZ_FAMS[0])[0], [["all", "All"], ["fastball", "Fastballs"], ["breaking", "Breaking"], ["offspeed", "Offspeed"]], "Pitch type") + "</div>" + hzLegend(hzMetric(), false);
+    if (anyZones) h += '<div class="hz-tools">' + hzMetricSeg() + (hzWide() ? "" : hzSeg("hzfam", (HZ_FAMS.filter(function (x) { return x[0] === state.hzFam; })[0] || HZ_FAMS[0])[0], [["all", "All"], ["fastball", "Fastballs"], ["breaking", "Breaking"], ["offspeed", "Offspeed"]], "Pitch type")) + "</div>" + hzLegend(hzMetric(), false);
     h += "</section>";
     var liveSel = !!(now && now.pair && now.key === sel), detail = sel ? pairDetail(doc, pk, sel, now) : "";
     if (liveSel) h += detail;
