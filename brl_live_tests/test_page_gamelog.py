@@ -125,3 +125,12 @@ def test_last_three_starts_line():
     fns = ''.join(_fn(s, n) for n in ('glNum', 'glAvg', 'glSorted', 'psLast3'))
     prefix = ("const assert=require('assert');function ip(outs){outs=Math.round(outs);return Math.floor(outs/3)+'.'+(outs%3);}")
     subprocess.run(['node', '-e', prefix + fns + js], check=True)
+
+
+def test_bullpen_rates():
+    s = _script()
+    prefix = ("const assert=require('assert');function pctColor(p){return {bg:'B'+p,fg:'F'};}")
+    js = ("assert.equal(penRate(null,'k'),'\\u2013');assert.equal(penRate({line:{pa:80,k:30,bb:5}},'k'),'\\u2013');"
+          "assert.equal(penRate({line:{pa:200,k:50,bb:16}},'k'),'25.0');"
+          "assert.ok(penRate({line:{pa:400,k:120,bb:20},pct:{k:91,bb:70}},'bb').indexOf('background:B70')>0);")
+    subprocess.run(['node', '-e', prefix + _fn(s, 'lineRate') + _fn(s, 'penRate') + js], check=True)

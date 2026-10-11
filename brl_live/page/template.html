@@ -450,6 +450,8 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .ps-strip { margin: 12px 0 14px; padding: 10px 12px 12px; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; }
 .ps-strip:empty, .ps-slot:empty { display: none; }
 .pm-sub { display: block; font-family: var(--body); font-size: 14px; color: var(--muted); }
+.pen-pct { display: inline-block; min-width: 38px; padding: 0 4px; border-radius: 4px; text-align: center; }
+.pen td:first-child, .pen th:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); }
 .ps-h { font-size: 14px; font-weight: 700; color: var(--muted); }
 .ps-cells { display: grid; grid-template-columns: repeat(6, auto); justify-content: space-between; gap: 4px 10px; margin: 6px 0 0; }
 .ps-cells div { min-width: 0; }
@@ -3837,6 +3839,14 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     });
     return out.length ? "Since " + (ls.season - 1) + ": " + out.join("; ") + "." : "";
   }
+  /* a reliever's strikeout or walk rate over the two seasons (100 or more batters), with its percentile color when ranked */
+  function penRate(pc, k) {
+    var L = pc && pc.line;
+    if (!L || !L.pa || L.pa < 100) return "\u2013";
+    var v = lineRate(L, k), p = pc.pct ? pc.pct[k] : null;
+    if (v == null) return "\u2013";
+    return p != null ? '<span class="pen-pct" style="background:' + pctColor(p).bg + ";color:" + pctColor(p).fg + '">' + (100 * v).toFixed(1) + "</span>" : (100 * v).toFixed(1);
+  }
   function bullpenCard(doc, se, nm) {
     var arms = (se.pitchers || []).filter(function (p) { return p.recent; });
     if (!arms.length || !doc.date) return "";
@@ -3854,10 +3864,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       for (var k = p.recent.length; k >= 1; k--) if (covered(k) && p.recent[k - 1] > 0) last = k;
       return "<tr><td>" + esc(lastName(nm(p.id))) + (p.role === "starter" ? " <small>SP</small>" : "") + "</td><td>" + esc(pc && pc.throws ? pc.throws : "") + "</td><td>" + esc(p.role === "starter" ? "Starter" : roleLabel(pc && pc.role) || "\u2013") + "</td>" +
         cols.map(function (d) { var k = Math.round((new Date(doc.date + "T12:00:00Z") - new Date(d + "T12:00:00Z")) / 864e5), n = p.recent[k - 1]; return "<td>" + (n ? n : "\u2013") + "</td>"; }).join("") +
-        "<td>" + (last ? (last === 1 ? "1 day" : last + " days") : covered(1) ? p.recent.length + "+ days" : "\u2013") + "</td><td>" + (fb && fb.speed != null ? Math.round(fb.speed) : "\u2013") + "</td></tr>";
+        "<td>" + (last ? (last === 1 ? "1 day" : last + " days") : covered(1) ? p.recent.length + "+ days" : "\u2013") + "</td><td>" + (fb && fb.speed != null ? Math.round(fb.speed) : "\u2013") + "</td>" +
+        "<td>" + penRate(pc, "k") + "</td><td>" + penRate(pc, "bb") + "</td></tr>";
     }).join("");
-    return '<div class="tbl-wrap hz-types"><table class="box"><thead><tr><th scope="col">Pitcher</th><th scope="col">T</th><th scope="col">Role</th>' + cols.map(function (d) { return '<th scope="col">' + esc(shortDate(d)) + "</th>"; }).join("") +
-      '<th scope="col">Since</th><th scope="col">FB</th></tr></thead><tbody>' + rows + '</tbody></table></div><p class="note">Pitches thrown in each of the latest games the team played, a dash if he did not pitch. Since: days since he last pitched. FB: fastball speed. Role: how he has been used over two seasons (closer: most outings start in the ninth or later).</p>';
+    return '<div class="tbl-wrap hz-types" tabindex="0" role="region" aria-label="Bullpen, scrolls sideways"><table class="box pen"><thead><tr><th scope="col">Pitcher</th><th scope="col">T</th><th scope="col">Role</th>' + cols.map(function (d) { return '<th scope="col">' + esc(shortDate(d)) + "</th>"; }).join("") +
+      '<th scope="col">Since</th><th scope="col">FB</th><th scope="col">K%</th><th scope="col">BB%</th></tr></thead><tbody>' + rows + '</tbody></table></div><p class="note">Pitches thrown in each of the latest games the team played, a dash if he did not pitch. Since: days since he last pitched. FB: fastball speed. K% and BB%: strikeouts and walks per batter over the last two seasons (100 or more batters), shaded by percentile. Role: how he has been used over two seasons (closer: most outings start in the ninth or later).</p>';
   }
   /* The lineup at a glance against the starter's hand: its sides, and its line from the nine hitters' zone counts against
      the league's for the same mix of sides (the standard top of an advance sheet). */
