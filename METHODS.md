@@ -231,6 +231,9 @@ removals as happen, in every season (LEASH-02). A correction on its log-odds by 
 2023 and 2024 decisions, lowered the decision log loss on 2025 and 2026 and, in full replays of both seasons, put every
 outs line from 12.5 to 20.5 within 2.4 points with win chances and totals unchanged. It is on for regular-season games
 (the postseason keeps the plain hazard with its measured x0.91), and the outs ladder shows for boxes simulated with it.
+Real pitch counts would sharpen it further on real decisions (LEASH-03: the exit hazard's log loss falls by about 0.006),
+but in the simulator, pitches drawn by outcome one plate appearance at a time did not fix the middle outs lines, so the
+engine's pitch draws are built and idle.
 
 ## The season's level, re-anchored in-season (October 11, 2026)
 

@@ -78,7 +78,7 @@ queue behind the shards (seen October 11 at 16:50 UTC). Check-only replays (n_si
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 3:03 p.m. Eastern October 11, by `date -u`)
+### In flight (updated 3:53 p.m. Eastern October 11, by `date -u`)
 
 - October 11, 3:03 p.m.: LEASH-03 (pitch counts in the starter's exit) registered; stage 1 held (research run 38165964534: the
   hazard expected 50% to 75% too many removals at 60 to 84 pitches and too few from 85 on, in every season; with pitch
@@ -89,6 +89,10 @@ queue behind the shards (seen October 11 at 16:50 UTC). Check-only replays (n_si
   brl_replay/hazard_correction_v2.json over brl_live/hazard_correction.json (the live builder sees 44 terms and turns on
   the pitch draws from brl_live/pitch_counts.json; regular season only). Then make the box's shown pitch counts use the
   engine's draws instead of its own estimate.
+  **LEASH-03 failed (3:53 p.m.):** the ladder lines stayed 1.38 points high in 2026 (1.0 allowed); every line within 2.3,
+  per-start slope 0.98 to 1.00 (better), win Brier and totals unchanged. LEASH-02 stays; the engine's pitch draws are
+  built and idle. Next idea there: pitch counts with a per-game command level (a pitcher's whole day runs long or short)
+  rather than independent draws per plate appearance.
 - October 11, 2:01 p.m.: LEASH-02 held every gate (stage 2 runs 38156905239 and 38156881017): every outs line 12.5 to 20.5
   within 2.4 points in both seasons, starts ending in the 4th right (11.1% against 10.9% and 11.5%), win Brier and totals
   unchanged. **On for regular-season games** (ADJUST hazard_correction True; brl_live/hazard_correction.json; the live
