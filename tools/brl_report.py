@@ -1533,6 +1533,123 @@ def form_study(T: dict, stage, spec: dict) -> dict:
     return out
 
 
+# VELO-01 (LEDGER): does a starter's fastball speed in his last start carry into the next one, and does a drop say
+# anything about his strikeouts and times on base next time?
+def game_velo_table(T: dict, mask) -> dict:
+    """Per pitcher appearance on the masked pitches: pitcher, season, day, game, whether he started (his first pitch in
+    the first inning), his main fastball's mean speed and count in the game (four-seam or sinker, whichever he threw more
+    that season, on pitches with a speed), and the plate-appearance counts: batters faced, strikeouts, walks and hit
+    batters, times on base, at-bats, total bases. Aggregates for the study and the cards."""
+    rows = np.flatnonzero(mask)
+    if not len(rows):
+        return {}
+    pit, sea = T['pitcher'][rows].astype(np.int64), T['season'][rows].astype(np.int64)
+    sub = T['sub'][rows]; v0 = T['v0'][rows].astype(np.float64); okv = np.isfinite(v0)
+    ff, si = D.SUBTYPES.index('FF'), D.SUBTYPES.index('SI')
+    ps = pit * 10000 + sea
+    ups, pinv = np.unique(ps, return_inverse=True)
+    n_ff = np.bincount(pinv, weights=(sub == ff).astype(float), minlength=len(ups)); n_si = np.bincount(pinv, weights=(sub == si).astype(float), minlength=len(ups))
+    main = np.where(n_ff >= n_si, ff, si)[pinv]
+    isfb = (sub == main) & okv
+    key = np.stack([pit, T['game'][rows].astype(np.int64)], 1)
+    ug, ginv = np.unique(key, axis=0, return_inverse=True)
+    ginv = ginv.ravel(); ng = len(ug)
+    c = lambda w: np.bincount(ginv, weights=np.asarray(w, dtype=np.float64), minlength=ng)
+    last = T['last_in_pa'][rows] == 1; o7 = T['out7'][rows]
+    entry = np.full(ng, 99); np.minimum.at(entry, ginv, T['inning'][rows])
+    day = np.zeros(ng, np.int64); np.maximum.at(day, ginv, T['day'][rows].astype(np.int64))
+    season = np.zeros(ng, np.int64); np.maximum.at(season, ginv, sea)
+    fb_n = c(isfb); fb_s = c(np.where(isfb, v0, 0.0))
+    tb = np.where(o7 == 3, 1.0, 0.0) + np.where(o7 == 4, 2.0, 0.0) + np.where(o7 == 5, 4.0, 0.0)
+    return {'pitcher': ug[:, 0], 'game': ug[:, 1], 'season': season, 'day': day, 'started': entry == 1,
+            'fb_n': fb_n, 'velo': np.where(fb_n > 0, fb_s / np.maximum(fb_n, 1), np.nan),
+            'bf': c(last), 'k': c(last & (o7 == 1)), 'bb': c(last & (o7 == 2)), 'on': c(last & np.isin(o7, (2, 3, 4, 5))),
+            'ab': c(last & np.isin(o7, (0, 1, 3, 4, 5, 6))), 'tb': c(np.where(last, tb, 0.0))}
+
+
+def velo_pairs(G: dict, season: int, prior: dict | None = None, min_fb: int = 15, min_prior: int = 3, k_shrink: float = 100.0) -> dict:
+    """Consecutive starts (j, j + 1) in one season: the change in start j's fastball speed from his mean over his earlier
+    starts this season (at least min_prior of them), the next start's speed change from the same mean, and the next
+    start's strikeouts, walks and times on base per batter faced against his level (this season before the next start
+    plus last season, shrunk toward the league with k_shrink batters)."""
+    sel = G['started'] & (G['season'] == season) & (G['fb_n'] >= min_fb)
+    out = {'pitcher': [], 'delta': [], 'next_delta': [], 'bf': [], 'k': [], 'bb': [], 'on': [], 'lev_k': [], 'lev_bb': [], 'lev_on': []}
+    lg = {x: G[x][sel].sum() / max(G['bf'][sel].sum(), 1) for x in ('k', 'bb', 'on')}
+    pids = np.unique(G['pitcher'][sel])
+    for pid in pids:
+        m = np.flatnonzero(sel & (G['pitcher'] == pid))
+        m = m[np.argsort(G['day'][m], kind='stable')]
+        if len(m) < min_prior + 2:
+            continue
+        pre = prior.get(int(pid)) if prior else None
+        for j in range(min_prior, len(m) - 1):
+            e, nx = m[:j], m[j + 1]
+            base = (G['velo'][e] * G['fb_n'][e]).sum() / G['fb_n'][e].sum()
+            out['pitcher'].append(int(pid)); out['delta'].append(float(G['velo'][m[j]] - base)); out['next_delta'].append(float(G['velo'][nx] - base))
+            out['bf'].append(float(G['bf'][nx]))
+            done = m[:j + 1]
+            for x in ('k', 'bb', 'on'):
+                num = G[x][done].sum() + (pre[x] if pre else 0.0); den = G['bf'][done].sum() + (pre['bf'] if pre else 0.0)
+                out['lev_' + x].append(float((num + k_shrink * lg[x]) / (den + k_shrink))); out[x].append(float(G[x][nx]))
+    return {k_: np.array(v) for k_, v in out.items()}
+
+
+def velo_study(T: dict, stage, spec: dict) -> dict:
+    """VELO-01 (LEDGER): slopes per mph of last-start fastball speed change (from his earlier starts this season) on the
+    next start's speed change and on his next start's strikeouts, walks and times on base per batter against his level;
+    fitted on the training seasons, the test season's slope with an interval from resampling pitchers, the squared-error
+    change from adding the training slope, and the next start after drops of a mile per hour or more. Aggregates only."""
+    reg = (T['post'] == 0) if 'post' in T else np.ones(len(T['season']), bool)
+    train = [int(x) for x in spec.get('train', (2024, 2025))]; test = int(spec.get('test', 2026)); boot = int(spec.get('boot', 2000))
+    rng = np.random.default_rng(int(spec.get('seed', 20261011)))
+    m = reg.copy()
+    if spec.get('test_end'):
+        m &= ~((T['season'] == test) & (T['day'] >= date.fromisoformat(spec['test_end']).toordinal()))
+    G = game_velo_table(T, m); stage('velo study: games')
+
+    def prior_of(season):
+        sel = G['started'] & (G['season'] == season - 1)
+        up, inv = np.unique(G['pitcher'][sel], return_inverse=True)
+        sums = {x: np.bincount(inv, weights=G[x][sel], minlength=len(up)) for x in ('bf', 'k', 'bb', 'on')}
+        return {int(pid): {x: float(sums[x][i]) for x in sums} for i, pid in enumerate(up)}
+    P = {y: velo_pairs(G, y, prior_of(y), min_fb=int(spec.get('min_fb', 15))) for y in train + [test]}
+    stage('velo study: pairs')
+    out = {'train': train, 'test': test, 'test_end': spec.get('test_end'), 'pairs': {str(y): int(len(P[y]['delta'])) for y in P}, 'targets': {}}
+
+    def slope(x, y, w):
+        return float((w * x * y).sum() / max((w * x * x).sum(), 1e-12))
+    for name in ('velo', 'k', 'bb', 'on'):
+        def xyw(p):
+            if name == 'velo':
+                return p['delta'], p['next_delta'], np.ones(len(p['delta']))
+            return p['delta'], p[name] / np.maximum(p['bf'], 1) - p['lev_' + name], p['bf']
+        xs = [xyw(P[y]) for y in train]
+        x, yv, w = (np.concatenate([a[i] for a in xs]) for i in range(3))
+        b_fit = slope(x - np.average(x, weights=w), yv, w)
+        xt, yt, wt = xyw(P[test])
+        pids = P[test]['pitcher']; up, pi = np.unique(pids, return_inverse=True)
+        xc = xt - np.average(xt, weights=wt)
+        sxy = np.bincount(pi, weights=wt * xc * yt, minlength=len(up)); sxx = np.bincount(pi, weights=wt * xc * xc, minlength=len(up))
+        draws = rng.integers(0, len(up), (boot, len(up)))
+        bs = sxy[draws].sum(1) / np.maximum(sxx[draws].sum(1), 1e-12)
+        e0 = np.bincount(pi, weights=wt * yt ** 2, minlength=len(up)); e1 = np.bincount(pi, weights=wt * (yt - b_fit * xc) ** 2, minlength=len(up))
+        rel = (e1 - e0)[draws].sum(1) / np.maximum(e0[draws].sum(1), 1e-12)
+        drop = xt <= -1.0
+        dm = np.bincount(pi, weights=np.where(drop, wt * yt, 0.0), minlength=len(up)); dw = np.bincount(pi, weights=np.where(drop, wt, 0.0), minlength=len(up))
+        om = np.bincount(pi, weights=np.where(drop, 0.0, wt * yt), minlength=len(up)); ow = np.bincount(pi, weights=np.where(drop, 0.0, wt), minlength=len(up))
+        db = dm[draws].sum(1) / np.maximum(dw[draws].sum(1), 1e-12) - om[draws].sum(1) / np.maximum(ow[draws].sum(1), 1e-12)
+        out['targets'][name] = {'slope_fit': round(b_fit, 5), 'slope_test': round(float(sxy.sum() / max(sxx.sum(), 1e-12)), 5),
+                                'slope_test_ci': [round(float(np.percentile(bs, 2.5)), 5), round(float(np.percentile(bs, 97.5)), 5)],
+                                'relative_change': [round(float((e1 - e0).sum() / max(e0.sum(), 1e-12)), 5), round(float(np.percentile(rel, 2.5)), 5), round(float(np.percentile(rel, 97.5)), 5)],
+                                'after_drops': {'starts': int(drop.sum()), 'mean': round(float(dm.sum() / max(dw.sum(), 1e-12)), 5),
+                                                'others': round(float(om.sum() / max(ow.sum(), 1e-12)), 5),
+                                                'difference': round(float(dm.sum() / max(dw.sum(), 1e-12) - om.sum() / max(ow.sum(), 1e-12)), 5),
+                                                'ci': [round(float(np.percentile(db, 2.5)), 5), round(float(np.percentile(db, 97.5)), 5)]},
+                                'pitchers': int(len(up)), 'pairs': int(len(xt)), 'sd_delta': round(float(np.std(xt)), 3)}
+        stage(f'velo study: {name}')
+    return out
+
+
 # SPLITS-01 (LEDGER): how much of a hitter's split by pitcher hand carries over. The metrics the splits table shows:
 # AVG and SLG on at-bats ended on the pitch, chase on pitches out of MLB's zone (11-14), misses per swing.
 SPLIT_M_GRID = (0.0, 25.0, 50.0, 100.0, 200.0, 400.0, 800.0, 1600.0, 3200.0, 6400.0, 1e6)
@@ -2739,6 +2856,9 @@ def main():
             dates = []
         if params.get('split_study'):
             receipt['split_study'] = split_shrink_study(T, stage, params['split_study'])
+            dates = []
+        if params.get('velo_study'):
+            receipt['velo_study'] = velo_study(T, stage, params['velo_study'])
             dates = []
         if params.get('form_study'):
             receipt['form_study'] = form_study(T, stage, params['form_study'])
