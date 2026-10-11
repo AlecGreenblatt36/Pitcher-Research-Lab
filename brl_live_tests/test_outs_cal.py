@@ -43,3 +43,9 @@ def test_starts_without_a_real_line_are_left_out():
     g[0]['starters']['away']['actual'] = None
     g[1]['starters']['home']['actual'] = {'outs': None, 'bf': 3}
     assert len(oc.starts(g)) == 2
+
+
+def test_bands_add_up_and_match_when_real_outs_follow_the_chances():
+    r = oc.season_check(_games(6, n=1500), draws=100)
+    assert abs(sum(v['sim'] for v in r['bands'].values()) - 100) < 1e-6 and abs(sum(v['actual'] for v in r['bands'].values()) - 100) < 1e-6
+    assert all(abs(v['gap_points']) < 2.0 for v in r['bands'].values())

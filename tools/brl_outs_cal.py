@@ -22,6 +22,7 @@ import numpy as np
 LINES = tuple(x + 0.5 for x in range(12, 21))          # 12.5 to 20.5
 BRIER_LINES = (14.5, 15.5, 16.5, 17.5)
 LEVEL_POINTS, FIFTH_OUTS = 2.5, 0.6                    # PLAYER-07's bounds for predictions (1) and (2)
+BANDS = ((0, 9), (10, 12), (13, 15), (16, 17), (18, 18), (19, 20), (21, 27))   # described; LEASH-02 gates 10 to 12
 
 
 def starts(games):
@@ -91,6 +92,10 @@ def season_check(games, draws=2000, seed=1):
                 lp.append(more_than(x['p'], L)); lo.append(float(yy > L))
     lp, lo = np.array(lp), np.array(lo)
     res['ladder_lines'] = {'n': int(len(lp)), 'pred': round(float(lp.mean()), 4), 'actual': round(float(lo.mean()), 4)}
+    res['bands'] = {}
+    for lo_, hi_ in BANDS:
+        ps = np.array([float(x['p'][lo_:hi_ + 1].sum()) for x in S]); ob = ((y >= lo_) & (y <= hi_)).astype(float)
+        res['bands'][f'{lo_}-{hi_}'] = {'sim': round(100 * float(ps.mean()), 2), 'actual': round(100 * float(ob.mean()), 2), 'gap_points': round(100 * float(ps.mean() - ob.mean()), 2)}
     res['level_holds'] = all(abs(v['gap_points']) <= LEVEL_POINTS for v in res['lines'].values())
     res['fifths_hold'] = res['max_fifth_gap_outs'] <= FIFTH_OUTS
     res['brier_holds'] = res['brier_lines'] < res['brier_lines_const']
@@ -128,6 +133,7 @@ def main():
             print(' ', L, 'pred %.4f act %.4f gap %+.2f [%+.2f, %+.2f]' % (x['pred'], x['actual'], x['gap_points'], *x['gap_ci_points']))
         print('  fifths', r['fifths'], 'max gap %.3f' % r['max_fifth_gap_outs'])
         print('  brier 14.5-17.5 %.5f const %.5f' % (r['brier_lines'], r['brier_lines_const']), 'ladder', r['ladder_lines'])
+        print('  bands (sim, actual)', ' '.join('%s: %.1f/%.1f' % (k, v['sim'], v['actual']) for k, v in r['bands'].items()))
         print('  (1) level', r['level_holds'], '(2) fifths', r['fifths_hold'], '(3) brier', r['brier_holds'])
     print('PLAYER-07 rule ((1) and (2) in both seasons):', out['rule_holds'])
 
