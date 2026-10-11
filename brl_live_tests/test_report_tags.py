@@ -31,16 +31,18 @@ def _season(rng, traits, season, n_pitch=900):
     p_sw = np.where(first & ~outside, 0.66 + traits['first'][bat], p_sw)
     p_sw = np.clip(p_sw, 0.01, 0.99)
     sw = rng.random(n) < p_sw
-    wh = sw & (rng.random(n) < np.clip(traits['whiff'][bat], 0.01, 0.9))
+    group = rng.choice(np.array([0, 0, 3, 5]), n)
+    wh = sw & (rng.random(n) < np.clip(traits['whiff'][bat] + np.where(group == 3, traits['brk'][bat], 0.0), 0.01, 0.9))
     call = np.where(~sw, 0, np.where(wh, 2, 1))
     day = 700000 + season * 400 + rng.integers(0, 180, n)
-    return {'batter': bat + 1000, 'season': np.full(n, season), 'day': day, 'post': np.zeros(n, int), 'group': np.zeros(n, int), 'call': call,
+    return {'batter': bat + 1000, 'season': np.full(n, season), 'day': day, 'post': np.zeros(n, int), 'group': group, 'call': call,
             'balls': balls, 'strikes': strikes, 'px': px.astype(np.float32), 'pz': pz.astype(np.float32), 'zone': zone, 'stand_r': (np.arange(n) // n_pitch) % 2,
             'bunt_pa': np.zeros(n, int), 'last_in_pa': np.zeros(n, int)}
 
 
 def _traits(rng, nh):
-    return {'chase': rng.normal(0.28, 0.07, nh), 'whiff': rng.normal(0.24, 0.06, nh), 'first': rng.normal(-0.36, 0.2, nh), 'two': rng.normal(0.0, 0.07, nh)}
+    return {'chase': rng.normal(0.28, 0.07, nh), 'whiff': rng.normal(0.24, 0.06, nh), 'first': rng.normal(-0.36, 0.2, nh), 'two': rng.normal(0.0, 0.07, nh),
+            'brk': rng.normal(0.08, 0.08, nh)}
 
 
 def _world(persist, seed=3, nh=160):
@@ -58,6 +60,9 @@ def test_tags_hold_when_habits_carry_over_and_not_when_redrawn():
         t = held['tags'][name]
         assert t['hitters'] >= 5 and t['held'], (name, t)
         assert abs(t['test_diff'] - t['train_diff']) < 0.03, (name, t)
+    fam = B.tag_study(_world(True), lambda *a: None, dict(spec, families=True))['splits'][0]['relative_family_whiff']
+    assert set(fam) == {'breaking', 'offspeed'} and fam['breaking']['hitters'] > 50 and fam['breaking']['corr_train_test'] > 0.4
+    assert abs(fam['offspeed']['corr_train_test']) < 0.3                       # nothing planted on offspeed
     rel = held['relative_two_strike']
     assert rel['corr_train_test'] > 0.5 and rel['tags']['expands_relative']['test_diff'] > 0.03
     null = B.tag_study(_world(False), lambda *a: None, spec)['splits'][0]

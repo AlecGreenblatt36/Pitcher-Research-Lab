@@ -1285,10 +1285,13 @@ def tag_counts(T: dict, mask) -> dict:
     sw = (T['call'][rows] == 1) | (T['call'][rows] == 2); wh = T['call'][rows] == 2
     g = count_group(T['balls'][rows], T['strikes'][rows]); ooz = T['zone'][rows] >= 11
     first, two, behind = g == 0, g == 3, g == 2
+    grp = T['group'][rows]; fb, br, os_ = np.isin(grp, (0, 1, 2, 6)), np.isin(grp, (3, 4)), grp == 5
     n = c(np.ones(len(rows), bool))
     return {'bats': bats, 'side': (c(T['stand_r'][rows] == 1) / np.maximum(n, 1) >= 0.5).astype(np.int64), 'n': n,
             'chase': (c(sw & outside), c(outside)), 'whiff': (c(wh), c(sw)), 'first': (c(sw & first), c(first)),
-            'two': (c(sw & two & ooz), c(two & ooz)), 'other': (c(sw & ~two & ooz), c(~two & ooz)), 'behind': (c(sw & behind), c(behind))}
+            'two': (c(sw & two & ooz), c(two & ooz)), 'other': (c(sw & ~two & ooz), c(~two & ooz)), 'behind': (c(sw & behind), c(behind)),
+            # TAGS-03: misses per swing by pitch family
+            'wh_fb': (c(wh & fb), c(sw & fb)), 'wh_br': (c(wh & br), c(sw & br)), 'wh_os': (c(wh & os_), c(sw & os_))}
 
 
 def _tag_league(tc: dict, rate: str, side_wise: bool) -> np.ndarray:
@@ -1383,6 +1386,36 @@ def tag_study(T: dict, stage, spec: dict) -> dict:
                 rtags[nm_] = {'threshold': sgn * sd, 'hitters': int(len(sel)), 'train_diff': float(rel_a[sel].mean()), 'test_diff': m_,
                               'test_ci': [float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5))]}
             res['relative_two_strike']['tags'] = rtags
+        if spec.get('families'):
+            # TAGS-03: his misses per swing on breaking balls (and offspeed) minus on fastballs, net of the league's same
+            # difference on his side: season-to-season correlation and tags at one standard deviation
+            res['relative_family_whiff'] = {}
+            for fam, key, floor in (('breaking', 'wh_br', 100), ('offspeed', 'wh_os', 60)):
+                def relf(tc):
+                    fn, fd = tc[key]; bn, bd = tc['wh_fb']
+                    ok_ = (fd >= floor) & (bd >= 150)
+                    rf = np.where(ok_, fn / np.maximum(fd, 1e-9), np.nan); rb = np.where(ok_, bn / np.maximum(bd, 1e-9), np.nan)
+                    lgf, lgb = _tag_league(tc, key, True), _tag_league(tc, 'wh_fb', True)
+                    return (rf - rb) - (lgf - lgb)
+                ra_, rb_ = relf(a), relf(b)
+                bothf = has_test & np.isfinite(ra_)
+                bothf[bothf] &= np.isfinite(rb_[ti[bothf]])
+                xf, yf = ra_[bothf], rb_[ti[bothf]]
+                entry = {'hitters': int(bothf.sum()), 'sd_train': float(np.std(xf)) if len(xf) else None,
+                         'corr_train_test': float(np.corrcoef(xf, yf)[0, 1]) if len(xf) >= 20 else None}
+                if len(xf) >= 20:
+                    sdf = float(np.std(xf)); ft = {}
+                    for nm_, sgn in (('misses_more', 1), ('misses_less', -1)):
+                        sel = np.flatnonzero(bothf)[(xf * sgn) >= sdf]
+                        if not len(sel):
+                            continue
+                        j = ti[sel]; w = b[key][1][j]; d = rb_[j]
+                        bs = rng.integers(0, len(sel), size=(boot, len(sel)))
+                        means = (w * d)[bs].sum(1) / np.maximum(w[bs].sum(1), 1e-9)
+                        ft[nm_] = {'threshold': sgn * sdf, 'hitters': int(len(sel)), 'train_diff': float(ra_[sel].mean()),
+                                   'test_diff': float((w * d).sum() / max(w.sum(), 1e-9)), 'test_ci': [float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5))]}
+                    entry['tags'] = ft
+                res['relative_family_whiff'][fam] = entry
         out['splits'].append(res)
         stage(f"tag study {split['train']} -> {split['test']}")
     return out
