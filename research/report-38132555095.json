@@ -1,0 +1,284 @@
+{
+ "schema": "brl.report-receipt.v1",
+ "run_id": "38132555095",
+ "params": {
+  "change_study": {
+   "seasons": [
+    2023,
+    2024,
+    2025,
+    2026
+   ],
+   "test_end": "2026-08-01",
+   "min_pa": 200,
+   "min_pa_test": 150,
+   "boot": 2000
+  },
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "dates": [
+   "2026-04-01"
+  ],
+  "publish": false
+ },
+ "started_at": "2026-10-11T10:37:02.571647+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 10.3,
+   "peak_rss_mb": 1087
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 20.3,
+   "peak_rss_mb": 1262
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 30.4,
+   "peak_rss_mb": 1420
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 40.4,
+   "peak_rss_mb": 1596
+  },
+  {
+   "stage": "change study: lines",
+   "at_seconds": 40.7,
+   "peak_rss_mb": 1596
+  },
+  {
+   "stage": "change study: done",
+   "at_seconds": 40.8,
+   "peak_rss_mb": 1596
+  }
+ ],
+ "reports": {},
+ "environment": {
+  "python": "3.12.15",
+  "commit": "89cacf5de24f8fc334ec569b727f229020e3181d",
+  "numpy": "2.5.4",
+  "scipy": "1.18.1",
+  "scikit-learn": "1.9.1",
+  "pandas": "3.0.6",
+  "cryptography": "46.0.4"
+ },
+ "change_study": {
+  "windows": {
+   "train": {
+    "hitters": 223,
+    "chase": {
+     "flagged": {
+      "n": 6,
+      "mean_change_points": 6.39,
+      "held": 0.683,
+      "ci": [
+       0.26,
+       1.178
+      ]
+     },
+     "unflagged": {
+      "n": 217,
+      "mean_change_points": 2.36,
+      "held": 0.566,
+      "ci": [
+       0.403,
+       0.74
+      ]
+     }
+    },
+    "whiff": {
+     "flagged": {
+      "n": 13,
+      "mean_change_points": 7.04,
+      "held": 0.7,
+      "ci": [
+       0.43,
+       0.95
+      ]
+     },
+     "unflagged": {
+      "n": 210,
+      "mean_change_points": 2.19,
+      "held": 0.441,
+      "ci": [
+       0.264,
+       0.617
+      ]
+     }
+    },
+    "k": {
+     "flagged": {
+      "n": 6,
+      "mean_change_points": 10.2,
+      "held": 0.844,
+      "ci": [
+       0.557,
+       1.069
+      ]
+     },
+     "unflagged": {
+      "n": 217,
+      "mean_change_points": 2.47,
+      "held": 0.558,
+      "ci": [
+       0.365,
+       0.756
+      ]
+     }
+    },
+    "bb": {
+     "flagged": {
+      "n": 3,
+      "mean_change_points": 6.68,
+      "held": 0.507,
+      "ci": [
+       0.29,
+       1.046
+      ]
+     },
+     "unflagged": {
+      "n": 220,
+      "mean_change_points": 1.68,
+      "held": 0.574,
+      "ci": [
+       0.402,
+       0.747
+      ]
+     }
+    },
+    "hard": {
+     "flagged": {
+      "n": 3,
+      "mean_change_points": 12.16,
+      "held": 0.288,
+      "ci": [
+       -0.222,
+       0.692
+      ]
+     },
+     "unflagged": {
+      "n": 220,
+      "mean_change_points": 4.1,
+      "held": 0.665,
+      "ci": [
+       0.514,
+       0.817
+      ]
+     }
+    }
+   },
+   "test": {
+    "hitters": 201,
+    "chase": {
+     "flagged": {
+      "n": 8,
+      "mean_change_points": 7.15,
+      "held": 0.626,
+      "ci": [
+       0.312,
+       0.965
+      ]
+     },
+     "unflagged": {
+      "n": 193,
+      "mean_change_points": 2.41,
+      "held": 0.531,
+      "ci": [
+       0.338,
+       0.724
+      ]
+     }
+    },
+    "whiff": {
+     "flagged": {
+      "n": 8,
+      "mean_change_points": 6.86,
+      "held": 0.554,
+      "ci": [
+       0.301,
+       0.837
+      ]
+     },
+     "unflagged": {
+      "n": 193,
+      "mean_change_points": 2.18,
+      "held": 0.688,
+      "ci": [
+       0.5,
+       0.878
+      ]
+     }
+    },
+    "k": {
+     "flagged": {
+      "n": 3,
+      "mean_change_points": 10.13,
+      "held": 0.483,
+      "ci": [
+       0.243,
+       0.834
+      ]
+     },
+     "unflagged": {
+      "n": 198,
+      "mean_change_points": 2.77,
+      "held": 0.594,
+      "ci": [
+       0.424,
+       0.763
+      ]
+     }
+    },
+    "bb": {
+     "flagged": {
+      "n": 2,
+      "mean_change_points": 5.88,
+      "held": 0.233,
+      "ci": [
+       -0.042,
+       0.48
+      ]
+     },
+     "unflagged": {
+      "n": 199,
+      "mean_change_points": 1.86,
+      "held": 0.428,
+      "ci": [
+       0.246,
+       0.61
+      ]
+     }
+    },
+    "hard": {
+     "flagged": {
+      "n": 6,
+      "mean_change_points": 13.16,
+      "held": 0.815,
+      "ci": [
+       0.539,
+       1.115
+      ]
+     },
+     "unflagged": {
+      "n": 195,
+      "mean_change_points": 3.37,
+      "held": 0.644,
+      "ci": [
+       0.453,
+       0.85
+      ]
+     }
+    }
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-11T10:37:43.346318+00:00",
+ "seconds": 40.8
+}
