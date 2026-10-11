@@ -556,7 +556,28 @@ class Fitted:
                     cell = np.argmin(np.abs(uu[:, None] - GU[None, :]), 1) + len(GU) * np.argmin(np.abs(zz[:, None] - GZ[None, :]), 1)
                     cnt = np.bincount(cell, minlength=len(GU) * len(GZ))
                     mix[fname][key] = [[float(GU[k % len(GU)]), float(GZ[k // len(GU)]), round(float(cnt[k] / m2.sum()), 3)] for k in np.argsort(-cnt)[:3] if cnt[k] > 0]
-        return {'throws': 'R' if T['throw_r'][r][0] == 1 else 'L', 'pitches': int(len(r)), 'mix': mix,
+        # the arsenal by pitch type, the way the public pitch pages list it: share, speed, spin, movement (PITCHf/x inches over
+        # the last 40 feet; horizontal positive to his arm side), misses per swing, chases, strikes and put-aways
+        arsenal = []
+        sub = T['sub'][r]; rh = T['throw_r'][r][0] == 1
+        for k, code in enumerate(D.SUBTYPES):
+            mm = sub == k
+            if mm.sum() < max(20, 0.01 * len(r)):
+                continue
+            rr = r[mm]; sw = self.swing[rr]; out = self.outside[rr]; two = T['strikes'][rr] == 2
+            fin = lambda v: None if not np.isfinite(v) else v
+            spin = fin(float(np.nanmean(np.where(T['spin'][rr] > 0, T['spin'][rr], np.nan)))) if np.isfinite(T['spin'][rr]).any() else None
+            arsenal.append({'type': code, 'pitches': int(mm.sum()), 'share': round(float(mm.mean()), 3),
+                            'speed': round(float(np.nanmean(T['v0'][rr])), 1),
+                            'spin': int(round(spin)) if spin else None,
+                            'v_mov': round(float(np.nanmean(T['pfx_z'][rr])), 1) if np.isfinite(T['pfx_z'][rr]).any() else None,
+                            'h_arm': round(float(np.nanmean(T['pfx_x'][rr])) * (-1.0 if rh else 1.0), 1) if np.isfinite(T['pfx_x'][rr]).any() else None,
+                            'whiff_rate': round(float(self.whiff[rr].sum() / sw.sum()), 3) if sw.sum() >= 25 else None,
+                            'chase_rate': round(float(sw[out].mean()), 3) if out.sum() >= 30 else None,
+                            'zone_rate': round(float((~out).mean()), 3),
+                            'putaway': round(float((two & (T['last_in_pa'][rr] == 1) & (T['out7'][rr] == 1)).sum() / two.sum()), 3) if two.sum() >= 30 else None})
+        arsenal.sort(key=lambda a: -a['share'])
+        return {'throws': 'R' if T['throw_r'][r][0] == 1 else 'L', 'pitches': int(len(r)), 'mix': mix, 'arsenal': arsenal,
                 'chase_rate_against': round(float(self.swing[r][self.outside[r]].mean()), 3) if self.outside[r].any() else None,
                 'looks_in_ends_out': round(float(self.looks_in_ends_out[r].mean()), 3),
                 'zones': zone_split(T, r, self.swing, self.whiff, by='stand_r'),      # where he throws, by the batter's side
