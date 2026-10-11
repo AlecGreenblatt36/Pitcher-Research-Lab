@@ -35,15 +35,21 @@ def _season(rng, traits, season, n_pitch=1500):
     v0 = np.where(group == 0, rng.choice(np.array([91.0, 91.0, 97.5]), n), 85.0)
     wh = sw & (rng.random(n) < np.clip(traits['whiff'][bat] + np.where(group == 3, traits['brk'][bat], 0.0) + np.where(v0 >= 96, traits['velo'][bat], 0.0), 0.01, 0.9))
     call = np.where(~sw, 0, np.where(wh, 2, 1))
+    inplay = call == 1
+    side_r = (np.arange(n) // n_pitch) % 2 == 1
+    pull_p = np.clip(traits['pull'][bat], 0.05, 0.95)
+    pulled = rng.random(n) < pull_p
+    spray = np.where(inplay, np.where(pulled, np.where(side_r, -30.0, 30.0), np.where(rng.random(n) < 0.5, 0.0, np.where(side_r, 30.0, -30.0))), np.nan)
+    traj = np.where(inplay, rng.choice(np.array([0, 0, 1, 2]), n), -1)
     day = 700000 + season * 400 + rng.integers(0, 180, n)
     return {'batter': bat + 1000, 'season': np.full(n, season), 'day': day, 'post': np.zeros(n, int), 'group': group, 'call': call,
             'balls': balls, 'strikes': strikes, 'px': px.astype(np.float32), 'pz': pz.astype(np.float32), 'zone': zone, 'stand_r': (np.arange(n) // n_pitch) % 2,
-            'bunt_pa': np.zeros(n, int), 'last_in_pa': np.zeros(n, int), 'v0': v0.astype(np.float32)}
+            'bunt_pa': np.zeros(n, int), 'last_in_pa': np.zeros(n, int), 'v0': v0.astype(np.float32), 'spray': spray.astype(np.float32), 'traj': traj}
 
 
 def _traits(rng, nh):
     return {'chase': rng.normal(0.28, 0.07, nh), 'whiff': rng.normal(0.24, 0.06, nh), 'first': rng.normal(-0.36, 0.2, nh), 'two': rng.normal(0.0, 0.07, nh),
-            'brk': rng.normal(0.08, 0.08, nh), 'velo': rng.normal(0.05, 0.08, nh)}
+            'brk': rng.normal(0.08, 0.08, nh), 'velo': rng.normal(0.05, 0.08, nh), 'pull': rng.normal(0.4, 0.12, nh)}
 
 
 def _world(persist, seed=3, nh=160, velo=False):
@@ -66,6 +72,8 @@ def test_tags_hold_when_habits_carry_over_and_not_when_redrawn():
     fam = B.tag_study(_world(True), lambda *a: None, dict(spec, families=True))['splits'][0]['relative_family_whiff']
     assert set(fam) == {'breaking', 'offspeed'} and fam['breaking']['hitters'] > 50 and fam['breaking']['corr_train_test'] > 0.4
     assert abs(fam['offspeed']['corr_train_test']) < 0.3                       # nothing planted on offspeed
+    pull = B.tag_study(_world(True), lambda *a: None, dict(spec, spray=True))['splits'][0]['pull']
+    assert pull['pull_gb']['corr_train_test'] > 0.5 and pull['pull_gb']['tags']['pulls']['test_diff'] > 0.05
     vel = B.tag_study(_world(True, velo=True), lambda *a: None, dict(spec, velocity=True))['splits'][0]['relative_velocity_whiff']
     assert vel['hitters'] > 50 and vel['corr_train_test'] > 0.3 and vel['tags']['late_on_velocity']['test_diff'] > 0.03
     rel = held['relative_two_strike']

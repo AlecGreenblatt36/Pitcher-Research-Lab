@@ -1287,6 +1287,12 @@ def tag_counts(T: dict, mask) -> dict:
     first, two, behind = g == 0, g == 3, g == 2
     grp = T['group'][rows]; fb, br, os_ = np.isin(grp, (0, 1, 2, 6)), np.isin(grp, (3, 4)), grp == 5
     v0 = np.nan_to_num(T['v0'][rows].astype(np.float64), nan=0.0) if 'v0' in T else np.zeros(len(rows))
+    if 'spray' in T and 'traj' in T:
+        ang = T['spray'][rows].astype(np.float64); okb = np.isfinite(ang); trj = T['traj'][rows]
+        pulled = okb & np.where(T['stand_r'][rows] == 1, np.nan_to_num(ang) < -15.0, np.nan_to_num(ang) > 15.0)
+        gb_, air_ = okb & (trj == 0), okb & ((trj == 1) | (trj == 2))
+    else:
+        pulled = gb_ = air_ = np.zeros(len(rows), bool)
     n = c(np.ones(len(rows), bool))
     return {'bats': bats, 'side': (c(T['stand_r'][rows] == 1) / np.maximum(n, 1) >= 0.5).astype(np.int64), 'n': n,
             'chase': (c(sw & outside), c(outside)), 'whiff': (c(wh), c(sw)), 'first': (c(sw & first), c(first)),
@@ -1294,7 +1300,9 @@ def tag_counts(T: dict, mask) -> dict:
             # TAGS-03: misses per swing by pitch family
             'wh_fb': (c(wh & fb), c(sw & fb)), 'wh_br': (c(wh & br), c(sw & br)), 'wh_os': (c(wh & os_), c(sw & os_)),
             # TAGS-04: misses per swing on hard fastballs (96 mph and up) and on softer ones (under 93)
-            'wh_hi': (c(wh & fb & (v0 >= 96)), c(sw & fb & (v0 >= 96))), 'wh_lo': (c(wh & fb & (v0 < 93)), c(sw & fb & (v0 < 93)))}
+            'wh_hi': (c(wh & fb & (v0 >= 96)), c(sw & fb & (v0 >= 96))), 'wh_lo': (c(wh & fb & (v0 < 93)), c(sw & fb & (v0 < 93))),
+            # TAGS-05: pulled ground balls and pulled balls in the air (field third on his pull side, 15 degrees off center)
+            'pull_gb': (c(gb_ & pulled), c(gb_)), 'pull_air': (c(air_ & pulled), c(air_))}
 
 
 def _tag_league(tc: dict, rate: str, side_wise: bool) -> np.ndarray:
@@ -1415,6 +1423,29 @@ def tag_study(T: dict, stage, spec: dict) -> dict:
                                'test_diff': float((w * d).sum() / max(w.sum(), 1e-9)), 'test_ci': [float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5))]}
                 ve['tags'] = vt
             res['relative_velocity_whiff'] = ve
+        if spec.get('spray'):
+            # TAGS-05: his pull share on ground balls and in the air against the league's on his side; tags at fixed thresholds
+            res['pull'] = {}
+            for key, thr, floor in (('pull_gb', 0.10, 60), ('pull_air', 0.08, 60)):
+                pn, pd_ = a[key]
+                r_tr = np.where(pd_ >= floor, pn / np.maximum(pd_, 1e-9), np.nan)
+                d_tr = r_tr - _tag_league(a, key, True)
+                tn, tdn = b[key]
+                lg_te = _tag_league(b, key, True)
+                okp = has_test & np.isfinite(d_tr)
+                okp[okp] &= tdn[ti[okp]] >= floor
+                x_ = d_tr[okp]; j_all = ti[okp]; y_ = tn[j_all] / np.maximum(tdn[j_all], 1e-9) - lg_te[j_all]
+                ent = {'hitters': int(okp.sum()), 'corr_train_test': float(np.corrcoef(x_, y_)[0, 1]) if len(x_) >= 20 else None, 'tags': {}}
+                for nm_, sgn in (('pulls', 1), ('goes_the_other_way', -1)):
+                    sel = np.flatnonzero(okp)[(x_ * sgn) >= thr]
+                    if not len(sel):
+                        continue
+                    j = ti[sel]; w = tdn[j]; d = tn[j] / np.maximum(w, 1e-9) - lg_te[j]
+                    bs = rng.integers(0, len(sel), size=(boot, len(sel)))
+                    means = (w * d)[bs].sum(1) / np.maximum(w[bs].sum(1), 1e-9)
+                    ent['tags'][nm_] = {'threshold': sgn * thr, 'hitters': int(len(sel)), 'train_diff': float(d_tr[sel].mean()),
+                                        'test_diff': float((w * d).sum() / max(w.sum(), 1e-9)), 'test_ci': [float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5))]}
+                res['pull'][key] = ent
         if spec.get('families'):
             # TAGS-03: his misses per swing on breaking balls (and offspeed) minus on fastballs, net of the league's same
             # difference on his side: season-to-season correlation and tags at one standard deviation
