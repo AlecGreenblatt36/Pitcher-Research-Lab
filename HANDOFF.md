@@ -65,7 +65,12 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 7:40 a.m. Eastern October 11, by `date -u`)
+### In flight (updated 8:00 a.m. Eastern October 11, by `date -u`)
+
+- October 11, 8:00 a.m.: PXSTATS-01 held (run 38136607768): for pitchers, expected AVG and SLG against from exit speed and
+  launch angle predicted the next season better than the actual ones (unlike hitters, XSTATS-01), so pitcher pages and
+  the pitching matchup rank them (cards' lines xh and xtb from xs_lines; PCT_PITCHER xavg, xslg). Cards rebuilt (run
+  38137036454; Skubal expected AVG against .211, 85th percentile).
 
 - October 11, 7:40 a.m.: HCHANGE-02 held for chase, misses, strikeouts and hard-hit (a looser 2-point, two-SE rule; 20 to
   41 hitters flagged; 56% to 70% held), so the changes line uses it; walks stay off (39%). XSTATS-01 failed: expected AVG
