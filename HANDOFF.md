@@ -65,9 +65,9 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 8:55 a.m. Eastern October 11, by `date -u`)
+### In flight (updated 8:48 a.m. Eastern October 11, by `date -u`)
 
-- October 11, 8:55 a.m.: BVP-01 (run 38139650184): every prediction failed; beyond each player's own level, a hitter's
+- October 11, 8:48 a.m.: BVP-01 (run 38139650184): every prediction failed; beyond each player's own level, a hitter's
   record against one pitcher carried between none and about 15% of a 20 plate-appearance record's on-base edge (2026's
   interval above zero, 2025's not), and nothing measurable in strikeouts or slugging. PROD-14: the Matchups tab shows each
   hitter's career line against the opposing starter from MLB (one vsPlayerTotal ask per lineup, never colored, the note
