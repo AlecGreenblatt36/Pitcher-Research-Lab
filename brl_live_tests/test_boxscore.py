@@ -226,3 +226,20 @@ def test_two_or_more_total_bases_of_his_own_keep_each_hit_with_the_spots_share()
     # a single alone never reaches two; a double does when kept; a single and a home run do when the home run is kept
     assert abs(row['tb2_probability']-k/2)<1e-12
     assert 'hs' not in row
+
+
+def test_runs_on_outs_in_play_are_batted_in_except_on_double_plays():
+    """MLB's rule 9.04: a run scoring on a groundout or flyout is an RBI; on a double play it is not."""
+    from brl_live.boxscore import transitions_for
+    kernel=transitions_for({'transitions':True})
+    m=matchup();sim=ObservedSimulator(Provider(),SimulationConfig(max_innings=100,max_plate_appearances=4000),transitions=kernel)
+    fit=BookkeepingFit(history(),'2026-10-06');seen=dp=0
+    for seed in range(1,40):
+        box=build_game_box(sim.simulate(m,seed,record_events=True),m,fit)
+        for p in box['plays']:
+            if p['box_outcome']!='bip_out' or not p['runs_scored']:continue
+            if 'double play' in p['description'] or 'triple play' in p['description']:
+                assert p['rbi']==0;dp+=1
+            else:
+                assert p['rbi']==p['runs_scored'];seen+=1
+    assert seen>=5

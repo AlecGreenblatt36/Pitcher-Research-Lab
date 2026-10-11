@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 311,
- "rows": 314,
+ "experiments": 312,
+ "rows": 315,
  "records": {
   "ACC-01": [
    {
@@ -5097,6 +5097,22 @@
     "runs": [],
     "frozen_commits": [],
     "status": "pending"
+   }
+  ],
+  "BOX-RBI-01": [
+   {
+    "id": "BOX-RBI-01",
+    "columns": {
+     "ID": "BOX-RBI-01",
+     "Attempt": "Runs batted in on outs in play, a correctness fix (October 11, 10 a.m. Eastern; no claim). The simulated box credited a run batted in only on a hit, a walk or hit-by-pitch and a sacrifice fly, so a run scoring on a groundout went without one, against MLB's scoring rule 9.04 (a run that scores on an out in play is batted in unless the play is a double play). The box now credits it (brl_live/boxscore.py; the simulator has no errors); test_boxscore.py checks it over simulated games. It changes the projected box's RBI column and each hitter's RBI distribution, nothing the engine decides",
+     "Disposition and evidence": "Done in the commit that added this row",
+     "Delta corrected Brier, 2026": "fix"
+    },
+    "registered_before_run": false,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "fix"
    }
   ],
   "PROD-13": [

@@ -212,7 +212,9 @@ def build_game_box(result,matchup,fit:BookkeepingFit) -> dict[str,Any]:
             charged=pid if responsible is None else str(responsible)
             if charged not in pitching[fs]:raise Blocked('Missing responsible pitcher in box score')
             pitching[fs][charged]['R']+=1
-        rbi=e['runs_scored'] if hit or o=='bb_hbp' or sf else 0
+        # MLB's scoring rule 9.04: a run that scores on a hit, a walk or hit-by-pitch, a sacrifice fly or an out in play other
+        # than a double play is batted in (the simulator has no errors)
+        rbi=e['runs_scored'] if hit or o=='bb_hbp' or sf or (o=='bip_out' and 'double play' not in e['description'] and 'triple play' not in e['description']) else 0
         b['RBI']+=rbi;e['rbi']=rbi;e['scoring_players']=[str(x[0]) for x in scored]
         inning=str(e['inning']);line=innings[s].setdefault(inning,{'R':0,'H':0})
         line['R']+=e['runs_scored'];line['H']+=int(hit)
