@@ -4738,8 +4738,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   /* Leaderboards and team tables from the players index (tools/brl_report.py index_line: plate appearances or batters
      faced, the percentile rows' rates and the ranks), laid out like the public leaderboards: one measure at a time with
      each player's percentile, and a team's hitters and pitchers in one table with every rate. */
-  var LD_DIR = { hitter: { avg: 1, slg: 1, k: -1, bb: 1, chase: -1, whiff: -1, hard: 1 }, pitcher: { k: 1, bb: -1, whiff: 1, chase: 1, hard: -1, avg: -1, velo: 1 } };
-  var LD_SHORT = { hitter: { avg: "AVG", slg: "SLG", k: "K%", bb: "BB%", chase: "Chase", whiff: "Whiff", hard: "Hard-hit" }, pitcher: { k: "K%", bb: "BB%", whiff: "Whiff", chase: "Chase", hard: "Hard-hit", avg: "AVG", velo: "Velo" } };
+  var LD_DIR = { hitter: { avg: 1, slg: 1, k: -1, bb: 1, chase: -1, whiff: -1, hard: 1, barrel: 1 }, pitcher: { k: 1, bb: -1, whiff: 1, chase: 1, hard: -1, barrel: -1, avg: -1, xavg: -1, xslg: -1, velo: 1 } };
+  var LD_SHORT = { hitter: { avg: "AVG", slg: "SLG", k: "K%", bb: "BB%", chase: "Chase", whiff: "Whiff", hard: "Hard-hit", barrel: "Barrel" }, pitcher: { k: "K%", bb: "BB%", whiff: "Whiff", chase: "Chase", hard: "Hard-hit", barrel: "Barrel", avg: "AVG", xavg: "xAVG", xslg: "xSLG", velo: "Velo" } };
   function ldFmt(kind, k, v) {
     var row = PCT_ROWS[kind].filter(function (r) { return r[0] === k; })[0], f = row ? row[2] : "pct";
     return v == null ? "\u2013" : f === "three" ? (v >= 1 ? v.toFixed(3) : v.toFixed(3).slice(1)) : f === "mph" ? v.toFixed(1) : (100 * v).toFixed(1) + "%";
