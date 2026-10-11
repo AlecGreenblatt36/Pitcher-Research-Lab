@@ -65,7 +65,17 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 9:05 p.m. Eastern October 10, by `date -u`)
+### In flight (updated 11:10 p.m. Eastern October 10, by `date -u`)
+
+- October 10, 11 p.m.: Game 5 final, Guardians 2, White Sox 0 (we had Guardians 57% before first pitch). The held changes
+  shipped after it was graded (claude/live-v2 and main at 7eab793ec: store writes compared by blob sha, the blocked-status
+  fix, the ledger slimming; 345 tests pass). Check the next live receipts (diagnostics/v2_receipt.json) say ok and that
+  ledger.json shrank. Also tonight: ZONES-01 registered, run (38106740119) and held on 2026, so the hot zones have an
+  Expected view (client-side shrinkage, HZ_EXP_M in the page); live at-bat notes from credited findings (next pitch
+  from SEQ-03F, the pitch count from WARMUP-01, runners in scoring position from PRESSURE-01); count tendencies,
+  usage by count and put-away rates (count_tend, usage_by_count; rebuilt in 38106430325); hitter tags for first-pitch and
+  two-strike habits. Checked and dropped: in-season re-anchoring of the run level (task 10): the simulator's monthly
+  total bias is within noise and reverses between seasons (2025-08 -0.37, 2026-08 +0.26; standard errors about 0.22).
 
 - October 10, 9 p.m. (Game 5 in progress): Alec asked for hot zones and layouts like the standard market. Done:
   hitter cards in the plans and on the Players page carry MLB's 13 zones (1-9 the strike zone by thirds, 11-14 the
