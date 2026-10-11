@@ -905,9 +905,9 @@ far and part of why simulated bullpens struck out fewer batters and allowed more
 
 - (October 11) Outcome levels drift by season and the simulator carries them from its tables: in replays with tables from
   other seasons, 2025's walk-or-HBP chances ran 2 points high and 2026's hit chances 1 point high (PLAYER-03); live, the
-  context table includes the current season through late September, so October is closer. Next season's item: re-anchor
-  each outcome's league level in-season from the season's real plate appearances so far (offsets log(observed/predicted)
-  shrunk by plate appearances), tested in replays of both seasons (RUNS-03 pointed the same way for the running plays).
+  context table includes the current season through late September, so October is closer. Tested October 11: in-season
+  re-anchoring raises the plate-appearance likelihood in both seasons (LEVEL-01) but lowers 2026's totals and worsens
+  the over and under in full replays, alone (LEVEL-02) or with the running plays (LEVEL-03); the layer is built and off.
 - (October 11) Relievers per team-game: the simulator uses about 0.1 fewer pitchers than real teams (4.19 against 4.29 in
   2025, 4.15 against 4.28 in 2026, LEASH-02's replays) and its game-to-game differences run wide: actual on simulated
   slope 0.50 and 0.48; once the starter's real length is known, the simulated count adds little (0.11 and 0.07). The
@@ -932,7 +932,10 @@ far and part of why simulated bullpens struck out fewer batters and allowed more
   (2025 tuned it); the clean test is next season's refit (train 2023-2025, tune on 2026, hold out 2027) or a refit
   trained on 2023 and tuned on 2024 with 2025 held out.
 - (October 11) The simulated run distributions are narrow (team-run SD 3.10 against 3.21 to 3.25; games decided by five or
-  more 27% against 29%), which sinks the run line (RUNLINE-01); DISP-03 tests market numbers from day-form worlds.
+  more 27% against 29%), which sinks the run line (RUNLINE-01). Day-form worlds for the market numbers fixed the spread
+  and the run line but not the over and under (DISP-03, off). Simulated starters also reach the 7th inning more often
+  than real ones (12.0% to 12.8% of starts against 10.8% to 11.6%, LEASH-02 and LEASH-03): too few bad days may be the
+  common cause.
 - Run conversion: with real outcomes replayed through the kernel and steals, the simulator scores 0.04 to 0.07 runs per
   team per nine innings fewer than real half-innings; the running plays close it (+0.01 and +0.04).
 - Bullpens: on real plate appearances the model is about 1.5% short of relievers' strikeouts (2026, starters right); in
