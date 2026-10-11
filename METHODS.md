@@ -201,6 +201,29 @@ and both held. Inside and away (PTAGS-04: fastballs on the inner or outer third 
 against the league's rate for the pitcher-hand and batter-side matchups he faced, 6 points over) carry over 0.57 to 0.61
 and both held. The plan sheets' lineup notes are drawn from these tags only.
 
+## The game page's props and previews (October 11, 2026)
+
+Hitter chances on the Odds tab are each hitter's own: every event of his lineup slot in a simulated game is his with his
+spot's share of the slot's plate appearances (PLAYER-02, 2023-2025 shares), the same rule the Summary's meters use. Scored
+on full replays of both seasons with the live settings (PLAYER-03), the chance of at least one hit came within 1 point of
+the actual share, a home run within 0.6 and a walk or hit-by-pitch within about 2; a logistic map fitted on one season did
+not hold up on the other, because each replay's level comes from the other seasons' tables, so the page shows the raw
+chances. Part-timers bat less often than their slot's share allows (95% to 96% of it under 100 prior plate appearances);
+factors for that fixed their chances but the gain over all hitters was within noise (PLAYER-05, not adopted). Starters'
+strikeouts are shown as a prop ladder at the lines 2.5 to 8.5, where the replays put each chance within about 2 points of
+how often starters got there (PLAYER-04, described after looking).
+
+The run line, the first inning and the first five innings were checked the same way before being shown (RUNLINE-01,
+NRFI-01, FIRST5-01) and none passed its rule: given a win, the simulator's margins run tight (the narrowness DISP-01 found in
+its run distributions), and the first-inning and five-inning chances held on level but missed a per-fifth bound set near
+the noise. DISP-03 tests taking the market numbers alone from worlds with the centered day-form shock while win chances
+stay plain; two or more total bases is under test as PLAYER-06.
+
+The Summary's team table and the Matchups tab's career lines against the starter are MLB's public numbers, read by the
+browser (PROD-14). How much a career line says was measured on 2023-2026 plate appearances (BVP-01): beyond each player's
+own level, a 20 plate-appearance record carried between none and about 15% of its on-base edge into later meetings, and no
+strikeout or slugging edge could be told from noise, so the lines are shown as facts and never colored as a read.
+
 ## Privacy, storage and publication
 
 Raw source responses, player history, pitch tables and model files stay encrypted on the data branch; the key is an
