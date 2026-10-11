@@ -243,3 +243,18 @@ def test_runs_on_outs_in_play_are_batted_in_except_on_double_plays():
             else:
                 assert p['rbi']==p['runs_scored'];seen+=1
     assert seen>=5
+
+
+def test_market_worlds_carry_the_day_form_and_their_own_seeds():
+    """DISP-03: the market worlds run the game's simulator around a day-form provider, never repeat the plain worlds'
+    seeds, and give joint total, margin and team-run distributions over the same worlds."""
+    from brl_live.boxscore import market_worlds
+    m=matchup();built=[]
+    def sim_for(pv):
+        built.append(pv);return ObservedSimulator(pv,SimulationConfig(max_innings=100,max_plate_appearances=4000))
+    out=market_worlds(sim_for,m,Provider(),range(1,41),{'sigma':0.12,'center':0.004,'worlds':30})
+    assert type(built[0]).__name__=='DayForm' and built[0].sigma==0.12 and built[0].center==0.004
+    assert out['n']==30 and out['total_run_distribution']['n']==30 and sum(c for _,c in out['margin_distribution']['counts'])==30
+    tot=sum(k*c for k,c in out['total_run_distribution']['counts'])
+    assert tot==sum(k*c for k,c in out['team_run_distributions']['away']['counts'])+sum(k*c for k,c in out['team_run_distributions']['home']['counts'])
+    assert all(k!=0 for k,_ in out['margin_distribution']['counts'])          # finished games have a winner

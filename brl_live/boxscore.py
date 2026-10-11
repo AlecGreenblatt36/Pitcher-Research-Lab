@@ -381,6 +381,9 @@ ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         'environment':True,'team_offsets':True,'steals':True,'transitions':True,'running_events':False,
         'reliever_choice':True,'leash':True,'base_state':False,'relief_exit':True,'relief_hooks':True,
         'postseason_exit_offset':{'F':0.4,'D':0.4,'L':0.4,'W':0.0},'day_form_sigma':0.0,
+        # DISP-03 (off until its replays are read): {'sigma':..,'center':..,'worlds':..}: extra worlds with the centered
+        # day-form shock for the market numbers only (the total's over and under, the run line); win chances stay plain
+        'market_day_form':None,
         # POST-03 (queued for Alec, off): {'cuts': [0.1518, 0.1876], 'scale': [0.81, 0.89, 0.94]} by the starter's
         # strikeouts minus walks this season (postseason starts 2023-2026: 0.772, 0.846 and 0.900 of his regular length)
         'postseason_starter_tiers':None}
@@ -532,6 +535,27 @@ def adjusted_provider(provider,full_history,date,settings=ADJUST,environment=Non
         label.append('per-world talent noise c=%g'%c)
     return provider,hook,label
 
+def market_worlds(sim_for,matchup,provider,seeds,spec,world_hook=None):
+    """DISP-03: worlds with the centered day-form shock (brl_live.provider_adjust.DayForm) on top of the game's provider, for
+    the market numbers only. sim_for(provider) builds the game's simulator around a provider; each world's seed is the box
+    seed mixed with a constant, so these worlds never repeat the plain ones. Returns the joint distributions they need."""
+    from .provider_adjust import DayForm
+    dform=DayForm(provider,float(spec['sigma']),float(spec.get('center',0.0)))
+    sim=sim_for(dform);pairs=[]
+    for seed in list(seeds)[:int(spec.get('worlds',4000))]:
+        s2=(int(seed)*2654435761+0x5EED)&0x7FFFFFFF
+        if world_hook:world_hook(s2)
+        dform.new_world(s2)
+        r=sim.simulate(matchup,s2)
+        if r.winner=='tie' or r.ended_by_plate_appearance_cap:raise Blocked('Unfinished market world')
+        pairs.append((r.away_score,r.home_score))
+    n=len(pairs)
+    return {'n':n,'day_form':{'sigma':float(spec['sigma']),'center':float(spec.get('center',0.0))},
+            'total_run_distribution':_distribution(Counter(a+h for a,h in pairs),n),
+            'margin_distribution':_distribution(Counter(h-a for a,h in pairs),n),
+            'team_run_distributions':{side:_distribution(Counter(p[i] for p in pairs),n) for i,side in enumerate(SIDE)}}
+
+
 def run_box_worlds(engine,matchup,history,date,seeds,full_history=None,settings=ADJUST,environment=None,teams=None):
     fit=BookkeepingFit(history,date,full_history=full_history)
     provider,world_hook,adjust_label=adjusted_provider(engine.provider,full_history,date,settings,environment,teams)
@@ -555,6 +579,9 @@ def run_box_worlds(engine,matchup,history,date,seeds,full_history=None,settings=
         results.append(result)
     payload=accumulator.finish()
     payload['adjustments']=adjust_label
+    if settings.get('market_day_form'):
+        payload['market_worlds']=market_worlds(lambda pv:ObservedSimulator(pv,config=engine.config,manager_policy=manager,steals=steals,transitions=kernel,running_events=running),
+                                               matchup,provider,seeds,settings['market_day_form'],world_hook)
     for j,i in enumerate(payload['sample_indices']):
         if world_hook:world_hook(int(seeds[i]))
         sample=build_game_box(sim.simulate(matchup,int(seeds[i]),record_events=True),matchup,fit)
