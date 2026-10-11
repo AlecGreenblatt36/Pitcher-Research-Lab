@@ -223,6 +223,12 @@ stays off too: in 2026, the model's first season unseen in fitting or tuning, th
 of the simulated rate, each step up in the simulated rate came with 0.90 of that step in actual hits and 0.82 in home runs,
 against 0.95 and 0.97 in 2025, the season the model was tuned on).
 
+The run charts and ranges the page states (each team's and the total's middle range, the chance of 10 or more total
+runs) keep the simulator's mean but take a negative binomial with its variance times 1.095, the residual over the
+predictive variance of a team's runs in the replays (TOTALS-05): the raw histograms held the real score up to 2.7 points
+less often than their mass claimed, the widened ones within 1.4 points in both seasons, with CRPS and the 10-or-more
+Brier no worse.
+
 Starters' outs recorded (the pitcher-outs prop) were scored the same way (PLAYER-07): right on average and at the lines
 near each start's median, but the simulator ended too many starts in the 4th inning and too few in the 5th (more than
 12.5 outs 3.8 points short in 2025). The cause was the exit hazard: a logistic fit whose inning terms are a straight
