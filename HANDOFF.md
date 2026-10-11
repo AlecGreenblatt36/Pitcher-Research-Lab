@@ -65,7 +65,16 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 4:30 a.m. Eastern October 11, by `date -u`)
+### In flight (updated 4:15 a.m. Eastern October 11, by `date -u`)
+
+- October 11, 4:15 a.m.: PTAGS-04 held (run 38122717614): Works inside / away with the fastball, each pitcher read
+  against the league's rate for the matchups he faced (pitcher_tag_counts carries an adjusted numerator whose ratio minus
+  the overall rate is his excess), 0.57 to 0.61 a season later. Hitter cards carry line_seasons (this season's and last
+  season's line, 200 or more plate appearances each); the page says a change only beyond three standard errors and 3
+  points (hitterChanges; 3 of tonight's 23 hitters). Real box scores show AVG and ERA through the game from the feed's
+  seasonStats (real_game.season_mark in both Python readers and the page's live reader; display only). Card rebuild for
+  PTAGS-04 at f6c9d5f80. Push brl_live changes to main sparingly: each push starts a live run and cancels the one in
+  progress (the 12-to-15-minute chain then restarts).
 
 - October 11, 4:30 a.m.: PTAGS-03 held (run 38120710560; ground-ball share 0.75 and 0.82 a season later): Ground-ball
   pitcher and Fly-ball pitcher are on the cards and starter folds. The pitching matchup on the Summary adds each
