@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 278,
- "rows": 281,
+ "experiments": 279,
+ "rows": 282,
  "records": {
   "ACC-01": [
    {
@@ -4562,6 +4562,22 @@
     ],
     "frozen_commits": [],
     "status": "held: 0.75 and 0.73"
+   }
+  ],
+  "PTAGS-01": [
+   {
+    "id": "PTAGS-01",
+    "columns": {
+     "ID": "PTAGS-01",
+     "Attempt": "Pitcher tags for the cards and plans, checked like the hitter tags: first-pitch strikes (anything but a ball on 0-0; 5 points either way of the league), pitches in MLB's zone 1-9 against those in 1-9 and 11-14 (4 points), chases on pitches in 11-14 (4 points), fastballs when behind in the count (12 points either way) and on the first pitch (15 under: starts with spin). Pitchers with 500 or more training pitches and 300 test pitches; tags from 2024-2025 scored on 2026 before August, and from 2023-2024 on 2025; each rate's season-to-season correlation. Report lane, tools/brl_report.py pitcher_tag_study; synthetic check (brl_live_tests/test_report_pitcher_tags.py: planted habits carry over, redrawn ones do not).",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: every tag with 10 or more pitchers holds in both splits (test difference at least half its threshold in its direction, interval excluding zero); the usage rates (fastballs behind and first) correlate 0.7 or more across seasons, the zone and chase rates 0.5 or more, first-pitch strikes 0.4 or more. Decision rule: the tags that hold in both splits go on the pitcher cards and the plans' starter folds; the rest do not.",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "ZONES-01": [

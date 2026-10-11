@@ -1505,6 +1505,76 @@ def tag_study(T: dict, stage, spec: dict) -> dict:
     return out
 
 
+# PTAGS-01 (LEDGER): pitcher tags, each a level against the league with a fixed threshold: name, rate, threshold
+PTAG_RULES = (('Throws first-pitch strikes', 'fps', 0.05), ('Falls behind first', 'fps', -0.05),
+              ('Lives in the zone', 'zone', 0.04), ('Works off the plate', 'zone', -0.04),
+              ('Gets chases', 'chase', 0.04), ('Few chases', 'chase', -0.04),
+              ('Fastballs when behind', 'fb_behind', 0.12), ('Spins it when behind', 'fb_behind', -0.12),
+              ('Starts with spin', 'fb_first', -0.15))
+
+
+def pitcher_tag_counts(T: dict, mask) -> dict:
+    """Per pitcher on the masked pitches: first-pitch strikes (anything but a ball on 0-0), pitches in MLB's zone (1-9),
+    chases on pitches out of it (11-14), and fastballs with the count behind him and on 0-0."""
+    rows = np.flatnonzero(mask)
+    ids, pi = np.unique(T['pitcher'][rows], return_inverse=True)
+    n_ = len(ids)
+    c = lambda m: np.bincount(pi, weights=np.asarray(m, dtype=np.float64), minlength=n_)
+    g = count_group(T['balls'][rows], T['strikes'][rows]); call = T['call'][rows]
+    sw = (call == 1) | (call == 2); z = T['zone'][rows]; inz = (z >= 1) & (z <= 9); ooz = z >= 11
+    fb = np.isin(T['group'][rows], (0, 1, 2, 6)); first, behind = g == 0, g == 2
+    ball = (call == 0) & (T['cs'][rows] != 1) if 'cs' in T else (call == 0)
+    return {'ids': ids, 'n': c(np.ones(len(rows), bool)), 'fps': (c(first & ~ball), c(first)), 'zone': (c(inz), c(inz | ooz)),
+            'chase': (c(sw & ooz), c(ooz)), 'fb_behind': (c(fb & behind), c(behind)), 'fb_first': (c(fb & first), c(first))}
+
+
+def pitcher_tag_study(T: dict, stage, spec: dict) -> dict:
+    """PTAGS-01 (LEDGER): do pitcher tags hold on later pitches? Tags from the training seasons (pitchers with min_pitches
+    or more), each tagged group's rate minus the league's on the test pitches, weighted by the pitchers' test pitches,
+    with intervals from resampling pitchers; plus each rate's season-to-season correlation. Aggregates only."""
+    reg = (T['post'] == 0) if 'post' in T else np.ones(len(T['season']), bool)
+    ok = reg & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2)
+    min_pitches = int(spec.get('min_pitches', 500)); min_test = int(spec.get('min_test', 300)); boot = int(spec.get('boot', 1000))
+    rng = np.random.default_rng(int(spec.get('seed', 20261011)))
+    floors = {'fps': 100, 'zone': 300, 'chase': 150, 'fb_behind': 100, 'fb_first': 100}
+    out = {'splits': []}
+    for split in spec.get('splits', [{'train': [2024, 2025], 'test': 2026, 'test_end': '2026-08-01'}, {'train': [2023, 2024], 'test': 2025}]):
+        tr_m = ok & np.isin(T['season'], split['train']); te_m = ok & (T['season'] == int(split['test']))
+        if split.get('test_end'):
+            te_m &= T['day'] < date.fromisoformat(split['test_end']).toordinal()
+        a, b = pitcher_tag_counts(T, tr_m), pitcher_tag_counts(T, te_m)
+        pos = {int(x): i for i, x in enumerate(b['ids'])}
+        ti = np.array([pos.get(int(x), -1) for x in a['ids']], np.int64)
+        has = (ti >= 0) & (a['n'] >= min_pitches)
+        has[has] &= b['n'][ti[has]] >= min_test
+        res = {'train': list(split['train']), 'test': int(split['test']), 'pitchers': int(has.sum()), 'tags': {}, 'corr': {}}
+        for rate, floor in floors.items():
+            an, ad = a[rate]; bn, bd = b[rate]
+            okr = has & (ad >= floor)
+            okr[okr] &= bd[ti[okr]] >= floor
+            x = an[okr] / ad[okr] - an.sum() / max(ad.sum(), 1); y = bn[ti[okr]] / bd[ti[okr]] - bn.sum() / max(bd.sum(), 1)
+            res['corr'][rate] = {'pitchers': int(okr.sum()), 'r': float(np.corrcoef(x, y)[0, 1]) if okr.sum() >= 20 else None}
+        for name, rate, thr in PTAG_RULES:
+            an, ad = a[rate]; bn, bd = b[rate]
+            lg_a, lg_b = an.sum() / max(ad.sum(), 1), bn.sum() / max(bd.sum(), 1)
+            d_tr = np.where(ad >= floors[rate], an / np.maximum(ad, 1e-9) - lg_a, np.nan)
+            on = has & np.isfinite(d_tr) & ((d_tr >= thr) if thr > 0 else (d_tr <= thr))
+            sel = np.flatnonzero(on)
+            j = ti[sel]; w = bd[j]; d = np.where(w > 0, bn[j] / np.maximum(w, 1e-9) - lg_b, 0.0); wd = w * d
+            mean = float(wd.sum() / max(w.sum(), 1e-9)) if len(sel) else None
+            lo = hi = None
+            if len(sel) >= 5:
+                bs = rng.integers(0, len(sel), size=(boot, len(sel)))
+                ms = wd[bs].sum(1) / np.maximum(w[bs].sum(1), 1e-9)
+                lo, hi = float(np.percentile(ms, 2.5)), float(np.percentile(ms, 97.5))
+            res['tags'][name] = {'rate': rate, 'threshold': thr, 'pitchers': int(len(sel)), 'train_diff': float(np.nanmean(d_tr[sel])) if len(sel) else None,
+                                 'test_diff': mean, 'test_ci': [lo, hi],
+                                 'held': bool(mean is not None and lo is not None and (mean >= thr / 2 if thr > 0 else mean <= thr / 2) and (lo > 0 if thr > 0 else hi < 0))}
+        out['splits'].append(res)
+        stage(f"pitcher tag study {split['train']} -> {split['test']}")
+    return out
+
+
 def matchup_read_study(T: dict, stage, spec: dict) -> dict:
     """MATCHUPREAD-01 (LEDGER): a pitcher's own locations laid over a hitter's expected zones (ZONES-01 shrinkage) against
     the league's locations, scored on the test season's at-bats. Aggregates only."""
@@ -2179,6 +2249,9 @@ def main():
             dates = []
         if params.get('tag_study'):
             receipt['tag_study'] = tag_study(T, stage, params['tag_study'])
+            dates = []
+        if params.get('pitcher_tag_study'):
+            receipt['pitcher_tag_study'] = pitcher_tag_study(T, stage, params['pitcher_tag_study'])
             dates = []
         if params.get('zone_study'):
             zs = params['zone_study']
