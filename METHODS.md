@@ -231,6 +231,9 @@ Brier no worse.
 Starters' strikeouts get the same treatment (PLAYER-08): each start's simulated distribution is kept and spread by a
 one-strikeout step to the residual variance, 1.07 times the simulated one; the ladder's largest gap fell from 2.35 to
 1.92 points (2025) and 1.39 to 1.20 (2026), and the middle range held the real count within 0.3 points of its own mass.
+Starters' hits allowed were checked the same way before getting a ladder (PLAYER-09): every line from 2.5 to 7.5 came
+within 1.7 points of how often starters went over, with the corrected starter exits and with the plain ones, so the Odds
+tab shows it for every game.
 
 Starters' outs recorded (the pitcher-outs prop) were scored the same way (PLAYER-07): right on average and at the lines
 near each start's median, but the simulator ended too many starts in the 4th inning and too few in the 5th (more than

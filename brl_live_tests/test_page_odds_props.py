@@ -156,3 +156,17 @@ def test_total_runs_states_no_over_chance_of_ours():
     assert 'Vegas total: ' in odds and ': simulator ' not in odds and 'p_over' in odds
     assert re.search(r'h \+= "</section>";\n    if \(!box\) return h \+ ', odds)
     assert 'function marketTotal' not in s
+
+
+def test_hits_allowed_ladder_shows_for_every_box():
+    """PLAYER-09: the hits-allowed ladder held on both replay sets (corrected and plain starter exits), so ladders() adds it
+    whether or not the outs ladder shows, at the lines 2.5 to 7.5 around the median."""
+    s = _script()
+    fns = re.search(r'\n  var K_SPREAD = .*?;\n', s).group(0) + ''.join(_line(s, n) for n in ('pct', 'total', 'mean', 'probAtLeast', 'kLadder', 'outsLadder', 'hLadder')) + ''.join(_fn(s, n) for n in ('quant', 'amOdds', 'propLadder', 'ladders', 'kShape'))
+    js = ("const assert=require('assert');"
+          "const d={K:{counts:[[3,100],[5,300],[7,100]]},H:{counts:[[2,100],[4,300],[5,300],[7,200],[9,100]]}};"
+          "const a=ladders(d,false);assert.ok(a.indexOf('>Hits allowed<')>0 && a.indexOf('>Strikeouts<')>0 && a.indexOf('>Outs<')<0,a);"
+          "const rows=(a.split('>Hits allowed<')[1].match(/<th scope=\"row\">([\\d.]+)<\\/th>/g)||[]).map(function(x){return x.replace(/<[^>]+>/g,'');});"
+          "assert.deepEqual(rows,['3.5','4.5','5.5','6.5']);"
+          "assert.equal(ladders({}, true), '');")
+    subprocess.run(['node', '-e', fns + js], check=True)

@@ -1131,13 +1131,16 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
      games), never for the plain hazard's. */
   function kLadder(c) { return propLadder(kShape(c), "Strikeouts", 2.5, 8.5); }
   function outsLadder(c) { return propLadder(c, "Outs", 12.5, 20.5); }
+  /* Hits allowed at the lines PLAYER-09 checked (2.5 to 7.5): within 1.7 points at every line in both seasons re-run, with
+     the corrected starter exits and with the plain ones, so it shows for every box. */
+  function hLadder(c) { return propLadder(c, "Hits allowed", 2.5, 7.5); }
   var OUTS_LADDER = true;
   function exitsByInning(box) { return (box && box.adjustments || []).some(function (a) { return /starter exits by inning/.test(String(a)); }); }
-  /* The starter's ladders on the Odds tab: strikeouts, and outs when shown; side by side where there is room. */
+  /* The starter's ladders on the Odds tab: strikeouts, hits allowed, and outs when shown; side by side where there is room. */
   function ladders(d, showOuts) {
-    var k = d.K ? kLadder(d.K) : "", o = showOuts && d.outs ? outsLadder(d.outs) : "";
-    if (!k && !o) return "";
-    return '<div class="ladders">' + (k ? '<div class="tbl-wrap ladder-wrap">' + k + "</div>" : "") + (o ? '<div class="tbl-wrap ladder-wrap">' + o + "</div>" : "") + "</div>";
+    var parts = [d.K ? kLadder(d.K) : "", d.H ? hLadder(d.H) : "", showOuts && d.outs ? outsLadder(d.outs) : ""].filter(Boolean);
+    if (!parts.length) return "";
+    return '<div class="ladders">' + parts.map(function (x) { return '<div class="tbl-wrap ladder-wrap">' + x + "</div>"; }).join("") + "</div>";
   }
 
   /* ---------- data shaping ---------- */
@@ -4734,7 +4737,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         (d.PC ? '<span class="r num">' + quant(d.PC, .25) + " to " + quant(d.PC, .75) + " pitches</span> <small>estimated</small>" : "") +
         ladders(d, outsOn) + "</li>";
     });
-    h += '</ul><p class="note">Ranges cover the middle half of simulated games. Strikeouts: his chance of more than each line from 2.5 to 8.5, with the fair price (no margin). Over two seasons re-run, these chances came within about 2 points of how often starters actually got there.' +
+    h += '</ul><p class="note">Ranges cover the middle half of simulated games. Strikeouts: his chance of more than each line from 2.5 to 8.5, with the fair price (no margin). Hits allowed the same way, from 2.5 to 7.5. Over two seasons re-run, these chances came within about 2 points of how often starters actually got there.' +
       (outsOn ? " Outs: the same for outs recorded (three an inning); re-run, every line from 12.5 to 20.5 came within 2.4 points." : "") + "</p></section>";
 
     var pf = function (p) { return state.propOdds ? amOdds(p) : pct(p); };
@@ -5465,7 +5468,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       h += "</ul></details>";
     }
     h += "<h2>Player pages</h2><p>Every hitter and pitcher with enough pitches has a page: his season line and last ten games from MLB, percentile rankings against everyone with 300 or more plate appearances or batters faced, his splits, hot zones, where he hits it, and for pitchers the arsenal, how each pitch moves and his fastball speed game by game. A few things we checked before saying them: a hitter's last ten games told almost nothing about his next ten in getting on base or slugging (strikeouts carried a little), and a split against lefties or righties beyond the usual one for his side mostly did not carry over to the next season, for hitters or pitchers, so the Expected view leans on the usual split. A starter's fastball speed did carry: about 45% of a change in his last start showed up again in the next one, and starters coming off a drop of a mile per hour or more struck out about two fewer batters per 100.</p>";
-    h += "<h2>Team stats, props and past meetings</h2><p>Before first pitch the Summary shows both teams' season numbers from MLB, each with the club's rank among the 30. The Odds tab lists each starter's strikeouts the way sportsbooks do, with our chance of going over each line and its fair price; re-run over two seasons, those chances came within about 2 points of how often starters actually got there. Starting with next season's regular-season games, it also lists each starter's outs recorded the same way. Each hitter's chances there are his own: the trips a pinch hitter or substitute takes from his spot late in games are allowed for, on average for each spot in the order. The Matchups tab adds each hitter's career line against the starting pitcher, from MLB. Those are small samples: over four seasons, beyond each player's own level, a 20 plate-appearance record carried between none and about 15% of its on-base edge into later meetings.</p>";
+    h += "<h2>Team stats, props and past meetings</h2><p>Before first pitch the Summary shows both teams' season numbers from MLB, each with the club's rank among the 30. The Odds tab lists each starter's strikeouts and hits allowed the way sportsbooks do, with our chance of going over each line and its fair price; re-run over two seasons, those chances came within about 2 points of how often starters actually got there. Starting with next season's regular-season games, it also lists each starter's outs recorded the same way. Each hitter's chances there are his own: the trips a pinch hitter or substitute takes from his spot late in games are allowed for, on average for each spot in the order. The Matchups tab adds each hitter's career line against the starting pitcher, from MLB. Those are small samples: over four seasons, beyond each player's own level, a 20 plate-appearance record carried between none and about 15% of its on-base edge into later meetings.</p>";
     h += "<h2>The projected game</h2><p>One of the ten thousand games: the one closest to the middle on runs, hits and each starter's innings and strikeouts, with our pick winning in nine innings. It reads like a box score, but it is one likely way the night goes, not a promise. The high-scoring, low-scoring and upset versions show the range.</p>";
     h += "<h2>During the game</h2><p>While a game is on, the page checks MLB's feed every 15 seconds for the score, the plays and every pitch. The win chance moves after each play, using the same ten thousand games from before first pitch and how real games have gone from the same spot.</p>";
     h += "<h2>Past and future games</h2><p>Tap Games, then use the date strip or the calendar. Any day of 2025 and 2026 works. Past days show the real box score next to what we said, and how our picks did that day. Before October 6, 2026 those are re-runs: we played each game again after the season using only what was known before it. For tomorrow, we post an early number the night before once both starters are announced, using projected lineups, and update it on game day when the real lineups come out. Further out you see the schedule.</p>";
