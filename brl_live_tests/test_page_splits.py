@@ -78,3 +78,40 @@ def test_no_expected_split_for_switch_hitters_both_hands_or_missing_league():
                "assert.equal(splitExpected({side:'R',zones:z},{},'R'),null);"
                "assert.ok(splitExpected({side:'L',zones:z},lg,'L').avg>0);process.stdout.write('ok');")
     assert out == 'ok'
+
+
+def _hz_run(js):
+    s = _script()
+    consts = ''.join(re.search(r'\n  var ' + v + r' = .*?;\n', s, re.S).group(0) for v in ('HZ_EXP_M', 'HZ_ANCHOR'))
+    metrics = re.search(r'\n  var HZ_METRICS = \{.*?\n  \};\n', s, re.S).group(0)
+    fns = ''.join(_fn(s, n) for n in ('hzTotal', 'hzCells', 'hzSplit', 'hzLeague', 'isSwitch', 'hzAnchor', 'hzExpected'))
+    out = subprocess.run(['node', '-e', "const assert=require('assert');" + consts + metrics + fns + js], check=True, capture_output=True, text=True)
+    return out.stdout
+
+
+def test_hot_zones_against_a_hand_anchor_on_his_level_against_both_hands():
+    # ZONES-03: the prior's level from his pitches against both hands, relative to his side's league rate on them
+    rng = np.random.default_rng(3)
+    me = {'R': {'all': _cells(rng, 400, .290, 900, .25, 800, .30)}, 'L': {'all': _cells(rng, 120, .330, 300, .35, 260, .36)}}
+    lgz = {'R': {'all': _cells(rng, 90000, .250, 200000, .24, 150000, .29)}, 'L': {'all': _cells(rng, 40000, .235, 90000, .27, 70000, .31)}}
+    card = {'side': 'R', 'zones': me}
+    lg = {'zones': {'R': lgz, 'L': lgz}}
+    got = json.loads(_hz_run("const card=" + json.dumps(card) + ",lg=" + json.dumps(lg) + ";"
+                             "const an=hzAnchor(card,lg,'L','all');"
+                             "process.stdout.write(JSON.stringify([hzExpected(HZ_METRICS.avg,'avg',card.zones.L.all,lg.zones.R.L.all,an),"
+                             "hzExpected(HZ_METRICS.avg,'avg',card.zones.L.all,lg.zones.R.L.all,null),"
+                             "hzExpected(HZ_METRICS.miss,'miss',card.zones.R.all,lg.zones.R.R.all,hzAnchor(card,lg,'R','all')),"
+                             "hzExpected(HZ_METRICS.miss,'miss',card.zones.R.all,lg.zones.R.R.all,null),"
+                             "hzAnchor({side:'R',side_by_hand:{R:'L',L:'R'},zones:card.zones},lg,'L','all'),hzAnchor(card,lg,'all','all')]));"))
+    tot = lambda cells: np.array(cells, float).sum(0)
+    L, mine_all = np.array(lgz['L']['all'], float), tot(me['R']['all']) + tot(me['L']['all'])
+    lg_both = tot(lgz['R']['all']) + tot(lgz['L']['all'])
+    la = lg_both[5] / lg_both[4]; h_all = (mine_all[5] + 30 * la) / (mine_all[4] + 30)
+    for c, l in zip(me['L']['all'], L):
+        lz = l[5] / l[4] if l[4] else L[:, 5].sum() / L[:, 4].sum()
+        sc = min(0.995, max(0.005, lz * h_all / la))
+        assert abs(got[0][str(c[0])] - (c[5] + 320 * sc) / (c[4] + 320)) < 1e-9
+    # his raw .330 against lefties no longer lifts the whole chart: the anchored chart sits lower than the old one
+    assert np.mean(list(got[0].values())) < np.mean(list(got[1].values()))
+    assert got[2] == got[3]                                   # misses against righties keep the old anchor
+    assert got[4] is None and got[5] is None                  # switch hitters and both hands: no anchor

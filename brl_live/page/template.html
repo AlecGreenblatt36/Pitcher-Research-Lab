@@ -2768,11 +2768,26 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   /* ZONES-01 (credited on 2026): his rate in each zone pulled toward his own overall level on the league's zone pattern,
      with m pseudo-events (fitted on 2025): 160 at-bats for average and slugging, 80 for swing and miss rates. */
   var HZ_EXP_M = { avg: 160, slg: 160, swing: 80, miss: 80 };
-  function hzExpected(m, key, cells, lg) {
+  /* ZONES-03 (2024-25 to 2026): against one hand, the metrics listed for that hand anchor his level on his pitches against
+     both hands (the same pitch type) relative to his side's league rate on them, with the m fitted for it; the zones still
+     follow the league's pattern for this hand. It beat anchoring on his pitches against that hand alone for average and
+     slugging against lefties and was no worse elsewhere; misses against righties stay as they were. */
+  var HZ_ANCHOR = { R: { avg: 160, slg: 160, swing: 80 }, L: { avg: 320, slg: 160, swing: 80, miss: 80 } };
+  function hzAnchor(card, lg, hand, fam) {
+    if (!card || !hzSplit(card.zones) || isSwitch(card) || (hand !== "R" && hand !== "L")) return null;
+    var side = card.side === "L" ? "L" : "R", a = hzLeague(lg, side, "R", fam), b = hzLeague(lg, side, "L", fam), mine = hzCells(card.zones, "all", fam);
+    return a && b && mine ? { mine: mine, lg: a.concat(b), hand: hand } : null;
+  }
+  function hzExpected(m, key, cells, lg, anchor) {
     if (!lg || !lg.length || !cells) return null;
     var lt = hzTotal(lg), t = hzTotal(cells), lgAll = lt[m.den] ? lt[m.num] / lt[m.den] : 0;
     if (!lgAll) return null;
     var hAll = (t[m.num] + 30 * lgAll) / (t[m.den] + 30), M = HZ_EXP_M[key] || 80, lby = {}, out = {};
+    var am = anchor && HZ_ANCHOR[anchor.hand] ? HZ_ANCHOR[anchor.hand][key] : null;
+    if (am) {
+      var at = hzTotal(anchor.mine), al = hzTotal(anchor.lg), la = al[m.den] ? al[m.num] / al[m.den] : 0;
+      if (la) { hAll = lgAll * ((at[m.num] + 30 * la) / (at[m.den] + 30)) / la; M = am; }
+    }
     lg.forEach(function (c) { lby[c[0]] = c; });
     cells.forEach(function (c) {
       var l = lby[c[0]], lz = l && l[m.den] ? l[m.num] / l[m.den] : lgAll, sc = lz * hAll / lgAll;
@@ -2813,7 +2828,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     (cells || []).forEach(function (c) { by[c[0]] = c; });
     var lby = {}; (o.lg || []).forEach(function (c) { lby[c[0]] = c; });
     var tot = hzTotal(cells), lt = hzTotal(o.lg && o.lg.length ? o.lg : cells);
-    var exp = o.expected && !m.loc ? hzExpected(m, o.metric, cells, o.lg) : null;
+    var exp = o.expected && !m.loc ? hzExpected(m, o.metric, cells, o.lg, o.anchor) : null;
     var val = function (c) { return m.loc ? (c && tot[1] >= m.min ? c[1] / tot[1] : null) : exp ? (c ? exp[c[0]] : null) : hzVal(m, c); };
     var thin = function (c) { return m.loc || exp ? null : hzThin(m, c); };
     var center = m.loc ? 1 / 13 : lt[m.den] ? lt[m.num] / lt[m.den] : null;
@@ -3019,7 +3034,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (!cells) return;
       var t = hzTotal(cells);
       h += '<div class="hz-card"><' + hl + ">" + esc(fam[1]) + (fam[2] ? " <small>" + esc(fam[2]) + "</small>" : "") + "</" + hl + ">" +
-        hzChart(cells, { metric: k, side: hzSideFor(card, useHand), lg: hzLeagueFor(lg, card, useHand, fam[0]), expected: hzView() === "exp", aim: plan ? plan[fam[0]] : null, strike: stPlan ? stPlan[fam[0]] : null, top: card.zone_top_ft, bot: card.zone_bottom_ft, label: (label || "") + fam[1] + ", " + (hzView() === "exp" ? "expected " : "") + HZ_METRICS[k].label + " by zone" }) +
+        hzChart(cells, { metric: k, side: hzSideFor(card, useHand), lg: hzLeagueFor(lg, card, useHand, fam[0]), anchor: hzAnchor(card, lg, useHand, fam[0]), expected: hzView() === "exp", aim: plan ? plan[fam[0]] : null, strike: stPlan ? stPlan[fam[0]] : null, top: card.zone_top_ft, bot: card.zone_bottom_ft, label: (label || "") + fam[1] + ", " + (hzView() === "exp" ? "expected " : "") + HZ_METRICS[k].label + " by zone" }) +
         '<div class="hz-n">' + Number(t[1]).toLocaleString() + " pitches</div></div>";
     });
     return h + "</div>";
@@ -3098,7 +3113,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   function hzLegend(k, marks) {
     var m = HZ_METRICS[k], exp = hzView() === "exp";
     return '<p class="note hz-key"><span class="hz-sw hot"></span>Above the league average <span class="hz-sw cold"></span>Below. ' + esc(m.say) +
-      (exp ? ". Expected: each zone pulled toward his own overall level on the league's zone pattern, more where he has been seen less; it predicted 2026 better than the raw numbers" : ". Gray: fewer than " + m.min + " " + m.unit) + ". Catcher's view." +
+      (exp ? ". Expected: each zone pulled toward his level on the league's zone pattern, more where he has been seen less (against one hand, his level against all pitchers with the usual split for his side); it predicted 2026 better than the raw numbers" : ". Gray: fewer than " + m.min + " " + m.unit) + ". Catcher's view." +
       (marks ? ' Outlined zones are the plan: <span class="hz-mk"></span> out of the zone where he chases, <span class="hz-mk open"></span> on the edge where he takes, <span class="hz-mk sq"></span> strikes he takes more than most hitters, <span class="hz-mk sq open"></span> strikes he can\'t do much with.' : "") + "</p>";
   }
   function reportTab(f, pk) {
@@ -3957,7 +3972,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       (wide ? HZ_FAMS : [fam]).forEach(function (fm) {
         var cells = card ? hzCells(card.zones, useHand, fm[0]) : null;
         if (!cells) return;
-        chart += '<div class="pl-hz-f">' + (wide ? "<small>" + esc(fm[1]) + "</small>" : "") + hzChart(cells, { metric: k, side: hzSideFor(card, useHand), lg: hzLeagueFor(doc.league, card, useHand, fm[0]), expected: hzView() === "exp", tag: (hzView() === "exp" ? "xp " : "") + HZ_METRICS[k].label, label: nm(hid) + ": " + (hzView() === "exp" ? "expected " : "") + HZ_METRICS[k].label + " by zone, " + fm[1].toLowerCase() + " from " + hzHandWords(useHand) }) + "</div>";
+        chart += '<div class="pl-hz-f">' + (wide ? "<small>" + esc(fm[1]) + "</small>" : "") + hzChart(cells, { metric: k, side: hzSideFor(card, useHand), lg: hzLeagueFor(doc.league, card, useHand, fm[0]), anchor: hzAnchor(card, doc.league, useHand, fm[0]), expected: hzView() === "exp", tag: (hzView() === "exp" ? "xp " : "") + HZ_METRICS[k].label, label: nm(hid) + ": " + (hzView() === "exp" ? "expected " : "") + HZ_METRICS[k].label + " by zone, " + fm[1].toLowerCase() + " from " + hzHandWords(useHand) }) + "</div>";
       });
       if (chart) chart = '<div class="pl-hz' + (wide ? " wide" : "") + '">' + chart + "</div>";
       if (spots && !spot && !benchShown) { h += '<li class="plan-bench">Off the bench</li>'; benchShown = true; }
