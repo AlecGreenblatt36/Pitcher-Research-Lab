@@ -90,7 +90,12 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   and trajectory ('traj' 0 ground ball, 1 liner, 2 fly, 3 pop-up), and hitter cards carry spray_counts (ground balls
   and balls in the air by field third at 15 degrees, pop-ups, hard-hit 95+ mph), drawn as "Where he hits it"
   (Players page, folded in a hitter's plan). Bullpen card: plan arms carry 'recent' (pitches on each of the five days
-  before the game, training pitches only), shown per sheet with only the days the plan's data covers. Earlier tonight (4b14c77e7): the live box score and plays show the real game
+  before the game, training pitches only), shown per sheet with only the days the plan's data covers. The postseason
+  plans (September 29 to October 9) were rebuilt with all of it in run 38102412944, each as of the date it had before
+  (09-29 and 09-30 as of 09-01, 10-01 to 10-05 as of 10-01, later days their own); October 10 and 11 in 38101924869.
+  Older days keep the old cards; the page shows the model grids in view when a card has no zones. Fixed: a plan for
+  tomorrow rebuilt after 8 p.m. Eastern called itself a look back (built_at's UTC date); the build day is now read in
+  Eastern time. Earlier tonight (4b14c77e7): the live box score and plays show the real game
   from first pitch, in batting order with substitutes under their spot, and no longer list the DH team's pitcher as
   a batter.
 
