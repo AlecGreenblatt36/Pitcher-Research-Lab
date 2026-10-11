@@ -101,3 +101,16 @@ def test_ground_ball_tag_reads_his_share_against_the_league():
     suffix = ("assert.ok(Math.abs(gbShift({side:'R',spray:{gb:[50,40,20],air:[20,30,20],popups:20}},lg)-0.05)<1e-9);"    # 110 of 200: 55%
               "assert.equal(gbShift({side:'R',spray:{gb:[10,10,10],air:[10,10,10],popups:0}},lg),null);")
     subprocess.run(['node', '-e', prefix + functions + suffix], check=True)
+
+
+def test_pitcher_tags_from_counts_against_the_league():
+    functions = page_functions('pitcherTags')
+    prefix = ("const assert=require('assert');var PTAG_RULES=[['Throws first-pitch strikes','fps',0.05,100],['Lives in the zone','zone',0.04,300],['Works off the plate','zone',-0.04,300],"
+              "['Gets chases','chase',0.04,150],['Fastballs when behind','fb_behind',0.12,100],['Spins it when behind','fb_behind',-0.12,100],['Starts with spin','fb_first',-0.15,100]];"
+              "const lg={ptags:{fps:0.6,zone:0.5,chase:0.3,fb_behind:0.6,fb_first:0.55}};")
+    suffix = ("let t=pitcherTags({ptags:{fps:[130,200],zone:[300,500],chase:[60,200],fb_behind:[80,100],fb_first:[70,200]}},lg);"
+              "assert.deepEqual(t,['Throws first-pitch strikes','Lives in the zone','Fastballs when behind','Starts with spin']);"
+              "t=pitcherTags({ptags:{fps:[50,80],zone:[100,250],chase:[20,100],fb_behind:[40,100],fb_first:[100,200]}},lg);"
+              "assert.deepEqual(t,['Spins it when behind']);"                          # the rest under their floors
+              "assert.deepEqual(pitcherTags({},lg),[]);")
+    subprocess.run(['node', '-e', prefix + functions + suffix], check=True)

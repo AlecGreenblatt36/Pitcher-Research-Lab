@@ -4570,14 +4570,16 @@
     "columns": {
      "ID": "PTAGS-01",
      "Attempt": "Pitcher tags for the cards and plans, checked like the hitter tags: first-pitch strikes (anything but a ball on 0-0; 5 points either way of the league), pitches in MLB's zone 1-9 against those in 1-9 and 11-14 (4 points), chases on pitches in 11-14 (4 points), fastballs when behind in the count (12 points either way) and on the first pitch (15 under: starts with spin). Pitchers with 500 or more training pitches and 300 test pitches; tags from 2024-2025 scored on 2026 before August, and from 2023-2024 on 2025; each rate's season-to-season correlation. Report lane, tools/brl_report.py pitcher_tag_study; synthetic check (brl_live_tests/test_report_pitcher_tags.py: planted habits carry over, redrawn ones do not).",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: every tag with 10 or more pitchers holds in both splits (test difference at least half its threshold in its direction, interval excluding zero); the usage rates (fastballs behind and first) correlate 0.7 or more across seasons, the zone and chase rates 0.5 or more, first-pitch strikes 0.4 or more. Decision rule: the tags that hold in both splits go on the pitcher cards and the plans' starter folds; the rest do not.",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: every tag with 10 or more pitchers holds in both splits (test difference at least half its threshold in its direction, interval excluding zero); the usage rates (fastballs behind and first) correlate 0.7 or more across seasons, the zone and chase rates 0.5 or more, first-pitch strikes 0.4 or more. Decision rule: the tags that hold in both splits go on the pitcher cards and the plans' starter folds; the rest do not. **Results (run 38114925921; 377 and 400 pitchers):** correlations across seasons: fastballs when behind 0.74 and 0.77, fastballs first 0.76 and 0.74, zone 0.58 and 0.58, chases 0.50 and 0.46, first-pitch strikes 0.38 and 0.47 (two of the ten predicted correlations fell just short: first-pitch strikes 0.38 against 0.4 in 2026, chases 0.46 against 0.5 in 2025). Tags on the test pitches (points against the league; training in brackets), 2026 then 2025: throws first-pitch strikes +3.9 [+6.7] and +3.5 [+6.8]; falls behind first -2.0 [-6.9] and -3.0 [-7.0]; lives in the zone +3.0 [+5.6] and +2.9 [+5.7]; works off the plate -3.5 [-5.4] and -3.7 [-5.9]; gets chases +4.2 [+5.8] and +3.2 [+6.0]; few chases -2.7 [-5.5] and -1.8 [-5.4]; fastballs when behind +12.9 [+19.4] and +12.4 [+19.7]; spins it when behind -13.9 [-19.6] and -16.4 [-20.8]; starts with spin -17.1 [-21.1] and -16.5 [-21.2]. **Decision (the registered rule):** seven tags held in both splits and go on the pitcher cards and the plans' starter folds (throws first-pitch strikes, lives in the zone, works off the plate, gets chases, fastballs when behind, spins it when behind, starts with spin; page pitcherTags); falls behind first (2026 short of half its threshold) and few chases (2025 short) do not.",
+     "Delta corrected Brier, 2026": "seven of nine held; two left off"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38114925921"
+    ],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "seven of nine held; two left off"
    }
   ],
   "ZONES-01": [

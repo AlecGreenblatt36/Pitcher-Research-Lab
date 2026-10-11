@@ -593,6 +593,10 @@ class Fitted:
         self.pct_ref_h, self.pct_ref_p = pct_reference(self.lines_h, PCT_HITTER), pct_reference(self.lines_p, PCT_PITCHER)
         self.league['ranked'] = {'min': PCT_MIN, 'hitters': int(sum(1 for L in self.lines_h.values() if L['pa'] >= PCT_MIN)),
                                  'pitchers': int(sum(1 for L in self.lines_p.values() if L['pa'] >= PCT_MIN))}
+        # pitcher tag counts (PTAGS-01) on the training rows, and the league's rates
+        ptc = pitcher_tag_counts(T, tr)
+        self.ptags = {int(pid): {k: [int(ptc[k][0][i]), int(ptc[k][1][i])] for k in ('fps', 'zone', 'chase', 'fb_behind', 'fb_first')} for i, pid in enumerate(ptc['ids'])}
+        self.league['ptags'] = {k: round(float(ptc[k][0].sum() / max(ptc[k][1].sum(), 1)), 4) for k in ('fps', 'zone', 'chase', 'fb_behind', 'fb_first')}
         self.run_year, self.run_season = running_season(asof_day)
         if self.run_year:
             self.league['run'] = dict(running_league(self.run_season), season=self.run_year)
@@ -750,6 +754,9 @@ class Fitted:
                 'looks_in_ends_out': round(float(self.looks_in_ends_out[r].mean()), 3),
                 'zones': zone_split(T, r, self.swing, self.whiff, by='stand_r'),      # where he throws, by the batter's side
                 'usage': usage_by_count(T, r)}                                        # what he throws, by count and batter side
+        pt = getattr(self, 'ptags', {}).get(int(p))
+        if pt:
+            card['ptags'] = pt
         rp = (getattr(self, 'run_season', {}) or {}).get('pitchers', {}).get(str(int(p)))
         if rp:
             card['run_against'] = {'season': self.run_year, **{k: rp[k] for k in ('sb', 'cs', 'bf') if k in rp}}

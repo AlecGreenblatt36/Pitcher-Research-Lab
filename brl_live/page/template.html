@@ -3244,6 +3244,20 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (gs != null) { if (gs >= 0.08) t.push("Ground-ball hitter"); else if (gs <= -0.08) t.push("Fly-ball hitter"); }
     return t;
   }
+  /* PTAGS-01: pitcher tags that held on the next season's pitches (each against the league, with the study's floors) */
+  var PTAG_RULES = [["Throws first-pitch strikes", "fps", 0.05, 100], ["Lives in the zone", "zone", 0.04, 300], ["Works off the plate", "zone", -0.04, 300],
+    ["Gets chases", "chase", 0.04, 150], ["Fastballs when behind", "fb_behind", 0.12, 100], ["Spins it when behind", "fb_behind", -0.12, 100], ["Starts with spin", "fb_first", -0.15, 100]];
+  function pitcherTags(pc, lg) {
+    var t = [], c = pc && pc.ptags, L = lg && lg.ptags;
+    if (!c || !L) return t;
+    PTAG_RULES.forEach(function (r) {
+      var x = c[r[1]], l = L[r[1]];
+      if (!x || l == null || x[1] < r[3]) return;
+      var d = x[0] / x[1] - l;
+      if (r[2] > 0 ? d >= r[2] : d <= r[2]) t.push(r[0]);
+    });
+    return t;
+  }
   /* TAGS-03: his misses per swing on a pitch type minus on fastballs, net of the same for most hitters on his side, from the
      hot-zone counts (both hands). It carries over (correlation 0.62 and 0.57 for breaking balls, 0.57 and 0.52 for offspeed),
      and tags at one standard deviation held on the next season's pitches. Rows of 100 breaking, 60 offspeed, 150 fastball swings. */
@@ -3533,7 +3547,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var keys = lineupKeys(doc, po);
     if (keys) h += '<p class="note hz-cap">Working through this lineup</p>' + keys;
     var spc = players[String(starter.id)] && players[String(starter.id)].pitcher, proj = starterProjection(doc, other, starter.id);
-    if (spc && spc.mix) h += '<details class="more" data-keep="ars-' + side + '"' + (state.rpOpen["ars-" + side] ? " open" : "") + "><summary>" + esc(lastName(nm(starter.id))) + "'s pitches</summary>" + (proj ? '<p class="pd-line">' + esc(proj) + "</p>" : "") + pctPanel(spc, doc.league, doc.asof, "h4") + (spc.arsenal && spc.arsenal.length ? arsenalTypes(spc, doc.league) : arsenalTable(spc.mix)) +
+    if (spc && spc.mix) h += '<details class="more" data-keep="ars-' + side + '"' + (state.rpOpen["ars-" + side] ? " open" : "") + "><summary>" + esc(lastName(nm(starter.id))) + "'s pitches</summary>" + (proj ? '<p class="pd-line">' + esc(proj) + "</p>" : "") + (pitcherTags(spc, doc.league).length ? '<div class="pl-tags pd-tags">' + pitcherTags(spc, doc.league).map(function (s0) { return "<span>" + esc(s0) + "</span>"; }).join("") + "</div>" : "") + pctPanel(spc, doc.league, doc.asof, "h4") + (spc.arsenal && spc.arsenal.length ? arsenalTypes(spc, doc.league) : arsenalTable(spc.mix)) +
       (runAgainstLine(spc.run_against, doc.league, lastName(nm(starter.id))) ? '<p class="note">' + esc(runAgainstLine(spc.run_against, doc.league, lastName(nm(starter.id)))) + "</p>" : "") +
       (spc.usage ? '<p class="note hz-cap">What he throws by count</p>' + (usageLine(spc) ? '<p class="pd-line">' + esc(usageLine(spc)) + "</p>" : "") + usageTable(spc, "R") + usageTable(spc, "L") : "") + "</details>";
     var pen = bullpenCard(doc, se, nm);
@@ -4073,7 +4087,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
           grids += "</div>";
           h += x.zones ? '<details class="more" id="pl-model"' + (state.rpOpen.plModel ? " open" : "") + "><summary>Our swing model's grids</summary>" + grids + "</details>" : grids;
         } else {
-          var mix = x.mix || {};
+          var mix = x.mix || {}, ptg = pitcherTags(x, lg);
+          if (ptg.length) h += '<div class="pl-tags" style="margin:0 0 10px">' + ptg.map(function (s0) { return "<span>" + esc(s0) + "</span>"; }).join("") + "</div>";
           h += '<p class="pd-line">Hitters chase ' + (x.chase_rate_against != null ? pct(x.chase_rate_against) : "\u2013") + " of his pitches out of the zone (league " + (lg.chase_rate != null ? pct(lg.chase_rate) : "\u2013") + "). " +
             (x.looks_in_ends_out != null ? pct(x.looks_in_ends_out) + " of his pitches look like strikes when the hitter has to decide, then end up balls (league " + (lg.looks_in_ends_out != null ? pct(lg.looks_in_ends_out) : "\u2013") + ")." : "") + "</p>";
           /* the arsenal the way every scouting sheet lists it, then where each pitch goes to each side */
@@ -4200,13 +4215,16 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     ["Aggressive in hitter's counts", "swings when behind", 13.9, 13.5, 11.3, 11.1], ["Misses breaking balls", "misses vs his fastball misses", 7.3, 8.0, 6.5, 5.3],
     ["Misses offspeed", "misses vs his fastball misses", 9.9, 9.9, 7.0, 5.4], ["Pulls grounders", "grounders pulled", 13.1, 12.6, 10.3, 8.4],
     ["Pulls in the air", "balls in the air pulled", 11.7, 11.9, 10.2, 10.4], ["Ground-ball hitter", "ground balls", 11.5, 10.2, 7.4, 6.6],
-    ["Fly-ball hitter", "ground balls", -10.3, -10.4, -8.4, -8.9]];
+    ["Fly-ball hitter", "ground balls", -10.3, -10.4, -8.4, -8.9],
+    ["Pitcher: throws first-pitch strikes", "first-pitch strikes", 6.7, 6.8, 3.9, 3.5], ["Pitcher: lives in the zone", "pitches in the zone", 5.6, 5.7, 3.0, 2.9],
+    ["Pitcher: gets chases", "chases", 5.8, 6.0, 4.2, 3.2], ["Pitcher: fastballs when behind", "fastballs behind", 19.4, 19.7, 12.9, 12.4],
+    ["Pitcher: spins it when behind", "fastballs behind", -19.6, -20.8, -13.9, -16.4], ["Pitcher: starts with spin", "first-pitch fastballs", -21.1, -21.2, -17.1, -16.5]];
   function tagChecksHtml() {
     var f = function (v) { return (v > 0 ? "+" : "") + v.toFixed(1); };
-    return '<h3 class="hz-h">The hitter tags, a season later</h3><p class="note">Tagged from two seasons, then checked on the next one. Points against the league on the same pitches; what we said first, what happened next.</p>' +
+    return '<h3 class="hz-h">The tags, a season later</h3><p class="note">Tagged from two seasons, then checked on the next one. Points against the league on the same pitches; what we said first, what happened next.</p>' +
       '<div class="tbl-wrap tag-checks" tabindex="0" role="region" aria-label="Hitter tags checked a season later, scrolls sideways"><table class="box"><thead><tr><th scope="col">Tag</th><th scope="col">Rate</th><th scope="col">Said</th><th scope="col">2026</th><th scope="col">Said</th><th scope="col">2025</th></tr></thead><tbody>' +
       TAG_CHECKS.map(function (r) { return "<tr><td>" + esc(r[0]) + "</td><td>" + esc(r[1]) + "</td><td>" + f(r[2]) + "</td><td><b>" + f(r[4]) + "</b></td><td>" + f(r[3]) + "</td><td><b>" + f(r[5]) + "</b></td></tr>"; }).join("") +
-      '</tbody></table></div><p class="note">Every tag held in both seasons. One read that did not hold up, extra misses on hard fastballs, is not used.</p>';
+      '</tbody></table></div><p class="note">Every tag listed held in both seasons. Reads that did not hold up are not used: extra misses on hard fastballs, and for pitchers, falling behind first and allowing few chases.</p>';
   }
   /* "When we say 60%, do they win 60%?" and month by month, from the two seasons re-run (days/season-YYYY.json). */
   function fillSeasonChecks() {
