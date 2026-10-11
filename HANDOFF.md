@@ -65,7 +65,17 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 9:51 a.m. Eastern October 11, by `date -u`)
+### In flight (updated 10:00 a.m. Eastern October 11, by `date -u`)
+
+- October 11, 10:00 a.m.: RUNLINE-01, NRFI-01 and FIRST5-01 all failed their registered rules (runs 38141799131, 38141956435),
+  so the page's More markets section stays off (MORE_MARKETS all false). The run line's miss is real: given a win, the
+  simulator's chance of winning by two or more runs about 2 points low in 2026 and the road winners it rates least likely
+  to win big did so 5 to 6 points more often in both seasons, the same narrowness DISP-01/02 found; a day-form shock used
+  only for the market numbers (win chances from the plain worlds) is the candidate fix, untested. The first inning and the
+  first five held on level (within 1.2 to 2.3 points) and missed a per-fifth bound that sat near the noise. BOX-RBI-01:
+  simulated boxes now credit runs batted in on outs in play other than double plays. PLAYER-06 replays (two or more total
+  bases): 2026 run 38144947261, 2025 queued after it; score with `tools/brl_player_cal.py` (kind tb2 in the output) and
+  turn on PROP_COLS.tb2 only if the rule holds.
 
 - October 11, 9:51 a.m.: a separate review of the day's page and study changes found five defects and six possible issues, all
   fixed in a78e72b4c: Record page notes now name what was checked (walks or hit-by-pitches; 1 to 2.3 points; the map
