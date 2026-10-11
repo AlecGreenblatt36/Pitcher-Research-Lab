@@ -452,9 +452,61 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .pair-detail { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 14px; }
 .pair-detail h3 { font-family: var(--display); font-size: 22px; margin: 0 0 4px; }
 .seg.arms { display: flex; flex-wrap: wrap; overflow: visible; }
-.seg.arms button { flex: 1 1 auto; }
+.seg.arms button { flex: 1 1 auto; white-space: nowrap; }
 .seg.arms small { font-weight: 400; font-size: 14px; opacity: .8; }
 .mu td.rp-cell { cursor: pointer; }
+
+
+/* Hot zones: the standard 13-zone chart (catcher's view), red above the league, blue below */
+.hz { display: flex; flex-direction: column; min-width: 0; }
+.hz-svg { display: block; width: 100%; height: auto; background: var(--surface); border-radius: 4px; }
+.hz-z { stroke: var(--rule-strong); stroke-width: .8; }
+.hz-k { fill: none; stroke: var(--ink); stroke-width: 2; pointer-events: none; }
+.hz-t { font-family: var(--display); font-weight: 700; font-size: 17px; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.hz-t.o { font-size: 15px; }
+.hz-aim { fill: none; stroke: var(--ink); stroke-width: 5; pointer-events: none; }
+.hz-g { fill: var(--ink); stroke: var(--surface); stroke-width: 1.4; pointer-events: none; }
+.hz-g.open { fill: var(--surface); stroke: var(--ink); stroke-width: 1.8; }
+.hz-io { display: flex; justify-content: space-between; font-size: 14px; line-height: 1.3; color: var(--muted); padding: 2px 2px 0; }
+.hz-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px 14px; margin: 4px 0 6px; }
+@media (min-width: 720px) { .hz-row { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); } .hz-card { max-width: 240px; } }
+.hz-card { min-width: 0; }
+.hz-card h4 { margin: 0 0 4px; font-size: 15px; line-height: 1.25; min-height: 38px; }
+.hz-card h4 small { display: block; font-weight: 400; color: var(--muted); font-size: 14px; }
+.hz-n { font-size: 14px; color: var(--muted); text-align: center; }
+.hz-h { margin: 14px 0 6px; font-size: 16px; }
+.hz-h2 { font-family: var(--display); font-weight: 700; font-size: 22px; margin: 18px 0 2px; }
+.hz-tools { display: flex; flex-wrap: wrap; gap: 8px 10px; margin: 10px 0 4px; }
+.hz-tools .seg { margin-bottom: 0; }
+.seg.hz-seg button { padding: 8px 11px; }
+.hz-line { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 6px 0 10px; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); overflow: hidden; max-width: 460px; }
+.hz-line div { padding: 6px 8px; border-left: 1px solid var(--rule-soft); min-width: 0; }
+.hz-line div:first-child { border-left: 0; }
+.hz-line span { display: block; font-size: 14px; font-weight: 700; color: var(--muted); }
+.hz-line b { display: block; font-family: var(--display); font-size: 22px; line-height: 1.1; }
+.hz-line small { display: block; color: var(--muted); font-size: 14px; white-space: nowrap; }
+.hz-key { line-height: 1.6; }
+.hz-sw { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: -1px; margin: 0 5px 0 0; }
+.hz-sw.hot { background: rgb(205,44,38); }
+.hz-sw.cold { background: rgb(33,102,172); margin-left: 8px; }
+.hz-mk { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--ink); vertical-align: -1px; }
+.hz-mk.open { background: transparent; border: 2px solid var(--ink); }
+.hz-mk.sq { border-radius: 2px; }
+.hz-plan { list-style: none; margin: 8px 0 0; padding: 0; }
+.hz-plan li { padding: 6px 0; border-top: 1px solid var(--rule-soft); font-size: 15px; }
+.pl-body { display: grid; grid-template-columns: minmax(0, 1fr) 124px; gap: 12px; align-items: start; margin: 6px 0 0 22px; }
+.pl-body.no-hz { grid-template-columns: minmax(0, 1fr); }
+.pl-body .pl-txt, .pl-body .pl-tags { margin-left: 0; }
+.pl-body .pl-txt { margin-top: 0; }
+.pl-hz .hz-t { font-size: 18px; }
+.pl-hz .hz-t.o { font-size: 16px; }
+.pd-tags { margin: 0 0 8px; }
+.hz-types { margin: 4px 0 10px; max-width: 520px; }
+.hz-types .box td { font-size: 16px; padding: 6px 4px; }
+.hz-types .box th { padding: 7px 4px; }
+.hz-types .box th:first-child, .hz-types .box td:first-child { padding-left: 8px; font-size: 15px; }
+.hz-types .box th:last-child, .hz-types .box td:last-child { padding-right: 8px; }
+@media (min-width: 720px) { .pl-body { grid-template-columns: minmax(0, 1fr) 156px; gap: 20px; } }
 
 /* Odds */
 .winbar { display: flex; height: 48px; border-radius: 6px; overflow: hidden; }
@@ -618,7 +670,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   var DATA_URL = "predictions.json";
   var D = null;
   var app = document.getElementById("app");
-  var state = { variant: {}, boxSide: {}, playSide: {}, muMetric: "obp", rpMetric: "chase", rpPair: {}, rpCount: "all", rpFollow: {}, rpCloud: false, rpOpen: {} };
+  var state = { variant: {}, boxSide: {}, playSide: {}, muMetric: "obp", rpMetric: "chase", rpPair: {}, rpCount: "all", rpFollow: {}, rpCloud: false, rpOpen: {}, hzMetric: "avg", hzFam: "all", hzHand: "" };
   var REPORTS = "https://raw.githubusercontent.com/AlecGreenblatt36/Pitcher-Research-Lab/brl-live-data/public/reports/";
   var TOTAL_TAUGHT = { sim: 0.32, line: 0.78, shift: -0.543, from: "2026-10-10" };   /* TOTALS-03: expected total taught by results, fixed cross-season weights */
   var RP = {};
@@ -2420,10 +2472,13 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var bg = edge >= 0 ? "rgba(46,125,154," + a.toFixed(3) + ")" : "rgba(240,178,58," + a.toFixed(3) + ")";
     return '<td class="rp-cell' + (sel ? " rp-sel" : "") + '" data-rp="' + key + '" style="background:' + bg + '">' + m.fmt(v) + "</td>";
   }
-  function rpGrid(doc, grid, aim, label, scale, strike, cloud) {
+  /* The model's 7x7 grid, kept in the hitter's own frame (negative side values inside); drawn from the catcher's view,
+     so a lefty's grid is flipped and his inside is on the right. */
+  function rpGrid(doc, grid, aim, label, scale, strike, cloud, lefty) {
     var gu = doc.grid.side_ft, gz = doc.grid.height_ft, h = '<div class="rp-grid" role="img" aria-label="' + esc(label) + '">';
     var cmax = cloud ? Math.max.apply(null, cloud.concat([0.001])) : 0;
-    for (var r = gz.length - 1; r >= 0; r--) for (var c = 0; c < gu.length; c++) {
+    for (var r = gz.length - 1; r >= 0; r--) for (var c0 = 0; c0 < gu.length; c0++) {
+      var c = lefty ? gu.length - 1 - c0 : c0;
       var k = r * gu.length + c, v = grid ? grid[k] : 0, a = Math.min(0.85, Math.abs(v) / scale);
       var bg = v >= 0 ? "rgba(240,178,58," + a.toFixed(3) + ")" : "rgba(46,125,154," + a.toFixed(3) + ")";
       if (cloud) { v = Math.round(100 * cloud[k]); bg = "rgba(23,35,28," + (0.85 * cloud[k] / cmax).toFixed(3) + ")"; }
@@ -2436,6 +2491,151 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       h += '<i class="' + cls + '" style="background:' + bg + '" title="' + esc(gu[c] + " ft, " + gz[r] + " ft: " + (cloud ? v + "% of landings" : (v > 0 ? "+" : "") + v) + why) + '"></i>';
     }
     return h + "</div>";
+  }
+  /* ---------- Hot zones: the standard chart, MLB's 13 zones from the catcher's view ----------
+     Zones 1-9 split the strike zone in thirds, zone 1 up and to the catcher's left; 11-14 are the four corners around it.
+     A hitter's counts per zone are [zone, pitches, swings, misses, at-bats ended there, hits, total bases], kept by the
+     pitcher's hand ("R", "L") and pitch type ("all", "fastball", "breaking", "offspeed"). The colors are the usual ones:
+     red above the league's rate for his side against that hand, blue below. */
+  var HZ_METRICS = {
+    avg: { label: "AVG", num: 5, den: 4, min: 10, show: 4, unit: "at-bats", scale: 0.1, three: true, say: "Batting average on at-bats that ended on a pitch in each zone" },
+    slg: { label: "SLG", num: 6, den: 4, min: 10, show: 4, unit: "at-bats", scale: 0.2, three: true, say: "Slugging on at-bats that ended on a pitch in each zone (a triple counts as a double)" },
+    swing: { label: "Swing %", num: 2, den: 1, min: 15, show: 6, unit: "pitches", scale: 0.25, say: "How often he swings at pitches in each zone" },
+    miss: { label: "Miss %", num: 3, den: 2, min: 10, show: 4, unit: "swings", scale: 0.15, say: "How often he misses when he swings in each zone" }
+  };
+  var HZ_FAMS = [["all", "All pitches"], ["fastball", "Fastballs"], ["breaking", "Breaking balls"], ["offspeed", "Offspeed"]];
+  var HZ_CELL = { 1: [0, 0], 2: [1, 0], 3: [2, 0], 4: [0, 1], 5: [1, 1], 6: [2, 1], 7: [0, 2], 8: [1, 2], 9: [2, 2] };
+  var HZ_OUT = { 11: ["M0 0H66V20H20V75H0Z", 33, 10.5, 10, 10], 12: ["M66 0H132V75H112V20H66Z", 99, 10.5, 122, 10], 13: ["M0 75H20V130H66V150H0Z", 33, 140, 10, 140], 14: ["M112 75H132V150H66V130H112Z", 99, 140, 122, 140] };
+  var HZ_UID = 0;
+  function hzMetric() { return HZ_METRICS[state.hzMetric] ? state.hzMetric : "avg"; }
+  function hzFmt(m, v) { return m.three ? (v >= 1 ? v.toFixed(3) : v.toFixed(3).slice(1)) : Math.round(v * 100) + "%"; }
+  function hzVal(m, c) { return c && c[m.den] >= m.min ? c[m.num] / c[m.den] : null; }
+  /* a zone with a few at-bats still shows its number, in gray and uncolored */
+  function hzThin(m, c) { return c && c[m.den] >= m.show && c[m.den] < m.min ? c[m.num] / c[m.den] : null; }
+  function hzTotal(cells) { var t = [0, 0, 0, 0, 0, 0, 0]; (cells || []).forEach(function (c) { for (var k = 1; k < 7; k++) t[k] += c[k]; }); return t; }
+  /* the counts against one hand ("R", "L") or both ("all", the two added); plan files built before the split carry one set */
+  function hzCells(z, hand, fam) {
+    if (!z) return null;
+    if (Array.isArray(z.all)) return z[fam] || null;
+    if (hand === "R" || hand === "L") return z[hand] && z[hand][fam] ? z[hand][fam] : null;
+    var a = z.R && z.R[fam], b = z.L && z.L[fam];
+    if (!a || !b) return a || b || null;
+    return a.map(function (c, i) { return c.map(function (v, k) { return k ? v + b[i][k] : v; }); });
+  }
+  function hzSplit(z) { return !!z && !Array.isArray(z.all) && !!(z.R || z.L); }
+  function hzLeague(lg, side, hand, fam) { var z = lg && lg.zones ? lg.zones[side === "L" ? "L" : "R"] : null; return hzCells(z, hand, fam); }
+  function hzZoneWords(zn, side) {
+    var inLeft = side !== "L", col = zn <= 9 ? (zn - 1) % 3 : (zn === 11 || zn === 13 ? 0 : 2), row = zn <= 9 ? Math.floor((zn - 1) / 3) : zn <= 12 ? 0 : 2;
+    var hz = col === 1 ? "" : (col === 0) === inLeft ? "in" : "away", vt = row === 0 ? "up" : row === 2 ? "down" : "";
+    var w = vt && hz ? vt + " and " + hz : vt || hz || "middle";
+    return zn <= 9 ? w.charAt(0).toUpperCase() + w.slice(1) : "Out of the zone, " + w;
+  }
+  /* Where a plan spot falls among the 13 zones: strikes in 1-9 (pulled onto the zone), pitches out of the zone in 11-14. */
+  function hzZoneOf(c, side, top, bot, strike) {
+    var x = side === "L" ? -c[0] : c[0], z = c[1];
+    if (strike) {
+      x = Math.max(-0.82, Math.min(0.82, x)); z = Math.max(bot + 0.01, Math.min(top - 0.01, z));
+      var col = x < -0.83 / 3 ? 0 : x > 0.83 / 3 ? 2 : 1, h3 = (top - bot) / 3, row = z > top - h3 ? 0 : z < bot + h3 ? 2 : 1;
+      return 1 + col + 3 * row;
+    }
+    var left = side === "L" ? c[0] >= 0 : c[0] < 0, up = z >= (top + bot) / 2;
+    return left ? (up ? 11 : 13) : (up ? 12 : 14);
+  }
+  /* One chart. o: metric key, side (the hitter's), lg (league cells for his side, the same hand and pitch type),
+     aim and strike (plan spots for this pitch type), top and bot (his zone in feet), label. */
+  function hzChart(cells, o) {
+    var m = HZ_METRICS[o.metric] || HZ_METRICS.avg, by = {}, side = o.side === "L" ? "L" : "R";
+    (cells || []).forEach(function (c) { by[c[0]] = c; });
+    var lby = {}; (o.lg || []).forEach(function (c) { lby[c[0]] = c; });
+    var lt = hzTotal(o.lg && o.lg.length ? o.lg : cells), center = lt[m.den] ? lt[m.num] / lt[m.den] : null;
+    var fill = function (v) {
+      if (v == null || center == null) return { bg: "var(--surface)", fg: "var(--muted)" };
+      var d = Math.max(-1, Math.min(1, (v - center) / m.scale)), a = Math.abs(d) * 0.9;
+      return { bg: (d >= 0 ? "rgba(205,44,38," : "rgba(33,102,172,") + a.toFixed(3) + ")", fg: a >= 0.5 ? "#fff" : "var(--ink)" };
+    };
+    var tip = function (zn) {
+      var c = by[zn], v = hzVal(m, c), l = hzVal(m, lby[zn]), w = hzZoneWords(zn, side) + ": ";
+      var th = hzThin(m, c);
+      if (v == null && th == null) return w + "too few " + m.unit + " to say";
+      if (v == null) { v = th; w += "only " + c[m.den] + " " + m.unit + ", "; }
+      var n = m.num === 5 ? c[5] + " for " + c[4] : m.num === 6 ? c[6] + " total bases in " + c[4] + " at-bats" : m.num === 2 ? "swung at " + c[2] + " of " + c[1] : "missed " + c[3] + " of " + c[2] + " swings";
+      return w + hzFmt(m, v) + " (" + n + ")" + (l != null ? ", league " + hzFmt(m, l) : "");
+    };
+    var text = function (zn) { var v = hzVal(m, by[zn]), t = hzThin(m, by[zn]); return v != null ? hzFmt(m, v) : t != null ? hzFmt(m, t) : "–"; };
+    var s = '<svg class="hz-svg" viewBox="0 0 132 150" role="img" aria-label="' + esc(o.label || "Hot zones") + '">';
+    [11, 12, 13, 14].forEach(function (zn) {
+      var q = HZ_OUT[zn], f = fill(hzVal(m, by[zn]));
+      s += '<path class="hz-z" d="' + q[0] + '" style="fill:' + f.bg + '"><title>' + esc(tip(zn)) + '</title></path><text class="hz-t o" x="' + q[1] + '" y="' + q[2] + '" style="fill:' + f.fg + '">' + text(zn) + "</text>";
+    });
+    for (var zn = 1; zn <= 9; zn++) {
+      var p = HZ_CELL[zn], x = 20 + p[0] * 92 / 3, y = 20 + p[1] * 110 / 3, f = fill(hzVal(m, by[zn]));
+      s += '<rect class="hz-z" x="' + x.toFixed(2) + '" y="' + y.toFixed(2) + '" width="30.67" height="36.67" style="fill:' + f.bg + '"><title>' + esc(tip(zn)) + '</title></rect><text class="hz-t" x="' + (x + 46 / 3).toFixed(2) + '" y="' + (y + 55 / 3).toFixed(2) + '" style="fill:' + f.fg + '">' + text(zn) + "</text>";
+    }
+    s += '<rect class="hz-k" x="20" y="20" width="92" height="110"/>';
+    /* the plan's spots: the zone outlined, with the mark the plan uses (a circle out of the zone, a square for a strike;
+       filled where he chases or takes more than most, open where he takes on the edge or can't do much with it) */
+    var top = o.top || 3.45, bot = o.bot || 1.55, marked = {}, uid = "hz" + (++HZ_UID);
+    (o.aim || []).forEach(function (c) { var zn = hzZoneOf(c, side, top, bot, false); if (!marked[zn] || (marked[zn] === "take" && c[2] !== "take")) marked[zn] = c[2] === "take" ? "take" : "chase"; });
+    (o.strike || []).forEach(function (c) { var zn = hzZoneOf(c, side, top, bot, true); if (!marked[zn] || (marked[zn] === "weak" && c[2] !== "weak")) marked[zn] = c[2] === "weak" ? "weak" : "strike"; });
+    Object.keys(marked).forEach(function (k) {
+      var zn = Number(k), kind = marked[k], open = kind === "take" || kind === "weak", gx, gy;
+      var shape;
+      if (zn >= 11) { var q = HZ_OUT[zn]; shape = '<path d="' + q[0] + '"'; gx = q[3]; gy = q[4]; }
+      else { var p2 = HZ_CELL[zn], x2 = 20 + p2[0] * 92 / 3, y2 = 20 + p2[1] * 110 / 3; shape = '<rect x="' + x2.toFixed(2) + '" y="' + y2.toFixed(2) + '" width="30.67" height="36.67"'; gx = x2 + 24.5; gy = y2 + 6.5; }
+      s += '<clipPath id="' + uid + "-" + zn + '">' + shape + "/></clipPath>" + shape + ' class="hz-aim" clip-path="url(#' + uid + "-" + zn + ')"/>';
+      s += kind === "chase" || kind === "take" ? '<circle class="hz-g' + (open ? " open" : "") + '" cx="' + gx.toFixed(2) + '" cy="' + gy.toFixed(2) + '" r="4.2"/>' : '<rect class="hz-g' + (open ? " open" : "") + '" x="' + (gx - 3.8).toFixed(2) + '" y="' + (gy - 3.8).toFixed(2) + '" width="7.6" height="7.6" rx="1"/>';
+    });
+    s += "</svg>";
+    return '<div class="hz">' + s + '<div class="hz-io" aria-hidden="true"><span>' + (side === "L" ? "Away" : "In") + "</span><span>" + (side === "L" ? "In" : "Away") + "</span></div></div>";
+  }
+  /* The slash-line strip over a hitter's charts: his numbers against this hand from the same counts. */
+  function hzLine(cells, lgCells) {
+    if (!cells) return "";
+    var t = hzTotal(cells), out = cells.filter(function (c) { return c[0] >= 11; }), o = hzTotal(out), l = lgCells ? hzTotal(lgCells) : null, lo = lgCells ? hzTotal(lgCells.filter(function (c) { return c[0] >= 11; })) : null;
+    var cols = [["AVG", t[4] ? hzFmt(HZ_METRICS.avg, t[5] / t[4]) : "–", l && l[4] ? hzFmt(HZ_METRICS.avg, l[5] / l[4]) : ""],
+                ["SLG", t[4] ? hzFmt(HZ_METRICS.slg, t[6] / t[4]) : "–", l && l[4] ? hzFmt(HZ_METRICS.slg, l[6] / l[4]) : ""],
+                ["Chase", o[1] ? Math.round(100 * o[2] / o[1]) + "%" : "–", lo && lo[1] ? Math.round(100 * lo[2] / lo[1]) + "%" : ""],
+                ["Miss", t[2] ? Math.round(100 * t[3] / t[2]) + "%" : "–", l && l[2] ? Math.round(100 * l[3] / l[2]) + "%" : ""],
+                ["AB", String(t[4]), ""]];
+    return '<div class="hz-line num">' + cols.map(function (c) { return "<div><span>" + c[0] + "</span><b>" + c[1] + "</b>" + (c[2] ? "<small>Lg " + c[2] + "</small>" : "") + "</div>"; }).join("") + "</div>";
+  }
+  /* His numbers by pitch type against this hand, the usual split table. */
+  function hzTypes(card, hand) {
+    var rows = HZ_FAMS.slice(1).map(function (fam) {
+      var c = hzCells(card.zones, hand, fam[0]);
+      if (!c) return "";
+      var t = hzTotal(c), o = hzTotal(c.filter(function (x) { return x[0] >= 11; }));
+      if (t[1] < 30) return "";
+      var r = function (a, b) { return b ? Math.round(100 * a / b) + "%" : "\u2013"; }, avg = HZ_METRICS.avg;
+      return "<tr><td>" + { fastball: "Fastball", breaking: "Breaking", offspeed: "Offspeed" }[fam[0]] + "</td><td>" + Number(t[1]).toLocaleString() + "</td><td>" + r(t[2], t[1]) + "</td><td>" + r(o[2], o[1]) + "</td><td>" + r(t[3], t[2]) + "</td><td>" +
+        (t[4] >= 10 ? hzFmt(avg, t[5] / t[4]) : "\u2013") + "</td><td>" + (t[4] >= 10 ? hzFmt(avg, t[6] / t[4]) : "\u2013") + "</td></tr>";
+    }).join("");
+    return rows ? '<div class="tbl-wrap hz-types"><table class="box"><thead><tr><th scope="col">Pitch</th><th scope="col">Seen</th><th scope="col">Swing</th><th scope="col">Chase</th><th scope="col">Miss</th><th scope="col">AVG</th><th scope="col">SLG</th></tr></thead><tbody>' + rows + "</tbody></table></div>" : "";
+  }
+  function hzSeg(key, cur, opts, aria) {
+    return '<div class="seg hz-seg" role="group" aria-label="' + esc(aria) + '">' + opts.map(function (o) { return "<button data-" + key + '="' + o[0] + '" aria-pressed="' + (o[0] === cur) + '">' + esc(o[1]) + "</button>"; }).join("") + "</div>";
+  }
+  function hzMetricSeg() { var k = hzMetric(); return hzSeg("hzmetric", k, Object.keys(HZ_METRICS).map(function (x) { return [x, HZ_METRICS[x].label]; }), "Hot zone number"); }
+  function hzHandWords(hand) { return hand === "R" ? "right-handed pitchers" : hand === "L" ? "left-handed pitchers" : "all pitchers"; }
+  function hzSeasons(asof) { var y = parseInt(String(asof || D.date).slice(0, 4), 10); return (y - 1) + " and " + y; }
+  /* A hitter's charts by pitch type against one hand, the plan's spots marked when given (plan[fam], stPlan[fam]). */
+  function hzStrip(card, lg, hand, fams, plan, stPlan, label) {
+    var z = card && card.zones, k = hzMetric(), h = '<div class="hz-row">';
+    var useHand = hzSplit(z) ? hand : "all";
+    fams.forEach(function (fam) {
+      var cells = hzCells(z, useHand, fam[0]);
+      if (!cells) return;
+      var t = hzTotal(cells);
+      h += '<div class="hz-card"><h4>' + esc(fam[1]) + (fam[2] ? " <small>" + esc(fam[2]) + "</small>" : "") + "</h4>" +
+        hzChart(cells, { metric: k, side: card.side, lg: hzLeague(lg, card.side, useHand, fam[0]), aim: plan ? plan[fam[0]] : null, strike: stPlan ? stPlan[fam[0]] : null, top: card.zone_top_ft, bot: card.zone_bottom_ft, label: (label || "") + fam[1] + ", " + HZ_METRICS[k].label + " by zone" }) +
+        '<div class="hz-n">' + Number(t[1]).toLocaleString() + " pitches</div></div>";
+    });
+    return h + "</div>";
+  }
+  function hzLegend(k, marks) {
+    var m = HZ_METRICS[k];
+    return '<p class="note hz-key"><span class="hz-sw hot"></span>Higher than the league <span class="hz-sw cold"></span>Lower. ' + esc(m.say) + ". Gray: fewer than " + m.min + " " + m.unit + ". Catcher's view." +
+      (marks ? ' Outlined zones are the plan: <span class="hz-mk"></span> out of the zone where he chases, <span class="hz-mk open"></span> on the edge where he takes, <span class="hz-mk sq"></span> strikes he takes more than most hitters, <span class="hz-mk sq open"></span> strikes he can\'t do much with.' : "") + "</p>";
   }
   function reportTab(f, pk) {
     return '<div id="rp-' + pk + '"><p class="empty">Loading the game plan…</p></div>';
@@ -2543,11 +2743,23 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var fl2 = famLine(ck === "all" ? pr.aim.by_family : bc[ck].by_family);
     if (fl2) h += '<p class="pd-line">' + esc(fl2) + "</p>";
     if (pr.evidence && pr.evidence.level === "thin") h += '<p class="note">Small sample. Treat it as a lean.</p>';
+    var shown = ["fastball", "breaking", "offspeed"].filter(function (fam) {
+      var mix = pc && pc.mix && pc.mix[fam];
+      return !(mix && mix.share < 0.01 && !(plan[fam] && plan[fam].length) && !(stPlan[fam] && stPlan[fam].length));    /* a pitch he does not throw */
+    });
+    if (hc.zones) {
+      /* his standard hot zones against this pitcher's hand, the plan's spots for this count outlined */
+      var hand = pc && pc.throws && hzSplit(hc.zones) ? pc.throws : "all";
+      h += '<h4 class="hz-h">' + esc(lastName(players[now.hid] && players[now.hid].name || now.hitter)) + " against " + esc(hzHandWords(hand)) + "</h4>" + hzLine(hzCells(hc.zones, hand, "all"), hzLeague(doc.league, hc.side, hand, "all"));
+      h += '<div class="hz-tools">' + hzMetricSeg() + "</div>";
+      h += hzStrip(hc, doc.league, hand, [["all", "All pitches", ""]].concat(shown.map(function (fam) { var mix = pc && pc.mix && pc.mix[fam]; return [fam, PITCH_NAME[fam], mix ? pct(mix.share) + ", " + Math.round(mix.speed) + " mph" : ""]; })), plan, stPlan, "");
+      return h + hzLegend(hzMetric(), true) + "</section>";
+    }
     h += '<div class="rp-cards">';
-    ["fastball", "breaking", "offspeed"].forEach(function (fam) {
+    shown.forEach(function (fam) {
       var own = hc.own_chase && hc.own_chase[fam], mix = pc && pc.mix && pc.mix[fam];
-      if (!own || (mix && mix.share < 0.01 && !(plan[fam] && plan[fam].length) && !(stPlan[fam] && stPlan[fam].length))) return;   /* a pitch he does not throw */
-      h += '<div class="rp-card"><h4>' + PITCH_NAME[fam] + (mix ? " <small>" + pct(mix.share) + " of his pitches, " + Math.round(mix.speed) + " mph</small>" : "") + "</h4>" + rpGrid(doc, own.grid, plan[fam], PITCH_NAME[fam] + ": plan", 0.8, stPlan[fam]) +
+      if (!own) return;
+      h += '<div class="rp-card"><h4>' + PITCH_NAME[fam] + (mix ? " <small>" + pct(mix.share) + " of his pitches, " + Math.round(mix.speed) + " mph</small>" : "") + "</h4>" + rpGrid(doc, own.grid, plan[fam], PITCH_NAME[fam] + ": plan", 0.8, stPlan[fam], null, hc.side === "L") +
         (plan[fam] && plan[fam].length ? '<div class="lbl">Out of the zone: ' + esc(spotList(plan[fam], function (c) { return c[2] === "take" ? " (to steal a strike)" : ""; }, true).join("; ")) + "</div>" : '<div class="lbl">He rarely throws this pitch out of the zone to this side.</div>') +
         (stPlan[fam] && stPlan[fam].length ? '<div class="lbl">Strikes: ' + esc(spotList(stPlan[fam], function (c) { return c[2] === "weak" ? " (can't do much with it)" : " (takes it more than most)"; }).join("; ")) + "</div>" : "") + "</div>";
     });
@@ -2559,6 +2771,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     withReportDoc(f, pk, function (doc) {
       var now = liveReportNow(pk, doc);
       host.innerHTML = now ? liveCardHtml(f, pk, doc, now) : "";
+      host.querySelectorAll("[data-hzmetric]").forEach(function (b) { b.addEventListener("click", function () { var y = window.scrollY; state.hzMetric = b.getAttribute("data-hzmetric"); loadLiveCard(f, pk); window.scrollTo(0, y); }); });
       if (now && now.lv.plate_umpire && UMPS === null) withUmpires(function () { loadLiveCard(f, pk); });
     });
   }
@@ -2588,6 +2801,10 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       });
     });
     host.querySelectorAll("details[data-keep]").forEach(function (d) { d.addEventListener("toggle", function () { state.rpOpen[d.getAttribute("data-keep")] = d.open; }); });
+    /* hot-zone controls redraw in place: the page keeps its scroll position */
+    var redraw = function () { var y = window.scrollY; loadReport(f, pk); window.scrollTo(0, y); };
+    host.querySelectorAll("[data-hzmetric]").forEach(function (b) { b.addEventListener("click", function (e) { e.stopPropagation(); state.hzMetric = b.getAttribute("data-hzmetric"); redraw(); }); });
+    host.querySelectorAll("[data-hzfam]").forEach(function (b) { b.addEventListener("click", function (e) { e.stopPropagation(); state.hzFam = b.getAttribute("data-hzfam"); redraw(); }); });
     host.querySelectorAll("[data-rpcloud]").forEach(function (b) { b.addEventListener("click", function () { state.rpCloud = b.getAttribute("data-rpcloud") === "1"; loadReport(f, pk); var d = document.getElementById("rp-detail-" + pk); if (d) d.scrollIntoView({ behavior: "instant", block: "start" }); }); });
     host.querySelectorAll("[data-rpdeck]").forEach(function (b) { b.addEventListener("click", function () { stop(); state.rpPair[pk] = b.getAttribute("data-rpdeck"); state.rpCount = "all"; loadReport(f, pk); var d = document.getElementById("rp-detail-" + pk); if (d) d.scrollIntoView({ behavior: "smooth", block: "nearest" }); }); });
     host.querySelectorAll("[data-rpfollow]").forEach(function (b) { b.addEventListener("click", function () { state.rpFollow[pk] = state.rpFollow[pk] === false; loadReport(f, pk); if (state.rpFollow[pk]) { var d = document.getElementById("rp-detail-" + pk); if (d) d.scrollIntoView({ behavior: "smooth", block: "nearest" }); } }); });
@@ -2712,6 +2929,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     out.posted = true;
     return out;
   }
+  function hzSheetHand(doc, starter) {
+    var pc = doc.players && doc.players[String(starter.id)] && doc.players[String(starter.id)].pitcher, any = null;
+    Object.keys(doc.players || {}).some(function (id) { var c = doc.players[id].hitter; if (c && c.zones) { any = c.zones; return true; } return false; });
+    return any && hzSplit(any) && pc && pc.throws ? hzHandWords(pc.throws) + ", the starter's hand" : "all pitchers";
+  }
   /* The plan sheet: every hitter in lineup order against the starter, one line each; tap a hitter for his full plan. */
   function planSheet(doc, side, sel) {
     var se = doc.sides && doc.sides[side], players = doc.players || {}, other = side === "away" ? "home" : "away";
@@ -2721,17 +2943,22 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var h = '<h3 class="team-h ' + side + '-c">How to pitch the ' + esc(nickname(doc.teams[side].name)) + '</h3><p class="note">' + (starter.role === "starter" ? esc(nm(starter.id)) + " starting for the " + esc(nickname(doc.teams[other].name)) + ". " :
       "The " + esc(nickname(doc.teams[other].name)) + " haven't named a starter yet. These lines are against " + esc(nm(starter.id)) + " out of their bullpen. ") +
       (po.posted ? "Posted lineup; the plan was built before it came out" + (po.missing.length ? ", so it has no line yet for " + esc(po.missing.join(" or ")) : "") + "." : lineupWords(se.lineup_source)) +
-      " Tap a hitter for his full plan, the counts and the bullpen.</p><ol class=\"plan-list\">";
+      " Hot zones against " + esc(hzSheetHand(doc, starter)) + ". Tap a hitter for his full plan, the counts and the bullpen.</p><ol class=\"plan-list\">";
     var spots = po.spots, benchShown = false;
+    /* each hitter's hot zones against the starter's hand, for the number and pitch type picked above the sheets */
+    var sc = players[String(starter.id)] && players[String(starter.id)].pitcher, hand = sc && sc.throws ? sc.throws : "all", k = hzMetric();
+    var fam = HZ_FAMS.filter(function (x) { return x[0] === state.hzFam; })[0] || HZ_FAMS[0];
     po.hitters.forEach(function (hid, i) {
       var key = side + "|" + hid + ":" + starter.id, pr = se.pairs[hid + ":" + starter.id], card = players[String(hid)] && players[String(hid)].hitter;
       var tags = hitterTags(card, doc.league), edge = edgeTag(pr), thin = pr && pr.evidence && pr.evidence.level === "thin";
       var spot = spots ? spots[String(hid)] : i + 1;
+      var useHand = card && hzSplit(card.zones) ? hand : "all", cells = card ? hzCells(card.zones, useHand, fam[0]) : null;
+      var chart = cells ? '<div class="pl-hz">' + hzChart(cells, { metric: k, side: card.side, lg: hzLeague(doc.league, card.side, useHand, fam[0]), label: nm(hid) + ": " + HZ_METRICS[k].label + " by zone, " + fam[1].toLowerCase() + " from " + hzHandWords(useHand) }) + "</div>" : "";
       if (spots && !spot && !benchShown) { h += '<li class="plan-bench">Off the bench</li>'; benchShown = true; }
       h += "<li" + (pr ? ' class="plan-row rp-cell' + (sel === key ? " rp-sel" : "") + '" data-rp="' + key + '" tabindex="0"' : ' class="plan-row"') + '><div class="pl-top"><b><span class="spot">' + (spot || "") + "</span>" + esc(nm(hid)) + (card ? " <small>" + esc(card.side === "L" ? "bats left" : "bats right") + "</small>" : "") + "</b>" +
         (edge ? '<span class="pl-edge ' + edge.split(" ")[0].toLowerCase() + '">' + edge + "</span>" : "") + "</div>" +
-        '<div class="pl-txt">' + esc(pr ? planLine(pr) : "Not enough pitches to say yet.") + "</div>" +
-        (tags.length || thin ? '<div class="pl-tags">' + tags.concat(thin ? ["Small sample"] : []).map(function (x) { return "<span>" + esc(x) + "</span>"; }).join("") + "</div>" : "") + "</li>";
+        '<div class="pl-body' + (chart ? "" : " no-hz") + '"><div class="pl-main"><div class="pl-txt">' + esc(pr ? planLine(pr) : "Not enough pitches to say yet.") + "</div>" +
+        (tags.length || thin ? '<div class="pl-tags">' + tags.concat(thin ? ["Small sample"] : []).map(function (x) { return "<span>" + esc(x) + "</span>"; }).join("") + "</div>" : "") + "</div>" + chart + "</div></li>";
     });
     return h + "</ol>";
   }
@@ -2746,49 +2973,80 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (arms.length > 1) h += '<div class="seg arms" role="group" aria-label="Pitcher">' + arms.map(function (pt) { var k_ = parts[0] + "|" + ids[0] + ":" + pt.id; return '<button data-rp="' + k_ + '" aria-pressed="' + (k_ === sel) + '">' + esc(lastName(nm(pt.id))) + (pt.role === "starter" ? " <small>SP</small>" : "") + "</button>"; }).join("") + "</div>";
     h += '<p class="pd-line">' + esc(planLine(pr2)) + "</p>";
     var tags = hitterTags(hc, doc.league);
-    if (hc) h += '<p class="note">' + esc(lastName(nm(ids[0]))) + " chases " + (hc.chase_rate != null ? pct(hc.chase_rate) : "–") + " of pitches out of the zone (league " + pct(doc.league.chase_rate) + ") and misses on " + (hc.whiff_rate != null ? pct(hc.whiff_rate) : "–") + " of his swings (league " + pct(doc.league.whiff_rate) + ")." + (tags.length ? " " + esc(tags.join(". ")) + "." : "") + "</p>";
+    /* with hot zones, his chase and miss rates are in the strip over the charts; the old sentence otherwise */
+    if (hc && !hc.zones) h += '<p class="note">' + esc(lastName(nm(ids[0]))) + " chases " + (hc.chase_rate != null ? pct(hc.chase_rate) : "–") + " of pitches out of the zone (league " + pct(doc.league.chase_rate) + ") and misses on " + (hc.whiff_rate != null ? pct(hc.whiff_rate) : "–") + " of his swings (league " + pct(doc.league.whiff_rate) + ")." + (tags.length ? " " + esc(tags.join(". ")) + "." : "") + "</p>";
+    else if (hc && tags.length) h += '<div class="pl-tags pd-tags">' + tags.map(function (x) { return "<span>" + esc(x) + "</span>"; }).join("") + "</div>";
     if (pc && pc.mix) h += '<p class="note">' + esc(lastName(nm(ids[1]))) + " throws " + ["fastball", "breaking", "offspeed"].filter(function (f) { return pc.mix[f] && pc.mix[f].share >= 0.005; }).map(function (f) { return PITCH_NAME[f].toLowerCase() + " " + pct(pc.mix[f].share) + (pc.mix[f].speed != null ? " (" + Math.round(pc.mix[f].speed) + " mph)" : ""); }).join(", ") + ".</p>";
     if (pr2.evidence && pr2.evidence.level === "thin") h += '<p class="note">Small sample: ' + Number(pr2.evidence.hitter_pitches).toLocaleString() + " pitches seen by the hitter, " + Number(pr2.evidence.pitcher_pitches_to_side).toLocaleString() + " thrown by the pitcher to " + (hc && hc.side === "L" ? "lefties" : "righties") + ". Treat it as a lean.</p>";
+    var hand = pc && pc.throws ? pc.throws : "all", useHand = hc && hzSplit(hc.zones) ? hand : "all";
+    var famsShown = function (plan, stPlan) {
+      return ["fastball", "breaking", "offspeed"].filter(function (fam) {
+        var mix = pc && pc.mix && pc.mix[fam];
+        return !(mix && mix.share < 0.01 && !(plan && plan[fam] && plan[fam].length) && !(stPlan && stPlan[fam] && stPlan[fam].length));   /* a pitch he does not throw */
+      });
+    };
+    var famHead = function (fam) { var mix = pc && pc.mix && pc.mix[fam]; return [fam, PITCH_NAME[fam], mix ? pct(mix.share) + ", " + Math.round(mix.speed) + " mph" : ""]; };
+    var model = "";
     if (pr2.aim && hc) {
       var counts = [["all", "All counts"], ["even_or_ahead", "Ahead or even"], ["behind", "Behind"], ["two_strikes", "Two strikes"]], bc = pr2.aim.by_count || {};
       var ck = state.rpCount && (state.rpCount === "all" || bc[state.rpCount]) ? state.rpCount : "all";
       var plan = ck === "all" ? pr2.aim.cells : bc[ck].cells;
       var stPlan = pr2.strike ? (ck === "all" ? pr2.strike.cells : (pr2.strike.by_count && pr2.strike.by_count[ck] ? pr2.strike.by_count[ck].cells : {})) : {};
-      h += '<div class="seg" role="group" aria-label="Count">' + counts.filter(function (c) { return c[0] === "all" || bc[c[0]]; }).map(function (c) { return '<button data-rpcount="' + c[0] + '" aria-pressed="' + (c[0] === ck) + '">' + c[1] + "</button>"; }).join("") + "</div>";
+      h += '<div class="seg arms" role="group" aria-label="Count">' + counts.filter(function (c) { return c[0] === "all" || bc[c[0]]; }).map(function (c) { return '<button data-rpcount="' + c[0] + '" aria-pressed="' + (c[0] === ck) + '">' + c[1] + "</button>"; }).join("") + "</div>";
       if (ck !== "all") {
         var line = planSentence(planSpots(pr2, plan, stPlan, bc[ck].by_family));
         if (line) h += '<p class="pd-line">' + esc(counts.filter(function (c) { return c[0] === ck; })[0][1]) + ": " + esc(line.charAt(0).toLowerCase() + line.slice(1)) + "</p>";
       }
       var fl = famLine(ck === "all" ? pr2.aim.by_family : bc[ck].by_family);
       if (fl) h += '<p class="pd-line">' + esc(fl) + "</p>";
-      h += '<p class="note">Circles are pitches out of the zone to throw him: filled where he chases, open where he takes a strike on the edge. Squares are strikes: filled where he takes more than most hitters, open where he swings but can\'t do much with it. Gold is where he swings more than most hitters, blue less. Catcher\'s view.</p>';
-      var hasCloud = ck === "all" && pr2.aim.dangerous_miss && Object.keys(pr2.aim.dangerous_miss).some(function (fam) { return pr2.aim.dangerous_miss[fam].cloud; });
-      if (hasCloud) h += '<div class="seg" role="group" aria-label="What the grid shows"><button data-rpcloud="0" aria-pressed="' + !state.rpCloud + '">His swings</button><button data-rpcloud="1" aria-pressed="' + !!state.rpCloud + '">Where the pitches end up</button></div>';
-      h += '<div class="rp-cards">';
-      ["fastball", "breaking", "offspeed"].forEach(function (fam) {
-        var own = hc.own_chase && hc.own_chase[fam], mix = pc && pc.mix && pc.mix[fam];
-        if (!own || (mix && mix.share < 0.01 && !(plan[fam] && plan[fam].length) && !(stPlan[fam] && stPlan[fam].length))) return;   /* a pitch he does not throw */
-        var cloud = state.rpCloud && ck === "all" && pr2.aim.dangerous_miss && pr2.aim.dangerous_miss[fam] ? pr2.aim.dangerous_miss[fam].cloud : null;
+      /* the standard hot zones against this pitcher's hand, the plan's spots outlined on each pitch type */
+      var shown = famsShown(plan, stPlan);
+      if (hc.zones) {
+        h += '<h4 class="hz-h">' + esc(lastName(nm(ids[0]))) + " against " + esc(hzHandWords(useHand)) + ", " + esc(hzSeasons(doc.asof)) + "</h4>" + hzLine(hzCells(hc.zones, useHand, "all"), hzLeague(doc.league, hc.side, useHand, "all")) + hzTypes(hc, useHand);
+        h += '<div class="hz-tools">' + hzMetricSeg() + "</div>";
+        h += hzStrip(hc, doc.league, useHand, [["all", "All pitches", ""]].concat(shown.map(famHead)), plan, stPlan, nm(ids[0]) + ": ");
+        h += hzLegend(hzMetric(), true);
+      }
+      var lines = [];
+      shown.forEach(function (fam) {
+        var a = plan[fam] || [], st = stPlan[fam] || [], bits = [];
+        var pick = function (cells, want, off) { return mergeSpots(spotList(cells.filter(want), null, off)); };
+        var chase = pick(a, function (c) { return c[2] !== "take"; }, true), edge = pick(a, function (c) { return c[2] === "take"; }, true);
+        var takes = pick(st, function (c) { return c[2] !== "weak"; }), weak = pick(st, function (c) { return c[2] === "weak"; });
+        if (chase.length) bits.push("Chases it " + listNames(chase) + ".");
+        if (edge.length) bits.push("Takes it " + listNames(edge) + ": steal a strike there.");
+        if (takes.length) bits.push("Takes strikes " + listNames(takes) + " more than most hitters.");
+        if (weak.length) bits.push("Can't do much with strikes " + listNames(weak) + ".");
         var dm = ck === "all" && pr2.aim.dangerous_miss && pr2.aim.dangerous_miss[fam] && pr2.aim.dangerous_miss[fam].runs_per_100_pa >= 0.05 ? pr2.aim.dangerous_miss[fam] : null;
-        h += '<div class="rp-card"><h4>' + PITCH_NAME[fam] + (mix ? " <small>" + pct(mix.share) + " of his pitches, " + Math.round(mix.speed) + " mph</small>" : "") + "</h4>" + rpGrid(doc, own.grid, plan[fam], PITCH_NAME[fam] + (cloud ? ": where the pitches end up" : ": plan"), 0.8, stPlan[fam], cloud) +
-          (cloud ? '<div class="lbl">Where these pitches end up with normal command. Darker means more of them.</div>' : "") +
-          (plan[fam] && plan[fam].length ? '<div class="lbl">Out of the zone: ' + esc(spotList(plan[fam], function (c) { return c[2] === "take" ? " (to steal a strike)" : ""; }, true).join("; ")) + "</div>" : '<div class="lbl">He rarely throws this pitch out of the zone to this side.</div>') +
-          (stPlan[fam] && stPlan[fam].length ? '<div class="lbl">Strikes: ' + esc(spotList(stPlan[fam], function (c) { return c[2] === "weak" ? " (can't do much with it)" : " (takes it more than most)"; }).join("; ")) + "</div>" : "") +
-          (dm ? '<div class="lbl">Don\'t miss ' + esc(spotPhrase(dm.cell)) + ". About " + pct(dm.share) + " of these pitches end up there.</div>" : "") + "</div>";
+        if (dm) bits.push("Don't miss " + spotPhrase(dm.cell) + ": about " + pct(dm.share) + " of these end up there.");
+        lines.push("<li><b>" + PITCH_NAME[fam] + "</b> " + (bits.length ? esc(bits.join(" ")) : "He rarely throws this pitch out of the zone to this side.") + "</li>");
       });
-      h += "</div>";
+      if (lines.length) h += '<ul class="hz-plan">' + lines.join("") + "</ul>";
       if (ck === "all") {
         var layoff = [], dontTake = [];
         ["fastball", "breaking", "offspeed"].forEach(function (fam) { (pr2.aim.cells[fam] || []).slice(0, 2).forEach(function (c) { var w = PITCH_PL[fam] + " " + spotPhrase(c, true), into = c[2] === "take" ? dontTake : layoff; if (into.indexOf(w) < 0) into.push(w); }); });
         if (layoff.length || dontTake.length) h += '<p class="note">If you coach the hitter: ' + (layoff.length ? "lay off " + esc(layoff.slice(0, 3).join(", ")) + ". " : "") + (dontTake.length ? "Don't take " + esc(dontTake.slice(0, 2).join(" or ")) + "." : "") + "</p>";
       }
+      /* the model's own finer grids, where the plan comes from, kept one tap away */
+      var hasCloud = ck === "all" && pr2.aim.dangerous_miss && Object.keys(pr2.aim.dangerous_miss).some(function (fam) { return pr2.aim.dangerous_miss[fam].cloud; });
+      if (hasCloud) model += '<div class="seg" role="group" aria-label="What the grid shows"><button data-rpcloud="0" aria-pressed="' + !state.rpCloud + '">His swings</button><button data-rpcloud="1" aria-pressed="' + !!state.rpCloud + '">Where the pitches end up</button></div>';
+      model += '<p class="note">Our swing model on a finer grid: gold where he swings more than most hitters, blue less. Circles are pitches out of the zone to throw him (filled where he chases, open where he takes a strike on the edge); squares are strikes (filled where he takes more than most hitters, open where he can\'t do much with it). Catcher\'s view.</p><div class="rp-cards">';
+      shown.forEach(function (fam) {
+        var own = hc.own_chase && hc.own_chase[fam], mix = pc && pc.mix && pc.mix[fam];
+        if (!own) return;
+        var cloud = state.rpCloud && ck === "all" && pr2.aim.dangerous_miss && pr2.aim.dangerous_miss[fam] ? pr2.aim.dangerous_miss[fam].cloud : null;
+        model += '<div class="rp-card"><h4>' + PITCH_NAME[fam] + (mix ? " <small>" + pct(mix.share) + " of his pitches, " + Math.round(mix.speed) + " mph</small>" : "") + "</h4>" + rpGrid(doc, own.grid, plan[fam], PITCH_NAME[fam] + (cloud ? ": where the pitches end up" : ": plan"), 0.8, stPlan[fam], cloud, hc.side === "L") +
+          (cloud ? '<div class="lbl">Where these pitches end up with normal command. Darker means more of them.</div>' : "") + "</div>";
+      });
+      model += "</div>";
     }
     if (pr2.miss_spots) {
       var ms_ = ["fastball", "breaking", "offspeed"].filter(function (fam) { return pr2.miss_spots[fam] && pr2.miss_spots[fam].cells.length; });
       if (ms_.length) h += '<p class="note">Two strikes, to get a swing and miss: ' + esc(ms_.map(function (fam) { return PITCH_PL[fam] + " " + spotPhrase(pr2.miss_spots[fam].cells[0]); }).join(", ")) + ".</p>";
     }
-    if (hc && hc.whiff_grid) h += '<div class="rp-cards" style="margin-top:14px"><div class="rp-card"><h4>Where he swings and misses</h4><div class="lbl">Gold: more than most hitters. Blue: less.</div>' + rpGrid(doc, hc.whiff_grid, null, "where he swings and misses", 0.5) + "</div>" +
+    if (hc && hc.whiff_grid) model += '<div class="rp-cards" style="margin-top:14px"><div class="rp-card"><h4>Where he swings and misses</h4><div class="lbl">Gold: more than most hitters. Blue: less.</div>' + rpGrid(doc, hc.whiff_grid, null, "where he swings and misses", 0.5, null, null, hc.side === "L") + "</div>" +
       (hc.zone_top_ft != null ? '<div class="rp-card"><h4>His strike zone</h4><div class="lbl">Top ' + hc.zone_top_ft + " ft, bottom " + hc.zone_bottom_ft + " ft, from the umpires' calls on him. " + Number(hc.pitches).toLocaleString() + " pitches seen.</div></div>" : "") + "</div>";
+    if (model) h += '<details class="more" data-keep="model"' + (state.rpOpen.model ? " open" : "") + "><summary>Our swing model's grids</summary>" + model + "</details>";
     var v = planValue(pr2);
     h += '<details class="more"><summary>The numbers</summary><ul class="compare">' +
       "<li><span>Chases vs an average hitter, per 100 pitches out of the zone</span><b>" + RP_METRICS.chase.fmt(pr2.chase_points) + "</b></li>" +
@@ -2814,6 +3072,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var h = '<section class="sec wide"><h2>Game plan</h2><p class="lede">How to pitch every hitter in both lineups, from ' + (Number(doc.training_pitches) / 1e6).toFixed(1) + " million pitches thrown before " + esc(shortDate(doc.asof)) + ". Nothing from this game goes in." +
       (retro ? " This is a look back built the same way." : early ? " Built the day before; it is rebuilt on game day." : "") + "</p>";
     if (now) h += liveNowStrip(f, pk, doc, now, false);
+    /* one set of hot-zone controls for both lineups */
+    var anyZones = Object.keys(players).some(function (id) { return players[id].hitter && players[id].hitter.zones; });
+    if (anyZones) h += '<div class="hz-tools">' + hzMetricSeg() + hzSeg("hzfam", (HZ_FAMS.filter(function (x) { return x[0] === state.hzFam; })[0] || HZ_FAMS[0])[0], [["all", "All"], ["fastball", "Fastballs"], ["breaking", "Breaking"], ["offspeed", "Offspeed"]], "Pitch type") + "</div>" + hzLegend(hzMetric(), false);
     h += "</section>";
     var liveSel = !!(now && now.pair && now.key === sel), detail = sel ? pairDetail(doc, pk, sel, now) : "";
     if (liveSel) h += detail;
@@ -3104,8 +3365,16 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         if (ng) h += '<a class="next-day" href="' + ng.href + '">' + (ng.day === D.date ? "Tonight" : "Tomorrow") + ": " + (ng.home ? "vs " : "at ") + esc(nickname(ng.opp)) + ". Open the game plan</a>";
         if (x.kind === "hitter") {
           var oc = x.own_cost, tags = hitterTags(x, lg);
-          h += '<p class="pd-line">Chases ' + (x.chase_rate != null ? pct(x.chase_rate) : "\u2013") + " of pitches out of the zone (league " + (lg.chase_rate != null ? pct(lg.chase_rate) : "\u2013") + "). Misses on " + (x.whiff_rate != null ? pct(x.whiff_rate) : "\u2013") + " of his swings (league " + (lg.whiff_rate != null ? pct(lg.whiff_rate) : "\u2013") + ").</p>";
+          if (!x.zones) h += '<p class="pd-line">Chases ' + (x.chase_rate != null ? pct(x.chase_rate) : "–") + " of pitches out of the zone (league " + (lg.chase_rate != null ? pct(lg.chase_rate) : "–") + "). Misses on " + (x.whiff_rate != null ? pct(x.whiff_rate) : "–") + " of his swings (league " + (lg.whiff_rate != null ? pct(lg.whiff_rate) : "–") + ").</p>";
           if (tags.length) h += '<div class="pl-tags" style="margin:0 0 10px">' + tags.map(function (s) { return "<span>" + esc(s) + "</span>"; }).join("") + "</div>";
+          if (x.zones) {
+            /* the standard hot zones: against both hands or one, by pitch type */
+            var split = hzSplit(x.zones), hh = split && (state.hzHand === "R" || state.hzHand === "L") ? state.hzHand : "all";
+            h += '<section class="sec hz-sec"><h2>Hot zones</h2><p class="lede">Against ' + esc(hzHandWords(hh)) + ", " + esc(hzSeasons(doc.asof)) + ".</p>";
+            h += '<div class="hz-tools">' + (split ? hzSeg("hzhand", hh, [["all", "All"], ["R", "vs RHP"], ["L", "vs LHP"]], "Pitcher's hand") : "") + hzMetricSeg() + "</div>";
+            h += hzLine(hzCells(x.zones, hh, "all"), hzLeague(lg, x.side, hh, "all")) + hzTypes(x, hh);
+            h += hzStrip(x, lg, hh, HZ_FAMS, null, null, x.name + ": ") + hzLegend(hzMetric(), false) + "</section>";
+          }
           if (oc) {
             /* where his decisions cost him, said once per spot and grouped by what he does there */
             var kinds = { chase: [], take: [], weak: [] }, why = [];
@@ -3117,29 +3386,32 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
             h += '<p class="note">His swing decisions are worth <b>' + fmtCost(tot) + " runs</b> a season next to an average hitter seeing the same pitches (" + fmtCost(oc.outside_runs_per_600_pa) + " on balls, " + fmtCost(oc.inside_runs_per_600_pa) + " on strikes)." +
               (why.length ? (tot != null && tot < 0 ? " Most of it comes from " : " Where he still gives some back: ") + esc(why.join(", and ")) + "." : "") + "</p>";
           }
-          h += '<p class="note">Where he swings, by pitch type. Gold: more than most hitters on his side. Blue: less. Catcher\'s view.' + (x.zone_top_ft != null ? " His strike zone runs " + x.zone_bottom_ft + " to " + x.zone_top_ft + " ft off the ground." : "") + "</p>";
-          h += '<div class="rp-cards">';
+          var grids = '<p class="note">Where he swings, by pitch type, from our swing model. Gold: more than most hitters on his side. Blue: less. Catcher\'s view.' + (x.zone_top_ft != null ? " His strike zone runs " + x.zone_bottom_ft + " to " + x.zone_top_ft + " ft off the ground." : "") + "</p>";
+          grids += '<div class="rp-cards">';
           ["fastball", "breaking", "offspeed"].forEach(function (fam) {
             var own = x.own_chase && x.own_chase[fam]; if (!own) return;
             var top = mergeSpots(spotList(own.top || [], null, true));
-            h += '<div class="rp-card"><h2 class="card-h">' + PITCH_NAME[fam] + "</h2>" + rpGrid(doc, own.grid, null, PITCH_NAME[fam] + ": where he swings", 0.8) +
+            grids += '<div class="rp-card"><h2 class="card-h">' + PITCH_NAME[fam] + "</h2>" + rpGrid(doc, own.grid, null, PITCH_NAME[fam] + ": where he swings", 0.8, null, null, x.side === "L") +
               (top.length ? '<div class="lbl">Chases it most ' + esc(listNames(top)) + ".</div>" : '<div class="lbl">Doesn\'t chase this pitch more than most hitters.</div>') + "</div>";
           });
-          if (x.whiff_grid) h += '<div class="rp-card"><h2 class="card-h">Where he swings and misses</h2><div class="lbl">Gold: more than most hitters on his side. Blue: less.</div>' + rpGrid(doc, x.whiff_grid, null, "where he swings and misses", 0.5) + "</div>";
-          h += "</div>";
+          if (x.whiff_grid) grids += '<div class="rp-card"><h2 class="card-h">Where he swings and misses</h2><div class="lbl">Gold: more than most hitters on his side. Blue: less.</div>' + rpGrid(doc, x.whiff_grid, null, "where he swings and misses", 0.5, null, null, x.side === "L") + "</div>";
+          grids += "</div>";
+          h += x.zones ? '<details class="more" id="pl-model"' + (state.rpOpen.plModel ? " open" : "") + "><summary>Our swing model's grids</summary>" + grids + "</details>" : grids;
         } else {
           var mix = x.mix || {};
           h += '<p class="pd-line">Hitters chase ' + (x.chase_rate_against != null ? pct(x.chase_rate_against) : "\u2013") + " of his pitches out of the zone (league " + (lg.chase_rate != null ? pct(lg.chase_rate) : "\u2013") + "). " +
             (x.looks_in_ends_out != null ? pct(x.looks_in_ends_out) + " of his pitches look like strikes when the hitter has to decide, then end up balls (league " + (lg.looks_in_ends_out != null ? pct(lg.looks_in_ends_out) : "\u2013") + ")." : "") + "</p>";
-          /* each pitch in a scout's line: how hard and how often, what it gets, and where it goes to each side */
-          h += '<div class="pt-list">';
-          ["fastball", "breaking", "offspeed"].forEach(function (fam) {
-            var m = mix[fam]; if (!m || m.share < 0.005) return;       /* a pitch he all but never throws gets no row */
-            var bits = [];
-            if (m.whiff_rate != null) bits.push("Misses on " + pct(m.whiff_rate) + " of swings.");
-            if (m.chase_rate != null) bits.push("Chased " + pct(m.chase_rate) + " of the time out of the zone.");
-            if (m.zone_rate != null) bits.push(pct(m.zone_rate) + " in the zone.");
-            var to = [];
+          /* the arsenal the way every scouting sheet lists it, then where each pitch goes to each side */
+          var fams = ["fastball", "breaking", "offspeed"].filter(function (fam) { return mix[fam] && mix[fam].share >= 0.005; });     /* a pitch he all but never throws gets no row */
+          if (fams.length) {
+            var rt = function (v) { return v != null ? pct(v) : "–"; };
+            h += '<div class="tbl-wrap hz-types"><table class="box"><thead><tr><th scope="col">Pitch</th><th scope="col">Thrown</th><th scope="col">MPH</th><th scope="col">Miss</th><th scope="col">Chase</th><th scope="col">Zone</th></tr></thead><tbody>' +
+              fams.map(function (fam) { var m = mix[fam]; return "<tr><td>" + PITCH_NAME[fam] + "</td><td>" + pct(m.share) + "</td><td>" + (m.speed != null ? m.speed.toFixed(1) : "–") + "</td><td>" + rt(m.whiff_rate) + "</td><td>" + rt(m.chase_rate) + "</td><td>" + rt(m.zone_rate) + "</td></tr>"; }).join("") +
+              '</tbody></table></div><p class="note">Miss: misses per swing. Chase: swings at his pitches out of the zone. Zone: pitches in the strike zone.</p>';
+          }
+          var goesTo = [];
+          fams.forEach(function (fam) {
+            var m = mix[fam], to = [];
             var goes = function (cells) {
               var top = cells[0][2], keep = cells.filter(function (c, i) { return i === 0 || c[2] >= 0.75 * top; });
               var edge = keep.filter(function (c) { return spotPhrase(c) !== "middle-middle"; });
@@ -3147,13 +3419,18 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
             };
             if (m.to_righties && m.to_righties.length) to.push("To righties: " + goes(m.to_righties) + ".");
             if (m.to_lefties && m.to_lefties.length) to.push("To lefties: " + goes(m.to_lefties) + ".");
-            h += '<div class="pt"><h2 class="card-h">' + PITCH_NAME[fam] + "<span>" + pct(m.share) + ", " + Math.round(m.speed) + " mph</span></h2>" + (bits.length ? "<p>" + esc(bits.join(" ")) + "</p>" : "") + (to.length ? "<p>" + esc(to.join(" ")) + "</p>" : "") + "</div>";
+            if (to.length) goesTo.push("<li><b>" + PITCH_NAME[fam] + "</b> " + esc(to.join(" ")) + "</li>");
           });
-          h += "</div>";
+          if (goesTo.length) h += '<h2 class="hz-h2">Where each pitch goes</h2><ul class="hz-plan">' + goesTo.join("") + "</ul>";
           h += '<p class="note">For his plan against each hitter, open one of his games and tap Game plan.</p>';
         }
         h += "</div>";
         app.innerHTML = h;
+        var again = function () { var y = window.scrollY; show(doc); window.scrollTo(0, y); };
+        app.querySelectorAll("[data-hzmetric]").forEach(function (b) { b.addEventListener("click", function () { state.hzMetric = b.getAttribute("data-hzmetric"); again(); }); });
+        app.querySelectorAll("[data-hzhand]").forEach(function (b) { b.addEventListener("click", function () { state.hzHand = b.getAttribute("data-hzhand"); again(); }); });
+        var fold = document.getElementById("pl-model");
+        if (fold) fold.addEventListener("toggle", function () { state.rpOpen.plModel = fold.open; });
       };
       if (PLAYER_SHARDS[shard]) { show(PLAYER_SHARDS[shard]); return; }
       app.innerHTML = '<div class="wrap"><p class="empty">Loading the card\u2026</p></div>';
