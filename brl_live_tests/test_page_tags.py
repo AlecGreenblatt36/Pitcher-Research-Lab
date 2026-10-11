@@ -195,3 +195,17 @@ def test_arsenal_changes_from_last_season():
               "assert.equal(arsenalChanges({arsenal_season:null,arsenal:pc.arsenal,arsenal_prev:pc.arsenal_prev}),'');"
               "assert.equal(arsenalChanges({arsenal_season:2026,arsenal:pc.arsenal}),'');")
     subprocess.run(['node', '-e', prefix + functions + suffix], check=True)
+
+
+def test_hitter_changes_from_last_season():
+    functions = page_functions('hitterChanges')
+    prefix = ("const assert=require('assert');var HC_RATES=[['chase','chase rate','chases','outside',0.03],['whiff','miss rate','misses','swings',0.03],['k','strikeout rate','k','pa',0.03],"
+              "['bb','walk rate','bb','pa',0.03],['hard','hard-hit rate','hard','bbe',0.05]];")
+    suffix = ("const prev={pa:600,outside:1100,chases:340,swings:1300,misses:300,k:130,bb:50,bbe:420,hard:170};"
+              "const cur={pa:550,outside:1000,chases:250,swings:1200,misses:282,k:121,bb:48,bbe:400,hard:200};"
+              "const t=hitterChanges({line_seasons:{season:2026,cur:cur,prev:prev}});"
+              "assert.ok(t.indexOf('Since 2025: chase rate down 5.9 points (31% to 25%)')===0,t);"
+              "assert.ok(t.indexOf('hard-hit rate up 9.5 points (40% to 50%)')>0,t);"
+              "assert.ok(t.indexOf('miss rate')<0&&t.indexOf('strikeout rate')<0,t);"
+              "assert.equal(hitterChanges({}),'');")
+    subprocess.run(['node', '-e', prefix + functions + suffix], check=True)

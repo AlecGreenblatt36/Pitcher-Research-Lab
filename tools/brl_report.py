@@ -600,6 +600,11 @@ class Fitted:
         # every player's line on the training rows and the percentile references (PROD-08)
         self.lines_h = player_lines(T, tr, swing, whiff, self.outside, 'batter')
         self.lines_p = player_lines(T, tr, swing, whiff, self.outside, 'pitcher')
+        # each hitter's line in the as-of season and the one before, for what changed (cards: line_seasons)
+        self.line_year = date.fromordinal(asof_day).year
+        if 'season' in T:
+            self.lines_h_cur = player_lines(T, tr & (T['season'] == self.line_year), swing, whiff, self.outside, 'batter')
+            self.lines_h_prev = player_lines(T, tr & (T['season'] == self.line_year - 1), swing, whiff, self.outside, 'batter')
         self.pct_ref_h, self.pct_ref_p = pct_reference(self.lines_h, PCT_HITTER), pct_reference(self.lines_p, PCT_PITCHER)
         self.league['ranked'] = {'min': PCT_MIN, 'hitters': int(sum(1 for L in self.lines_h.values() if L['pa'] >= PCT_MIN)),
                                  'pitchers': int(sum(1 for L in self.lines_p.values() if L['pa'] >= PCT_MIN))}
@@ -669,6 +674,9 @@ class Fitted:
             pr = pct_ranks(L, self.pct_ref_h, PCT_HITTER)
             if pr:
                 card['pct'] = pr
+        Lc, Lp = getattr(self, 'lines_h_cur', {}).get(int(h)), getattr(self, 'lines_h_prev', {}).get(int(h))
+        if Lc and Lp and Lc.get('pa', 0) >= 200 and Lp.get('pa', 0) >= 200:
+            card['line_seasons'] = {'season': int(self.line_year), 'cur': Lc, 'prev': Lp}
         if self.PM is not None and r is not None and len(r) >= 300:
             # VALUE-18 from the hitter's side: what his own swing tendencies cost him on the pitches he actually saw, against the average
             # hitter his side at the same pitches (his calibrated own part times the value of a swing against a take), per 600 plate
