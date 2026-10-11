@@ -87,8 +87,14 @@ queue behind the shards (seen October 11 at 16:50 UTC). Check-only replays (n_si
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 4:58 p.m. Eastern October 11, by `date -u`)
+### In flight (updated 5:20 p.m. Eastern October 11, by `date -u`)
 
+- October 11, 5:20 p.m.: two display calibrations held and are on the page. TOTALS-05: the run charts and ranges are
+  negative binomials with the simulator's mean and variance x1.095 (page RUN_SPREAD; tools/brl_runs_shape.py); the
+  ranges now hold the real score within 1.4 points of what they claim (raw up to 2.7 short). PLAYER-08: the strikeout
+  ladder and ranges spread each start's distribution to the residual variance (K_SPREAD 1.0693; tools/brl_k_spread.py).
+  Both constants come from LEASH-02's replays; refit them (same tools) whenever the live settings change the spread.
+  Live updates now read each pitcher's entry inning from the play-by-play (needed by RELIEF-04's correction).
 - October 11, 4:58 p.m.: RELIEF-04 registered (relievers who come in by the 3rd inning stay far longer than the exit
   hazard expects; 6th-inning entries come out sooner). Stage 1 held (research run 38174006841: decision log loss -0.0071
   and -0.0060 on held-out 2025 and 2026). Stage 2 replays v2-prod4-relief4-1000-<season> started 20:57 UTC (runs
