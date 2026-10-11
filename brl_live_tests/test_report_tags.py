@@ -33,7 +33,9 @@ def _season(rng, traits, season, n_pitch=1500):
     sw = rng.random(n) < p_sw
     group = rng.choice(np.array([0, 0, 3, 5]), n)
     v0 = np.where(group == 0, rng.choice(np.array([91.0, 91.0, 97.5]), n), 85.0)
-    wh = sw & (rng.random(n) < np.clip(traits['whiff'][bat] + np.where(group == 3, traits['brk'][bat], 0.0) + np.where(v0 >= 96, traits['velo'][bat], 0.0), 0.01, 0.9))
+    up, dn = (zone >= 1) & (zone <= 3), (zone >= 7) & (zone <= 9)
+    wh = sw & (rng.random(n) < np.clip(traits['whiff'][bat] + np.where(group == 3, traits['brk'][bat], 0.0) + np.where(v0 >= 96, traits['velo'][bat], 0.0)
+                                       + np.where(up, traits['vert'][bat] / 2, 0.0) - np.where(dn, traits['vert'][bat] / 2, 0.0), 0.01, 0.9))
     call = np.where(~sw, 0, np.where(wh, 2, 1))
     inplay = call == 1
     side_r = (np.arange(n) // n_pitch) % 2 == 1
@@ -41,22 +43,28 @@ def _season(rng, traits, season, n_pitch=1500):
     pulled = rng.random(n) < pull_p
     spray = np.where(inplay, np.where(pulled, np.where(side_r, -30.0, 30.0), np.where(rng.random(n) < 0.5, 0.0, np.where(side_r, 30.0, -30.0))), np.nan)
     traj = np.where(inplay, rng.choice(np.array([0, 0, 1, 2]), n), -1)
+    p_hard = np.clip(0.38 + np.where(up, traits['hhv'][bat] / 2, 0.0) - np.where(dn, traits['hhv'][bat] / 2, 0.0), 0.02, 0.98)
+    ls = np.where(inplay, np.where(rng.random(n) < p_hard, 101.0, 84.0), np.nan)
     day = 700000 + season * 400 + rng.integers(0, 180, n)
     return {'batter': bat + 1000, 'season': np.full(n, season), 'day': day, 'post': np.zeros(n, int), 'group': group, 'call': call,
             'balls': balls, 'strikes': strikes, 'px': px.astype(np.float32), 'pz': pz.astype(np.float32), 'zone': zone, 'stand_r': (np.arange(n) // n_pitch) % 2,
-            'bunt_pa': np.zeros(n, int), 'last_in_pa': np.zeros(n, int), 'v0': v0.astype(np.float32), 'spray': spray.astype(np.float32), 'traj': traj}
+            'bunt_pa': np.zeros(n, int), 'last_in_pa': np.zeros(n, int), 'v0': v0.astype(np.float32), 'spray': spray.astype(np.float32), 'traj': traj, 'ls': ls.astype(np.float32)}
 
 
 def _traits(rng, nh):
     return {'chase': rng.normal(0.28, 0.07, nh), 'whiff': rng.normal(0.24, 0.06, nh), 'first': rng.normal(-0.36, 0.2, nh), 'two': rng.normal(0.0, 0.07, nh),
-            'brk': rng.normal(0.08, 0.08, nh), 'velo': rng.normal(0.05, 0.08, nh), 'pull': rng.normal(0.4, 0.12, nh)}
+            'brk': rng.normal(0.08, 0.08, nh), 'velo': rng.normal(0.05, 0.08, nh), 'pull': rng.normal(0.4, 0.12, nh),
+            'vert': rng.normal(0.0, 0.10, nh), 'hhv': rng.normal(0.0, 0.14, nh)}
 
 
-def _world(persist, seed=3, nh=160, velo=False):
+def _world(persist, seed=3, nh=160, velo=False, vert=False):
     rng = np.random.default_rng(seed)
     t1 = _traits(rng, nh); t2 = t1 if persist else _traits(rng, nh)
     if not velo:
         t1['velo'] = t1['velo'] * 0.0; t2['velo'] = t2['velo'] * 0.0
+    if not vert:
+        for t in (t1, t2):
+            t['vert'] = t['vert'] * 0.0; t['hhv'] = t['hhv'] * 0.0
     parts = [_season(rng, t1, 1), _season(rng, t1, 2), _season(rng, t2, 3)]
     return {k: np.concatenate([p[k] for p in parts]) for k in parts[0]}
 
@@ -84,3 +92,20 @@ def test_tags_hold_when_habits_carry_over_and_not_when_redrawn():
         t = null['tags'][name]
         assert not t['held'] and abs(t['test_diff']) < 0.045, (name, t)
     assert abs(null['relative_two_strike']['corr_train_test']) < 0.25
+
+
+def test_vertical_reads_carry_over_only_when_planted():
+    # TAGS-07 and TAGS-08: misses and hard contact up in the zone against down, relative to himself
+    B = _report()
+    spec = {'splits': [{'train': [1, 2], 'test': 3}], 'min_pitches': 300, 'min_test': 200, 'boot': 300, 'vertical': True}
+    v = B.tag_study(_world(True, vert=True), lambda *a: None, spec)['splits'][0]['vertical']
+    assert set(v) == {'miss', 'hard'}
+    assert v['miss']['hitters'] > 100 and v['miss']['corr_train_test'] > 0.4, v['miss']
+    assert v['miss']['tags']['up']['held'] and v['miss']['tags']['down']['held'], v['miss']['tags']
+    assert v['hard']['hitters'] > 100 and v['hard']['corr_train_test'] > 0.25, v['hard']
+    assert v['hard']['tags']['up']['test_diff'] > 0.02 and v['hard']['tags']['down']['test_diff'] < -0.02
+    lg = v['miss']['league_train_up_down']
+    assert set(lg) == {'R', 'L'} and all(0 < x < 1 for x in lg['R'] + lg['L'])
+    redrawn = B.tag_study(_world(False, vert=True), lambda *a: None, spec)['splits'][0]['vertical']
+    assert abs(redrawn['miss']['corr_train_test']) < 0.25 and abs(redrawn['hard']['corr_train_test']) < 0.25
+    assert not redrawn['miss']['tags']['up']['held']

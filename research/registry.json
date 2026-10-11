@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 280,
- "rows": 283,
+ "experiments": 282,
+ "rows": 285,
  "records": {
   "ACC-01": [
    {
@@ -4595,6 +4595,38 @@
     ],
     "frozen_commits": [],
     "status": "seven of nine held; two left off"
+   }
+  ],
+  "TAGS-07": [
+   {
+    "id": "TAGS-07",
+    "columns": {
+     "ID": "TAGS-07",
+     "Attempt": "Where a hitter misses in the zone, up or down, read relative to himself: his misses per swing on pitches in the top third of his zone (MLB zones 1-3) minus in the bottom third (7-9), net of the league's same difference on his side (rows of 80 swings in each third in each window). The classic scouting read (beat him up in the zone, or down) that the Miss % chart shows raw. Same splits and hitters as TAGS-01 (tag_study with vertical): the season-to-season correlation, and tags at one standard deviation scored on the test pitches with intervals from resampling hitters (weights: the smaller of his two test rows). Synthetic check (brl_live_tests/test_report_tags.py): a planted vertical miss habit carries over (correlation 0.74, both tags held), a redrawn one does not (0.08).",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: correlation 0.4 or more in both splits; each one-SD tag (misses up, misses down) holds in both splits (test difference at least a third of the threshold in its direction, interval excluding zero). Decision rule: if a direction holds in both splits, the plans and cards tag Misses up in the zone or Misses down in the zone (page from the cards' zone counts, already carried) and the lineup notes say where to go for misses; otherwise no tag.",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
+   }
+  ],
+  "TAGS-08": [
+   {
+    "id": "TAGS-08",
+    "columns": {
+     "ID": "TAGS-08",
+     "Attempt": "Where a hitter does damage in the zone, up or down, relative to himself: his share of measured balls in play at 95 mph or more from the top third of his zone minus the bottom third, net of the league's same difference on his side (rows of 50 measured balls in play in each third). Same run, splits and scoring as TAGS-07. Synthetic check: a planted habit carries over (correlation 0.81), a redrawn one does not (0.00).",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: correlation 0.25 or more in both splits; each one-SD tag (hits the high strike hard, hits the low strike hard) holds in both splits under TAGS-07's rule. Decision rule: if a direction holds in both splits, the cards carry hard-hit counts by zone and the plans tag Hits the high strike hard or Hits the low strike hard, with a lineup note on which way to keep the ball; otherwise no tag.",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "ZONES-01": [

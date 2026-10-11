@@ -1322,8 +1322,19 @@ def tag_counts(T: dict, mask) -> dict:
         gb_, air_, pop_ = okb & (trj == 0), okb & ((trj == 1) | (trj == 2)), okb & (trj == 3)
     else:
         pulled = gb_ = air_ = pop_ = np.zeros(len(rows), bool)
+    # TAGS-07 and TAGS-08: the top third of his zone (MLB zones 1-3) and the bottom third (7-9); balls in play with a
+    # measured exit speed and those at 95 mph or more
+    z_ = T['zone'][rows]; up_, dn_ = (z_ >= 1) & (z_ <= 3), (z_ >= 7) & (z_ <= 9)
+    if 'ls' in T:
+        ls_ = T['ls'][rows].astype(np.float64)
+        hit_ = np.isfinite(ls_) & (np.isfinite(T['spray'][rows].astype(np.float64)) if 'spray' in T else ((T['call'][rows] == 1) & (T['last_in_pa'][rows] == 1)))
+        hard_ = hit_ & (np.nan_to_num(ls_) >= 95)
+    else:
+        hit_ = hard_ = np.zeros(len(rows), bool)
     n = c(np.ones(len(rows), bool))
     return {'bats': bats, 'side': (c(T['stand_r'][rows] == 1) / np.maximum(n, 1) >= 0.5).astype(np.int64), 'n': n,
+            'wh_up': (c(wh & up_), c(sw & up_)), 'wh_dn': (c(wh & dn_), c(sw & dn_)),
+            'hh_up': (c(hard_ & up_), c(hit_ & up_)), 'hh_dn': (c(hard_ & dn_), c(hit_ & dn_)),
             'chase': (c(sw & outside), c(outside)), 'whiff': (c(wh), c(sw)), 'first': (c(sw & first), c(first)),
             'two': (c(sw & two & ooz), c(two & ooz)), 'other': (c(sw & ~two & ooz), c(~two & ooz)), 'behind': (c(sw & behind), c(behind)),
             # TAGS-03: misses per swing by pitch family
@@ -1507,6 +1518,41 @@ def tag_study(T: dict, stage, spec: dict) -> dict:
                                    'test_diff': float((w * d).sum() / max(w.sum(), 1e-9)), 'test_ci': [float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5))]}
                     entry['tags'] = ft
                 res['relative_family_whiff'][fam] = entry
+        if spec.get('vertical'):
+            # TAGS-07 (misses) and TAGS-08 (hard contact): the top third of his zone against the bottom third, relative to
+            # himself and net of the league's same difference on his side; season-to-season correlation and tags at one
+            # standard deviation, scored on the test pitches (weights: the smaller of his two test rows)
+            res['vertical'] = {}
+            for read, ku, kd, floor in (('miss', 'wh_up', 'wh_dn', 80), ('hard', 'hh_up', 'hh_dn', 50)):
+                def relz(tc, ku=ku, kd=kd, floor=floor):
+                    un, ud = tc[ku]; dn2, dd = tc[kd]
+                    ok_ = (ud >= floor) & (dd >= floor)
+                    ru = np.where(ok_, un / np.maximum(ud, 1e-9), np.nan); rd = np.where(ok_, dn2 / np.maximum(dd, 1e-9), np.nan)
+                    return (ru - rd) - (_tag_league(tc, ku, True) - _tag_league(tc, kd, True))
+                za, zb = relz(a), relz(b)
+                bz = has_test & np.isfinite(za)
+                bz[bz] &= np.isfinite(zb[ti[bz]])
+                xz, yz = za[bz], zb[ti[bz]]
+                lg = {}
+                for sd_, nm_s in ((1, 'R'), (0, 'L')):
+                    m_ = a['side'] == sd_
+                    lg[nm_s] = [float(a[ku][0][m_].sum() / max(a[ku][1][m_].sum(), 1e-9)), float(a[kd][0][m_].sum() / max(a[kd][1][m_].sum(), 1e-9))]
+                ent = {'hitters': int(bz.sum()), 'floor': floor, 'league_train_up_down': lg, 'sd_train': float(np.std(xz)) if len(xz) else None,
+                       'corr_train_test': float(np.corrcoef(xz, yz)[0, 1]) if len(xz) >= 20 else None}
+                if len(xz) >= 20:
+                    sdz = float(np.std(xz)); zt = {}
+                    for nm_, sgn in (('up', 1), ('down', -1)):
+                        sel = np.flatnonzero(bz)[(xz * sgn) >= sdz]
+                        if not len(sel):
+                            continue
+                        j = ti[sel]; w = np.minimum(b[ku][1][j], b[kd][1][j]); d = zb[j]
+                        bs = rng.integers(0, len(sel), size=(boot, len(sel)))
+                        means = (w * d)[bs].sum(1) / np.maximum(w[bs].sum(1), 1e-9)
+                        m_ = float((w * d).sum() / max(w.sum(), 1e-9)); lo_, hi_ = float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5))
+                        zt[nm_] = {'threshold': sgn * sdz, 'hitters': int(len(sel)), 'train_diff': float(za[sel].mean()), 'test_diff': m_,
+                                   'test_ci': [lo_, hi_], 'held': bool(sgn * m_ >= sdz / 3 and (lo_ > 0 if sgn > 0 else hi_ < 0))}
+                    ent['tags'] = zt
+                res['vertical'][read] = ent
         out['splits'].append(res)
         stage(f"tag study {split['train']} -> {split['test']}")
     return out
