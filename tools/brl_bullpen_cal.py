@@ -63,6 +63,34 @@ def season_check(games, draws=2000, seed=1):
     return res
 
 
+def fit_map(games, lo=0.002, hi=0.998, iters=50):
+    """A logistic calibration of the shown chance (candidates with a share above 0): logit(p') = a + b logit(p), fitted by
+    Newton's method on one season's rows; returns (a, b)."""
+    R = [r for r in rows(games) if r[1] > 0]
+    x = np.log(np.clip([r[1] for r in R], lo, hi) / (1 - np.clip([r[1] for r in R], lo, hi))); y = np.array([r[2] for r in R], float)
+    X = np.column_stack([np.ones(len(x)), x]); w = np.array([0.0, 1.0])
+    for _ in range(iters):
+        q = 1 / (1 + np.exp(-(X @ w))); g = X.T @ (y - q); H = (X * (q * (1 - q))[:, None]).T @ X
+        step = np.linalg.solve(H, g); w = w + step
+        if np.abs(step).max() < 1e-10:
+            break
+    return float(w[0]), float(w[1])
+
+
+def apply_map(games, a, b, lo=0.002, hi=0.998):
+    """The same games with every candidate's shown chance mapped (shares of 0 stay 0)."""
+    out = []
+    for g in games:
+        g2 = dict(g); st = {}
+        for side, s in ((g.get('starters') or {}).items()):
+            s2 = dict(s)
+            if s.get('relievers'):
+                s2['relievers'] = [[pid, (1 / (1 + np.exp(-(a + b * np.log(min(max(sh, lo), hi) / (1 - min(max(sh, lo), hi))))))) if sh > 0 else 0.0, u] for pid, sh, u in s['relievers']]
+            st[side] = s2
+        g2['starters'] = st; out.append(g2)
+    return out
+
+
 def load_games(paths):
     seen, out = set(), []
     for f in paths:

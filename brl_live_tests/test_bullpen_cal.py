@@ -27,3 +27,10 @@ def test_right_chances_hold_and_squashed_ones_fail():
     assert all(good['holds'].values()) and abs(good['gap_points']) < 1.0
     bad = bc.season_check(_games(2, squash=0.6), draws=200)
     assert not bad['holds']['(2) every bin within 5']
+
+
+def test_a_map_fitted_on_one_season_fixes_squashed_chances_on_another():
+    a, b = bc.fit_map(_games(3, squash=0.6))
+    assert b > 1.3
+    fixed = bc.season_check(bc.apply_map(_games(4, squash=0.6), a, b), draws=200)
+    assert fixed['holds']['(2) every bin within 5'] and abs(fixed['gap_points']) < 1.5
