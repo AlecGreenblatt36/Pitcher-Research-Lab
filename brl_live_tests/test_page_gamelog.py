@@ -81,3 +81,18 @@ def test_strip_starter_reliever_and_postseason_line():
          "assert.ok(h.indexOf('<dt>OPS</dt><dd>.811</dd>')>0&&h.indexOf('Postseason: 2 games, 2 for 7 (.286), 1 HR, 2 RBI.')>0,h);"
          "assert.equal(psStrip({season:null,games:[]},'hitting','2026'),'');"
          "assert.equal(glPostLine([g('2026-10-03','D',true,true,144,{outs:20,earnedRuns:1,gamesStarted:1,wins:1,losses:0,strikeOuts:7})],'pitching'),'Postseason: 1 start, 1-0, 6.2 IP, 1 ER, 7 SO, 1.35 ERA.');")
+
+
+def test_movement_chart_dots_rings_and_thin_arsenals():
+    s = _script()
+    consts = ''.join(re.search(r'\n  var ' + v + r' = .*?;\n', s, re.S).group(0) for v in ('TYPE_COLOR', 'TYPE_NAME'))
+    prefix = "const assert=require('assert');function esc(x){return String(x==null?'':x);}function pct(p){return Math.round(p*100)+'%';}"
+    js = ("const pc={arsenal_season:2026,arsenal:[{type:'FF',share:0.5,v_mov:10.1,h_arm:2.3},{type:'SL',share:0.3,v_mov:1.2,h_arm:-4.5},{type:'CU',share:0.01,v_mov:-8,h_arm:-6},{type:'CH',share:0.19,v_mov:null,h_arm:8}]};"
+          "let h=movementChart(pc,{arsenal:{FF:{v_mov:9.6,h_arm:4.4},SL:{speed:86}}});"
+          "assert.equal((h.match(/class=\"mv-pt\"/g)||[]).length,2);"            # a pitch under 2% or without movement gets no dot
+          "assert.equal((h.match(/class=\"mv-lg\"/g)||[]).length,1);"            # a ring only where the league has movement
+          "assert.ok(h.indexOf('Rings:')>0&&h.indexOf('This season (2026) only.')>0);"
+          "assert.ok(h.indexOf('Four-seam 10.1 in. rise, 2.3 in. arm side; Slider 1.2 in. rise, 4.5 in. glove side')>0,h.slice(0,400));"
+          "h=movementChart(pc,{});assert.equal((h.match(/class=\"mv-lg\"/g)||[]).length,0);assert.ok(h.indexOf('Rings:')<0);"
+          "assert.equal(movementChart({arsenal:[{type:'FF',share:1,v_mov:10,h_arm:3}]},{}),'');assert.equal(movementChart(null,{}),'');")
+    subprocess.run(['node', '-e', prefix + consts + _fn(s, 'movementChart') + js], check=True)

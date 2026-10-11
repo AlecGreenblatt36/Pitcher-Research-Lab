@@ -465,6 +465,20 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .glog td.opp { text-align: left; font-family: var(--body); font-size: 15px; }
 .glog thead th.l { text-align: left; }
 .gl-sec .tbl-wrap { max-width: 760px; }
+.mv-sec { margin-top: 18px; }
+.mv-wrap { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: flex-start; }
+.mv-svg { width: 100%; max-width: 340px; height: auto; display: block; }
+.mv-bg { fill: var(--surface); stroke: var(--rule); }
+.mv-gr { stroke: var(--rule-soft); stroke-width: 1; }
+.mv-ax { stroke: var(--rule-strong); stroke-width: 1.5; }
+.mv-t { font-family: var(--body); font-size: 11px; fill: var(--muted); text-anchor: middle; }
+.mv-ax-l { font-family: var(--body); font-size: 12px; font-weight: 700; fill: var(--muted); }
+.mv-lg { fill: none; stroke-width: 2; stroke-dasharray: 3 2; }
+.mv-pt { stroke: var(--surface); stroke-width: 1.5; fill-opacity: .92; }
+.mv-pl { font-family: var(--body); font-size: 13px; font-weight: 700; fill: var(--ink); }
+.mv-key { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1 1 200px; }
+.mv-key span { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; white-space: nowrap; }
+.mv-key i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
 .glog tr.tot th, .glog tr.tot td { border-top: 2px solid var(--ink); border-bottom: 0; font-weight: 700; }
 .pl-back { display: inline-block; padding: 12px 4px; margin: -12px -4px; min-height: 44px; box-sizing: border-box; }
 .rp-card { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 12px; min-width: 0; }
@@ -2896,6 +2910,43 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       a.map(function (x) { return "<tr><td>" + esc(TYPE_NAME[x.type] || x.type) + "</td><td>" + pct(x.share) + "</td><td>" + num(x.speed, 1) + lgv(x, "speed") + "</td><td>" + (x.spin != null ? Number(x.spin).toLocaleString() : "\u2013") + "</td><td>" + num(x.v_mov, 1) + "</td><td>" + mv(x.h_arm) + "</td><td>" + rt(x.whiff_rate) + lgv(x, "whiff_rate") + "</td><td>" + rt(x.chase_rate) + lgv(x, "chase_rate") + "</td><td>" + rt(x.zone_rate) + lgv(x, "zone_rate") + "</td><td>" + rt(x.putaway) + lgv(x, "putaway") + "</td></tr>"; }).join("") +
       '</tbody></table></div><p class="note">' + (pc.arsenal_season ? "This season (" + pc.arsenal_season + ") only. " : "") + (la ? "Small numbers: the league for the same pitch type. " : "") + 'Vert and Horiz: inches of movement from spin over the last 40 feet (the classic PITCHf/x measure; TrackMan-style induced break reads about twice as big). Horizontal is positive toward his arm side. Miss: misses per swing. Chase: swings at it out of the zone. Zone: share in the strike zone. Put away: strikeouts per two-strike pitch.</p>';
   }
+  /* How his pitches move, the way the public pitch pages plot it: each pitch type at its average movement from spin
+     (PITCHf/x inches over the last 40 feet; right is his arm side, up is rise against a pitch thrown with no spin), sized by
+     how often he throws it, with the league's average for the same pitch type as a ring when the cards carry it. */
+  var TYPE_COLOR = { FF: "#D22D49", FA: "#D22D49", SI: "#E07B00", FC: "#8C3B2A", SL: "#B89A00", ST: "#C2852A", SV: "#6F92C4", CU: "#1597AE", KC: "#6A45C9",
+    CS: "#1597AE", CH: "#2E9B47", FS: "#2A8A8A", FO: "#2A8A8A", SC: "#6B8E23", KN: "#77700A", EP: "#7A7A7A" };
+  function movementChart(pc, lg, hl) {
+    var a = ((pc && pc.arsenal) || []).filter(function (x) { return x.v_mov != null && x.h_arm != null && x.share >= 0.02; });
+    if (a.length < 2) return "";
+    var la = (lg && lg.arsenal) || {}, ring = function (x) { var r = la[x.type]; return r && r.v_mov != null && r.h_arm != null ? r : null; };
+    var big = 10;
+    a.forEach(function (x) { var r = ring(x); big = Math.max(big, Math.abs(x.v_mov), Math.abs(x.h_arm), r ? Math.abs(r.v_mov) : 0, r ? Math.abs(r.h_arm) : 0); });
+    var lim = Math.ceil((big + 3) / 5) * 5, W = 300, pad = 14, S = (W - 2 * pad) / (2 * lim);
+    var X = function (v) { return (pad + (v + lim) * S).toFixed(1); }, Y = function (v) { return (pad + (lim - v) * S).toFixed(1); };
+    var say = a.map(function (x) { return (TYPE_NAME[x.type] || x.type) + " " + (x.v_mov >= 0 ? x.v_mov.toFixed(1) + " in. rise" : (-x.v_mov).toFixed(1) + " in. drop") + ", " +
+      Math.abs(x.h_arm).toFixed(1) + " in. " + (x.h_arm >= 0 ? "arm side" : "glove side"); }).join("; ");
+    var h = '<svg class="mv-svg" viewBox="0 0 ' + W + " " + W + '" role="img" aria-label="' + esc("How his pitches move: " + say) + '">';
+    h += '<rect class="mv-bg" x="' + pad + '" y="' + pad + '" width="' + (W - 2 * pad) + '" height="' + (W - 2 * pad) + '" rx="6"/>';
+    for (var g = -lim; g <= lim; g += 5) {
+      h += '<line class="' + (g === 0 ? "mv-ax" : "mv-gr") + '" x1="' + X(g) + '" y1="' + Y(-lim) + '" x2="' + X(g) + '" y2="' + Y(lim) + '"/>' +
+        '<line class="' + (g === 0 ? "mv-ax" : "mv-gr") + '" x1="' + X(-lim) + '" y1="' + Y(g) + '" x2="' + X(lim) + '" y2="' + Y(g) + '"/>';
+      if (g !== 0 && g % 10 === 0) h += '<text class="mv-t" x="' + X(g) + '" y="' + (W - pad - 5) + '">' + (g > 0 ? "+" : "") + g + '</text><text class="mv-t" x="' + (pad + 4) + '" y="' + (Number(Y(g)) + 4).toFixed(1) + '" text-anchor="start">' + (g > 0 ? "+" : "") + g + "</text>";
+    }
+    h += '<text class="mv-ax-l" x="' + (W / 2 + 4) + '" y="' + (pad + 14) + '" text-anchor="start">Rise</text><text class="mv-ax-l" x="' + (W / 2 + 4) + '" y="' + (W - pad - 20) + '" text-anchor="start">Drop</text>' +
+      '<text class="mv-ax-l" x="' + (W - pad - 6) + '" y="' + (W / 2 - 6) + '" text-anchor="end">Arm side</text><text class="mv-ax-l" x="' + (pad + 6) + '" y="' + (W / 2 - 6) + '" text-anchor="start">Glove side</text>';
+    a.forEach(function (x) { var r = ring(x); if (r) h += '<circle class="mv-lg" cx="' + X(r.h_arm) + '" cy="' + Y(r.v_mov) + '" r="9" stroke="' + (TYPE_COLOR[x.type] || "#777") + '"/>'; });
+    a.slice().sort(function (p, q) { return q.share - p.share; }).forEach(function (x) {
+      var rr = 6 + 11 * Math.sqrt(x.share), cx = Number(X(x.h_arm)), cy = Number(Y(x.v_mov)), right = cx < W - 70;
+      h += '<circle class="mv-pt" cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="' + rr.toFixed(1) + '" fill="' + (TYPE_COLOR[x.type] || "#777") + '"/>' +
+        '<text class="mv-pl" x="' + (right ? cx + rr + 3 : cx - rr - 3).toFixed(1) + '" y="' + (cy + 4).toFixed(1) + '" text-anchor="' + (right ? "start" : "end") + '">' + esc(x.type) + "</text>";
+    });
+    h += "</svg>";
+    var key = a.map(function (x) { return '<span><i style="background:' + (TYPE_COLOR[x.type] || "#777") + '"></i>' + esc(x.type) + " " + esc(TYPE_NAME[x.type] || "") + " " + pct(x.share) + "</span>"; }).join("");
+    var rings = a.some(function (x) { return ring(x); });
+    return '<section class="sec mv-sec">' + (hl === "h4" ? '<h4 class="hz-h">How his pitches move</h4>' : '<h2 class="hz-h2">How his pitches move</h2>') + '<div class="mv-wrap">' + h + '<div class="mv-key">' + key + "</div></div>" +
+      '<p class="note">Each pitch type at its average movement from spin, in inches over the last 40 feet (the classic PITCHf/x measure). Right: toward his arm side. Up: rise against a pitch thrown with no spin; down: more drop. Bigger dots: thrown more.' +
+      (rings ? " Rings: the league's average for the same pitch type." : "") + (pc.arsenal_season ? " This season (" + esc(pc.arsenal_season) + ") only." : "") + "</p></section>";
+  }
   var COUNT_ROWS = [["first", "First pitch"], ["ahead", "Pitcher ahead or even"], ["behind", "Pitcher behind"], ["two", "Two strikes"]];
   /* A hitter's swings by count (the usual split), each next to the league's for his side. */
   function countTable(card, lg) {
@@ -3887,7 +3938,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var keys = lineupKeys(doc, po);
     if (keys) h += '<p class="note hz-cap">Working through this lineup</p>' + keys;
     var spc = players[String(starter.id)] && players[String(starter.id)].pitcher, proj = starterProjection(doc, other, starter.id);
-    if (spc && spc.mix) h += '<details class="more" data-keep="ars-' + side + '"' + (state.rpOpen["ars-" + side] ? " open" : "") + "><summary>" + esc(lastName(nm(starter.id))) + "'s pitches</summary>" + (proj ? '<p class="pd-line">' + esc(proj) + "</p>" : "") + (pitcherTags(spc, doc.league).length ? '<div class="pl-tags pd-tags">' + pitcherTags(spc, doc.league).map(function (s0) { return "<span>" + esc(s0) + "</span>"; }).join("") + "</div>" : "") + pctPanel(spc, doc.league, doc.asof, "h4") + (spc.arsenal && spc.arsenal.length ? arsenalTypes(spc, doc.league) : arsenalTable(spc.mix)) + (arsenalChanges(spc) ? '<p class="pd-line">' + esc(arsenalChanges(spc)) + "</p>" : "") +
+    if (spc && spc.mix) h += '<details class="more" data-keep="ars-' + side + '"' + (state.rpOpen["ars-" + side] ? " open" : "") + "><summary>" + esc(lastName(nm(starter.id))) + "'s pitches</summary>" + (proj ? '<p class="pd-line">' + esc(proj) + "</p>" : "") + (pitcherTags(spc, doc.league).length ? '<div class="pl-tags pd-tags">' + pitcherTags(spc, doc.league).map(function (s0) { return "<span>" + esc(s0) + "</span>"; }).join("") + "</div>" : "") + pctPanel(spc, doc.league, doc.asof, "h4") + (spc.arsenal && spc.arsenal.length ? arsenalTypes(spc, doc.league) : arsenalTable(spc.mix)) + (arsenalChanges(spc) ? '<p class="pd-line">' + esc(arsenalChanges(spc)) + "</p>" : "") + movementChart(spc, doc.league, "h4") +
       (runAgainstLine(spc.run_against, doc.league, lastName(nm(starter.id))) ? '<p class="note">' + esc(runAgainstLine(spc.run_against, doc.league, lastName(nm(starter.id)))) + "</p>" : "") +
       (spc.usage ? '<p class="note hz-cap">What he throws by count</p>' + (usageLine(spc) ? '<p class="pd-line">' + esc(usageLine(spc)) + "</p>" : "") + usageTable(spc, "R") + usageTable(spc, "L") : "") + "</details>";
     var pen = bullpenCard(doc, se, nm);
@@ -4640,6 +4691,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
           if (x.arsenal && x.arsenal.length) {
             h += arsenalTypes(x, lg);
             if (arsenalChanges(x)) h += '<p class="pd-line">' + esc(arsenalChanges(x)) + "</p>";
+            h += movementChart(x, lg);
           }
           else if (fams.length) h += arsenalTable(mix) + '<p class="note">Miss: misses per swing. Chase: swings at his pitches out of the zone. Zone: pitches in the strike zone. Put away: strikeouts per two-strike pitch of that type.</p>';
           if (x.usage) h += '<h2 class="hz-h2">What he throws by count</h2>' + (usageLine(x) ? '<p class="pd-line">' + esc(usageLine(x)) + "</p>" : "") + usageTable(x, "R") + usageTable(x, "L") + '<p class="note">Share of each pitch type in each count. Behind means more balls than strikes.</p>';
