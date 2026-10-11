@@ -1,5 +1,5 @@
 {
- "created_at": "2026-10-11T03:54:00.247088+00:00",
+ "created_at": "2026-10-11T04:07:57.134835+00:00",
  "status": "iteration_completed",
  "runtime": "brl_engine (public code, sealed data)",
  "ledger_branch": "brl-live-data",
@@ -10,10 +10,10 @@
  "secret_present": true,
  "scheduled_games": [
   {
-   "game_pk": 849831,
-   "scheduled_start": "2026-10-11T00:00:00Z",
-   "away": "Chicago White Sox",
-   "home": "Cleveland Guardians"
+   "game_pk": 849809,
+   "scheduled_start": "2026-10-12T00:00:00Z",
+   "away": "Los Angeles Dodgers",
+   "home": "Milwaukee Brewers"
   }
  ],
  "data_source": "brl-data-202610070629",
@@ -33,7 +33,7 @@
  "skill_baseline_prior_games": 38,
  "history_coverage_through": "2026-10-09",
  "history_added_PA": 1759,
- "history_refresh_note": null,
+ "history_refresh_note": "Statcast empty on a date with completed games",
  "history_day_notes": {},
  "pa_model": {
   "name": "pa-2026-v2-physics",
@@ -56,7 +56,7 @@
    "seasons_mode": "live"
   }
  },
- "pitch_bookkeeping_prior_PA": 213601,
+ "pitch_bookkeeping_prior_PA": 212447,
  "pitch_bookkeeping_season_games": 4930,
  "engine_rules_changed": false,
  "model_parameters_changed": false,
@@ -64,14 +64,14 @@
  "live_updates": 1,
  "live_update_errors": 0,
  "market_receipt": {
-  "date": "2026-10-10",
+  "date": "2026-10-11",
   "schedule_games": 1,
-  "lines_seen": 0,
-  "matched": 0,
-  "captured_pregame": 0,
+  "lines_seen": 1,
+  "matched": 1,
+  "captured_pregame": 1,
   "books": {
-   "games_with_consensus": 0,
-   "mean_books": 0
+   "games_with_consensus": 1,
+   "mean_books": 8.0
   },
   "events": 1,
   "competition_keys": [
@@ -83,27 +83,114 @@
    "date",
    "format",
    "geoBroadcasts",
-   "headlines",
    "highlights",
    "id",
-   "leaders",
    "neutralSite",
    "notes",
+   "odds",
    "playByPlayAvailable",
    "recent",
    "series",
    "startDate",
    "status",
+   "tickets",
    "timeValid",
    "type",
    "uid",
    "venue",
    "wasSuspended"
   ],
-  "odds_keys": [],
-  "odds_subkeys": {},
-  "moneyline_shape": null,
-  "moneyline_home_shape": null
+  "odds_keys": [
+   "awayTeamOdds",
+   "details",
+   "footer",
+   "header",
+   "homeTeamOdds",
+   "link",
+   "moneyline",
+   "overUnder",
+   "pointSpread",
+   "provider",
+   "spread",
+   "total"
+  ],
+  "odds_subkeys": {
+   "provider": [
+    "displayName",
+    "id",
+    "logos",
+    "name",
+    "priority"
+   ],
+   "awayTeamOdds": [
+    "favorite",
+    "favoriteAtOpen",
+    "team",
+    "underdog"
+   ],
+   "homeTeamOdds": [
+    "favorite",
+    "favoriteAtOpen",
+    "team",
+    "underdog"
+   ],
+   "moneyline": [
+    "away",
+    "displayName",
+    "home",
+    "shortDisplayName"
+   ],
+   "pointSpread": [
+    "away",
+    "displayName",
+    "home",
+    "shortDisplayName"
+   ],
+   "total": [
+    "displayName",
+    "over",
+    "shortDisplayName",
+    "under"
+   ],
+   "link": [
+    "href",
+    "isExternal",
+    "isPremium",
+    "language",
+    "rel",
+    "shortText",
+    "text",
+    "tracking"
+   ],
+   "header": [
+    "logo",
+    "text"
+   ],
+   "footer": [
+    "disclaimer"
+   ]
+  },
+  "moneyline_shape": {
+   "displayName": "str",
+   "shortDisplayName": "str",
+   "home": [
+    "close",
+    "open"
+   ],
+   "away": [
+    "close",
+    "open"
+   ]
+  },
+  "moneyline_home_shape": {
+   "close": [
+    "link",
+    "odds"
+   ],
+   "open": [
+    "odds"
+   ]
+  }
  },
  "team_results_rows": 9718,
  "team_results_meta": {
@@ -119,10 +206,10 @@
   "skipped": 0
  },
  "storage_read_audit": {
-  "contents_verified": 23,
+  "contents_verified": 24,
   "blob_fallbacks": 23,
-  "bytes_verified": 56862861,
-  "requests": 92,
-  "rate_limit_remaining": 4725
+  "bytes_verified": 56865313,
+  "requests": 94,
+  "rate_limit_remaining": 3839
  }
 }
