@@ -1283,23 +1283,24 @@ ZONE_M_GRID = (0.0, 2.0, 5.0, 10.0, 20.0, 40.0, 80.0, 160.0, 320.0, 640.0)
 ZONE_METRICS = (('avg', 'h', 'ab'), ('swing', 'sw', 'n'), ('miss', 'wh', 'sw'), ('slg', 'tb', 'ab'))
 
 
-def zone_tables(T: dict, mask) -> dict:
+def zone_tables(T: dict, mask, who: str = 'batter') -> dict:
     """Per (batter, zone) counts on the masked pitches: n, swings, misses, at-bats ended there, hits, total bases; plus each
-    batter's side (the majority of his pitches). MLB's 13 zones in ZONES13 order."""
+    batter's side (the majority of his pitches). MLB's 13 zones in ZONES13 order. who 'pitcher' (PZONES-01): per pitcher,
+    his throwing hand as his side."""
     rows = np.flatnonzero(mask)
     zmap = np.full(32, -1, np.int64)
     for i, zz in enumerate(ZONES13):
         zmap[zz] = i
     zi = zmap[np.clip(T['zone'][rows], 0, 31)]
     rows = rows[zi >= 0]; zi = zi[zi >= 0]
-    bats, bi = np.unique(T['batter'][rows], return_inverse=True)
+    bats, bi = np.unique(T[who][rows], return_inverse=True)
     key = bi * 13 + zi; nb = len(bats)
     sw = (T['call'][rows] == 1) | (T['call'][rows] == 2); wh = T['call'][rows] == 2
     last = T['last_in_pa'][rows] == 1; o7 = T['out7'][rows]
     ab = last & np.isin(o7, (0, 1, 3, 4, 5, 6)); hit = last & np.isin(o7, (3, 4, 5))
     tb = np.where(last & (o7 == 3), 1.0, 0.0) + np.where(last & (o7 == 4), 2.0, 0.0) + np.where(last & (o7 == 5), 4.0, 0.0)
     cnt = lambda w: np.bincount(key, weights=w.astype(np.float64), minlength=nb * 13).reshape(nb, 13)
-    side = np.bincount(bi, weights=T['stand_r'][rows].astype(np.float64), minlength=nb) / np.maximum(np.bincount(bi, minlength=nb), 1)
+    side = np.bincount(bi, weights=T['stand_r' if who == 'batter' else 'throw_r'][rows].astype(np.float64), minlength=nb) / np.maximum(np.bincount(bi, minlength=nb), 1)
     pa = np.bincount(bi, weights=last.astype(np.float64), minlength=nb)
     return {'bats': bats, 'side': (side >= 0.5).astype(np.int64), 'pa': pa, 'n': cnt(np.ones(len(rows), bool)), 'sw': cnt(sw), 'wh': cnt(wh),
             'ab': cnt(ab), 'h': cnt(hit), 'tb': cnt(tb)}
@@ -1342,11 +1343,15 @@ def zone_shrink_study(T: dict, stage, spec: dict) -> dict:
     train = tuple(spec.get('train', (2024, 2025))); test = int(spec.get('test', 2026)); min_pa = float(spec.get('min_pa', 100))
     rng = np.random.default_rng(int(spec.get('seed', 20261011)))
 
-    # ZONES-02: an optional subset of pitches (a pitcher hand or a pitch family), the same on both sides of the split
+    # ZONES-02: an optional subset of pitches (a pitcher hand or a pitch family), the same on both sides of the split;
+    # PZONES-01: who 'pitcher' reads pitchers' zones, with a batter-side subset (stand_r) as their charts show
     sub = spec.get('subset') or {}
+    who = 'pitcher' if spec.get('who') == 'pitcher' else 'batter'
     base = reg.copy()
     if 'throw_r' in sub:
         base &= T['throw_r'] == int(sub['throw_r'])
+    if 'stand_r' in sub:
+        base &= T['stand_r'] == int(sub['stand_r'])
     if 'family' in sub:
         base &= np.isin(T['group'], {'fastball': (0, 1, 2, 6), 'breaking': (3, 4), 'offspeed': (5,)}[sub['family']])
 
@@ -1359,20 +1364,20 @@ def zone_shrink_study(T: dict, stage, spec: dict) -> dict:
         base_all &= np.isin(T['group'], {'fastball': (0, 1, 2, 6), 'breaking': (3, 4), 'offspeed': (5,)}[sub['family']])
 
     def joined(tr_years, te_year):
-        tr = zone_tables(T, base & np.isin(T['season'], tr_years)); te = zone_tables(T, base & (T['season'] == te_year))
+        tr = zone_tables(T, base & np.isin(T['season'], tr_years), who); te = zone_tables(T, base & (T['season'] == te_year), who)
         pos = {int(b): i for i, b in enumerate(te['bats'])}
         keep = np.array([pa >= min_pa and int(b) in pos for b, pa in zip(tr['bats'], tr['pa'])], bool)
         ti = np.array([pos[int(b)] for b in tr['bats'][keep]], np.int64)
         trk = {k: (v[keep] if hasattr(v, '__len__') and len(v) == len(keep) else v) for k, v in tr.items()}
         tek = {k: v[ti] for k, v in te.items() if k in ('n', 'sw', 'wh', 'ab', 'h', 'tb')}
         if anchor:
-            ta = zone_tables(T, base_all & np.isin(T['season'], tr_years))
+            ta = zone_tables(T, base_all & np.isin(T['season'], tr_years), who)
             apos = {int(b): i for i, b in enumerate(ta['bats'])}
             ai = np.array([apos[int(b)] for b in trk['bats']], np.int64)          # every kept hitter has these pitches too
             trk['all_hands'] = {k: ta[k][ai] for k in ('n', 'sw', 'wh', 'ab', 'h', 'tb')}
         return trk, tek
 
-    out = {'fit': {'train': list(fit_train), 'test': fit_test}, 'score': {'train': list(train), 'test': test}, 'min_pa': min_pa, 'grid': list(ZONE_M_GRID), 'metrics': {}}
+    out = {'who': who, 'fit': {'train': list(fit_train), 'test': fit_test}, 'score': {'train': list(train), 'test': test}, 'min_pa': min_pa, 'grid': list(ZONE_M_GRID), 'metrics': {}}
     tr1, te1 = joined(fit_train, fit_test); stage('zone study: fit tables')
     tr2, te2 = joined(train, test); stage('zone study: score tables')
     out['hitters'] = {'fit': int(len(tr1['bats'])), 'score': int(len(tr2['bats']))}

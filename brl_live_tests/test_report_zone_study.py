@@ -102,3 +102,18 @@ def test_anchored_prior_loses_when_hitters_own_a_big_hand_split():
     sw = B.zone_shrink_study(_hand_league(seed=5, hand_sd=0.6), lambda *a: None, {'min_pa': 30, 'subset': {'throw_r': 0}, 'anchor': True})['metrics']['swing']
     assert sw['anchored_scaled_minus_scaled'][1] > 0, sw    # the scaled prior misses his own split
     assert sw['anchored_minus_shrunk'][0] > 0
+
+
+def test_pitcher_zones_by_batter_side():
+    # PZONES-01: the same study read per pitcher (his hand as his side), on pitches to one batter side
+    B = _report()
+    T = _league(seed=6)
+    rng = np.random.default_rng(6)
+    T['pitcher'] = T['batter'].copy(); T['throw_r'] = T['stand_r'].copy()
+    T['stand_r'] = (rng.random(len(T['season'])) < 0.55).astype(int)
+    out = B.zone_shrink_study(T, lambda *a: None, {'min_pa': 50, 'who': 'pitcher'})
+    sw = out['metrics']['swing']
+    assert out['who'] == 'pitcher' and out['hitters']['score'] == 120
+    assert sw['shrunk_minus_raw'][2] < 0 and sw['shrunk_minus_scaled'][2] < 0, sw
+    half = B.zone_shrink_study(T, lambda *a: None, {'min_pa': 20, 'who': 'pitcher', 'subset': {'stand_r': 1}})
+    assert half['metrics']['swing']['events'] < sw['events']

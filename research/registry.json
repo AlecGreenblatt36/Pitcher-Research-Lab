@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 296,
- "rows": 299,
+ "experiments": 297,
+ "rows": 300,
  "records": {
   "ACC-01": [
    {
@@ -4807,6 +4807,22 @@
     ],
     "frozen_commits": [],
     "status": "held: (1), (2), (3)"
+   }
+  ],
+  "PZONES-01": [
+   {
+    "id": "PZONES-01",
+    "columns": {
+     "ID": "PZONES-01",
+     "Attempt": "Expected zones for pitchers. The pitcher charts (Where he pitches: AVG, SLG, swing and miss rates against in MLB's 13 zones, to right- or left-handed batters) are raw counts over two seasons. ZONES-01's study read per pitcher (his throwing hand as his side; league rates for pitchers of his hand): raw, league, scaled (his level on the league's zone pattern) and shrunk (m fitted), on pitches to right-handed batters and to left-handed batters separately; pitchers with 100 or more batters faced on that side in training; m chosen on 2023-2024 to 2025, scored once on 2024-2025 to 2026 (pitcher zones were never scored before; the 2026 months after July are later-period validation, evidence rule 6); paired bootstrap over pitchers (2,000 draws). tools/brl_report.py zone_shrink_study with who 'pitcher' and a stand_r subset, report lane, aggregates only. Synthetic check (brl_live_tests/test_report_zone_study.py): planted pitcher zone patterns recovered.",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions on 2026, in both batter-side subsets: (1) shrunk beats raw on all four metrics with the interval excluding zero; (2) on swing and miss rates against, shrunk beats scaled with the interval excluding zero; (3) on AVG and SLG against, shrunk is no worse than scaled (upper end at most +0.0005 nats per at-bat, +0.002 squared error). Decision rule: if (1) holds, the pitcher charts' AVG, SLG, swing and miss views get the Expected view (shrunk at the fitted m, or scaled where shrunk does not beat it), with the standard view the default; the location share stays as it is. If (1) fails, nothing changes.",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "MATCHUPREAD-01": [
