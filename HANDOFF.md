@@ -65,7 +65,23 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 5:45 p.m. Eastern October 10, by `date -u`)
+### In flight (updated 9:05 p.m. Eastern October 10, by `date -u`)
+
+- October 10, 9 p.m. (Game 5 in progress): Alec asked for hot zones and layouts like the standard market. Done:
+  hitter cards in the plans and on the Players page carry MLB's 13 zones (1-9 the strike zone by thirds, 11-14 the
+  corners outside it, catcher's view, from the per-pitch `zone` column) as counts only: [zone, pitches, swings,
+  misses, at-bats ended there, hits, total bases], split by the pitcher's hand (card['zones'] = {'R': {...}, 'L':
+  {...}}, families all/fastball/breaking/offspeed; league['zones'][batter side][pitcher hand]). tools/brl_report.py
+  zone_counts and zone_split (aa3775419); the plans and cards were rebuilt in run 38099403917. The page draws the
+  standard chart (hzChart): AVG, SLG, Swing %, Miss %; red above the league's rate for his side against that hand,
+  blue below; gray numbers under 10 at-bats (15 pitches, 10 swings); a triple counts as a double in SLG (out7 lumps
+  them). Game plan rows show his chart against the starter's hand (all four pitch types side by side on a wide
+  screen); a hitter's full plan has his line, a by-pitch-type table and the charts with the plan's zones outlined;
+  the live at-bat card the same for the count in progress; pitcher cards list the arsenal as a table. The model's
+  7x7 grids moved into folds and now flip for lefties (they were drawn in the hitter's frame but labeled catcher's
+  view). Pages f059767b4 and 922a607b0. Earlier tonight (4b14c77e7): the live box score and plays show the real game
+  from first pitch, in batting order with substitutes under their spot, and no longer list the DH team's pitcher as
+  a batter.
 
 - October 10, 5:45 p.m.: the rebuild with all of October 10's fixes is complete: every one of the 401 report days
   (2025-03-27 to 2026-10-08) was written after 17:43 UTC. The 2025 postseason month had been missed (its 18:55 push
