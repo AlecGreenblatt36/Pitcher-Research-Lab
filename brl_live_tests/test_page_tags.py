@@ -18,7 +18,7 @@ def page_functions(*names):
 
 
 def _run(suffix):
-    functions = page_functions('hitterTags', 'twoStrikeShift', 'famWhiffShift', 'hzCells', 'hzTotal')
+    functions = page_functions('hitterTags', 'twoStrikeShift', 'famWhiffShift', 'pullShift', 'hzCells', 'hzTotal')
     prefix = "const assert=require('assert');var TWO_SHIFT=0.065;var FAM_SHIFT={breaking:0.052,offspeed:0.067},FAM_FLOOR={breaking:100,offspeed:60};"
     subprocess.run(['node', '-e', prefix + functions + suffix], check=True)
 
@@ -75,7 +75,7 @@ def test_count_mix_line_reads_the_count_and_side():
 
 
 def test_pitch_type_miss_tags_read_against_his_own_fastball():
-    functions = page_functions('hitterTags', 'twoStrikeShift', 'famWhiffShift', 'hzCells', 'hzTotal')
+    functions = page_functions('hitterTags', 'twoStrikeShift', 'famWhiffShift', 'pullShift', 'hzCells', 'hzTotal')
     prefix = ("const assert=require('assert');var TWO_SHIFT=0.065;var FAM_SHIFT={breaking:0.052,offspeed:0.067},FAM_FLOOR={breaking:100,offspeed:60};"
               "function cells(sw,mi){return [[1,sw*2,sw,mi,0,0,0]];}"
               "function zones(fb,br,os){return {R:{all:cells(fb[0]+br[0]+os[0],fb[1]+br[1]+os[1]),fastball:cells(fb[0],fb[1]),breaking:cells(br[0],br[1]),offspeed:cells(os[0],os[1])},L:{all:cells(0,0),fastball:cells(0,0),breaking:cells(0,0),offspeed:cells(0,0)}};}"
@@ -83,4 +83,13 @@ def test_pitch_type_miss_tags_read_against_his_own_fastball():
     suffix = ("let t=hitterTags({side:'R',zones:zones([300,54],[200,90],[100,30])},lg);assert.ok(t.indexOf('Misses breaking balls')>=0,t);"
               "t=hitterTags({side:'R',zones:zones([300,54],[200,40],[100,30])},lg);assert.ok(t.indexOf('Handles breaking balls')>=0,t);"
               "t=hitterTags({side:'R',zones:zones([300,54],[50,40],[100,30])},lg);assert.ok(t.indexOf('Misses breaking balls')<0&&t.indexOf('Handles breaking balls')<0,t);")
+    subprocess.run(['node', '-e', prefix + functions + suffix], check=True)
+
+
+def test_pull_tags_read_his_pull_side():
+    functions = page_functions('pullShift')
+    prefix = "const assert=require('assert');const lg={spray:{R:{gb:[500,300,200],air:[300,400,300]},L:{gb:[200,300,500],air:[300,400,300]}}};"
+    suffix = ("assert.ok(Math.abs(pullShift({side:'R',spray:{gb:[60,25,15],air:[30,40,30]}},lg,'gb')-0.1)<1e-9);"          # 60% pulled against 50%
+              "assert.ok(Math.abs(pullShift({side:'L',spray:{gb:[15,25,60],air:[30,40,30]}},lg,'gb')-0.1)<1e-9);"          # a lefty pulls to right field
+              "assert.equal(pullShift({side:'R',spray:{gb:[20,10,10],air:[30,40,30]}},lg,'gb'),null);")                   # under 60 grounders
     subprocess.run(['node', '-e', prefix + functions + suffix], check=True)

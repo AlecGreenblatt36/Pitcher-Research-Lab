@@ -4534,14 +4534,16 @@
     "columns": {
      "ID": "TAGS-05",
      "Attempt": "Where a hitter hits it, as a positioning read: his share of ground balls pulled (the field third on his pull side, 15 degrees off center, from the gameday hit coordinates) and of balls in the air pulled, against the league's on his side (rows of 60 of each in each window). Tags at fixed thresholds: Pulls grounders (10 points or more over) and grounders the other way (10 under); pulls in the air (8 over) and the other way in the air (8 under). Same splits and hitters as TAGS-01 (tag_study with spray), season-to-season correlation and the tags scored on the test pitches. Synthetic check: a planted pull habit carries over.",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: correlation 0.5 or more for ground balls and 0.4 or more in the air, both splits; each tag with 10 or more hitters holds at half its threshold with the interval excluding zero. Decision rule: the tags that hold in both splits go on the plans with a lineup note for shading the infield; the rest do not.",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: correlation 0.5 or more for ground balls and 0.4 or more in the air, both splits; each tag with 10 or more hitters holds at half its threshold with the interval excluding zero. Decision rule: the tags that hold in both splits go on the plans with a lineup note for shading the infield; the rest do not. **Results (run 38113180387):** ground balls: correlation 0.60 (233 hitters, 2026 test) and 0.58 (278, 2025); pulls grounders +10.3 [7.5, 13.0] and +8.4 [5.8, 10.9] on the test balls (training +13.1, +12.6), grounders the other way -10.9 [-14.7, -6.5] and -9.9 [-12.5, -7.2]. In the air: correlation 0.70 (261) and 0.68 (304); pulls +10.2 [8.4, 12.2] and +10.4 [8.2, 12.4], the other way -8.0 [-10.2, -5.9] and -8.5 [-10.2, -6.9]. **Every prediction held.** The plans tag all four (page pullShift from the cards' spray counts) and the lineup notes say whom to shade the infield to pull or the other way.",
+     "Delta corrected Brier, 2026": "held: 0.58 to 0.70"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38113180387"
+    ],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "held: 0.58 to 0.70"
    }
   ],
   "ZONES-01": [

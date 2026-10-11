@@ -3213,6 +3213,10 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var ts = twoStrikeShift(c, l);
       if (ts) { if (ts.shift >= TWO_SHIFT) t.push("Expands with two strikes"); else if (ts.shift <= -TWO_SHIFT) t.push("Holds his zone with two strikes"); }
     }
+    /* TAGS-05: where he hits it, against most hitters on his side (the field third on his pull side, 15 degrees off center) */
+    var pg = pullShift(card, lg, "gb"), pa = pullShift(card, lg, "air");
+    if (pg != null) { if (pg >= 0.10) t.push("Pulls grounders"); else if (pg <= -0.10) t.push("Grounders go the other way"); }
+    if (pa != null) { if (pa >= 0.08) t.push("Pulls in the air"); else if (pa <= -0.08) t.push("Goes the other way in the air"); }
     /* TAGS-03: misses by pitch type against his own fastball misses, net of most hitters on his side */
     [["breaking", "breaking balls"], ["offspeed", "offspeed"]].forEach(function (f) {
       var v = famWhiffShift(card, lg, f[0]);
@@ -3225,6 +3229,15 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
      hot-zone counts (both hands). It carries over (correlation 0.62 and 0.57 for breaking balls, 0.57 and 0.52 for offspeed),
      and tags at one standard deviation held on the next season's pitches. Rows of 100 breaking, 60 offspeed, 150 fastball swings. */
   var FAM_SHIFT = { breaking: 0.052, offspeed: 0.067 }, FAM_FLOOR = { breaking: 100, offspeed: 60 };
+  /* TAGS-05: his pull share of ground balls ("gb") or balls in the air ("air") minus the league's on his side; it carries over
+     (0.58 to 0.60 on the ground, 0.68 to 0.70 in the air) and the tags held on the next season's balls. Rows of 60. */
+  function pullShift(card, lg, kind) {
+    var sp = card && card.spray, ls = lg && lg.spray ? lg.spray[card && card.side === "L" ? "L" : "R"] : null;
+    if (!sp || !ls || !sp[kind] || !ls[kind]) return null;
+    var k = card.side === "L" ? 2 : 0, sum = function (a) { return a[0] + a[1] + a[2]; }, n = sum(sp[kind]), ln = sum(ls[kind]);
+    if (n < 60 || !ln) return null;
+    return sp[kind][k] / n - ls[kind][k] / ln;
+  }
   function famWhiffShift(card, lg, fam) {
     if (!card || !card.zones || !lg || !lg.zones) return null;
     var tot = function (z, f) { var cells = hzCells(z, "all", f); var t = hzTotal(cells || []); return [t[2], t[3]]; };
@@ -3386,7 +3399,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var groups = [["Takes the first pitch", "Get ahead with a strike", []], ["Swings at the first pitch", "Start off the plate", []], ["Chases a lot", "Expand the zone", []],
                   ["Swings and misses", "Go for the miss", []], ["Expands with two strikes", "Finish off the plate", []], ["Holds his zone with two strikes", "Finish on the edges", []],
                   ["behind", "Don't give in when behind", []], ["run", "Hold on first", []],
-                  ["Misses breaking balls", "Breaking balls for misses", []], ["Misses offspeed", "Offspeed for misses", []]];
+                  ["Misses breaking balls", "Breaking balls for misses", []], ["Misses offspeed", "Offspeed for misses", []],
+                  ["Pulls grounders", "Shade the infield to pull", []], ["Grounders go the other way", "Shade the infield the other way", []]];
     var short = shortNames(nine.map(function (hid) { return { player_id: hid, name: (players[String(hid)] || {}).name || String(hid) }; }));
     nine.forEach(function (hid) {
       var p = players[String(hid)], c = p && p.hitter;
