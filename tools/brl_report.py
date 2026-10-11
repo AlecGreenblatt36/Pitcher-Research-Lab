@@ -122,6 +122,32 @@ def record_from(days: dict) -> dict:
     return rec
 
 
+ZONES13 = (1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14)   # MLB's zones, catcher's view: 1-9 the strike zone by thirds, 11-14 outside
+
+
+def zone_counts(T: dict, rows, swing, whiff) -> dict:
+    """The standard hot-zone counts on these rows (MLB's zone number per pitch, catcher's view): for all pitches and for
+    each pitch family, per zone [zone, pitches, swings, misses, at-bats ended there, hits, total bases]. Counts only."""
+    out = {}
+    rows = np.asarray(rows, dtype=np.int64)
+    if not len(rows):
+        return out
+    z = T['zone'][rows]; g = T['group'][rows]
+    sw = swing[rows]; wh = whiff[rows]
+    last = T['last_in_pa'][rows] == 1; o7 = T['out7'][rows]
+    ab = last & np.isin(o7, (0, 1, 3, 4, 5, 6)); hit = last & np.isin(o7, (3, 4, 5))
+    tb = np.where(last & (o7 == 3), 1.0, 0.0) + np.where(last & (o7 == 4), 2.0, 0.0) + np.where(last & (o7 == 5), 4.0, 0.0)
+    fams = [('all', np.ones(len(rows), bool))] + [(fname, np.isin(g, codes)) for fname, codes, _, _ in FAMILIES]
+    for fname, fm in fams:
+        cells = []
+        for zz in ZONES13:
+            m = fm & (z == zz)
+            n = int(m.sum())
+            cells.append([zz, n, int(sw[m].sum()), int(wh[m].sum()), int(ab[m].sum()), int(hit[m].sum()), int(round(float(tb[m].sum())))])
+        out[fname] = cells
+    return out
+
+
 def put(repo, token, path, text, branch, message, tries=14):
     """put_text with patience: several backfills commit to the same branch at once, so a 409 is ordinary; and many runs
     writing at once can hit GitHub's secondary rate limit (403 or 429 with a retry hint), which is waited out."""
@@ -352,6 +378,8 @@ class Fitted:
         self.looks_in_ends_out = looks_in & self.outside
         self.league = {'chase_rate': round(float(swing[tr & self.outside].mean()), 3), 'whiff_rate': round(float(whiff[tr & (swing == 1)].sum() / max((tr & (swing == 1)).sum(), 1)), 3),
                        'looks_in_ends_out': round(float(self.looks_in_ends_out[tr].mean()), 3)}
+        # the standard hot-zone counts for every hitter of each side together, the reference the cards are colored against
+        self.league['zones'] = {sd_: zone_counts(T, np.flatnonzero(tr & (T['stand_r'] == (1 if sd_ == 'R' else 0))), swing, whiff) for sd_ in ('R', 'L')}
         # the pitcher's training pitches
         self.gp = D._groups(T['pitcher'], tr)
         self.cgrp = np.where(T['strikes'] == 2, 2, np.where(T['balls'] > T['strikes'], 1, 0))
@@ -395,6 +423,8 @@ class Fitted:
             card['whiff_grid'] = [round(float(v), 2) for v in dw]
         if h in self.zone:
             card['zone_top_ft'], card['zone_bottom_ft'] = round(self.zone[h][0], 2), round(self.zone[h][1], 2)
+        if r is not None and len(r):
+            card['zones'] = zone_counts(T, r, self.swing, self.whiff)
         if self.PM is not None and r is not None and len(r) >= 300:
             # VALUE-18 from the hitter's side: what his own swing tendencies cost him on the pitches he actually saw, against the average
             # hitter his side at the same pitches (his calibrated own part times the value of a swing against a take), per 600 plate
