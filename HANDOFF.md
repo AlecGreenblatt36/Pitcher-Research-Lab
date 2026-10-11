@@ -65,7 +65,22 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 11:35 a.m. Eastern October 11, by `date -u`)
+### In flight (updated 12:15 p.m. Eastern October 11, by `date -u`)
+
+- October 11, 12:15 p.m.: LEVEL-01 held (in-season re-anchoring of each outcome's league level: +0.114 and +0.146 nats per
+  1,000 real plate appearances at m 10,000, both intervals above zero; check-only runs 38152933999 and 38152908828). The
+  layer is built (brl_live/provider_adjust.py LevelAdjust; per-date offsets brl_replay/level_offsets_<season>.json from
+  tools/brl_level_cal.py --write-offsets) and off. LEVEL-02 registered: full replays with the layer (tags
+  v2-prod4-level-1000-<season>), paired against PLAYER-06's replays (v2-prod4-tb-1000-<season>); score with
+  `tools/replay_compare.py v2-prod4-tb-1000 v2-prod4-level-1000` and `tools/brl_player_cal.py --pair
+  <season>='<tb glob>::<level glob>'`; first-date games must match exactly. If it passes, the live side still needs
+  the season's running sums (observed and predicted outcome counts by date) before next season.
+- PLAYER-07 registered (starters' outs, the pitcher-outs prop); replays v2-prod4-outs-1000-<season> (runs 38152417051
+  for 2026, 38152442137 for 2025) record each starter's real outs (harness pitcher_outs); score with
+  tools/brl_outs_cal.py; the page's outs ladder is built behind OUTS_LADDER (false).
+- Layout today: table row labels take the light rule, team stats show each rank beside its number, the Odds tab's
+  ladders put each price beside its chance (one line a row), bullpen tables list arms at 10% or more with the rest in
+  one line.
 
 - October 11, 11:35 a.m.: DISP-03 failed its rule ((1): the total's over and under improved only within noise, pooled -0.00015
   [-0.00047, +0.00017]; (2), (3), (4) held: centered day-form worlds fix the run spread and put the run line within 1.5
