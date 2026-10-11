@@ -53,6 +53,12 @@ Rejected with evidence on October 8: SKEW-02 (all physics seasons: right strikeo
 (superseded), RETRAIN-03 (window). Discovery (private page, not published): DISC-01 to DISC-07, Decision Horizon page
 https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challenge test).
 
+### Runner budget (October 11)
+
+The repository gets about 20 concurrent GitHub-hosted jobs. A full replay takes 9 (a setup job and 8 shards) for about 50
+minutes, so keep at most two full replays running at once; with four, the live slate run that a push starts waits in the
+queue behind the shards (seen October 11 at 16:50 UTC). Check-only replays (n_sims 0) take about 4 minutes.
+
 ### How to check a game night from outside (the run logs are not readable; everything is on the ledger branch)
 
 - `git fetch origin +brl-live-data:refs/remotes/origin/brl-live-data`, then: diagnostics/v2_receipt.json (each live
