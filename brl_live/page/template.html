@@ -499,6 +499,8 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .pl-body.no-hz { grid-template-columns: minmax(0, 1fr); }
 .pl-body .pl-txt, .pl-body .pl-tags { margin-left: 0; }
 .pl-body .pl-txt { margin-top: 0; }
+.pl-stats { font-size: 14px; color: var(--muted); margin: 0 0 4px; }
+.pl-stats b { font-family: var(--display); font-size: 17px; color: var(--ink); }
 .pl-hz .hz-t { font-size: 18px; }
 .pl-hz .hz-t.o { font-size: 16px; }
 .pd-tags { margin: 0 0 8px; }
@@ -2988,6 +2990,16 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     out.posted = true;
     return out;
   }
+  /* A lineup card's line for a hitter against this hand: AVG and SLG, chase and miss rates, from the zone counts. */
+  function hzStatLine(card, hand) {
+    var c = card && card.zones ? hzCells(card.zones, hand, "all") : null;
+    if (!c) return "";
+    var t = hzTotal(c), o = hzTotal(c.filter(function (x) { return x[0] >= 11; })), bits = [];
+    if (t[4] >= 30) bits.push("<b>" + hzFmt(HZ_METRICS.avg, t[5] / t[4]) + "</b> AVG", "<b>" + hzFmt(HZ_METRICS.slg, t[6] / t[4]) + "</b> SLG");
+    if (o[1] >= 50) bits.push("<b>" + Math.round(100 * o[2] / o[1]) + "%</b> chase");
+    if (t[2] >= 50) bits.push("<b>" + Math.round(100 * t[3] / t[2]) + "%</b> miss");
+    return bits.length ? '<div class="pl-stats num">' + bits.join(", ") + (hand === "R" ? " vs RHP" : hand === "L" ? " vs LHP" : "") + "</div>" : "";
+  }
   function hzWide() { try { return window.matchMedia("(min-width: 1000px)").matches; } catch (e) { return false; } }
   function hzSheetHand(doc, starter) {
     var pc = doc.players && doc.players[String(starter.id)] && doc.players[String(starter.id)].pitcher, any = null;
@@ -3026,7 +3038,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (spots && !spot && !benchShown) { h += '<li class="plan-bench">Off the bench</li>'; benchShown = true; }
       h += "<li" + (pr ? ' class="plan-row rp-cell' + (sel === key ? " rp-sel" : "") + '" data-rp="' + key + '" tabindex="0"' : ' class="plan-row"') + '><div class="pl-top"><b><span class="spot">' + (spot || "") + "</span>" + esc(nm(hid)) + (card ? " <small>" + esc(card.side === "L" ? "bats left" : "bats right") + "</small>" : "") + "</b>" +
         (edge ? '<span class="pl-edge ' + edge.split(" ")[0].toLowerCase() + '">' + edge + "</span>" : "") + "</div>" +
-        '<div class="pl-body' + (chart ? "" : " no-hz") + '"><div class="pl-main"><div class="pl-txt">' + esc(pr ? planLine(pr) : "Not enough pitches to say yet.") + "</div>" +
+        '<div class="pl-body' + (chart ? "" : " no-hz") + '"><div class="pl-main">' + hzStatLine(card, useHand) + '<div class="pl-txt">' + esc(pr ? planLine(pr) : "Not enough pitches to say yet.") + "</div>" +
         (tags.length || thin ? '<div class="pl-tags">' + tags.concat(thin ? ["Small sample"] : []).map(function (x) { return "<span>" + esc(x) + "</span>"; }).join("") + "</div>" : "") + "</div>" + chart + "</div></li>";
     });
     return h + "</ol>";
