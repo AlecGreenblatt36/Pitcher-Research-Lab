@@ -518,6 +518,8 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .hz-types .box th { padding: 7px 4px; }
 .hz-types .box th:first-child, .hz-types .box td:first-child { padding-left: 8px; font-size: 15px; }
 .hz-types .box th:last-child, .hz-types .box td:last-child { padding-right: 8px; }
+.hz-types.ct .box td small { display: block; font-family: var(--body); font-size: 14px; color: var(--muted); line-height: 1.2; }
+.hz-cap { margin: 10px 0 4px; font-weight: 700; color: var(--ink); }
 @media (min-width: 720px) { .pl-body { grid-template-columns: minmax(0, 1fr) 156px; gap: 20px; } }
 .pl-hz-f small { display: block; font-size: 14px; font-weight: 700; color: var(--muted); margin: 0 0 2px; }
 @media (min-width: 1000px) {
@@ -2644,13 +2646,34 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     }).join("");
     return rows ? '<div class="tbl-wrap hz-types"><table class="box"><thead><tr><th scope="col">Pitch</th><th scope="col">Seen</th><th scope="col">Swing</th><th scope="col">Chase</th><th scope="col">Miss</th><th scope="col">AVG</th><th scope="col">SLG</th></tr></thead><tbody>' + rows + "</tbody></table></div>" : "";
   }
-  /* A pitcher's arsenal the way every scouting sheet lists it: how often, how hard, misses, chases, strikes. */
+  /* A pitcher's arsenal the way every scouting sheet lists it: how often, how hard, misses, chases, strikes, put-aways. */
   function arsenalTable(mix) {
     var fams = ["fastball", "breaking", "offspeed"].filter(function (fam) { return mix && mix[fam] && mix[fam].share >= 0.005; });
     if (!fams.length) return "";
-    var rt = function (v) { return v != null ? pct(v) : "\u2013"; };
-    return '<div class="tbl-wrap hz-types"><table class="box"><thead><tr><th scope="col">Pitch</th><th scope="col">Thrown</th><th scope="col">MPH</th><th scope="col">Miss</th><th scope="col">Chase</th><th scope="col">Zone</th></tr></thead><tbody>' +
-      fams.map(function (fam) { var m = mix[fam]; return "<tr><td>" + PITCH_NAME[fam] + "</td><td>" + pct(m.share) + "</td><td>" + (m.speed != null ? m.speed.toFixed(1) : "\u2013") + "</td><td>" + rt(m.whiff_rate) + "</td><td>" + rt(m.chase_rate) + "</td><td>" + rt(m.zone_rate) + "</td></tr>"; }).join("") + "</tbody></table></div>";
+    var rt = function (v) { return v != null ? pct(v) : "\u2013"; }, pa = fams.some(function (f) { return mix[f].putaway != null; });
+    return '<div class="tbl-wrap hz-types"><table class="box"><thead><tr><th scope="col">Pitch</th><th scope="col">Thrown</th><th scope="col">MPH</th><th scope="col">Miss</th><th scope="col">Chase</th><th scope="col">Zone</th>' + (pa ? '<th scope="col">Put away</th>' : "") + "</tr></thead><tbody>" +
+      fams.map(function (fam) { var m = mix[fam]; return "<tr><td>" + PITCH_NAME[fam] + "</td><td>" + pct(m.share) + "</td><td>" + (m.speed != null ? m.speed.toFixed(1) : "\u2013") + "</td><td>" + rt(m.whiff_rate) + "</td><td>" + rt(m.chase_rate) + "</td><td>" + rt(m.zone_rate) + "</td>" + (pa ? "<td>" + rt(m.putaway) + "</td>" : "") + "</tr>"; }).join("") + "</tbody></table></div>";
+  }
+  var COUNT_ROWS = [["first", "First pitch"], ["ahead", "Pitcher ahead or even"], ["behind", "Pitcher behind"], ["two", "Two strikes"]];
+  /* A hitter's swings by count (the usual split), each next to the league's for his side. */
+  function countTable(card, lg) {
+    var c = card && card.counts, l = lg && lg.counts ? lg.counts[card.side === "L" ? "L" : "R"] : null;
+    if (!c || !c.first) return "";
+    var r = function (a, b) { return b ? Math.round(100 * a / b) + "%" : "\u2013"; };
+    var cell = function (row, lrow, a, b, min) { return "<td>" + (row && row[b] >= min ? r(row[a], row[b]) : "\u2013") + (lrow && lrow[b] ? "<small>" + r(lrow[a], lrow[b]) + "</small>" : "") + "</td>"; };
+    return '<div class="tbl-wrap hz-types ct"><table class="box"><thead><tr><th scope="col">Count</th><th scope="col">Pitches</th><th scope="col">Swing</th><th scope="col">Chase</th><th scope="col">Miss</th></tr></thead><tbody>' +
+      COUNT_ROWS.map(function (k) { var row = c[k[0]], lr = l ? l[k[0]] : null; return "<tr><td>" + k[1] + "</td><td>" + (row ? Number(row[0]).toLocaleString() : "\u2013") + "</td>" + cell(row, lr, 1, 0, 20) + cell(row, lr, 4, 3, 15) + cell(row, lr, 2, 1, 15) + "</tr>"; }).join("") +
+      '</tbody></table></div><p class="note">Small numbers: most hitters on his side. Chase: swings at pitches out of the zone. Miss: misses per swing. The counts are from the pitcher\'s side: behind means more balls than strikes.</p>';
+  }
+  /* What a pitcher throws in each count group, to one side of the plate. */
+  function usageTable(pc, side) {
+    var u = pc && pc.usage && pc.usage[side];
+    if (!u) return "";
+    var fams = ["fastball", "breaking", "offspeed"], tot = [0, 0, 0];
+    COUNT_ROWS.forEach(function (k) { (u[k[0]] || [0, 0, 0]).forEach(function (n, i) { tot[i] += n; }); });
+    var keep = fams.map(function (f, i) { return tot[i] / Math.max(1, tot[0] + tot[1] + tot[2]) >= 0.01; });
+    return '<div class="tbl-wrap hz-types"><table class="box"><thead><tr><th scope="col">To ' + (side === "L" ? "lefties" : "righties") + "</th>" + fams.map(function (f, i) { return keep[i] ? '<th scope="col">' + PITCH_NAME[f].replace(" ball", "") + "</th>" : ""; }).join("") + "</tr></thead><tbody>" +
+      COUNT_ROWS.map(function (k) { var row = u[k[0]] || [0, 0, 0], n = row[0] + row[1] + row[2]; return "<tr><td>" + k[1] + "</td>" + row.map(function (x, i) { return keep[i] ? "<td>" + (n >= 20 ? Math.round(100 * x / n) + "%" : "\u2013") + "</td>" : ""; }).join("") + "</tr>"; }).join("") + "</tbody></table></div>";
   }
   function hzSeg(key, cur, opts, aria) {
     return '<div class="seg hz-seg" role="group" aria-label="' + esc(aria) + '">' + opts.map(function (o) { return "<button data-" + key + '="' + o[0] + '" aria-pressed="' + (o[0] === cur) + '">' + esc(o[1]) + "</button>"; }).join("") + "</div>";
@@ -2824,9 +2847,26 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     }
     var np = nextPitchNote(now.lv.current, players[now.pid] && players[now.pid].pitcher);
     if (np) h += '<p class="rp-next"><b>Next pitch:</b> ' + esc(np) + "</p>";
+    var ld = loadNote(now.lv, now.pid, lastName(nm(now.pid, now.pitcher)));
+    if (ld) h += '<p class="rp-next"><b>On the mound:</b> ' + esc(ld) + "</p>";
     var ul = umpireLine(now.lv);
     if (ul) h += '<small class="rp-now-miss">' + ul + "</small>";
     return h + "</div>";
+  }
+  /* Pitches the pitcher on the mound has thrown today, from the real plays plus the at-bat in progress. */
+  function pitchCountNow(lv, pid) {
+    var pc = 0;
+    if (!pid) return 0;
+    (lv.plays || []).forEach(function (x) { if (String(x.pitcher_id) === String(pid)) pc += (x.pitches || []).length; });
+    return pc + (lv.current && lv.current.pitches ? lv.current.pitches.length : 0);
+  }
+  /* WARMUP-01 (a strategy finding): the times-through-the-order decline follows the pitcher's pitch count, about 0.026
+     runs a batter per 100 pitches, not how often the hitters have seen him; a fresh reliever resets it. */
+  function loadNote(lv, pid, name) {
+    var pc = pitchCountNow(lv, pid);
+    if (pc < 60 || !name) return "";
+    var per = 0.026 * pc / 100, next9 = 9 * 0.026 * (pc + 17) / 100;
+    return name + " is at " + pc + " pitches. Hitters now do about " + per.toFixed(2) + " runs better per at-bat than when he was fresh, about " + next9.toFixed(1) + " runs over the next nine. The drop follows his pitch count, not how many times they have seen him; a fresh reliever resets it.";
   }
   /* The next pitch, from SEQ-03F (credited on months the model never saw): after a taken pitch, and more after a swing and
      miss, the same pitch family again draws more misses than a change (about 2 points of miss rate after a ball, 2.5
@@ -3109,7 +3149,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       (po.posted ? "Posted lineup; the plan was built before it came out" + (po.missing.length ? ", so it has no line yet for " + esc(po.missing.join(" or ")) : "") + "." : lineupWords(se.lineup_source)) +
       " Hot zones against " + esc(hzSheetHand(doc, starter)) + ". Tap a hitter for his full plan, the counts and the bullpen.</p>";
     var spc = players[String(starter.id)] && players[String(starter.id)].pitcher;
-    if (spc && spc.mix) h += '<details class="more" data-keep="ars-' + side + '"' + (state.rpOpen["ars-" + side] ? " open" : "") + "><summary>" + esc(lastName(nm(starter.id))) + "'s pitches</summary>" + arsenalTable(spc.mix) + "</details>";
+    if (spc && spc.mix) h += '<details class="more" data-keep="ars-' + side + '"' + (state.rpOpen["ars-" + side] ? " open" : "") + "><summary>" + esc(lastName(nm(starter.id))) + "'s pitches</summary>" + arsenalTable(spc.mix) +
+      (spc.usage ? '<p class="note hz-cap">What he throws by count</p>' + usageTable(spc, "R") + usageTable(spc, "L") : "") + "</details>";
     var pen = bullpenCard(doc, se, nm);
     if (pen) h += '<details class="more" data-keep="pen-' + side + '"' + (state.rpOpen["pen-" + side] ? " open" : "") + "><summary>" + esc(nickname(doc.teams[other].name)) + " bullpen: rest and pitches</summary>" + pen + "</details>";
     h += '<ol class="plan-list">';
@@ -3178,6 +3219,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var shown = famsShown(plan, stPlan);
       if (hc.zones) {
         h += '<h4 class="hz-h">' + esc(lastName(nm(ids[0]))) + " against " + esc(hzHandWords(useHand)) + ", " + esc(hzSeasons(doc.asof)) + "</h4>" + hzLine(hzCells(hc.zones, useHand, "all"), hzLeague(doc.league, hc.side, useHand, "all")) + hzTypes(hc, useHand);
+        var ctab = countTable(hc, doc.league);
+        if (ctab) h += '<details class="more" data-keep="counts"' + (state.rpOpen.counts ? " open" : "") + "><summary>His swings by count</summary>" + ctab + "</details>";
         h += '<div class="hz-tools">' + hzMetricSeg() + "</div>";
         h += hzStrip(hc, doc.league, useHand, [["all", "All pitches", ""]].concat(shown.map(famHead)), plan, stPlan, nm(ids[0]) + ": ");
         h += hzLegend(hzMetric(), true);
@@ -3562,6 +3605,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
             h += '<section class="sec hz-sec"><h2>Hot zones</h2><p class="lede">Against ' + esc(hzHandWords(hh)) + ", " + esc(hzSeasons(doc.asof)) + ".</p>";
             h += '<div class="hz-tools">' + (split ? hzSeg("hzhand", hh, [["all", "All"], ["R", "vs RHP"], ["L", "vs LHP"]], "Pitcher's hand") : "") + hzMetricSeg() + "</div>";
             h += hzLine(hzCells(x.zones, hh, "all"), hzLeague(lg, x.side, hh, "all")) + hzTypes(x, hh);
+            var ctab2 = countTable(x, lg);
+            if (ctab2) h += '<h3 class="hz-h">By count, against all pitchers</h3>' + ctab2;
             h += hzStrip(x, lg, hh, HZ_FAMS, null, null, x.name + ": ", "h3") + hzLegend(hzMetric(), false) + "</section>";
           }
           var spr = sprayTend(x.spray, lg, x.side, x.name + ": ");
@@ -3594,7 +3639,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
             (x.looks_in_ends_out != null ? pct(x.looks_in_ends_out) + " of his pitches look like strikes when the hitter has to decide, then end up balls (league " + (lg.looks_in_ends_out != null ? pct(lg.looks_in_ends_out) : "\u2013") + ")." : "") + "</p>";
           /* the arsenal the way every scouting sheet lists it, then where each pitch goes to each side */
           var fams = ["fastball", "breaking", "offspeed"].filter(function (fam) { return mix[fam] && mix[fam].share >= 0.005; });     /* a pitch he all but never throws gets no row */
-          if (fams.length) h += arsenalTable(mix) + '<p class="note">Miss: misses per swing. Chase: swings at his pitches out of the zone. Zone: pitches in the strike zone.</p>';
+          if (fams.length) h += arsenalTable(mix) + '<p class="note">Miss: misses per swing. Chase: swings at his pitches out of the zone. Zone: pitches in the strike zone. Put away: strikeouts per two-strike pitch of that type.</p>';
+          if (x.usage) h += '<h2 class="hz-h2">What he throws by count</h2>' + usageTable(x, "R") + usageTable(x, "L") + '<p class="note">Share of each pitch type in each count. Behind means more balls than strikes.</p>';
           if (x.zones && (x.zones.R || x.zones.L)) {
             /* where he pitches, the standard 13 zones: to righties or lefties, by pitch type */
             var bs = state.hzBat === "L" && x.zones.L ? "L" : x.zones.R ? "R" : "L", pm = HZ_PMETRICS[state.hzPMetric] ? state.hzPMetric : "loc";
