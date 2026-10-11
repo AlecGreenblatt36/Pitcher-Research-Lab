@@ -4177,9 +4177,25 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (!el || !R || !R.games || !lines.length) return;
       el.innerHTML = '<h2>Game plans</h2><p class="lede">Every game plan since ' + esc(dateLabel(R.first_date).replace(/^[A-Za-z]+, /, "") + ", " + R.first_date.slice(0, 4)) + " (" + Number(R.games).toLocaleString() +
         " games), built before the game and checked after it. Pitchers were not throwing to our plans, so this checks the read on each hitter.</p><ul class=\"plan-checks\">" +
-        lines.map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + "</ul>";
+        lines.map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + "</ul>" + tagChecksHtml();
       el.hidden = false;
     });
+  }
+  /* The hitter tags, each checked on the next season (TAGS-01 to 05 in the ledger): tagged from two seasons, then the
+     tagged hitters' rate against the league's on the next season's pitches (2026 before August, and 2025). Points. */
+  var TAG_CHECKS = [["Chases a lot", "chase rate", 7.9, 8.3, 7.0, 7.3], ["Patient", "chase rate", -8.6, -8.6, -8.0, -7.1],
+    ["Swings and misses", "misses per swing", 7.7, 7.8, 7.5, 6.3], ["Puts the bat on the ball", "misses per swing", -10.0, -9.7, -9.2, -9.3],
+    ["Takes the first pitch", "first-pitch swings", -15.2, -14.4, -12.9, -12.8], ["Swings at the first pitch", "first-pitch swings", 15.4, 15.7, 10.7, 13.7],
+    ["Expands with two strikes", "extra two-strike chasing", 10.7, 10.6, 7.7, 8.6], ["Holds his zone with two strikes", "extra two-strike chasing", -9.6, -9.5, -6.7, -7.7],
+    ["Aggressive in hitter's counts", "swings when behind", 13.9, 13.5, 11.3, 11.1], ["Misses breaking balls", "misses vs his fastball misses", 7.3, 8.0, 6.5, 5.3],
+    ["Misses offspeed", "misses vs his fastball misses", 9.9, 9.9, 7.0, 5.4], ["Pulls grounders", "grounders pulled", 13.1, 12.6, 10.3, 8.4],
+    ["Pulls in the air", "balls in the air pulled", 11.7, 11.9, 10.2, 10.4]];
+  function tagChecksHtml() {
+    var f = function (v) { return (v > 0 ? "+" : "") + v.toFixed(1); };
+    return '<h3 class="hz-h">The hitter tags, a season later</h3><p class="note">Tagged from two seasons, then checked on the next one. Points against the league on the same pitches; what we said first, what happened next.</p>' +
+      '<div class="tbl-wrap tag-checks" tabindex="0" role="region" aria-label="Hitter tags checked a season later, scrolls sideways"><table class="box"><thead><tr><th scope="col">Tag</th><th scope="col">Rate</th><th scope="col">Said</th><th scope="col">2026</th><th scope="col">Said</th><th scope="col">2025</th></tr></thead><tbody>' +
+      TAG_CHECKS.map(function (r) { return "<tr><td>" + esc(r[0]) + "</td><td>" + esc(r[1]) + "</td><td>" + f(r[2]) + "</td><td><b>" + f(r[4]) + "</b></td><td>" + f(r[3]) + "</td><td><b>" + f(r[5]) + "</b></td></tr>"; }).join("") +
+      '</tbody></table></div><p class="note">Every tag held in both seasons. One read that did not hold up, extra misses on hard fastballs, is not used.</p>';
   }
   /* "When we say 60%, do they win 60%?" and month by month, from the two seasons re-run (days/season-YYYY.json). */
   function fillSeasonChecks() {
