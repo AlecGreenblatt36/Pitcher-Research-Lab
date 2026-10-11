@@ -2086,7 +2086,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var real = realGame(st, lv || (D.live && D.live[pk]), actualBox);
     if (tab === "report") html += reportTab(f, pk);
     else if (tab === "odds") html += oddsTab(f, box);
-    else if (!s) html += '<p class="empty">The full simulated game is still being built for this forecast.</p>';
+    else if (!s && (real || actualBox) && tab === "box") html += boxTab(f, real || actualBox, null, pk, "Actual", true);
+    else if (!s && real && real.plays && tab === "plays") html += playsTab(f, real) + '<p class="note">The real game from the official play-by-play.</p>';
+    else if (!s) html += '<p class="empty">' + (real || actualBox ? "No full simulated game was kept for this forecast; the real box score and plays are on their tabs." : actual ? "No full simulated game was kept for this forecast." : "The full simulated game is still being built for this forecast.") + "</p>";
     else if (tab === "box") html += ((!(real || actualBox) || state.boxSide[pk] === "proj") ? versions : "") + boxTab(f, s, real || actualBox, pk, real && real._live ? "Live" : "Actual");
     else if (tab === "plays") {
       var pside = state.playSide[pk] || (real ? "actual" : "proj");
