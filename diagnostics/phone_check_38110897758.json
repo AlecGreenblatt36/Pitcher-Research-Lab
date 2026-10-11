@@ -1,0 +1,81 @@
+{
+  "started_at": "2026-10-11T04:15:34.332316+00:00",
+  "site": "https://alecgreenblatt36.github.io/Pitcher-Research-Lab/",
+  "status": "FAIL",
+  "private_data_or_secret_access": false,
+  "checks": [],
+  "font_checks": [
+    {
+      "width": 390,
+      "before": [
+        {
+          "family": "Barlow Condensed",
+          "weight": "500",
+          "status": "unloaded"
+        },
+        {
+          "family": "Barlow Condensed",
+          "weight": "600",
+          "status": "loaded"
+        },
+        {
+          "family": "Barlow Condensed",
+          "weight": "700",
+          "status": "loaded"
+        },
+        {
+          "family": "Atkinson Hyperlegible",
+          "weight": "400",
+          "status": "loaded"
+        },
+        {
+          "family": "Atkinson Hyperlegible",
+          "weight": "700",
+          "status": "loaded"
+        }
+      ],
+      "loaded": [
+        {
+          "spec": "400 16px \"Atkinson Hyperlegible\"",
+          "faces": [
+            {
+              "family": "Atkinson Hyperlegible",
+              "weight": "400",
+              "status": "loaded"
+            }
+          ]
+        },
+        {
+          "spec": "700 24px \"Barlow Condensed\"",
+          "faces": [
+            {
+              "family": "Barlow Condensed",
+              "weight": "700",
+              "status": "loaded"
+            }
+          ]
+        }
+      ],
+      "body_family": "\"Atkinson Hyperlegible\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+      "heading_family": "\"Barlow Condensed\", \"Arial Narrow\", \"Roboto Condensed\", sans-serif"
+    }
+  ],
+  "design_checks": [
+    {
+      "width": 390,
+      "view": "slate",
+      "minimum_text_px": 14,
+      "minimum_tap_height": 44,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "view": "game_summary",
+      "minimum_text_px": 13,
+      "minimum_tap_height": 44,
+      "overflow": false
+    }
+  ],
+  "error": "AssertionError: game_summary contains small text",
+  "finished_at": "2026-10-11T04:15:39.001479+00:00"
+}
