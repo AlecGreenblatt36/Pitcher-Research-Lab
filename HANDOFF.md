@@ -65,7 +65,14 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 10:49 a.m. Eastern October 11, by `date -u`)
+### In flight (updated 11:35 a.m. Eastern October 11, by `date -u`)
+
+- October 11, 11:35 a.m.: DISP-03 failed its rule ((1): the total's over and under improved only within noise, pooled -0.00015
+  [-0.00047, +0.00017]; (2), (3), (4) held: centered day-form worlds fix the run spread and put the run line within 1.5
+  points in both seasons). Nothing changes: ADJUST market_day_form stays None (the box code and the page's reading of
+  box.market_worlds are built and tested, idle), MORE_MARKETS stays off. A second review (after the first) found the
+  fielder's choice missing from the RBI rule and five ledger figures; all fixed in 2fa79ff1f. The replays' real-PA check
+  now records each game's prediction second moments, ready for an in-season level re-anchoring study (next season).
 
 - October 11, 10:49 a.m.: PLAYER-06 failed its rule (two or more total bases right on level in both seasons, but the top tenth
   3.4 points high in 2026), so the 2+ TB column stays off (PROP_COLS.tb2 false; the Odds hitter tables already fit five
