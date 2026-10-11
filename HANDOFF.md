@@ -65,7 +65,15 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 4:15 a.m. Eastern October 11, by `date -u`)
+### In flight (updated 4:30 a.m. Eastern October 11, by `date -u`)
+
+- October 11, 4:30 a.m.: a second review (a60bee37b..9dd6093ca) found two real defects, fixed in 17e687e5f's parent:
+  arsenalChanges claimed pitches added or dropped from lists that leave out types under 20 pitches (now from complete
+  shares: arsenal_shares and arsenal_prev with every type), and the bullpen card dropped a game only unlisted arms
+  pitched (now the staff team's game days from the schedule, pen_days). Also: season_mark is safe on odd data, the
+  page's live reader takes AVG and ERA only as strings. Player pages have a splits table by the other side's hand, and a
+  pitcher page no longer shows a second arsenal table when nothing changed (an if/else slip). Lesson: when inserting a
+  line between an if and its else, rebrace the block. Card rebuild at 17e687e5f.
 
 - October 11, 4:15 a.m.: PTAGS-04 held (run 38122717614): Works inside / away with the fastball, each pitcher read
   against the league's rate for the matchups he faced (pitcher_tag_counts carries an adjusted numerator whose ratio minus
