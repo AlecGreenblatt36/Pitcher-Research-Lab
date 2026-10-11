@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 309,
- "rows": 312,
+ "experiments": 310,
+ "rows": 313,
  "records": {
   "ACC-01": [
    {
@@ -5065,6 +5065,22 @@
     ],
     "frozen_commits": [],
     "status": "descriptive"
+   }
+  ],
+  "PLAYER-05": [
+   {
+    "id": "PLAYER-05",
+    "columns": {
+     "ID": "PLAYER-05",
+     "Attempt": "Part-time hitters' share of their lineup slot. PLAYER-03's replays (live settings, both seasons) show the page's chances running high for hitters with little recent playing time in both seasons (at least one hit +2.3 points for 1 to 99 plate appearances in the prior 365 days, strikeouts and walks high too), and the reason is plate appearances: such hitters get 95% to 96% of the trips their slot's share allows (pinch hitters and defensive changes take more of a part-timer's spot), 96% to 98% with 100 to 199, 98% to 99% with 200 to 399, and regulars 100%. Design: each hitter's share of his slot's events becomes the spot's share (PLAYER-02) times a factor for his prior 365 days' plate appearances (1-99, 100-199, 200-399, 400 or more), the factor being actual plate appearances over the simulated ones times the spot's share in that group, fitted on one season and applied to the other (tools/brl_player_cal.py part_time_study), scored on the page's chances",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the adjusted chances were computed** (the plate-appearance ratios and raw gaps above were seen first). Predictions: (1) with the other season's factors, the Brier of the chance of at least one hit and of a home run falls in both seasons, the 95% interval's upper end below zero (bootstrap over dates, 2,000 draws); (2) the 1-99 group's hit-chance gap shrinks by at least a third in both seasons; (3) regulars (400 or more) move by under 0.2 points. Decision rule: if (1) holds for hits and home runs in both seasons, the live boxes keep each hitter's events with the spot's share times his group's factor (fitted on both seasons; brl_live/boxscore.py, the box rows carry it as keep) and the page uses it for every chance; otherwise nothing changes. Results: pending",
+     "Delta corrected Brier, 2026": "pending"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "pending"
    }
   ],
   "PROD-13": [
