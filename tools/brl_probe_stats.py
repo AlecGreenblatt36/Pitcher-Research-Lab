@@ -101,6 +101,62 @@ def game_log_checks(out, teams, season):
         out['checks'][name] = info
 
 
+VS_KEYS = ('plateAppearances', 'atBats', 'hits', 'doubles', 'triples', 'homeRuns', 'baseOnBalls', 'strikeOuts', 'avg', 'obp', 'slg', 'ops')
+TEAM_KEYS = ('gamesPlayed', 'runs', 'avg', 'obp', 'slg', 'ops', 'homeRuns', 'strikeOuts', 'baseOnBalls', 'stolenBases', 'era', 'whip',
+             'strikeoutsPer9Inn', 'walksPer9Inn', 'homeRunsPer9', 'saves', 'blownSaves', 'runsScoredPer9')
+
+
+def stats_shape(doc, keys, last=4):
+    """Any stats answer's shape, in both forms ({'stats': [...]} and {'people': [{'stats': [...]}]}, or the teams form
+    {'stats': [{'splits': [{'team': ...}]}]}): per stat type, how many splits, the keys a split and its stat carry, and the
+    first few splits' public facts (season, team, opponent, the chosen stat values)."""
+    holders = (doc or {}).get('people') or [doc or {}]
+    types = {}
+    for p in holders:
+        for st in p.get('stats') or []:
+            t = (st.get('type') or {}).get('displayName') or ''
+            e = types.setdefault(t, {'n_splits': 0, 'split_keys': set(), 'stat_keys': set(), 'first': [], 'group': (st.get('group') or {}).get('displayName')})
+            for x in st.get('splits') or []:
+                e['n_splits'] += 1; e['split_keys'].update(x.keys()); e['stat_keys'].update((x.get('stat') or {}).keys())
+                if len(e['first']) < last:
+                    e['first'].append({'person': p.get('id'), 'season': x.get('season'), 'team': (x.get('team') or {}).get('name'),
+                                       'opponent': (x.get('opponent') or {}).get('fullName') or (x.get('opponent') or {}).get('name'),
+                                       'batter': (x.get('batter') or {}).get('id'), 'pitcher': (x.get('pitcher') or {}).get('id'),
+                                       'stat': pick(x.get('stat') or {}, keys)})
+    return {t: dict(e, split_keys=sorted(e['split_keys']), stat_keys=sorted(e['stat_keys'])) for t, e in types.items()}
+
+
+def bvp_team_checks(out, teams, season):
+    """Can the page show each hitter's record against tonight's starter (the batter-against-pitcher line every preview
+    prints) and each team's season stats side by side? The asks the page could make, their CORS answer and shape."""
+    sp = {s: teams[s]['probablePitcher']['id'] for s in ('away', 'home')}
+    hitters = {}
+    for s in ('away', 'home'):
+        tid = ((teams.get(s) or {}).get('team') or {}).get('id')
+        info, doc = get(API + f'v1/teams/{tid}/roster?rosterType=active&season={season}')
+        hitters[s] = [r['person']['id'] for r in (doc or {}).get('roster') or []
+                      if ((r.get('position') or {}).get('type') or '') != 'Pitcher' and (r.get('person') or {}).get('id')][:9]
+    # the away hitters against the home starter
+    hs, pid = hitters['away'], sp['home']
+    asks = []
+    if hs:
+        h0 = hs[0]
+        asks += [('bvp_one', f'v1/people/{h0}/stats?stats=vsPlayer&group=hitting&opposingPlayerId={pid}', VS_KEYS),
+                 ('bvp_one_total', f'v1/people/{h0}/stats?stats=vsPlayerTotal&group=hitting&opposingPlayerId={pid}', VS_KEYS),
+                 ('bvp_batch', 'v1/people?personIds=' + ','.join(str(i) for i in hs) + '&hydrate='
+                  + quote(f'stats(group=[hitting],type=[vsPlayerTotal],opposingPlayerId={pid})', safe='()=,[]'), VS_KEYS),
+                 ('bvp_batch_seasons', 'v1/people?personIds=' + ','.join(str(i) for i in hs) + '&hydrate='
+                  + quote(f'stats(group=[hitting],type=[vsPlayer],opposingPlayerId={pid})', safe='()=,[]'), VS_KEYS)]
+    tid = ((teams.get('away') or {}).get('team') or {}).get('id')
+    asks += [('team_stats_all', f'v1/teams/stats?season={season}&sportIds=1&group=hitting,pitching&stats=season', TEAM_KEYS),
+             ('team_stats_one', f'v1/teams/{tid}/stats?season={season}&group=hitting,pitching&stats=season', TEAM_KEYS)]
+    out['bvp_players'] = {'hitters_away': hs, 'home_starter': pid}
+    for name, path, keys in asks:
+        info, doc = get(API + path)
+        info['shape'] = stats_shape(doc, keys)
+        out['checks'][name] = info
+
+
 def main():
     out = {'schema': 'brl.stats-probe.v1', 'at': datetime.now(timezone.utc).isoformat(), 'origin': ORIGIN, 'checks': {}}
     now = datetime.now(timezone.utc)
@@ -141,6 +197,10 @@ def main():
             game_log_checks(out, teams, season)
         except Exception as exc:                      # the probe's other answers still land
             out['gamelog_error'] = type(exc).__name__ + ': ' + str(exc)[:200]
+        try:
+            bvp_team_checks(out, teams, season)
+        except Exception as exc:
+            out['bvp_error'] = type(exc).__name__ + ': ' + str(exc)[:200]
         info, doc = get(API + f"v1.1/game/{game['gamePk']}/feed/live")
         if doc:
             bx = ((doc.get('liveData') or {}).get('boxscore') or {}).get('teams') or {}
