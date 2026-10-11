@@ -15,7 +15,7 @@ def _report():
     return mod
 
 
-def _season(rng, traits, season, n_pitch=900):
+def _season(rng, traits, season, n_pitch=1500):
     nh = len(traits['chase'])
     bat = np.repeat(np.arange(nh), n_pitch)
     n = len(bat)
@@ -32,22 +32,25 @@ def _season(rng, traits, season, n_pitch=900):
     p_sw = np.clip(p_sw, 0.01, 0.99)
     sw = rng.random(n) < p_sw
     group = rng.choice(np.array([0, 0, 3, 5]), n)
-    wh = sw & (rng.random(n) < np.clip(traits['whiff'][bat] + np.where(group == 3, traits['brk'][bat], 0.0), 0.01, 0.9))
+    v0 = np.where(group == 0, rng.choice(np.array([91.0, 91.0, 97.5]), n), 85.0)
+    wh = sw & (rng.random(n) < np.clip(traits['whiff'][bat] + np.where(group == 3, traits['brk'][bat], 0.0) + np.where(v0 >= 96, traits['velo'][bat], 0.0), 0.01, 0.9))
     call = np.where(~sw, 0, np.where(wh, 2, 1))
     day = 700000 + season * 400 + rng.integers(0, 180, n)
     return {'batter': bat + 1000, 'season': np.full(n, season), 'day': day, 'post': np.zeros(n, int), 'group': group, 'call': call,
             'balls': balls, 'strikes': strikes, 'px': px.astype(np.float32), 'pz': pz.astype(np.float32), 'zone': zone, 'stand_r': (np.arange(n) // n_pitch) % 2,
-            'bunt_pa': np.zeros(n, int), 'last_in_pa': np.zeros(n, int)}
+            'bunt_pa': np.zeros(n, int), 'last_in_pa': np.zeros(n, int), 'v0': v0.astype(np.float32)}
 
 
 def _traits(rng, nh):
     return {'chase': rng.normal(0.28, 0.07, nh), 'whiff': rng.normal(0.24, 0.06, nh), 'first': rng.normal(-0.36, 0.2, nh), 'two': rng.normal(0.0, 0.07, nh),
-            'brk': rng.normal(0.08, 0.08, nh)}
+            'brk': rng.normal(0.08, 0.08, nh), 'velo': rng.normal(0.05, 0.08, nh)}
 
 
-def _world(persist, seed=3, nh=160):
+def _world(persist, seed=3, nh=160, velo=False):
     rng = np.random.default_rng(seed)
     t1 = _traits(rng, nh); t2 = t1 if persist else _traits(rng, nh)
+    if not velo:
+        t1['velo'] = t1['velo'] * 0.0; t2['velo'] = t2['velo'] * 0.0
     parts = [_season(rng, t1, 1), _season(rng, t1, 2), _season(rng, t2, 3)]
     return {k: np.concatenate([p[k] for p in parts]) for k in parts[0]}
 
@@ -63,6 +66,8 @@ def test_tags_hold_when_habits_carry_over_and_not_when_redrawn():
     fam = B.tag_study(_world(True), lambda *a: None, dict(spec, families=True))['splits'][0]['relative_family_whiff']
     assert set(fam) == {'breaking', 'offspeed'} and fam['breaking']['hitters'] > 50 and fam['breaking']['corr_train_test'] > 0.4
     assert abs(fam['offspeed']['corr_train_test']) < 0.3                       # nothing planted on offspeed
+    vel = B.tag_study(_world(True, velo=True), lambda *a: None, dict(spec, velocity=True))['splits'][0]['relative_velocity_whiff']
+    assert vel['hitters'] > 50 and vel['corr_train_test'] > 0.3 and vel['tags']['late_on_velocity']['test_diff'] > 0.03
     rel = held['relative_two_strike']
     assert rel['corr_train_test'] > 0.5 and rel['tags']['expands_relative']['test_diff'] > 0.03
     null = B.tag_study(_world(False), lambda *a: None, spec)['splits'][0]

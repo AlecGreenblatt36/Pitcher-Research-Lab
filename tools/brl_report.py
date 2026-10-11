@@ -1286,12 +1286,15 @@ def tag_counts(T: dict, mask) -> dict:
     g = count_group(T['balls'][rows], T['strikes'][rows]); ooz = T['zone'][rows] >= 11
     first, two, behind = g == 0, g == 3, g == 2
     grp = T['group'][rows]; fb, br, os_ = np.isin(grp, (0, 1, 2, 6)), np.isin(grp, (3, 4)), grp == 5
+    v0 = np.nan_to_num(T['v0'][rows].astype(np.float64), nan=0.0) if 'v0' in T else np.zeros(len(rows))
     n = c(np.ones(len(rows), bool))
     return {'bats': bats, 'side': (c(T['stand_r'][rows] == 1) / np.maximum(n, 1) >= 0.5).astype(np.int64), 'n': n,
             'chase': (c(sw & outside), c(outside)), 'whiff': (c(wh), c(sw)), 'first': (c(sw & first), c(first)),
             'two': (c(sw & two & ooz), c(two & ooz)), 'other': (c(sw & ~two & ooz), c(~two & ooz)), 'behind': (c(sw & behind), c(behind)),
             # TAGS-03: misses per swing by pitch family
-            'wh_fb': (c(wh & fb), c(sw & fb)), 'wh_br': (c(wh & br), c(sw & br)), 'wh_os': (c(wh & os_), c(sw & os_))}
+            'wh_fb': (c(wh & fb), c(sw & fb)), 'wh_br': (c(wh & br), c(sw & br)), 'wh_os': (c(wh & os_), c(sw & os_)),
+            # TAGS-04: misses per swing on hard fastballs (96 mph and up) and on softer ones (under 93)
+            'wh_hi': (c(wh & fb & (v0 >= 96)), c(sw & fb & (v0 >= 96))), 'wh_lo': (c(wh & fb & (v0 < 93)), c(sw & fb & (v0 < 93)))}
 
 
 def _tag_league(tc: dict, rate: str, side_wise: bool) -> np.ndarray:
@@ -1386,6 +1389,32 @@ def tag_study(T: dict, stage, spec: dict) -> dict:
                 rtags[nm_] = {'threshold': sgn * sd, 'hitters': int(len(sel)), 'train_diff': float(rel_a[sel].mean()), 'test_diff': m_,
                               'test_ci': [float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5))]}
             res['relative_two_strike']['tags'] = rtags
+        if spec.get('velocity'):
+            # TAGS-04: his misses on hard fastballs minus on softer ones, net of the league's same difference on his side
+            def relv(tc):
+                hn, hd = tc['wh_hi']; ln, ld = tc['wh_lo']
+                ok_ = (hd >= 80) & (ld >= 150)
+                rh_ = np.where(ok_, hn / np.maximum(hd, 1e-9), np.nan); rl_ = np.where(ok_, ln / np.maximum(ld, 1e-9), np.nan)
+                return (rh_ - rl_) - (_tag_league(tc, 'wh_hi', True) - _tag_league(tc, 'wh_lo', True))
+            va, vb = relv(a), relv(b)
+            bothv = has_test & np.isfinite(va)
+            bothv[bothv] &= np.isfinite(vb[ti[bothv]])
+            xv, yv = va[bothv], vb[ti[bothv]]
+            ve = {'hitters': int(bothv.sum()), 'sd_train': float(np.std(xv)) if len(xv) else None,
+                  'corr_train_test': float(np.corrcoef(xv, yv)[0, 1]) if len(xv) >= 20 else None}
+            if len(xv) >= 20:
+                sdv = float(np.std(xv)); vt = {}
+                for nm_, sgn in (('late_on_velocity', 1), ('handles_velocity', -1)):
+                    sel = np.flatnonzero(bothv)[(xv * sgn) >= sdv]
+                    if not len(sel):
+                        continue
+                    j = ti[sel]; w = b['wh_hi'][1][j]; d = vb[j]
+                    bs = rng.integers(0, len(sel), size=(boot, len(sel)))
+                    means = (w * d)[bs].sum(1) / np.maximum(w[bs].sum(1), 1e-9)
+                    vt[nm_] = {'threshold': sgn * sdv, 'hitters': int(len(sel)), 'train_diff': float(va[sel].mean()),
+                               'test_diff': float((w * d).sum() / max(w.sum(), 1e-9)), 'test_ci': [float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5))]}
+                ve['tags'] = vt
+            res['relative_velocity_whiff'] = ve
         if spec.get('families'):
             # TAGS-03: his misses per swing on breaking balls (and offspeed) minus on fastballs, net of the league's same
             # difference on his side: season-to-season correlation and tags at one standard deviation
