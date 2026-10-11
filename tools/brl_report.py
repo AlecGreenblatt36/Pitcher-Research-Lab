@@ -1964,7 +1964,7 @@ def build_players(fit: Fitted, asof: str, stage) -> tuple[dict, dict]:
     shards = {}
     for h, card in hitters.items():
         w = who.get(h, {}); oc = card.get('own_cost') or {}
-        index['hitters'][str(h)] = {'name': w.get('name') or str(h), 'team': w.get('team') or '', 'side': card['side'], 'pitches': card['pitches'],
+        index['hitters'][str(h)] = {'name': w.get('name') or str(h), 'team': w.get('team') or '', 'side': 'S' if card.get('side_by_hand') else card['side'], 'pitches': card['pitches'],
                                     'chase_rate': card.get('chase_rate'), 'whiff_rate': card.get('whiff_rate'), 'own_cost': oc.get('runs_per_600_pa'),
                                     'own_cost_outside': oc.get('outside_runs_per_600_pa'), 'own_cost_inside': oc.get('inside_runs_per_600_pa'),
                                     **index_line(card, PCT_HITTER)}
