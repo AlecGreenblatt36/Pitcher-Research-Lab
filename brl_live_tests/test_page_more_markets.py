@@ -62,3 +62,11 @@ def test_markets_show_only_when_switched_on():
     assert 'tied after five 20%, a push' in on and 'LAD <b>37%</b>' in on and 'MIL <b>63%</b>' in on   # 0.3/0.8 and 0.5/0.8
     assert 'Over <b>60%</b>' in on and 'Under <b>40%</b>' in on                       # five or more through five: 600 of 1,000
     assert 'A run <b>52%</b>' in on and 'No run <b>48%</b>' in on
+
+
+def test_day_form_worlds_take_over_the_market_numbers_when_the_box_has_them():
+    """DISP-03: with market worlds in the box, the run line reads their margins; without, the plain ones."""
+    box = dict(BOX, market_worlds={'n': 1000, 'margin_distribution': {'n': 1000, 'counts': [[-3, 150], [-1, 250], [1, 200], [3, 400]]},
+                                   'total_run_distribution': {'n': 1000, 'counts': [[5, 500], [9, 500]]}})
+    got = json.loads(_run('process.stdout.write(JSON.stringify(runLineMarket(' + json.dumps(F) + ',' + json.dumps(box) + ',null)));', 0.51, {}))
+    assert got['fav'] == 'home' and abs(got['p'] - 0.51 * 400 / 600) < 1e-12        # by two or more given a win: 400 of 600

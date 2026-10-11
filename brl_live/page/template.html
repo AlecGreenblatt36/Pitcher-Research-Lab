@@ -4546,7 +4546,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     };
     var h = '<div class="tbl-wrap board-wrap"><table class="box price-board"><thead><tr><th scope="col"><span class="visually-hidden">Team</span></th><th scope="col">' + esc(mkt.provider || "Line") + '</th><th scope="col">Our fair price</th></tr></thead><tbody>' +
       row("away", mkt.away_ml, ph == null ? null : 1 - ph) + row("home", mkt.home_ml, ph);
-    var tr = box && box.total_run_distribution ? dist(box.total_run_distribution) : null, pov = null;
+    var tr = marketTotal(box) || (box && box.total_run_distribution ? dist(box.total_run_distribution) : null), pov = null;
     if (tr && mkt.over_under != null) {
       var L0 = Number(mkt.over_under), ov = 0, un = 0;
       tr.counts.forEach(function (x) { if (x[0] > L0) ov += x[1]; else if (x[0] < L0) un += x[1]; });
@@ -4555,6 +4555,10 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (mkt.over_under != null) h += '<tr><th scope="row">Total ' + esc(mkt.over_under) + "</th><td>o" + amText(mkt.over_odds) + " / u" + amText(mkt.under_odds) + "</td><td>" + (pov != null ? "o" + amOdds(pov) : "\u2013") + "</td></tr>";
     return h + '</tbody></table></div><p class="note">' + esc(mkt.provider || "The book") + "'s prices at " + esc(timeET(mkt.captured_at)) + " ET. Our fair price is our pick as American odds with no margin: below \u2212100 favored, above +100 not. For the total, the simulator's chance of the over, a push left out.</p>";
   }
+  /* The total's distribution for the market numbers: from the day-form worlds when the live run adds them (DISP-03: the
+     total's over and under and the run line come from worlds as spread out as real games, win chances from the plain ones),
+     else the plain worlds. */
+  function marketTotal(box) { return box && box.market_worlds ? dist(box.market_worlds.total_run_distribution) : null; }
   /* Markets beyond the moneyline and the total, each shown only once its check held on two seasons re-run (RUNLINE-01,
      FIRST5-01, NRFI-01; until then false). The run line keeps the pick: our win chance times the simulator's chance of
      winning by two or more once a team wins, over the same worlds, so the two scores' dependence is kept. The first five
@@ -4566,7 +4570,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   /* the run line's favorite lays the run and a half: the book's moneyline favorite when there is a line (so the two sides
      match the book's), else our pick's; its chance is our win chance for it times the simulator's by-two-or-more given a win */
   function runLineMarket(f, box, mkt) {
-    var m = box && dist(box.margin_distribution), ph = homeProb(f);
+    var m = box && (dist((box.market_worlds || {}).margin_distribution) || dist(box.margin_distribution)), ph = homeProb(f);
     if (!m || ph == null) return null;
     var hw = mmShare(m, function (k) { return k > 0; }), h2 = mmShare(m, function (k) { return k >= 2; });
     var aw = mmShare(m, function (k) { return k < 0; }), a2 = mmShare(m, function (k) { return k <= -2; });
@@ -4633,18 +4637,19 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       h += '<div class="legend"><span><i class="key" style="background:var(--away)"></i>' + esc(nickname(f.away.name)) + '</span><span><i class="key" style="background:var(--home)"></i>' + esc(nickname(f.home.name)) + "</span></div>";
       h += runsChart(ra, rh) + "</section>";
     }
-    var tr = box.total_run_distribution ? dist(box.total_run_distribution) : null;
+    var tr = box.total_run_distribution ? dist(box.total_run_distribution) : null, trm = marketTotal(box) || tr;
     if (tr) {
       var mkt2 = D.market && D.market[f.game_pk], mline = "";
       if (mkt2 && mkt2.over_under != null) {
-        /* the simulator's chance of the over, a push left out, as the replays score it (tools/replay_compare.py p_over) */
+        /* the simulator's chance of the over, a push left out, as the replays score it (tools/replay_compare.py p_over);
+           from the day-form worlds when the box has them (DISP-03) */
         var L0 = Number(mkt2.over_under), ov = 0, un = 0;
-        tr.counts.forEach(function (x) { if (x[0] > L0) ov += x[1]; else if (x[0] < L0) un += x[1]; });
+        trm.counts.forEach(function (x) { if (x[0] > L0) ov += x[1]; else if (x[0] < L0) un += x[1]; });
         mline = " Vegas total: " + mkt2.over_under + "." + (ov + un ? " Over " + mkt2.over_under + (L0 === Math.round(L0) ? " (a push left out)" : "") + ": simulator " + pct(ov / (ov + un)) + (mkt2.p_over != null ? ", Vegas " + pct(mkt2.p_over) : "") + "." : "");
       }
       var taughtTotal = (mkt2 && mkt2.over_under != null && f.date >= TOTAL_TAUGHT.from) ? (TOTAL_TAUGHT.sim * mean(tr) + TOTAL_TAUGHT.line * Number(mkt2.over_under) + TOTAL_TAUGHT.shift) : null;
       h += '<section class="sec"><h2>Total runs</h2><p class="lede">' + (taughtTotal != null ? "We expect " + taughtTotal.toFixed(1) + " runs: the simulator\'s " + mean(tr).toFixed(1) + " mixed with the Vegas total (over two seasons re-run, the mix beat the Vegas total on its own). " : "We expect " + mean(tr).toFixed(1) + " runs. ") +
-        "Most likely " + mode(tr) + ". Half of games land between " + quant(tr, .25) + " and " + quant(tr, .75) + ". " + pct(probAtLeast(tr, 10)) + " reach 10 or more." + esc(mline) + "</p></section>";
+        "Most likely " + mode(trm) + ". Half of games land between " + quant(trm, .25) + " and " + quant(trm, .75) + ". " + pct(probAtLeast(trm, 10)) + " reach 10 or more." + esc(mline) + "</p></section>";
     }
 
     h += moreMarkets(f, box, mkt);
