@@ -4447,14 +4447,16 @@
     "columns": {
      "ID": "TAGS-02",
      "Attempt": "The plans' third count line, checked like TAGS-01: \"In hitter's counts he gets aggressive\" (countPlan) when his swing rate with the pitcher behind (1-0, 2-0, 3-0, 2-1, 3-1) is 10 points or more over his side's league, rows of 80 pitches. Same splits, hitters, weighting and intervals as TAGS-01 (tag_study with extra).",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Prediction: the tagged hitters swing at least 5 points more than the league with the pitcher behind on the test pitches in both seasons, interval excluding zero. Decision rule: if it fails in either season, the line comes off the plans.",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Prediction: the tagged hitters swing at least 5 points more than the league with the pitcher behind on the test pitches in both seasons, interval excluding zero. Decision rule: if it fails in either season, the line comes off the plans. **Results (run 38111153832):** 55 and 62 hitters tagged (35 and 45 with 200 or more test pitches); with the pitcher behind they swung +11.3 points over the league [9.3, 13.1] on 2026 pitches before August (training +13.9) and +11.1 [9.3, 12.7] on 2025 (training +13.5). **Held in both seasons; the line stays.**",
+     "Delta corrected Brier, 2026": "held: +11.3 and +11.1 points"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38111153832"
+    ],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "held: +11.3 and +11.1 points"
    }
   ],
   "ZONES-01": [
