@@ -2434,7 +2434,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   };
   function muCell(v, m) {
     var edge = m.hitter * (v - m.league) / m.league, a = Math.min(0.55, Math.abs(edge) * 0.9);
-    var bg = edge >= 0 ? "rgba(240,178,58," + a.toFixed(3) + ")" : "rgba(46,125,154," + a.toFixed(3) + ")";
+    var bg = edge >= 0 ? "rgba(205,44,38," + a.toFixed(3) + ")" : "rgba(33,102,172," + a.toFixed(3) + ")";
     var txt = m.league < 0.05 ? (v * 100).toFixed(1) + "%" : Math.round(v * 100) + "%";
     return '<td style="background:' + bg + '">' + txt + "</td>";
   }
@@ -2443,7 +2443,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (!mu || mu.error || !mu.away) return '<p class="empty">The hitter-against-pitcher grid is not part of this forecast.</p>';
     var key = MU_METRICS[state.muMetric] ? state.muMetric : "obp", m = MU_METRICS[key];
     var h = '<section class="sec wide"><h2>Hitter against pitcher</h2><p class="lede">Each hitter against the starter and the relievers most likely to pitch: our chance for one at-bat, bases empty, nobody out, tie game. ' +
-      "Gold favors the hitter, blue the pitcher, against the league rate of " + (m.league < 0.05 ? (m.league * 100).toFixed(1) : Math.round(m.league * 100)) + "%.</p>";
+      "Red favors the hitter, blue the pitcher, against the league rate of " + (m.league < 0.05 ? (m.league * 100).toFixed(1) : Math.round(m.league * 100)) + "%.</p>";
     h += '<div class="seg" role="group" aria-label="Which chance">' + Object.keys(MU_METRICS).map(function (k2) {
       return '<button data-mumetric="' + k2 + '" aria-pressed="' + (k2 === key) + '">' + MU_METRICS[k2].label + "</button>";
     }).join("") + "</div></section>";
@@ -2474,7 +2474,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   function rpCell(v, m, key, sel) {
     if (v == null) return '<td class="rp-cell" data-rp="' + key + '">–</td>';
     var edge = m.good * v / m.scale, a = Math.min(0.55, Math.abs(edge) * 0.35);
-    var bg = edge >= 0 ? "rgba(46,125,154," + a.toFixed(3) + ")" : "rgba(240,178,58," + a.toFixed(3) + ")";
+    var bg = edge >= 0 ? "rgba(33,102,172," + a.toFixed(3) + ")" : "rgba(205,44,38," + a.toFixed(3) + ")";
     return '<td class="rp-cell' + (sel ? " rp-sel" : "") + '" data-rp="' + key + '" style="background:' + bg + '">' + m.fmt(v) + "</td>";
   }
   /* The model's 7x7 grid, kept in the hitter's own frame (negative side values inside); drawn from the catcher's view,
@@ -2485,7 +2485,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     for (var r = gz.length - 1; r >= 0; r--) for (var c0 = 0; c0 < gu.length; c0++) {
       var c = lefty ? gu.length - 1 - c0 : c0;
       var k = r * gu.length + c, v = grid ? grid[k] : 0, a = Math.min(0.85, Math.abs(v) / scale);
-      var bg = v >= 0 ? "rgba(240,178,58," + a.toFixed(3) + ")" : "rgba(46,125,154," + a.toFixed(3) + ")";
+      var bg = v >= 0 ? "rgba(205,44,38," + a.toFixed(3) + ")" : "rgba(33,102,172," + a.toFixed(3) + ")";
       if (cloud) { v = Math.round(100 * cloud[k]); bg = "rgba(23,35,28," + (0.85 * cloud[k] / cmax).toFixed(3) + ")"; }
       var inz = Math.abs(gu[c]) < 0.83 && gz[r] > 1.5 && gz[r] < 3.5;
       var aimAt = (aim || []).filter(function (p) { return Math.abs(p[0] - gu[c]) < 0.01 && Math.abs(p[1] - gz[r]) < 0.01; })[0];
@@ -3046,7 +3046,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       /* the model's own finer grids, where the plan comes from, kept one tap away */
       var hasCloud = ck === "all" && pr2.aim.dangerous_miss && Object.keys(pr2.aim.dangerous_miss).some(function (fam) { return pr2.aim.dangerous_miss[fam].cloud; });
       if (hasCloud) model += '<div class="seg" role="group" aria-label="What the grid shows"><button data-rpcloud="0" aria-pressed="' + !state.rpCloud + '">His swings</button><button data-rpcloud="1" aria-pressed="' + !!state.rpCloud + '">Where the pitches end up</button></div>';
-      model += '<p class="note">Our swing model on a finer grid: gold where he swings more than most hitters, blue less. Circles are pitches out of the zone to throw him (filled where he chases, open where he takes a strike on the edge); squares are strikes (filled where he takes more than most hitters, open where he can\'t do much with it). Catcher\'s view.</p><div class="rp-cards">';
+      model += '<p class="note">Our swing model on a finer grid: red where he swings more than most hitters, blue less. Circles are pitches out of the zone to throw him (filled where he chases, open where he takes a strike on the edge); squares are strikes (filled where he takes more than most hitters, open where he can\'t do much with it). Catcher\'s view.</p><div class="rp-cards">';
       shown.forEach(function (fam) {
         var own = hc.own_chase && hc.own_chase[fam], mix = pc && pc.mix && pc.mix[fam];
         if (!own) return;
@@ -3060,7 +3060,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var ms_ = ["fastball", "breaking", "offspeed"].filter(function (fam) { return pr2.miss_spots[fam] && pr2.miss_spots[fam].cells.length; });
       if (ms_.length) h += '<p class="note">Two strikes, to get a swing and miss: ' + esc(ms_.map(function (fam) { return PITCH_PL[fam] + " " + spotPhrase(pr2.miss_spots[fam].cells[0]); }).join(", ")) + ".</p>";
     }
-    if (hc && hc.whiff_grid) model += '<div class="rp-cards" style="margin-top:14px"><div class="rp-card"><h4>Where he swings and misses</h4><div class="lbl">Gold: more than most hitters. Blue: less.</div>' + rpGrid(doc, hc.whiff_grid, null, "where he swings and misses", 0.5, null, null, hc.side === "L") + "</div>" +
+    if (hc && hc.whiff_grid) model += '<div class="rp-cards" style="margin-top:14px"><div class="rp-card"><h4>Where he swings and misses</h4><div class="lbl">Red: more than most hitters. Blue: less.</div>' + rpGrid(doc, hc.whiff_grid, null, "where he swings and misses", 0.5, null, null, hc.side === "L") + "</div>" +
       (hc.zone_top_ft != null ? '<div class="rp-card"><h4>His strike zone</h4><div class="lbl">Top ' + hc.zone_top_ft + " ft, bottom " + hc.zone_bottom_ft + " ft, from the umpires' calls on him. " + Number(hc.pitches).toLocaleString() + " pitches seen.</div></div>" : "") + "</div>";
     if (model) h += '<details class="more" data-keep="model"' + (state.rpOpen.model ? " open" : "") + "><summary>Our swing model's grids</summary>" + model + "</details>";
     var v = planValue(pr2);
@@ -3402,7 +3402,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
             h += '<p class="note">His swing decisions are worth <b>' + fmtCost(tot) + " runs</b> a season next to an average hitter seeing the same pitches (" + fmtCost(oc.outside_runs_per_600_pa) + " on balls, " + fmtCost(oc.inside_runs_per_600_pa) + " on strikes)." +
               (why.length ? (tot != null && tot < 0 ? " Most of it comes from " : " Where he still gives some back: ") + esc(why.join(", and ")) + "." : "") + "</p>";
           }
-          var grids = '<p class="note">Where he swings, by pitch type, from our swing model. Gold: more than most hitters on his side. Blue: less. Catcher\'s view.' + (x.zone_top_ft != null ? " His strike zone runs " + x.zone_bottom_ft + " to " + x.zone_top_ft + " ft off the ground." : "") + "</p>";
+          var grids = '<p class="note">Where he swings, by pitch type, from our swing model. Red: more than most hitters on his side. Blue: less. Catcher\'s view.' + (x.zone_top_ft != null ? " His strike zone runs " + x.zone_bottom_ft + " to " + x.zone_top_ft + " ft off the ground." : "") + "</p>";
           grids += '<div class="rp-cards">';
           ["fastball", "breaking", "offspeed"].forEach(function (fam) {
             var own = x.own_chase && x.own_chase[fam]; if (!own) return;
@@ -3410,7 +3410,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
             grids += '<div class="rp-card"><h2 class="card-h">' + PITCH_NAME[fam] + "</h2>" + rpGrid(doc, own.grid, null, PITCH_NAME[fam] + ": where he swings", 0.8, null, null, x.side === "L") +
               (top.length ? '<div class="lbl">Chases it most ' + esc(listNames(top)) + ".</div>" : '<div class="lbl">Doesn\'t chase this pitch more than most hitters.</div>') + "</div>";
           });
-          if (x.whiff_grid) grids += '<div class="rp-card"><h2 class="card-h">Where he swings and misses</h2><div class="lbl">Gold: more than most hitters on his side. Blue: less.</div>' + rpGrid(doc, x.whiff_grid, null, "where he swings and misses", 0.5, null, null, x.side === "L") + "</div>";
+          if (x.whiff_grid) grids += '<div class="rp-card"><h2 class="card-h">Where he swings and misses</h2><div class="lbl">Red: more than most hitters on his side. Blue: less.</div>' + rpGrid(doc, x.whiff_grid, null, "where he swings and misses", 0.5, null, null, x.side === "L") + "</div>";
           grids += "</div>";
           h += x.zones ? '<details class="more" id="pl-model"' + (state.rpOpen.plModel ? " open" : "") + "><summary>Our swing model's grids</summary>" + grids + "</details>" : grids;
         } else {
