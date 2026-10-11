@@ -1850,6 +1850,59 @@ def tto_study(T: dict, stage, spec: dict) -> dict:
     return out
 
 
+# CHANGE-01 (LEDGER): do the season-over-season changes the hitter pages call out hold the next season? The page's rule
+# (hitterChanges): a rate moved at least `min` and at least three standard errors between two seasons of 200 or more.
+CHANGE_RATES = (('chase', 'chases', 'outside', 0.03), ('whiff', 'misses', 'swings', 0.03), ('k', 'k', 'pa', 0.03), ('bb', 'bb', 'pa', 0.03),
+                ('hard', 'hard', 'bbe', 0.05))
+
+
+def change_study(T: dict, stage, spec: dict) -> dict:
+    """CHANGE-01 (LEDGER): for hitters with min_pa or more plate appearances in each of three seasons, the rate changes the
+    page flags from the first season to the second, and how much of each flagged change was still there in the third
+    (the third season's rate minus the first's, over the flagged change, pooled over hitters); unflagged changes as a
+    reference; intervals from resampling hitters. Aggregates only."""
+    reg = (T['post'] == 0) if 'post' in T else np.ones(len(T['season']), bool)
+    boot = int(spec.get('boot', 2000)); min_pa = float(spec.get('min_pa', 200)); min_pa_test = float(spec.get('min_pa_test', 150))
+    rng = np.random.default_rng(int(spec.get('seed', 20261011)))
+    call = T['call']; swing = ((call == 1) | (call == 2)).astype(np.float64); whiff = (call == 2)
+    px, pz = T['px'].astype(np.float64), T['pz'].astype(np.float64)
+    outside = np.isfinite(px) & np.isfinite(pz) & ((np.abs(px) > D.ZONE_HALF) | (pz > D.ZONE_TOP) | (pz < D.ZONE_BOT))
+    lines = {}
+    for y in spec.get('seasons', (2023, 2024, 2025, 2026)):
+        m = reg & (T['season'] == int(y))
+        if spec.get('test_end') and int(y) == max(spec.get('seasons', (2023, 2024, 2025, 2026))):
+            m &= T['day'] < date.fromisoformat(spec['test_end']).toordinal()
+        lines[int(y)] = player_lines(T, m, swing, whiff, outside, 'batter')
+    stage('change study: lines')
+    out = {'windows': {}}
+    for label, (y0, y1, y2) in (('train', (2023, 2024, 2025)), ('test', (2024, 2025, 2026))):
+        L0, L1, L2 = lines.get(y0, {}), lines.get(y1, {}), lines.get(y2, {})
+        ids = [h for h in L1 if h in L0 and h in L2 and L0[h]['pa'] >= min_pa and L1[h]['pa'] >= min_pa and L2[h]['pa'] >= min_pa_test]
+        res = {'hitters': len(ids)}
+        for name, num, den, floor in CHANGE_RATES:
+            fl, ref = [], []
+            for h in ids:
+                n0, n1, n2 = L0[h][den], L1[h][den], L2[h][den]
+                if not (n0 and n1 and n2):
+                    continue
+                p0, p1, p2 = L0[h][num] / n0, L1[h][num] / n1, L2[h][num] / n2
+                d = p1 - p0; se = np.sqrt(p1 * (1 - p1) / n1 + p0 * (1 - p0) / n0)
+                row = (np.sign(d) * (p2 - p0), abs(d), h)
+                (fl if abs(d) >= floor and abs(d) >= 3 * se else ref).append(row)
+            def held(rows):
+                if not rows:
+                    return None
+                a = np.array([r[0] for r in rows]); b_ = np.array([r[1] for r in rows])
+                draws = rng.integers(0, len(rows), (boot, len(rows)))
+                bs = a[draws].sum(1) / np.maximum(b_[draws].sum(1), 1e-12)
+                return {'n': len(rows), 'mean_change_points': round(float(100 * b_.mean()), 2), 'held': round(float(a.sum() / max(b_.sum(), 1e-12)), 3),
+                        'ci': [round(float(np.percentile(bs, 2.5)), 3), round(float(np.percentile(bs, 97.5)), 3)]}
+            res[name] = {'flagged': held(fl), 'unflagged': held(ref)}
+        out['windows'][label] = res
+    stage('change study: done')
+    return out
+
+
 # SPLITS-01 (LEDGER): how much of a hitter's split by pitcher hand carries over. The metrics the splits table shows:
 # AVG and SLG on at-bats ended on the pitch, chase on pitches out of MLB's zone (11-14), misses per swing.
 SPLIT_M_GRID = (0.0, 25.0, 50.0, 100.0, 200.0, 400.0, 800.0, 1600.0, 3200.0, 6400.0, 1e6)
@@ -3056,6 +3109,9 @@ def main():
             dates = []
         if params.get('split_study'):
             receipt['split_study'] = split_shrink_study(T, stage, params['split_study'])
+            dates = []
+        if params.get('change_study'):
+            receipt['change_study'] = change_study(T, stage, params['change_study'])
             dates = []
         if params.get('tto_study'):
             receipt['tto_study'] = tto_study(T, stage, params['tto_study'])

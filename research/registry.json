@@ -2,7 +2,7 @@
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
  "experiments": 297,
- "rows": 300,
+ "rows": 301,
  "records": {
   "ACC-01": [
    {
@@ -3199,6 +3199,20 @@
     ],
     "frozen_commits": [],
     "status": "failed: -0.00004 [-0.0008, +0.0006] runs/PA/mph; whiffs -0.0002"
+   },
+   {
+    "id": "CHANGE-01",
+    "columns": {
+     "ID": "CHANGE-01",
+     "Attempt": "Do the changes the hitter pages call out hold? The page says a hitter's chase, miss, strikeout, walk or hard-hit rate changed since last season when it moved at least 3 points (5 for hard-hit) and at least three standard errors between two seasons of 200 or more plate appearances (hitterChanges). For hitters with 200 or more plate appearances in three straight seasons (150 in 2026 before August 1), the changes flagged from the first season to the second, and how much of each was still there in the third: the third season's rate minus the first's over the flagged change, pooled over hitters, with unflagged changes as a reference and intervals from resampling hitters (2,000 draws). Windows: 2023 to 2024 then 2025, and 2024 to 2025 then 2026 (the test). tools/brl_report.py change_study, report lane, aggregates only. Synthetic check (brl_live_tests/test_report_change_study.py): lasting strikeout changes held above 0.8, reverting ones under 0.2.",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions on the 2026 window: (1) flagged strikeout and walk rate changes held at least 60%, interval excluding zero; (2) flagged chase and miss rate changes held at least 50%; (3) flagged hard-hit changes held at least 30%. Decision rule: the changes line says how much of changes like these held a season later, rate by rate; a rate whose flagged changes held under 30% or with an interval including zero is dropped from the line.",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "STANCE-01": [
