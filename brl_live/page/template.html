@@ -468,6 +468,7 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .hz-g { fill: var(--ink); stroke: var(--surface); stroke-width: 1.4; pointer-events: none; }
 .hz-g.open { fill: var(--surface); stroke: var(--ink); stroke-width: 1.8; }
 .hz-io { display: flex; justify-content: space-between; font-size: 14px; line-height: 1.3; color: var(--muted); padding: 2px 2px 0; }
+.hz-io b { font-weight: 700; color: var(--ink); }
 .hz-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px 14px; margin: 4px 0 6px; }
 @media (min-width: 720px) { .hz-row { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); } .hz-card { max-width: 240px; } }
 .hz-card { min-width: 0; }
@@ -2591,7 +2592,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       s += kind === "chase" || kind === "take" ? '<circle class="hz-g' + (open ? " open" : "") + '" cx="' + gx.toFixed(2) + '" cy="' + gy.toFixed(2) + '" r="4.2"/>' : '<rect class="hz-g' + (open ? " open" : "") + '" x="' + (gx - 3.8).toFixed(2) + '" y="' + (gy - 3.8).toFixed(2) + '" width="7.6" height="7.6" rx="1"/>';
     });
     s += "</svg>";
-    return '<div class="hz">' + s + '<div class="hz-io" aria-hidden="true"><span>' + (side === "L" ? "Away" : "In") + "</span><span>" + (side === "L" ? "In" : "Away") + "</span></div></div>";
+    return '<div class="hz">' + s + '<div class="hz-io" aria-hidden="true"><span>' + (side === "L" ? "Away" : "In") + "</span>" + (o.tag ? "<b>" + esc(o.tag) + "</b>" : "") + "<span>" + (side === "L" ? "In" : "Away") + "</span></div></div>";
   }
   /* The slash-line strip over a hitter's charts: his numbers against this hand from the same counts. */
   function hzLine(cells, lgCells) {
@@ -2967,7 +2968,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       (wide ? HZ_FAMS : [fam]).forEach(function (fm) {
         var cells = card ? hzCells(card.zones, useHand, fm[0]) : null;
         if (!cells) return;
-        chart += '<div class="pl-hz-f">' + (wide ? "<small>" + esc(fm[1]) + "</small>" : "") + hzChart(cells, { metric: k, side: card.side, lg: hzLeague(doc.league, card.side, useHand, fm[0]), label: nm(hid) + ": " + HZ_METRICS[k].label + " by zone, " + fm[1].toLowerCase() + " from " + hzHandWords(useHand) }) + "</div>";
+        chart += '<div class="pl-hz-f">' + (wide ? "<small>" + esc(fm[1]) + "</small>" : "") + hzChart(cells, { metric: k, side: card.side, lg: hzLeague(doc.league, card.side, useHand, fm[0]), tag: HZ_METRICS[k].label, label: nm(hid) + ": " + HZ_METRICS[k].label + " by zone, " + fm[1].toLowerCase() + " from " + hzHandWords(useHand) }) + "</div>";
       });
       if (chart) chart = '<div class="pl-hz' + (wide ? " wide" : "") + '">' + chart + "</div>";
       if (spots && !spot && !benchShown) { h += '<li class="plan-bench">Off the bench</li>'; benchShown = true; }
