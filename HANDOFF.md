@@ -79,7 +79,13 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   screen); a hitter's full plan has his line, a by-pitch-type table and the charts with the plan's zones outlined;
   the live at-bat card the same for the count in progress; pitcher cards list the arsenal as a table. The model's
   7x7 grids moved into folds and now flip for lefties (they were drawn in the hitter's frame but labeled catcher's
-  view). Pages f059767b4 and 922a607b0. Earlier tonight (4b14c77e7): the live box score and plays show the real game
+  view). Pages f059767b4 and 922a607b0. Then: pitcher cards carry zone counts by batter side (pitcher_card['zones'],
+  zone_split(by='stand_r'), 14110f083; rebuilt in run 38100865499), drawn as "Where he pitches" (Pitch %: each zone's
+  share of his pitches, red above an even spread of one in thirteen; or AVG, SLG, swing and miss against) on the
+  Players page, under a hitter's full plan (to his side) and folded in the live at-bat card; plan rows carry a
+  lineup-card line (AVG, SLG, chase, miss against the starter's hand) and the starter's arsenal table one tap above
+  each sheet; one color rule site-wide (red favors the hitter, blue the pitcher; the matchup and model grids were
+  gold for the hitter); each zone's number is white or dark by contrast. Earlier tonight (4b14c77e7): the live box score and plays show the real game
   from first pitch, in batting order with substitutes under their spot, and no longer list the DH team's pitcher as
   a batter.
 
