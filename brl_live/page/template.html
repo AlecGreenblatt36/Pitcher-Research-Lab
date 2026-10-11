@@ -317,6 +317,8 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .box td:first-child { font-family: var(--body); font-size: 16px; }
 .box td .spot { display: inline-block; width: 18px; color: var(--muted); font-size: 14px; }
 .box td.avg { color: var(--muted); }
+.splits-wrap { max-width: 520px; }
+.splits th[scope="row"] { text-align: left; font-weight: 700; color: var(--ink); border-bottom: 1px solid var(--rule-soft); font-family: var(--body); font-size: 16px; }
 .box td .sub { display: block; color: var(--muted); font-size: 14px; font-family: var(--body); }
 .box tr.tot td { font-weight: 700; border-top: 1px solid var(--ink); border-bottom: 0; }
 .box tr.sub td:first-child { padding-left: 22px; color: var(--muted); }
@@ -3506,6 +3508,24 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     return out;
   }
   /* A lineup card's line for a hitter against this hand: AVG and SLG, chase and miss rates, from the zone counts. */
+  /* Splits by the other side's hand, the standard table: at-bats ending in the zones give AVG and SLG; chases (MLB zones
+     11-14) and misses from his pitches. Hitters by the pitcher's hand, pitchers by the batter's side; both seasons, from
+     the card's zone counts. */
+  function splitsTable(card, kind, asof) {
+    var z = card && card.zones;
+    if (!z || !hzSplit(z)) return "";
+    var body = "";
+    [["R", kind === "hitter" ? "vs RHP" : "vs RHB"], ["L", kind === "hitter" ? "vs LHP" : "vs LHB"]].forEach(function (r) {
+      var c = hzCells(z, r[0], "all");
+      if (!c) return;
+      var t = hzTotal(c), o = hzTotal(c.filter(function (x) { return x[0] >= 11; }));
+      if (t[4] < 10) return;
+      body += '<tr><th scope="row">' + r[1] + "</th><td>" + t[4] + "</td><td>" + hzFmt(HZ_METRICS.avg, t[5] / t[4]) + "</td><td>" + hzFmt(HZ_METRICS.slg, t[6] / t[4]) + "</td><td>" + (o[1] ? Math.round(100 * o[2] / o[1]) + "%" : "\u2013") + "</td><td>" + (t[2] ? Math.round(100 * t[3] / t[2]) + "%" : "\u2013") + "</td></tr>";
+    });
+    if (!body) return "";
+    return '<h2 class="hz-h2">Splits</h2><div class="tbl-wrap splits-wrap"><table class="box splits"><thead><tr><th scope="col"><span class="visually-hidden">Split</span></th><th scope="col">AB</th><th scope="col">AVG</th><th scope="col">SLG</th><th scope="col">Chase</th><th scope="col">Miss</th></tr></thead><tbody>' + body +
+      '</tbody></table></div><p class="note">' + (kind === "hitter" ? "By the pitcher's hand" : "Hitters against him, by their side") + ", " + esc(hzSeasons(asof)) + ". AB: at-bats ending on a pitch in the zones. Chase: swings at pitches out of the zone. Miss: misses per swing.</p>";
+  }
   function hzStatLine(card, hand) {
     var c = card && card.zones ? hzCells(card.zones, hand, "all") : null;
     if (!c) return "";
@@ -4329,6 +4349,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
           if (!x.zones) h += '<p class="pd-line">Chases ' + (x.chase_rate != null ? pct(x.chase_rate) : "–") + " of pitches out of the zone (league " + (lg.chase_rate != null ? pct(lg.chase_rate) : "–") + "). Misses on " + (x.whiff_rate != null ? pct(x.whiff_rate) : "–") + " of his swings (league " + (lg.whiff_rate != null ? pct(lg.whiff_rate) : "–") + ").</p>";
           if (tags.length) h += '<div class="pl-tags" style="margin:0 0 10px">' + tags.map(function (s) { return "<span>" + esc(s) + "</span>"; }).join("") + "</div>";
           if (hitterChanges(x)) h += '<p class="pd-line">' + esc(hitterChanges(x)) + "</p>";
+          h += splitsTable(x, "hitter", doc.asof);
           if (x.zones) {
             /* the standard hot zones: against both hands or one, by pitch type */
             var split = hzSplit(x.zones), hh = split && (state.hzHand === "R" || state.hzHand === "L") ? state.hzHand : "all";
@@ -4368,10 +4389,13 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
           if (ptg.length) h += '<div class="pl-tags" style="margin:0 0 10px">' + ptg.map(function (s0) { return "<span>" + esc(s0) + "</span>"; }).join("") + "</div>";
           h += '<p class="pd-line">Hitters chase ' + (x.chase_rate_against != null ? pct(x.chase_rate_against) : "\u2013") + " of his pitches out of the zone (league " + (lg.chase_rate != null ? pct(lg.chase_rate) : "\u2013") + "). " +
             (x.looks_in_ends_out != null ? pct(x.looks_in_ends_out) + " of his pitches look like strikes when the hitter has to decide, then end up balls (league " + (lg.looks_in_ends_out != null ? pct(lg.looks_in_ends_out) : "\u2013") + ")." : "") + "</p>";
+          h += splitsTable(x, "pitcher", doc.asof);
           /* the arsenal the way every scouting sheet lists it, then where each pitch goes to each side */
           var fams = ["fastball", "breaking", "offspeed"].filter(function (fam) { return mix[fam] && mix[fam].share >= 0.005; });     /* a pitch he all but never throws gets no row */
-          if (x.arsenal && x.arsenal.length) h += arsenalTypes(x, lg);
-          if (arsenalChanges(x)) h += '<p class="pd-line">' + esc(arsenalChanges(x)) + "</p>";
+          if (x.arsenal && x.arsenal.length) {
+            h += arsenalTypes(x, lg);
+            if (arsenalChanges(x)) h += '<p class="pd-line">' + esc(arsenalChanges(x)) + "</p>";
+          }
           else if (fams.length) h += arsenalTable(mix) + '<p class="note">Miss: misses per swing. Chase: swings at his pitches out of the zone. Zone: pitches in the strike zone. Put away: strikeouts per two-strike pitch of that type.</p>';
           if (x.usage) h += '<h2 class="hz-h2">What he throws by count</h2>' + (usageLine(x) ? '<p class="pd-line">' + esc(usageLine(x)) + "</p>" : "") + usageTable(x, "R") + usageTable(x, "L") + '<p class="note">Share of each pitch type in each count. Behind means more balls than strikes.</p>';
           if (x.zones && (x.zones.R || x.zones.L)) {
