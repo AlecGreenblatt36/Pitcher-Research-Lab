@@ -3523,7 +3523,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   function bullpenCard(doc, se, nm) {
     var arms = (se.pitchers || []).filter(function (p) { return p.recent; });
     if (!arms.length || !doc.date) return "";
-    var cols = [1, 2, 3].map(function (k) { return addDays(doc.date, -k); }).filter(function (d) { return !doc.asof || d < doc.asof; });
+    /* the columns are the team's latest game days in the five days the plan's data covers (a day nobody in this
+       bullpen pitched is an off day), else the latest covered days */
+    var cov = [1, 2, 3, 4, 5].filter(function (k) { return !doc.asof || addDays(doc.date, -k) < doc.asof; });
+    var played = cov.filter(function (k) { return arms.some(function (p) { return p.recent[k - 1] > 0; }); });
+    var cols = (played.length ? played : cov).slice(0, 3).map(function (k) { return addDays(doc.date, -k); });
     if (!cols.length) return "";
     var players = doc.players || {};
     var rows = arms.map(function (p) {
@@ -3535,7 +3539,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         "<td>" + (last ? (last === 1 ? "1 day" : last + " days") : covered(1) ? "5+ days" : "\u2013") + "</td><td>" + (fb && fb.speed != null ? Math.round(fb.speed) : "\u2013") + "</td></tr>";
     }).join("");
     return '<div class="tbl-wrap hz-types"><table class="box"><thead><tr><th scope="col">Pitcher</th><th scope="col">T</th><th scope="col">Role</th>' + cols.map(function (d) { return '<th scope="col">' + esc(shortDate(d)) + "</th>"; }).join("") +
-      '<th scope="col">Since</th><th scope="col">FB</th></tr></thead><tbody>' + rows + '</tbody></table></div><p class="note">Pitches thrown on each day, a dash if he did not pitch. Since: days since he last pitched. FB: fastball speed. Role: how he has been used over two seasons (closer: most outings start in the ninth or later).</p>';
+      '<th scope="col">Since</th><th scope="col">FB</th></tr></thead><tbody>' + rows + '</tbody></table></div><p class="note">Pitches thrown in each of the latest games the team played, a dash if he did not pitch. Since: days since he last pitched. FB: fastball speed. Role: how he has been used over two seasons (closer: most outings start in the ninth or later).</p>';
   }
   /* The lineup at a glance against the starter's hand: its sides, and its line from the nine hitters' zone counts against
      the league's for the same mix of sides (the standard top of an advance sheet). */
