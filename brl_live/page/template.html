@@ -481,6 +481,18 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .hz-tools { display: flex; flex-wrap: wrap; gap: 8px 10px; margin: 10px 0 4px; }
 .hz-tools .seg { margin-bottom: 0; }
 .seg.hz-seg button { padding: 8px 11px; }
+/* Percentile rankings, the way the public player pages draw them: a bar to his rank, the rank in a dot, the rate at the end */
+.pr-sec { max-width: 520px; margin-top: 18px; }
+.pr-list { display: grid; gap: 7px; margin: 8px 0 6px; }
+.pr-row { display: grid; grid-template-columns: minmax(0, 128px) minmax(0, 1fr) 54px; align-items: center; column-gap: 10px; }
+.pr-l { font-size: 14px; font-weight: 700; color: var(--muted); line-height: 1.2; }
+.pr-track { position: relative; height: 26px; }
+.pr-track::before { content: ""; position: absolute; left: 0; right: 0; top: 12px; height: 2px; background: var(--rule); border-radius: 1px; }
+.pr-fill { position: absolute; left: 0; top: 10px; height: 6px; border-radius: 3px; }
+.pr-dot { position: absolute; top: 0; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; box-shadow: 0 0 0 2px var(--surface); }
+.pr-v { text-align: right; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--ink); }
+.pr-scale { display: grid; grid-template-columns: minmax(0, 128px) minmax(0, 1fr) 54px; column-gap: 10px; font-size: 12px; color: var(--muted); }
+.pr-scale span:nth-child(2) { display: flex; justify-content: space-between; }
 .hz-line { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 6px 0 10px; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); overflow: hidden; max-width: 460px; }
 .hz-line div { padding: 6px 8px; border-left: 1px solid var(--rule-soft); min-width: 0; }
 .hz-line div:first-child { border-left: 0; }
@@ -3718,6 +3730,39 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (selT) selT.addEventListener("change", function () { location.hash = "#/players/" + encodeURIComponent(selT.value); });
     });
   }
+  /* PROD-08: percentile ranks among every player with 300 or more plate appearances (batters faced for a pitcher) over the
+     cards' seasons, computed with the cards; higher is better for him on every row, red above the middle, blue below. */
+  var PCT_ROWS = {
+    hitter: [["avg", "Batting average", "three"], ["slg", "Slugging", "three"], ["k", "Strikeout %", "pct"], ["bb", "Walk %", "pct"], ["chase", "Chase %", "pct"], ["whiff", "Whiff %", "pct"], ["hard", "Hard-hit %", "pct"]],
+    pitcher: [["k", "Strikeout %", "pct"], ["bb", "Walk %", "pct"], ["whiff", "Whiff %", "pct"], ["chase", "Chase %", "pct"], ["hard", "Hard-hit % against", "pct"], ["avg", "Average against", "three"], ["velo", "Fastball speed", "mph"]]
+  };
+  function lineRate(L, k) {
+    var d = function (a, b) { return L[b] ? L[a] / L[b] : null; };
+    return k === "avg" ? d("h", "ab") : k === "slg" ? d("tb", "ab") : k === "k" ? d("k", "pa") : k === "bb" ? d("bb", "pa") : k === "chase" ? d("chases", "outside") :
+      k === "whiff" ? d("misses", "swings") : k === "hard" ? d("hard", "bbe") : k === "velo" ? (L.velo != null ? L.velo : null) : null;
+  }
+  function pctColor(p) {
+    /* gray at the middle, deepening to red toward 100 and to blue toward 1 */
+    var d = Math.max(-1, Math.min(1, (p - 50) / 50)), a = Math.abs(d), gray = HZ_DARK ? [110, 122, 115] : [178, 186, 181], end = d >= 0 ? HZ_RED : HZ_BLUE;
+    var rgb = gray.map(function (g, i) { return Math.round(g + (end[i] - g) * a); });
+    var lin = function (c) { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+    var L = 0.2126 * lin(rgb[0]) + 0.7152 * lin(rgb[1]) + 0.0722 * lin(rgb[2]);
+    return { bg: "rgb(" + rgb.join(",") + ")", fg: 1.05 / (L + 0.05) >= (L + 0.05) / 0.05 ? "#fff" : "#17231C" };
+  }
+  function pctPanel(x, lg, asof) {
+    if (!x || !x.pct || !x.line) return "";
+    var kind = x.kind === "pitcher" || x.throws ? "pitcher" : "hitter", rows = PCT_ROWS[kind], rk = lg && lg.ranked, h = "";
+    rows.forEach(function (r) {
+      var p = x.pct[r[0]], v = lineRate(x.line, r[0]);
+      if (p == null || v == null) return;
+      var c = pctColor(p), shown = r[2] === "three" ? (v >= 1 ? v.toFixed(3) : v.toFixed(3).slice(1)) : r[2] === "mph" ? v.toFixed(1) : (100 * v).toFixed(1) + "%";
+      h += '<div class="pr-row"><span class="pr-l">' + esc(r[1]) + '</span><span class="pr-track" role="img" aria-label="' + esc(r[1] + ": " + shown + ", " + ordinal(p) + " percentile") + '"><i class="pr-fill" style="width:calc(13px + (100% - 26px) * ' + (p / 100) + ");background:" + c.bg + '"></i><b class="pr-dot" style="left:calc((100% - 26px) * ' + (p / 100) + ");background:" + c.bg + ";color:" + c.fg + '" aria-hidden="true">' + p + '</b></span><span class="pr-v">' + esc(shown) + "</span></div>";
+    });
+    if (!h) return "";
+    var pool = rk ? (kind === "pitcher" ? rk.pitchers : rk.hitters) : null, min = rk && rk.min ? rk.min : 300;
+    return '<section class="sec pr-sec"><h2>Percentile rankings</h2><p class="lede">Against ' + (pool ? Number(pool).toLocaleString() + " " : "all ") + (kind === "pitcher" ? "pitchers with " + min + "+ batters faced" : "hitters with " + min + "+ plate appearances") + ", " + esc(hzSeasons(asof)) + ". 100 is the best. Red: better than most. Blue: worse." + (kind === "hitter" ? " Fewer strikeouts, chases and misses rank higher." : " Fewer walks, hits and hard contact rank higher.") + '</p><div class="pr-list">' + h +
+      '</div><div class="pr-scale" aria-hidden="true"><span></span><span><span>Worst</span><span>Average</span><span>Best</span></span><span></span></div></section>';
+  }
   function renderPlayer(kind, id) {
     withNextSchedules(function () { renderPlayer(kind, id); });
     withPlayers(function () {
@@ -3729,6 +3774,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         var h = '<div class="wrap"><div class="page-head"><h1>' + esc(x.name) + '</h1><p>' + esc(x.team) + (x.team ? ", " : "") + (x.kind === "hitter" ? (x.side === "L" ? "bats left" : "bats right") : (x.throws === "L" ? "throws left" : "throws right")) + ". From " + Number(x.pitches).toLocaleString() + " pitches, updated " + esc(dateLabel(doc.asof)) + '. <a class="pl-back" href="#/players">All players</a></p></div>';
         var ng = nextGameFor(x.team);
         if (ng) h += '<a class="next-day" href="' + ng.href + '">' + (ng.day === D.date ? "Tonight" : "Tomorrow") + ": " + (ng.home ? "vs " : "at ") + esc(nickname(ng.opp)) + ". Open the game plan</a>";
+        h += pctPanel(x, lg, doc.asof);
         if (x.kind === "hitter") {
           var oc = x.own_cost, tags = hitterTags(x, lg);
           if (!x.zones) h += '<p class="pd-line">Chases ' + (x.chase_rate != null ? pct(x.chase_rate) : "–") + " of pitches out of the zone (league " + (lg.chase_rate != null ? pct(lg.chase_rate) : "–") + "). Misses on " + (x.whiff_rate != null ? pct(x.whiff_rate) : "–") + " of his swings (league " + (lg.whiff_rate != null ? pct(lg.whiff_rate) : "–") + ").</p>";

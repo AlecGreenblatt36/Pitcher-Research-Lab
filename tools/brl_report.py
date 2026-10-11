@@ -218,6 +218,88 @@ def spray_counts(T: dict, rows) -> dict | None:
             'popups': int(((tr == 3) & ok).sum()), 'hard': [int((ls[meas] >= 95).sum()), int(meas.sum())]}
 
 
+# Percentile ranks the way the public player pages show them (PROD-08): each player's rate among every player with PCT_MIN
+# or more plate appearances (hitters) or batters faced (pitchers) over the training window, as the share of those players
+# he does better than (a hitter's strikeouts and a pitcher's walks count lower as better). Counts and ranks only.
+PCT_MIN = 300
+PCT_HITTER = (('avg', 1), ('slg', 1), ('k', -1), ('bb', 1), ('chase', -1), ('whiff', -1), ('hard', 1))
+PCT_PITCHER = (('k', 1), ('bb', -1), ('whiff', 1), ('chase', 1), ('hard', -1), ('avg', -1), ('velo', 1))
+
+
+def player_lines(T: dict, rows, swing, whiff, outside, key: str) -> dict:
+    """Each player's line over these rows as counts, keyed by player id (key 'batter' or 'pitcher'): plate appearances
+    (batters faced for a pitcher), at-bats, hits, total bases, home runs, strikeouts, walks (with hit batters; the outcome
+    table lumps them), pitches, swings, misses, pitches out of the zone, chases, batted balls with a measured exit speed
+    and those at 95 mph or more; for a pitcher also his main fastball's speed (four-seam or sinker, whichever he throws
+    more, from 50 or more of them)."""
+    rows = np.asarray(rows)
+    idx = np.flatnonzero(rows) if rows.dtype == bool else rows.astype(np.int64)
+    if not len(idx):
+        return {}
+    ids, inv = np.unique(T[key][idx], return_inverse=True)
+    n = len(ids)
+    cnt = lambda m: np.bincount(inv, weights=np.asarray(m, dtype=np.float64), minlength=n)
+    last = T['last_in_pa'][idx] == 1; o7 = T['out7'][idx]
+    ls = T['ls'][idx].astype(np.float64)
+    inplay = np.isfinite(T['spray'][idx]) if 'spray' in T else (last & (T['call'][idx] == 1))
+    meas = inplay & np.isfinite(ls)
+    tb = np.where(o7 == 3, 1.0, 0.0) + np.where(o7 == 4, 2.0, 0.0) + np.where(o7 == 5, 4.0, 0.0)
+    sw = np.asarray(swing)[idx] == 1; out = np.asarray(outside)[idx]
+    cols = {'pa': cnt(last), 'ab': cnt(last & np.isin(o7, (0, 1, 3, 4, 5, 6))), 'h': cnt(last & np.isin(o7, (3, 4, 5))),
+            'tb': cnt(np.where(last, tb, 0.0)), 'hr': cnt(last & (o7 == 5)), 'k': cnt(last & (o7 == 1)), 'bb': cnt(last & (o7 == 2)),
+            'pitches': np.bincount(inv, minlength=n).astype(np.float64), 'swings': cnt(sw), 'misses': cnt(np.asarray(whiff)[idx]),
+            'outside': cnt(out), 'chases': cnt(out & sw), 'bbe': cnt(meas), 'hard': cnt(meas & (np.nan_to_num(ls) >= 95))}
+    velo = None
+    if key == 'pitcher' and 'sub' in T:
+        sub = T['sub'][idx]; v0 = T['v0'][idx].astype(np.float64); okv = np.isfinite(v0)
+        ff, si = D.SUBTYPES.index('FF'), D.SUBTYPES.index('SI')
+        n_ff, n_si = cnt(sub == ff), cnt(sub == si)
+        s_ff, c_ff = cnt(np.where((sub == ff) & okv, v0, 0.0)), cnt((sub == ff) & okv)
+        s_si, c_si = cnt(np.where((sub == si) & okv, v0, 0.0)), cnt((sub == si) & okv)
+        use_ff = n_ff >= n_si
+        num, den = np.where(use_ff, s_ff, s_si), np.where(use_ff, c_ff, c_si)
+        velo = np.where(den >= 50, num / np.maximum(den, 1.0), np.nan)
+    res = {}
+    for i, pid in enumerate(ids):
+        row = {k: int(round(float(v[i]))) for k, v in cols.items()}
+        if velo is not None and np.isfinite(velo[i]):
+            row['velo'] = round(float(velo[i]), 1)
+        res[int(pid)] = row
+    return res
+
+
+def line_rates(L: dict) -> dict:
+    """The rates a line's counts give (None where the denominator is zero)."""
+    div = lambda a, b: (L[a] / L[b]) if L.get(b) else None
+    r = {'avg': div('h', 'ab'), 'slg': div('tb', 'ab'), 'k': div('k', 'pa'), 'bb': div('bb', 'pa'), 'chase': div('chases', 'outside'),
+         'whiff': div('misses', 'swings'), 'hard': div('hard', 'bbe')}
+    if L.get('velo') is not None:
+        r['velo'] = float(L['velo'])
+    return r
+
+
+def pct_reference(lines: dict, keys) -> dict:
+    """metric -> the sorted rates of every player with PCT_MIN or more plate appearances (or batters faced)."""
+    q = [line_rates(L) for L in lines.values() if L.get('pa', 0) >= PCT_MIN]
+    return {k: np.sort(np.array([x[k] for x in q if x.get(k) is not None], dtype=np.float64)) for k, _ in keys}
+
+
+def pct_ranks(L: dict | None, ref: dict, keys) -> dict | None:
+    """A ranked player's percentile on each metric (1 to 100, higher better for him), or None below PCT_MIN."""
+    if not L or L.get('pa', 0) < PCT_MIN:
+        return None
+    r = line_rates(L); out = {}
+    for k, sgn in keys:
+        v, a = r.get(k), ref.get(k)
+        if v is None or a is None or len(a) < 20:
+            continue
+        below = int(np.searchsorted(a, v, 'left')); above = int(len(a) - np.searchsorted(a, v, 'right'))
+        tie = len(a) - below - above
+        p = ((below if sgn > 0 else above) + 0.5 * tie) / len(a)
+        out[k] = int(min(100, max(1, round(100 * p))))
+    return out or None
+
+
 def put(repo, token, path, text, branch, message, tries=14):
     """put_text with patience: several backfills commit to the same branch at once, so a 409 is ordinary; and many runs
     writing at once can hit GitHub's secondary rate limit (403 or 429 with a retry hint), which is waited out."""
@@ -453,6 +535,12 @@ class Fitted:
         self.league['zones'] = {sd_: zone_split(T, np.flatnonzero(tr & (T['stand_r'] == (1 if sd_ == 'R' else 0))), swing, whiff) for sd_ in ('R', 'L')}
         self.league['spray'] = {sd_: spray_counts(T, np.flatnonzero(tr & (T['stand_r'] == (1 if sd_ == 'R' else 0)))) for sd_ in ('R', 'L')}
         self.league['counts'] = {sd_: count_tend(T, np.flatnonzero(tr & (T['stand_r'] == (1 if sd_ == 'R' else 0))), swing, whiff) for sd_ in ('R', 'L')}
+        # every player's line on the training rows and the percentile references (PROD-08)
+        self.lines_h = player_lines(T, tr, swing, whiff, self.outside, 'batter')
+        self.lines_p = player_lines(T, tr, swing, whiff, self.outside, 'pitcher')
+        self.pct_ref_h, self.pct_ref_p = pct_reference(self.lines_h, PCT_HITTER), pct_reference(self.lines_p, PCT_PITCHER)
+        self.league['ranked'] = {'min': PCT_MIN, 'hitters': int(sum(1 for L in self.lines_h.values() if L['pa'] >= PCT_MIN)),
+                                 'pitchers': int(sum(1 for L in self.lines_p.values() if L['pa'] >= PCT_MIN))}
         # the pitcher's training pitches
         self.gp = D._groups(T['pitcher'], tr)
         self.cgrp = np.where(T['strikes'] == 2, 2, np.where(T['balls'] > T['strikes'], 1, 0))
@@ -502,6 +590,12 @@ class Fitted:
             if sp:
                 card['spray'] = sp
             card['counts'] = count_tend(T, r, self.swing, self.whiff)
+        L = getattr(self, 'lines_h', {}).get(int(h))
+        if L:
+            card['line'] = L
+            pr = pct_ranks(L, self.pct_ref_h, PCT_HITTER)
+            if pr:
+                card['pct'] = pr
         if self.PM is not None and r is not None and len(r) >= 300:
             # VALUE-18 from the hitter's side: what his own swing tendencies cost him on the pitches he actually saw, against the average
             # hitter his side at the same pitches (his calibrated own part times the value of a swing against a take), per 600 plate
@@ -587,11 +681,18 @@ class Fitted:
         if rel.sum():
             role.update({'ninth_share': round(float((entry[rel] >= 9).mean()), 3), 'entry_inning': round(float(entry[rel].mean()), 2),
                          'bf_per_relief': round(float(bf[rel].mean()), 2)})
-        return {'throws': 'R' if T['throw_r'][r][0] == 1 else 'L', 'pitches': int(len(r)), 'mix': mix, 'arsenal': arsenal, 'role': role,
+        card = {'throws': 'R' if T['throw_r'][r][0] == 1 else 'L', 'pitches': int(len(r)), 'mix': mix, 'arsenal': arsenal, 'role': role,
                 'chase_rate_against': round(float(self.swing[r][self.outside[r]].mean()), 3) if self.outside[r].any() else None,
                 'looks_in_ends_out': round(float(self.looks_in_ends_out[r].mean()), 3),
                 'zones': zone_split(T, r, self.swing, self.whiff, by='stand_r'),      # where he throws, by the batter's side
                 'usage': usage_by_count(T, r)}                                        # what he throws, by count and batter side
+        L = getattr(self, 'lines_p', {}).get(int(p))
+        if L:
+            card['line'] = L
+            pr = pct_ranks(L, self.pct_ref_p, PCT_PITCHER)
+            if pr:
+                card['pct'] = pr
+        return card
 
     def _chain(self, ps_, pw_, pcs_, pfo_, ci_):
         use_c = np.bincount(ci_, minlength=12) >= 15; ki = ci_ % 3
