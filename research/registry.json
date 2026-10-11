@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 300,
- "rows": 303,
+ "experiments": 301,
+ "rows": 304,
  "records": {
   "ACC-01": [
    {
@@ -4881,6 +4881,22 @@
     ],
     "frozen_commits": [],
     "status": "failed: (1), (2), (3)"
+   }
+  ],
+  "PXSTATS-01": [
+   {
+    "id": "PXSTATS-01",
+    "columns": {
+     "ID": "PXSTATS-01",
+     "Attempt": "XSTATS-01 against pitchers: does a pitcher's expected AVG and SLG against, from the exit speed and launch angle of the balls hit off him, predict his next season's AVG and SLG against better than the actual ones? Same table, windows, pitchers with 300 or more batters faced in training and 150 in the test, blend and intervals (tools/brl_report.py xstats_study with who 'pitcher'). A pitcher's average against swings more with balls in play than a hitter's, so expected numbers may help here even though they did not for hitters.",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions on 2026: (1) expected AVG against predicts AVG against better than AVG against does, interval excluding zero; (2) the same for SLG against. Decision rule: for each where (1) or (2) holds, the pitcher percentile rankings and cards add an Expected row (expected average or slugging against); otherwise nothing changes.",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "PSPLITS-01": [

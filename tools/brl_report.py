@@ -1928,20 +1928,21 @@ def xstats_study(T: dict, stage, spec: dict) -> dict:
     min_pa = float(spec.get('min_pa', 300)); min_test = float(spec.get('min_test', 150)); boot = int(spec.get('boot', 2000))
     rng = np.random.default_rng(int(spec.get('seed', 20261011)))
     fit = spec.get('fit', {'train': [2023, 2024], 'test': 2025}); score = spec.get('score', {'train': [2024, 2025], 'test': 2026, 'test_end': '2026-08-01'})
+    who = 'pitcher' if spec.get('who') == 'pitcher' else 'batter'           # PXSTATS-01: against pitchers
 
     def pairs(sp):
         trm = reg & np.isin(T['season'], sp['train']); tem = reg & (T['season'] == int(sp['test']))
         if sp.get('test_end'):
             tem &= T['day'] < date.fromisoformat(sp['test_end']).toordinal()
         tab = xs_table(T, trm)
-        a = xs_lines(T, trm, tab); b = xs_lines(T, tem, tab)
+        a = xs_lines(T, trm, tab, who); b = xs_lines(T, tem, tab, who)
         pos = {int(x): i for i, x in enumerate(b['ids'])}
         keep = [i for i, x in enumerate(a['ids']) if a['pa'][i] >= min_pa and int(x) in pos and b['pa'][pos[int(x)]] >= min_test]
         bi = np.array([pos[int(a['ids'][i])] for i in keep], np.int64); ai = np.array(keep, np.int64)
         return {k: a[k][ai] for k in a if k != 'ids'}, {k: b[k][bi] for k in b if k != 'ids'}, tab
     A1, B1, _ = pairs(fit); stage('xstats study: fit')
     A2, B2, tab2 = pairs(score); stage('xstats study: score')
-    out = {'fit': fit, 'score': score, 'hitters': {'fit': int(len(A1['ab'])), 'score': int(len(A2['ab']))},
+    out = {'who': who, 'fit': fit, 'score': score, 'hitters': {'fit': int(len(A1['ab'])), 'score': int(len(A2['ab']))},
            'measured_share': round(float(A2['meas'].sum() / max(A2['bip'].sum(), 1)), 4), 'metrics': {}}
     for name, num, xnum in (('avg', 'h', 'xh'), ('slg', 'tb', 'xtb')):
         def preds(A):
@@ -3229,6 +3230,9 @@ def main():
             dates = []
         if params.get('xstats_study'):
             receipt['xstats_study'] = xstats_study(T, stage, params['xstats_study'])
+            dates = []
+        if params.get('pitcher_xstats_study'):
+            receipt['pitcher_xstats_study'] = xstats_study(T, stage, dict(params['pitcher_xstats_study'], who='pitcher'))
             dates = []
         if params.get('change_study'):
             receipt['change_study'] = change_study(T, stage, params['change_study'])

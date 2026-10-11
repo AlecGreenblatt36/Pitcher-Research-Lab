@@ -56,3 +56,12 @@ def test_raw_wins_when_results_come_from_elsewhere():
     m = B.xstats_study(_world(seed=2, contact_sd=0.0, speed_sd=0.5), lambda *a: None, SPEC)['metrics']['avg']
     assert m['expected_minus_raw'][1] > 0, m
     assert m['blend_weight'] < 0.3, m
+
+
+def test_against_pitchers():
+    # PXSTATS-01: the same read per pitcher (results against him)
+    B = _report()
+    T = _world(seed=4)
+    T['pitcher'] = T['batter'].copy()
+    out = B.xstats_study(T, lambda *a: None, dict(SPEC, who='pitcher'))
+    assert out['who'] == 'pitcher' and out['hitters']['score'] == 300 and out['metrics']['avg']['expected_minus_raw'][2] < 0
