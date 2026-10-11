@@ -5233,14 +5233,19 @@
     "columns": {
      "ID": "DISP-03",
      "Attempt": "Market numbers from day-form worlds. On the live settings the simulated team-run SD is still narrow (3.10 against 3.25 actual in 2025, 3.11 against 3.21 in 2026, from the RUNLINE-01 replays), with too few blowouts (games decided by five or more 26.9% against 28.8% in 2025 and 26.8% against 28.7% in 2026), and RUNLINE-01 failed on it. DISP-02 showed the centered day-form shock (one shock per batting team and world on reaching base) fixes the width and the totals but pulls win chances toward even. So: win chances stay with the plain worlds, and only the market numbers (the total's over and under, the run line's margin given a win) come from day-form worlds. Replays of 2025 and 2026 with the live settings plus DISP-02's centered shock (sigma 0.13 and center 0.004 for 2026, 0.11 and 0.003 for 2025, each from the other season's gap), paired streams and the same seeds as the RUNLINE-01 replays (tags v2-prod4-df-1000-<season>), compared by game with tools/replay_compare.py against v2-prod4-margins-1000 and checked for the run line with tools/brl_runline_cal.py",
-     "Disposition and evidence": "**Registered in the commit that added this row, before its replays.** Predictions: (1) P(over the closing total) Brier better pooled over both seasons, the 95% interval's upper end below zero, and neither season worse by more than 0.0003; (2) mean total within 0.03 runs a game of the plain worlds in both seasons; (3) the team-run SD moves toward actual in both; (4) given a win, the chance of winning by two or more within 1.5 points of how often winners did, for home and road winners, in both seasons. Decision rule: if (1) and (2) hold, the page's over and under for the total (the Odds tab's fair price and the simulator's chance of the over) come from day-form worlds the live run adds for each game, while every win chance stays with the plain worlds; if (4) also holds, the run line shows from the day-form margins (MORE_MARKETS.runline). Otherwise nothing changes. Results: pending",
-     "Delta corrected Brier, 2026": "pending"
+     "Disposition and evidence": "**Registered in the commit that added this row, before its replays.** Predictions: (1) P(over the closing total) Brier better pooled over both seasons, the 95% interval's upper end below zero, and neither season worse by more than 0.0003; (2) mean total within 0.03 runs a game of the plain worlds in both seasons; (3) the team-run SD moves toward actual in both; (4) given a win, the chance of winning by two or more within 1.5 points of how often winners did, for home and road winners, in both seasons. Decision rule: if (1) and (2) hold, the page's over and under for the total (the Odds tab's fair price and the simulator's chance of the over) come from day-form worlds the live run adds for each game, while every win chance stays with the plain worlds; if (4) also holds, the run line shows from the day-form margins (MORE_MARKETS.runline). Otherwise nothing changes. Results (runs 38146625979 for 2025 and 38146596899 for 2026, against the RUNLINE-01 replays 38141956435 and 38141799131 by game; tools/replay_compare.py): P(over the closing total) Brier -0.00028 [-0.00070, +0.00016] (2025, 1,638 games) and -0.00007 [-0.00053, +0.00042] (2026, 2,346 games), pooled -0.00015 [-0.00047, +0.00017]; mean total 8.865 against 8.863 (2025) and 8.932 against 8.933 (2026); team-run SD 3.096 to 3.196 (actual 3.249) and 3.108 to 3.245 (actual 3.210); games decided by five or more 26.9% to 27.9% (28.8%) and 26.8% to 28.2% (28.7%); given a win, the chance of winning by two or more within 1.1 points of how often winners did for home and road winners in 2025 and within 1.5 in 2026 (home 67.0% against 68.4%, road 75.9% against 77.3%). The win Brier of the day-form worlds themselves (not used for win chances) -0.00016 and +0.00033. Predictions: (2), (3) and (4) held; (1) failed (the pooled interval's upper end is +0.00017). **Nothing changes under the rule**: market_day_form stays off and the run line stays hidden. The day-form margins do put the run line right in both seasons; a run-line-only test would need a season these replays have not seen",
+     "Delta corrected Brier, 2026": "(2), (3), (4) held; (1) failed; nothing changes"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38141799131",
+     "38141956435",
+     "38146596899",
+     "38146625979"
+    ],
     "frozen_commits": [],
-    "status": "pending"
+    "status": "(2), (3), (4) held; (1) failed; nothing changes"
    }
   ],
   "BOX-01": [
