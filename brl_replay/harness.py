@@ -462,7 +462,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                 from research_lab.game_sim.locked_pa_provider import SIM_FROM_MODEL
                 model_of_sim = {v: k for k, v in SIM_FROM_MODEL.items()}
                 agg = {r_: {"pred": np.zeros(7), "obs": np.zeros(7), "n": 0, "layers": {nm_: np.zeros(7) for nm_, _ in chain[:-1]},
-                            "ll": {nm_: 0.0 for nm_, _ in chain[:-1] + [("full", None)]}} for r_ in ("starter", "reliever")}
+                            "ll": {nm_: 0.0 for nm_, _ in chain[:-1] + [("full", None)]}, "s2": np.zeros((7, 7))} for r_ in ("starter", "reliever")}
                 starters_ = {int(g.home_starter), int(g.away_starter)}
                 grp_ = {}      # (batting side 0 away 1 home, inning bucket, role, times through the order capped at 3): n, observed, bare, full
                 bgrp_ = {}     # (bases 0 empty, 1 first only, 2 a runner in scoring position; outs): n, observed, full
@@ -483,7 +483,9 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                         agg.setdefault("errors", []).append(type(exc_).__name__ + ": " + str(exc_)[:80])
                         continue
                     r_ = "starter" if int(row.pitcher) in starters_ else "reliever"
-                    agg[r_]["pred"] += np.array([probs[model_of_sim[lab]] for lab in MODEL_ORDER])
+                    pv_ = np.array([probs[model_of_sim[lab]] for lab in MODEL_ORDER])
+                    agg[r_]["pred"] += pv_
+                    agg[r_]["s2"] += np.outer(pv_, pv_)                      # second moments, for a level offset's log-likelihood (LEVEL-01)
                     for nm_, pr_ in inner_:
                         agg[r_]["layers"][nm_] += np.array([pr_[model_of_sim[lab]] for lab in MODEL_ORDER])
                     if str(row.outcome) in MODEL_ORDER:
@@ -511,7 +513,8 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                 errs = agg.pop("errors", [])
                 records[-1]["real_pa"] = {r_: {"n": v_["n"], "pred": [round(float(x), 3) for x in v_["pred"]], "obs": [int(x) for x in v_["obs"]],
                                                "layers": {nm_: [round(float(x), 3) for x in lv_] for nm_, lv_ in v_["layers"].items()},
-                                               "ll": {nm_: round(float(x), 4) for nm_, x in v_["ll"].items()}} for r_, v_ in agg.items()}
+                                               "ll": {nm_: round(float(x), 4) for nm_, x in v_["ll"].items()},
+                                               "s2": [round(float(x), 5) for x in v_["s2"].ravel()]} for r_, v_ in agg.items()}
                 records[-1]["real_pa"]["groups"] = [[k_[0], k_[1], k_[2], k_[3], v_[0], [int(x) for x in v_[1]], [round(float(x), 4) for x in v_[2]], [round(float(x), 4) for x in v_[3]]]
                                                     for k_, v_ in sorted(grp_.items())]
                 records[-1]["real_pa"]["bases"] = [[k_[0], k_[1], v_[0], [int(x) for x in v_[1]], [round(float(x), 4) for x in v_[2]]]
