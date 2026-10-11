@@ -26,7 +26,7 @@ PITCH_CODE = {'X': 'X', 'D': 'X', 'E': 'X', 'J': 'X', 'W': 'S', 'Q': 'S', 'L': '
 BAT_FIELDS = {'PA': 'plateAppearances', 'AB': 'atBats', 'H': 'hits', '2B': 'doubles', '3B': 'triples', 'HR': 'homeRuns', 'R': 'runs',
               'RBI': 'rbi', 'BB': 'baseOnBalls', 'HBP': 'hitByPitch', 'K': 'strikeOuts', 'SF': 'sacFlies'}
 PIT_FIELDS = {'PC': 'numberOfPitches', 'H': 'hits', 'R': 'runs', 'BB': 'baseOnBalls', 'HBP': 'hitBatsmen', 'K': 'strikeOuts',
-              'HR': 'homeRuns', 'BF': 'battersFaced'}
+              'HR': 'homeRuns', 'BF': 'battersFaced', 'ER': 'earnedRuns'}
 
 
 def _int(value, default=0) -> int:

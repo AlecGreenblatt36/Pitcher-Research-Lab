@@ -1997,7 +1997,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   function lcBox(doc) {
     var out = { batting: {}, pitching: {} }, teams = doc.teams || {};
     var BAT = { PA: "plateAppearances", AB: "atBats", H: "hits", "2B": "doubles", "3B": "triples", HR: "homeRuns", R: "runs", RBI: "rbi", BB: "baseOnBalls", HBP: "hitByPitch", K: "strikeOuts", SF: "sacFlies" };
-    var PIT = { PC: "numberOfPitches", H: "hits", R: "runs", BB: "baseOnBalls", HBP: "hitBatsmen", K: "strikeOuts", HR: "homeRuns", BF: "battersFaced" };
+    var PIT = { PC: "numberOfPitches", H: "hits", R: "runs", ER: "earnedRuns", BB: "baseOnBalls", HBP: "hitBatsmen", K: "strikeOuts", HR: "homeRuns", BF: "battersFaced" };
     ["away", "home"].forEach(function (s) {
       var t = teams[s] || {}, players = t.players || {}, bat = [], pit = [];
       (t.batters || []).forEach(function (pid) {
@@ -2393,11 +2393,12 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (notes.length) h += '<p class="box-notes">' + notes.join(" ") + "</p>";
       h += "</section>";
     });
+    var hasER = ["away", "home"].some(function (t) { return (src.pitching[t] || []).some(function (p) { return p.ER != null; }); });
     ["away", "home"].forEach(function (t) {
       var pit = src.pitching[t] || [], pnames = shortNames(pit);
-      h += '<section class="sec"><h3 class="team-h ' + t + '-c">' + esc(nickname(f[t].name)) + ' pitching</h3><div class="tbl-wrap"><table class="box"><thead><tr><th scope="col">Pitchers</th><th>IP</th><th>H</th><th>R</th><th>BB</th><th>K</th><th>HR</th><th>Pitches</th></tr></thead><tbody>';
+      h += '<section class="sec"><h3 class="team-h ' + t + '-c">' + esc(nickname(f[t].name)) + ' pitching</h3><div class="tbl-wrap"><table class="box"><thead><tr><th scope="col">Pitchers</th><th>IP</th><th>H</th><th>R</th>' + (hasER ? "<th>ER</th>" : "") + '<th>BB</th><th>K</th><th>HR</th><th>Pitches</th></tr></thead><tbody>';
       pit.forEach(function (p) {
-        h += "<tr><td>" + esc(pnames[String(p.player_id)]) + "</td><td>" + ip(p.outs) + "</td><td>" + p.H + "</td><td>" + p.R + "</td><td>" + p.BB + "</td><td>" + p.K + "</td><td>" + p.HR + "</td><td>" + p.PC + "</td></tr>";
+        h += "<tr><td>" + esc(pnames[String(p.player_id)]) + "</td><td>" + ip(p.outs) + "</td><td>" + p.H + "</td><td>" + p.R + "</td>" + (hasER ? "<td>" + (p.ER != null ? p.ER : "\u2013") + "</td>" : "") + "<td>" + p.BB + "</td><td>" + p.K + "</td><td>" + p.HR + "</td><td>" + p.PC + "</td></tr>";
       });
       h += "</tbody></table></div></section>";
     });

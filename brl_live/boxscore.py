@@ -592,7 +592,7 @@ def parse_actual_box(feed,game_pk,fetched_at):
         for pid in team['pitchers']:
             p=team['players']['ID'+str(pid)];stats=p.get('stats',{}).get('pitching',{})
             if not stats:continue
-            mapping={'PC':'numberOfPitches','H':'hits','R':'runs','BB':'baseOnBalls','HBP':'hitBatsmen','K':'strikeOuts','HR':'homeRuns','BF':'battersFaced'}
+            mapping={'PC':'numberOfPitches','H':'hits','R':'runs','ER':'earnedRuns','BB':'baseOnBalls','HBP':'hitBatsmen','K':'strikeOuts','HR':'homeRuns','BF':'battersFaced'}
             ip=str(stats['inningsPitched']).split('.')
             if len(ip)!=2 or ip[1] not in ('0','1','2'):raise Blocked('Invalid baseball innings notation')
             row={'player_id':str(pid),'name':p['person']['fullName'],'outs':3*int(ip[0])+int(ip[1]),
