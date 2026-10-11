@@ -586,7 +586,7 @@ def parse_actual_box(feed,game_pk,fetched_at):
             if not stats:continue
             mapping={'PA':'plateAppearances','AB':'atBats','H':'hits','2B':'doubles','3B':'triples','HR':'homeRuns','R':'runs','RBI':'rbi','BB':'baseOnBalls','HBP':'hitByPitch','K':'strikeOuts','SF':'sacFlies'}
             # Missing fields are unavailable, never fabricated as zero.
-            row={'player_id':str(pid),'name':p['person']['fullName'],'spot':int(p.get('battingOrder','0'))//100,
+            row={'player_id':str(pid),'name':p['person']['fullName'],'spot':int(p.get('battingOrder','0'))//100,'order':int(p.get('battingOrder','0')),
                  **{k:int(stats[v]) if v in stats else None for k,v in mapping.items()}}
             bat.append(row)
         for pid in team['pitchers']:

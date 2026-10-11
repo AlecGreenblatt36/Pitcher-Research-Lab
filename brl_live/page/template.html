@@ -312,6 +312,7 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .box td .spot { display: inline-block; width: 18px; color: var(--muted); font-size: 14px; }
 .box td .sub { display: block; color: var(--muted); font-size: 14px; font-family: var(--body); }
 .box tr.tot td { font-weight: 700; border-top: 1px solid var(--ink); border-bottom: 0; }
+.box tr.sub td:first-child { padding-left: 22px; color: var(--muted); }
 .box-notes { font-size: 15px; margin: 8px 2px 0; }
 .box-notes b { font-weight: 700; }
 .team-h { font-family: var(--display); font-weight: 700; font-size: 22px; margin: 0 0 6px; }
@@ -1730,7 +1731,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var pside = state.playSide[pk] || (real ? "actual" : "proj");
       if (real) html += '<div class="seg" role="group" aria-label="Which plays"><button data-playside="actual" aria-pressed="' + (pside === "actual") + '">' + (real._live ? "Live" : "Actual") + '</button><button data-playside="proj" aria-pressed="' + (pside !== "actual") + '">Projected</button></div>';
       if (pside !== "actual" || !real) html += versions;
-      html += playsTab(f, pside === "actual" && real ? real : s);
+      html += pside === "actual" && real && !real.plays.length ? '<p class="empty">First pitch is in. The first plate appearance shows here when it ends.</p>' : playsTab(f, pside === "actual" && real ? real : s);
       if (pside === "actual" && real) html += '<p class="note">The real game from the official play-by-play' + (real._live ? ", through the last completed plate appearance at the last check" : "") + ".</p>";
       else html += '<p class="note">The simulator decides how each at-bat ends. The pitches shown are borrowed from a real at-bat that ended the same way, for the look of it; they decide nothing.</p>';
     }
@@ -1930,7 +1931,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       (t.batters || []).forEach(function (pid) {
         var p = players["ID" + pid] || {}, st = (p.stats || {}).batting || {};
         if (!Object.keys(st).length && !p.battingOrder) return;
-        var row = { player_id: String(pid), name: String((p.person || {}).fullName || ""), spot: Math.floor(lcInt(p.battingOrder, 0) / 100) };
+        var row = { player_id: String(pid), name: String((p.person || {}).fullName || ""), spot: Math.floor(lcInt(p.battingOrder, 0) / 100), order: lcInt(p.battingOrder, 0) };
         Object.keys(BAT).forEach(function (k) { row[k] = lcInt(st[BAT[k]], 0); });
         bat.push(row);
       });
@@ -2014,10 +2015,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   /* The official plays and lines in the shape of a simulated game, so the same tabs render both. */
   function realGame(st, lv, actualBox) {
     if (st === "final" && actualBox && actualBox.plays && actualBox.plays.length) return { batting: actualBox.batting, pitching: actualBox.pitching, plays: actualBox.plays, score: actualBox.score, innings: actualBox.innings, _real: true, _final: true };
-    if (st === "live" && lv && lv.plays && lv.plays.length) {
+    if (st === "live" && lv && ((lv.plays && lv.plays.length) || (lv.box && lv.box.batting))) {
+      /* from first pitch the tabs show the real game: the real lineups (zeros before they bat), not the simulated one */
       var b = lv.box || { batting: { away: [], home: [] }, pitching: { away: [], home: [] } };
       var sc = lv.state ? { away: lv.state.away_score, home: lv.state.home_score } : (b.score || { away: 0, home: 0 });
-      return { batting: b.batting || { away: [], home: [] }, pitching: b.pitching || { away: [], home: [] }, plays: lv.plays, score: sc, innings: b.innings || {}, _real: true, _live: !lv._final, _final: !!lv._final };
+      return { batting: b.batting || { away: [], home: [] }, pitching: b.pitching || { away: [], home: [] }, plays: lv.plays || [], score: sc, innings: b.innings || {}, _real: true, _live: !lv._final, _final: !!lv._final };
     }
     return null;
   }
@@ -2286,17 +2288,29 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   }
 
   /* Box score tab */
+  /* A box score's batting rows: in batting order, each substitute right under the player he replaced (MLB's order
+     number is spot x 100 plus the substitution), and no pitcher who is listed but never came to bat (DH games). */
+  function battingRows(rows) {
+    var out = rows.filter(function (b) { return b.spot || (b.PA || b.AB || b.BB || b.HBP || b.SF || 0) > 0; }).map(function (b, i) {
+      var order = b.order || (b.spot ? b.spot * 100 : 1000 + i);
+      return Object.assign({}, b, { _order: order, _sub: !!(b.order && b.order % 100), _i: i });
+    });
+    out.sort(function (a, b) { return a._order - b._order || a._i - b._i; });
+    var seen = {};
+    out.forEach(function (b) { if (b.spot && !b.order) { b._sub = !!seen[b.spot]; seen[b.spot] = 1; } });
+    return out;
+  }
   function boxTab(f, s, actualBox, pk, label, realOnly) {
     var side = state.boxSide[pk] || (actualBox ? "actual" : "proj"), src = side === "actual" && actualBox ? actualBox : s, h = '<h2 class="visually-hidden">Box score</h2>';
     if (actualBox && !realOnly) {
       h += '<div class="seg" role="group" aria-label="Which box score"><button data-boxside="actual" aria-pressed="' + (side === "actual") + '">' + esc(label || "Actual") + '</button><button data-boxside="proj" aria-pressed="' + (side !== "actual") + '">Projected</button></div>';
     }
     ["away", "home"].forEach(function (t) {
-      var bat = src.batting[t] || [], tot = { AB: 0, R: 0, H: 0, RBI: 0, BB: 0, K: 0 }, names = shortNames(bat);
+      var bat = battingRows(src.batting[t] || []), tot = { AB: 0, R: 0, H: 0, RBI: 0, BB: 0, K: 0 }, names = shortNames(bat);
       h += '<section class="sec"><h3 class="team-h ' + t + '-c">' + esc(nickname(f[t].name)) + '</h3><div class="tbl-wrap"><table class="box"><thead><tr><th scope="col">Batters</th><th>AB</th><th>R</th><th>H</th><th>RBI</th><th>BB</th><th>K</th></tr></thead><tbody>';
       bat.forEach(function (b) {
         ["AB", "R", "H", "RBI", "BB", "K"].forEach(function (k) { tot[k] += b[k] || 0; });
-        h += '<tr><td><span class="spot">' + (b.spot || "") + "</span>" + esc(names[String(b.player_id)]) + "</td><td>" + b.AB + "</td><td>" + b.R + "</td><td>" + b.H + "</td><td>" + b.RBI + "</td><td>" + b.BB + "</td><td>" + b.K + "</td></tr>";
+        h += '<tr' + (b._sub ? ' class="sub"' : "") + '><td><span class="spot">' + (b._sub ? "" : (b.spot || "")) + "</span>" + esc(names[String(b.player_id)]) + "</td><td>" + b.AB + "</td><td>" + b.R + "</td><td>" + b.H + "</td><td>" + b.RBI + "</td><td>" + b.BB + "</td><td>" + b.K + "</td></tr>";
       });
       h += '<tr class="tot"><td>Totals</td><td>' + tot.AB + "</td><td>" + tot.R + "</td><td>" + tot.H + "</td><td>" + tot.RBI + "</td><td>" + tot.BB + "</td><td>" + tot.K + "</td></tr></tbody></table></div>";
       var notes = [["2B", "2B"], ["3B", "3B"], ["HR", "HR"], ["HBP", "HBP"]].map(function (k) {

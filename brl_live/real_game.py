@@ -172,6 +172,7 @@ def box_from_feed(feed: dict) -> dict:
             if not stats and not p.get('battingOrder'):
                 continue          # listed but never in the lineup; a lineup spot not yet up shows zeros
             bat.append({'player_id': str(pid), 'name': str((p.get('person') or {}).get('fullName') or ''), 'spot': _int(p.get('battingOrder'), 0) // 100,
+                        'order': _int(p.get('battingOrder'), 0),
                         **{k: _int(stats.get(v), 0) for k, v in BAT_FIELDS.items()}})
         for pid in team.get('pitchers') or []:
             p = players.get('ID' + str(pid)) or {}
