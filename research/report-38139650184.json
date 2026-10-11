@@ -1,0 +1,271 @@
+{
+ "schema": "brl.report-receipt.v1",
+ "run_id": "38139650184",
+ "params": {
+  "bvp_study": {
+   "boot": 2000,
+   "seed": 20261011
+  },
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "dates": [
+   "2026-04-01"
+  ],
+  "publish": false
+ },
+ "started_at": "2026-10-11T12:32:59.538551+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 10.4,
+   "peak_rss_mb": 1092
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 20.3,
+   "peak_rss_mb": 1262
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 30.4,
+   "peak_rss_mb": 1436
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 40.3,
+   "peak_rss_mb": 1593
+  },
+  {
+   "stage": "bvp study: plate appearances",
+   "at_seconds": 40.5,
+   "peak_rss_mb": 1593
+  },
+  {
+   "stage": "bvp study: 2023-2024 to 2025",
+   "at_seconds": 50.9,
+   "peak_rss_mb": 1593
+  },
+  {
+   "stage": "bvp study: 2023-2025 to 2026",
+   "at_seconds": 61.4,
+   "peak_rss_mb": 1593
+  }
+ ],
+ "reports": {},
+ "environment": {
+  "python": "3.12.15",
+  "commit": "54dc49debaf5936891621fba476548a6dd34418f",
+  "numpy": "2.5.4",
+  "scipy": "1.18.1",
+  "scikit-learn": "1.9.1",
+  "pandas": "3.0.6",
+  "cryptography": "46.0.4"
+ },
+ "bvp_study": {
+  "plate_appearances": 731711,
+  "m": {
+   "on": 100.0,
+   "k": 60.0,
+   "tb": 150.0
+  },
+  "replications": {
+   "2023-2024 to 2025": {
+    "obp": {
+     "pairs": 31304,
+     "batters": 522,
+     "trials_early": 92128,
+     "trials_late": 72032,
+     "rate_late": 0.3124,
+     "sigma2": 0.2148,
+     "tau2": 0.000565,
+     "tau2_ci": [
+      -0.0002366,
+      0.0013496
+     ],
+     "tau_points": 2.38,
+     "k": 380,
+     "k_low": 159,
+     "carried_by_n": {
+      "10": 0.026,
+      "20": 0.05,
+      "30": 0.073,
+      "50": 0.116
+     },
+     "carried_by_n_high": {
+      "10": 0.059,
+      "20": 0.112,
+      "30": 0.159,
+      "50": 0.239
+     },
+     "pairs_min_each": 27,
+     "corr_min_each": -0.112,
+     "slope_min_each": -0.115
+    },
+    "k": {
+     "pairs": 31304,
+     "batters": 522,
+     "trials_early": 92128,
+     "trials_late": 72032,
+     "rate_late": 0.2227,
+     "sigma2": 0.1731,
+     "tau2": 5.97e-05,
+     "tau2_ci": [
+      -0.000611,
+      0.0007555
+     ],
+     "tau_points": 0.77,
+     "k": 2901,
+     "k_low": 229,
+     "carried_by_n": {
+      "10": 0.003,
+      "20": 0.007,
+      "30": 0.01,
+      "50": 0.017
+     },
+     "carried_by_n_high": {
+      "10": 0.042,
+      "20": 0.08,
+      "30": 0.116,
+      "50": 0.179
+     },
+     "pairs_min_each": 27,
+     "corr_min_each": -0.344,
+     "slope_min_each": -0.331
+    },
+    "slg": {
+     "pairs": 28980,
+     "batters": 520,
+     "trials_early": 81512,
+     "trials_late": 63978,
+     "rate_late": 0.3953,
+     "sigma2": 0.7495,
+     "tau2": -0.0011226,
+     "tau2_ci": [
+      -0.0045747,
+      0.0023825
+     ],
+     "tau_points": 0.0,
+     "k": null,
+     "k_low": 315,
+     "carried_by_n": {
+      "10": 0.0,
+      "20": 0.0,
+      "30": 0.0,
+      "50": 0.0
+     },
+     "carried_by_n_high": {
+      "10": 0.031,
+      "20": 0.06,
+      "30": 0.087,
+      "50": 0.137
+     },
+     "pairs_min_each": 19,
+     "corr_min_each": -0.394,
+     "slope_min_each": -0.412
+    }
+   },
+   "2023-2025 to 2026": {
+    "obp": {
+     "pairs": 35086,
+     "batters": 518,
+     "trials_early": 117102,
+     "trials_late": 78019,
+     "rate_late": 0.3156,
+     "sigma2": 0.216,
+     "tau2": 0.0011584,
+     "tau2_ci": [
+      0.0003985,
+      0.0019562
+     ],
+     "tau_points": 3.4,
+     "k": 186,
+     "k_low": 110,
+     "carried_by_n": {
+      "10": 0.051,
+      "20": 0.097,
+      "30": 0.139,
+      "50": 0.211
+     },
+     "carried_by_n_high": {
+      "10": 0.083,
+      "20": 0.153,
+      "30": 0.214,
+      "50": 0.312
+     },
+     "pairs_min_each": 34,
+     "corr_min_each": 0.061,
+     "slope_min_each": 0.06
+    },
+    "k": {
+     "pairs": 35086,
+     "batters": 518,
+     "trials_early": 117102,
+     "trials_late": 78019,
+     "rate_late": 0.2219,
+     "sigma2": 0.1727,
+     "tau2": 0.0002611,
+     "tau2_ci": [
+      -0.0003315,
+      0.0008549
+     ],
+     "tau_points": 1.62,
+     "k": 661,
+     "k_low": 202,
+     "carried_by_n": {
+      "10": 0.015,
+      "20": 0.029,
+      "30": 0.043,
+      "50": 0.07
+     },
+     "carried_by_n_high": {
+      "10": 0.047,
+      "20": 0.09,
+      "30": 0.129,
+      "50": 0.198
+     },
+     "pairs_min_each": 34,
+     "corr_min_each": 0.107,
+     "slope_min_each": 0.115
+    },
+    "slg": {
+     "pairs": 32445,
+     "batters": 515,
+     "trials_early": 103379,
+     "trials_late": 69006,
+     "rate_late": 0.3914,
+     "sigma2": 0.7414,
+     "tau2": 0.0014316,
+     "tau2_ci": [
+      -0.0015461,
+      0.0048571
+     ],
+     "tau_points": 3.78,
+     "k": 518,
+     "k_low": 153,
+     "carried_by_n": {
+      "10": 0.019,
+      "20": 0.037,
+      "30": 0.055,
+      "50": 0.088
+     },
+     "carried_by_n_high": {
+      "10": 0.061,
+      "20": 0.116,
+      "30": 0.164,
+      "50": 0.247
+     },
+     "pairs_min_each": 23,
+     "corr_min_each": -0.26,
+     "slope_min_each": -0.274
+    }
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-11T12:34:00.951973+00:00",
+ "seconds": 61.4
+}
