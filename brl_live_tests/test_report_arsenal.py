@@ -62,3 +62,16 @@ def test_arsenal_uses_the_latest_season_when_it_has_300_pitches():
     fake.asof_day = date(2026, 4, 1).toordinal(); T['season'] = np.where(np.arange(n) < 600, 2025, 2026)   # 200 pitches this season: both seasons
     card = B.Fitted.pitcher_card(fake, 77)
     assert card['arsenal_season'] is None
+
+
+def test_league_arsenal_rates_by_pitch_type():
+    B = _report()
+    n = 6000
+    sub = np.where(np.arange(n) % 3 == 0, 4, 0)                       # a third sliders, the rest four-seamers
+    T = {'sub': sub, 'strikes': np.resize([0, 1, 2], n), 'last_in_pa': np.resize([0, 0, 1], n), 'out7': np.resize([1, 1, 1], n),
+         'v0': np.where(sub == 4, 86.0, 95.0)}
+    swing = np.resize([1.0, 0.0], n); whiff = np.where((sub == 4) & (swing == 1), 1.0, 0.0)
+    out = np.resize([True, False, False], n)
+    lg = B.league_arsenal(T, np.ones(n, bool), swing, whiff, out)
+    assert set(lg) == {'FF', 'SL'} and lg['SL']['whiff_rate'] == 1.0 and lg['FF']['whiff_rate'] == 0.0
+    assert lg['SL']['speed'] == 86.0 and lg['FF']['zone_rate'] == 1.0 and lg['SL']['zone_rate'] == 0.0      # the sliders are the pitches out of the zone

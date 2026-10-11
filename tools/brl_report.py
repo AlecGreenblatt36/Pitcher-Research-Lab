@@ -256,6 +256,27 @@ PCT_HITTER = (('avg', 1), ('slg', 1), ('k', -1), ('bb', 1), ('chase', -1), ('whi
 PCT_PITCHER = (('k', 1), ('bb', -1), ('whiff', 1), ('chase', 1), ('hard', -1), ('avg', -1), ('velo', 1))
 
 
+def league_arsenal(T: dict, rows, swing, whiff, outside) -> dict:
+    """Each pitch type's league rates on these rows, the reference the arsenal tables show next to a pitcher's: speed,
+    misses per swing, chases, share in the zone and put-aways (strikeouts per two-strike pitch of the type)."""
+    if 'sub' not in T:
+        return {}
+    idx = np.flatnonzero(rows) if np.asarray(rows).dtype == bool else np.asarray(rows, dtype=np.int64)
+    sub = T['sub'][idx]; sw = np.asarray(swing)[idx] == 1; wh = np.asarray(whiff)[idx] == 1; out = np.asarray(outside)[idx]
+    two = T['strikes'][idx] == 2; k_end = (T['last_in_pa'][idx] == 1) & (T['out7'][idx] == 1); v0 = T['v0'][idx].astype(np.float64)
+    res = {}
+    for k, code in enumerate(D.SUBTYPES):
+        m = sub == k
+        if m.sum() < 2000:
+            continue
+        res[code] = {'pitches': int(m.sum()), 'speed': round(float(np.nanmean(v0[m])), 1),
+                     'whiff_rate': round(float((wh & m).sum() / max((sw & m).sum(), 1)), 3),
+                     'chase_rate': round(float((sw & m & out).sum() / max((m & out).sum(), 1)), 3),
+                     'zone_rate': round(float((m & ~out).sum() / m.sum()), 3),
+                     'putaway': round(float((m & two & k_end).sum() / max((m & two).sum(), 1)), 3)}
+    return res
+
+
 def player_lines(T: dict, rows, swing, whiff, outside, key: str) -> dict:
     """Each player's line over these rows as counts, keyed by player id (key 'batter' or 'pitcher'): plate appearances
     (batters faced for a pitcher), at-bats, hits, total bases, home runs, strikeouts, walks (with hit batters; the outcome
@@ -565,6 +586,7 @@ class Fitted:
         self.league['zones'] = {sd_: zone_split(T, np.flatnonzero(tr & (T['stand_r'] == (1 if sd_ == 'R' else 0))), swing, whiff) for sd_ in ('R', 'L')}
         self.league['spray'] = {sd_: spray_counts(T, np.flatnonzero(tr & (T['stand_r'] == (1 if sd_ == 'R' else 0)))) for sd_ in ('R', 'L')}
         self.league['counts'] = {sd_: count_tend(T, np.flatnonzero(tr & (T['stand_r'] == (1 if sd_ == 'R' else 0))), swing, whiff) for sd_ in ('R', 'L')}
+        self.league['arsenal'] = league_arsenal(T, tr, swing, whiff, self.outside)         # each pitch type's league rates, for the arsenal tables
         # every player's line on the training rows and the percentile references (PROD-08)
         self.lines_h = player_lines(T, tr, swing, whiff, self.outside, 'batter')
         self.lines_p = player_lines(T, tr, swing, whiff, self.outside, 'pitcher')
