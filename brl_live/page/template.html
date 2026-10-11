@@ -1048,7 +1048,16 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         var j = box.sample_indices.indexOf(w);
         if (j >= 0 && box.samples[j]) out0.push({ key: r[1], label: r[2], i: j });
       });
-      if (out0.length && out0[0].key === "proj") return out0;
+      if (out0.length && out0[0].key === "proj") {
+        /* The roles were chosen with the simulator's favorite. When our pick (team ratings and the line in) is the other
+           team, the projected game is the most typical game our pick wins, so the header never shows the pick losing. */
+        var up = out0.filter(function (x) { return x.key === "upset"; })[0], fv = favorite(f);
+        if (up && sampleWinner(box.samples[out0[0].i]) !== fv && sampleWinner(box.samples[up.i]) === fv) {
+          var t = out0[0].i; out0[0].i = up.i; up.i = t; out0[0].flipped = true;
+        }
+        if (box.projected_follows_pick) out0[0].flipped = true;     /* early and archived boxes keep one game, chosen the same way */
+        return out0;
+      }
     }
     var fav = favorite(f), samples = box.samples.map(function (s, i) { return { s: s, i: i }; });
     var ranked = samples.slice().sort(function (a, b) { return centrality(a.s, box, fav, f) - centrality(b.s, box, fav, f); });
@@ -1771,7 +1780,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     } else if (s) {
       var simFav = f.home_win_probability == null ? null : f.home_win_probability >= 0.5 ? "home" : "away";
       var split = v && v.key === "proj" && simFav && simFav !== fav && sampleWinner(s) === simFav;
-      html += lineScore(f, s) + '<p class="hero-note">The line score is one simulated game, not a real score.' + (split ? " It follows the simulator, which by itself leans the " + esc(nickname(f[simFav].name)) + " (" + pct(simFav === "home" ? f.home_win_probability : 1 - f.home_win_probability) + "); with the team ratings" + (taughtRecipe(f) && marketProb(D.market && D.market[f.game_pk]) != null ? " and the betting line" : "") + " in, our pick is the " + esc(nickname(f[fav].name)) + "." : "") + "</p>";
+      var flipped = v && v.key === "proj" && v.flipped;
+      html += lineScore(f, s) + '<p class="hero-note">The line score is one simulated game, not a real score.' + (flipped ? " The simulator by itself leans the " + esc(nickname(f[simFav].name)) + " (" + pct(simFav === "home" ? f.home_win_probability : 1 - f.home_win_probability) + "); with the team ratings" + (taughtRecipe(f) && marketProb(D.market && D.market[f.game_pk]) != null ? " and the betting line" : "") + " in, our pick is the " + esc(nickname(f[fav].name)) + ", so this is the most typical simulated game they win." : "") + (split ?" It follows the simulator, which by itself leans the " + esc(nickname(f[simFav].name)) + " (" + pct(simFav === "home" ? f.home_win_probability : 1 - f.home_win_probability) + "); with the team ratings" + (taughtRecipe(f) && marketProb(D.market && D.market[f.game_pk]) != null ? " and the betting line" : "") + " in, our pick is the " + esc(nickname(f[fav].name)) + "." : "") + "</p>";
     }
     html += "</div></div></div></section>";
 

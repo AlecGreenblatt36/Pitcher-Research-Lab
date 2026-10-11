@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 268,
- "rows": 271,
+ "experiments": 269,
+ "rows": 272,
  "records": {
   "ACC-01": [
    {
@@ -4384,6 +4384,21 @@
     "columns": {
      "ID": "PROD-06",
      "Attempt": "Product call, October 10, 9 p.m. Eastern (Alec: hot zones and layouts like the standard market). Descriptive counts only, no model and no claim: the standard hot-zone chart (MLB's 13 zones from the per-pitch zone column, catcher's view) with AVG, SLG, swing and miss rates by the pitcher's hand and pitch type; pitcher cards' zone counts by batter side; spray tendencies (ground balls and balls in the air by field third from the gameday hit coordinates, pop-ups, hard-hit at 95 mph); the bullpen card's pitches on the five days before a game. All from training pitches before the plan's as-of date. Known simplifications: a triple counts as a double in SLG (the outcome table lumps them); a sacrifice fly counts as an at-bat; zones with fewer than 10 at-bats (15 pitches, 10 swings) show in gray. The plan's spots still come from the swing maps, so a chart and a plan can disagree.",
+     "Disposition and evidence": "on (a display change; no gate)"
+    },
+    "registered_before_run": false,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "on (a display change; no gate)"
+   }
+  ],
+  "PROD-07": [
+   {
+    "id": "PROD-07",
+    "columns": {
+     "ID": "PROD-07",
+     "Attempt": "Product call, October 11, 12 a.m. Eastern. The projected game shown with a forecast (the header's score, line score, box and plays) is the most typical saved world in which our pick wins. The saved roles are chosen over all 10,000 worlds with the simulator's favorite, so when the team ratings and the line make the pick the other team (October 11, Dodgers at Brewers: simulator Dodgers 54%, pick Brewers 51%) the header showed the pick losing 5-2. Now the saved upset world (the most typical game the other team wins) is shown instead, with a note that says so; the probabilities, the record and the box's player chances are unchanged. Applies to the page's full boxes (client side, variantsFor), tomorrow's lean early box, the day archives and boxes archived in the ledger (box_page.lean_box with the record's headline). No model and no claim.",
      "Disposition and evidence": "on (a display change; no gate)"
     },
     "registered_before_run": false,

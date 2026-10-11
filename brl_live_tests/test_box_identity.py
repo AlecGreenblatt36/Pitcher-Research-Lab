@@ -28,11 +28,15 @@ def test_latest_version_wins_over_save_time():
     subprocess.run(['node','-e',prefix+functions+suffix],check=True)
 
 def test_roles_saved_with_the_forecast_drive_the_version_buttons():
-    functions=page_functions('variantsFor')
+    functions=page_functions('variantsFor','sampleWinner')
     prefix=("const assert=require('assert');var ROLE_LABELS=[['projected','proj','Projected game'],['high','high','High scoring'],['low','low','Low scoring'],['upset','upset','Upset']];"
-            "function favorite(){return 'home';}"
+            "var FAV='home';function favorite(){return FAV;}"
             "const box={sample_roles:{projected:40,high:7,low:900,upset:3},sample_indices:[40,7,900,3,11],samples:[1,2,3,4,5].map(function(i){return {score:{away:0,home:i},plays:[],pitching:{away:[],home:[]}};})};")
     suffix="const v=variantsFor(box,{});assert.deepEqual(v.map(function(x){return x.key+':'+x.i;}),['proj:0','high:1','low:2','upset:3']);"
+    # our pick is the away team: the projected game becomes the saved upset world (the most typical game the pick wins)
+    suffix+=("box.samples[0].score={away:5,home:2};box.samples[3].score={away:2,home:3};FAV='home';"
+             "const w=variantsFor(box,{});assert.deepEqual(w.map(function(x){return x.key+':'+x.i;}),['proj:3','high:1','low:2','upset:0']);assert.ok(w[0].flipped);"
+             "FAV='away';const u=variantsFor(box,{});assert.deepEqual(u.map(function(x){return x.key+':'+x.i;}),['proj:0','high:1','low:2','upset:3']);assert.ok(!u[0].flipped);")
     subprocess.run(['node','-e',prefix+functions+suffix],check=True)
 
 def page_vars(*names):

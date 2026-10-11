@@ -88,7 +88,7 @@ def test_tomorrows_early_call_stays_on_the_page_lean():
     l['forecasts']['far'] = dict(l['forecasts']['a'], game_pk=6, date='2026-10-08', version=1)
     seen = []
     real = box_page.lean_box
-    box_page.lean_box = lambda b: (seen.append(b['game_pk']), {'game_pk': b['game_pk'], 'date': b['date'], 'archived': True})[1]
+    box_page.lean_box = lambda b, home_pick=None: (seen.append(b['game_pk']), {'game_pk': b['game_pk'], 'date': b['date'], 'archived': True})[1]
     try:
         l['box_scores']['t'] = {'game_pk': 5, 'date': '2026-10-07', 'samples': ['big']}
         l['box_scores']['far'] = {'game_pk': 6, 'date': '2026-10-08'}
@@ -99,3 +99,19 @@ def test_tomorrows_early_call_stays_on_the_page_lean():
     assert set(public['box_scores']) == {'a', 'yday', 't'} and seen == [5]
     assert public['box_scores']['t'] == {'game_pk': 5, 'date': '2026-10-07', 'early': True}
     assert set(public['box_publications']) == {'a', 'yday', 't'}
+
+
+def test_lean_box_keeps_the_game_our_pick_wins():
+    """The saved roles follow the simulator's favorite; when the headline picks the other team, the kept game is the
+    saved upset world (the most typical game the pick wins), and the box says so."""
+    from brl_live.box_page import lean_box
+    sample=lambda s,a,h:{'seed':s,'score':{'away':a,'home':h},'innings':{'away':{},'home':{}},'batting':{'away':[],'home':[]},'pitching':{'away':[],'home':[]},'plays':[],'world_index':s}
+    box={'game_pk':1,'date':'2026-10-11','sample_roles':{'projected':7,'high':8,'upset':9},'sample_indices':[7,8,9],
+         'teams':{'away':{'batting':[],'pitching':[]},'home':{'batting':[],'pitching':[]}},'samples':[sample(7,5,2),sample(8,6,4),sample(9,2,3)]}
+    kept=lean_box(box,home_pick=0.51)
+    assert kept['samples'][0]['seed']==9 and kept['sample_roles']=={'projected':9} and kept['sample_indices']==[9] and kept['projected_follows_pick']
+    same=lean_box(box,home_pick=0.46)
+    assert same['samples'][0]['seed']==7 and same['sample_roles']=={'projected':7} and 'projected_follows_pick' not in same
+    assert lean_box(box)['samples'][0]['seed']==7
+    no_upset=dict(box,sample_roles={'projected':7,'high':8},sample_indices=[7,8],samples=box['samples'][:2])
+    assert lean_box(no_upset,home_pick=0.6)['samples'][0]['seed']==7

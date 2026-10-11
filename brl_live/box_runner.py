@@ -264,6 +264,12 @@ def archive_old_boxes(ledger,today):
     from .edge_metrics import skill_box_outcome
     try:cutoff=(_date.fromisoformat(str(today))-timedelta(days=ARCHIVE_AFTER_DAYS-1)).isoformat()
     except ValueError:return 0
+    # The kept game is the one the page showed as projected: the most typical game our pick (the headline) wins.
+    try:
+        from .record import build_record
+        blend=build_record(ledger).get('blend') or {}
+    except Exception:
+        blend={}
     cache=ledger.setdefault('box_cache',{});done=0
     for ident,box in list((ledger.get('box_scores') or {}).items()):
         if box.get('archived') or str(box.get('date'))>=cutoff:continue
@@ -278,7 +284,7 @@ def archive_old_boxes(ledger,today):
         cache[ident]={'player':{'version':version,'excluded':reason},
                       'skill':{'published':not_published,'eligible':not_eligible,'result':raw},
                       'actual_sha256':content_hash(actual),'archived_on':str(today)}
-        ledger['box_scores'][ident]=lean_box(box);done+=1
+        ledger['box_scores'][ident]=lean_box(box,home_pick=blend.get(ident));done+=1
     return done
 
 def main(public_dir):

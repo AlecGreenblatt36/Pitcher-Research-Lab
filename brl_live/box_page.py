@@ -73,7 +73,8 @@ def trim_boxes(public: dict) -> dict:
         if pk in latest and latest[pk][0] != k:
             continue
         if d in ahead:
-            early = lean_box(v); early.pop('archived', None); early['early'] = True
+            early = lean_box(v, home_pick=((public.get('record') or {}).get('blend') or {}).get(k))
+            early.pop('archived', None); early['early'] = True
             recent[k] = early
         else:
             recent[k] = {name: value for name, value in v.items() if name not in PAGE_BOX_DROP}
@@ -143,8 +144,17 @@ ARCHIVE_PLAY_KEYS = ('inning', 'half', 'batter_id', 'batter_name', 'pitcher_id',
                      'outs_before', 'outs_after', 'runs_scored', 'away_score', 'home_score', 'scoring_players', 'rbi', 'estimated_pitches', 'contact')
 
 
-def lean_box(box: dict) -> dict:
-    """A box for the day archive: projected sample only, player means and chances, no distributions or pitch lists."""
+def _winner(sample: dict) -> str:
+    score = sample.get('score') or {}
+    return 'home' if (score.get('home') or 0) > (score.get('away') or 0) else 'away'
+
+
+def lean_box(box: dict, home_pick: float | None = None) -> dict:
+    """A box for the day archive: projected sample only, player means and chances, no distributions or pitch lists.
+
+    The saved roles were chosen with the simulator's favorite. With home_pick (the headline's home win chance) given and
+    the headline picking the other team, the kept game is the saved 'upset' world, the most typical game our pick wins,
+    so the page never shows the pick losing its own projected game."""
     out = {k: box[k] for k in ('schema', 'game_pk', 'date', 'saved_at', 'forecast_origin', 'team_ids', 'starters', 'lineup_status',
                                'history_through', 'forecast_id', 'n_simulations', 'sample_roles', 'sample_indices', 'adjustments',
                                'team_model', 'team_run_distributions', 'total_run_distribution', 'line_score', 'win_table', 'matchups') if k in box}
@@ -157,19 +167,34 @@ def lean_box(box: dict) -> dict:
                 rows.append({k: v for k, v in r.items() if k != 'distributions'})
             out['teams'][side][kind] = rows
     samples = box.get('samples') or []
-    proj = samples[0] if samples else None
+    roles, indices = box.get('sample_roles') or {}, list(box.get('sample_indices') or [])
+    choice = 0
+    if home_pick is not None and samples:
+        fav = 'home' if home_pick >= 0.5 else 'away'
+        up = roles.get('upset')
+        j = indices.index(up) if up is not None and up in indices else -1
+        if _winner(samples[0]) != fav and 0 <= j < len(samples) and _winner(samples[j]) == fav:
+            choice = j
+    proj = samples[choice] if samples else None
     if proj is not None:
         lean = {k: proj[k] for k in ('seed', 'score', 'innings', 'batting', 'pitching', 'world_index', 'typical') if k in proj}
         lean['plays'] = [{k: pl.get(k) for k in ARCHIVE_PLAY_KEYS} for pl in proj.get('plays') or []]
         out['samples'] = [lean]
-        out['sample_roles'] = {'projected': out.get('sample_roles', {}).get('projected')}
-        out['sample_indices'] = out.get('sample_indices', [None])[:1]
+        if choice:
+            out['sample_roles'] = {'projected': indices[choice]}
+            out['sample_indices'] = [indices[choice]]
+            out['projected_follows_pick'] = True
+        else:
+            out['sample_roles'] = {'projected': out.get('sample_roles', {}).get('projected')}
+            out['sample_indices'] = out.get('sample_indices', [None])[:1]
     out['archived'] = True
     return out
 
 
-def day_archives(ledger: dict) -> dict:
-    """date -> compact public payload for that day (forecasts, actuals, market, lean boxes)."""
+def day_archives(ledger: dict, blend: dict | None = None) -> dict:
+    """date -> compact public payload for that day (forecasts, actuals, market, lean boxes). blend: the record's headline
+    home win chance by forecast, so each day's projected game is the most typical game our pick wins (lean_box)."""
+    blend = blend or {}
     days = {}
     for ident, box in (ledger.get('box_scores') or {}).items():
         days.setdefault(str(box.get('date')), {'date': str(box.get('date')), 'forecasts': {}, 'publications': {}, 'actuals': {}, 'status': {},
@@ -183,7 +208,7 @@ def day_archives(ledger: dict) -> dict:
                 if ident in (ledger.get('publications') or {}):
                     day['publications'][ident] = ledger['publications'][ident]
                 if ident in (ledger.get('box_scores') or {}):
-                    day['box_scores'][ident] = lean_box(ledger['box_scores'][ident])
+                    day['box_scores'][ident] = lean_box(ledger['box_scores'][ident], home_pick=blend.get(ident))
                     if ident in (ledger.get('box_publications') or {}):
                         day['box_publications'][ident] = ledger['box_publications'][ident]
         for pk in pks:
@@ -212,7 +237,7 @@ def render_page(ledger, scores, destination, setup_message=None, *, replay=False
     (d / '.nojekyll').write_text('')
     days = d / 'days'
     days.mkdir(exist_ok=True)
-    archives = day_archives(ledger)
+    archives = day_archives(ledger, (public.get('record') or {}).get('blend'))
     for date, payload in archives.items():
         (days / (date + '.json')).write_bytes(canonical(payload))
     public_index = {'schema': 'brl.days.v1', 'dates': sorted(archives)}
