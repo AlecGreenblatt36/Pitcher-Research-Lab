@@ -168,8 +168,10 @@ once it is over.
 The hitter tags are levels against the league with fixed thresholds, and they were checked on the next season's
 pitches (TAGS-01, TAGS-02): every tag held in both test seasons, at about 80 to 95% of its training difference. The
 two-strike tags compare a hitter's two-strike chase rate with his own chase rate in the other counts, net of the
-league's change on his side; that change correlates 0.64 and 0.72 from one season to the next. The plan sheets' lineup
-notes are drawn from these tags only.
+league's change on his side; that change correlates 0.64 and 0.72 from one season to the next. The pitch-type tags
+(TAGS-03) compare his misses per swing on breaking balls or offspeed with his misses on fastballs, net of the league's
+same difference on his side (correlations 0.52 to 0.62 from one season to the next). The plan sheets' lineup notes are
+drawn from these tags only.
 
 ## Privacy, storage and publication
 

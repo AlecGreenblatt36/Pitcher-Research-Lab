@@ -78,7 +78,14 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   E (parse_actual_box 'errors', the client's state.errors). TAGS-01: every hitter tag carried over to the next season in
   both test seasons; the two-strike tags now read his change against his own chase in the other counts (season-to-season
   correlation 0.64 and 0.72; page twoStrikeShift), and the plans' evidence fold quotes the carry-over. TAGS-02 (the
-  hitter's-count aggression line) held: +11.3 and +11.1 points over the league with the pitcher behind. The phone check failed once on 12 and 13px text in the new
+  hitter's-count aggression line) held: +11.3 and +11.1 points over the league with the pitcher behind. TAGS-03 held:
+  misses by pitch type against his own fastball misses carry over (0.52 to 0.62), so the plans tag Misses/Handles
+  breaking balls and offspeed (page famWhiffShift). Each plan sheet opens with "Working through this lineup" (lineupKeys)
+  from these tags, the running game (PROD-09: runners to hold, steals against the starter, each hitter's line) and the
+  starter's projected line from the simulator's box; arsenal tables use this season's pitches when 300 or more; the live
+  card gives the pitcher's mix in the count at hand. POST-03 held (postseason managers keep good starters in longer: top
+  third by K-BB 0.90 of their regular length, bottom 0.77); the tiered factor is built in brl_live/live_extension.py and
+  OFF (ADJUST postseason_starter_tiers None), queued for Alec's OK. The phone check failed once on 12 and 13px text in the new
   pieces (its floor is 14px); fixed at 12ac50da0. Run tools/check_brl_phone_page.py against the local build (--url
   http://127.0.0.1:8790/index.html?api=http://127.0.0.1:8790/mlb/) before pushing page changes.
 
