@@ -4871,14 +4871,16 @@
     "columns": {
      "ID": "XSTATS-01",
      "Attempt": "Expected batting average and slugging, the way the public player pages compute them: each measured ball in play (no bunts) takes the league's hit rate and total bases for its exit speed and launch angle (3 mph by 4 degrees, backed off to 6 by 8 where a bin has under 30 balls; unmeasured balls in play at the league's unmeasured rates; strikeouts and other at-bats none), over his at-bats. Does a hitter's expected AVG (SLG) from two seasons predict his next season's AVG (SLG) better than his AVG (SLG)? Table and lines from the training seasons; hitters with 300 or more plate appearances in training and 150 in the test; squared error weighted by test at-bats; a blend weight on expected fitted on 2023-2024 to 2025; scored once on 2024-2025 to 2026 before August 1; intervals from resampling hitters (2,000 draws). tools/brl_report.py xstats_study, xs_table, xs_lines, report lane, aggregates only. Synthetic check (brl_live_tests/test_report_xstats_study.py): with results driven by contact quality, expected wins; with results driven by something else (speed), raw wins and the blend leans raw.",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions on 2026: (1) expected AVG predicts AVG better than AVG does, interval excluding zero; (2) expected SLG predicts SLG better than SLG does, interval excluding zero; (3) the fitted blend puts at least half its weight on expected for both. Decision rule: for each of AVG and SLG where (1) or (2) holds, the hitter percentile rankings and cards add an Expected row (expected AVG, expected SLG, labeled as from how hard and at what angle he hits the ball); otherwise nothing changes.",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions on 2026: (1) expected AVG predicts AVG better than AVG does, interval excluding zero; (2) expected SLG predicts SLG better than SLG does, interval excluding zero; (3) the fitted blend puts at least half its weight on expected for both. Decision rule: for each of AVG and SLG where (1) or (2) holds, the hitter percentile rankings and cards add an Expected row (expected AVG, expected SLG, labeled as from how hard and at what angle he hits the ball); otherwise nothing changes. **Results (run 38136145933, receipt research/report-38136145933.json; 265 hitters scored on 2026 before August 1, 99.6% of balls in play measured):** AVG: expected minus raw squared error +0.000004 [-0.000097, +0.000108]; correlations with 2026 AVG 0.35 (expected) and 0.38 (raw); the blend (0.65 on expected, fitted on 2025) against raw -0.000041 [-0.000107, +0.000024]. SLG: expected minus raw -0.0000005 [-0.00052, +0.00053]; correlations 0.445 and 0.422; the blend (0.47) against raw -0.00022 [-0.00048, +0.00002]. **(1), (2) and (3) failed**: over two seasons of 300 or more plate appearances, expected AVG and SLG from exit speed and launch angle predicted the next season about as well as the actual numbers, not better. Decision, as registered: nothing changes; no Expected AVG or SLG rows. The Record page's list says so.",
+     "Delta corrected Brier, 2026": "failed: (1), (2), (3)"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38136145933"
+    ],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "failed: (1), (2), (3)"
    }
   ],
   "PSPLITS-01": [
