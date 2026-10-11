@@ -1,19 +1,19 @@
 {
  "schema": "brl.stats-probe.v1",
- "at": "2026-10-11T08:59:02.034224+00:00",
+ "at": "2026-10-11T12:26:41.995183+00:00",
  "origin": "https://alecgreenblatt36.github.io",
  "checks": {
   "schedule": {
    "status": 200,
    "allow_origin": "*",
    "bytes": 3460,
-   "seconds": 0.27
+   "seconds": 0.13
   },
   "people_season": {
    "status": 200,
    "allow_origin": "*",
    "bytes": 7998,
-   "seconds": 0.12,
+   "seconds": 0.18,
    "rows": [
     {
      "id": 669373,
@@ -137,7 +137,7 @@
    "status": 200,
    "allow_origin": "*",
    "bytes": 7998,
-   "seconds": 0.11,
+   "seconds": 0.16,
    "rows": [
     {
      "id": 669373,
@@ -261,7 +261,7 @@
    "status": 200,
    "allow_origin": "*",
    "bytes": 5226,
-   "seconds": 0.16,
+   "seconds": 0.2,
    "rows": [
     {
      "id": 669373,
@@ -328,20 +328,20 @@
     "status": 200,
     "allow_origin": "*",
     "bytes": 6682,
-    "seconds": 0.07
+    "seconds": 0.1
    },
    "home": {
     "status": 200,
     "allow_origin": "*",
     "bytes": 6666,
-    "seconds": 0.07
+    "seconds": 0.09
    }
   },
   "gamelog_pitching": {
    "status": 200,
    "allow_origin": "*",
    "bytes": 44655,
-   "seconds": 0.07,
+   "seconds": 0.1,
    "shape": {
     "types": [
      "gameLog"
@@ -529,7 +529,7 @@
    "status": 200,
    "allow_origin": "*",
    "bytes": 1992,
-   "seconds": 0.16,
+   "seconds": 0.14,
    "shape": {
     "types": [
      "gameLog"
@@ -657,7 +657,7 @@
    "status": 200,
    "allow_origin": "*",
    "bytes": 103918,
-   "seconds": 0.24,
+   "seconds": 0.2,
    "shape": {
     "types": [
      "gameLog",
@@ -846,7 +846,7 @@
    "status": 200,
    "allow_origin": "*",
    "bytes": 175832,
-   "seconds": 0.3,
+   "seconds": 0.11,
    "shape": {
     "types": [
      "gameLog"
@@ -1008,7 +1008,7 @@
    "status": 200,
    "allow_origin": "*",
    "bytes": 5506,
-   "seconds": 0.11,
+   "seconds": 0.19,
    "shape": {
     "types": [
      "gameLog"
@@ -1170,7 +1170,7 @@
    "status": 200,
    "allow_origin": "*",
    "bytes": 177765,
-   "seconds": 0.16,
+   "seconds": 0.23,
    "shape": {
     "types": [
      "gameLog",
@@ -1333,7 +1333,7 @@
    "status": 200,
    "allow_origin": "*",
    "bytes": 181969,
-   "seconds": 0.22,
+   "seconds": 0.27,
    "shape": {
     "types": [
      "gameLog"
@@ -1495,7 +1495,7 @@
    "status": 200,
    "allow_origin": "*",
    "bytes": 49885,
-   "seconds": 0.13,
+   "seconds": 0.21,
    "shape": {
     "types": [
      "gameLog",
@@ -1684,7 +1684,7 @@
    "status": 200,
    "allow_origin": "*",
    "bytes": 2980,
-   "seconds": 0.11,
+   "seconds": 0.18,
    "shape": {
     "types": [
      "gameLog"
@@ -1812,7 +1812,7 @@
    "status": 200,
    "allow_origin": "*",
    "bytes": 177765,
-   "seconds": 0.15,
+   "seconds": 0.19,
    "shape": {
     "types": [
      "gameLog",
@@ -1975,7 +1975,7 @@
    "status": 200,
    "allow_origin": "*",
    "bytes": 6423,
-   "seconds": 0.1,
+   "seconds": 0.17,
    "shape": {
     "types": [
      "gameLog"
@@ -2133,11 +2133,964 @@
     ]
    }
   },
+  "bvp_one": {
+   "status": 200,
+   "allow_origin": "*",
+   "bytes": 3020,
+   "seconds": 0.15,
+   "shape": {
+    "vsPlayer": {
+     "n_splits": 2,
+     "split_keys": [
+      "batter",
+      "gameType",
+      "numTeams",
+      "opponent",
+      "pitcher",
+      "season",
+      "stat",
+      "team"
+     ],
+     "stat_keys": [
+      "airOuts",
+      "atBats",
+      "atBatsPerHomeRun",
+      "avg",
+      "babip",
+      "baseOnBalls",
+      "catchersInterference",
+      "doubles",
+      "gamesPlayed",
+      "groundIntoDoublePlay",
+      "groundIntoTriplePlay",
+      "groundOuts",
+      "groundOutsToAirouts",
+      "hitByPitch",
+      "hits",
+      "homeRuns",
+      "intentionalWalks",
+      "leftOnBase",
+      "numberOfPitches",
+      "obp",
+      "ops",
+      "plateAppearances",
+      "rbi",
+      "sacBunts",
+      "sacFlies",
+      "slg",
+      "strikeOuts",
+      "totalBases",
+      "triples"
+     ],
+     "first": [
+      {
+       "person": null,
+       "season": "2025",
+       "team": "Los Angeles Dodgers",
+       "opponent": "Milwaukee Brewers",
+       "batter": 681624,
+       "pitcher": 694819,
+       "stat": {
+        "plateAppearances": 3,
+        "atBats": 3,
+        "hits": 0,
+        "doubles": 0,
+        "triples": 0,
+        "homeRuns": 0,
+        "baseOnBalls": 0,
+        "strikeOuts": 1,
+        "avg": ".000",
+        "obp": ".000",
+        "slg": ".000",
+        "ops": ".000"
+       }
+      },
+      {
+       "person": null,
+       "season": "2026",
+       "team": "Los Angeles Dodgers",
+       "opponent": "Milwaukee Brewers",
+       "batter": 681624,
+       "pitcher": 694819,
+       "stat": {
+        "plateAppearances": 3,
+        "atBats": 3,
+        "hits": 0,
+        "doubles": 0,
+        "triples": 0,
+        "homeRuns": 0,
+        "baseOnBalls": 0,
+        "strikeOuts": 0,
+        "avg": ".000",
+        "obp": ".000",
+        "slg": ".000",
+        "ops": ".000"
+       }
+      }
+     ],
+     "group": "hitting"
+    },
+    "vsPlayerTotal": {
+     "n_splits": 1,
+     "split_keys": [
+      "batter",
+      "gameType",
+      "numTeams",
+      "pitcher",
+      "stat"
+     ],
+     "stat_keys": [
+      "airOuts",
+      "atBats",
+      "atBatsPerHomeRun",
+      "avg",
+      "babip",
+      "baseOnBalls",
+      "catchersInterference",
+      "doubles",
+      "gamesPlayed",
+      "groundIntoDoublePlay",
+      "groundIntoTriplePlay",
+      "groundOuts",
+      "groundOutsToAirouts",
+      "hitByPitch",
+      "hits",
+      "homeRuns",
+      "intentionalWalks",
+      "leftOnBase",
+      "numberOfPitches",
+      "obp",
+      "ops",
+      "plateAppearances",
+      "rbi",
+      "sacBunts",
+      "sacFlies",
+      "slg",
+      "strikeOuts",
+      "totalBases",
+      "triples"
+     ],
+     "first": [
+      {
+       "person": null,
+       "season": null,
+       "team": null,
+       "opponent": null,
+       "batter": 681624,
+       "pitcher": 694819,
+       "stat": {
+        "plateAppearances": 6,
+        "atBats": 6,
+        "hits": 0,
+        "doubles": 0,
+        "triples": 0,
+        "homeRuns": 0,
+        "baseOnBalls": 0,
+        "strikeOuts": 1,
+        "avg": ".000",
+        "obp": ".000",
+        "slg": ".000",
+        "ops": ".000"
+       }
+      }
+     ],
+     "group": "hitting"
+    }
+   }
+  },
+  "bvp_one_total": {
+   "status": 200,
+   "allow_origin": "*",
+   "bytes": 1064,
+   "seconds": 0.17,
+   "shape": {
+    "vsPlayerTotal": {
+     "n_splits": 1,
+     "split_keys": [
+      "batter",
+      "gameType",
+      "numTeams",
+      "pitcher",
+      "stat"
+     ],
+     "stat_keys": [
+      "airOuts",
+      "atBats",
+      "atBatsPerHomeRun",
+      "avg",
+      "babip",
+      "baseOnBalls",
+      "catchersInterference",
+      "doubles",
+      "gamesPlayed",
+      "groundIntoDoublePlay",
+      "groundIntoTriplePlay",
+      "groundOuts",
+      "groundOutsToAirouts",
+      "hitByPitch",
+      "hits",
+      "homeRuns",
+      "intentionalWalks",
+      "leftOnBase",
+      "numberOfPitches",
+      "obp",
+      "ops",
+      "plateAppearances",
+      "rbi",
+      "sacBunts",
+      "sacFlies",
+      "slg",
+      "strikeOuts",
+      "totalBases",
+      "triples"
+     ],
+     "first": [
+      {
+       "person": null,
+       "season": null,
+       "team": null,
+       "opponent": null,
+       "batter": 681624,
+       "pitcher": 694819,
+       "stat": {
+        "plateAppearances": 6,
+        "atBats": 6,
+        "hits": 0,
+        "doubles": 0,
+        "triples": 0,
+        "homeRuns": 0,
+        "baseOnBalls": 0,
+        "strikeOuts": 1,
+        "avg": ".000",
+        "obp": ".000",
+        "slg": ".000",
+        "ops": ".000"
+       }
+      }
+     ],
+     "group": "hitting"
+    }
+   }
+  },
+  "bvp_batch": {
+   "status": 200,
+   "allow_origin": "*",
+   "bytes": 15326,
+   "seconds": 0.22,
+   "shape": {
+    "vsPlayerTotal": {
+     "n_splits": 7,
+     "split_keys": [
+      "batter",
+      "gameType",
+      "numTeams",
+      "pitcher",
+      "stat"
+     ],
+     "stat_keys": [
+      "airOuts",
+      "atBats",
+      "atBatsPerHomeRun",
+      "avg",
+      "babip",
+      "baseOnBalls",
+      "catchersInterference",
+      "doubles",
+      "gamesPlayed",
+      "groundIntoDoublePlay",
+      "groundIntoTriplePlay",
+      "groundOuts",
+      "groundOutsToAirouts",
+      "hitByPitch",
+      "hits",
+      "homeRuns",
+      "intentionalWalks",
+      "leftOnBase",
+      "numberOfPitches",
+      "obp",
+      "ops",
+      "plateAppearances",
+      "rbi",
+      "sacBunts",
+      "sacFlies",
+      "slg",
+      "strikeOuts",
+      "totalBases",
+      "triples"
+     ],
+     "first": [
+      {
+       "person": 681624,
+       "season": null,
+       "team": null,
+       "opponent": null,
+       "batter": 681624,
+       "pitcher": 694819,
+       "stat": {
+        "plateAppearances": 6,
+        "atBats": 6,
+        "hits": 0,
+        "doubles": 0,
+        "triples": 0,
+        "homeRuns": 0,
+        "baseOnBalls": 0,
+        "strikeOuts": 1,
+        "avg": ".000",
+        "obp": ".000",
+        "slg": ".000",
+        "ops": ".000"
+       }
+      },
+      {
+       "person": 518692,
+       "season": null,
+       "team": null,
+       "opponent": null,
+       "batter": 518692,
+       "pitcher": 694819,
+       "stat": {
+        "plateAppearances": 6,
+        "atBats": 6,
+        "hits": 0,
+        "doubles": 0,
+        "triples": 0,
+        "homeRuns": 0,
+        "baseOnBalls": 0,
+        "strikeOuts": 3,
+        "avg": ".000",
+        "obp": ".000",
+        "slg": ".000",
+        "ops": ".000"
+       }
+      },
+      {
+       "person": 676439,
+       "season": null,
+       "team": null,
+       "opponent": null,
+       "batter": 676439,
+       "pitcher": 694819,
+       "stat": {
+        "plateAppearances": 2,
+        "atBats": 2,
+        "hits": 1,
+        "doubles": 0,
+        "triples": 0,
+        "homeRuns": 0,
+        "baseOnBalls": 0,
+        "strikeOuts": 0,
+        "avg": ".500",
+        "obp": ".500",
+        "slg": ".500",
+        "ops": "1.000"
+       }
+      },
+      {
+       "person": 808975,
+       "season": null,
+       "team": null,
+       "opponent": null,
+       "batter": 808975,
+       "pitcher": 694819,
+       "stat": {
+        "plateAppearances": 2,
+        "atBats": 2,
+        "hits": 0,
+        "doubles": 0,
+        "triples": 0,
+        "homeRuns": 0,
+        "baseOnBalls": 0,
+        "strikeOuts": 2,
+        "avg": ".000",
+        "obp": ".000",
+        "slg": ".000",
+        "ops": ".000"
+       }
+      }
+     ],
+     "group": "hitting"
+    }
+   }
+  },
+  "bvp_batch_seasons": {
+   "status": 200,
+   "allow_origin": "*",
+   "bytes": 24681,
+   "seconds": 0.26,
+   "shape": {
+    "vsPlayer": {
+     "n_splits": 9,
+     "split_keys": [
+      "batter",
+      "gameType",
+      "numTeams",
+      "opponent",
+      "pitcher",
+      "season",
+      "stat",
+      "team"
+     ],
+     "stat_keys": [
+      "airOuts",
+      "atBats",
+      "atBatsPerHomeRun",
+      "avg",
+      "babip",
+      "baseOnBalls",
+      "catchersInterference",
+      "doubles",
+      "gamesPlayed",
+      "groundIntoDoublePlay",
+      "groundIntoTriplePlay",
+      "groundOuts",
+      "groundOutsToAirouts",
+      "hitByPitch",
+      "hits",
+      "homeRuns",
+      "intentionalWalks",
+      "leftOnBase",
+      "numberOfPitches",
+      "obp",
+      "ops",
+      "plateAppearances",
+      "rbi",
+      "sacBunts",
+      "sacFlies",
+      "slg",
+      "strikeOuts",
+      "totalBases",
+      "triples"
+     ],
+     "first": [
+      {
+       "person": 681624,
+       "season": "2025",
+       "team": "Los Angeles Dodgers",
+       "opponent": "Milwaukee Brewers",
+       "batter": 681624,
+       "pitcher": 694819,
+       "stat": {
+        "plateAppearances": 3,
+        "atBats": 3,
+        "hits": 0,
+        "doubles": 0,
+        "triples": 0,
+        "homeRuns": 0,
+        "baseOnBalls": 0,
+        "strikeOuts": 1,
+        "avg": ".000",
+        "obp": ".000",
+        "slg": ".000",
+        "ops": ".000"
+       }
+      },
+      {
+       "person": 681624,
+       "season": "2026",
+       "team": "Los Angeles Dodgers",
+       "opponent": "Milwaukee Brewers",
+       "batter": 681624,
+       "pitcher": 694819,
+       "stat": {
+        "plateAppearances": 3,
+        "atBats": 3,
+        "hits": 0,
+        "doubles": 0,
+        "triples": 0,
+        "homeRuns": 0,
+        "baseOnBalls": 0,
+        "strikeOuts": 0,
+        "avg": ".000",
+        "obp": ".000",
+        "slg": ".000",
+        "ops": ".000"
+       }
+      },
+      {
+       "person": 518692,
+       "season": "2025",
+       "team": "Los Angeles Dodgers",
+       "opponent": "Milwaukee Brewers",
+       "batter": 518692,
+       "pitcher": 694819,
+       "stat": {
+        "plateAppearances": 3,
+        "atBats": 3,
+        "hits": 0,
+        "doubles": 0,
+        "triples": 0,
+        "homeRuns": 0,
+        "baseOnBalls": 0,
+        "strikeOuts": 2,
+        "avg": ".000",
+        "obp": ".000",
+        "slg": ".000",
+        "ops": ".000"
+       }
+      },
+      {
+       "person": 518692,
+       "season": "2026",
+       "team": "Los Angeles Dodgers",
+       "opponent": "Milwaukee Brewers",
+       "batter": 518692,
+       "pitcher": 694819,
+       "stat": {
+        "plateAppearances": 3,
+        "atBats": 3,
+        "hits": 0,
+        "doubles": 0,
+        "triples": 0,
+        "homeRuns": 0,
+        "baseOnBalls": 0,
+        "strikeOuts": 1,
+        "avg": ".000",
+        "obp": ".000",
+        "slg": ".000",
+        "ops": ".000"
+       }
+      }
+     ],
+     "group": "hitting"
+    },
+    "vsPlayerTotal": {
+     "n_splits": 7,
+     "split_keys": [
+      "batter",
+      "gameType",
+      "numTeams",
+      "pitcher",
+      "stat"
+     ],
+     "stat_keys": [
+      "airOuts",
+      "atBats",
+      "atBatsPerHomeRun",
+      "avg",
+      "babip",
+      "baseOnBalls",
+      "catchersInterference",
+      "doubles",
+      "gamesPlayed",
+      "groundIntoDoublePlay",
+      "groundIntoTriplePlay",
+      "groundOuts",
+      "groundOutsToAirouts",
+      "hitByPitch",
+      "hits",
+      "homeRuns",
+      "intentionalWalks",
+      "leftOnBase",
+      "numberOfPitches",
+      "obp",
+      "ops",
+      "plateAppearances",
+      "rbi",
+      "sacBunts",
+      "sacFlies",
+      "slg",
+      "strikeOuts",
+      "totalBases",
+      "triples"
+     ],
+     "first": [
+      {
+       "person": 681624,
+       "season": null,
+       "team": null,
+       "opponent": null,
+       "batter": 681624,
+       "pitcher": 694819,
+       "stat": {
+        "plateAppearances": 6,
+        "atBats": 6,
+        "hits": 0,
+        "doubles": 0,
+        "triples": 0,
+        "homeRuns": 0,
+        "baseOnBalls": 0,
+        "strikeOuts": 1,
+        "avg": ".000",
+        "obp": ".000",
+        "slg": ".000",
+        "ops": ".000"
+       }
+      },
+      {
+       "person": 518692,
+       "season": null,
+       "team": null,
+       "opponent": null,
+       "batter": 518692,
+       "pitcher": 694819,
+       "stat": {
+        "plateAppearances": 6,
+        "atBats": 6,
+        "hits": 0,
+        "doubles": 0,
+        "triples": 0,
+        "homeRuns": 0,
+        "baseOnBalls": 0,
+        "strikeOuts": 3,
+        "avg": ".000",
+        "obp": ".000",
+        "slg": ".000",
+        "ops": ".000"
+       }
+      },
+      {
+       "person": 676439,
+       "season": null,
+       "team": null,
+       "opponent": null,
+       "batter": 676439,
+       "pitcher": 694819,
+       "stat": {
+        "plateAppearances": 2,
+        "atBats": 2,
+        "hits": 1,
+        "doubles": 0,
+        "triples": 0,
+        "homeRuns": 0,
+        "baseOnBalls": 0,
+        "strikeOuts": 0,
+        "avg": ".500",
+        "obp": ".500",
+        "slg": ".500",
+        "ops": "1.000"
+       }
+      },
+      {
+       "person": 808975,
+       "season": null,
+       "team": null,
+       "opponent": null,
+       "batter": 808975,
+       "pitcher": 694819,
+       "stat": {
+        "plateAppearances": 2,
+        "atBats": 2,
+        "hits": 0,
+        "doubles": 0,
+        "triples": 0,
+        "homeRuns": 0,
+        "baseOnBalls": 0,
+        "strikeOuts": 2,
+        "avg": ".000",
+        "obp": ".000",
+        "slg": ".000",
+        "ops": ".000"
+       }
+      }
+     ],
+     "group": "hitting"
+    }
+   }
+  },
+  "team_stats_all": {
+   "status": 200,
+   "allow_origin": "*",
+   "bytes": 57150,
+   "seconds": 0.22,
+   "shape": {
+    "season": {
+     "n_splits": 60,
+     "split_keys": [
+      "rank",
+      "season",
+      "stat",
+      "team"
+     ],
+     "stat_keys": [
+      "airOuts",
+      "atBats",
+      "atBatsPerHomeRun",
+      "avg",
+      "babip",
+      "balks",
+      "baseOnBalls",
+      "battersFaced",
+      "blownSaves",
+      "catchersInterference",
+      "caughtStealing",
+      "caughtStealingPercentage",
+      "completeGames",
+      "doubles",
+      "earnedRuns",
+      "era",
+      "gamesFinished",
+      "gamesPitched",
+      "gamesPlayed",
+      "gamesStarted",
+      "groundIntoDoublePlay",
+      "groundOuts",
+      "groundOutsToAirouts",
+      "hitBatsmen",
+      "hitByPitch",
+      "hits",
+      "hitsPer9Inn",
+      "holds",
+      "homeRuns",
+      "homeRunsPer9",
+      "inningsPitched",
+      "intentionalWalks",
+      "leftOnBase",
+      "losses",
+      "numberOfPitches",
+      "obp",
+      "ops",
+      "outs",
+      "pickoffs",
+      "pitchesPerInning",
+      "plateAppearances",
+      "rbi",
+      "runs",
+      "runsScoredPer9",
+      "sacBunts",
+      "sacFlies",
+      "saveOpportunities",
+      "saves",
+      "shutouts",
+      "slg",
+      "stolenBasePercentage",
+      "stolenBases",
+      "strikeOuts",
+      "strikePercentage",
+      "strikeoutWalkRatio",
+      "strikeoutsPer9Inn",
+      "strikes",
+      "totalBases",
+      "triples",
+      "walksPer9Inn",
+      "whip",
+      "wildPitches",
+      "winPercentage",
+      "wins"
+     ],
+     "first": [
+      {
+       "person": null,
+       "season": "2026",
+       "team": "Milwaukee Brewers",
+       "opponent": null,
+       "batter": null,
+       "pitcher": null,
+       "stat": {
+        "gamesPlayed": 162,
+        "runs": 832,
+        "avg": ".258",
+        "obp": ".341",
+        "slg": ".403",
+        "ops": ".744",
+        "homeRuns": 154,
+        "strikeOuts": 1383,
+        "baseOnBalls": 668,
+        "stolenBases": 162
+       }
+      },
+      {
+       "person": null,
+       "season": "2026",
+       "team": "Tampa Bay Rays",
+       "opponent": null,
+       "batter": null,
+       "pitcher": null,
+       "stat": {
+        "gamesPlayed": 162,
+        "runs": 736,
+        "avg": ".258",
+        "obp": ".326",
+        "slg": ".402",
+        "ops": ".728",
+        "homeRuns": 169,
+        "strikeOuts": 1145,
+        "baseOnBalls": 514,
+        "stolenBases": 164
+       }
+      },
+      {
+       "person": null,
+       "season": "2026",
+       "team": "Los Angeles Dodgers",
+       "opponent": null,
+       "batter": null,
+       "pitcher": null,
+       "stat": {
+        "gamesPlayed": 162,
+        "runs": 801,
+        "avg": ".257",
+        "obp": ".338",
+        "slg": ".424",
+        "ops": ".762",
+        "homeRuns": 204,
+        "strikeOuts": 1267,
+        "baseOnBalls": 628,
+        "stolenBases": 72
+       }
+      },
+      {
+       "person": null,
+       "season": "2026",
+       "team": "Colorado Rockies",
+       "opponent": null,
+       "batter": null,
+       "pitcher": null,
+       "stat": {
+        "gamesPlayed": 162,
+        "runs": 752,
+        "avg": ".254",
+        "obp": ".322",
+        "slg": ".417",
+        "ops": ".739",
+        "homeRuns": 180,
+        "strikeOuts": 1409,
+        "baseOnBalls": 500,
+        "stolenBases": 109
+       }
+      }
+     ],
+     "group": "hitting"
+    }
+   }
+  },
+  "team_stats_one": {
+   "status": 200,
+   "allow_origin": "*",
+   "bytes": 2262,
+   "seconds": 0.15,
+   "shape": {
+    "season": {
+     "n_splits": 2,
+     "split_keys": [
+      "season",
+      "stat",
+      "team"
+     ],
+     "stat_keys": [
+      "airOuts",
+      "atBats",
+      "atBatsPerHomeRun",
+      "avg",
+      "babip",
+      "balks",
+      "baseOnBalls",
+      "battersFaced",
+      "blownSaves",
+      "catchersInterference",
+      "caughtStealing",
+      "caughtStealingPercentage",
+      "completeGames",
+      "doubles",
+      "earnedRuns",
+      "era",
+      "gamesFinished",
+      "gamesPitched",
+      "gamesPlayed",
+      "gamesStarted",
+      "groundIntoDoublePlay",
+      "groundOuts",
+      "groundOutsToAirouts",
+      "hitBatsmen",
+      "hitByPitch",
+      "hits",
+      "hitsPer9Inn",
+      "holds",
+      "homeRuns",
+      "homeRunsPer9",
+      "inningsPitched",
+      "intentionalWalks",
+      "leftOnBase",
+      "losses",
+      "numberOfPitches",
+      "obp",
+      "ops",
+      "outs",
+      "pickoffs",
+      "pitchesPerInning",
+      "plateAppearances",
+      "rbi",
+      "runs",
+      "runsScoredPer9",
+      "sacBunts",
+      "sacFlies",
+      "saveOpportunities",
+      "saves",
+      "shutouts",
+      "slg",
+      "stolenBasePercentage",
+      "stolenBases",
+      "strikeOuts",
+      "strikePercentage",
+      "strikeoutWalkRatio",
+      "strikeoutsPer9Inn",
+      "strikes",
+      "totalBases",
+      "triples",
+      "walksPer9Inn",
+      "whip",
+      "wildPitches",
+      "winPercentage",
+      "wins"
+     ],
+     "first": [
+      {
+       "person": null,
+       "season": "2026",
+       "team": "Los Angeles Dodgers",
+       "opponent": null,
+       "batter": null,
+       "pitcher": null,
+       "stat": {
+        "gamesPlayed": 162,
+        "runs": 801,
+        "avg": ".257",
+        "obp": ".338",
+        "slg": ".424",
+        "ops": ".762",
+        "homeRuns": 204,
+        "strikeOuts": 1267,
+        "baseOnBalls": 628,
+        "stolenBases": 72
+       }
+      },
+      {
+       "person": null,
+       "season": "2026",
+       "team": "Los Angeles Dodgers",
+       "opponent": null,
+       "batter": null,
+       "pitcher": null,
+       "stat": {
+        "gamesPlayed": 162,
+        "runs": 600,
+        "avg": ".218",
+        "obp": ".289",
+        "slg": ".364",
+        "ops": ".653",
+        "homeRuns": 172,
+        "strikeOuts": 1521,
+        "baseOnBalls": 480,
+        "stolenBases": 111,
+        "era": "3.55",
+        "whip": "1.14",
+        "strikeoutsPer9Inn": "9.53",
+        "walksPer9Inn": "3.01",
+        "homeRunsPer9": "1.08",
+        "saves": 46,
+        "blownSaves": 23,
+        "runsScoredPer9": "3.76"
+       }
+      }
+     ],
+     "group": "hitting"
+    }
+   }
+  },
   "feed_live": {
    "status": 200,
    "allow_origin": "*",
    "bytes": 179581,
-   "seconds": 0.07,
+   "seconds": 0.06,
    "probables": {
     "away": {
      "player_keys": [
@@ -2283,5 +3236,19 @@
    681624,
    683734
   ]
+ },
+ "bvp_players": {
+  "hitters_away": [
+   681624,
+   571771,
+   518692,
+   676439,
+   808975,
+   800543,
+   663656,
+   571970,
+   500743
+  ],
+  "home_starter": 694819
  }
 }
