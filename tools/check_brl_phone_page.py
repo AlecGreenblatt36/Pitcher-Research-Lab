@@ -168,7 +168,7 @@ def main():
                         for _ in range(15):
                             page.wait_for_timeout(1000)
                             if page.locator('.rp-grid').count():break
-                        info.update(card=href,card_grids=page.locator('.rp-grid').count(),card_text=re.sub(r'\s+',' ',page.inner_text('#app')[:240]))
+                        info.update(card=href,card_grids=page.locator('.rp-grid').count(),card_zones=page.locator('.hz-svg').count(),card_text=re.sub(r'\s+',' ',page.inner_text('#app')[:240]))
                         if page.locator('.rp-grid').count():design_check('player_card');page.screenshot(path=str(out/f'player_card_{width}.png'),full_page=True)
                     receipt.setdefault('players',[]).append({'width':width,**info})
                 except Exception as exc:
@@ -183,7 +183,7 @@ def main():
                         info={'game':f['game_pk'],'loaded':loaded,'plan_rows':page.locator('.plan-row').count(),'now_strip':page.locator('.rp-now').count()}
                         if page.locator('.plan-row[data-rp]').count():
                             page.locator('.plan-row[data-rp]').first.click();page.wait_for_timeout(300)
-                            info['plan_grids']=page.locator('.rp-grid').count()
+                            info['plan_grids']=page.locator('.rp-grid').count();info['plan_zones']=page.locator('.hz-svg').count()
                             design_check('report');page.screenshot(path=str(out/f'report_{width}.png'),full_page=True)
                         receipt.setdefault('report',[]).append({'width':width,**info})
                 except Exception as exc:
