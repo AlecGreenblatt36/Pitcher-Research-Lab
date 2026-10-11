@@ -206,13 +206,15 @@ def test_arsenal_changes_from_last_season():
 
 def test_hitter_changes_from_last_season():
     functions = page_functions('hitterChanges')
-    prefix = ("const assert=require('assert');var HC_RATES=[['chase','chase rate','chases','outside',0.03],['whiff','miss rate','misses','swings',0.03],['k','strikeout rate','k','pa',0.03],"
-              "['bb','walk rate','bb','pa',0.03],['hard','hard-hit rate','hard','bbe',0.05]];")
+    s = TEMPLATE.read_text(encoding='utf-8').split('<script>')[2].split('</script>')[0]
+    prefix = "const assert=require('assert');" + re.search(r'\n  var HC_RATES = .*?;\n', s, re.S).group(0)
     suffix = ("const prev={pa:600,outside:1100,chases:340,swings:1300,misses:300,k:130,bb:50,bbe:420,hard:170};"
               "const cur={pa:550,outside:1000,chases:230,swings:1200,misses:282,k:121,bb:48,bbe:400,hard:220};"
               "const t=hitterChanges({line_seasons:{season:2026,cur:cur,prev:prev}});"
-              "assert.ok(t.indexOf('Since 2025: chase rate down 7.9 points (31% to 23%)')===0,t);"
-              "assert.ok(t.indexOf('hard-hit rate up 14.5 points (40% to 55%)')>0,t);"
+              "assert.ok(t.indexOf('Since 2025: chase rate down 7.9 points (31% to 23%; changes like it held about 60% the next season)')===0,t);"
+              "assert.ok(t.indexOf('hard-hit rate up 14.5 points (40% to 55%; changes like it held about 80% the next season)')>0,t);"
+              # HCHANGE-01: walk-rate changes are no longer called out
+              "assert.ok(hitterChanges({line_seasons:{season:2026,cur:Object.assign({},cur,{bb:110}),prev:prev}}).indexOf('walk rate')<0);"
               # a 4-point move on these samples is under three standard errors: not said
               "assert.equal(hitterChanges({line_seasons:{season:2026,cur:Object.assign({},cur,{chases:300,hard:170}),prev:prev}}),'');"
               "assert.ok(t.indexOf('miss rate')<0&&t.indexOf('strikeout rate')<0,t);"

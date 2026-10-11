@@ -3844,8 +3844,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   /* What changed for a hitter from last season: a rate that moved by more than three times its sampling error (so
      with five rates a hitter whose habits did not change shows one about once in eighty) and by a practical amount
      (3 points; hard-hit 5), from the card's two season lines (200 or more plate appearances in each). */
-  var HC_RATES = [["chase", "chase rate", "chases", "outside", 0.03], ["whiff", "miss rate", "misses", "swings", 0.03], ["k", "strikeout rate", "k", "pa", 0.03],
-                  ["bb", "walk rate", "bb", "pa", 0.03], ["hard", "hard-hit rate", "hard", "bbe", 0.05]];
+  /* HCHANGE-01 (2024 to 2025, then 2026): how much of a flagged change was still there a season later, pooled over the
+     few hitters flagged (chase 8, misses 8, strikeouts 3, hard-hit 6); walk-rate changes held 23% with an interval
+     including zero, so walks are no longer called out */
+  var HC_RATES = [["chase", "chase rate", "chases", "outside", 0.03, 0.6], ["whiff", "miss rate", "misses", "swings", 0.03, 0.55], ["k", "strikeout rate", "k", "pa", 0.03, 0.5],
+                  ["hard", "hard-hit rate", "hard", "bbe", 0.05, 0.8]];
   function hitterChanges(card) {
     var ls = card && card.line_seasons;
     if (!ls || !ls.cur || !ls.prev) return "";
@@ -3854,7 +3857,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var n1 = ls.cur[r[3]], n0 = ls.prev[r[3]];
       if (!n1 || !n0) return;
       var p1 = ls.cur[r[2]] / n1, p0 = ls.prev[r[2]] / n0, d = p1 - p0, se = Math.sqrt(p1 * (1 - p1) / n1 + p0 * (1 - p0) / n0);
-      if (Math.abs(d) >= r[4] && Math.abs(d) >= 3 * se) out.push(r[1] + " " + (d > 0 ? "up " : "down ") + (100 * Math.abs(d)).toFixed(1) + " points (" + Math.round(100 * p0) + "% to " + Math.round(100 * p1) + "%)");
+      if (Math.abs(d) >= r[4] && Math.abs(d) >= 3 * se) out.push(r[1] + " " + (d > 0 ? "up " : "down ") + (100 * Math.abs(d)).toFixed(1) + " points (" + Math.round(100 * p0) + "% to " + Math.round(100 * p1) + "%; changes like it held about " + Math.round(100 * r[5]) + "% the next season)");
     });
     return out.length ? "Since " + (ls.season - 1) + ": " + out.join("; ") + "." : "";
   }
@@ -4989,6 +4992,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     ["Does a starter's fastball speed in his last start carry into the next?", "Yes: about 45% of the change showed up again, and strikeouts moved with it, about 1.3 per 100 batters for each mph."],
     ["Does pitching the day before cost a reliever?", "About a sixth of a mph and no strikeouts we could measure, under the bar we set, so the bullpen card does not flag it."],
     ["Do hitters do better the third time through the order?", "Yes, every season: about 1 point more on base and 3 points fewer strikeouts in 2026. A starter's own third-time gap did not reliably carry over."],
+    ["Do the changes we call out since last season hold?", "Mostly: about half to four fifths of a flagged change in chase, miss, strikeout and hard-hit rates was still there the next season. Walk-rate changes did not reliably hold, so we stopped calling them out."],
     ["Are the Expected hot zones better than the raw counts?", "Yes, for hitters and for pitchers, on every subset we checked: thin zones are mostly noise, so they are pulled toward the player's level on the league's pattern."]];
   /* "When we say 60%, do they win 60%?" and month by month, from the two seasons re-run (days/season-YYYY.json). */
   function fillSeasonChecks() {

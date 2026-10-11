@@ -4905,16 +4905,18 @@
     "columns": {
      "ID": "HCHANGE-01",
      "Attempt": "Do the changes the hitter pages call out hold? (Registered as CHANGE-01 in commit 89cacf5de; renamed before its results because that ID was taken.) The page says a hitter's chase, miss, strikeout, walk or hard-hit rate changed since last season when it moved at least 3 points (5 for hard-hit) and at least three standard errors between two seasons of 200 or more plate appearances (hitterChanges). For hitters with 200 or more plate appearances in three straight seasons (150 in 2026 before August 1), the changes flagged from the first season to the second, and how much of each was still there in the third: the third season's rate minus the first's over the flagged change, pooled over hitters, with unflagged changes as a reference and intervals from resampling hitters (2,000 draws). Windows: 2023 to 2024 then 2025, and 2024 to 2025 then 2026 (the test). tools/brl_report.py change_study, report lane, aggregates only. Synthetic check (brl_live_tests/test_report_change_study.py): lasting strikeout changes held above 0.8, reverting ones under 0.2.",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions on the 2026 window: (1) flagged strikeout and walk rate changes held at least 60%, interval excluding zero; (2) flagged chase and miss rate changes held at least 50%; (3) flagged hard-hit changes held at least 30%. Decision rule: the changes line says how much of changes like these held a season later, rate by rate; a rate whose flagged changes held under 30% or with an interval including zero is dropped from the line.",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions on the 2026 window: (1) flagged strikeout and walk rate changes held at least 60%, interval excluding zero; (2) flagged chase and miss rate changes held at least 50%; (3) flagged hard-hit changes held at least 30%. Decision rule: the changes line says how much of changes like these held a season later, rate by rate; a rate whose flagged changes held under 30% or with an interval including zero is dropped from the line. **Results (run 38132555095, receipt research/report-38132555095.json):** the rule flags few hitters with three straight full seasons. 2026 window (201 hitters): chase 8 flagged, held **0.63 [0.31, 0.97]** (mean change 7.2 points); misses 8, **0.55 [0.30, 0.84]**; strikeouts 3, **0.48 [0.24, 0.83]**; walks 2, 0.23 [-0.04, 0.48]; hard-hit 6, **0.82 [0.54, 1.12]**. 2025 window (223 hitters): chase 6, 0.68; misses 13, 0.70; strikeouts 6, 0.84; walks 3, 0.51; hard-hit 3, 0.29 [-0.22, 0.69]. Unflagged changes (2 to 4 points on average) held 0.43 to 0.69 in both windows. **(1) failed** (strikeouts 0.48 under 0.60 on 3 hitters; walks 0.23 with an interval including zero), **(2) held** (0.63 and 0.55), **(3) held** (0.82). Decision, as registered: the changes line quotes how much of changes like each held (chase about 60%, misses 55%, strikeouts 50%, hard-hit 80%) and no longer calls out walk-rate changes. Reading: the flagged samples are small; the broader finding is that a regular's rate changes from one season to the next mostly hold about half to two thirds.",
+     "Delta corrected Brier, 2026": "(1) failed; (2), (3) held"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38132555095"
+    ],
     "frozen_commits": [
      "89cacf5de"
     ],
-    "status": "registered"
+    "status": "(1) failed; (2), (3) held"
    }
   ],
   "VELO-01": [
