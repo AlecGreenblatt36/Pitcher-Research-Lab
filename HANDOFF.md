@@ -15,7 +15,7 @@ discovery page stays private.
 - LEASH-02's exit correction in postseason games too; it would need the postseason factor x0.91 re-measured on the
   corrected hazard first. Regular-season games have it from October 11.
 
-## Current checkpoint, October 8, 2026, 5 p.m. Eastern (Claude in charge)
+## Current checkpoint, October 8, 2026, 5 p.m. Eastern (Claude in charge; additions through October 11 below)
 
 Read this section first, then LEDGER.md (every experiment with its registered prediction, result and decision). The
 October 7 checkpoint below still describes the machinery (lanes, privacy, scheduling); this section says what changed.
@@ -48,6 +48,15 @@ October 7 checkpoint below still describes the machinery (lanes, privacy, schedu
   as one commit (put_many); the live store retries 409s for minutes; the season top-up writes nothing when nothing is
   new. Every report day from 2025-03-27 to 2026-10-08 was rebuilt with these. Product call (October 10, evening): a
   plan for a game to come lists six relievers (was four), the simulator's likeliest; postseason teams use five or six.
+
+- October 11 additions (each with its LEDGER row): starter exits by inning, LEASH-02's correction on the starter-exit
+  hazard, regular-season games only (ADJUST hazard_correction; postseason games keep the plain hazard with x0.91), and
+  with it the starters' outs ladder on the Odds tab for boxes simulated with it (12.5 to 20.5); the page states no over
+  chance of its own anywhere (TOTALS-03); the run charts and ranges are negative binomials with the simulator's mean and
+  its variance times 1.095 (TOTALS-05); hitter props switch between chances and fair American odds; the live builder
+  refuses a hazard correction file that is not LEASH-02's 32 terms. Built and off: the in-season level layer (LEVEL-01,
+  failed LEVEL-02 and LEVEL-03), the engine's pitch draws (LEASH-03 failed), RELIEF-04's entry-inning correction on the
+  relief-exit hazard (ADJUST relief_correction; replays running at this writing).
 
 ### Evidence (full-season replays, 1,000 worlds per game, each season with tables from other seasons)
 
