@@ -677,6 +677,11 @@ small { font-size: 14px; }
 .range-list .r { font-family: var(--display); font-size: 19px; font-weight: 600; }
 .range-list small { color: var(--muted); font-size: 14px; }
 .ladder-wrap { margin-top: 8px; max-width: 360px; }
+.box.props th, .box.props td { padding-left: 4px; padding-right: 4px; }
+.box.props td { font-size: 16px; }
+.box.props th:first-child, .box.props td:first-child { padding-left: 10px; }
+.box.props td:first-child { font-size: 15px; }
+.box.props th:last-child, .box.props td:last-child { padding-right: 10px; }
 .bvp-t td, .bvp-t th { font-size: 16px; padding: 7px 5px; }
 .bvp-t th .spot { display: inline-block; width: 18px; color: var(--muted); font-size: 14px; }
 .ts-t th[scope=row] { text-align: left; font-family: var(--body); font-weight: 400; font-size: 15px; white-space: normal; }
@@ -4670,7 +4675,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     ["away", "home"].forEach(function (side) {
       var bat = box.teams[side].batting || [], bnames = shortNames(bat);
       var tb = PROP_COLS.tb2 && bat.some(function (b) { return b.tb2_probability != null; });
-      h += '<section class="sec"><h3 class="team-h ' + side + '-c">' + esc(nickname(f[side].name)) + ' hitters</h3><div class="tbl-wrap"><table class="box"><thead><tr><th scope="col">Batters</th><th>1+ hit</th><th>2+ hits</th>' + (tb ? "<th>2+ TB</th>" : "") + "<th>HR</th><th>Walk</th></tr></thead><tbody>";
+      h += '<section class="sec"><h3 class="team-h ' + side + '-c">' + esc(nickname(f[side].name)) + ' hitters</h3><div class="tbl-wrap"><table class="box props"><thead><tr><th scope="col">Batters</th><th>1+ hit</th><th>2+ hits</th>' + (tb ? "<th>2+ TB</th>" : "") + "<th>HR</th><th>Walk</th></tr></thead><tbody>";
       bat.forEach(function (b) {
         var d = b.distributions || {};
         h += '<tr><td><span class="spot">' + (b.spot || "") + "</span>" + esc(bnames[String(b.player_id)]) + "</td><td>" + (d.H ? pct(ownAtLeast(d.H, 1, b.spot)) : "") + "</td><td>" + (d.H ? pct(ownAtLeast(d.H, 2, b.spot)) : "") +
