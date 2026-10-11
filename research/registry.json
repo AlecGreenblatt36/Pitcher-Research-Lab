@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 266,
- "rows": 269,
+ "experiments": 267,
+ "rows": 270,
  "records": {
   "ACC-01": [
    {
@@ -4409,6 +4409,22 @@
     ],
     "frozen_commits": [],
     "status": "credited: Expected view beside the standard one"
+   }
+  ],
+  "ZONES-02": [
+   {
+    "id": "ZONES-02",
+    "columns": {
+     "ID": "ZONES-02",
+     "Attempt": "ZONES-01's Expected view on the subsets the charts show: the same study run separately on pitches from right-handed pitchers, from left-handed pitchers, and on fastballs, breaking balls and offspeed pitches (the prior from the same subset, m refitted in each on 2023-2024 to 2025, scored once on 2024-2025 to 2026; hitters with 100 or more plate appearances in training)",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: (1) in every subset shrunk beats raw on all four metrics with the interval excluding zero; (2) each subset's fitted m is within a factor of four of the pooled one (160 for average and slugging, 80 for swing and miss rates). Decision rule: if (1) holds, the Expected view stays on every chart; where (2) fails, that subset's charts use its own m; if (1) fails for a subset, its charts show the standard view only.",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "BOX-01": [
