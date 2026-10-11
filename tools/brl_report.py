@@ -1426,6 +1426,113 @@ def zone_estimates_anchored(tr: dict, num: str, den: str, m: float, k_all: float
     return {'scaled': scaled, 'shrunk': shrunk}
 
 
+# FORM-01 (LEDGER): does a hitter's last ten games say anything about his next ten beyond his level?
+FORM_METRICS = (('obp', 'on', 'pa'), ('slg', 'tb', 'ab'), ('k', 'k', 'pa'))
+
+
+def form_windows(T: dict, mask, prior_mask=None, step: int = 10, first: int = 20, lag: int = 10, lead: int = 10,
+                 min_games: int = 40) -> dict:
+    """Ten-game windows per hitter-season on the masked plate appearances: at game index i = first, first + step, ...
+    (games in date order, while i + lead games remain), his counts over the last `lag` games before i, the next `lead`
+    games from i, and before i (this season up to the game, plus prior_mask's plate appearances of the season before, his
+    level). Counts per window: plate appearances, at-bats, times on base (hits and walks or hit batters), total bases,
+    strikeouts. Aggregates for the study only."""
+    last = mask & (T['last_in_pa'] == 1)
+    rows = np.flatnonzero(last)
+    o7 = T['out7'][rows]
+    pa = np.ones(len(rows)); ab = np.isin(o7, (0, 1, 3, 4, 5, 6)).astype(float); on = np.isin(o7, (2, 3, 4, 5)).astype(float)
+    tb = np.where(o7 == 3, 1.0, 0.0) + np.where(o7 == 4, 2.0, 0.0) + np.where(o7 == 5, 4.0, 0.0); k = (o7 == 1).astype(float)
+    key = np.stack([T['batter'][rows].astype(np.int64), T['season'][rows].astype(np.int64), T['day'][rows].astype(np.int64), T['game'][rows].astype(np.int64)], 1)
+    order = np.lexsort((key[:, 3], key[:, 2], key[:, 1], key[:, 0]))
+    key, cols = key[order], np.stack([pa, ab, on, tb, k], 1)[order]
+    # one row per hitter-season-game
+    gkey, gstart = np.unique(key[:, [0, 1, 3]], axis=0, return_index=True)
+    gstart = np.sort(gstart)
+    gsum = np.add.reduceat(cols, gstart, axis=0); gk = key[gstart]
+    prior = {}
+    if prior_mask is not None:
+        pr = np.flatnonzero(prior_mask & (T['last_in_pa'] == 1))
+        if len(pr):
+            po = T['out7'][pr]
+            pc = np.stack([np.ones(len(pr)), np.isin(po, (0, 1, 3, 4, 5, 6)), np.isin(po, (2, 3, 4, 5)),
+                           np.where(po == 3, 1.0, 0.0) + np.where(po == 4, 2.0, 0.0) + np.where(po == 5, 4.0, 0.0), po == 1], 1).astype(float)
+            pk = T['batter'][pr].astype(np.int64) * 10000 + T['season'][pr].astype(np.int64)
+            uk, inv = np.unique(pk, return_inverse=True)
+            sums = np.zeros((len(uk), 5)); np.add.at(sums, inv, pc)
+            prior = {int(u): sums[i] for i, u in enumerate(uk)}
+    out = {'bat': [], 'season': [], 'last': [], 'next': [], 'level': []}
+    hs = gk[:, 0] * 10000 + gk[:, 1]
+    bounds = np.flatnonzero(np.r_[True, hs[1:] != hs[:-1], True])
+    for a0, a1 in zip(bounds[:-1], bounds[1:]):
+        n = a1 - a0
+        if n < min_games:
+            continue
+        g = gsum[a0:a1]; cum = np.vstack([np.zeros(5), np.cumsum(g, 0)])
+        pre = prior.get(int(gk[a0, 0]) * 10000 + int(gk[a0, 1]) - 1, np.zeros(5))
+        for i in range(first, n - lead + 1, step):
+            out['bat'].append(int(gk[a0, 0])); out['season'].append(int(gk[a0, 1]))
+            out['last'].append(cum[i] - cum[i - lag]); out['next'].append(cum[i + lead] - cum[i]); out['level'].append(cum[i] + pre)
+    return {k2: np.array(v) for k2, v in out.items()}
+
+
+def form_study(T: dict, stage, spec: dict) -> dict:
+    """FORM-01 (LEDGER): his next ten games predicted from his level (this season before the game plus the season
+    before, lightly shrunk toward the league), and from his level plus k times his last ten games' difference from it; k
+    fitted on the training seasons' windows by weighted least squares, both scored once on the test season's windows
+    (squared error weighted by the next ten games' plate appearances or at-bats), intervals from resampling hitters.
+    Aggregates only."""
+    reg = (T['post'] == 0) if 'post' in T else np.ones(len(T['season']), bool)
+    train = [int(x) for x in spec.get('train', (2024, 2025))]; test = int(spec.get('test', 2026)); boot = int(spec.get('boot', 2000))
+    k_shrink = float(spec.get('k_shrink', 100.0))
+    rng = np.random.default_rng(int(spec.get('seed', 20261011)))
+
+    def windows(season):
+        m = reg & (T['season'] == season)
+        if season == test and spec.get('test_end'):
+            m &= T['day'] < date.fromisoformat(spec['test_end']).toordinal()
+        return form_windows(T, m, reg & (T['season'] == season - 1))
+    W = {y: windows(y) for y in train + [test]}
+    stage('form study: windows')
+    out = {'train': train, 'test': test, 'test_end': spec.get('test_end'), 'windows': {str(y): int(len(W[y]['bat'])) for y in W}, 'metrics': {}}
+    idx = {'pa': 0, 'ab': 1, 'on': 2, 'tb': 3, 'k': 4}
+    for name, num, den in FORM_METRICS:
+        def parts(w):
+            n, d = idx[num], idx[den]
+            lv, la, nx = w['level'], w['last'], w['next']
+            lg = lv[:, n].sum() / max(lv[:, d].sum(), 1e-9)
+            level = (lv[:, n] + k_shrink * lg) / (lv[:, d] + k_shrink)
+            last_r = np.where(la[:, d] > 0, la[:, n] / np.maximum(la[:, d], 1e-9), level)
+            next_r = np.where(nx[:, d] > 0, nx[:, n] / np.maximum(nx[:, d], 1e-9), level)
+            return level, last_r - level, next_r, nx[:, d], la[:, d]
+        xs, ys, ws = [], [], []
+        for y in train:
+            level, dev, nxt, wt, lw = parts(W[y])
+            ok = (wt > 0) & (lw > 0)
+            xs.append(dev[ok]); ys.append((nxt - level)[ok]); ws.append(wt[ok])
+        x, yv, w = np.concatenate(xs), np.concatenate(ys), np.concatenate(ws)
+        k_fit = float((w * x * yv).sum() / max((w * x * x).sum(), 1e-12))
+        level, dev, nxt, wt, lw = parts(W[test])
+        ok = (wt > 0) & (lw > 0)
+        e0 = wt[ok] * (nxt[ok] - level[ok]) ** 2; e1 = wt[ok] * (nxt[ok] - level[ok] - k_fit * dev[ok]) ** 2
+        bats = W[test]['bat'][ok]; ub, bi = np.unique(bats, return_inverse=True)
+        d_h = np.bincount(bi, weights=e1 - e0, minlength=len(ub)); w_h = np.bincount(bi, weights=wt[ok], minlength=len(ub))
+        e0_h = np.bincount(bi, weights=e0, minlength=len(ub))
+        draws = rng.integers(0, len(ub), (boot, len(ub)))
+        rel = d_h[draws].sum(1) / np.maximum(e0_h[draws].sum(1), 1e-12)
+        # the same slope estimated on the test windows alone, for how much of a stretch carried over there
+        xt, yt, wt2 = dev[ok], (nxt - level)[ok], wt[ok]
+        sxy = np.bincount(bi, weights=wt2 * xt * yt, minlength=len(ub)); sxx = np.bincount(bi, weights=wt2 * xt * xt, minlength=len(ub))
+        k_test = float(sxy.sum() / max(sxx.sum(), 1e-12))
+        kb = sxy[draws].sum(1) / np.maximum(sxx[draws].sum(1), 1e-12)
+        out['metrics'][name] = {'k_fit': round(k_fit, 4), 'k_test': round(k_test, 4), 'k_test_ci': [round(float(np.percentile(kb, 2.5)), 4), round(float(np.percentile(kb, 97.5)), 4)],
+                                'windows': int(ok.sum()), 'hitters': int(len(ub)),
+                                'mse_level': round(float(e0.sum() / wt[ok].sum()), 6), 'mse_with_last10': round(float(e1.sum() / wt[ok].sum()), 6),
+                                'relative_change': [round(float(d_h.sum() / max(e0_h.sum(), 1e-12)), 5), round(float(np.percentile(rel, 2.5)), 5), round(float(np.percentile(rel, 97.5)), 5)],
+                                'sd_last10_dev': round(float(np.sqrt(np.average(dev[ok] ** 2, weights=lw[ok]))), 4)}
+        stage(f'form study: {name}')
+    return out
+
+
 # SPLITS-01 (LEDGER): how much of a hitter's split by pitcher hand carries over. The metrics the splits table shows:
 # AVG and SLG on at-bats ended on the pitch, chase on pitches out of MLB's zone (11-14), misses per swing.
 SPLIT_M_GRID = (0.0, 25.0, 50.0, 100.0, 200.0, 400.0, 800.0, 1600.0, 3200.0, 6400.0, 1e6)
@@ -2632,6 +2739,9 @@ def main():
             dates = []
         if params.get('split_study'):
             receipt['split_study'] = split_shrink_study(T, stage, params['split_study'])
+            dates = []
+        if params.get('form_study'):
+            receipt['form_study'] = form_study(T, stage, params['form_study'])
             dates = []
         if params.get('pitcher_split_study'):
             receipt['pitcher_split_study'] = split_shrink_study(T, stage, dict(params['pitcher_split_study'], who='pitcher'))

@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 292,
- "rows": 295,
+ "experiments": 293,
+ "rows": 296,
  "records": {
   "ACC-01": [
    {
@@ -4861,6 +4861,22 @@
     ],
     "frozen_commits": [],
     "status": "(1) and (3) held; (2) failed"
+   }
+  ],
+  "FORM-01": [
+   {
+    "id": "FORM-01",
+    "columns": {
+     "ID": "FORM-01",
+     "Attempt": "Hot and cold stretches. Player pages now show a hitter's last ten games; does a ten-game stretch say anything about his next ten beyond his level? Ten-game windows per hitter-season (regular season, 40 or more games; at games 20, 30, 40 and so on): his level is everything before the game this season plus last season, lightly shrunk toward the league (100 plate appearances); the candidate adds k times his last ten games' difference from that level, k fitted by weighted least squares on 2024 and 2025 windows and scored once on 2026 before August 1 (squared error weighted by the next ten games' plate appearances, or at-bats for SLG). Metrics: OBP (times on base per plate appearance), SLG per at-bat, strikeouts per plate appearance. Also the slope on the 2026 windows alone with an interval from resampling hitters (2,000 draws). tools/brl_report.py form_study and form_windows, report lane, aggregates only. Synthetic check (brl_live_tests/test_report_form_study.py): with talent that drifts from game to game k is 0.14 to 0.16; with steady talent k is near zero.",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions on 2026: (1) k on OBP and on SLG is under 0.10 (at most a tenth of a stretch's difference from his level carries into the next ten games); (2) adding the last ten games changes the squared error by less than 1% on OBP and SLG; (3) on strikeouts k is larger than on OBP. Decision rule: the game log's note says how much of a ten-game stretch carried into the next ten in 2026 (the test-season slope and its interval), or that it did not carry over beyond noise if the interval includes zero. Nothing else changes.",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "BOX-01": [
