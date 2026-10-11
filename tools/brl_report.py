@@ -1855,6 +1855,116 @@ def tto_study(T: dict, stage, spec: dict) -> dict:
     return out
 
 
+# XSTATS-01 (LEDGER): expected batting average and slugging from how hard and at what angle a hitter hits the ball, the
+# way the public player pages compute them: each measured ball in play takes the league's hit rate and total bases for
+# its exit speed and launch angle.
+XS_LS = np.arange(40.0, 123.0, 3.0)          # exit speed bin edges, mph
+XS_LA = np.arange(-60.0, 74.0, 4.0)          # launch angle bin edges, degrees
+
+
+def xs_rows(T: dict, mask):
+    """The masked plate appearances' final pitches: at-bats, hits, total bases, and for balls in play (no bunts) whether
+    exit speed and launch angle were measured."""
+    last = mask & (T['last_in_pa'] == 1)
+    if 'bunt_pa' in T:
+        last &= ~(T['bunt_pa'] == 1)
+    rows = np.flatnonzero(last)
+    o7 = T['out7'][rows]
+    ab = np.isin(o7, (0, 1, 3, 4, 5, 6)); hit = np.isin(o7, (3, 4, 5))
+    tb = np.where(o7 == 3, 1.0, 0.0) + np.where(o7 == 4, 2.0, 0.0) + np.where(o7 == 5, 4.0, 0.0)
+    bip = np.isin(o7, (0, 3, 4, 5, 6)) & (T['call'][rows] == 1)
+    ls, la = T['ls'][rows].astype(np.float64), T['la'][rows].astype(np.float64)
+    meas = bip & np.isfinite(ls) & np.isfinite(la)
+    return rows, ab, hit, tb, bip, meas, ls, la
+
+
+def xs_table(T: dict, mask) -> dict:
+    """The league's hit rate and total bases per measured ball in play by exit speed (3 mph) and launch angle (4 degrees),
+    backed off to 6 mph and 8 degrees where a bin has under 30 balls; and the rates for balls in play with no measurement."""
+    rows, ab, hit, tb, bip, meas, ls, la = xs_rows(T, mask)
+    def binned(ls_e, la_e):
+        i = np.clip(np.digitize(ls[meas], ls_e) - 1, 0, len(ls_e) - 2); j = np.clip(np.digitize(la[meas], la_e) - 1, 0, len(la_e) - 2)
+        k = i * (len(la_e) - 1) + j; m = (len(ls_e) - 1) * (len(la_e) - 1)
+        n = np.bincount(k, minlength=m); h = np.bincount(k, weights=hit[meas].astype(float), minlength=m); t = np.bincount(k, weights=tb[meas], minlength=m)
+        return n, h, t
+    fine, coarse = binned(XS_LS, XS_LA), binned(XS_LS[::2], XS_LA[::2])
+    um = bip & ~meas
+    return {'fine': fine, 'coarse': coarse, 'p_un': float(hit[um].sum() / max(um.sum(), 1)), 'tb_un': float(tb[um].sum() / max(um.sum(), 1)),
+            'p_all': float(hit[meas].sum() / max(meas.sum(), 1)), 'tb_all': float(tb[meas].sum() / max(meas.sum(), 1))}
+
+
+def xs_expect(tab: dict, ls, la):
+    """Expected hits and total bases for measured balls in play from the league table."""
+    def look(ls_e, la_e, tabk):
+        i = np.clip(np.digitize(ls, ls_e) - 1, 0, len(ls_e) - 2); j = np.clip(np.digitize(la, la_e) - 1, 0, len(la_e) - 2)
+        k = i * (len(la_e) - 1) + j; n, h, t = tabk
+        return n[k], h[k] / np.maximum(n[k], 1), t[k] / np.maximum(n[k], 1)
+    nf, pf, tf = look(XS_LS, XS_LA, tab['fine']); nc, pc, tc = look(XS_LS[::2], XS_LA[::2], tab['coarse'])
+    use_f = nf >= 30; use_c = ~use_f & (nc >= 30)
+    p = np.where(use_f, pf, np.where(use_c, pc, tab['p_all'])); t = np.where(use_f, tf, np.where(use_c, tc, tab['tb_all']))
+    return p, t
+
+
+def xs_lines(T: dict, mask, tab: dict, key: str = 'batter') -> dict:
+    """Per player on the masked plate appearances: at-bats, hits, total bases, expected hits and expected total bases
+    (measured balls in play from the table, unmeasured ones at the league's unmeasured rates, other at-bats none)."""
+    rows, ab, hit, tb, bip, meas, ls, la = xs_rows(T, mask)
+    ids, inv = np.unique(T[key][rows], return_inverse=True)
+    p, t = xs_expect(tab, ls[meas], la[meas])
+    xh = np.zeros(len(rows)); xt = np.zeros(len(rows))
+    xh[meas] = p; xt[meas] = t
+    um = bip & ~meas
+    xh[um] = tab['p_un']; xt[um] = tab['tb_un']
+    c = lambda w: np.bincount(inv, weights=np.asarray(w, dtype=np.float64), minlength=len(ids))
+    return {'ids': ids, 'pa': c(np.ones(len(rows))), 'ab': c(ab), 'h': c(hit), 'tb': c(tb), 'xh': c(xh), 'xtb': c(xt), 'bip': c(bip), 'meas': c(meas)}
+
+
+def xstats_study(T: dict, stage, spec: dict) -> dict:
+    """XSTATS-01 (LEDGER): does a hitter's expected AVG (SLG) from his batted balls predict his next season's AVG (SLG)
+    better than his AVG (SLG) itself? Table and hitters' lines from the training seasons, scored on the test season
+    (squared error weighted by test at-bats), with the blend weight fitted on the fit split; intervals from resampling
+    hitters. Aggregates only."""
+    reg = (T['post'] == 0) if 'post' in T else np.ones(len(T['season']), bool)
+    min_pa = float(spec.get('min_pa', 300)); min_test = float(spec.get('min_test', 150)); boot = int(spec.get('boot', 2000))
+    rng = np.random.default_rng(int(spec.get('seed', 20261011)))
+    fit = spec.get('fit', {'train': [2023, 2024], 'test': 2025}); score = spec.get('score', {'train': [2024, 2025], 'test': 2026, 'test_end': '2026-08-01'})
+
+    def pairs(sp):
+        trm = reg & np.isin(T['season'], sp['train']); tem = reg & (T['season'] == int(sp['test']))
+        if sp.get('test_end'):
+            tem &= T['day'] < date.fromisoformat(sp['test_end']).toordinal()
+        tab = xs_table(T, trm)
+        a = xs_lines(T, trm, tab); b = xs_lines(T, tem, tab)
+        pos = {int(x): i for i, x in enumerate(b['ids'])}
+        keep = [i for i, x in enumerate(a['ids']) if a['pa'][i] >= min_pa and int(x) in pos and b['pa'][pos[int(x)]] >= min_test]
+        bi = np.array([pos[int(a['ids'][i])] for i in keep], np.int64); ai = np.array(keep, np.int64)
+        return {k: a[k][ai] for k in a if k != 'ids'}, {k: b[k][bi] for k in b if k != 'ids'}, tab
+    A1, B1, _ = pairs(fit); stage('xstats study: fit')
+    A2, B2, tab2 = pairs(score); stage('xstats study: score')
+    out = {'fit': fit, 'score': score, 'hitters': {'fit': int(len(A1['ab'])), 'score': int(len(A2['ab']))},
+           'measured_share': round(float(A2['meas'].sum() / max(A2['bip'].sum(), 1)), 4), 'metrics': {}}
+    for name, num, xnum in (('avg', 'h', 'xh'), ('slg', 'tb', 'xtb')):
+        def preds(A):
+            raw = A[num] / np.maximum(A['ab'], 1); xs = A[xnum] / np.maximum(A['ab'], 1)
+            return raw, xs
+        r1, x1 = preds(A1); y1 = B1[num] / np.maximum(B1['ab'], 1); w1 = B1['ab']
+        # the blend weight on expected, fitted on the fit split (least squares, weighted by test at-bats)
+        d = x1 - r1; wgt = float(np.clip((w1 * d * (y1 - r1)).sum() / max((w1 * d * d).sum(), 1e-12), 0, 1))
+        r2, x2 = preds(A2); y2 = B2[num] / np.maximum(B2['ab'], 1); w2 = B2['ab']
+        bl = r2 + wgt * (x2 - r2)
+        e = {'raw': w2 * (y2 - r2) ** 2, 'expected': w2 * (y2 - x2) ** 2, 'blend': w2 * (y2 - bl) ** 2}
+        n = len(y2); draws = rng.integers(0, n, (boot, n)); tot = w2.sum()
+        res = {'blend_weight': round(wgt, 3), 'mse': {k: round(float(v.sum() / tot), 6) for k, v in e.items()},
+               'corr': {'raw': round(float(np.corrcoef(r2, y2)[0, 1]), 3), 'expected': round(float(np.corrcoef(x2, y2)[0, 1]), 3)},
+               'mean': {'raw': round(float(np.average(r2, weights=w2)), 4), 'expected': round(float(np.average(x2, weights=w2)), 4), 'test': round(float(np.average(y2, weights=w2)), 4)}}
+        for a_, b_ in (('expected', 'raw'), ('blend', 'raw'), ('blend', 'expected')):
+            dd = e[a_] - e[b_]; bs = dd[draws].sum(1) / np.maximum(w2[draws].sum(1), 1e-12)
+            res[f'{a_}_minus_{b_}'] = [round(float(dd.sum() / tot), 7), round(float(np.percentile(bs, 2.5)), 7), round(float(np.percentile(bs, 97.5)), 7)]
+        out['metrics'][name] = res
+    stage('xstats study: done')
+    return out
+
+
 # HCHANGE-01 (LEDGER): do the season-over-season changes the hitter pages call out hold the next season? The page's rule
 # (hitterChanges): a rate moved at least `min` and at least three standard errors between two seasons of 200 or more.
 CHANGE_RATES = (('chase', 'chases', 'outside', 0.03), ('whiff', 'misses', 'swings', 0.03), ('k', 'k', 'pa', 0.03), ('bb', 'bb', 'pa', 0.03),
@@ -3116,6 +3226,9 @@ def main():
             dates = []
         if params.get('split_study'):
             receipt['split_study'] = split_shrink_study(T, stage, params['split_study'])
+            dates = []
+        if params.get('xstats_study'):
+            receipt['xstats_study'] = xstats_study(T, stage, params['xstats_study'])
             dates = []
         if params.get('change_study'):
             receipt['change_study'] = change_study(T, stage, params['change_study'])

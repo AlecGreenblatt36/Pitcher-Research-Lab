@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 299,
- "rows": 302,
+ "experiments": 300,
+ "rows": 303,
  "records": {
   "ACC-01": [
    {
@@ -4863,6 +4863,22 @@
     ],
     "frozen_commits": [],
     "status": "(1) and (2) held; (3) misses only"
+   }
+  ],
+  "XSTATS-01": [
+   {
+    "id": "XSTATS-01",
+    "columns": {
+     "ID": "XSTATS-01",
+     "Attempt": "Expected batting average and slugging, the way the public player pages compute them: each measured ball in play (no bunts) takes the league's hit rate and total bases for its exit speed and launch angle (3 mph by 4 degrees, backed off to 6 by 8 where a bin has under 30 balls; unmeasured balls in play at the league's unmeasured rates; strikeouts and other at-bats none), over his at-bats. Does a hitter's expected AVG (SLG) from two seasons predict his next season's AVG (SLG) better than his AVG (SLG)? Table and lines from the training seasons; hitters with 300 or more plate appearances in training and 150 in the test; squared error weighted by test at-bats; a blend weight on expected fitted on 2023-2024 to 2025; scored once on 2024-2025 to 2026 before August 1; intervals from resampling hitters (2,000 draws). tools/brl_report.py xstats_study, xs_table, xs_lines, report lane, aggregates only. Synthetic check (brl_live_tests/test_report_xstats_study.py): with results driven by contact quality, expected wins; with results driven by something else (speed), raw wins and the blend leans raw.",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions on 2026: (1) expected AVG predicts AVG better than AVG does, interval excluding zero; (2) expected SLG predicts SLG better than SLG does, interval excluding zero; (3) the fitted blend puts at least half its weight on expected for both. Decision rule: for each of AVG and SLG where (1) or (2) holds, the hitter percentile rankings and cards add an Expected row (expected AVG, expected SLG, labeled as from how hard and at what angle he hits the ball); otherwise nothing changes.",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "PSPLITS-01": [
