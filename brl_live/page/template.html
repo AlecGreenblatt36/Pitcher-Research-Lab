@@ -425,7 +425,8 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .pl-list b { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .pl-list .good { color: var(--good); } .pl-list .bad { color: var(--bad); }
 /* leaderboards and team tables on the Players page */
-.ld .seg { margin: 4px 0 8px; }
+.ld .seg { margin: 4px 0 8px; display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); width: 100%; background: var(--surface); }
+.ld .seg button { padding: 8px 4px; }
 .ld-grid { display: grid; gap: 0 40px; }
 @media (min-width: 900px) { .ld-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
 .ld-grid .sec { min-width: 0; }
@@ -439,11 +440,9 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .pct-pill { display: inline-block; min-width: 28px; padding: 0 5px; border-radius: 10px; font-size: 14px; font-weight: 700; text-align: center; line-height: 1.5; font-variant-numeric: tabular-nums; }
 .roster th[scope="row"] { text-align: left; white-space: nowrap; font-family: var(--body); font-size: 16px; font-weight: 400; color: var(--ink); border-bottom: 1px solid var(--rule-soft); }
 .roster th[scope="row"] a { color: inherit; }
-.ld .seg { display: flex; }
 .jump { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 14px; }
 .jump button { min-height: 44px; padding: 6px 14px; border-radius: 22px; border: 1px solid var(--rule-strong); background: var(--surface); color: var(--ink); font: inherit; font-weight: 700; font-size: 15px; cursor: pointer; }
 .jump button:hover { background: var(--hover); }
-.ld .seg button { flex: 1 1 auto; }
 .roster th[scope="row"] small { color: var(--muted); font-weight: 400; }
 .roster td { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .roster thead th { text-align: right; white-space: nowrap; }
