@@ -144,7 +144,7 @@ def bats_lookup(h: pd.DataFrame, cutoff: str) -> dict:
 
 def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates: list, *, model_path: Path, model_sha256: str,
                  history_path: Path, hazard_path: Path, n_sims: int, physics_table=None, offsets=None, rest=False, environment=None,
-                 team_offsets=None, age_layer=None, steals=None, win_states=False, starter_lines=False, role_offsets=None, real_pa_check=False, transitions=None, hitter_lines=False, running_events=None, reliever_choice=None, leash=None, base_state=None, relief_exit=None, relief_hooks=None, day_form=0.0, paired_streams=False, matchup=None, level_offsets=None, log=print) -> list[dict]:
+                 team_offsets=None, age_layer=None, steals=None, win_states=False, starter_lines=False, role_offsets=None, real_pa_check=False, transitions=None, hitter_lines=False, running_events=None, reliever_choice=None, leash=None, base_state=None, relief_exit=None, relief_hooks=None, day_form=0.0, paired_streams=False, matchup=None, level_offsets=None, hazard_correction=None, log=print) -> list[dict]:
     """Simulate every game on the given dates; one record per game (win counts, run histograms, starter outs).
 
     environment: optional {game_pk: seven log-multipliers} (brl_live/environment.py); games without an entry are unadjusted.
@@ -173,6 +173,8 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
     day_form: sd of a per-team, per-world shock on reaching base (brl_live.provider_adjust.DayForm); 0 is off.
     matchup: optional {'table': {(batter, pitcher): (chase points, zone-swing points)}, 'coefs': {'K': (..), 'BB': (..)}}:
         decision-moment matchups (brl_live.provider_adjust.MatchupAdjust), from earlier seasons only.
+    hazard_correction: optional {'terms', 'coef'}: LEASH-02's correction on the starter-exit hazard's log-odds by inning, its end
+        and the score (research_lab.game_sim.starter_hazard.CORRECTION_TERMS).
     paired_streams: tie every random draw to a team's plate appearance number (engine paired streams), so replays of two
         settings with the same seeds stay paired and their comparison carries far less simulation noise; both replays of a
         comparison must use the same choice.
@@ -381,7 +383,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                 for sid_l in (int(g.away_starter), int(g.home_starter)):
                     pexp_g[sid_l] = leash[0].adjust(float(pexp.get(sid_l, hazard["league_mean_bf"])), leash[1].facts(sid_l, date))
             policy = FittedStarterPolicy(hazard, pexp_g, texp, {int(g.away_starter): g.away, int(g.home_starter): g.home},
-                                         reliever_choice=reliever_choice, relief_exit=relief_exit,
+                                         correction=hazard_correction, reliever_choice=reliever_choice, relief_exit=relief_exit,
                                          relief_offsets=({'away': relief_hooks.at(g.away, date), 'home': relief_hooks.at(g.home, date)}
                                                          if relief_hooks is not None else None))
             steal = None

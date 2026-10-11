@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 316,
- "rows": 319,
+ "experiments": 317,
+ "rows": 320,
  "records": {
   "ACC-01": [
    {
@@ -5265,6 +5265,24 @@
     ],
     "frozen_commits": [],
     "status": "(1) failed in 2025; outs ladder off"
+   }
+  ],
+  "LEASH-02": [
+   {
+    "id": "LEASH-02",
+    "columns": {
+     "ID": "LEASH-02",
+     "Attempt": "When starters come out, by inning. PLAYER-07 found the simulator ending too many starts in the 4th inning and too few in the 5th. Diagnosis (described after looking; research run 38156118083, the live exit hazard on every real removal decision of 2023 to 2026, the states the simulator sees): after the 4th inning ends the hazard expects 391 to 416 removals a season where 253 to 290 happened (actual over expected 0.62 to 0.70 by season; 0.60 to 0.69 by score and 0.54 to 0.80 by runs allowed); after the 5th with a lead 1.17; after the 7th 1.11 to 1.20; mid-inning in the 4th with a run or none allowed 0.60 and 0.61, in the 5th with none 0.74. The hazard is a logistic regression with the inning as one straight-line term, so it cannot hold managers' habit of letting a starter finish the 5th. Built: a correction on the hazard's log-odds, one term for each inning from the 3rd to the 7th by whether it just ended and the score (fielding team ahead, tied, behind), and two for mid-inning with few runs allowed (the 4th with a run or none, the 5th with none; 32 terms), fitted on 2023 and 2024 decisions with the hazard's own chance as the offset and a light ridge (tools/brl_research.py hazard_fix), applied in the simulator's starter policy (research_lab.game_sim.starter_hazard). The terms were chosen after seeing all four seasons' cells; the fit sees 2023 and 2024 only",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the fit and the replays.** Stage 1, decisions: (a) the decision log loss on 2025 and on 2026 improves, each game-clustered interval below zero; (b) removals after the 4th inning ends expected within 10% of actual in both seasons. Stage 2, full replays of 2025 and 2026 with PLAYER-07's settings and seeds plus the correction, against PLAYER-07's replays: (1) every half line from 12.5 to 20.5 outs within 2.5 points of the actual share in both seasons (PLAYER-07's (1)), and starts ending with 10 to 12 outs within 1.5 points of the real share in both; (2) the win Brier pooled not worse than +0.0002; (3) the mean total's squared error not worse, the pooled paired interval's upper end below +0.03 runs squared. Decision rule: if (a), (b) and (1) to (3) hold, the correction goes live for regular-season games (ADJUST hazard_correction); the postseason keeps its measured settings (x0.91 and the +0.4 exit offset were fitted on the plain hazard). The outs ladder would then be re-checked under PLAYER-07's rule on these replays before it shows. Otherwise nothing changes",
+     "Delta corrected Brier, 2026": "Registered; fit queued"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [
+     "38156118083"
+    ],
+    "frozen_commits": [],
+    "status": "Registered; fit queued"
    }
   ],
   "LEVEL-01": [

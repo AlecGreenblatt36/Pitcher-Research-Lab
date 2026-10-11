@@ -440,6 +440,53 @@ def hazard_check(data_root: Path) -> dict:
     return out
 
 
+def ridge_logit_offset(Z, y, offset, lam=10.0, iters=60):
+    """Coefficients g of logit(p) = offset + Z g by Newton's method, with a ridge lam on g (LEASH-02's correction)."""
+    g = np.zeros(Z.shape[1])
+    for _ in range(iters):
+        q = 1.0 / (1.0 + np.exp(-(offset + Z @ g)))
+        grad = Z.T @ (y - q) - lam * g
+        H = (Z * (q * (1 - q))[:, None]).T @ Z + lam * np.eye(Z.shape[1])
+        step = np.linalg.solve(H, grad); g = g + step
+        if np.abs(step).max() < 1e-9:
+            break
+    return g
+
+
+def hazard_fix(data_root: Path, train=(2023, 2024), lam=10.0) -> dict:
+    """LEASH-02, stage 1: the correction on the live starter-exit hazard's log-odds (starter_hazard.CORRECTION_TERMS), fitted
+    on the train seasons' real removal decisions with the hazard's own chance as the offset, then scored on each later season:
+    the decision log loss against the plain hazard (game-clustered interval), removals after the 4th inning ends against
+    the expected count, and the season by inning cells. Coefficients and aggregates only."""
+    import joblib
+    from research_lab.game_sim import starter_hazard as sh
+    from brl_replay.games import load_history
+    pa = load_history(next(data_root.rglob('plate_appearances.csv.gz')))
+    if 'game_type' in pa.columns:
+        pa = pa[pa['game_type'].astype(str) == 'R']
+    bundle = joblib.load(next(data_root.rglob('starter_hazard.joblib')))
+    d, starts = sh.build_decisions(pa)
+    d = sh.add_tendencies(d, starts, float(bundle['league_mean_bf']))
+    p0 = np.clip(bundle['model'].predict_proba(d[sh.FEATURES])[:, 1], 1e-6, 1 - 1e-6)
+    off = np.log(p0 / (1 - p0)); y = d['y'].to_numpy(float); Z = sh.correction_matrix(d)
+    tr = d['season'].isin(train).to_numpy()
+    g = ridge_logit_offset(Z[tr], y[tr], off[tr], lam)
+    p1 = 1.0 / (1.0 + np.exp(-(off + Z @ g)))
+    out = {'terms': list(sh.CORRECTION_TERMS), 'coef': [round(float(x), 5) for x in g], 'lam': lam, 'train': list(train),
+           'decisions': {str(int(k)): int(v) for k, v in d['season'].value_counts().items()}, 'by_season': {}, 'cells': []}
+    for season in sorted(int(x) for x in d['season'].unique()):
+        m = (d['season'] == season).to_numpy()
+        diff, lo, hi = sh.clustered_diff_ci(y[m], p1[m], p0[m], d['game_pk'].to_numpy()[m])
+        e4 = m & (d['inning'].to_numpy() == 4) & (d['inning_ended'].to_numpy() == 1)
+        out['by_season'][str(season)] = {'log_loss_plain': round(sh.log_loss(y[m], p0[m]), 6), 'log_loss_corrected': round(sh.log_loss(y[m], p1[m]), 6),
+                                         'log_loss_change': round(diff, 6), 'ci': [round(lo, 6), round(hi, 6)],
+                                         'after_4th': {'removals': int(y[e4].sum()), 'plain': round(float(p0[e4].sum()), 1), 'corrected': round(float(p1[e4].sum()), 1)}}
+    inn = d['inning'].clip(upper=9).to_numpy(int)
+    for (season, i, e), idx in pd.DataFrame({'s': d['season'].to_numpy(int), 'i': inn, 'e': d['inning_ended'].to_numpy(int)}).groupby(['s', 'i', 'e']).indices.items():
+        out['cells'].append([int(season), int(i), int(e), int(len(idx)), int(y[idx].sum()), round(float(p0[idx].sum()), 1), round(float(p1[idx].sum()), 1)])
+    return out
+
+
 def postseason_usage(repo, token, key, branch, seasons=(2023, 2024, 2025, 2026)) -> dict:
     """How starters and bullpens are used in postseason games compared with the regular season (from the sealed study seasons)."""
     import collections
@@ -532,7 +579,7 @@ def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']; key_hex = os.environ['BRL_PA_PACKAGE_KEY']; key = key_bytes(key_hex)
     branch = os.environ.get('BRL_LEDGER_BRANCH', 'brl-live-data')
     experiment = (os.environ.get('BRL_EXPERIMENT') or 'physics').strip()
-    if experiment == 'hazard_check':
+    if experiment in ('hazard_check', 'hazard_fix'):
         run_id = os.environ.get('GITHUB_RUN_ID', 'local')
         receipt = {'schema': 'brl.research-receipt.v1', 'experiment': experiment, 'run_id': run_id, 'started_at': datetime.now(timezone.utc).isoformat()}
         try:
@@ -544,7 +591,7 @@ def main():
                 import shutil; shutil.rmtree(data_root)
             data_root.mkdir(parents=True)
             ep.restore_package(repo, token, key_hex, manifest, data_root)
-            receipt['results'] = hazard_check(data_root); receipt['status'] = 'completed'
+            receipt['results'] = (hazard_fix if experiment == 'hazard_fix' else hazard_check)(data_root); receipt['status'] = 'completed'
         except Exception as exc:
             receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:300]
             receipt['where'] = [{'file': Path(f.filename).name, 'function': f.name, 'line': f.lineno} for f in traceback.extract_tb(exc.__traceback__)[-5:]]

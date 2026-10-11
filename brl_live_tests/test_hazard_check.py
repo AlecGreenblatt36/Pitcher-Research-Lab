@@ -64,3 +64,43 @@ def test_hazard_check_scores_real_decisions_by_inning(tmp_path):
     assert all(len(v) == 28 for v in ex.values())
     # every exit here comes at an inning's end (exit after the 4th to 7th): 12 to 21 outs
     assert sum(sum(v[12:22]) for v in ex.values()) == y
+
+
+def test_hazard_fix_recovers_a_planted_inning_habit_and_the_policy_applies_it(tmp_path):
+    """LEASH-02: the fit runs end to end on made-up games and reports each season in the terms' order; the Newton fit with
+    the hazard's log-odds as the offset recovers planted terms; the policy's chance with the correction is the plain chance
+    moved by the term for the state it sees (after the 4th with a lead), and unchanged where the term is zero."""
+    from research_lab.game_sim import starter_hazard as sh
+    rng = np.random.default_rng(8)
+    pa = _games(rng, n=400)
+    pa.to_csv(tmp_path / 'plate_appearances.csv.gz', index=False, compression='gzip')
+    from brl_replay.games import load_history
+    h = load_history(tmp_path / 'plate_appearances.csv.gz')
+    d, starts = sh.build_decisions(h)
+    league = float(starts['bf_total'].mean())
+    d = sh.add_tendencies(d, starts, league)
+    model = sh.fit_hazard(d, 1.0)
+    joblib.dump({'model': model, 'league_mean_bf': league}, tmp_path / 'starter_hazard.joblib')
+    # the fix itself on real-shaped data: fits, reports both seasons, keeps the terms' order
+    out = br.hazard_fix(tmp_path, train=(2025,))
+    assert out['terms'] == list(sh.CORRECTION_TERMS) and len(out['coef']) == 32
+    assert set(out['by_season']) == {'2025', '2026'}
+    # the Newton fit with an offset recovers a planted term
+    n = 20000
+    off = rng.normal(-2.0, 1.0, n); Z = np.zeros((n, 3)); Z[np.arange(n), rng.integers(0, 3, n)] = 1
+    truth = np.array([-0.6, 0.0, 0.4])
+    y = (rng.random(n) < 1 / (1 + np.exp(-(off + Z @ truth)))).astype(float)
+    g = br.ridge_logit_offset(Z, y, off, lam=1.0)
+    assert np.allclose(g, truth, atol=0.12)
+    # the policy adds the term for the state it sees
+    corr = {'terms': list(sh.CORRECTION_TERMS), 'coef': [0.0] * 32}
+    corr['coef'][sh.CORRECTION_TERMS.index('i4e_ahead')] = -0.6
+    plain = sh.FittedStarterPolicy({'model': model, 'league_mean_bf': league}, {}, {}, {})
+    fixed = sh.FittedStarterPolicy({'model': model, 'league_mean_bf': league}, {}, {}, {}, correction=corr)
+    a = plain._prob(14.0, 1.0, 4.0, 1.0, 3.0, 0.0, 2.0, 22.0, 22.0); b = fixed._prob(14.0, 1.0, 4.0, 1.0, 3.0, 0.0, 2.0, 22.0, 22.0)
+    lo = lambda p: np.log(p / (1 - p))
+    assert abs((lo(b) - lo(a)) + 0.6) < 1e-9
+    assert fixed._prob(14.0, 1.0, 5.0, 1.0, 3.0, 0.0, 2.0, 22.0, 22.0) == plain._prob(14.0, 1.0, 5.0, 1.0, 3.0, 0.0, 2.0, 22.0, 22.0)
+    z = sh.correction_matrix(d.head(500))
+    zz = np.array([sh.correction_terms(r.inning, r.inning_ended, r.lead, r.runs) for r in d.head(500).itertuples()])
+    assert np.array_equal(z, zz)

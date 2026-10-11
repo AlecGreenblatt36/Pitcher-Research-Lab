@@ -92,6 +92,40 @@ def engineer(d: pd.DataFrame) -> pd.DataFrame:
     return d
 
 
+# LEASH-02: a correction on the hazard's log-odds. The hazard holds the inning as one straight-line term, so it cannot keep
+# managers' habit of letting a starter finish the 5th (after the 4th ends it expects about half again as many removals as
+# happen). One term per inning from the 3rd to the 7th by whether it just ended and the score (the fielding team behind, tied,
+# ahead), and two for mid-inning with few runs allowed (the 4th with a run or none, the 5th with none).
+CORRECTION_TERMS = tuple(f"i{i}{'e' if e else 'm'}_{s}" for i in range(3, 8) for e in (1, 0) for s in ("behind", "tied", "ahead")) + ("i4m_quiet", "i5m_scoreless")
+
+
+def correction_terms(inning, ended, lead, runs) -> np.ndarray:
+    """The correction's indicators for one decision (CORRECTION_TERMS order)."""
+    z = np.zeros(len(CORRECTION_TERMS))
+    inning, ended = int(inning), int(bool(ended))
+    if 3 <= inning <= 7:
+        sc = 0 if lead < 0 else (1 if lead == 0 else 2)
+        z[(inning - 3) * 6 + (0 if ended else 3) + sc] = 1.0
+    if not ended and inning == 4 and runs <= 1:
+        z[30] = 1.0
+    if not ended and inning == 5 and runs == 0:
+        z[31] = 1.0
+    return z
+
+
+def correction_matrix(d: pd.DataFrame) -> np.ndarray:
+    """correction_terms for every decision of a build_decisions frame (inning, inning_ended, lead, runs)."""
+    inn, ended = d["inning"].to_numpy(int), d["inning_ended"].to_numpy(int)
+    lead, runs = d["lead"].to_numpy(float), d["runs"].to_numpy(float)
+    Z = np.zeros((len(d), len(CORRECTION_TERMS)))
+    sc = np.where(lead < 0, 0, np.where(lead == 0, 1, 2))
+    rows = np.flatnonzero((inn >= 3) & (inn <= 7))
+    Z[rows, (inn[rows] - 3) * 6 + np.where(ended[rows] == 1, 0, 3) + sc[rows]] = 1.0
+    Z[:, 30] = ((ended == 0) & (inn == 4) & (runs <= 1)).astype(float)
+    Z[:, 31] = ((ended == 0) & (inn == 5) & (runs == 0)).astype(float)
+    return Z
+
+
 def heuristic_probability(d: pd.DataFrame) -> np.ndarray:
     """Exact replica of ManagerPolicy.should_remove for starters (fixture profile)."""
     exp = np.maximum(1.0, np.round(d["pitcher_exp_bf"].to_numpy()))
@@ -177,7 +211,7 @@ from .manager import ManagerPolicy  # noqa: E402
 class FittedStarterPolicy(ManagerPolicy):
     """Starter removal from the fitted hazard; relievers keep the dev heuristic."""
 
-    def __init__(self, bundle: dict, pitcher_exp: dict, team_exp: dict, team_of_pitcher: dict, **kw):
+    def __init__(self, bundle: dict, pitcher_exp: dict, team_exp: dict, team_of_pitcher: dict, correction=None, **kw):
         super().__init__(**kw)
         self.model, self.league = bundle["model"], float(bundle["league_mean_bf"])
         self.pitcher_exp, self.team_exp, self.team_of = pitcher_exp, team_exp, team_of_pitcher
@@ -185,6 +219,13 @@ class FittedStarterPolicy(ManagerPolicy):
         scaler, lr = self.model.named_steps["s"], self.model.named_steps["m"]
         self._mu, self._sd = scaler.mean_, scaler.scale_
         self._w, self._b = lr.coef_[0], float(lr.intercept_[0])
+        # LEASH-02: {'terms': CORRECTION_TERMS, 'coef': [...]} added to the log-odds; None leaves the hazard as fitted
+        self._gamma = None
+        if correction is not None:
+            if tuple(correction["terms"]) != CORRECTION_TERMS:
+                raise ValueError("hazard correction terms do not match")
+            self._gamma = np.asarray(correction["coef"], float)
+            self.name = "fitted-starter-hazard-v1 + inning correction (relievers: heuristic)"
 
     def _prob(self, bf, runs, inning, ended, outs, runners, lead, p_exp, t_exp) -> float:
         """Numpy replica of engineer() + scaler + logistic (same order as FEATURES)."""
@@ -193,6 +234,8 @@ class FittedStarterPolicy(ManagerPolicy):
                       ended, inning, float(inning >= 6), outs, runners, lead, min(abs(lead), 5),
                       float(bf >= 18), p_exp, t_exp, ended * d, runs * float(inning <= 4)])
         z = float(((x - self._mu) / self._sd) @ self._w + self._b)
+        if self._gamma is not None:
+            z += float(correction_terms(inning, ended, lead, runs) @ self._gamma)
         return 1.0 / (1.0 + np.exp(-z))
 
     def should_remove(self, pitcher, line, state, fielding_side, inning_ended, rng):
