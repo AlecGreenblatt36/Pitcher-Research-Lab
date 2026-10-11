@@ -93,8 +93,11 @@ queue behind the shards (seen October 11 at 16:50 UTC). Check-only replays (n_si
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 6:06 p.m. Eastern October 11, by `date -u`)
+### In flight (updated 6:34 p.m. Eastern October 11, by `date -u`)
 
+- October 11, 6:34 p.m.: BULLPEN-03 registered (the chance-to-pitch table, scored per reliever for the first time).
+  Replays v2-prod4-pen-1000-<season> started 22:34 UTC (runs 38180906147 and 38180930219), RELIEF-04's settings plus the
+  new recording, so their games must equal RELIEF-04's (check home_wins per game). Score with tools/brl_bullpen_cal.py.
 - October 11, 6:06 p.m.: the Odds tab now carries the standard pitcher-hits market (PLAYER-09: each starter's
   hits-allowed ladder, 2.5 to 7.5, within 1.7 points on both replay sets, shown for every box) and a batter-strikeouts
   column (PROD-16, 1+ K). RUNLINE-02 failed (independent team runs miss how home wins end); the run line stays hidden.
