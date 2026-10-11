@@ -204,6 +204,9 @@ details.more[open] summary::before { content: "\2212"; }
 .line th.rh { background: var(--board); }
 .line .rh.r { right: 36px; }
 .line .rh.h { right: 0; }
+.line.has-e .rh.r { right: 72px; }
+.line.has-e .rh.h { right: 36px; }
+.line .rh.e { right: 0; }
 .line td.rh.r::after { content: ""; position: absolute; top: 0; bottom: 0; left: -8px; width: 8px; background: linear-gradient(to right, rgba(31,74,55,0), var(--board)); }
 .line td.rh { position: sticky; }
 .line td.scored { color: var(--lamp); }
@@ -1029,7 +1032,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   function liveLine(lv) {
     var inn = { away: {}, home: {} };
     (lv.state.innings || []).forEach(function (i) { ["away", "home"].forEach(function (side) { if (i[side] && i[side].R != null) inn[side][String(i.num)] = { R: i[side].R, H: i[side].H || 0 }; }); });
-    return { innings: inn, score: { away: lv.state.away_score, home: lv.state.home_score }, plays: [], _played: Math.max(9, lv.state.inning), _live: true };
+    return { innings: inn, score: { away: lv.state.away_score, home: lv.state.home_score }, errors: lv.state.errors || null, plays: [], _played: Math.max(9, lv.state.inning), _live: true };
   }
   function homeProb(f) {
     if (f._past) return f._past.hl;
@@ -1911,9 +1914,10 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   function lineScore(f, s) {
     var keys = Object.keys(s.innings.away || {}).concat(Object.keys(s.innings.home || {})).map(Number);
     var played = s._played || Math.max(9, s.plays && s.plays.length ? samplePlayed(s) : Math.max.apply(null, keys.length ? keys : [9]));
-    var h = '<div class="line-wrap"><table class="line num" aria-label="Line score of the game shown"><thead><tr><th class="team"><span class="visually-hidden">Team</span></th>';
+    var E = s.errors && s.errors.away != null && s.errors.home != null ? s.errors : null;      /* real games only: the simulator keeps no errors */
+    var h = '<div class="line-wrap"><table class="line num' + (E ? " has-e" : "") + '" aria-label="Line score of the game shown"><thead><tr><th class="team"><span class="visually-hidden">Team</span></th>';
     for (var i = 1; i <= played; i++) h += "<th>" + i + "</th>";
-    h += '<td class="gap" aria-hidden="true"></td><th class="rh r">R</th><th class="rh h">H</th></tr></thead><tbody>';
+    h += '<td class="gap" aria-hidden="true"></td><th class="rh r">R</th><th class="rh h">H</th>' + (E ? '<th class="rh e">E</th>' : "") + "</tr></thead><tbody>";
     ["away", "home"].forEach(function (side) {
       var inn = s.innings[side] || {}, R = 0, H = 0;
       h += '<tr><th class="team">' + esc(f[side].abbr) + "</th>";
@@ -1922,7 +1926,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         if (c) { R += c.R; H += c.H; h += "<td" + (c.R ? ' class="scored"' : "") + ">" + c.R + "</td>"; }
         else h += "<td>" + (side === "home" && i === played && s.score.home > s.score.away && !s._live ? "X" : "") + "</td>";
       }
-      h += '<td class="gap"></td><td class="rh r">' + s.score[side] + '</td><td class="rh h">' + H + "</td></tr>";
+      h += '<td class="gap"></td><td class="rh r">' + s.score[side] + '</td><td class="rh h">' + H + "</td>" + (E ? '<td class="rh e">' + E[side] + "</td>" : "") + "</tr>";
     });
     return h + "</tbody></table></div>";
   }
@@ -2046,6 +2050,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (outs >= 3) { half = half === "top" ? "bottom" : "top"; if (half === "top") inning += 1; outs = 0; bases = [null, null, null]; between = true; }
     }
     var teams = ls.teams || {}, sc = { away: lcInt((teams.away || {}).runs, 0), home: lcInt((teams.home || {}).runs, 0) };
+    var errs = (teams.away || {}).errors != null && (teams.home || {}).errors != null ? { away: lcInt(teams.away.errors, 0), home: lcInt(teams.home.errors, 0) } : null;
     var batting = half === "top" ? "away" : "home", fielding = batting === "home" ? "away" : "home";
     var innings = (ls.innings || []).filter(function (i) { return i.num != null; }).map(function (i) {
       var o = { num: lcInt(i.num, 0) };
@@ -2064,7 +2069,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       current = { pitches: cpz[0], zone: cpz[1], official: true, at_bat: lcInt((cp.about || {}).atBatIndex, -1) };
     }
     var abstract = String(gs.abstractGameState || ""), state = { inning: Math.max(inning, 1), half: half, outs: outs, bases: bases, between_innings: between,
-      away_score: sc.away, home_score: sc.home, batting_side: batting, balls: lcInt(ls.balls, 0), strikes: lcInt(ls.strikes, 0), detailed_state: gs.detailedState || "", innings: innings };
+      away_score: sc.away, home_score: sc.home, batting_side: batting, balls: lcInt(ls.balls, 0), strikes: lcInt(ls.strikes, 0), detailed_state: gs.detailedState || "", innings: innings, errors: errs };
     return { abstract: abstract, detailed: String(gs.detailedState || ""), started: started, final: /^final$/i.test(abstract), state: state, due_up: due, due_up_id: dueId, on_deck: deck, on_deck_id: deckId, on_mound: mound, pitcher_names: names, current: current,
       signature: [state.inning, half, outs, sc.away, sc.home, String(bases), id(off.batter), abstract].join("|") };
   }

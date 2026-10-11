@@ -136,6 +136,12 @@ def test_actual_reader_joins_ids_and_converts_innings():
     assert b['batting']['away'][0]['player_id']=='1'
 
 
+def test_actual_reader_keeps_errors_only_when_the_feed_has_them():
+    assert 'errors' not in parse_actual_box(actual_fixture(),1,'2026-10-07T00:00:00Z')
+    f=actual_fixture();f['liveData']['linescore']['teams']['away']['errors']=1;f['liveData']['linescore']['teams']['home']['errors']=0
+    assert parse_actual_box(f,1,'2026-10-07T00:00:00Z')['errors']=={'away':1,'home':0}
+
+
 def test_actual_reader_never_accepts_in_progress():
     f=actual_fixture();f['gameData']['status']['abstractGameState']='Live'
     with pytest.raises(ValueError):parse_actual_box(f,1,'2026-10-07T00:00:00Z')

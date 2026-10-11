@@ -579,6 +579,9 @@ def parse_actual_box(feed,game_pk,fetched_at):
     for item in live['linescore']['innings']:
         for s in SIDE:
             if 'runs' in item.get(s,{}):out['innings'][s][str(item['num'])]={k:int(item[s][v]) for k,v in [('R','runs'),('H','hits')]}
+    # errors for the line score's E column (display only; missing in the feed means left out, never zero)
+    errs={s:((live['linescore'].get('teams') or {}).get(s) or {}).get('errors') for s in SIDE}
+    if all(v is not None for v in errs.values()):out['errors']={s:int(errs[s]) for s in SIDE}
     for s in SIDE:
         team=live['boxscore']['teams'][s];bat=[];pit=[]
         for pid in team['batters']:

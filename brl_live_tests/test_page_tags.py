@@ -38,3 +38,14 @@ def test_two_strike_tags_read_the_change_not_the_level():
          "t=hitterTags(" + holds + ",lg);assert.ok(t.indexOf('Holds his zone with two strikes')>=0,t);"
          "const thin={side:'R',counts:{first:[50,10,0,20,6],ahead:[50,20,0,20,6],behind:[50,20,0,20,6],two:[50,30,0,40,30]}};"
          "assert.equal(twoStrikeShift(thin.counts,lg.counts.R),null);")
+
+
+def test_line_score_adds_errors_for_real_games_only():
+    functions = page_functions('lineScore', 'samplePlayed')
+    prefix = ("const assert=require('assert');function esc(x){return String(x);}"
+              "const f={away:{abbr:'CWS'},home:{abbr:'CLE'}};")
+    suffix = ("const real={innings:{away:{'1':{R:0,H:1}},home:{'1':{R:2,H:2}}},score:{away:0,home:2},errors:{away:1,home:0},plays:[],_played:9};"
+              "let h=lineScore(f,real);assert.ok(h.indexOf('>E</th>')>0&&h.indexOf('has-e')>0);"
+              "const sim={innings:{away:{'1':{R:0,H:1}},home:{'1':{R:2,H:2}}},score:{away:0,home:2},plays:[],_played:9};"
+              "h=lineScore(f,sim);assert.ok(h.indexOf('>E</th>')<0);")
+    subprocess.run(['node', '-e', prefix + functions + suffix], check=True)
