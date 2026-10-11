@@ -1,0 +1,367 @@
+{
+ "schema": "brl.report-receipt.v1",
+ "run_id": "38128749747",
+ "params": {
+  "pitcher_split_study": {
+   "fit": {
+    "train": [
+     2023,
+     2024
+    ],
+    "test": 2025
+   },
+   "score": {
+    "train": [
+     2024,
+     2025
+    ],
+    "test": 2026,
+    "test_end": "2026-08-01"
+   },
+   "min_pa": 300,
+   "min_cell": 100,
+   "boot": 2000
+  },
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "dates": [
+   "2026-04-01"
+  ],
+  "publish": false
+ },
+ "started_at": "2026-10-11T09:33:16.244991+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 10.3,
+   "peak_rss_mb": 1094
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 20.0,
+   "peak_rss_mb": 1253
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 30.4,
+   "peak_rss_mb": 1428
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 40.4,
+   "peak_rss_mb": 1597
+  },
+  {
+   "stage": "split study: fit tables",
+   "at_seconds": 40.7,
+   "peak_rss_mb": 1598
+  },
+  {
+   "stage": "split study: score tables",
+   "at_seconds": 40.8,
+   "peak_rss_mb": 1598
+  },
+  {
+   "stage": "split study: avg",
+   "at_seconds": 40.9,
+   "peak_rss_mb": 1601
+  },
+  {
+   "stage": "split study: slg",
+   "at_seconds": 41.0,
+   "peak_rss_mb": 1601
+  },
+  {
+   "stage": "split study: chase",
+   "at_seconds": 41.1,
+   "peak_rss_mb": 1601
+  },
+  {
+   "stage": "split study: miss",
+   "at_seconds": 41.2,
+   "peak_rss_mb": 1601
+  }
+ ],
+ "reports": {},
+ "environment": {
+  "python": "3.12.15",
+  "commit": "135647fd225a82a625e1c7a1a3351434018d2e15",
+  "numpy": "2.5.4",
+  "scipy": "1.18.1",
+  "scikit-learn": "1.9.1",
+  "pandas": "3.0.6",
+  "cryptography": "46.0.4"
+ },
+ "pitcher_split_study": {
+  "who": "pitcher",
+  "fit": {
+   "train": [
+    2023,
+    2024
+   ],
+   "test": 2025
+  },
+  "score": {
+   "train": [
+    2024,
+    2025
+   ],
+   "test": 2026,
+   "test_end": "2026-08-01"
+  },
+  "min_pa": 300.0,
+  "min_cell": 100.0,
+  "grid": [
+   0.0,
+   25.0,
+   50.0,
+   100.0,
+   200.0,
+   400.0,
+   800.0,
+   1600.0,
+   3200.0,
+   6400.0,
+   1000000.0
+  ],
+  "metrics": {
+   "avg": {
+    "m": 1600.0,
+    "fit_curve": [
+     0.5509,
+     0.550721,
+     0.5506,
+     0.550451,
+     0.550306,
+     0.550204,
+     0.550155,
+     0.550143,
+     0.550148,
+     0.550155,
+     0.550167
+    ],
+    "events": 74144,
+    "loss": {
+     "raw": 0.553319,
+     "league": 0.55258,
+     "scaled": 0.552496,
+     "shrunk": 0.552473
+    },
+    "shrunk_minus_raw": [
+     -0.000846,
+     -0.001178,
+     -0.000506
+    ],
+    "shrunk_minus_scaled": [
+     -2.3e-05,
+     -7.4e-05,
+     2.5e-05
+    ],
+    "shrunk_minus_league": [
+     -0.000107,
+     -0.000663,
+     0.000408
+    ],
+    "scaled_minus_raw": [
+     -0.000823,
+     -0.001188,
+     -0.00044
+    ],
+    "carry": {
+     "hitters": 242,
+     "r": 0.102,
+     "r_ci": [
+      -0.014,
+      0.214
+     ],
+     "slope": 0.148,
+     "sd_train": 0.0395,
+     "sd_test": 0.0571,
+     "league_split_lefty_pitchers": -0.0166,
+     "league_split_righty_pitchers": 0.005
+    }
+   },
+   "slg": {
+    "m": 1600.0,
+    "fit_curve": [
+     0.008924,
+     0.008681,
+     0.008515,
+     0.008306,
+     0.008099,
+     0.007947,
+     0.007867,
+     0.007843,
+     0.007846,
+     0.007856,
+     0.007874
+    ],
+    "events": 74144,
+    "loss": {
+     "raw": 0.010634,
+     "league": 0.009774,
+     "scaled": 0.009511,
+     "shrunk": 0.00949
+    },
+    "shrunk_minus_raw": [
+     -0.001144,
+     -0.001679,
+     -0.000667
+    ],
+    "shrunk_minus_scaled": [
+     -2.1e-05,
+     -0.000109,
+     6.1e-05
+    ],
+    "shrunk_minus_league": [
+     -0.000284,
+     -0.001076,
+     0.000518
+    ],
+    "scaled_minus_raw": [
+     -0.001122,
+     -0.001721,
+     -0.000569
+    ],
+    "carry": {
+     "hitters": 242,
+     "r": 0.064,
+     "r_ci": [
+      -0.069,
+      0.2
+     ],
+     "slope": 0.089,
+     "sd_train": 0.0814,
+     "sd_test": 0.1118,
+     "league_split_lefty_pitchers": -0.0499,
+     "league_split_righty_pitchers": 0.0252
+    }
+   },
+   "chase": {
+    "m": 800.0,
+    "fit_curve": [
+     0.598784,
+     0.598728,
+     0.598684,
+     0.59862,
+     0.598543,
+     0.598479,
+     0.59845,
+     0.598461,
+     0.598492,
+     0.598525,
+     0.598581
+    ],
+    "events": 165388,
+    "loss": {
+     "raw": 0.614608,
+     "league": 0.615163,
+     "scaled": 0.614302,
+     "shrunk": 0.614239
+    },
+    "shrunk_minus_raw": [
+     -0.000369,
+     -0.000549,
+     -0.0002
+    ],
+    "shrunk_minus_scaled": [
+     -6.2e-05,
+     -0.000168,
+     4.1e-05
+    ],
+    "shrunk_minus_league": [
+     -0.000924,
+     -0.001492,
+     -0.000391
+    ],
+    "scaled_minus_raw": [
+     -0.000306,
+     -0.00057,
+     -4.8e-05
+    ],
+    "carry": {
+     "hitters": 166,
+     "r": 0.263,
+     "r_ci": [
+      0.122,
+      0.399
+     ],
+     "slope": 0.37,
+     "sd_train": 0.0344,
+     "sd_test": 0.0482,
+     "league_split_lefty_pitchers": -0.0065,
+     "league_split_righty_pitchers": -0.0227
+    }
+   },
+   "miss": {
+    "m": 400.0,
+    "fit_curve": [
+     0.537648,
+     0.537599,
+     0.537561,
+     0.537506,
+     0.537448,
+     0.537412,
+     0.537419,
+     0.537466,
+     0.537529,
+     0.537583,
+     0.537668
+    ],
+    "events": 150638,
+    "loss": {
+     "raw": 0.53369,
+     "league": 0.537208,
+     "scaled": 0.533505,
+     "shrunk": 0.533395
+    },
+    "shrunk_minus_raw": [
+     -0.000295,
+     -0.000422,
+     -0.000174
+    ],
+    "shrunk_minus_scaled": [
+     -0.00011,
+     -0.00026,
+     3.5e-05
+    ],
+    "shrunk_minus_league": [
+     -0.003814,
+     -0.005026,
+     -0.00272
+    ],
+    "scaled_minus_raw": [
+     -0.000185,
+     -0.000439,
+     6.5e-05
+    ],
+    "carry": {
+     "hitters": 152,
+     "r": 0.322,
+     "r_ci": [
+      0.182,
+      0.455
+     ],
+     "slope": 0.362,
+     "sd_train": 0.0395,
+     "sd_test": 0.0445,
+     "league_split_lefty_pitchers": 0.0085,
+     "league_split_righty_pitchers": -0.018
+    }
+   }
+  },
+  "hitters": {
+   "fit": 365,
+   "score": 343,
+   "score_lefties": 103,
+   "side_changed_in_test": 0
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-11T09:33:57.413269+00:00",
+ "seconds": 41.2
+}
