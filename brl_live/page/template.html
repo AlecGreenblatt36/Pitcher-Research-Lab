@@ -484,6 +484,7 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .pl-txt { margin: 4px 0 0 22px; font-size: 16px; line-height: 1.45; }
 .pl-tags { margin: 6px 0 0 22px; display: flex; flex-wrap: wrap; gap: 6px; }
 .pl-tags span { font-size: 14px; color: var(--muted); border: 1px solid var(--rule); border-radius: 999px; padding: 1px 8px; }
+.rp-now .rp-now-tags { margin: 8px 0 0; }
 .pd-line { font-size: 17px; line-height: 1.45; margin: 6px 0 10px; }
 .pair-detail { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 14px; }
 .pair-detail h3 { font-family: var(--display); font-size: 22px; margin: 0 0 4px; }
@@ -3049,6 +3050,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var hn = nm(now.hid, now.hitter), card = hn && now.hid ? ' <a href="#/player/h/' + encodeURIComponent(now.hid) + '">' + esc(lastName(hn)) + "'s card</a> shows where he chases." : "";
       h += '<small class="rp-now-miss">' + (doc.sides && doc.sides[now.side] && doc.sides[now.side].hitters.map(String).indexOf(now.hid) >= 0 ? "No plan for this one: he isn't one of the pitchers we planned for." : "No plan for this one: he wasn't in the lineup we planned for.") + card + "</small>";
     }
+    /* his tags (each held a season later), the same chips as his plan row */
+    var ltags = st.between_innings ? [] : hitterTags(players[now.hid] && players[now.hid].hitter, doc.league).slice(0, 4);
+    if (ltags.length) h += '<div class="pl-tags rp-now-tags">' + ltags.map(function (x) { return "<span>" + esc(x) + "</span>"; }).join("") + "</div>";
     var np = nextPitchNote(now.lv.current, players[now.pid] && players[now.pid].pitcher);
     if (np) h += '<p class="rp-next"><b>Next pitch:</b> ' + esc(np) + "</p>";
     var cm = st.between_innings ? "" : countMixLine(players[now.pid] && players[now.pid].pitcher, players[now.hid] && players[now.hid].hitter, st);
