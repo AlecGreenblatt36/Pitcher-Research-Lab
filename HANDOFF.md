@@ -71,8 +71,17 @@ queue behind the shards (seen October 11 at 16:50 UTC). Check-only replays (n_si
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 2:37 p.m. Eastern October 11, by `date -u`)
+### In flight (updated 3:03 p.m. Eastern October 11, by `date -u`)
 
+- October 11, 3:03 p.m.: LEASH-03 (pitch counts in the starter's exit) registered; stage 1 held (research run 38165964534: the
+  hazard expected 50% to 75% too many removals at 60 to 84 pitches and too few from 85 on, in every season; with pitch
+  terms the decision log loss drops about 0.006 on 2025 and 2026). The engine can draw each plate appearance's pitches by
+  outcome (research_lab/game_sim/pitch_counts.py, own random stream; off unless given a table). Stage 2 replays: tags
+  v2-prod4-leash3-1000-<season> (started 19:00 UTC) against v2-prod4-leash2-1000; score with tools/brl_outs_cal.py on
+  the leash3 files, then tools/replay_compare.py v2-prod4-leash2-1000 v2-prod4-leash3-1000. To switch on: copy
+  brl_replay/hazard_correction_v2.json over brl_live/hazard_correction.json (the live builder sees 44 terms and turns on
+  the pitch draws from brl_live/pitch_counts.json; regular season only). Then make the box's shown pitch counts use the
+  engine's draws instead of its own estimate.
 - October 11, 2:01 p.m.: LEASH-02 held every gate (stage 2 runs 38156905239 and 38156881017): every outs line 12.5 to 20.5
   within 2.4 points in both seasons, starts ending in the 4th right (11.1% against 10.9% and 11.5%), win Brier and totals
   unchanged. **On for regular-season games** (ADJUST hazard_correction True; brl_live/hazard_correction.json; the live
