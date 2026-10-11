@@ -65,7 +65,15 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 3:15 a.m. Eastern October 11, by `date -u`)
+### In flight (updated 3:35 a.m. Eastern October 11, by `date -u`)
+
+- October 11, 3:35 a.m.: a separate review of tonight's page changes found four issues, all fixed in a60bee37b: the
+  next day's regrade of a game-day plan was labeled a look back (planWhen: a look back is built after its game day
+  from pitches before an earlier date), KN and EP counted as offspeed in this season's mix (the cards count them with
+  fastballs), the live count tip read from the pitcher's side, and a jump button could point at an empty sheet. The live
+  at-bat card shows the hitter's tags (32092c775); the plans have jump buttons to each lineup and to all matchups.
+  PTAGS-03 (ground-ball and fly-ball pitchers) registered and running; if it holds, add its two rules to PTAG_RULES
+  (rate gb_against, floor 150) and rebuild the cards (the daily build at 13:20 UTC does it too).
 
 - October 11, 3:15 a.m.: PTAGS-02 held (run 38118026447): pitcher heights carry over 0.73 to 0.78; Elevates fastballs,
   Keeps fastballs down and Buries breaking balls are on the pitcher cards and starter folds (page PTAG_RULES; the cards

@@ -4657,14 +4657,16 @@
     "columns": {
      "ID": "PTAGS-03",
      "Attempt": "Ground-ball and fly-ball pitchers, checked like PTAGS-01: ground balls among the batted balls against him that have a trajectory (ground balls, liners, fly balls and pop-ups, from the gameday hit data), against the league in the same window; tags at 8 points either way (rows of 150 batted balls). Same splits, pitchers and scoring as PTAGS-01 (pitcher_tag_study with batted). Synthetic check (brl_live_tests/test_report_pitcher_tags.py): a planted ground-ball habit carries over, a redrawn one does not.",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: the ground-ball share correlates 0.6 or more from one season to the next in both splits; both tags (each with 10 or more pitchers) hold in both splits (test difference at least half the threshold in its direction, interval excluding zero). Decision rule: the tags that hold go on the pitcher cards and starter folds (page PTAG_RULES; the cards carry gb_against counts from the next rebuild); the rest do not.",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: the ground-ball share correlates 0.6 or more from one season to the next in both splits; both tags (each with 10 or more pitchers) hold in both splits (test difference at least half the threshold in its direction, interval excluding zero). Decision rule: the tags that hold go on the pitcher cards and starter folds (page PTAG_RULES; the cards carry gb_against counts from the next rebuild); the rest do not. **Results (run 38120710560):** the ground-ball share correlates 0.75 (148 pitchers with 150 batted balls in both windows, 2026 test before August) and 0.82 (235, 2025). Ground-ball pitchers +9.8 [8.2, 11.7] (47, training +12.8) and +11.2 [9.3, 12.9] (55, +13.0); fly-ball pitchers -6.9 [-9.3, -4.8] (31, -11.4) and -9.0 [-11.1, -7.0] (36, -11.2). **Every prediction held.** Both tags go on the pitcher cards and starter folds (page PTAG_RULES, floor 150).",
+     "Delta corrected Brier, 2026": "held: 0.75 and 0.82"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38120710560"
+    ],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "held: 0.75 and 0.82"
    }
   ],
   "ZONES-01": [

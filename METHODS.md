@@ -180,7 +180,9 @@ difference a season later. A velocity read (extra misses on fastballs at 96 mph 
 0.26 and 0.15) and is not shown. Pitcher tags (PTAGS-01) were checked the same way: first-pitch strikes, pitches in the zone, chases,
 fastballs when behind and on the first pitch; seven held in both test seasons and are shown, two (falling behind first,
 few chases) are not. Height tags (PTAGS-02: fastballs in the top third of the fixed zone or above, in the bottom third or
-below, breaking balls below the zone; 8 points over the league) carry over 0.73 to 0.78 and all three held. The plan sheets' lineup notes are drawn from these tags only.
+below, breaking balls below the zone; 8 points over the league) carry over 0.73 to 0.78 and all three held. Ground-ball
+and fly-ball pitchers (PTAGS-03: ground balls among batted balls against, 8 points either way) carry over 0.75 and 0.82
+and both held. The plan sheets' lineup notes are drawn from these tags only.
 
 ## Privacy, storage and publication
 
