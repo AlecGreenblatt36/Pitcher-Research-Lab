@@ -89,6 +89,10 @@ def test_game_to_come_gets_the_projected_lineup_bench_and_bullpen():
     assert away['hitters'][:9] == VS_R and away['spots']['201'] == 1
     # the home club's relievers by games in relief: 951 (four), then 952 (two), then the rest by batters faced and recency
     assert [p['id'] for p in away['pitchers']] == [900, 951, 952]
+    # each arm carries his pitches on the five days before the game (the bullpen card's rest columns)
+    rec = {p['id']: p['recent'] for p in away['pitchers']}
+    assert all(len(v) == 5 and all(isinstance(n, int) for n in v) for v in rec.values())
+    assert rec[900][0] > 0 and rec[952][0] == 0 and rec[952][2] > 0        # 900 started yesterday; 952 last pitched three days ago
     # with a simulator box, its likeliest arms come first instead
     rep2 = B.build_report(fit, T, DAY, DAY, lambda *a: None, max_relievers=2, sim_pens={6000: {'home': [954, 950, 951]}})
     assert [p['id'] for p in rep2['games']['6000']['sides']['away']['pitchers']] == [900, 954, 950]

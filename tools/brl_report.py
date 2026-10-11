@@ -1096,6 +1096,14 @@ def build_report(fit: Fitted, T_all: dict, day: str, asof: str, stage, max_relie
     def hand_of(pid):
         rows_ = fit.gp.get(pid) if pid else None
         return None if rows_ is None or not len(rows_) else ('R' if int(fit.T['throw_r'][rows_[0]]) == 1 else 'L')
+    def recent_load(pid):
+        """Pitches he threw on each of the five days before the game (the bullpen card's rest columns), from the training
+        pitches, so nothing from the game day itself."""
+        rows_ = fit.gp.get(pid)
+        if rows_ is None or not len(rows_):
+            return [0, 0, 0, 0, 0]
+        dd = fit.T['day'][rows_]
+        return [int((dd == d0.toordinal() - k).sum()) for k in range(1, 6)]
     need_names = set()
     for g in games:
         pk = g['game_pk']
@@ -1136,7 +1144,7 @@ def build_report(fit: Fitted, T_all: dict, day: str, asof: str, stage, max_relie
             if not box:                         # a game to come: the starter and the likeliest relievers with enough pitches
                 staff = [x for x in staff if x == starter] + [x for x in staff if x != starter][:max_relievers]
             side_entry = {'lineup_source': source, 'hitters': hitters, 'spots': {str(x): v for x, v in spots.items() if x in hitters},
-                          'pitchers': [{'id': x, 'role': 'starter' if x == starter else 'reliever'} for x in staff], 'pairs': {}}
+                          'pitchers': [{'id': x, 'role': 'starter' if x == starter else 'reliever', 'recent': recent_load(x)} for x in staff], 'pairs': {}}
             need_names.update(hitters); need_names.update(staff)
             for h in hitters:
                 for p in staff:
