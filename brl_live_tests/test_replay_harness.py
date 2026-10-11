@@ -45,6 +45,7 @@ def test_reconstruct_and_replay(tmp_path):
     for r in out_phys:
         assert r['n'] == 4 and r['home_wins'] + r['ties'] <= 4 and sum(r['home_hist']) == 4 and 'home_runs' in r
         assert sum(r['margin_hist']) == 4 and sum(r['margin_hist'][16:]) == r['home_wins']      # the margin's joint histogram
+        assert sum(r['f5_margin_hist']) == 4 and sum(r['f5_total_hist']) == 4 and 0 <= r['first_inning'][0] <= 4
     # a run environment that makes home runs ten times likelier in every game moves the run histograms up; same seeds otherwise
     import numpy as np
     z = np.zeros(7); z[5] = np.log(10.0)

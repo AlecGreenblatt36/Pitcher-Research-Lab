@@ -358,6 +358,8 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
             hw = ties = 0
             ha = np.zeros(MAX_RUNS + 1, int); aa = np.zeros(MAX_RUNS + 1, int)
             mh = np.zeros(2 * MAX_MARGIN + 1, int)                  # home minus away runs, -MAX_MARGIN..+MAX_MARGIN (the run line needs the joint)
+            f5m = np.zeros(2 * MAX_MARGIN + 1, int); f5t = np.zeros(MAX_RUNS + 1, int)   # after five innings: margin and total
+            first = np.zeros(3, int)                                # worlds with no run in the first inning, the road team scoring in it, the home team
             s_outs = {"away": [], "home": []}
             sl = {side: {m_: np.zeros(n_, int) for m_, n_ in (("k", 21), ("bf", 46), ("h", 21), ("bb", 16), ("outs", 28))} for side in ("away", "home")} if starter_lines else None
             tot = {side: np.zeros(4) for side in ("away", "home")} if starter_lines else None   # team pitching: K, BF, BB+HBP, hits
@@ -385,6 +387,11 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                 ha[min(r.home_score, MAX_RUNS)] += 1
                 aa[min(r.away_score, MAX_RUNS)] += 1
                 mh[min(max(r.home_score - r.away_score, -MAX_MARGIN), MAX_MARGIN) + MAX_MARGIN] += 1
+                ir_ = {sd_: {int(i_): int(v_) for i_, v_ in ((r.inning_runs or {}).get(sd_) or {}).items()} for sd_ in ("away", "home")}
+                f5h = sum(v_ for i_, v_ in ir_["home"].items() if i_ <= 5); f5a = sum(v_ for i_, v_ in ir_["away"].items() if i_ <= 5)
+                f5m[min(max(f5h - f5a, -MAX_MARGIN), MAX_MARGIN) + MAX_MARGIN] += 1; f5t[min(f5h + f5a, MAX_RUNS)] += 1
+                a1, h1 = ir_["away"].get(1, 0), ir_["home"].get(1, 0)
+                first += (a1 + h1 == 0, a1 > 0, h1 > 0)
                 if r.winner == "home":
                     hw += 1
                 elif r.winner not in ("away", "home"):
@@ -427,6 +434,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                             hl[bid_]["h_hist"][0] += 1; hl[bid_]["hr_hist"][0] += 1; hl[bid_]["bb_hist"][0] += 1; hl[bid_]["k_hist"][0] += 1
             records.append({"game_pk": int(g.game_pk), "date": date, "home": g.home, "away": g.away, "n": n_sims,
                             "home_wins": hw, "ties": ties, "home_hist": ha.tolist(), "away_hist": aa.tolist(), "margin_hist": mh.tolist(),
+                            "f5_margin_hist": f5m.tolist(), "f5_total_hist": f5t.tolist(), "first_inning": first.tolist(),
                             "home_starter_outs": float(np.mean(s_outs["home"])) if s_outs["home"] else 0.0, "away_starter_outs": float(np.mean(s_outs["away"])) if s_outs["away"] else 0.0,
                             "home_runs": int(g.home_runs), "away_runs": int(g.away_runs)})
             if hl is not None:
