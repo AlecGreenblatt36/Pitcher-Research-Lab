@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 318,
- "rows": 321,
+ "experiments": 319,
+ "rows": 322,
  "records": {
   "ACC-01": [
    {
@@ -5167,6 +5167,24 @@
      "38139188923"
     ],
     "frozen_commits": [],
+    "status": "display"
+   }
+  ],
+  "PROD-15": [
+   {
+    "id": "PROD-15",
+    "columns": {
+     "ID": "PROD-15",
+     "Attempt": "Product calls, October 11, 2:50 p.m. Eastern (display; one is a consistency fix). (1) The Odds tab's price board gives the runs we expect in the total's row (the taught total of TOTALS-03 when the market total is captured, otherwise the simulator's mean) instead of an over price: TOTALS-03 found no over chance of ours better than the closing total (the simulator's own scored 0.2513 and 0.2528 against a coin's 0.25 in PLAYER-06's replays) and said the page states none, but the price board added that morning (commit 5ad85a25a) priced the simulator's over; the Total runs section still names the simulator's over chance beside Vegas's. (2) Tables: row labels take the light rule (the heavy rule stays under column headers), team stats show each rank beside its number, the strikeout ladder prints each price beside its chance, the bullpen tables list arms at 10% or more with the rest in one line, and the Players page's stat pickers sit in an even grid",
+     "Disposition and evidence": "Done in the commits of October 11 afternoon; tests (test_page_odds_props.py, test_page_gamelog.py), axe light and dark, phone check",
+     "Delta corrected Brier, 2026": "display"
+    },
+    "registered_before_run": false,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [
+     "5ad85a25a"
+    ],
     "status": "display"
    }
   ],

@@ -120,3 +120,22 @@ def test_outs_ladder_only_for_boxes_simulated_with_the_exit_correction():
           "assert.ok(ladders(d,false).indexOf('>Outs<')<0 && ladders(d,false).indexOf('>Strikeouts<')>0);")
     subprocess.run(['node', '-e', fns + js], check=True)
     assert re.search(r'\n  var OUTS_LADDER = true;\n', s)
+
+
+def test_price_board_gives_expected_runs_for_the_total_not_an_over_price():
+    """TOTALS-03: no over chance of ours beat the closing total, so the board's total row gives the runs we expect (the
+    taught mix of the simulator and the line from TOTAL_TAUGHT.from, else the simulator's mean), never an over price."""
+    s = _script()
+    tt = re.search(r'\n  var TOTAL_TAUGHT = .*?;', s).group(0)
+    fns = ''.join(_line(s, n) for n in ('esc', 'dist', 'total', 'mean', 'amText')) + ''.join(_fn(s, n) for n in ('amOdds', 'taughtTotalFor', 'lineBoard'))
+    js = ("const assert=require('assert');"
+          "function homeProb(f){return 0.51;} function nickname(n){return n;} function timeET(t){return '3:15 AM';}"
+          "const box={total_run_distribution:{counts:[[4,200],[6,300],[8,300],[10,200]]}};"
+          "const mkt={provider:'DraftKings',away_ml:-107,home_ml:-113,over_under:6,over_odds:-112,under_odds:-108,captured_at:'x'};"
+          "const f={date:'2026-10-11',away:{abbr:'LAD',name:'Dodgers'},home:{abbr:'MIL',name:'Brewers'}};"
+          "const h=lineBoard(f,mkt,box);"
+          "const want=(0.32*7.0+0.78*6-0.543).toFixed(1)+' runs';"
+          "assert.ok(h.indexOf('Total 6</th><td>o\\u2212112 / u\\u2212108</td><td>'+want+'</td></tr>')>0,h);"
+          "assert.ok(h.indexOf('we do not price the over')>0,h);"
+          "const old=lineBoard(Object.assign({},f,{date:'2026-10-01'}),mkt,box);assert.ok(old.indexOf('<td>7.0 runs</td>')>0,old);")
+    subprocess.run(['node', '-e', tt + fns + js], check=True)

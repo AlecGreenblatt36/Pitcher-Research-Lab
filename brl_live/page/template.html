@@ -4553,6 +4553,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     h += '<details class="more" data-keep="how"' + (state.rpOpen.how ? " open" : "") + '><summary>How the plan is built</summary><p class="note">For every hitter we map where he swings, read about a quarter second before the ball gets there, when he has to decide. We compare that to an average hitter on his side and to the spots this pitcher actually throws each pitch to. Each spot is scored by what usually happens there for this hitter: a chase, a take, a whiff, a foul or a ball in play, and what that does to the count. The spots on the plan are the best of the pitcher\'s usual spots, with normal command (pitches miss by about 7 inches). The run figures assume hitters don\'t adjust much. Every test, including the ones that failed, is in the project ledger.</p></details></section>';
     return h;
   }
+  /* The expected total taught by results (TOTALS-03): the simulator's mean mixed with the market's total, for games from
+     TOTAL_TAUGHT.from with a captured total; null otherwise. */
+  function taughtTotalFor(f, mkt, tr) {
+    return (mkt && mkt.over_under != null && tr && f.date >= TOTAL_TAUGHT.from) ? (TOTAL_TAUGHT.sim * mean(tr) + TOTAL_TAUGHT.line * Number(mkt.over_under) + TOTAL_TAUGHT.shift) : null;
+  }
   /* American odds for a win chance (no vig), the way a sportsbook board prints a price */
   function amOdds(p) {
     if (p == null || !(p > 0 && p < 1)) return "\u2013";
@@ -4568,14 +4573,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     };
     var h = '<div class="tbl-wrap board-wrap"><table class="box price-board"><thead><tr><th scope="col"><span class="visually-hidden">Team</span></th><th scope="col">' + esc(mkt.provider || "Line") + '</th><th scope="col">Our fair price</th></tr></thead><tbody>' +
       row("away", mkt.away_ml, ph == null ? null : 1 - ph) + row("home", mkt.home_ml, ph);
-    var tr = marketTotal(box) || (box && box.total_run_distribution ? dist(box.total_run_distribution) : null), pov = null;
-    if (tr && mkt.over_under != null) {
-      var L0 = Number(mkt.over_under), ov = 0, un = 0;
-      tr.counts.forEach(function (x) { if (x[0] > L0) ov += x[1]; else if (x[0] < L0) un += x[1]; });
-      pov = ov + un ? ov / (ov + un) : null;
-    }
-    if (mkt.over_under != null) h += '<tr><th scope="row">Total ' + esc(mkt.over_under) + "</th><td>o" + amText(mkt.over_odds) + " / u" + amText(mkt.under_odds) + "</td><td>" + (pov != null ? "o" + amOdds(pov) : "\u2013") + "</td></tr>";
-    return h + '</tbody></table></div><p class="note">' + esc(mkt.provider || "The book") + "'s prices at " + esc(timeET(mkt.captured_at)) + " ET. Our fair price is our pick as American odds with no margin: below \u2212100 favored, above +100 not. For the total, the simulator's chance of the over, a push left out.</p>";
+    var tr = box && box.total_run_distribution ? dist(box.total_run_distribution) : null, et = tr ? (taughtTotalFor(f, mkt, tr) != null ? taughtTotalFor(f, mkt, tr) : mean(tr)) : null;
+    if (mkt.over_under != null) h += '<tr><th scope="row">Total ' + esc(mkt.over_under) + "</th><td>o" + amText(mkt.over_odds) + " / u" + amText(mkt.under_odds) + "</td><td>" + (et != null ? et.toFixed(1) + " runs" : "\u2013") + "</td></tr>";
+    return h + '</tbody></table></div><p class="note">' + esc(mkt.provider || "The book") + "'s prices at " + esc(timeET(mkt.captured_at)) + " ET. Our fair price is our pick as American odds with no margin: below \u2212100 favored, above +100 not. For the total we give the runs we expect instead of a price: re-run over two seasons, no over chance of ours called games better than the closing total, so we do not price the over.</p>";
   }
   /* The total's distribution for the market numbers: from the day-form worlds when the live run adds them (DISP-03: the
      total's over and under and the run line come from worlds as spread out as real games, win chances from the plain ones),
@@ -4669,7 +4669,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         trm.counts.forEach(function (x) { if (x[0] > L0) ov += x[1]; else if (x[0] < L0) un += x[1]; });
         mline = " Vegas total: " + mkt2.over_under + "." + (ov + un ? " Over " + mkt2.over_under + (L0 === Math.round(L0) ? " (a push left out)" : "") + ": simulator " + pct(ov / (ov + un)) + (mkt2.p_over != null ? ", Vegas " + pct(mkt2.p_over) : "") + "." : "");
       }
-      var taughtTotal = (mkt2 && mkt2.over_under != null && f.date >= TOTAL_TAUGHT.from) ? (TOTAL_TAUGHT.sim * mean(tr) + TOTAL_TAUGHT.line * Number(mkt2.over_under) + TOTAL_TAUGHT.shift) : null;
+      var taughtTotal = taughtTotalFor(f, mkt2, tr);
       h += '<section class="sec"><h2>Total runs</h2><p class="lede">' + (taughtTotal != null ? "We expect " + taughtTotal.toFixed(1) + " runs: the simulator\'s " + mean(tr).toFixed(1) + " mixed with the Vegas total (over two seasons re-run, the mix beat the Vegas total on its own). " : "We expect " + mean(tr).toFixed(1) + " runs. ") +
         "Most likely " + mode(tr) + ". Half of games land between " + quant(tr, .25) + " and " + quant(tr, .75) + ". " + pct(probAtLeast(tr, 10)) + " reach 10 or more." + esc(mline) + "</p></section>";
     }
