@@ -676,7 +676,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   var DATA_URL = "predictions.json";
   var D = null;
   var app = document.getElementById("app");
-  var state = { variant: {}, boxSide: {}, playSide: {}, muMetric: "obp", rpMetric: "chase", rpPair: {}, rpCount: "all", rpFollow: {}, rpCloud: false, rpOpen: {}, hzMetric: "avg", hzFam: "all", hzHand: "" };
+  var state = { variant: {}, boxSide: {}, playSide: {}, muMetric: "obp", rpMetric: "chase", rpPair: {}, rpCount: "all", rpFollow: {}, rpCloud: false, rpOpen: {}, hzMetric: "avg", hzFam: "all", hzHand: "", hzBat: "R", hzPMetric: "loc" };
   var REPORTS = "https://raw.githubusercontent.com/AlecGreenblatt36/Pitcher-Research-Lab/brl-live-data/public/reports/";
   var TOTAL_TAUGHT = { sim: 0.32, line: 0.78, shift: -0.543, from: "2026-10-10" };   /* TOTALS-03: expected total taught by results, fixed cross-season weights */
   var RP = {};
@@ -2510,6 +2510,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     miss: { label: "Miss %", num: 3, den: 2, min: 10, show: 4, unit: "swings", scale: 0.15, say: "How often he misses when he swings in each zone" }
   };
   var HZ_FAMS = [["all", "All pitches"], ["fastball", "Fastballs"], ["breaking", "Breaking balls"], ["offspeed", "Offspeed"]];
+  /* where a pitcher's pitches go: each zone's share of them, red where more than an even spread (one in thirteen) */
+  var HZ_LOC = { label: "Pitch %", loc: true, min: 30, scale: 0.07, say: "Share of his pitches in each zone" };
+  var HZ_PMETRICS = { loc: "Pitch %", avg: "AVG", slg: "SLG", swing: "Swing %", miss: "Miss %" };
   var HZ_CELL = { 1: [0, 0], 2: [1, 0], 3: [2, 0], 4: [0, 1], 5: [1, 1], 6: [2, 1], 7: [0, 2], 8: [1, 2], 9: [2, 2] };
   var HZ_OUT = { 11: ["M0 0H66V20H20V75H0Z", 33, 10.5, 10, 10], 12: ["M66 0H132V75H112V20H66Z", 99, 10.5, 122, 10], 13: ["M0 75H20V130H66V150H0Z", 33, 140, 10, 140], 14: ["M112 75H132V150H66V130H112Z", 99, 140, 122, 140] };
   var HZ_UID = 0, HZ_MQ = null, HZ_MQ_PK = null, HZ_RED = [196, 40, 36], HZ_BLUE = [28, 90, 160], HZ_DARK = false;
@@ -2550,11 +2553,16 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   }
   /* One chart. o: metric key, side (the hitter's), lg (league cells for his side, the same hand and pitch type),
      aim and strike (plan spots for this pitch type), top and bot (his zone in feet), label. */
+  /* One chart. o: metric key ("loc" for where a pitcher's pitches go), side (the batter's), lg (league cells for his side,
+     the same hand and pitch type), aim and strike (plan spots for this pitch type), top and bot (his zone in feet), label. */
   function hzChart(cells, o) {
-    var m = HZ_METRICS[o.metric] || HZ_METRICS.avg, by = {}, side = o.side === "L" ? "L" : "R";
+    var m = o.metric === "loc" ? HZ_LOC : HZ_METRICS[o.metric] || HZ_METRICS.avg, by = {}, side = o.side === "L" ? "L" : "R";
     (cells || []).forEach(function (c) { by[c[0]] = c; });
     var lby = {}; (o.lg || []).forEach(function (c) { lby[c[0]] = c; });
-    var lt = hzTotal(o.lg && o.lg.length ? o.lg : cells), center = lt[m.den] ? lt[m.num] / lt[m.den] : null;
+    var tot = hzTotal(cells), lt = hzTotal(o.lg && o.lg.length ? o.lg : cells);
+    var val = function (c) { return m.loc ? (c && tot[1] >= m.min ? c[1] / tot[1] : null) : hzVal(m, c); };
+    var thin = function (c) { return m.loc ? null : hzThin(m, c); };
+    var center = m.loc ? 1 / 13 : lt[m.den] ? lt[m.num] / lt[m.den] : null;
     var fill = function (v) {
       if (v == null || center == null) return { bg: "var(--surface)", fg: "var(--muted)" };
       var d = Math.max(-1, Math.min(1, (v - center) / m.scale)), a = Math.abs(d) * 0.9, rgb = d >= 0 ? HZ_RED : HZ_BLUE;
@@ -2565,21 +2573,22 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       return { bg: "rgba(" + rgb.join(",") + "," + a.toFixed(3) + ")", fg: white ? "#fff" : "var(--ink)" };
     };
     var tip = function (zn) {
-      var c = by[zn], v = hzVal(m, c), l = hzVal(m, lby[zn]), w = hzZoneWords(zn, side) + ": ";
-      var th = hzThin(m, c);
+      var c = by[zn], v = val(c), w = hzZoneWords(zn, side) + ": ";
+      if (m.loc) return v == null ? w + "too few pitches to say" : w + hzFmt(m, v) + " of these pitches (" + c[1] + " of " + tot[1] + ")";
+      var l = hzVal(m, lby[zn]), th = thin(c);
       if (v == null && th == null) return w + "too few " + m.unit + " to say";
       if (v == null) { v = th; w += "only " + c[m.den] + " " + m.unit + ", "; }
       var n = m.num === 5 ? c[5] + " for " + c[4] : m.num === 6 ? c[6] + " total bases in " + c[4] + " at-bats" : m.num === 2 ? "swung at " + c[2] + " of " + c[1] : "missed " + c[3] + " of " + c[2] + " swings";
       return w + hzFmt(m, v) + " (" + n + ")" + (l != null ? ", league " + hzFmt(m, l) : "");
     };
-    var text = function (zn) { var v = hzVal(m, by[zn]), t = hzThin(m, by[zn]); return v != null ? hzFmt(m, v) : t != null ? hzFmt(m, t) : "–"; };
+    var text = function (zn) { var v = val(by[zn]), t = thin(by[zn]); return v != null ? hzFmt(m, v) : t != null ? hzFmt(m, t) : "–"; };
     var s = '<svg class="hz-svg" viewBox="0 0 132 150" role="img" aria-label="' + esc(o.label || "Hot zones") + '">';
     [11, 12, 13, 14].forEach(function (zn) {
-      var q = HZ_OUT[zn], f = fill(hzVal(m, by[zn]));
+      var q = HZ_OUT[zn], f = fill(val(by[zn]));
       s += '<path class="hz-z" d="' + q[0] + '" style="fill:' + f.bg + '"><title>' + esc(tip(zn)) + '</title></path><text class="hz-t o" x="' + q[1] + '" y="' + q[2] + '" style="fill:' + f.fg + '">' + text(zn) + "</text>";
     });
     for (var zn = 1; zn <= 9; zn++) {
-      var p = HZ_CELL[zn], x = 20 + p[0] * 92 / 3, y = 20 + p[1] * 110 / 3, f = fill(hzVal(m, by[zn]));
+      var p = HZ_CELL[zn], x = 20 + p[0] * 92 / 3, y = 20 + p[1] * 110 / 3, f = fill(val(by[zn]));
       s += '<rect class="hz-z" x="' + x.toFixed(2) + '" y="' + y.toFixed(2) + '" width="30.67" height="36.67" style="fill:' + f.bg + '"><title>' + esc(tip(zn)) + '</title></rect><text class="hz-t" x="' + (x + 46 / 3).toFixed(2) + '" y="' + (y + 55 / 3).toFixed(2) + '" style="fill:' + f.fg + '">' + text(zn) + "</text>";
     }
     s += '<rect class="hz-k" x="20" y="20" width="92" height="110"/>';
@@ -2651,6 +2660,26 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         '<div class="hz-n">' + Number(t[1]).toLocaleString() + " pitches</div></div>";
     });
     return h + "</div>";
+  }
+  /* Where a pitcher's pitches go to one side of the plate, by pitch type: share of pitches (or a result against him). */
+  function hzPitchStrip(pc, bside, fams, metric, lg, label, hl) {
+    var z = pc && pc.zones && pc.zones[bside];
+    if (!z) return "";
+    hl = hl || "h4";
+    var h = "";
+    fams.forEach(function (fam) {
+      var cells = z[fam[0]];
+      if (!cells) return;
+      var t = hzTotal(cells);
+      if (t[1] < 30) return;
+      h += '<div class="hz-card"><' + hl + ">" + esc(fam[1]) + (fam[2] ? " <small>" + esc(fam[2]) + "</small>" : "") + "</" + hl + ">" +
+        hzChart(cells, { metric: metric, side: bside, lg: metric === "loc" ? null : hzLeague(lg, bside, pc.throws, fam[0]), label: (label || "") + fam[1] + ", " + (metric === "loc" ? "share of his pitches" : HZ_METRICS[metric].label + " against him") + " by zone" }) +
+        '<div class="hz-n">' + Number(t[1]).toLocaleString() + " pitches</div></div>";
+    });
+    return h ? '<div class="hz-row">' + h + "</div>" : "";
+  }
+  function hzLocLegend() {
+    return '<p class="note hz-key"><span class="hz-sw hot"></span>More of his pitches than an even spread (about 8% a zone) <span class="hz-sw cold"></span>Fewer. Catcher\'s view.</p>';
   }
   function hzLegend(k, marks) {
     var m = HZ_METRICS[k];
@@ -3041,6 +3070,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         h += hzStrip(hc, doc.league, useHand, [["all", "All pitches", ""]].concat(shown.map(famHead)), plan, stPlan, nm(ids[0]) + ": ");
         h += hzLegend(hzMetric(), true);
       }
+      /* and where this pitcher throws each pitch to hitters on his side of the plate, to lay over the hitter's charts */
+      var loc = pc && pc.zones ? hzPitchStrip(pc, hc.side, shown.map(famHead), "loc", doc.league, nm(ids[1]) + ": ") : "";
+      if (loc) h += '<h4 class="hz-h">Where ' + esc(lastName(nm(ids[1]))) + " throws to " + (hc.side === "L" ? "lefties" : "righties") + ", " + esc(hzSeasons(doc.asof)) + "</h4>" + loc + hzLocLegend();
       var lines = [];
       shown.forEach(function (fam) {
         var a = plan[fam] || [], st = stPlan[fam] || [], bits = [];
@@ -3438,6 +3470,14 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
           /* the arsenal the way every scouting sheet lists it, then where each pitch goes to each side */
           var fams = ["fastball", "breaking", "offspeed"].filter(function (fam) { return mix[fam] && mix[fam].share >= 0.005; });     /* a pitch he all but never throws gets no row */
           if (fams.length) h += arsenalTable(mix) + '<p class="note">Miss: misses per swing. Chase: swings at his pitches out of the zone. Zone: pitches in the strike zone.</p>';
+          if (x.zones && (x.zones.R || x.zones.L)) {
+            /* where he pitches, the standard 13 zones: to righties or lefties, by pitch type */
+            var bs = state.hzBat === "L" && x.zones.L ? "L" : x.zones.R ? "R" : "L", pm = HZ_PMETRICS[state.hzPMetric] ? state.hzPMetric : "loc";
+            h += '<section class="sec hz-sec"><h2>Where he pitches</h2><p class="lede">To ' + (bs === "L" ? "left-handed" : "right-handed") + " hitters, " + esc(hzSeasons(doc.asof)) + ".</p>";
+            h += '<div class="hz-tools">' + hzSeg("hzbat", bs, [["R", "vs RHB"], ["L", "vs LHB"]], "Batter's side") + hzSeg("hzpmetric", pm, Object.keys(HZ_PMETRICS).map(function (k) { return [k, HZ_PMETRICS[k]]; }), "Number") + "</div>";
+            h += hzPitchStrip(x, bs, [["all", "All pitches", ""]].concat(fams.map(function (fam) { return [fam, PITCH_NAME[fam], pct(mix[fam].share) + " of his pitches"]; })), pm, lg, x.name + ": ", "h3");
+            h += (pm === "loc" ? hzLocLegend() : hzLegend(pm, false).replace("Above the league average", "Above the league average against")) + "</section>";
+          }
           var goesTo = [];
           fams.forEach(function (fam) {
             var m = mix[fam], to = [];
@@ -3458,6 +3498,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         var again = function () { var y = window.scrollY; show(doc); window.scrollTo(0, y); };
         app.querySelectorAll("[data-hzmetric]").forEach(function (b) { b.addEventListener("click", function () { state.hzMetric = b.getAttribute("data-hzmetric"); again(); }); });
         app.querySelectorAll("[data-hzhand]").forEach(function (b) { b.addEventListener("click", function () { state.hzHand = b.getAttribute("data-hzhand"); again(); }); });
+        app.querySelectorAll("[data-hzbat]").forEach(function (b) { b.addEventListener("click", function () { state.hzBat = b.getAttribute("data-hzbat"); again(); }); });
+        app.querySelectorAll("[data-hzpmetric]").forEach(function (b) { b.addEventListener("click", function () { state.hzPMetric = b.getAttribute("data-hzpmetric"); again(); }); });
         var fold = document.getElementById("pl-model");
         if (fold) fold.addEventListener("toggle", function () { state.rpOpen.plModel = fold.open; });
       };
