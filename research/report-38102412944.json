@@ -1,0 +1,125 @@
+{
+ "schema": "brl.report-receipt.v1",
+ "run_id": "38102412944",
+ "params": {
+  "dates": [
+   "2026-09-29",
+   "2026-09-30",
+   "2026-10-01",
+   "2026-10-02",
+   "2026-10-03",
+   "2026-10-04",
+   "2026-10-05",
+   "2026-10-06",
+   "2026-10-07",
+   "2026-10-08",
+   "2026-10-09"
+  ],
+  "asof": "2026-10-01",
+  "asof_for": {
+   "2026-09-29": "2026-09-01",
+   "2026-09-30": "2026-09-01",
+   "2026-10-06": "2026-10-06",
+   "2026-10-07": "2026-10-07",
+   "2026-10-08": "2026-10-08",
+   "2026-10-09": "2026-10-09"
+  },
+  "publish": true
+ },
+ "started_at": "2026-10-11T01:37:10.888432+00:00",
+ "stages": [
+  {
+   "stage": "load 2025",
+   "at_seconds": 7.8,
+   "peak_rss_mb": 1079
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 15.6,
+   "peak_rss_mb": 1243
+  },
+  {
+   "stage": "league swing model",
+   "at_seconds": 33.7,
+   "peak_rss_mb": 3304
+  },
+  {
+   "stage": "hitter swing maps 603",
+   "at_seconds": 34.7,
+   "peak_rss_mb": 3304
+  },
+  {
+   "stage": "whiff maps 559",
+   "at_seconds": 57.3,
+   "peak_rss_mb": 4863
+  },
+  {
+   "stage": "swing model, 603 maps",
+   "at_seconds": 79.1,
+   "peak_rss_mb": 6642
+  },
+  {
+   "stage": "models fitted",
+   "at_seconds": 100.4,
+   "peak_rss_mb": 9425
+  },
+  {
+   "stage": "fitted",
+   "at_seconds": 100.5,
+   "peak_rss_mb": 9425
+  },
+  {
+   "stage": "simulator bullpens",
+   "at_seconds": 101.7,
+   "peak_rss_mb": 9425
+  },
+  {
+   "stage": "recent players",
+   "at_seconds": 103.7,
+   "peak_rss_mb": 9425
+  },
+  {
+   "stage": "game 849845",
+   "at_seconds": 105.4,
+   "peak_rss_mb": 9425
+  },
+  {
+   "stage": "game 849849",
+   "at_seconds": 107.0,
+   "peak_rss_mb": 9425
+  },
+  {
+   "stage": "game 849851",
+   "at_seconds": 109.0,
+   "peak_rss_mb": 9425
+  },
+  {
+   "stage": "game 849843",
+   "at_seconds": 110.9,
+   "peak_rss_mb": 9425
+  },
+  {
+   "stage": "report 2026-09-29",
+   "at_seconds": 116.1,
+   "peak_rss_mb": 9425
+  }
+ ],
+ "reports": {
+  "2026-09-29": {
+   "games": 4,
+   "bytes": 1435561,
+   "asof": "2026-09-01",
+   "graded": 4
+  }
+ },
+ "environment": {
+  "python": "3.12.15",
+  "commit": "37b47f9adfad1adc63a8f7d65b5c80a7bca9e9aa",
+  "numpy": "2.5.4",
+  "scipy": "1.18.1",
+  "scikit-learn": "1.9.1",
+  "pandas": "3.0.6",
+  "cryptography": "46.0.4"
+ },
+ "status": "in progress"
+}
