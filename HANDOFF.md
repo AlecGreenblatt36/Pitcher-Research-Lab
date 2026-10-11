@@ -85,7 +85,12 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   Players page, under a hitter's full plan (to his side) and folded in the live at-bat card; plan rows carry a
   lineup-card line (AVG, SLG, chase, miss against the starter's hand) and the starter's arsenal table one tap above
   each sheet; one color rule site-wide (red favors the hitter, blue the pitcher; the matchup and model grids were
-  gold for the hitter); each zone's number is white or dark by contrast. Earlier tonight (4b14c77e7): the live box score and plays show the real game
+  gold for the hitter); each zone's number is white or dark by contrast. Spray tendencies: the pitch table now keeps
+  each batted ball's direction ('spray', degrees off center from the gameday coordinates, home plate 125.42, 198.27)
+  and trajectory ('traj' 0 ground ball, 1 liner, 2 fly, 3 pop-up), and hitter cards carry spray_counts (ground balls
+  and balls in the air by field third at 15 degrees, pop-ups, hard-hit 95+ mph), drawn as "Where he hits it"
+  (Players page, folded in a hitter's plan). Bullpen card: plan arms carry 'recent' (pitches on each of the five days
+  before the game, training pitches only), shown per sheet with only the days the plan's data covers. Earlier tonight (4b14c77e7): the live box score and plays show the real game
   from first pitch, in batting order with substitutes under their spot, and no longer list the DH team's pitcher as
   a batter.
 

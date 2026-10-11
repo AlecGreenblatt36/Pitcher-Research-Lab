@@ -3043,6 +3043,25 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (t[2] >= 50) bits.push("<b>" + Math.round(100 * t[3] / t[2]) + "%</b> miss");
     return bits.length ? '<div class="pl-stats num">' + bits.join(", ") + (hand === "R" ? " vs RHP" : hand === "L" ? " vs LHP" : "") + "</div>" : "";
   }
+  /* The bullpen card: each planned arm's pitches on the days before the game (days the plan's data covers), his hand
+     and his fastball's speed. */
+  function bullpenCard(doc, se, nm) {
+    var arms = (se.pitchers || []).filter(function (p) { return p.recent; });
+    if (!arms.length || !doc.date) return "";
+    var cols = [1, 2, 3].map(function (k) { return addDays(doc.date, -k); }).filter(function (d) { return !doc.asof || d < doc.asof; });
+    if (!cols.length) return "";
+    var players = doc.players || {};
+    var rows = arms.map(function (p) {
+      var pc = players[String(p.id)] && players[String(p.id)].pitcher, fb = pc && pc.mix && pc.mix.fastball;
+      var covered = function (k) { return !doc.asof || addDays(doc.date, -k) < doc.asof; }, last = 0;
+      for (var k = 5; k >= 1; k--) if (covered(k) && p.recent[k - 1] > 0) last = k;
+      return "<tr><td>" + esc(lastName(nm(p.id))) + (p.role === "starter" ? " <small>SP</small>" : "") + "</td><td>" + esc(pc && pc.throws ? pc.throws : "") + "</td>" +
+        cols.map(function (d) { var k = Math.round((new Date(doc.date + "T12:00:00Z") - new Date(d + "T12:00:00Z")) / 864e5), n = p.recent[k - 1]; return "<td>" + (n ? n : "\u2013") + "</td>"; }).join("") +
+        "<td>" + (last ? (last === 1 ? "1 day" : last + " days") : covered(1) ? "5+ days" : "\u2013") + "</td><td>" + (fb && fb.speed != null ? Math.round(fb.speed) : "\u2013") + "</td></tr>";
+    }).join("");
+    return '<div class="tbl-wrap hz-types"><table class="box"><thead><tr><th scope="col">Pitcher</th><th scope="col">T</th>' + cols.map(function (d) { return '<th scope="col">' + esc(shortDate(d)) + "</th>"; }).join("") +
+      '<th scope="col">Since</th><th scope="col">FB</th></tr></thead><tbody>' + rows + '</tbody></table></div><p class="note">Pitches thrown on each day, a dash if he did not pitch. Since: days since he last pitched. FB: fastball speed.</p>';
+  }
   function hzWide() { try { return window.matchMedia("(min-width: 1000px)").matches; } catch (e) { return false; } }
   function hzSheetHand(doc, starter) {
     var pc = doc.players && doc.players[String(starter.id)] && doc.players[String(starter.id)].pitcher, any = null;
@@ -3061,6 +3080,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       " Hot zones against " + esc(hzSheetHand(doc, starter)) + ". Tap a hitter for his full plan, the counts and the bullpen.</p>";
     var spc = players[String(starter.id)] && players[String(starter.id)].pitcher;
     if (spc && spc.mix) h += '<details class="more" data-keep="ars-' + side + '"' + (state.rpOpen["ars-" + side] ? " open" : "") + "><summary>" + esc(lastName(nm(starter.id))) + "'s pitches</summary>" + arsenalTable(spc.mix) + "</details>";
+    var pen = bullpenCard(doc, se, nm);
+    if (pen) h += '<details class="more" data-keep="pen-' + side + '"' + (state.rpOpen["pen-" + side] ? " open" : "") + "><summary>" + esc(nickname(doc.teams[other].name)) + " bullpen: rest and pitches</summary>" + pen + "</details>";
     h += '<ol class="plan-list">';
     var spots = po.spots, benchShown = false;
     /* each hitter's hot zones against the starter's hand, for the number and pitch type picked above the sheets */
