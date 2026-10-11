@@ -65,7 +65,7 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 12:15 p.m. Eastern October 11, by `date -u`)
+### In flight (updated 12:50 p.m. Eastern October 11, by `date -u`)
 
 - October 11, 12:15 p.m.: LEVEL-01 held (in-season re-anchoring of each outcome's league level: +0.114 and +0.146 nats per
   1,000 real plate appearances at m 10,000, both intervals above zero; check-only runs 38152933999 and 38152908828). The
@@ -80,6 +80,14 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   simulator ends too many starts in the 4th inning and too few in the 5th (10 to 12 outs 13.6% against 10.9% and 11.5%
   of real starts; 13 to 15 outs 25.5% against 29.6%, 25.2% against 27.8%). The exit hazard
   (research_lab/game_sim/starter_hazard.py) has no term for finishing the 5th: next item (LEASH-02).
+- October 11, 12:50 p.m.: LEASH-02 registered and stage 1 held (research run 38156674333): a 32-term correction on the starter-exit
+  hazard's log-odds (inning 3 to 7 by its end and the score, plus quiet mid-4th and scoreless mid-5th), fitted on 2023-2024
+  decisions, lowers the decision log loss on 2025 and 2026 (intervals below zero) and puts removals after the 4th within 4%
+  of actual (the plain hazard expects about half again as many). Stage 2 replays: tags v2-prod4-leash2-1000-<season>,
+  paired against PLAYER-07's v2-prod4-outs-1000-<season>; score with tools/brl_outs_cal.py (bands included) and
+  `tools/replay_compare.py v2-prod4-outs-1000 v2-prod4-leash2-1000`. If it passes: ADJUST hazard_correction True (regular
+  season only; live code and brl_live/hazard_correction.json are in place), and PLAYER-07's rule is re-read on these
+  replays for the outs ladder.
 - Layout today: table row labels take the light rule, team stats show each rank beside its number, the Odds tab's
   ladders put each price beside its chance (one line a row), bullpen tables list arms at 10% or more with the rest in
   one line.
