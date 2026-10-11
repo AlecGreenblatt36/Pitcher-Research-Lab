@@ -1,4 +1,4 @@
-"""CHANGE-01's study on made-up seasons: when hitters' strikeout rates really move and stay moved, the flagged changes
+"""HCHANGE-01's study on made-up seasons: when hitters' strikeout rates really move and stay moved, the flagged changes
 hold the next season; when the move reverts, they do not."""
 import importlib.util
 from datetime import date

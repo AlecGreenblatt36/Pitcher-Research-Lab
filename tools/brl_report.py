@@ -1850,14 +1850,14 @@ def tto_study(T: dict, stage, spec: dict) -> dict:
     return out
 
 
-# CHANGE-01 (LEDGER): do the season-over-season changes the hitter pages call out hold the next season? The page's rule
+# HCHANGE-01 (LEDGER): do the season-over-season changes the hitter pages call out hold the next season? The page's rule
 # (hitterChanges): a rate moved at least `min` and at least three standard errors between two seasons of 200 or more.
 CHANGE_RATES = (('chase', 'chases', 'outside', 0.03), ('whiff', 'misses', 'swings', 0.03), ('k', 'k', 'pa', 0.03), ('bb', 'bb', 'pa', 0.03),
                 ('hard', 'hard', 'bbe', 0.05))
 
 
 def change_study(T: dict, stage, spec: dict) -> dict:
-    """CHANGE-01 (LEDGER): for hitters with min_pa or more plate appearances in each of three seasons, the rate changes the
+    """HCHANGE-01 (LEDGER): for hitters with min_pa or more plate appearances in each of three seasons, the rate changes the
     page flags from the first season to the second, and how much of each flagged change was still there in the third
     (the third season's rate minus the first's, over the flagged change, pooled over hitters); unflagged changes as a
     reference; intervals from resampling hitters. Aggregates only."""
