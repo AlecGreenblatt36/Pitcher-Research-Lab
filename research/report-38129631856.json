@@ -1,0 +1,211 @@
+{
+ "schema": "brl.report-receipt.v1",
+ "run_id": "38129631856",
+ "params": {
+  "velo_study": {
+   "train": [
+    2024,
+    2025
+   ],
+   "test": 2026,
+   "test_end": "2026-08-01",
+   "boot": 2000,
+   "min_fb": 15
+  },
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "dates": [
+   "2026-04-01"
+  ],
+  "publish": false
+ },
+ "started_at": "2026-10-11T09:48:04.676242+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 9.7,
+   "peak_rss_mb": 1092
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 19.0,
+   "peak_rss_mb": 1263
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 28.4,
+   "peak_rss_mb": 1426
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 37.7,
+   "peak_rss_mb": 1588
+  },
+  {
+   "stage": "velo study: games",
+   "at_seconds": 40.3,
+   "peak_rss_mb": 1588
+  },
+  {
+   "stage": "velo study: pairs",
+   "at_seconds": 40.5,
+   "peak_rss_mb": 1588
+  },
+  {
+   "stage": "velo study: velo",
+   "at_seconds": 40.5,
+   "peak_rss_mb": 1588
+  },
+  {
+   "stage": "velo study: k",
+   "at_seconds": 40.5,
+   "peak_rss_mb": 1588
+  },
+  {
+   "stage": "velo study: bb",
+   "at_seconds": 40.5,
+   "peak_rss_mb": 1588
+  },
+  {
+   "stage": "velo study: on",
+   "at_seconds": 40.5,
+   "peak_rss_mb": 1588
+  }
+ ],
+ "reports": {},
+ "environment": {
+  "python": "3.12.15",
+  "commit": "02b5ab27ab5d8d52374002107957ac5b309c9400",
+  "numpy": "2.5.4",
+  "scipy": "1.18.1",
+  "scikit-learn": "1.9.1",
+  "pandas": "3.0.6",
+  "cryptography": "46.0.4"
+ },
+ "velo_study": {
+  "train": [
+   2024,
+   2025
+  ],
+  "test": 2026,
+  "test_end": "2026-08-01",
+  "pairs": {
+   "2024": 3328,
+   "2025": 3340,
+   "2026": 1973
+  },
+  "targets": {
+   "velo": {
+    "slope_fit": 0.41635,
+    "slope_test": 0.43891,
+    "slope_test_ci": [
+     0.37176,
+     0.50033
+    ],
+    "relative_change": [
+     -0.17027,
+     -0.21179,
+     -0.12372
+    ],
+    "after_drops": {
+     "starts": 102,
+     "mean": -0.40418,
+     "others": 0.1181,
+     "difference": -0.52228,
+     "ci": [
+      -0.72371,
+      -0.32557
+     ]
+    },
+    "pitchers": 190,
+    "pairs": 1973,
+    "sd_delta": 0.697
+   },
+   "k": {
+    "slope_fit": 0.00349,
+    "slope_test": 0.01297,
+    "slope_test_ci": [
+     0.00616,
+     0.0195
+    ],
+    "relative_change": [
+     -0.0041,
+     -0.00663,
+     -0.00155
+    ],
+    "after_drops": {
+     "starts": 102,
+     "mean": -0.02344,
+     "others": -0.00355,
+     "difference": -0.01989,
+     "ci": [
+      -0.0366,
+      -0.00246
+     ]
+    },
+    "pitchers": 190,
+    "pairs": 1973,
+    "sd_delta": 0.697
+   },
+   "bb": {
+    "slope_fit": -0.00182,
+    "slope_test": -0.00361,
+    "slope_test_ci": [
+     -0.00725,
+     0.00011
+    ],
+    "relative_change": [
+     -0.00128,
+     -0.00304,
+     0.00049
+    ],
+    "after_drops": {
+     "starts": 102,
+     "mean": 0.00184,
+     "others": -0.00171,
+     "difference": 0.00356,
+     "ci": [
+      -0.00748,
+      0.01422
+     ]
+    },
+    "pitchers": 190,
+    "pairs": 1973,
+    "sd_delta": 0.697
+   },
+   "on": {
+    "slope_fit": -0.00233,
+    "slope_test": -0.00976,
+    "slope_test_ci": [
+     -0.01633,
+     -0.00284
+    ],
+    "relative_change": [
+     -0.00196,
+     -0.00355,
+     -0.00036
+    ],
+    "after_drops": {
+     "starts": 102,
+     "mean": 0.01844,
+     "others": 0.00259,
+     "difference": 0.01585,
+     "ci": [
+      0.00219,
+      0.02988
+     ]
+    },
+    "pitchers": 190,
+    "pairs": 1973,
+    "sd_delta": 0.697
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-11T09:48:45.194083+00:00",
+ "seconds": 40.5
+}
