@@ -934,8 +934,9 @@ far and part of why simulated bullpens struck out fewer batters and allowed more
 - (October 11) The simulated run distributions are narrow (team-run SD 3.10 against 3.21 to 3.25; games decided by five or
   more 27% against 29%), which sinks the run line (RUNLINE-01). Day-form worlds for the market numbers fixed the spread
   and the run line but not the over and under (DISP-03, off). Simulated starters also reach the 7th inning more often
-  than real ones (12.0% to 12.8% of starts against 10.8% to 11.6%, LEASH-02 and LEASH-03): too few bad days may be the
-  common cause.
+  than real ones (12.0% to 12.8% of starts against 10.8% to 11.6%, LEASH-02 and LEASH-03). Not a missing bad-day spread:
+  DISP-03's day-form replays (same plain hazard) have more 7-inning starts, not fewer (13.1% and 12.5% against 12.6% and
+  11.8% without), since good days for the pitching side lengthen starts as much as bad days shorten them.
 - Run conversion: with real outcomes replayed through the kernel and steals, the simulator scores 0.04 to 0.07 runs per
   team per nine innings fewer than real half-innings; the running plays close it (+0.01 and +0.04).
 - Bullpens: on real plate appearances the model is about 1.5% short of relievers' strikeouts (2026, starters right); in
