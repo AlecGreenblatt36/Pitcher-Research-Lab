@@ -504,6 +504,14 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .pl-hz .hz-t { font-size: 18px; }
 .pl-hz .hz-t.o { font-size: 16px; }
 .pd-tags { margin: 0 0 8px; }
+.sp { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr); gap: 8px 18px; align-items: start; margin: 6px 0 4px; }
+.sp-svg { display: block; width: 100%; height: auto; }
+.sp-z { stroke: var(--rule-strong); stroke-width: .8; }
+.sp-line { fill: none; stroke: var(--ink); stroke-width: 1.4; }
+.sp-t { font-family: var(--display); font-weight: 700; font-size: 15px; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.sp-t.in { font-size: 13px; }
+.sp-words p { margin: 0 0 6px; font-size: 15px; }
+@media (max-width: 560px) { .sp { grid-template-columns: minmax(0, 1fr); } .sp-fig { max-width: 300px; } }
 .hz-types { margin: 4px 0 10px; max-width: 520px; }
 .hz-types .box td { font-size: 16px; padding: 6px 4px; }
 .hz-types .box th { padding: 7px 4px; }
@@ -2683,6 +2691,41 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   function hzLocLegend() {
     return '<p class="note hz-key"><span class="hz-sw hot"></span>More of his pitches than an even spread (about 8% a zone) <span class="hz-sw cold"></span>Fewer. Catcher\'s view.</p>';
   }
+  /* Where a hitter hits it: the field in thirds, ground balls in the infield ring and balls in the air (line drives and
+     fly balls) in the outfield, each third shaded by his share; the sentence gives the league's shares for his side. */
+  function sprayTend(sp, lg, side, label) {
+    if (!sp) return "";
+    var ng = sp.gb[0] + sp.gb[1] + sp.gb[2], na = sp.air[0] + sp.air[1] + sp.air[2];
+    if (ng + na < 40) return "";
+    var P = function (r, t) { var a = t * Math.PI / 180; return (100 + r * Math.sin(a)).toFixed(1) + " " + (140 - r * Math.cos(a)).toFixed(1); };
+    var sector = function (r1, r2, t1, t2) {
+      return "M" + P(r1, t1) + "L" + P(r2, t1) + "A" + r2 + " " + r2 + " 0 0 1 " + P(r2, t2) + "L" + P(r1, t2) + (r1 ? "A" + r1 + " " + r1 + " 0 0 0 " + P(r1, t1) : "") + "Z";
+    };
+    var pullLeft = side !== "L", lgs = lg && lg.spray ? lg.spray[side === "L" ? "L" : "R"] : null;
+    var share = function (arr, k) { var t = arr[0] + arr[1] + arr[2]; return t ? arr[k] / t : null; };
+    var svg = '<svg class="sp-svg" viewBox="0 0 200 150" role="img" aria-label="' + esc((label || "") + "where his ground balls and balls in the air go") + '">';
+    [[0, 80, sp.gb, ng, "ground balls"], [80, 132, sp.air, na, "balls in the air"]].forEach(function (ring) {
+      [[-45, -15], [-15, 15], [15, 45]].forEach(function (th, k) {
+        var v = ring[3] >= 15 ? share(ring[2], k) : null, a = v == null ? 0 : Math.min(0.9, v * 1.4);
+        var c = P(ring[0] ? (ring[0] + ring[1]) / 2 : 58, (th[0] + th[1]) / 2).split(" ");
+        var where = k === 1 ? "up the middle" : (k === 0) === pullLeft ? "pulled" : "the other way";
+        svg += '<path class="sp-z" d="' + sector(ring[0], ring[1], th[0], th[1]) + '" style="fill:rgba(31,74,55,' + a.toFixed(3) + ')"><title>' + esc(ring[4].charAt(0).toUpperCase() + ring[4].slice(1) + " " + where + ": " + (v == null ? "too few" : pct(v) + " (" + ring[2][k] + " of " + ring[3] + ")")) + "</title></path>";
+        if (v != null) svg += '<text class="sp-t' + (ring[0] ? "" : " in") + '" x="' + c[0] + '" y="' + c[1] + '" style="fill:' + (a > 0.5 ? "#fff" : "var(--ink)") + '">' + pct(v) + "</text>";
+      });
+    });
+    svg += '<path class="sp-line" d="M100 140L' + P(132, -45) + "M100 140L" + P(132, 45) + '"/></svg>';
+    var words = function (arr, lgArr) {
+      var o = [share(arr, pullLeft ? 0 : 2), share(arr, 1), share(arr, pullLeft ? 2 : 0)];
+      var l = lgArr ? [share(lgArr, pullLeft ? 0 : 2), share(lgArr, 1), share(lgArr, pullLeft ? 2 : 0)] : null;
+      return pct(o[0]) + " pulled, " + pct(o[1]) + " up the middle, " + pct(o[2]) + " the other way" + (l && l[0] != null ? " (most hitters on his side: " + pct(l[0]) + ", " + pct(l[1]) + ", " + pct(l[2]) + ")" : "");
+    };
+    var lines = [];
+    if (ng >= 15) lines.push("Ground balls: " + words(sp.gb, lgs && lgs.gb) + ".");
+    if (na >= 15) lines.push("In the air: " + words(sp.air, lgs && lgs.air) + ".");
+    if (sp.hard && sp.hard[1] >= 30) lines.push("Hit hard (95 mph or more): " + pct(sp.hard[0] / sp.hard[1]) + " of his batted balls" + (lgs && lgs.hard && lgs.hard[1] ? " (most hitters: " + pct(lgs.hard[0] / lgs.hard[1]) + ")" : "") + ".");
+    return '<div class="sp"><div class="sp-fig">' + svg + '<div class="hz-io" aria-hidden="true"><span>' + (pullLeft ? "Pull" : "Opposite field") + "</span><span>" + (pullLeft ? "Opposite field" : "Pull") + "</span></div></div>" +
+      '<div class="sp-words">' + lines.map(function (x) { return "<p>" + esc(x) + "</p>"; }).join("") + '<p class="note">Inner ring: ground balls. Outer ring: line drives and fly balls. Darker means more of his. ' + Number(ng + na).toLocaleString() + " balls in play, " + esc(hzSeasons()) + ".</p></div></div>";
+  }
   function hzLegend(k, marks) {
     var m = HZ_METRICS[k];
     return '<p class="note hz-key"><span class="hz-sw hot"></span>Above the league average <span class="hz-sw cold"></span>Below. ' + esc(m.say) + ". Gray: fewer than " + m.min + " " + m.unit + ". Catcher's view." +
@@ -3091,6 +3134,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       /* and where this pitcher throws each pitch to hitters on his side of the plate, to lay over the hitter's charts */
       var loc = pc && pc.zones ? hzPitchStrip(pc, hc.side, shown.map(famHead), "loc", doc.league, nm(ids[1]) + ": ") : "";
       if (loc) h += '<h4 class="hz-h">Where ' + esc(lastName(nm(ids[1]))) + " throws to " + (hc.side === "L" ? "lefties" : "righties") + ", " + esc(hzSeasons(doc.asof)) + "</h4>" + loc + hzLocLegend();
+      var spr = sprayTend(hc.spray, doc.league, hc.side, nm(ids[0]) + ": ");
+      if (spr) h += '<details class="more" data-keep="spray"' + (state.rpOpen.spray ? " open" : "") + "><summary>Where " + esc(lastName(nm(ids[0]))) + " hits it</summary>" + spr + "</details>";
       var lines = [];
       shown.forEach(function (fam) {
         var a = plan[fam] || [], st = stPlan[fam] || [], bits = [];
@@ -3459,6 +3504,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
             h += hzLine(hzCells(x.zones, hh, "all"), hzLeague(lg, x.side, hh, "all")) + hzTypes(x, hh);
             h += hzStrip(x, lg, hh, HZ_FAMS, null, null, x.name + ": ", "h3") + hzLegend(hzMetric(), false) + "</section>";
           }
+          var spr = sprayTend(x.spray, lg, x.side, x.name + ": ");
+          if (spr) h += '<section class="sec"><h2>Where he hits it</h2>' + spr + "</section>";
           if (oc) {
             /* where his decisions cost him, said once per spot and grouped by what he does there */
             var kinds = { chase: [], take: [], weak: [] }, why = [];
