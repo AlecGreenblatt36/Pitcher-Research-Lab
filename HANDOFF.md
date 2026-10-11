@@ -87,8 +87,13 @@ queue behind the shards (seen October 11 at 16:50 UTC). Check-only replays (n_si
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 5:51 p.m. Eastern October 11, by `date -u`)
+### In flight (updated 6:06 p.m. Eastern October 11, by `date -u`)
 
+- October 11, 6:06 p.m.: the Odds tab now carries the standard pitcher-hits market (PLAYER-09: each starter's
+  hits-allowed ladder, 2.5 to 7.5, within 1.7 points on both replay sets, shown for every box) and a batter-strikeouts
+  column (PROD-16, 1+ K). RUNLINE-02 failed (independent team runs miss how home wins end); the run line stays hidden.
+  Not testable on the replays as recorded: walks-only and earned-runs props (the rows keep walks with HBP and no
+  runs allowed by starter), batter runs and RBIs (no per-hitter runs in the rows).
 - October 11, 5:51 p.m.: **RELIEF-04 held every gate and is on for regular-season games** (ADJUST relief_correction;
   brl_live/relief_correction.json, hooks brl_live/relief_hooks_corrected.json). Pitchers per starter out -0.164 and
   -0.133 against -0.146 and -0.127 real (gaps were -0.039 and -0.031), win Brier and totals unchanged. The postseason keeps
