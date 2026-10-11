@@ -1,0 +1,113 @@
+{
+ "schema": "brl.report-receipt.v1",
+ "run_id": "38108106040",
+ "params": {
+  "dates": [],
+  "seasons": [
+   2024,
+   2025,
+   2026
+  ],
+  "matchup_read": {
+   "train": [
+    2024,
+    2025
+   ],
+   "test": 2026,
+   "m": 160,
+   "min_pitches": 200,
+   "min_pa": 100
+  }
+ },
+ "started_at": "2026-10-11T03:21:53.566403+00:00",
+ "stages": [
+  {
+   "stage": "load 2024",
+   "at_seconds": 11.1,
+   "peak_rss_mb": 1077
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 22.0,
+   "peak_rss_mb": 1254
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 32.9,
+   "peak_rss_mb": 1410
+  },
+  {
+   "stage": "matchup read: locations",
+   "at_seconds": 33.2,
+   "peak_rss_mb": 1410
+  },
+  {
+   "stage": "matchup read: hitter zones",
+   "at_seconds": 33.3,
+   "peak_rss_mb": 1410
+  },
+  {
+   "stage": "matchup read: test at-bats",
+   "at_seconds": 34.2,
+   "peak_rss_mb": 1410
+  },
+  {
+   "stage": "index",
+   "at_seconds": 34.3,
+   "peak_rss_mb": 1410
+  }
+ ],
+ "reports": {},
+ "environment": {
+  "python": "3.12.15",
+  "commit": "121ca687f9ccbf2c14b91bed8d9f117b077a08f8",
+  "numpy": "2.5.4",
+  "scipy": "1.18.1",
+  "scikit-learn": "1.9.1",
+  "pandas": "3.0.6",
+  "cryptography": "46.0.4"
+ },
+ "matchup_read": {
+  "train": [
+   2024,
+   2025
+  ],
+  "test": 2026,
+  "m": 160.0,
+  "min_pitches": 200,
+  "min_pa": 100.0,
+  "at_bats": 93623,
+  "pitchers": 472,
+  "mse_composite": 0.75335,
+  "mse_baseline": 0.75332,
+  "sd_composite_minus_baseline": 0.0185,
+  "mean_actual": 0.3948,
+  "mean_composite": 0.3478,
+  "mean_baseline": 0.3462,
+  "slope": [
+   0.457,
+   0.107,
+   0.83
+  ],
+  "mse_composite_minus_baseline": [
+   2.9e-05,
+   -0.000222,
+   0.000273
+  ]
+ },
+ "record": {
+  "games": 4991,
+  "dates": 401,
+  "first_date": "2025-03-27",
+  "last_date": "2026-10-08",
+  "chases": 152037,
+  "chases_expected_league": 156426.0,
+  "chases_expected_map": 155820.7,
+  "in_recommended": 99782,
+  "usual_expected": 117814.1,
+  "outside_pitches": 534748
+ },
+ "status": "completed",
+ "finished_at": "2026-10-11T03:24:48.891469+00:00",
+ "seconds": 175.3
+}
