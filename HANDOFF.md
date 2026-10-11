@@ -819,6 +819,13 @@ far and part of why simulated bullpens struck out fewer batters and allowed more
 
 ### Known gaps, measured
 
+- (October 11) Outcome levels drift by season and the simulator carries them from its tables: in replays with tables from
+  other seasons, 2025's walk-or-HBP chances ran 2 points high and 2026's hit chances 1 point high (PLAYER-03); live, the
+  context table includes the current season through late September, so October is closer. Next season's item: re-anchor
+  each outcome's league level in-season from the season's real plate appearances so far (offsets log(observed/predicted)
+  shrunk by plate appearances), tested in replays of both seasons (RUNS-03 pointed the same way for the running plays).
+- (October 11) The simulated run distributions are narrow (team-run SD 3.10 against 3.21 to 3.25; games decided by five or
+  more 27% against 29%), which sinks the run line (RUNLINE-01); DISP-03 tests market numbers from day-form worlds.
 - Run conversion: with real outcomes replayed through the kernel and steals, the simulator scores 0.04 to 0.07 runs per
   team per nine innings fewer than real half-innings; the running plays close it (+0.01 and +0.04).
 - Bullpens: on real plate appearances the model is about 1.5% short of relievers' strikeouts (2026, starters right); in
