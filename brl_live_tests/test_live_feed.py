@@ -130,3 +130,17 @@ def test_reliever_rest_follows_the_last_three_days():
     assert reliever_profile(app, 7, 'R', 'Seven', '2026-10-07', rest=False).rest == 1.0
     from brl_live import live_feed
     assert reliever_profile(app, 7, 'R', 'Seven', '2026-10-07').rest == (0.0 if live_feed.RELIEVER_REST else 1.0)
+
+
+def test_each_pitchers_entry_inning_comes_from_the_play_by_play():
+    """RELIEF-04 reads the inning a reliever came in: his first play; one with no play yet came in this inning; the starter
+    the 1st."""
+    f = feed()
+    f['liveData']['plays'] = {'allPlays': [{'about': {'inning': 1}, 'matchup': {'pitcher': {'id': 401}}},
+                                           {'about': {'inning': 6}, 'matchup': {'pitcher': {'id': 402}}},
+                                           {'about': {'inning': 7}, 'matchup': {'pitcher': {'id': 402}}}]}
+    s = parse_live_state(f)
+    assert s['lines']['401'].entry_inning == 1 and s['lines']['402'].entry_inning == 6 and s['lines']['301'].entry_inning == 1
+    f['liveData']['plays'] = {'allPlays': []}
+    s = parse_live_state(f)
+    assert s['lines']['402'].entry_inning == 6 and s['lines']['401'].entry_inning == 1     # no plays: this inning

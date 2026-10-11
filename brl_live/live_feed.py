@@ -185,6 +185,13 @@ def parse_live_state(feed: dict) -> dict:
         if not pid and pitchers_used[s]:
             pid = pitchers_used[s][-1]
         current[s] = pid
+    # the inning each pitcher came in: his first play in the play-by-play; a pitcher with none yet came in this inning
+    entered = {}
+    for pl in ((live.get('plays') or {}).get('allPlays') or []):
+        q = _pid(((pl.get('matchup') or {}).get('pitcher')))
+        inn = (pl.get('about') or {}).get('inning')
+        if q and inn is not None and q not in entered:
+            entered[q] = int(inn)
     lines = {}
     for s in SIDES:
         players = box[s].get('players') or {}
@@ -196,7 +203,8 @@ def parse_live_state(feed: dict) -> dict:
                                       runs_allowed=int(st.get('runs') or 0), earned_runs=int(st.get('earnedRuns') or 0),
                                       hits_allowed=int(st.get('hits') or 0), walks_hbp=int(st.get('baseOnBalls') or 0) + int(st.get('hitByPitch') or 0),
                                       strikeouts=int(st.get('strikeOuts') or 0), home_runs=int(st.get('homeRuns') or 0),
-                                      is_starter=(pid == pitchers_used[s][0]))
+                                      is_starter=(pid == pitchers_used[s][0]),
+                                      entry_inning=entered.get(pid, 1 if pid == pitchers_used[s][0] else inning))
     status = feed['gameData']['status']
     return {'inning': inning, 'half': half, 'outs': outs, 'bases': bases, 'between_innings': between,
             'away_score': score['away'], 'home_score': score['home'], 'batting_side': batting_side,
