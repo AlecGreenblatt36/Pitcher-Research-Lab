@@ -521,6 +521,7 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .hz-types.ct .box td small { display: block; font-family: var(--body); font-size: 14px; color: var(--muted); line-height: 1.2; }
 .hz-cap { margin: 10px 0 4px; font-weight: 700; color: var(--ink); }
 .hz-types.ars { max-width: 760px; }
+.lineup-glance b { font-size: 20px; }
 .hz-types.ars .box th:first-child, .hz-types.ars .box td:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); }
 @media (min-width: 720px) { .pl-body { grid-template-columns: minmax(0, 1fr) 156px; gap: 20px; } }
 .pl-hz-f small { display: block; font-size: 14px; font-weight: 700; color: var(--muted); margin: 0 0 2px; }
@@ -3210,6 +3211,32 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     return '<div class="tbl-wrap hz-types"><table class="box"><thead><tr><th scope="col">Pitcher</th><th scope="col">T</th>' + cols.map(function (d) { return '<th scope="col">' + esc(shortDate(d)) + "</th>"; }).join("") +
       '<th scope="col">Since</th><th scope="col">FB</th></tr></thead><tbody>' + rows + '</tbody></table></div><p class="note">Pitches thrown on each day, a dash if he did not pitch. Since: days since he last pitched. FB: fastball speed.</p>';
   }
+  /* The lineup at a glance against the starter's hand: its sides, and its line from the nine hitters' zone counts against
+     the league's for the same mix of sides (the standard top of an advance sheet). */
+  function lineupGlance(doc, po, hand) {
+    var players = doc.players || {}, nine = po.hitters.filter(function (hid, i) { return po.spots ? po.spots[String(hid)] : i < 9; }).slice(0, 9);
+    var sides = { L: 0, R: 0 }, t = [0, 0, 0, 0, 0, 0, 0], o = [0, 0, 0, 0, 0, 0, 0], lt = [0, 0, 0, 0, 0, 0, 0], lo = [0, 0, 0, 0, 0, 0, 0], n = 0;
+    nine.forEach(function (hid) {
+      var c = players[String(hid)] && players[String(hid)].hitter;
+      if (!c) return;
+      sides[c.side === "L" ? "L" : "R"]++;
+      var cells = c.zones ? hzCells(c.zones, hzSplit(c.zones) ? hand : "all", "all") : null, lg = hzLeague(doc.league, c.side, hzSplit(c.zones) ? hand : "all", "all");
+      if (!cells || !lg) return;
+      n++;
+      var add = function (acc, rows) { hzTotal(rows).forEach(function (v, k) { acc[k] += v; }); };
+      add(t, cells); add(o, cells.filter(function (x) { return x[0] >= 11; }));
+      /* the league's rates for his side, carried at his own number of events so the mix of sides matches */
+      var L = hzTotal(lg), LO = hzTotal(lg.filter(function (x) { return x[0] >= 11; })), mine = hzTotal(cells), mo = hzTotal(cells.filter(function (x) { return x[0] >= 11; }));
+      lt[4] += mine[4]; lt[5] += L[4] ? mine[4] * L[5] / L[4] : 0; lt[6] += L[4] ? mine[4] * L[6] / L[4] : 0;
+      lt[2] += mine[2]; lt[3] += L[2] ? mine[2] * L[3] / L[2] : 0;
+      lo[1] += mo[1]; lo[2] += LO[1] ? mo[1] * LO[2] / LO[1] : 0;
+    });
+    if (n < 6 || !t[4]) return "";
+    var f3 = function (v) { return hzFmt(HZ_METRICS.avg, v); }, p0 = function (a, b) { return b ? Math.round(100 * a / b) + "%" : "\u2013"; };
+    var cols = [["AVG", f3(t[5] / t[4]), f3(lt[5] / lt[4])], ["SLG", f3(t[6] / t[4]), f3(lt[6] / lt[4])], ["Chase", p0(o[2], o[1]), p0(lo[2], lo[1])], ["Miss", p0(t[3], t[2]), p0(lt[3], lt[2])],
+                ["Sides", sides.L + " L, " + sides.R + " R", ""]];
+    return '<div class="hz-line num lineup-glance">' + cols.map(function (c) { return "<div><span>" + c[0] + "</span><b>" + c[1] + "</b>" + (c[2] ? "<small>Lg " + c[2] + "</small>" : "") + "</div>"; }).join("") + "</div>";
+  }
   function hzWide() { try { return window.matchMedia("(min-width: 1000px)").matches; } catch (e) { return false; } }
   function hzSheetHand(doc, starter) {
     var pc = doc.players && doc.players[String(starter.id)] && doc.players[String(starter.id)].pitcher, any = null;
@@ -3231,6 +3258,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       "The " + esc(nickname(doc.teams[other].name)) + " haven't named a starter yet. These lines are against " + esc(nm(starter.id)) + " out of their bullpen. ") +
       (po.posted ? "Posted lineup; the plan was built before it came out" + (po.missing.length ? ", so it has no line yet for " + esc(po.missing.join(" or ")) : "") + "." : lineupWords(se.lineup_source)) +
       " Hot zones against " + esc(hzSheetHand(doc, starter)) + ". Tap a hitter for his full plan, the counts and the bullpen.</p>";
+    var glance = lineupGlance(doc, po, hzSheetPick(players[String(starter.id)] && players[String(starter.id)].pitcher));
+    if (glance) h += '<p class="note hz-cap">The lineup against ' + esc(hzHandWords(hzSheetPick(players[String(starter.id)] && players[String(starter.id)].pitcher))) + "</p>" + glance;
     var spc = players[String(starter.id)] && players[String(starter.id)].pitcher;
     if (spc && spc.mix) h += '<details class="more" data-keep="ars-' + side + '"' + (state.rpOpen["ars-" + side] ? " open" : "") + "><summary>" + esc(lastName(nm(starter.id))) + "'s pitches</summary>" + (spc.arsenal && spc.arsenal.length ? arsenalTypes(spc) : arsenalTable(spc.mix)) +
       (spc.usage ? '<p class="note hz-cap">What he throws by count</p>' + (usageLine(spc) ? '<p class="pd-line">' + esc(usageLine(spc)) + "</p>" : "") + usageTable(spc, "R") + usageTable(spc, "L") : "") + "</details>";
