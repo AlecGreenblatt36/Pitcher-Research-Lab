@@ -1,0 +1,312 @@
+{
+ "schema": "brl.report-receipt.v1",
+ "run_id": "38106740119",
+ "params": {
+  "dates": [],
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "zone_study": {
+   "fit_train": [
+    2023,
+    2024
+   ],
+   "fit_test": 2025,
+   "train": [
+    2024,
+    2025
+   ],
+   "test": 2026,
+   "min_pa": 100
+  }
+ },
+ "started_at": "2026-10-11T02:56:22.036928+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 10.3,
+   "peak_rss_mb": 1083
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 18.7,
+   "peak_rss_mb": 1253
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 26.8,
+   "peak_rss_mb": 1424
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 34.8,
+   "peak_rss_mb": 1581
+  },
+  {
+   "stage": "zone study: fit tables",
+   "at_seconds": 35.0,
+   "peak_rss_mb": 1581
+  },
+  {
+   "stage": "zone study: score tables",
+   "at_seconds": 35.1,
+   "peak_rss_mb": 1581
+  },
+  {
+   "stage": "zone study: avg",
+   "at_seconds": 35.1,
+   "peak_rss_mb": 1581
+  },
+  {
+   "stage": "zone study: swing",
+   "at_seconds": 35.1,
+   "peak_rss_mb": 1581
+  },
+  {
+   "stage": "zone study: miss",
+   "at_seconds": 35.1,
+   "peak_rss_mb": 1581
+  },
+  {
+   "stage": "zone study: slg",
+   "at_seconds": 35.1,
+   "peak_rss_mb": 1581
+  },
+  {
+   "stage": "index",
+   "at_seconds": 35.1,
+   "peak_rss_mb": 1581
+  }
+ ],
+ "reports": {},
+ "environment": {
+  "python": "3.12.15",
+  "commit": "cff64a09512a2585c0dd18726e114a50c21dd414",
+  "numpy": "2.5.4",
+  "scipy": "1.18.1",
+  "scikit-learn": "1.9.1",
+  "pandas": "3.0.6",
+  "cryptography": "46.0.4"
+ },
+ "zone_study": {
+  "fit": {
+   "train": [
+    2023,
+    2024
+   ],
+   "test": 2025
+  },
+  "score": {
+   "train": [
+    2024,
+    2025
+   ],
+   "test": 2026
+  },
+  "min_pa": 100.0,
+  "grid": [
+   0.0,
+   2.0,
+   5.0,
+   10.0,
+   20.0,
+   40.0,
+   80.0,
+   160.0,
+   320.0,
+   640.0
+  ],
+  "metrics": {
+   "avg": {
+    "m": 160.0,
+    "fit_curve": [
+     0.571736,
+     0.554495,
+     0.551529,
+     0.549282,
+     0.547273,
+     0.545766,
+     0.54491,
+     0.544629,
+     0.544683,
+     0.54484
+    ],
+    "events": 139165,
+    "loss": {
+     "raw": 0.577343,
+     "league": 0.542665,
+     "scaled": 0.542886,
+     "shrunk": 0.542438
+    },
+    "shrunk_minus_raw": [
+     -0.034905,
+     -0.042771,
+     -0.027841
+    ],
+    "shrunk_minus_scaled": [
+     -0.000448,
+     -0.000696,
+     -0.000208
+    ],
+    "shrunk_minus_league": [
+     -0.000227,
+     -0.000803,
+     0.000346
+    ],
+    "scaled_minus_raw": [
+     -0.034457,
+     -0.042264,
+     -0.027342
+    ]
+   },
+   "swing": {
+    "m": 80.0,
+    "fit_curve": [
+     0.602472,
+     0.602068,
+     0.601785,
+     0.601454,
+     0.601041,
+     0.600642,
+     0.600434,
+     0.600615,
+     0.601265,
+     0.602246
+    ],
+    "events": 600794,
+    "loss": {
+     "raw": 0.616849,
+     "league": 0.621061,
+     "scaled": 0.618537,
+     "shrunk": 0.614444
+    },
+    "shrunk_minus_raw": [
+     -0.002405,
+     -0.002928,
+     -0.001968
+    ],
+    "shrunk_minus_scaled": [
+     -0.004093,
+     -0.005061,
+     -0.003269
+    ],
+    "shrunk_minus_league": [
+     -0.006617,
+     -0.007694,
+     -0.005519
+    ],
+    "scaled_minus_raw": [
+     0.001688,
+     0.000514,
+     0.002937
+    ]
+   },
+   "miss": {
+    "m": 80.0,
+    "fit_curve": [
+     0.482459,
+     0.478958,
+     0.477885,
+     0.476937,
+     0.475996,
+     0.475276,
+     0.475007,
+     0.475284,
+     0.475968,
+     0.476767
+    ],
+    "events": 284697,
+    "loss": {
+     "raw": 0.478369,
+     "league": 0.480279,
+     "scaled": 0.472528,
+     "shrunk": 0.469499
+    },
+    "shrunk_minus_raw": [
+     -0.00887,
+     -0.011967,
+     -0.006431
+    ],
+    "shrunk_minus_scaled": [
+     -0.003029,
+     -0.003815,
+     -0.002278
+    ],
+    "shrunk_minus_league": [
+     -0.01078,
+     -0.012839,
+     -0.008965
+    ],
+    "scaled_minus_raw": [
+     -0.005841,
+     -0.009217,
+     -0.003135
+    ]
+   },
+   "slg": {
+    "m": 160.0,
+    "fit_curve": [
+     0.04748,
+     0.044299,
+     0.041584,
+     0.038952,
+     0.036214,
+     0.033903,
+     0.032448,
+     0.031898,
+     0.031931,
+     0.032165
+    ],
+    "events": 139165,
+    "loss": {
+     "raw": 0.048576,
+     "league": 0.0341,
+     "scaled": 0.033638,
+     "shrunk": 0.033119
+    },
+    "shrunk_minus_raw": [
+     -0.015457,
+     -0.017391,
+     -0.013597
+    ],
+    "shrunk_minus_scaled": [
+     -0.000519,
+     -0.000898,
+     -0.000141
+    ],
+    "shrunk_minus_league": [
+     -0.000981,
+     -0.002014,
+     3.2e-05
+    ],
+    "scaled_minus_raw": [
+     -0.014938,
+     -0.017116,
+     -0.012804
+    ]
+   }
+  },
+  "hitters": {
+   "fit": 460,
+   "score": 462
+  }
+ },
+ "record": {
+  "games": 4991,
+  "dates": 401,
+  "first_date": "2025-03-27",
+  "last_date": "2026-10-08",
+  "chases": 152037,
+  "chases_expected_league": 156426.0,
+  "chases_expected_map": 155820.7,
+  "in_recommended": 99782,
+  "usual_expected": 117814.1,
+  "outside_pitches": 534748
+ },
+ "status": "completed",
+ "finished_at": "2026-10-11T02:59:13.745607+00:00",
+ "seconds": 171.7
+}
