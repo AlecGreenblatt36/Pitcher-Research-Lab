@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 265,
- "rows": 268,
+ "experiments": 266,
+ "rows": 269,
  "records": {
   "ACC-01": [
    {
@@ -4391,6 +4391,22 @@
     "runs": [],
     "frozen_commits": [],
     "status": "on (a display change; no gate)"
+   }
+  ],
+  "ZONES-01": [
+   {
+    "id": "ZONES-01",
+    "columns": {
+     "ID": "ZONES-01",
+     "Attempt": "Expected hot zones. A raw zone rate over two seasons rests on 5 to 150 at-bats a zone, so much of the chart is noise. Candidates for a hitter's rate in each of MLB's 13 zones, from training seasons only: raw (his own count ratio); league (the league's rate in that zone for his side); scaled (the league's zone rate times his own overall rate over the league's, his level on the league's shape); and shrunk (his counts plus m pseudo-events at the scaled rate, m fitted). Metrics: batting average per at-bat ending there, swing rate per pitch, miss rate per swing (binary log loss per event) and slugging per at-bat (squared error weighted by at-bats). Regular-season pitches, hitters with 100 or more plate appearances in training; m chosen on training 2023 and 2024 scored on 2025, then everything scored once on training 2024 and 2025 against 2026 (the two-season window the cards use); paired bootstrap over hitters (2,000 draws). tools/brl_report.py zone_shrink_study, report lane, aggregates only",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions on 2026: (1) shrunk beats raw on all four metrics with the interval excluding zero; (2) shrunk beats scaled on swing and miss rates with the interval excluding zero (hitters have zone patterns of their own beyond level and league shape); (3) on batting average and slugging shrunk is no worse than scaled (upper end at most +0.0005 nats per at-bat, +0.002 squared error). Decision rule: if (1) holds, the hot-zone charts get an Expected view (shrunk at the fitted m, or scaled where (2) or (3) favors it) beside the standard view, which stays the default; if (1) fails, no Expected view.",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "BOX-01": [
