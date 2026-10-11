@@ -65,7 +65,14 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 2:45 a.m. Eastern October 11, by `date -u`)
+### In flight (updated 3:15 a.m. Eastern October 11, by `date -u`)
+
+- October 11, 3:15 a.m.: PTAGS-02 held (run 38118026447): pitcher heights carry over 0.73 to 0.78; Elevates fastballs,
+  Keeps fastballs down and Buries breaking balls are on the pitcher cards and starter folds (page PTAG_RULES; the cards
+  carry fb_up, fb_dn, br_dn since rebuild 38118434363). The Players page now opens with hitting and pitching leaderboards
+  (top ten by any percentile row, side by side on a wide screen) and a team shows two tables (hitters, pitchers) with
+  every rate shaded by percentile; the players index carries pa, r (rates) and pct per player (tools/brl_report.py
+  index_line, rebuild with players true after 2249ece95). Swing decisions and chase lists moved into folds.
 
 - October 11, 2:45 a.m.: TAGS-07 and TAGS-08 held (run 38117275043): a hitter's misses up in the zone against down
   (top third, MLB zones 1-3, against the bottom third, 7-9; relative to himself, net of the league) carry over 0.46 and

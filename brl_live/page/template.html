@@ -421,7 +421,10 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .pl-list .good { color: var(--good); } .pl-list .bad { color: var(--bad); }
 /* leaderboards and team tables on the Players page */
 .ld .seg { margin: 4px 0 8px; }
-.ld-list { list-style: none; margin: 0 0 12px; padding: 0; max-width: 560px; counter-reset: none; }
+.ld-grid { display: grid; gap: 0 40px; }
+@media (min-width: 900px) { .ld-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.ld-grid .sec { min-width: 0; }
+.ld-list { list-style: none; margin: 0 0 12px; padding: 0; }
 .ld-list li { border-top: 1px solid var(--rule-soft); }
 .ld-list a { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto auto; align-items: center; column-gap: 8px; min-height: 48px; padding: 6px 4px; text-decoration: none; color: inherit; }
 .ld-list a:hover { background: var(--hover); }
@@ -4149,8 +4152,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var lieSay = ". The number is how often his pitch looks like a strike when the hitter has to decide, then ends up out of the zone" + (P.league && P.league.looks_in_ends_out != null ? " (league " + pct(P.league.looks_in_ends_out) + ")" : "") + ".";
       if (rated && !query) {
         var kh = LD_DIR.hitter[state.ldHit] ? state.ldHit : "slg", kp = LD_DIR.pitcher[state.ldPit] ? state.ldPit : "k";
-        h += '<section class="sec ld"><h2>Hitting leaders</h2><p class="lede">The top ten among ' + (rk && rk.hitters ? Number(rk.hitters).toLocaleString() + " " : "") + "hitters with 300 or more plate appearances, " + esc(seasons) + ". The small number is his percentile (100 is the best).</p>" + leaderboard(hit, "hitter", kh) + "</section>";
-        h += '<section class="sec ld"><h2>Pitching leaders</h2><p class="lede">The top ten among ' + (rk && rk.pitchers ? Number(rk.pitchers).toLocaleString() + " " : "") + "pitchers with 300 or more batters faced, " + esc(seasons) + ".</p>" + leaderboard(pit, "pitcher", kp) + "</section>";
+        h += '<div class="ld-grid"><section class="sec ld"><h2>Hitting leaders</h2><p class="lede">The top ten among ' + (rk && rk.hitters ? Number(rk.hitters).toLocaleString() + " " : "") + "hitters with 300 or more plate appearances, " + esc(seasons) + ". The small number is his percentile (100 is the best).</p>" + leaderboard(hit, "hitter", kh) + "</section>";
+        h += '<section class="sec ld"><h2>Pitching leaders</h2><p class="lede">The top ten among ' + (rk && rk.pitchers ? Number(rk.pitchers).toLocaleString() + " " : "") + "pitchers with 300 or more batters faced, " + esc(seasons) + ".</p>" + leaderboard(pit, "pitcher", kp) + "</section></div>";
         h += '<section class="sec"><details class="more"><summary>Swing decisions: who costs himself the most</summary><p class="lede">The 40 big leaguers who hurt themselves most with their swing decisions: chasing bad pitches and taking good ones' + costSay + "</p>" + costList(hit, 40) + "</details>";
         h += '<details class="more"><summary>Getting chases: the best pitchers at it</summary><p class="lede">The 40 big leaguers best at getting chases' + lieSay + "</p>" + lieList(pit, 40) + "</details></section>";
       } else if (rated && isClub) {
