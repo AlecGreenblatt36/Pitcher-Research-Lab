@@ -3224,7 +3224,14 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var key = RP_METRICS[state.rpMetric] ? state.rpMetric : "chase", m = RP_METRICS[key];
     var players = doc.players || {}, nm = function (id) { var p = players[String(id)]; return p && p.name ? p.name : String(id); };
     /* a look back is a plan built after its game; an early plan is built the day before and rebuilt on game day */
-    var built = String(doc.built_at || "").slice(0, 10), early = doc.date && (built ? built < doc.date : doc.date > D.date), retro = !early && doc.asof && doc.date && doc.asof < doc.date;
+    /* the build day in Eastern time: a plan for tomorrow built tonight after 8 p.m. carries tomorrow's UTC date */
+    var built = "";
+    try {
+      var bt = doc.built_at ? new Date(String(doc.built_at).replace(/(\.\d{3})\d+/, "$1")) : null;    /* some browsers refuse microseconds */
+      built = bt && !isNaN(bt) ? bt.toLocaleDateString("en-CA", { timeZone: "America/New_York" }) : String(doc.built_at || "").slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(built)) built = String(doc.built_at || "").slice(0, 10);
+    } catch (e) { built = String(doc.built_at || "").slice(0, 10); }
+    var early = doc.date && (built ? built < doc.date : doc.date > D.date), retro = !early && doc.asof && doc.date && doc.asof < doc.date;
     var sel = state.rpPair[pk], selSide = sel ? sel.split("|")[0] : null;
     var h = '<section class="sec wide"><h2>Game plan</h2><p class="lede">How to pitch every hitter in both lineups, from ' + (Number(doc.training_pitches) / 1e6).toFixed(1) + " million pitches thrown before " + esc(shortDate(doc.asof)) + ". Nothing from this game goes in." +
       (retro ? " This is a look back built the same way." : early ? " Built the day before; it is rebuilt on game day." : "") + "</p>";
