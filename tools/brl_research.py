@@ -574,6 +574,31 @@ def pitch_counts_fit(data_root: Path, physics, train=(2023, 2024), lam=10.0, cap
     return out
 
 
+def relief_pitches(data_root: Path, physics) -> dict:
+    """The relievers' side of LEASH-03's diagnosis: the live relief-exit hazard (brl_live/relief_exit.json, RELIEF-02) on
+    every real relief decision of the regular seasons, by the reliever's pitches in the outing so far (the physics tables'
+    pitches per plate appearance) and whether the inning just ended: decisions, removals and the hazard's summed chance.
+    Aggregates only."""
+    from brl_replay.games import load_history
+    from brl_replay.relief_decisions import decisions, fitted
+    h = load_history(next(data_root.rglob('plate_appearances.csv.gz')))
+    if 'game_type' not in h.columns:
+        h = h.assign(game_type='R')
+    n = physics[['game_pk', 'at_bat_number', 'n']].drop_duplicates(['game_pk', 'at_bat_number']).astype({'game_pk': 'int64', 'at_bat_number': 'int64'})
+    h = h.merge(n, on=['game_pk', 'at_bat_number'], how='left')
+    d = decisions(h)
+    d = d.sort_values(['game_pk', 'bat', 'pitcher', 'at_bat_number'], kind='mergesort')
+    d['pitches'] = d.groupby(['game_pk', 'bat', 'pitcher'])['n'].cumsum()
+    doc = json.loads((ROOT / 'brl_live' / 'relief_exit.json').read_text())
+    d['p'] = fitted(d, doc)
+    d = d[d['p'].notna() & d['pitches'].notna()]
+    band = np.digitize(d['pitches'].to_numpy(float), [10, 20, 30, 40])
+    out = {'decisions': int(len(d)), 'bands': ['<10', '10-19', '20-29', '30-39', '40+'], 'cells': []}
+    for (season, b, e), g in d.assign(b=band).groupby(['season', 'b', 'ended']):
+        out['cells'].append([int(season), int(b), int(e), int(len(g)), int(g['removed'].sum()), round(float(g['p'].sum()), 1)])
+    return out
+
+
 def postseason_usage(repo, token, key, branch, seasons=(2023, 2024, 2025, 2026)) -> dict:
     """How starters and bullpens are used in postseason games compared with the regular season (from the sealed study seasons)."""
     import collections
@@ -666,7 +691,7 @@ def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']; key_hex = os.environ['BRL_PA_PACKAGE_KEY']; key = key_bytes(key_hex)
     branch = os.environ.get('BRL_LEDGER_BRANCH', 'brl-live-data')
     experiment = (os.environ.get('BRL_EXPERIMENT') or 'physics').strip()
-    if experiment in ('hazard_check', 'hazard_fix', 'hazard_pitches', 'pitch_counts'):
+    if experiment in ('hazard_check', 'hazard_fix', 'hazard_pitches', 'pitch_counts', 'relief_pitches'):
         run_id = os.environ.get('GITHUB_RUN_ID', 'local')
         receipt = {'schema': 'brl.research-receipt.v1', 'experiment': experiment, 'run_id': run_id, 'started_at': datetime.now(timezone.utc).isoformat()}
         try:
@@ -678,7 +703,7 @@ def main():
                 import shutil; shutil.rmtree(data_root)
             data_root.mkdir(parents=True)
             ep.restore_package(repo, token, key_hex, manifest, data_root)
-            if experiment in ('hazard_pitches', 'pitch_counts'):
+            if experiment in ('hazard_pitches', 'pitch_counts', 'relief_pitches'):
                 import io
                 tables = []
                 for year in (2023, 2024, 2025, 2026):
@@ -687,7 +712,7 @@ def main():
                         tables.append(pd.read_csv(io.BytesIO(gzip.decompress(unseal(raw, key, physics_purpose(year)))), usecols=['game_pk', 'at_bat_number', 'n']))
                 receipt['physics_seasons'] = len(tables)
                 phys_n = pd.concat(tables, ignore_index=True) if tables else None
-                receipt['results'] = pitch_counts_fit(data_root, phys_n) if experiment == 'pitch_counts' else hazard_pitches(data_root, phys_n)
+                receipt['results'] = {'pitch_counts': pitch_counts_fit, 'relief_pitches': relief_pitches}.get(experiment, hazard_pitches)(data_root, phys_n)
             else:
                 receipt['results'] = (hazard_fix if experiment == 'hazard_fix' else hazard_check)(data_root)
             receipt['status'] = 'completed'

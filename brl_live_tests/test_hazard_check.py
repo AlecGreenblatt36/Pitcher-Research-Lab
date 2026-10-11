@@ -144,3 +144,13 @@ def test_hazard_pitches_sums_each_starters_pitches_and_scores_both_hazards(tmp_p
     # from the physics tables' pitches per plate appearance instead: the same counts give the same cells
     phys = pa[['game_pk', 'at_bat_number', 'pitch_number']].rename(columns={'pitch_number': 'n'})
     assert br.hazard_pitches(tmp_path, phys)['cells'] == out['cells']
+
+
+def test_relief_pitches_scores_every_relief_decision_by_pitches_in_the_outing(tmp_path):
+    rng = np.random.default_rng(14)
+    pa = _games(rng, n=120)
+    pa.to_csv(tmp_path / 'plate_appearances.csv.gz', index=False, compression='gzip')
+    phys = pa[['game_pk', 'at_bat_number']].assign(n=rng.integers(1, 8, len(pa)))
+    out = br.relief_pitches(tmp_path, phys)
+    assert out['decisions'] > 0 and sum(c[3] for c in out['cells']) == out['decisions']
+    assert all(0 <= c[1] <= 4 and c[4] <= c[3] for c in out['cells'])
