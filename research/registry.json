@@ -4889,14 +4889,16 @@
     "columns": {
      "ID": "PXSTATS-01",
      "Attempt": "XSTATS-01 against pitchers: does a pitcher's expected AVG and SLG against, from the exit speed and launch angle of the balls hit off him, predict his next season's AVG and SLG against better than the actual ones? Same table, windows, pitchers with 300 or more batters faced in training and 150 in the test, blend and intervals (tools/brl_report.py xstats_study with who 'pitcher'). A pitcher's average against swings more with balls in play than a hitter's, so expected numbers may help here even though they did not for hitters.",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions on 2026: (1) expected AVG against predicts AVG against better than AVG against does, interval excluding zero; (2) the same for SLG against. Decision rule: for each where (1) or (2) holds, the pitcher percentile rankings and cards add an Expected row (expected average or slugging against); otherwise nothing changes.",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions on 2026: (1) expected AVG against predicts AVG against better than AVG against does, interval excluding zero; (2) the same for SLG against. Decision rule: for each where (1) or (2) holds, the pitcher percentile rankings and cards add an Expected row (expected average or slugging against); otherwise nothing changes. **Results (run 38136607768, receipt research/report-38136607768.json; 227 pitchers scored on 2026 before August 1):** AVG against: expected minus raw **-0.00019 [-0.00031, -0.00007]**, correlations with 2026 0.43 (expected) and 0.36 (raw), blend weight 0.84; SLG against: expected minus raw **-0.00044 [-0.00089, -0.00002]**, correlations 0.37 and 0.35, blend weight 1.0. **(1) and (2) held.** Decision, as registered: pitcher percentile rankings and cards add Expected average against and Expected slugging against (cards' lines carry xh and xtb from tools/brl_report.py xs_lines; PCT_PITCHER xavg and xslg; page PCT_ROWS and lineRate). Unlike for hitters (XSTATS-01), a pitcher's average against is noisy enough that the batted balls predict it better.",
+     "Delta corrected Brier, 2026": "held: (1), (2)"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38136607768"
+    ],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "held: (1), (2)"
    }
   ],
   "PSPLITS-01": [

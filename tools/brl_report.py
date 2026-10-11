@@ -278,7 +278,7 @@ def running_league(season: dict) -> dict:
 # he does better than (a hitter's strikeouts and a pitcher's walks count lower as better). Counts and ranks only.
 PCT_MIN = 300
 PCT_HITTER = (('avg', 1), ('slg', 1), ('k', -1), ('bb', 1), ('chase', -1), ('whiff', -1), ('hard', 1))
-PCT_PITCHER = (('k', 1), ('bb', -1), ('whiff', 1), ('chase', 1), ('hard', -1), ('avg', -1), ('velo', 1))
+PCT_PITCHER = (('k', 1), ('bb', -1), ('whiff', 1), ('chase', 1), ('hard', -1), ('avg', -1), ('xavg', -1), ('xslg', -1), ('velo', 1))
 
 
 def league_arsenal(T: dict, rows, swing, whiff, outside) -> dict:
@@ -358,6 +358,8 @@ def line_rates(L: dict) -> dict:
          'whiff': div('misses', 'swings'), 'hard': div('hard', 'bbe')}
     if L.get('velo') is not None:
         r['velo'] = float(L['velo'])
+    if L.get('xh') is not None:                    # PXSTATS-01: expected AVG and SLG against, for pitchers
+        r['xavg'] = div('xh', 'ab'); r['xslg'] = div('xtb', 'ab')
     return r
 
 
@@ -634,6 +636,14 @@ class Fitted:
         # every player's line on the training rows and the percentile references (PROD-08)
         self.lines_h = player_lines(T, tr, swing, whiff, self.outside, 'batter')
         self.lines_p = player_lines(T, tr, swing, whiff, self.outside, 'pitcher')
+        # PXSTATS-01: each pitcher's expected hits and total bases against from the exit speed and launch angle of the balls
+        # hit off him (the league table from the same rows)
+        if 'la' in T and 'ls' in T:
+            xl = xs_lines(T, tr, xs_table(T, tr), 'pitcher')
+            for i, pid in enumerate(xl['ids']):
+                L = self.lines_p.get(int(pid))
+                if L is not None:
+                    L['xh'] = round(float(xl['xh'][i]), 1); L['xtb'] = round(float(xl['xtb'][i]), 1)
         # each hitter's line in the as-of season and the one before, for what changed (cards: line_seasons)
         self.line_year = date.fromordinal(asof_day).year
         if 'season' in T:

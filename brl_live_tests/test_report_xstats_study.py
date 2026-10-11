@@ -65,3 +65,16 @@ def test_against_pitchers():
     T['pitcher'] = T['batter'].copy()
     out = B.xstats_study(T, lambda *a: None, dict(SPEC, who='pitcher'))
     assert out['who'] == 'pitcher' and out['hitters']['score'] == 300 and out['metrics']['avg']['expected_minus_raw'][2] < 0
+
+
+def test_line_rates_carry_expected_against_and_rank_it():
+    B = _report()
+    L = {'pa': 400, 'ab': 360, 'h': 80, 'tb': 130, 'k': 100, 'bb': 30, 'chases': 300, 'outside': 1000, 'misses': 250, 'swings': 900, 'bbe': 250, 'hard': 90,
+         'xh': 72.0, 'xtb': 120.6}
+    r = B.line_rates(L)
+    assert abs(r['xavg'] - 0.2) < 1e-12 and abs(r['xslg'] - 0.335) < 1e-12
+    assert 'xavg' not in B.line_rates({k: v for k, v in L.items() if k not in ('xh', 'xtb')})
+    lines = {i: dict(L, pa=400, xh=50.0 + i, xtb=100.0 + i) for i in range(40)}
+    ref = B.pct_reference(lines, B.PCT_PITCHER)
+    lo, hi = B.pct_ranks(lines[0], ref, B.PCT_PITCHER), B.pct_ranks(lines[39], ref, B.PCT_PITCHER)
+    assert lo['xavg'] > hi['xavg'] and lo['xslg'] > hi['xslg']        # fewer expected hits against rank higher

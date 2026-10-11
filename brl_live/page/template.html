@@ -4676,12 +4676,14 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
      cards' seasons, computed with the cards; higher is better for him on every row, red above the middle, blue below. */
   var PCT_ROWS = {
     hitter: [["avg", "Batting average", "three"], ["slg", "Slugging", "three"], ["k", "Strikeout %", "pct"], ["bb", "Walk %", "pct"], ["chase", "Chase %", "pct"], ["whiff", "Whiff %", "pct"], ["hard", "Hard-hit %", "pct"]],
-    pitcher: [["k", "Strikeout %", "pct"], ["bb", "Walk %", "pct"], ["whiff", "Whiff %", "pct"], ["chase", "Chase %", "pct"], ["hard", "Hard-hit % against", "pct"], ["avg", "Average against", "three"], ["velo", "Fastball speed", "mph"]]
+    pitcher: [["k", "Strikeout %", "pct"], ["bb", "Walk %", "pct"], ["whiff", "Whiff %", "pct"], ["chase", "Chase %", "pct"], ["hard", "Hard-hit % against", "pct"], ["avg", "Average against", "three"],
+      ["xavg", "Expected average against", "three"], ["xslg", "Expected slugging against", "three"], ["velo", "Fastball speed", "mph"]]
   };
   function lineRate(L, k) {
     var d = function (a, b) { return L[b] ? L[a] / L[b] : null; };
     return k === "avg" ? d("h", "ab") : k === "slg" ? d("tb", "ab") : k === "k" ? d("k", "pa") : k === "bb" ? d("bb", "pa") : k === "chase" ? d("chases", "outside") :
-      k === "whiff" ? d("misses", "swings") : k === "hard" ? d("hard", "bbe") : k === "velo" ? (L.velo != null ? L.velo : null) : null;
+      k === "whiff" ? d("misses", "swings") : k === "hard" ? d("hard", "bbe") : k === "velo" ? (L.velo != null ? L.velo : null) :
+      k === "xavg" ? (L.xh != null ? d("xh", "ab") : null) : k === "xslg" ? (L.xtb != null ? d("xtb", "ab") : null) : null;
   }
   function pctColor(p) {
     /* gray at the middle, deepening to red toward 100 and to blue toward 1 */
@@ -4703,7 +4705,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     });
     if (!h) return "";
     var pool = rk ? (kind === "pitcher" ? rk.pitchers : rk.hitters) : null, min = rk && rk.min ? rk.min : 300;
-    return '<section class="sec pr-sec"><' + hl + ' class="pr-h">Percentile rankings</' + hl + '><p class="lede">Against ' + (pool ? Number(pool).toLocaleString() + " " : "all ") + (kind === "pitcher" ? "pitchers with " + min + "+ batters faced" : "hitters with " + min + "+ plate appearances") + ", " + esc(hzSeasons(asof)) + ". 100 is the best. Red: better than most. Blue: worse." + (kind === "hitter" ? " Fewer strikeouts, chases and misses rank higher." : " Fewer walks, hits and hard contact rank higher.") + '</p><div class="pr-list">' + h +
+    return '<section class="sec pr-sec"><' + hl + ' class="pr-h">Percentile rankings</' + hl + '><p class="lede">Against ' + (pool ? Number(pool).toLocaleString() + " " : "all ") + (kind === "pitcher" ? "pitchers with " + min + "+ batters faced" : "hitters with " + min + "+ plate appearances") + ", " + esc(hzSeasons(asof)) + ". 100 is the best. Red: better than most. Blue: worse." + (kind === "hitter" ? " Fewer strikeouts, chases and misses rank higher." : " Fewer walks, hits and hard contact rank higher." +
+      (x.pct && x.pct.xavg != null ? " Expected: from how hard and at what angle the balls were hit off him; it predicted pitchers' next seasons better than their actual average and slugging against." : "")) + '</p><div class="pr-list">' + h +
       '</div><div class="pr-scale" aria-hidden="true"><span></span><span><span>Worst</span><span>Average</span><span>Best</span></span><span></span></div></section>';
   }
   /* ---------- a player's season line and his last games, the way every player page opens: from MLB's public stats,
@@ -5054,7 +5057,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     ["Does pitching the day before cost a reliever?", "About a sixth of a mph and no strikeouts we could measure, under the bar we set, so the bullpen card does not flag it."],
     ["Do hitters do better the third time through the order?", "Yes, every season: about 1 point more on base and 3 points fewer strikeouts in 2026. A starter's own third-time gap did not reliably carry over."],
     ["Do the changes we call out since last season hold?", "Mostly: of a change in chase, miss, strikeout or hard-hit rate (2 points or more, beyond the sampling noise), about 55% to 70% was still there the next season. Walk-rate changes held less (about 40%), so we do not call them out."],
-    ["Do expected average and slugging from exit speed and launch angle beat the real ones?", "Not in our data: over two seasons they predicted a hitter's next season about as well as his actual average and slugging, not better, so we don't show them."],
+    ["Do expected average and slugging from exit speed and launch angle beat the real ones?", "For hitters, no: over two seasons they predicted the next season about as well as his actual average and slugging, so we don't show them. For pitchers, yes: the balls hit off him predicted his next season better than his actual average and slugging against, so pitcher pages rank them."],
     ["Are the Expected hot zones better than the raw counts?", "Yes, for hitters and for pitchers, on every subset we checked: thin zones are mostly noise, so they are pulled toward the player's level on the league's pattern."]];
   /* "When we say 60%, do they win 60%?" and month by month, from the two seasons re-run (days/season-YYYY.json). */
   function fillSeasonChecks() {
