@@ -283,12 +283,17 @@ PCT_PITCHER = (('k', 1), ('bb', -1), ('whiff', 1), ('chase', 1), ('hard', -1), (
 
 def league_arsenal(T: dict, rows, swing, whiff, outside) -> dict:
     """Each pitch type's league rates on these rows, the reference the arsenal tables show next to a pitcher's: speed,
-    misses per swing, chases, share in the zone and put-aways (strikeouts per two-strike pitch of the type)."""
+    misses per swing, chases, share in the zone and put-aways (strikeouts per two-strike pitch of the type); and, when the
+    table has movement, the type's average movement from spin (PITCHf/x inches, horizontal positive to the pitcher's arm
+    side, so both hands pool), the reference ring on the movement chart."""
     if 'sub' not in T:
         return {}
     idx = np.flatnonzero(rows) if np.asarray(rows).dtype == bool else np.asarray(rows, dtype=np.int64)
     sub = T['sub'][idx]; sw = np.asarray(swing)[idx] == 1; wh = np.asarray(whiff)[idx] == 1; out = np.asarray(outside)[idx]
     two = T['strikes'][idx] == 2; k_end = (T['last_in_pa'][idx] == 1) & (T['out7'][idx] == 1); v0 = T['v0'][idx].astype(np.float64)
+    mov = 'pfx_x' in T and 'pfx_z' in T and 'throw_r' in T
+    if mov:
+        vz = T['pfx_z'][idx].astype(np.float64); hx = T['pfx_x'][idx].astype(np.float64) * np.where(T['throw_r'][idx] == 1, -1.0, 1.0)
     res = {}
     for k, code in enumerate(D.SUBTYPES):
         m = sub == k
@@ -299,6 +304,8 @@ def league_arsenal(T: dict, rows, swing, whiff, outside) -> dict:
                      'chase_rate': round(float((sw & m & out).sum() / max((m & out).sum(), 1)), 3),
                      'zone_rate': round(float((m & ~out).sum() / m.sum()), 3),
                      'putaway': round(float((m & two & k_end).sum() / max((m & two).sum(), 1)), 3)}
+        if mov and np.isfinite(vz[m]).sum() >= 1000 and np.isfinite(hx[m]).sum() >= 1000:
+            res[code]['v_mov'] = round(float(np.nanmean(vz[m])), 1); res[code]['h_arm'] = round(float(np.nanmean(hx[m])), 1)
     return res
 
 

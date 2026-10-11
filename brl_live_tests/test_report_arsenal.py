@@ -79,3 +79,10 @@ def test_league_arsenal_rates_by_pitch_type():
     lg = B.league_arsenal(T, np.ones(n, bool), swing, whiff, out)
     assert set(lg) == {'FF', 'SL'} and lg['SL']['whiff_rate'] == 1.0 and lg['FF']['whiff_rate'] == 0.0
     assert lg['SL']['speed'] == 86.0 and lg['FF']['zone_rate'] == 1.0 and lg['SL']['zone_rate'] == 0.0      # the sliders are the pitches out of the zone
+    assert 'v_mov' not in lg['FF']                                    # no movement columns, no movement reference
+    # movement, horizontal to the arm side: a righty's four-seamer runs toward the third-base side (negative pfx_x) and a
+    # lefty's toward first (positive), so both read +8 arm side; sliders break the other way
+    rhp = np.resize([1, 0], n)
+    T.update({'throw_r': rhp, 'pfx_z': np.where(sub == 4, 1.0, 10.0), 'pfx_x': np.where(sub == 4, -3.0, 8.0) * np.where(rhp == 1, -1.0, 1.0)})
+    lg = B.league_arsenal(T, np.ones(n, bool), swing, whiff, out)
+    assert lg['FF']['v_mov'] == 10.0 and lg['FF']['h_arm'] == 8.0 and lg['SL']['v_mov'] == 1.0 and lg['SL']['h_arm'] == -3.0
