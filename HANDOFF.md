@@ -65,7 +65,15 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 7:10 a.m. Eastern October 11, by `date -u`)
+### In flight (updated 7:40 a.m. Eastern October 11, by `date -u`)
+
+- October 11, 7:40 a.m.: HCHANGE-02 held for chase, misses, strikeouts and hard-hit (a looser 2-point, two-SE rule; 20 to
+  41 hitters flagged; 56% to 70% held), so the changes line uses it; walks stay off (39%). XSTATS-01 failed: expected AVG
+  and SLG from exit speed and launch angle predicted the next season no better than the real numbers (not shown; the
+  Record page says so). Plan rows carry each hitter's MLB season line (fillHitLines, one batch ask for the lineup); the
+  lineup line uses the Expected split in the Expected view; the game log table is keyboard-scrollable (axe clean, light
+  and dark). Local preview mocks: $S/tour/site/mlb/gl/season-hitting.json for the batch season lines. Do not
+  `pkill -f serve.py` from a shell whose own command line contains that string (it kills the shell); kill by pid.
 
 - October 11, 7:10 a.m.: a separate review of the session's page and report changes (4f10922ba..8cfb431c6) found six
   wording defects, no crashes or wrong arithmetic; all fixed in d99b9524e: the velocity chart now says it shows games
