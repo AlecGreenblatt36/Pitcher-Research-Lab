@@ -23,34 +23,40 @@ MAX_MARGIN = 15
 
 def actual_innings(g):
     """(road runs in the 1st, home runs in the 1st, road runs through 5, home runs through 5) from the real scores by
-    inning, or None where a side's 2nd or 6th inning is missing (a shortened game)."""
+    inning (each side's score before its first plate appearance of each inning). The first inning needs both sides' 2nd
+    inning; through five takes each side's score before its 6th, or the final home score when the road team batted in
+    the 6th and the game ended before the home team did (five full innings were played). A part that cannot be read is
+    None: a game shortened before its 2nd inning or before the top of the 6th."""
     a = ((g.get('innings') or {}).get('actual_first_scores')) or {}
-    out = []
-    for upto in (2, 6):
-        for side in ('away', 'home'):
-            d = {int(i): int(v) for i, v in (a.get(side) or [])}
-            if upto not in d:
-                return None
-            out.append(d[upto] - d.get(1, 0))
-    return out[0], out[1], out[2], out[3]
+    d = {side: {int(i): int(v) for i, v in (a.get(side) or [])} for side in ('away', 'home')}
+    first = (d['away'][2] - d['away'].get(1, 0), d['home'][2] - d['home'].get(1, 0)) if 2 in d['away'] and 2 in d['home'] else (None, None)
+    if 6 in d['away'] and 6 in d['home']:
+        five = (d['away'][6], d['home'][6])
+    elif 6 in d['away'] and g.get('home_runs') is not None:
+        five = (d['away'][6], int(g['home_runs']))
+    else:
+        five = (None, None)
+    return first[0], first[1], five[0], five[1]
 
 
 def terms(g):
-    act = actual_innings(g)
-    if act is None or 'first_inning' not in g:
+    if 'first_inning' not in g:
         return None
+    a1, h1, a5, h5 = actual_innings(g)
     n = float(g['n'])
     fi = g['first_inning']
     m = np.asarray(g['f5_margin_hist'], float); k = np.arange(len(m)) - MAX_MARGIN
     t = np.asarray(g['f5_total_hist'], float); kt = np.arange(len(t))
-    a1, h1, a5, h5 = act
-    return {'date': g['date'],
-            'p': {'no_run_1st': fi[0] / n, 'road_scores_1st': fi[1] / n, 'home_scores_1st': fi[2] / n,
-                  'home_leads_5': m[k > 0].sum() / m.sum(), 'tied_5': m[k == 0].sum() / m.sum(), 'road_leads_5': m[k < 0].sum() / m.sum(),
-                  'over_4_5_thru_5': t[kt >= 5].sum() / t.sum(), 'over_3_5_thru_5': t[kt >= 4].sum() / t.sum()},
-            'y': {'no_run_1st': float(a1 + h1 == 0), 'road_scores_1st': float(a1 > 0), 'home_scores_1st': float(h1 > 0),
-                  'home_leads_5': float(h5 > a5), 'tied_5': float(h5 == a5), 'road_leads_5': float(h5 < a5),
-                  'over_4_5_thru_5': float(a5 + h5 >= 5), 'over_3_5_thru_5': float(a5 + h5 >= 4)}}
+    p, y = {}, {}
+    if a1 is not None:
+        p.update({'no_run_1st': fi[0] / n, 'road_scores_1st': fi[1] / n, 'home_scores_1st': fi[2] / n})
+        y.update({'no_run_1st': float(a1 + h1 == 0), 'road_scores_1st': float(a1 > 0), 'home_scores_1st': float(h1 > 0)})
+    if a5 is not None:
+        p.update({'home_leads_5': m[k > 0].sum() / m.sum(), 'tied_5': m[k == 0].sum() / m.sum(), 'road_leads_5': m[k < 0].sum() / m.sum(),
+                  'over_4_5_thru_5': t[kt >= 5].sum() / t.sum(), 'over_3_5_thru_5': t[kt >= 4].sum() / t.sum()})
+        y.update({'home_leads_5': float(h5 > a5), 'tied_5': float(h5 == a5), 'road_leads_5': float(h5 < a5),
+                  'over_4_5_thru_5': float(a5 + h5 >= 5), 'over_3_5_thru_5': float(a5 + h5 >= 4)})
+    return {'date': g['date'], 'p': p, 'y': y} if p else None
 
 
 def fifths(p, y):
@@ -62,18 +68,26 @@ def fifths(p, y):
     return out
 
 
+NAMES = ('no_run_1st', 'road_scores_1st', 'home_scores_1st', 'home_leads_5', 'tied_5', 'road_leads_5', 'over_4_5_thru_5', 'over_3_5_thru_5')
+
+
 def season_check(games, draws=2000, seed=1):
     T = [x for x in (terms(g) for g in games) if x is not None]
+    assert T, 'no game carries the first-inning and five-inning records with the scores by inning (replay with starter_lines)'
     res = {'games': len(T)}
-    dates = np.array([x['date'] for x in T]); keys, inv = np.unique(dates, return_inverse=True)
-    rng = np.random.default_rng(seed); idx = rng.integers(0, len(keys), size=(draws, len(keys)))
-    sn = np.bincount(inv, minlength=len(keys)).astype(float)
-    for name in T[0]['p'] if T else []:
-        p = np.array([x['p'][name] for x in T]); y = np.array([x['y'][name] for x in T])
+    rng = np.random.default_rng(seed)
+    for name in NAMES:
+        S = [x for x in T if name in x['p']]
+        if not S:
+            continue
+        dates = np.array([x['date'] for x in S]); keys, inv = np.unique(dates, return_inverse=True)
+        idx = rng.integers(0, len(keys), size=(draws, len(keys)))
+        sn = np.bincount(inv, minlength=len(keys)).astype(float)
+        p = np.array([x['p'][name] for x in S]); y = np.array([x['y'][name] for x in S])
         sp, sy = np.bincount(inv, weights=p, minlength=len(keys)), np.bincount(inv, weights=y, minlength=len(keys))
         gap = (sp[idx].sum(1) - sy[idx].sum(1)) / sn[idx].sum(1)
         f = fifths(p, y)
-        res[name] = {'pred': round(float(p.mean()), 4), 'actual': round(float(y.mean()), 4), 'gap_points': round(100 * float(p.mean() - y.mean()), 2),
+        res[name] = {'games': int(len(S)), 'pred': round(float(p.mean()), 4), 'actual': round(float(y.mean()), 4), 'gap_points': round(100 * float(p.mean() - y.mean()), 2),
                      'gap_ci_points': [round(100 * float(np.quantile(gap, .025)), 2), round(100 * float(np.quantile(gap, .975)), 2)],
                      'fifths': f, 'max_fifth_gap_points': round(100 * max(abs(a - b) for a, b, _ in f), 2),
                      'brier': round(float(((p - y) ** 2).mean()), 5), 'brier_const': round(float(((y.mean() - y) ** 2).mean()), 5)}

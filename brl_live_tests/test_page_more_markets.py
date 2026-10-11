@@ -41,17 +41,23 @@ F = {'away': {'abbr': 'LAD'}, 'home': {'abbr': 'MIL'}}
 
 def test_run_line_keeps_the_pick_and_the_favorite_lays_the_run_and_a_half():
     # home wins 600 of 1,000 worlds, 350 by two or more: given a win, 7/12; the pick says home 51%
-    got = json.loads(_run('process.stdout.write(JSON.stringify(runLineMarket(' + json.dumps(F) + ',' + json.dumps(BOX) + ')));', 0.51, {}))
+    rl = lambda mkt: 'process.stdout.write(JSON.stringify(runLineMarket(' + json.dumps(F) + ',' + json.dumps(BOX) + ',' + json.dumps(mkt) + ')));'
+    got = json.loads(_run(rl(None), 0.51, {}))
     assert got['fav'] == 'home' and got['dog'] == 'away' and abs(got['p'] - 0.51 * 350 / 600) < 1e-12
-    # the road team favored: its win by two or more given a win is 100/400
-    got = json.loads(_run('process.stdout.write(JSON.stringify(runLineMarket(' + json.dumps(F) + ',' + json.dumps(BOX) + ')));', 0.40, {}))
+    # the road team favored by our pick: its win by two or more given a win is 100/400
+    got = json.loads(_run(rl(None), 0.40, {}))
     assert got['fav'] == 'away' and abs(got['p'] - 0.60 * 100 / 400) < 1e-12
+    # with a line, the book's favorite lays the run and a half even where our pick leans the other way
+    got = json.loads(_run(rl({'home_ml': 120, 'away_ml': -140}), 0.51, {}))
+    assert got['fav'] == 'away' and abs(got['p'] - 0.49 * 100 / 400) < 1e-12
+    got = json.loads(_run(rl({'home_ml': -150, 'away_ml': 130}), 0.45, {}))
+    assert got['fav'] == 'home' and abs(got['p'] - 0.45 * 350 / 600) < 1e-12
 
 
 def test_markets_show_only_when_switched_on():
     off = _run('process.stdout.write(moreMarkets(' + json.dumps(F) + ',' + json.dumps(BOX) + '));', 0.51, {'runline': False, 'f5': False, 'nrfi': False})
     assert off == ''
-    on = _run('process.stdout.write(moreMarkets(' + json.dumps(F) + ',' + json.dumps(BOX) + '));', 0.51, {'runline': True, 'f5': True, 'nrfi': True})
+    on = _run('process.stdout.write(moreMarkets(' + json.dumps(F) + ',' + json.dumps(BOX) + ',null));', 0.51, {'runline': True, 'f5': True, 'nrfi': True})
     assert 'MIL −1.5 <b>30%</b>' in on and 'LAD +1.5 <b>70%</b>' in on          # 0.51 x 7/12 = 0.2975
     assert 'tied after five 20%, a push' in on and 'LAD <b>37%</b>' in on and 'MIL <b>63%</b>' in on   # 0.3/0.8 and 0.5/0.8
     assert 'Over <b>60%</b>' in on and 'Under <b>40%</b>' in on                       # five or more through five: 600 of 1,000

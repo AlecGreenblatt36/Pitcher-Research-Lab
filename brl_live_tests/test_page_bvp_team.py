@@ -89,3 +89,10 @@ def test_a_group_without_its_block_name_is_read_from_its_keys_and_a_missing_team
         st.pop('group')
     out = json.loads(_run('var t=tsTeams(' + json.dumps(doc) + ');process.stdout.write(JSON.stringify([Object.keys(t["100"]).sort(),tsTable(t,["100","999"],["A","B"])]));'))
     assert out == [['hitting', 'pitching'], '']
+
+
+def test_career_lines_count_regular_season_meetings_only():
+    post = dict(_split(4, 4, 2, 1, 0, 1, 5), gameType='P')
+    doc = {'people': [{'id': 7, 'stats': [{'type': {'displayName': 'vsPlayerTotal'}, 'splits': [_split(6, 5, 1, 0, 1, 2, 1), post]}]}]}
+    rows = json.loads(_run('process.stdout.write(JSON.stringify(bvpRows(' + json.dumps(doc) + ')));'))
+    assert rows['7']['pa'] == 6 and rows['7']['hr'] == 0

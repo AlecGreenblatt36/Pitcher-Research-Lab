@@ -1057,10 +1057,12 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     return t ? 1 - below / t : 0;
   }
   /* A starter's strikeouts the way the prop market lists them: the chance of more than each half line near his middle, with
-     the fair price (PLAYER-04: on the live engine these chances came within 2.1 points of how often starters got there). */
+     the fair price, at the lines PLAYER-04 checked (2.5 to 8.5: on the live engine within 2.1 points of how often starters
+     got there). */
   function kLadder(c) {
     var med = quant(c, 0.5), lines = [];
-    for (var L = Math.max(0.5, med - 1.5); L <= med + 1.5; L += 1) lines.push(L);
+    for (var L = Math.max(2.5, med - 1.5); L <= Math.min(8.5, med + 1.5); L += 1) lines.push(L);
+    if (!lines.length) return "";
     return '<table class="box ladder"><thead><tr><th scope="col">Strikeouts</th><th scope="col">Over</th><th scope="col">Under</th></tr></thead><tbody>' +
       lines.map(function (L) {
         var o = probAtLeast(c, L + 0.5);
@@ -2774,6 +2776,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       (p.stats || []).forEach(function (st) {
         if (((st.type || {}).displayName || "") !== "vsPlayerTotal") return;
         (st.splits || []).forEach(function (x) {
+          if (x.gameType && x.gameType !== "R") return;
           var a = x.stat || {}, c = out[p.id] || (out[p.id] = { pa: 0, ab: 0, h: 0, hr: 0, bb: 0, k: 0, hbp: 0, sf: 0, tb: 0 });
           c.pa += +a.plateAppearances || 0; c.ab += +a.atBats || 0; c.h += +a.hits || 0; c.hr += +a.homeRuns || 0; c.bb += +a.baseOnBalls || 0;
           c.k += +a.strikeOuts || 0; c.hbp += +a.hitByPitch || 0; c.sf += +a.sacFlies || 0; c.tb += +a.totalBases || 0;
@@ -2798,19 +2801,25 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     return '<div class="tbl-wrap" tabindex="0" role="region" aria-label="' + esc(label || "Career against the starter") + ', scrolls sideways"><table class="box bvp-t"><thead><tr><th scope="col">Hitter</th><th scope="col">PA</th><th scope="col">H</th><th scope="col">HR</th><th scope="col">BB</th><th scope="col">K</th><th scope="col">AVG</th><th scope="col">OPS</th></tr></thead><tbody>' +
       body + (met > 1 ? '<tr class="bvp-tot"><th scope="row">Lineup</th>' + cells(tot) + "</tr>" : "") + "</tbody></table></div>";
   }
+  /* each section is painted once per answer (a repaint would reset its sideways scroll); a failed ask is tried again a
+     minute later, the next time the tab is drawn */
   function fillBvp() {
     app.querySelectorAll("[data-bvp]").forEach(function (sec) {
       var pid = sec.getAttribute("data-bvp"), ids = sec.getAttribute("data-hitters"), key = pid + ":" + ids, body = sec.querySelector(".bvp-body"), e = BVP[key];
+      if (e && e.failed && Date.now() - e.at > 60000) { delete BVP[key]; e = null; }
       if (e && !e.pending) {
+        var mark = key + (e.failed ? ":failed" : "");
+        if (sec.getAttribute("data-painted") === mark) return;
         var names = []; try { names = JSON.parse(sec.getAttribute("data-names")); } catch (err) { names = []; }
         if (body) body.innerHTML = e.failed ? '<p class="note">MLB\'s records did not load; the grid above is our read of each meeting.</p>' : bvpTable(e.rows, names, (sec.querySelector("h3") || {}).textContent) + '<p class="note">' + BVP_NOTE + "</p>";
+        sec.setAttribute("data-painted", mark);
         return;
       }
       if (e) return;
       BVP[key] = { pending: true };
       lcFetch(LIVE_API + "v1/people?personIds=" + ids + "&hydrate=stats(group=[hitting],type=[vsPlayerTotal],opposingPlayerId=" + pid + ")").then(function (doc) {
         BVP[key] = { rows: bvpRows(doc) }; fillBvp();
-      }, function () { BVP[key] = { failed: true }; fillBvp(); });
+      }, function () { BVP[key] = { failed: true, at: Date.now() }; fillBvp(); });
     });
   }
   var BVP_NOTE = "Regular-season meetings, from MLB. These are small samples. Over four seasons, beyond each player's own level, a 20 plate-appearance record carried between none and about 15% of its on-base edge into later meetings, and no strikeout or slugging edge we could tell from noise. The grid above is our read of each meeting.";
@@ -2867,6 +2876,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   function fillTeamStats() {
     app.querySelectorAll("[data-ts]").forEach(function (sec) {
       var y = sec.getAttribute("data-ts"), e = TS[y], body = sec.querySelector(".ts-body");
+      if (e && e.failed && Date.now() - e.at > 60000) { delete TS[y]; e = null; }
       if (e && !e.pending) {
         var t = e.failed ? "" : tsTable(e.teams, sec.getAttribute("data-teams").split(","), sec.getAttribute("data-abbr").split(","));
         if (!t) { sec.hidden = true; return; }
@@ -2876,7 +2886,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (e) return;
       TS[y] = { pending: true };
       lcFetch(LIVE_API + "v1/teams/stats?season=" + y + "&sportIds=1&group=hitting,pitching&stats=season").then(function (doc) { TS[y] = { teams: tsTeams(doc) }; fillTeamStats(); },
-        function () { TS[y] = { failed: true }; fillTeamStats(); });
+        function () { TS[y] = { failed: true, at: Date.now() }; fillTeamStats(); });
     });
   }
   var RP_METRICS = {
@@ -4551,19 +4561,24 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
      innings (a tie pushes) and the first inning are the simulator's own chances. */
   var MORE_MARKETS = { runline: false, f5: false, nrfi: false };
   function mmShare(c, test) { var t = total(c), s = 0; c.counts.forEach(function (x) { if (test(x[0])) s += x[1]; }); return t ? s / t : null; }
-  function runLineMarket(f, box) {
+  /* the run line's favorite lays the run and a half: the book's moneyline favorite when there is a line (so the two sides
+     match the book's), else our pick's; its chance is our win chance for it times the simulator's by-two-or-more given a win */
+  function runLineMarket(f, box, mkt) {
     var m = box && dist(box.margin_distribution), ph = homeProb(f);
     if (!m || ph == null) return null;
     var hw = mmShare(m, function (k) { return k > 0; }), h2 = mmShare(m, function (k) { return k >= 2; });
     var aw = mmShare(m, function (k) { return k < 0; }), a2 = mmShare(m, function (k) { return k <= -2; });
     if (!hw || !aw) return null;
-    var favHome = ph >= 0.5, p = favHome ? ph * h2 / hw : (1 - ph) * a2 / aw;
+    var imp = function (ml) { ml = Number(ml); return ml < 0 ? -ml / (100 - ml) : 100 / (ml + 100); };
+    var favHome = mkt && mkt.home_ml != null && mkt.away_ml != null && isFinite(Number(mkt.home_ml)) && isFinite(Number(mkt.away_ml)) && imp(mkt.home_ml) !== imp(mkt.away_ml) ?
+      imp(mkt.home_ml) > imp(mkt.away_ml) : ph >= 0.5;
+    var p = favHome ? ph * h2 / hw : (1 - ph) * a2 / aw;
     return { fav: favHome ? "home" : "away", dog: favHome ? "away" : "home", p: p };
   }
-  function moreMarkets(f, box) {
+  function moreMarkets(f, box, mkt) {
     var rows = [], cell = function (label, p) { return "<td>" + label + " <b>" + pct(p) + "</b><small>" + amOdds(p) + "</small></td>"; };
     if (MORE_MARKETS.runline) {
-      var rl = runLineMarket(f, box);
+      var rl = runLineMarket(f, box, mkt);
       if (rl) rows.push('<tr><th scope="row">Run line</th>' + cell(esc(f[rl.fav].abbr) + " \u22121.5", rl.p) + cell(esc(f[rl.dog].abbr) + " +1.5", 1 - rl.p) + "</tr>");
     }
     var f5 = box && dist(box.f5_margin_distribution), f5t = box && dist(box.f5_total_distribution);
@@ -4577,7 +4592,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       rows.push('<tr><th scope="row">First inning</th>' + cell("A run", 1 - nr) + cell("No run", nr) + "</tr>");
     }
     if (!rows.length) return "";
-    return '<section class="sec"><h2>More markets</h2><div class="tbl-wrap"><table class="box mm"><tbody>' + rows.join("") + '</tbody></table></div><p class="note">Our chance of each side and its fair price (no margin). The run line is our pick times how often the simulator\'s winner won by two or more; the first five innings and the first inning are the simulator\'s own chances. Each was checked on two seasons re-run before it was shown here.</p></section>';
+    return '<section class="sec"><h2>More markets</h2><div class="tbl-wrap"><table class="box mm"><tbody>' + rows.join("") + '</tbody></table></div><p class="note">Our chance of each side and its fair price (no margin). The run line: our win chance for the team laying the run and a half times how often the simulator\'s winner won by two or more. The first five innings: each team\'s chance if it is not tied after five (a tie pushes); those and the first inning are the simulator\'s own chances. Each was checked on two seasons re-run before it was shown here.</p></section>';
   }
   function oddsTab(f, box) {
     var h = "", pa = winProb(f, "away"), ph = winProb(f, "home");
@@ -4630,7 +4645,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         "Most likely " + mode(tr) + ". Half of games land between " + quant(tr, .25) + " and " + quant(tr, .75) + ". " + pct(probAtLeast(tr, 10)) + " reach 10 or more." + esc(mline) + "</p></section>";
     }
 
-    h += moreMarkets(f, box);
+    h += moreMarkets(f, box, mkt);
     h += '<section class="sec"><h2>Starting pitchers</h2><ul class="range-list">';
     ["away", "home"].forEach(function (side) {
       var p = box.teams[side].pitching[0];
@@ -4640,9 +4655,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         (d.K ? '<span class="r num">' + quant(d.K, .25) + " to " + quant(d.K, .75) + " strikeouts</span> <small>most likely " + mode(d.K) + "</small><br>" : "") +
         (d.outs ? '<span class="r num">' + ip(quant(d.outs, .25)) + " to " + ip(quant(d.outs, .75)) + " innings</span><br>" : "") +
         (d.PC ? '<span class="r num">' + quant(d.PC, .25) + " to " + quant(d.PC, .75) + " pitches</span> <small>estimated</small>" : "") +
-        (d.K ? '<div class="tbl-wrap ladder-wrap">' + kLadder(d.K) + "</div>" : "") + "</li>";
+        (d.K && kLadder(d.K) ? '<div class="tbl-wrap ladder-wrap">' + kLadder(d.K) + "</div>" : "") + "</li>";
     });
-    h += '</ul><p class="note">Ranges cover the middle half of simulated games. Strikeouts: his chance of more than each line, with the fair price (no margin). Over two seasons re-run, these chances came within 2 points of how often starters actually got there.</p></section>';
+    h += '</ul><p class="note">Ranges cover the middle half of simulated games. Strikeouts: his chance of more than each line from 2.5 to 8.5, with the fair price (no margin). Over two seasons re-run, these chances came within about 2 points of how often starters actually got there.</p></section>';
 
     h += '<div class="pair wide">';
     ["away", "home"].forEach(function (side) {
@@ -5251,11 +5266,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       '</tbody></table></div><p class="note">Every tag listed held in both seasons. Reads that did not hold up are not used: extra misses on hard fastballs, extra misses on the inside third, and for pitchers, falling behind first and allowing few chases.</p>' +
       '<h3 class="hz-h">Other things we checked before saying them</h3><div class="tbl-wrap other-checks"><table class="box"><thead><tr><th scope="col">The question</th><th scope="col">What we found</th></tr></thead><tbody>' +
       OTHER_CHECKS.map(function (r) { return "<tr><td>" + esc(r[0]) + "</td><td>" + esc(r[1]) + "</td></tr>"; }).join("") + "</tbody></table></div>" +
-      '<p class="note">Each was written down with its test before the numbers came in, then checked on 2026 games the earlier seasons never saw.</p>';
+      '<p class="note">Each was written down with its test before the numbers came in (the strikeout check is the exception: we described it after looking), and checked on games the fitted numbers never saw.</p>';
   }
   var OTHER_CHECKS = [
-    ["Are the hitter chances on the Odds tab right?", "Close. Over two seasons re-run, the chance of at least one hit came within 1 point of how often hitters got one (61.2% against 61.3% in 2025, 61.6% against 60.7% in 2026), home runs within 0.6 points and walks within about 2. The likeliest home-run hitters ran 1 to 2 points high. A correction fitted on one season made the other worse, so the chances are shown as the simulator gives them."],
-    ["Are the starters' strikeout chances right?", "Yes: over two seasons re-run, the chance of reaching each line from 3 to 9 strikeouts came within about 2 points of how often starters did, and the middle half of each start's range held half the real lines."],
+    ["Are the hitter chances on the Odds tab right?", "Close. Over two seasons re-run, the chance of at least one hit came within 1 point of how often hitters got one (61.2% against 61.3% in 2025, 61.6% against 60.7% in 2026), a home run within 0.6 points, and reaching by a walk or hit-by-pitch within about 2. The likeliest home-run hitters ran 1 to 2.3 points high. A correction fitted on one season did not hold up on the other (hits, two hits and walks got worse), so the chances are shown as the simulator gives them."],
+    ["Are the starters' strikeout chances right?", "Yes: over two seasons re-run, the chance of reaching each line from 3 to 9 strikeouts came within about 2 points of how often starters did, and the middle half of each start's range held half the real lines. We described this one after looking at it."],
     ["Does a hitter's record against one pitcher carry into their next meetings?", "A little at most: beyond each player's own level, a 20 plate-appearance record carried between none and about 15% of its on-base edge, and no strikeout or slugging edge we could tell from noise. The Matchups tab shows the records as facts."],
     ["Do a hitter's last ten games say how his next ten go?", "Hardly: about 2% of a hot or cold stretch in getting on base or slugging carried over, within noise. Strikeouts carried about 15%."],
     ["Does a hitter's split against lefties or righties carry over?", "Beyond the usual split for his side, no (average and slugging: correlation 0.06 a season later). Misses carried over in part. The Expected view leans on the usual split."],
@@ -5359,7 +5374,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       h += "</ul></details>";
     }
     h += "<h2>Player pages</h2><p>Every hitter and pitcher with enough pitches has a page: his season line and last ten games from MLB, percentile rankings against everyone with 300 or more plate appearances or batters faced, his splits, hot zones, where he hits it, and for pitchers the arsenal, how each pitch moves and his fastball speed game by game. A few things we checked before saying them: a hitter's last ten games told almost nothing about his next ten in getting on base or slugging (strikeouts carried a little), and a split against lefties or righties beyond the usual one for his side mostly did not carry over to the next season, for hitters or pitchers, so the Expected view leans on the usual split. A starter's fastball speed did carry: about 45% of a change in his last start showed up again in the next one, and starters coming off a drop of a mile per hour or more struck out about two fewer batters per 100.</p>";
-    h += "<h2>Team stats, props and past meetings</h2><p>Before first pitch the Summary shows both teams' season numbers from MLB, each with the club's rank among the 30. The Odds tab lists each starter's strikeouts the way sportsbooks do, with our chance of going over each line and its fair price; re-run over two seasons, those chances came within about 2 points of how often starters actually got there. Each hitter's chances there are his own, so a pinch hitter taking his last trip is allowed for. The Matchups tab adds each hitter's career line against the starting pitcher, from MLB. Those are small samples: over four seasons, beyond each player's own level, a 20 plate-appearance record carried between none and about 15% of its on-base edge into later meetings.</p>";
+    h += "<h2>Team stats, props and past meetings</h2><p>Before first pitch the Summary shows both teams' season numbers from MLB, each with the club's rank among the 30. The Odds tab lists each starter's strikeouts the way sportsbooks do, with our chance of going over each line and its fair price; re-run over two seasons, those chances came within about 2 points of how often starters actually got there. Each hitter's chances there are his own: the trips a pinch hitter or substitute takes from his spot late in games are allowed for, on average for each spot in the order. The Matchups tab adds each hitter's career line against the starting pitcher, from MLB. Those are small samples: over four seasons, beyond each player's own level, a 20 plate-appearance record carried between none and about 15% of its on-base edge into later meetings.</p>";
     h += "<h2>The projected game</h2><p>One of the ten thousand games: the one closest to the middle on runs, hits and each starter's innings and strikeouts, with our pick winning in nine innings. It reads like a box score, but it is one likely way the night goes, not a promise. The high-scoring, low-scoring and upset versions show the range.</p>";
     h += "<h2>During the game</h2><p>While a game is on, the page checks MLB's feed every 15 seconds for the score, the plays and every pitch. The win chance moves after each play, using the same ten thousand games from before first pitch and how real games have gone from the same spot.</p>";
     h += "<h2>Past and future games</h2><p>Tap Games, then use the date strip or the calendar. Any day of 2025 and 2026 works. Past days show the real box score next to what we said, and how our picks did that day. Before October 6, 2026 those are re-runs: we played each game again after the season using only what was known before it. For tomorrow, we post an early number the night before once both starters are announced, using projected lineups, and update it on game day when the real lineups come out. Further out you see the schedule.</p>";

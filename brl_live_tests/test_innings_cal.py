@@ -27,16 +27,20 @@ def _games(seed, n=2400, extra_scoreless=0.0):
             ra[0] = rh[0] = 0
         sa, sh = np.r_[0, np.cumsum(ra)], np.r_[0, np.cumsum(rh)]
         firsts = {'away': [[k + 1, int(sa[k])] for k in range(9)], 'home': [[k + 1, int(sh[k])] for k in range(9)]}
-        out.append({'game_pk': i, 'date': '2025-%03d' % (i // 15), 'n': w, 'first_inning': first, 'f5_margin_hist': f5m.tolist(), 'f5_total_hist': f5t.tolist(),
+        out.append({'game_pk': i, 'date': '2025-%03d' % (i // 15), 'n': w, 'first_inning': first, 'f5_margin_hist': f5m.tolist(), 'f5_total_hist': f5t.tolist(), 'home_runs': int(sh[-1]),
                     'innings': {'actual_first_scores': firsts}})
     return out
 
 
 def test_real_innings_are_read_from_the_scores_by_inning():
-    g = {'innings': {'actual_first_scores': {'away': [[1, 0], [2, 2], [3, 2], [4, 2], [5, 3], [6, 3]], 'home': [[1, 0], [2, 0], [3, 1], [6, 4]]}}}
+    g = {'home_runs': 5, 'innings': {'actual_first_scores': {'away': [[1, 0], [2, 2], [3, 2], [4, 2], [5, 3], [6, 3]], 'home': [[1, 0], [2, 0], [3, 1], [6, 4]]}}}
     assert ic.actual_innings(g) == (2, 0, 3, 4)
-    g['innings']['actual_first_scores']['home'] = [[1, 0], [2, 0]]            # no sixth inning for the home side: left out
-    assert ic.actual_innings(g) is None
+    # called in the top of the 6th: five full innings, the home team's five-inning score is its final
+    g['innings']['actual_first_scores']['home'] = [[1, 0], [2, 0], [3, 1]]
+    assert ic.actual_innings(g) == (2, 0, 3, 5)
+    # shortened before the road team's 6th: the first inning still counts, five innings do not
+    g['innings']['actual_first_scores']['away'] = [[1, 0], [2, 2], [3, 2]]
+    assert ic.actual_innings(g) == (2, 0, None, None)
 
 
 def test_own_chances_check_out_and_a_planted_scoreless_first_is_found():

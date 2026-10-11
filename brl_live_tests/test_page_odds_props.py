@@ -74,6 +74,8 @@ def test_strikeout_ladder_centers_on_the_median_and_over_plus_under_is_one():
         p = sum(c for k, c in counts if k > float(line)) / n
         assert int(over) == round(p * 100) and int(over) + int(under) in (99, 100, 101)
         assert (o_odds.startswith('−') or o_odds == '+100') if p >= 0.5 else o_odds.startswith('+')
-    # a pitcher with a low median never gets a line below a half strikeout
+    # only the lines PLAYER-04 checked (2.5 to 8.5): an opener's median of 0 gets none, an ace's median of 9 two
     low = _run('process.stdout.write(kLadder({counts:[[0,500],[1,300],[2,200]]}));')
-    assert re.findall(r'<th scope="row">([\d.]+)</th>', low) == ['0.5', '1.5']
+    assert low == ''
+    ace = _run('process.stdout.write(kLadder({counts:[[7,100],[8,200],[9,300],[10,250],[11,150]]}));')
+    assert re.findall(r'<th scope="row">([\d.]+)</th>', ace) == ['7.5', '8.5']
