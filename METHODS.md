@@ -151,6 +151,13 @@ location alignment (pitches in the recommended cells against the pitcher's usual
 intent) and policy value (not measured by a grade). Intent logging and randomized plan comparisons are the evidence
 that would settle the last link; they need a team.
 
+The report also carries plain counts for the standard scouting views (PROD-06, a display change with no claim): each
+hitter's results over MLB's 13 zones (the per-pitch zone, catcher's view) by the pitcher's hand and pitch type, each
+pitcher's by the batter's side, each hitter's batted-ball direction (field thirds at 15 degrees from the gameday hit
+coordinates) and trajectory, and each planned arm's pitches on the five days before the game. All of it comes from
+the same training pitches as the maps. The page colors a zone against the league's rate for that batter side and
+pitcher hand; SLG counts a triple as a double, and zones with few at-bats are shown in gray.
+
 ## Privacy, storage and publication
 
 Raw source responses, player history, pitch tables and model files stay encrypted on the data branch; the key is an
