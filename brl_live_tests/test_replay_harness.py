@@ -75,3 +75,12 @@ def test_reconstruct_and_replay(tmp_path):
     out_age = replay_dates(h, app, g, dates, model_path=plain, model_sha256=sha256_file(plain), history_path=history_path, hazard_path=hazard, n_sims=4,
                            age_layer=big, log=lambda m: None)
     assert runs(out_age) > runs(out_plain)
+    # hitter lines (PLAYER-03): each lineup hitter's histograms count every world once and agree with his chances
+    out_hl = replay_dates(h, app, g, dates, model_path=plain, model_sha256=sha256_file(plain), history_path=history_path, hazard_path=hazard, n_sims=4,
+                          hitter_lines=True, log=lambda m: None)
+    for r in out_hl:
+        assert len(r['hitters']) == 18
+        for x in r['hitters']:
+            assert all(sum(x[k]) == 4 for k in ('h_hist', 'hr_hist', 'bb_hist', 'k_hist'))
+            for p_, k in (('p_hit', 'h_hist'), ('p_hr', 'hr_hist'), ('p_bb', 'bb_hist'), ('p_k', 'k_hist')):
+                assert abs(x[p_] - (1 - x[k][0] / 4)) < 1e-9

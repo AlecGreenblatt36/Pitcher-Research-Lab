@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 301,
- "rows": 304,
+ "experiments": 303,
+ "rows": 306,
  "records": {
   "ACC-01": [
    {
@@ -5027,6 +5027,41 @@
     ],
     "frozen_commits": [],
     "status": "(1), (2) held; (3) failed"
+   }
+  ],
+  "PLAYER-03": [
+   {
+    "id": "PLAYER-03",
+    "columns": {
+     "ID": "PLAYER-03",
+     "Attempt": "The hitter chances on the page, re-scored on the live engine, with a calibration fitted across seasons. Each lineup hitter's chance of at least one hit, two or more hits, a home run, a walk and a strikeout, computed the way the page computes them (each of the slot's events kept with his spot's share of the slot's plate appearances, PLAYER-02), from full replays of 2025 and 2026 with the live settings (the settings of TOTALS-08's paired-streams weather replays: each season with tables fitted on other seasons, 1,000 worlds per game, the same seeds) plus each hitter's histograms of hits, home runs, walks and strikeouts (brl_replay/harness.py), against his actual line in that game (box-score facts). PLAYER-02 scored the October 8 engine on 2026 only; the bullpens, the starter leash and the run environment have changed since (PROD-03, PROD-04). Calibration: for each kind of chance, logit(p') = a + b logit(p), fitted by maximum likelihood on one season's hitter-games and applied to the other season's",
+     "Disposition and evidence": "**Registered in the commit that added this row, before any replay.** Predictions: (1) the chance of at least one hit runs 0.5 to 2.0 points above the actual share in both seasons; (2) a home run 0.2 to 1.0 points above, and the tenth of hitter-games with the highest chance 1 to 4 points above; (3) two or more hits 0.3 to 2.0 points above; (4) a walk and a strikeout within 1.5 points of the actual share either way; (5) the calibration passes the rule below for the hit and home-run chances and not for walks. Decision rule: the page shows the calibrated chance of a kind (the Summary's meters and the Odds tab's table) if, in both seasons with the map fitted on the other season, the Brier score falls with the 95% interval's upper end below zero (bootstrap over dates, 2,000 draws, paired by hitter-game) and the calibrated mean is within 0.5 points of the actual share; the map shown is then fitted on both seasons together. Otherwise the raw chance stays. Also reported, not gates: each kind by lineup spot and for hitters with fewer than 200 plate appearances in the prior 365 days. Results: pending",
+     "Delta corrected Brier, 2026": "pending"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "pending"
+   }
+  ],
+  "PLAYER-04": [
+   {
+    "id": "PLAYER-04",
+    "columns": {
+     "ID": "PLAYER-04",
+     "Attempt": "Starters' strikeouts as the page states them, scored on the live engine (descriptive: the numbers were looked at before this row was written, so no prediction is claimed). The replays that tested the live run environment (TOTALS-08's paired-streams weather replays, runs 38009502287 and 38009599322, 1,000 worlds per game, each season with tables fitted on other seasons) record each starter's simulated strikeout distribution and his actual line: 4,854 starts in 2026 and 4,846 in 2025",
+     "Disposition and evidence": "Strikeouts 4.67 simulated against 4.70 actual (2026) and 4.85 against 4.79 (2025); actual on the simulated mean slope 1.005 and 0.993; the middle half of each start's distribution holds 49.1% and 49.6% of actual lines, the middle 80% holds 79.8% and 78.9%; by fifths of the simulated mean within 0.19 strikeouts in both seasons. The chance of at least 3 to 9 strikeouts against the actual share: within 1.4 points at every line in 2026 (5 or more 50.3% against 49.7%, 7 or more 21.7% against 22.8%, 9 or more 6.6% against 8.0%) and within 2.1 points in 2025 (3 or more 83.3% against 81.2%, 5 or more 53.0% against 51.8%, 7 or more 23.6% against 23.0%). PLAYER-01's shortfall (4.57 against 4.70, slope 1.10, before PROD-03) is gone with the leash and the fitted bullpens. Product call: the Odds tab states each starter's strikeouts the way the prop market does, his chance of more than each half line near his middle",
+     "Delta corrected Brier, 2026": "descriptive"
+    },
+    "registered_before_run": false,
+    "diagnostic": false,
+    "runs": [
+     "38009502287",
+     "38009599322"
+    ],
+    "frozen_commits": [],
+    "status": "descriptive"
    }
   ],
   "BOX-01": [

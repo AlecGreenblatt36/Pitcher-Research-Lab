@@ -156,7 +156,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
     leash: optional (research_lab.game_sim.starter_leash.Leash, AppearanceIndex of regular-season appearances): each
         starter's expected batters faced moved for short rest, a relief outing before, a return from a layoff and the month.
     hitter_lines: also record each lineup hitter's simulated chances (at least one hit, a home run, a strikeout, a walk), mean
-    plate appearances, hits and home runs, the hits histogram, his actual line in that game (box-score facts) and a baseline
+    plate appearances, hits and home runs, the histograms of his hits, home runs, walks and strikeouts, his actual line in that game (box-score facts) and a baseline
     from earlier dates only (his hit and home-run rates per plate appearance over the prior 365 days, shrunk toward the league)."""
     from brl_live.provider_adjust import ContextAdjust, EnvironmentAdjust, TeamAdjust, RoleAdjust
     hcols = h[HISTORY_COLUMNS]
@@ -367,7 +367,8 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
             hl = None
             if hitter_lines:
                 # per lineup hitter: worlds with >=1 hit, >=1 home run, >=1 strikeout, >=1 walk; sums of PA, hits, home runs; hits histogram
-                hl = {(side, str(b.player_id)): {"any": np.zeros(4), "sum": np.zeros(3), "h_hist": np.zeros(6, int)}
+                hl = {(side, str(b.player_id)): {"any": np.zeros(4), "sum": np.zeros(3), "h_hist": np.zeros(6, int), "hr_hist": np.zeros(4, int),
+                                                 "bb_hist": np.zeros(5, int), "k_hist": np.zeros(5, int)}
                       for side in ("away", "home") for b in teams[side].lineup}
             for si, s in enumerate(seeds):
                 if dform is not None:
@@ -417,9 +418,10 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                         a_["any"] += (c_[1] > 0, c_[2] > 0, c_[3] > 0, c_[4] > 0)
                         a_["sum"] += (c_[0], c_[1], c_[2])
                         a_["h_hist"][min(c_[1], 5)] += 1
+                        a_["hr_hist"][min(c_[2], 3)] += 1; a_["bb_hist"][min(c_[4], 4)] += 1; a_["k_hist"][min(c_[3], 4)] += 1
                     for bid_ in hl:
                         if bid_ not in cnt:
-                            hl[bid_]["h_hist"][0] += 1
+                            hl[bid_]["h_hist"][0] += 1; hl[bid_]["hr_hist"][0] += 1; hl[bid_]["bb_hist"][0] += 1; hl[bid_]["k_hist"][0] += 1
             records.append({"game_pk": int(g.game_pk), "date": date, "home": g.home, "away": g.away, "n": n_sims,
                             "home_wins": hw, "ties": ties, "home_hist": ha.tolist(), "away_hist": aa.tolist(),
                             "home_starter_outs": float(np.mean(s_outs["home"])) if s_outs["home"] else 0.0, "away_starter_outs": float(np.mean(s_outs["away"])) if s_outs["away"] else 0.0,
@@ -435,6 +437,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                                       "p_k": round(float(a_["any"][2] / n_sims), 4), "p_bb": round(float(a_["any"][3] / n_sims), 4),
                                       "mean_pa": round(float(a_["sum"][0] / n_sims), 3), "mean_h": round(float(a_["sum"][1] / n_sims), 4),
                                       "mean_hr": round(float(a_["sum"][2] / n_sims), 4), "h_hist": a_["h_hist"].tolist(),
+                                      "hr_hist": a_["hr_hist"].tolist(), "bb_hist": a_["bb_hist"].tolist(), "k_hist": a_["k_hist"].tolist(),
                                       "prior_h_rate": round(float(ph_), 4), "prior_hr_rate": round(float(phr_), 4), "prior_pa_365": prior_pa_,
                                       "actual": act_bat.get((int(g.game_pk), int(b.player_id)))})
                 records[-1]["hitters"] = out_h
