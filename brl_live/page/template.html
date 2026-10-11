@@ -4639,6 +4639,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
      innings (a tie pushes) and the first inning are the simulator's own chances. */
   var MORE_MARKETS = { runline: false, f5: false, nrfi: false };
   /* the hitters' two or more total bases (total bases over 1.5), off until PLAYER-06 holds */
+  /* The hitter props table: 1+ hit, 2+ hits, HR, walk and 1+ strikeout (the batter-strikeouts market at 0.5; PLAYER-03 found
+     the strikeout chance within 1.0 point of the actual share in both seasons re-run). */
   var PROP_COLS = { tb2: false };
   function mmShare(c, test) { var t = total(c), s = 0; c.counts.forEach(function (x) { if (test(x[0])) s += x[1]; }); return t ? s / t : null; }
   /* the run line's favorite lays the run and a half: the book's moneyline favorite when there is a line (so the two sides
@@ -4746,12 +4748,12 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     ["away", "home"].forEach(function (side) {
       var bat = box.teams[side].batting || [], bnames = shortNames(bat);
       var tb = PROP_COLS.tb2 && bat.some(function (b) { return b.tb2_probability != null; });
-      h += '<section class="sec"><h3 class="team-h ' + side + '-c">' + esc(nickname(f[side].name)) + ' hitters</h3><div class="tbl-wrap"><table class="box props"><thead><tr><th scope="col">Batters</th><th>1+ hit</th><th>2+ hits</th>' + (tb ? "<th>2+ TB</th>" : "") + "<th>HR</th><th>Walk</th></tr></thead><tbody>";
+      h += '<section class="sec"><h3 class="team-h ' + side + '-c">' + esc(nickname(f[side].name)) + ' hitters</h3><div class="tbl-wrap"><table class="box props"><thead><tr><th scope="col">Batters</th><th>1+ hit</th><th>2+ hits</th>' + (tb ? "<th>2+ TB</th>" : "") + "<th>HR</th><th>Walk</th><th>1+ K</th></tr></thead><tbody>";
       bat.forEach(function (b) {
         var d = b.distributions || {};
         h += '<tr><td><span class="spot">' + (b.spot || "") + "</span>" + esc(bnames[String(b.player_id)]) + "</td><td>" + (d.H ? pf(ownAtLeast(d.H, 1, b.spot)) : "") + "</td><td>" + (d.H ? pf(ownAtLeast(d.H, 2, b.spot)) : "") +
           (tb ? "</td><td>" + (b.tb2_probability != null ? pf(b.tb2_probability) : "") : "") +
-          "</td><td>" + (d.HR ? pf(ownAtLeast(d.HR, 1, b.spot)) : "") + "</td><td>" + (d.BB ? pf(ownAtLeast(d.BB, 1, b.spot)) : "") + "</td></tr>";
+          "</td><td>" + (d.HR ? pf(ownAtLeast(d.HR, 1, b.spot)) : "") + "</td><td>" + (d.BB ? pf(ownAtLeast(d.BB, 1, b.spot)) : "") + "</td><td>" + (d.K ? pf(ownAtLeast(d.K, 1, b.spot)) : "") + "</td></tr>";
       });
       h += '</tbody></table></div><p class="note">Each hitter\'s own chance: a pinch hitter or a substitute takes some of his spot\'s trips late in games, the same as the Summary\'s meters.' + (state.propOdds ? " Fair odds: the chance as American odds with no margin." : "") + "</p></section>";
     });

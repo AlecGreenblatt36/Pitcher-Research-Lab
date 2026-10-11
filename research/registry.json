@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 324,
- "rows": 327,
+ "experiments": 325,
+ "rows": 328,
  "records": {
   "ACC-01": [
    {
@@ -5185,6 +5185,22 @@
     "frozen_commits": [
      "5ad85a25a"
     ],
+    "status": "display"
+   }
+  ],
+  "PROD-16": [
+   {
+    "id": "PROD-16",
+    "columns": {
+     "ID": "PROD-16",
+     "Attempt": "Product call, October 11, 6:05 p.m. Eastern (display). The Odds tab's hitter props add each hitter's chance of at least one strikeout (the batter-strikeouts market at 0.5), the same own-chance rule as the other columns (PLAYER-02's slot shares). Evidence: PLAYER-03's replays, where the strikeout chance came within 1.0 point of the actual share in both seasons (62.9% against 61.9% in 2025, 61.8% against 61.1% in 2026; its prediction (4) held for strikeouts), and no map was needed",
+     "Disposition and evidence": "Done in the evening commits; the table still fits a 390-pixel screen with fair odds on (it scrolls inside its frame at 320); tests test_page_odds_props.py",
+     "Delta corrected Brier, 2026": "display"
+    },
+    "registered_before_run": false,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
     "status": "display"
    }
   ],

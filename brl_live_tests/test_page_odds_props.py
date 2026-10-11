@@ -170,3 +170,9 @@ def test_hits_allowed_ladder_shows_for_every_box():
           "assert.deepEqual(rows,['3.5','4.5','5.5','6.5']);"
           "assert.equal(ladders({}, true), '');")
     subprocess.run(['node', '-e', fns + js], check=True)
+
+
+def test_hitter_props_list_a_strikeout_column():
+    """PROD-16: the hitter props table adds 1+ K with the same own-chance rule as the other columns."""
+    s = _script()
+    assert '<th>Walk</th><th>1+ K</th>' in s and 'pf(ownAtLeast(d.K, 1, b.spot))' in s
