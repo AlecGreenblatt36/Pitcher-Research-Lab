@@ -605,7 +605,7 @@ class Fitted:
                                  'pitchers': int(sum(1 for L in self.lines_p.values() if L['pa'] >= PCT_MIN))}
         # pitcher tag counts (PTAGS-01) on the training rows, and the league's rates
         ptc = pitcher_tag_counts(T, tr)
-        pkeys = [k for k in ('fps', 'zone', 'chase', 'fb_behind', 'fb_first', 'fb_up', 'fb_dn', 'br_dn') if k in ptc]
+        pkeys = [k for k in ('fps', 'zone', 'chase', 'fb_behind', 'fb_first', 'fb_up', 'fb_dn', 'br_dn', 'gb_against') if k in ptc]
         self.ptags = {int(pid): {k: [int(ptc[k][0][i]), int(ptc[k][1][i])] for k in pkeys} for i, pid in enumerate(ptc['ids'])}
         self.league['ptags'] = {k: round(float(ptc[k][0].sum() / max(ptc[k][1].sum(), 1)), 4) for k in pkeys}
         self.run_year, self.run_season = running_season(asof_day)
@@ -1579,6 +1579,9 @@ PTAG_FLOORS = {'fps': 100, 'zone': 300, 'chase': 150, 'fb_behind': 100, 'fb_firs
 # PTAGS-02: where he puts the ball, by height (fastballs up, fastballs down, breaking balls below the zone)
 PTAG_RULES_LOC = (('Elevates fastballs', 'fb_up', 0.08), ('Keeps fastballs down', 'fb_dn', 0.08), ('Buries breaking balls', 'br_dn', 0.08))
 PTAG_FLOORS_LOC = {'fb_up': 200, 'fb_dn': 200, 'br_dn': 150}
+# PTAGS-03: ground-ball and fly-ball pitchers (ground balls among batted balls against, 8 points either way of the league)
+PTAG_RULES_BB = (('Ground-ball pitcher', 'gb_against', 0.08), ('Fly-ball pitcher', 'gb_against', -0.08))
+PTAG_FLOORS_BB = {'gb_against': 150}
 
 
 def pitcher_tag_counts(T: dict, mask) -> dict:
@@ -1602,6 +1605,10 @@ def pitcher_tag_counts(T: dict, mask) -> dict:
         pzf = np.nan_to_num(pz, nan=2.5)
         out.update({'fb_up': (c(fb & okz & (pzf > up_cut)), c(fb & okz)), 'fb_dn': (c(fb & okz & (pzf < dn_cut)), c(fb & okz)),
                     'br_dn': (c(br & okz & (pzf < D.ZONE_BOT)), c(br & okz))})
+    if 'spray' in T and 'traj' in T:
+        # PTAGS-03: ground balls among the batted balls against him with a trajectory (ground balls, liners, flies, pop-ups)
+        okb = np.isfinite(T['spray'][rows].astype(np.float64)); trj = T['traj'][rows]
+        out['gb_against'] = (c(okb & (trj == 0)), c(okb & (trj >= 0) & (trj <= 3)))
     return out
 
 
@@ -1614,9 +1621,11 @@ def pitcher_tag_study(T: dict, stage, spec: dict) -> dict:
     min_pitches = int(spec.get('min_pitches', 500)); min_test = int(spec.get('min_test', 300)); boot = int(spec.get('boot', 1000))
     rng = np.random.default_rng(int(spec.get('seed', 20261011)))
     floors = dict(PTAG_FLOORS)
-    rules = PTAG_RULES + (PTAG_RULES_LOC if spec.get('location') else ())
+    rules = PTAG_RULES + (PTAG_RULES_LOC if spec.get('location') else ()) + (PTAG_RULES_BB if spec.get('batted') else ())
     if spec.get('location'):
         floors.update(PTAG_FLOORS_LOC)
+    if spec.get('batted'):
+        floors.update(PTAG_FLOORS_BB)
     out = {'splits': []}
     for split in spec.get('splits', [{'train': [2024, 2025], 'test': 2026, 'test_end': '2026-08-01'}, {'train': [2023, 2024], 'test': 2025}]):
         tr_m = ok & np.isin(T['season'], split['train']); te_m = ok & (T['season'] == int(split['test']))

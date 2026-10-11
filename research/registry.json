@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 283,
- "rows": 286,
+ "experiments": 284,
+ "rows": 287,
  "records": {
   "ACC-01": [
    {
@@ -4649,6 +4649,22 @@
      "3cfdd4e4c"
     ],
     "status": "held: 0.73 to 0.78"
+   }
+  ],
+  "PTAGS-03": [
+   {
+    "id": "PTAGS-03",
+    "columns": {
+     "ID": "PTAGS-03",
+     "Attempt": "Ground-ball and fly-ball pitchers, checked like PTAGS-01: ground balls among the batted balls against him that have a trajectory (ground balls, liners, fly balls and pop-ups, from the gameday hit data), against the league in the same window; tags at 8 points either way (rows of 150 batted balls). Same splits, pitchers and scoring as PTAGS-01 (pitcher_tag_study with batted). Synthetic check (brl_live_tests/test_report_pitcher_tags.py): a planted ground-ball habit carries over, a redrawn one does not.",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: the ground-ball share correlates 0.6 or more from one season to the next in both splits; both tags (each with 10 or more pitchers) hold in both splits (test difference at least half the threshold in its direction, interval excluding zero). Decision rule: the tags that hold go on the pitcher cards and starter folds (page PTAG_RULES; the cards carry gb_against counts from the next rebuild); the rest do not.",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "ZONES-01": [
