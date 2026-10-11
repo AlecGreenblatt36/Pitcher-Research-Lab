@@ -487,7 +487,7 @@ def hazard_fix(data_root: Path, train=(2023, 2024), lam=10.0) -> dict:
     return out
 
 
-def hazard_pitches(data_root: Path) -> dict:
+def hazard_pitches(data_root: Path, physics=None) -> dict:
     """LEASH-03's diagnosis: does the starter's pitch count say more about his exit than the hazard's batters faced, runs and
     inning? Every real removal decision of the regular seasons with the starter's pitches so far (each plate appearance's
     last pitch_number, summed), scored by the plain hazard and by LEASH-02's correction (brl_replay/hazard_correction.json):
@@ -499,9 +499,13 @@ def hazard_pitches(data_root: Path) -> dict:
     pa = load_history(next(data_root.rglob('plate_appearances.csv.gz')))
     if 'game_type' in pa.columns:
         pa = pa[pa['game_type'].astype(str) == 'R']
+    pa = pa.copy()
+    if physics is not None:
+        # each plate appearance's pitches from the sealed per-PA physics tables ('n'), joined on the game and plate appearance
+        n = physics[['game_pk', 'at_bat_number', 'n']].drop_duplicates(['game_pk', 'at_bat_number']).astype({'game_pk': 'int64', 'at_bat_number': 'int64'})
+        pa = pa.drop(columns=[c for c in ('pitch_number',) if c in pa.columns]).merge(n.rename(columns={'n': 'pitch_number'}), on=['game_pk', 'at_bat_number'], how='left')
     if 'pitch_number' not in pa.columns:
         return {'missing': 'pitch_number', 'columns': sorted(pa.columns)[:80]}
-    pa = pa.copy()
     pa['pitch_number'] = pd.to_numeric(pa['pitch_number'], errors='coerce')
     bundle = joblib.load(next(data_root.rglob('starter_hazard.joblib')))
     d, starts = sh.build_decisions(pa)
@@ -628,7 +632,18 @@ def main():
                 import shutil; shutil.rmtree(data_root)
             data_root.mkdir(parents=True)
             ep.restore_package(repo, token, key_hex, manifest, data_root)
-            receipt['results'] = {'hazard_fix': hazard_fix, 'hazard_pitches': hazard_pitches}.get(experiment, hazard_check)(data_root); receipt['status'] = 'completed'
+            if experiment == 'hazard_pitches':
+                import io
+                tables = []
+                for year in (2023, 2024, 2025, 2026):
+                    raw = read_blob(repo, token, physics_path(year), branch)
+                    if raw is not None:
+                        tables.append(pd.read_csv(io.BytesIO(gzip.decompress(unseal(raw, key, physics_purpose(year)))), usecols=['game_pk', 'at_bat_number', 'n']))
+                receipt['physics_seasons'] = len(tables)
+                receipt['results'] = hazard_pitches(data_root, pd.concat(tables, ignore_index=True) if tables else None)
+            else:
+                receipt['results'] = (hazard_fix if experiment == 'hazard_fix' else hazard_check)(data_root)
+            receipt['status'] = 'completed'
         except Exception as exc:
             receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:300]
             receipt['where'] = [{'file': Path(f.filename).name, 'function': f.name, 'line': f.lineno} for f in traceback.extract_tb(exc.__traceback__)[-5:]]

@@ -141,3 +141,6 @@ def test_hazard_pitches_sums_each_starters_pitches_and_scores_both_hazards(tmp_p
     assert {c[1] for c in out['cells']} <= set(range(6))
     no = pa.drop(columns=['pitch_number']); no.to_csv(tmp_path / 'plate_appearances.csv.gz', index=False, compression='gzip')
     assert br.hazard_pitches(tmp_path)['missing'] == 'pitch_number'
+    # from the physics tables' pitches per plate appearance instead: the same counts give the same cells
+    phys = pa[['game_pk', 'at_bat_number', 'pitch_number']].rename(columns={'pitch_number': 'n'})
+    assert br.hazard_pitches(tmp_path, phys)['cells'] == out['cells']
