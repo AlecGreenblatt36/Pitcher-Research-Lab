@@ -1086,6 +1086,86 @@ def zone_shrink_study(T: dict, stage, spec: dict) -> dict:
     return out
 
 
+def matchup_read_study(T: dict, stage, spec: dict) -> dict:
+    """MATCHUPREAD-01 (LEDGER): a pitcher's own locations laid over a hitter's expected zones (ZONES-01 shrinkage) against
+    the league's locations, scored on the test season's at-bats. Aggregates only."""
+    reg = (T['post'] == 0) if 'post' in T else np.ones(len(T['season']), bool)
+    train = tuple(spec.get('train', (2024, 2025))); test = int(spec.get('test', 2026))
+    m = float(spec.get('m', 160.0)); min_fp = int(spec.get('min_pitches', 200)); min_pa = float(spec.get('min_pa', 100)); k_all = 30.0
+    zmap = np.full(32, -1, np.int64)
+    for i, zz in enumerate(ZONES13):
+        zmap[zz] = i
+    zi = zmap[np.clip(T['zone'], 0, 31)]
+    g = T['group']; fam = np.where(np.isin(g, (0, 1, 2, 6)), 0, np.where(np.isin(g, (3, 4)), 1, np.where(g == 5, 2, -1)))
+    last = T['last_in_pa'] == 1; o7 = T['out7']
+    ab = last & np.isin(o7, (0, 1, 3, 4, 5, 6))
+    tb = np.where(last & (o7 == 3), 1.0, 0.0) + np.where(last & (o7 == 4), 2.0, 0.0) + np.where(last & (o7 == 5), 4.0, 0.0)
+    ok = reg & (zi >= 0) & (fam >= 0)
+    tr = ok & np.isin(T['season'], train); te = reg & (T['season'] == test) & ab & (fam >= 0)
+    pit, bat, st, th = T['pitcher'], T['batter'], T['stand_r'].astype(np.int64), T['throw_r'].astype(np.int64)
+    # the pitcher's location counts by (pitcher, batter side, family) and the league's by (hand, side, family)
+    ptr = np.flatnonzero(tr)
+    pkey = {}
+    pk_codes = (pit[ptr].astype(np.int64) * 2 + st[ptr]) * 3 + fam[ptr]
+    uk, inv = np.unique(pk_codes, return_inverse=True)
+    pcounts = np.zeros((len(uk), 13)); np.add.at(pcounts, (inv, zi[ptr]), 1.0)
+    for j, kc in enumerate(uk):
+        pkey[int(kc)] = j
+    lcounts = np.zeros((2, 2, 3, 13)); np.add.at(lcounts, (th[ptr], st[ptr], fam[ptr], zi[ptr]), 1.0)
+    lshare = lcounts / np.maximum(lcounts.sum(-1, keepdims=True), 1.0)
+    stage('matchup read: locations')
+    # each hitter's at-bats and total bases by zone against each hand on each family, and the league's by (side, hand, family)
+    atr = np.flatnonzero(tr & ab)
+    hk_codes = (bat[atr].astype(np.int64) * 2 + th[atr]) * 3 + fam[atr]
+    uh, hinv = np.unique(hk_codes, return_inverse=True)
+    hab = np.zeros((len(uh), 13)); htb = np.zeros((len(uh), 13))
+    np.add.at(hab, (hinv, zi[atr]), 1.0); np.add.at(htb, (hinv, zi[atr]), tb[atr])
+    hside = np.zeros(len(uh)); np.add.at(hside, hinv, st[atr].astype(np.float64)); hside = (hside / np.maximum(np.bincount(hinv, minlength=len(uh)), 1) >= 0.5).astype(np.int64)
+    lab = np.zeros((2, 2, 3, 13)); ltb = np.zeros((2, 2, 3, 13))
+    np.add.at(lab, (st[atr], th[atr], fam[atr], zi[atr]), 1.0); np.add.at(ltb, (st[atr], th[atr], fam[atr], zi[atr]), tb[atr])
+    hfam = (uh % 3).astype(np.int64); hhand = ((uh // 3) % 2).astype(np.int64)
+    lz = ltb[hside, hhand, hfam] / np.maximum(lab[hside, hhand, hfam], 1.0)
+    la = ltb[hside, hhand, hfam].sum(1) / np.maximum(lab[hside, hhand, hfam].sum(1), 1.0)
+    h_all = (htb.sum(1) + k_all * la) / (hab.sum(1) + k_all)
+    scaled = lz * (h_all / np.maximum(la, 1e-9))[:, None]
+    xslg = (htb + m * scaled) / (hab + m)
+    hkey = {int(kc): j for j, kc in enumerate(uh)}
+    pa_tr = {}
+    for b_, n_ in zip(*np.unique(bat[np.flatnonzero(reg & np.isin(T['season'], train) & last)], return_counts=True)):
+        pa_tr[int(b_)] = int(n_)
+    stage('matchup read: hitter zones')
+    # the test at-bats
+    ev = np.flatnonzero(te)
+    E, B, Y, P = [], [], [], []
+    for i in ev:
+        pkc = (int(pit[i]) * 2 + int(st[i])) * 3 + int(fam[i]); hkc = (int(bat[i]) * 2 + int(th[i])) * 3 + int(fam[i])
+        pj = pkey.get(pkc); hj = hkey.get(hkc)
+        if pj is None or hj is None or pcounts[pj].sum() < min_fp or pa_tr.get(int(bat[i]), 0) < min_pa:
+            continue
+        x = xslg[hj]; sp = pcounts[pj] / pcounts[pj].sum(); sl = lshare[int(th[i]), int(st[i]), int(fam[i])]
+        E.append(float(sp @ x)); B.append(float(sl @ x)); Y.append(float(tb[i])); P.append(int(pit[i]))
+    E, B, Y, P = map(np.asarray, (E, B, Y, P))
+    stage('matchup read: test at-bats')
+    out = {'train': list(train), 'test': test, 'm': m, 'min_pitches': min_fp, 'min_pa': min_pa, 'at_bats': int(len(Y)), 'pitchers': int(len(np.unique(P))) if len(P) else 0}
+    if len(Y) < 1000:
+        out['note'] = 'too few test at-bats'
+        return out
+    d = E - B; r = Y - B
+    out.update({'mse_composite': round(float(((Y - E) ** 2).mean()), 5), 'mse_baseline': round(float(((Y - B) ** 2).mean()), 5),
+                'sd_composite_minus_baseline': round(float(d.std()), 4), 'mean_actual': round(float(Y.mean()), 4), 'mean_composite': round(float(E.mean()), 4), 'mean_baseline': round(float(B.mean()), 4)})
+    slope = float((d * r).sum() / max((d * d).sum(), 1e-12))
+    up, pinv = np.unique(P, return_inverse=True)
+    rng = np.random.default_rng(int(spec.get('seed', 20261011)))
+    se_d = ((Y - E) ** 2 - (Y - B) ** 2)
+    sum_dr = np.bincount(pinv, weights=d * r, minlength=len(up)); sum_dd = np.bincount(pinv, weights=d * d, minlength=len(up))
+    sum_se = np.bincount(pinv, weights=se_d, minlength=len(up)); cnt = np.bincount(pinv, minlength=len(up)).astype(np.float64)
+    draws = rng.integers(0, len(up), (2000, len(up)))
+    bs = sum_dr[draws].sum(1) / np.maximum(sum_dd[draws].sum(1), 1e-12); bm = sum_se[draws].sum(1) / np.maximum(cnt[draws].sum(1), 1.0)
+    out['slope'] = [round(slope, 3), round(float(np.percentile(bs, 2.5)), 3), round(float(np.percentile(bs, 97.5)), 3)]
+    out['mse_composite_minus_baseline'] = [round(float(se_d.mean()), 6), round(float(np.percentile(bm, 2.5)), 6), round(float(np.percentile(bm, 97.5)), 6)]
+    return out
+
+
 def lineup_study(T: dict, stage, spec: dict) -> dict:
     """LINEUP-01 and LINEUP-02 (LEDGER): for every team-game of the evaluated seasons, how many of the nine starters each
     pre-lineup rule names (and how many in the right spot), from the team's games on earlier days only. Aggregates only."""
@@ -1671,6 +1751,9 @@ def main():
         T = D.concat(tables); del tables
         if params.get('lineup_study'):
             receipt['lineup_study'] = lineup_study(T, stage, params['lineup_study'])
+            dates = []
+        if params.get('matchup_read'):
+            receipt['matchup_read'] = matchup_read_study(T, stage, params['matchup_read'])
             dates = []
         if params.get('zone_study'):
             zs = params['zone_study']
