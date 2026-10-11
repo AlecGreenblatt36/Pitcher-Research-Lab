@@ -168,3 +168,24 @@ def test_entry_inning_correction_maps_cells_and_moves_only_its_cell():
                       'late': [0.8] * 3, 'n_on': [0, 0, 0], 'n_outs_when_up': [1, 0, 0], 'ended': [0, 1, 1], 'entry_inning': [7, 7, 7]})
     a, b = fitted(d, DOC), fitted(d, DOC, {'terms': list(CORRECTION_TERMS), 'coef': coef})
     assert b[0] < 1e-6 < a[0] and abs(a[1] - b[1]) < 1e-12 and abs(a[2] - b[2]) < 1e-12
+
+
+def test_relief_correction_switch_is_off_and_regular_season_only():
+    """RELIEF-04 is built off. Switched on, regular-season games get the corrected exits with hooks measured against them;
+    postseason games keep the plain hazard, its hooks and the postseason exit offset."""
+    from brl_live import boxscore as bx
+    from research_lab.game_sim.relief_exit import CORRECTION_TERMS
+    assert bx.ADJUST['relief_correction'] is False
+    base = ManagerPolicy()
+    m, _ = bx.manager_for(base, bx.ADJUST, ('NYY', 'BOS'), 'R')
+    assert m.relief_exit.gamma is None
+    on = dict(bx.ADJUST, relief_correction=True)
+    m, label = bx.manager_for(base, on, ('NYY', 'BOS'), 'R')
+    assert m.relief_exit.gamma is not None and 'entry-inning correction' in label
+    hooks = json.loads((ROOT / 'brl_live/relief_hooks_corrected.json').read_text())['teams']
+    assert m.relief_offsets['away']['mid'] == hooks['NYY']['mid']
+    m, label = bx.manager_for(base, on, ('NYY', 'BOS'), 'L')
+    plain = json.loads((ROOT / 'brl_live/relief_hooks.json').read_text())['teams']
+    assert m.relief_exit.gamma is None and abs(m.relief_offsets['away']['mid'] - (plain['NYY']['mid'] + 0.4)) < 1e-12
+    doc = json.loads((ROOT / 'brl_live/relief_correction.json').read_text())
+    assert doc['terms'] == list(CORRECTION_TERMS) and len(doc['coef']) == 49

@@ -391,13 +391,19 @@ ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         # LEASH-02 (on from October 11, 2026; its gates held on both seasons): the inning correction on the starter-exit
         # hazard's log-odds, regular season only (brl_live/hazard_correction.json); the postseason keeps its measured usage
         # on the plain hazard
-        'hazard_correction':True}
+        'hazard_correction':True,
+        # RELIEF-04 (off until its replays are read): the entry-inning correction on the relief-exit hazard, regular season
+        # only (brl_live/relief_correction.json); with it the team hooks come from brl_live/relief_hooks_corrected.json,
+        # measured against the corrected hazard. The postseason keeps the plain hazard, its hooks and its exit offset
+        'relief_correction':False}
 
 TRANSITIONS_PATH=Path(__file__).resolve().parent/'transitions.json'
 RUNNING_EVENTS_PATH=Path(__file__).resolve().parent/'running_events.json'
 RELIEVER_CHOICE_PATH=Path(__file__).resolve().parent/'reliever_choice.json'
 RELIEF_EXIT_PATH=Path(__file__).resolve().parent/'relief_exit.json'
 RELIEF_HOOKS_PATH=Path(__file__).resolve().parent/'relief_hooks.json'
+RELIEF_CORRECTION_PATH=Path(__file__).resolve().parent/'relief_correction.json'
+RELIEF_HOOKS_CORRECTED_PATH=Path(__file__).resolve().parent/'relief_hooks_corrected.json'
 LEASH_PATH=Path(__file__).resolve().parent/'leash.json'
 _KERNEL={}
 
@@ -445,25 +451,36 @@ def reliever_choice_for(settings):
         _KERNEL['c']=RelieverChoice(json.loads(RELIEVER_CHOICE_PATH.read_text()))
     return _KERNEL['c']
 
-def relief_exit_for(settings):
-    """The fitted reliever exits (brl_live/relief_exit.json, RELIEF-02) when switched on, else None."""
-    if not settings.get('relief_exit'):return None
-    if 'x' not in _KERNEL:
-        from research_lab.game_sim.relief_exit import ReliefExit
-        _KERNEL['x']=ReliefExit(json.loads(RELIEF_EXIT_PATH.read_text()))
-    return _KERNEL['x']
+def relief_corrected(settings,game_type='R'):
+    """True when RELIEF-04's entry-inning correction applies: switched on with the fitted exits, regular season only."""
+    return bool(settings.get('relief_exit') and settings.get('relief_correction')) and str(game_type)=='R'
 
-def relief_hooks_for(settings):
-    """The team hook offsets (brl_live/relief_hooks.json, RELIEF-03) when switched on with the fitted exits, else None."""
+def relief_exit_for(settings,game_type='R'):
+    """The fitted reliever exits (brl_live/relief_exit.json, RELIEF-02) when switched on, else None; with RELIEF-04's
+    entry-inning correction (brl_live/relief_correction.json) in regular-season games when that is switched on."""
+    if not settings.get('relief_exit'):return None
+    corrected=relief_corrected(settings,game_type);key='xc' if corrected else 'x'
+    if key not in _KERNEL:
+        from research_lab.game_sim.relief_exit import ReliefExit
+        corr=None
+        if corrected:
+            c=json.loads(RELIEF_CORRECTION_PATH.read_text());corr={'terms':c['terms'],'coef':c['coef']}
+        _KERNEL[key]=ReliefExit(json.loads(RELIEF_EXIT_PATH.read_text()),correction=corr)
+    return _KERNEL[key]
+
+def relief_hooks_for(settings,game_type='R'):
+    """The team hook offsets (brl_live/relief_hooks.json, RELIEF-03) when switched on with the fitted exits, else None;
+    measured against the corrected hazard (relief_hooks_corrected.json) when RELIEF-04's correction applies."""
     if not (settings.get('relief_hooks') and settings.get('relief_exit')):return None
-    if 'h' not in _KERNEL:_KERNEL['h']=json.loads(RELIEF_HOOKS_PATH.read_text())
-    return _KERNEL['h']
+    corrected=relief_corrected(settings,game_type);key='h2' if corrected else 'h'
+    if key not in _KERNEL:_KERNEL[key]=json.loads((RELIEF_HOOKS_CORRECTED_PATH if corrected else RELIEF_HOOKS_PATH).read_text())
+    return _KERNEL[key]
 
 def manager_for(manager,settings,teams=None,game_type='R'):
     """(manager, label): the engine's manager with the fitted reliever choice and exits (and, given the game's teams as
     (away, home) abbreviations, their hook offsets; in postseason games the postseason exit offset) attached when
     switched on (a copy, so the engine's own manager is unchanged), else the manager itself and None."""
-    choice=reliever_choice_for(settings);exits=relief_exit_for(settings);hooks=relief_hooks_for(settings)
+    choice=reliever_choice_for(settings);exits=relief_exit_for(settings,game_type);hooks=relief_hooks_for(settings,game_type)
     if choice is None and exits is None:return manager,None
     import copy
     m=copy.copy(manager);labels=[]

@@ -22,13 +22,15 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('history'); ap.add_argument('out'); ap.add_argument('--doc', required=True); ap.add_argument('--as-of', required=True)
     ap.add_argument('--half-life', type=float, default=90.0); ap.add_argument('--k', type=float, default=10.0)
+    ap.add_argument('--correction', help="RELIEF-04's entry-inning correction ({'terms', 'coef'}): offsets against the corrected hazard")
     a = ap.parse_args()
     d = decisions(pd.read_csv(a.history, usecols=COLS, low_memory=False))
     d = d[d['date'] < a.as_of]
-    hooks = HookOffsets(d, fitted(d, json.loads(Path(a.doc).read_text())), half_life=a.half_life, k=a.k)
+    corr = json.loads(Path(a.correction).read_text()) if a.correction else None
+    hooks = HookOffsets(d, fitted(d, json.loads(Path(a.doc).read_text()), corr), half_life=a.half_life, k=a.k)
     table = {t: {k: round(v, 5) for k, v in o.items()} for t, o in hooks.table(a.as_of).items()}
     doc = {'schema': 'brl.relief-hooks.v1', 'name': f'reliever hooks by team through {d["date"].max()}', 'as_of': a.as_of,
-           'through': str(d['date'].max()), 'half_life': a.half_life, 'k': a.k, 'exit_doc': str(a.doc), 'decisions': int(len(d)),
+           'through': str(d['date'].max()), 'half_life': a.half_life, 'k': a.k, 'exit_doc': str(a.doc), 'correction': str(a.correction) if a.correction else None, 'decisions': int(len(d)),
            'teams': table}
     Path(a.out).write_text(json.dumps(doc, indent=1) + '\n')
     print(json.dumps({k: doc[k] for k in ('name', 'decisions')}), {t: table[t] for t in list(table)[:5]})
