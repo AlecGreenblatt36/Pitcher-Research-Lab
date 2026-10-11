@@ -4492,7 +4492,7 @@
     "id": "PROD-12",
     "columns": {
      "ID": "PROD-12",
-     "Attempt": "Product calls, October 11, 5 to 6 a.m. Eastern (display only, no model and no claim): player pages open the way every player page does, with his season line (hitters AVG, HR, RBI, R, SB, OPS; starters W-L, ERA, GS, IP, SO, WHIP; relievers G and SV in place of GS and IP) and his last ten games (date and round, opponent, his team's result or his decision, the box line, AVG or ERA through that game, totals over the ten), read by the browser from MLB's public stats like the starters' lines. The stats probe (diagnostics/stats_probe.json, runs 38126258426 and 38126721578) checked both asks the page makes: any site may read them, the regular season's line and game log come in one answer, the postseason's games in a second, each game with its date, opponent, home or away, result and box line, and AVG, OBP, SLG, OPS and ERA through that game. Also: the players index and lists mark switch hitters; the league's average movement per pitch type rides on the cards for the movement chart.",
+     "Attempt": "Product calls, October 11, 5 to 6 a.m. Eastern (display only, no model and no claim): player pages open the way every player page does, with his season line (hitters AVG, HR, RBI, R, SB, OPS; starters W-L, ERA, GS, IP, SO, WHIP; relievers G and SV in place of GS and IP) and his last ten games (date and round, opponent, his team's result or his decision, the box line, AVG or ERA through that game, totals over the ten), read by the browser from MLB's public stats like the starters' lines. The stats probe (diagnostics/stats_probe.json, runs 38126258426 and 38126721578) checked both asks the page makes: any site may read them, the regular season's line and game log come in one answer, the postseason's games in a second, each game with its date, opponent, home or away, result and box line, and AVG, OBP, SLG, OPS and ERA through that game. Also: the players index and lists mark switch hitters; the league's average movement per pitch type rides on the cards for the movement chart. Later the same morning (display only): the pitching matchup adds each starter's last three starts from the game logs and his last start's fastball; plan rows carry each hitter's MLB season line (AVG, HR, OPS); the bullpen card adds strikeout and walk rates shaded by percentile; the Odds tab shows the book's moneylines and total next to our pick as a fair price; the Record page lists the other checks in plain words; the lineup line against the starter's hand uses the Expected split in the Expected view. A separate review found six wording defects in these pieces, fixed in d99b9524e.",
      "Disposition and evidence": "on (display changes; no gate)"
     },
     "registered_before_run": false,
@@ -4501,7 +4501,9 @@
      "38126258426",
      "38126721578"
     ],
-    "frozen_commits": [],
+    "frozen_commits": [
+     "d99b9524e"
+    ],
     "status": "on (display changes; no gate)"
    }
   ],
