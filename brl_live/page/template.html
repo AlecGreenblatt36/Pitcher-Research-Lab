@@ -677,6 +677,16 @@ small { font-size: 14px; }
 .range-list .r { font-family: var(--display); font-size: 19px; font-weight: 600; }
 .range-list small { color: var(--muted); font-size: 14px; }
 .ladder-wrap { margin-top: 8px; max-width: 360px; }
+.bvp-t td, .bvp-t th { font-size: 16px; padding: 7px 5px; }
+.bvp-t th .spot { display: inline-block; width: 18px; color: var(--muted); font-size: 14px; }
+.ts-t th[scope=row] { text-align: left; font-family: var(--body); font-weight: 400; font-size: 15px; white-space: normal; }
+.ts-t td { font-size: 17px; vertical-align: top; padding: 5px 6px; }
+.ts-t th[scope=row] { padding-top: 5px; padding-bottom: 5px; }
+.ts-t td small { display: block; font-family: var(--body); font-size: 14px; color: var(--muted); font-weight: 400; }
+.ts-t td.ts-win { font-weight: 700; }
+.bvp-t th[scope=row] { text-align: left; font-family: var(--body); font-weight: 400; white-space: nowrap; }
+.bvp-t td.bvp-none { text-align: left; color: var(--muted); font-family: var(--body); font-size: 15px; }
+.bvp-t tr.bvp-tot th, .bvp-t tr.bvp-tot td { font-weight: 700; border-top: 2px solid var(--ink); }
 .ladder td small { display: block; font-family: var(--body); font-size: 14px; color: var(--muted); line-height: 1.2; }
 .ladder th[scope=row] { text-align: left; padding-left: 12px; font-family: var(--display); font-size: 18px; color: var(--ink); font-weight: 600; border-bottom: 1px solid var(--rule-soft); }
 
@@ -2063,6 +2073,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (!keep) window.scrollTo(0, 0);
     fillSpLines();
     fillPlayerStats();
+    if (tab === "matchups") fillBvp();
+    if (tab === "summary") fillTeamStats();
     if (tab === "summary") fillPitchingMatchup(f, pk, box);
     if (tab === "report") loadReport(f, pk);
     else if (tab === "summary" && lv && !lv._final) loadLiveCard(f, pk);
@@ -2503,7 +2515,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (!real && lv && lv.state && !lv._final)          /* started, but MLB's play-by-play has not come in: keep the simulated game folded */
       return h0 + '<details class="more proj-fold" data-keep="proj-' + f.game_pk + '"' + (state.rpOpen["proj-" + f.game_pk] ? " open" : "") + "><summary>The game we projected before first pitch</summary>" +
         (versions || "") + projectedSummary(f, s, box, null, null, v) + "</details>";
-    if (!real) return h0 + (!actual && !lv ? '<div id="pm-' + f.game_pk + '">' + pitchingMatchup(f, box, RP[f.game_pk] || null) + "</div>" : "") + (versions || "") + projectedSummary(f, s, box, actual, actualBox, v);
+    if (!real) return h0 + (!actual && !lv ? '<div id="pm-' + f.game_pk + '">' + pitchingMatchup(f, box, RP[f.game_pk] || null) + "</div>" + teamStatsSlot(f) : "") + (versions || "") + projectedSummary(f, s, box, actual, actualBox, v);
     /* With the real game on: did we get it right first (after the final), then the real game, then the game we
        projected folded under one line (its versions and the full simulated game open from there). */
     if (actual && actualBox) h0 += howClose(f, box, actualBox, s);
@@ -2740,8 +2752,128 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         h += "</tr>";
       });
       h += "</tbody></table></div>" + '<p class="note">Outlined: the reliever who is toughest on each hitter by this measure.</p></section>';
+      var sp = g.pitchers.filter(function (pt) { return pt.role === "starter"; })[0];
+      if (sp) h += '<section class="sec wide bvp" data-bvp="' + esc(sp.id) + '" data-hitters="' + esc(g.batters.map(function (b) { return b.id; }).join(",")) + '" data-names="' +
+        esc(JSON.stringify(g.batters.map(function (b) { return [b.id, b.spot, bn[String(b.id)] || lastName(b.name)]; }))) + '"><h3 class="hz-h">' + esc(nickname(f[side].name)) + " hitters, career against " + esc(lastName(sp.name)) +
+        '</h3><div class="bvp-body"><p class="note">Loading each hitter\'s record against him from MLB\u2026</p></div></section>';
     });
     return h;
+  }
+  /* Each hitter's career line against tonight's starter, the batter-against-pitcher table every preview prints, read by
+     the browser from MLB's public stats (one ask per lineup; the stats probe of October 11 checked it): regular-season
+     meetings summed over the answer's splits. Facts only: never colored as a read (BVP-01 says why). */
+  var BVP = {};
+  function bvpRows(doc) {
+    var out = {};
+    ((doc || {}).people || []).forEach(function (p) {
+      (p.stats || []).forEach(function (st) {
+        if (((st.type || {}).displayName || "") !== "vsPlayerTotal") return;
+        (st.splits || []).forEach(function (x) {
+          var a = x.stat || {}, c = out[p.id] || (out[p.id] = { pa: 0, ab: 0, h: 0, hr: 0, bb: 0, k: 0, hbp: 0, sf: 0, tb: 0 });
+          c.pa += +a.plateAppearances || 0; c.ab += +a.atBats || 0; c.h += +a.hits || 0; c.hr += +a.homeRuns || 0; c.bb += +a.baseOnBalls || 0;
+          c.k += +a.strikeOuts || 0; c.hbp += +a.hitByPitch || 0; c.sf += +a.sacFlies || 0; c.tb += +a.totalBases || 0;
+        });
+      });
+    });
+    return out;
+  }
+  function bvpTable(rows, names, label) {
+    var three = function (x) { return x >= 1 ? x.toFixed(3) : x.toFixed(3).replace(/^0/, ""); };
+    var cells = function (c) {
+      var obp = (c.ab + c.bb + c.hbp + c.sf) ? (c.h + c.bb + c.hbp) / (c.ab + c.bb + c.hbp + c.sf) : null;
+      return "<td>" + c.pa + "</td><td>" + c.h + "</td><td>" + c.hr + "</td><td>" + c.bb + "</td><td>" + c.k + "</td><td>" + (c.ab ? three(c.h / c.ab) : "\u2013") + "</td><td>" + (c.ab && obp != null ? three(obp + c.tb / c.ab) : "\u2013") + "</td>";
+    };
+    var tot = { pa: 0, ab: 0, h: 0, hr: 0, bb: 0, k: 0, hbp: 0, sf: 0, tb: 0 }, met = 0;
+    var body = names.map(function (n) {
+      var c = rows[n[0]];
+      if (!c || !c.pa) return '<tr><th scope="row"><span class="spot">' + n[1] + "</span>" + esc(n[2]) + '</th><td colspan="7" class="bvp-none">Never faced him</td></tr>';
+      met++; Object.keys(tot).forEach(function (k) { tot[k] += c[k]; });
+      return '<tr><th scope="row"><span class="spot">' + n[1] + "</span>" + esc(n[2]) + "</th>" + cells(c) + "</tr>";
+    }).join("");
+    return '<div class="tbl-wrap" tabindex="0" role="region" aria-label="' + esc(label || "Career against the starter") + ', scrolls sideways"><table class="box bvp-t"><thead><tr><th scope="col">Hitter</th><th scope="col">PA</th><th scope="col">H</th><th scope="col">HR</th><th scope="col">BB</th><th scope="col">K</th><th scope="col">AVG</th><th scope="col">OPS</th></tr></thead><tbody>' +
+      body + (met > 1 ? '<tr class="bvp-tot"><th scope="row">Lineup</th>' + cells(tot) + "</tr>" : "") + "</tbody></table></div>";
+  }
+  function fillBvp() {
+    app.querySelectorAll("[data-bvp]").forEach(function (sec) {
+      var pid = sec.getAttribute("data-bvp"), ids = sec.getAttribute("data-hitters"), key = pid + ":" + ids, body = sec.querySelector(".bvp-body"), e = BVP[key];
+      if (e && !e.pending) {
+        var names = []; try { names = JSON.parse(sec.getAttribute("data-names")); } catch (err) { names = []; }
+        if (body) body.innerHTML = e.failed ? '<p class="note">MLB\'s records did not load; the grid above is our read of each meeting.</p>' : bvpTable(e.rows, names, (sec.querySelector("h3") || {}).textContent) + '<p class="note">' + BVP_NOTE + "</p>";
+        return;
+      }
+      if (e) return;
+      BVP[key] = { pending: true };
+      lcFetch(LIVE_API + "v1/people?personIds=" + ids + "&hydrate=stats(group=[hitting],type=[vsPlayerTotal],opposingPlayerId=" + pid + ")").then(function (doc) {
+        BVP[key] = { rows: bvpRows(doc) }; fillBvp();
+      }, function () { BVP[key] = { failed: true }; fillBvp(); });
+    });
+  }
+  var BVP_NOTE = "Regular-season meetings, from MLB. These are small samples. Over four seasons, beyond each player's own level, a 20 plate-appearance record carried between none and about 15% of its on-base edge into later meetings, and no strikeout or slugging edge we could tell from noise. The grid above is our read of each meeting.";
+  /* The two teams' season stats side by side with each one's rank among the 30 clubs, the team table every preview prints,
+     read by the browser from MLB's public team stats (one ask for every club; the stats probe of October 11 checked it).
+     Regular season; the better number of each row in bold. Facts only, not part of our model. */
+  var TS = {};
+  var TS_ROWS = [["Record", "pitching", function (x) { return x.wins != null && x.losses != null ? (+x.wins) / Math.max(1, (+x.wins) + (+x.losses)) : null; }, 1, function (v, x) { return x.wins + "-" + x.losses; }],
+    ["Runs per game", "hitting", function (x) { return x.gamesPlayed ? x.runs / x.gamesPlayed : null; }, 1, function (v) { return v.toFixed(2); }],
+    ["AVG", "hitting", function (x) { return x.avg != null ? +x.avg : null; }, 1, function (v, x) { return String(x.avg); }],
+    ["OPS", "hitting", function (x) { return x.ops != null ? +x.ops : null; }, 1, function (v, x) { return String(x.ops); }],
+    ["Home runs", "hitting", function (x) { return x.homeRuns != null ? +x.homeRuns : null; }, 1, function (v) { return String(v); }],
+    ["Strikeout %", "hitting", function (x) { return x.plateAppearances ? x.strikeOuts / x.plateAppearances : null; }, -1, function (v) { return (100 * v).toFixed(1) + "%"; }],
+    ["Stolen bases", "hitting", function (x) { return x.stolenBases != null ? +x.stolenBases : null; }, 1, function (v) { return String(v); }],
+    ["Runs allowed per game", "pitching", function (x) { return x.gamesPlayed ? x.runs / x.gamesPlayed : null; }, -1, function (v) { return v.toFixed(2); }],
+    ["ERA", "pitching", function (x) { return x.era != null ? +x.era : null; }, -1, function (v, x) { return String(x.era); }],
+    ["WHIP", "pitching", function (x) { return x.whip != null ? +x.whip : null; }, -1, function (v, x) { return String(x.whip); }],
+    ["Strikeouts per 9", "pitching", function (x) { return x.strikeoutsPer9Inn != null ? +x.strikeoutsPer9Inn : null; }, 1, function (v, x) { return String(x.strikeoutsPer9Inn); }],
+    ["Walks per 9", "pitching", function (x) { return x.walksPer9Inn != null ? +x.walksPer9Inn : null; }, -1, function (v, x) { return String(x.walksPer9Inn); }]];
+  function ordinal(n) { var t = n % 100, u = n % 10; return n + (t >= 11 && t <= 13 ? "th" : u === 1 ? "st" : u === 2 ? "nd" : u === 3 ? "rd" : "th"); }
+  function teamStatsSlot(f) {
+    if (!f.away || !f.home || !f.away.team_id || !f.home.team_id) return "";
+    return '<section class="sec ts" data-ts="' + esc(String(f.date || "").slice(0, 4)) + '" data-teams="' + esc(f.away.team_id + "," + f.home.team_id) + '" data-abbr="' + esc(f.away.abbr + "," + f.home.abbr) +
+      '"><h2>Team stats</h2><div class="ts-body"><p class="note">Loading both teams\' season numbers from MLB\u2026</p></div></section>';
+  }
+  /* {team id: {hitting: stat, pitching: stat}} from the all-clubs answer; a split's group from its block, else its keys */
+  function tsTeams(doc) {
+    var out = {};
+    ((doc || {}).stats || []).forEach(function (st) {
+      var g = ((st.group || {}).displayName || "").toLowerCase();
+      (st.splits || []).forEach(function (x) {
+        var id = (x.team || {}).id, a = x.stat || {}, grp = g === "hitting" || g === "pitching" ? g : (a.era != null ? "pitching" : "hitting");
+        if (id == null) return;
+        (out[id] = out[id] || {})[grp] = a;
+      });
+    });
+    return out;
+  }
+  function tsTable(teams, ids, abbr) {
+    var a = teams[ids[0]], b = teams[ids[1]];
+    if (!a || !b) return "";
+    var rows = TS_ROWS.map(function (r) {
+      var xa = a[r[1]], xb = b[r[1]];
+      if (!xa || !xb) return "";
+      var va = r[2](xa), vb = r[2](xb);
+      if (va == null || vb == null || !isFinite(va) || !isFinite(vb)) return "";
+      var all = Object.keys(teams).map(function (k) { var x = teams[k][r[1]]; return x ? r[2](x) : null; }).filter(function (v) { return v != null && isFinite(v); });
+      var rank = function (v) { return 1 + all.filter(function (w) { return r[3] > 0 ? w > v + 1e-9 : w < v - 1e-9; }).length; };
+      var better = r[3] * (va - vb);
+      var cell = function (v, x, win) { return "<td" + (win ? ' class="ts-win"' : "") + ">" + esc(r[4](v, x)) + "<small>" + ordinal(rank(v)) + "</small></td>"; };
+      return '<tr><th scope="row">' + esc(r[0]) + "</th>" + cell(va, xa, better > 1e-9) + cell(vb, xb, better < -1e-9) + "</tr>";
+    }).join("");
+    return '<div class="tbl-wrap"><table class="box ts-t"><thead><tr><th scope="col"><span class="visually-hidden">Stat</span></th><th scope="col">' + esc(abbr[0]) + '</th><th scope="col">' + esc(abbr[1]) + "</th></tr></thead><tbody>" + rows + "</tbody></table></div>";
+  }
+  function fillTeamStats() {
+    app.querySelectorAll("[data-ts]").forEach(function (sec) {
+      var y = sec.getAttribute("data-ts"), e = TS[y], body = sec.querySelector(".ts-body");
+      if (e && !e.pending) {
+        var t = e.failed ? "" : tsTable(e.teams, sec.getAttribute("data-teams").split(","), sec.getAttribute("data-abbr").split(","));
+        if (!t) { sec.hidden = true; return; }
+        if (body) body.innerHTML = t + '<p class="note">' + esc(y) + " regular season, from MLB. Small numbers: each team's rank among the 30 clubs; bold: the better of the two.</p>";
+        return;
+      }
+      if (e) return;
+      TS[y] = { pending: true };
+      lcFetch(LIVE_API + "v1/teams/stats?season=" + y + "&sportIds=1&group=hitting,pitching&stats=season").then(function (doc) { TS[y] = { teams: tsTeams(doc) }; fillTeamStats(); },
+        function () { TS[y] = { failed: true }; fillTeamStats(); });
+    });
   }
   var RP_METRICS = {
     chase: { label: "Chases", unit: "extra chases per 100 pitches out of the zone, against an average hitter, with this pitcher's stuff", f: function (p) { return p.chase_points; }, good: 1, scale: 2.5, fmt: function (v) { return (v > 0 ? "+" : "") + v.toFixed(1); } },
@@ -5083,6 +5215,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       '<p class="note">Each was written down with its test before the numbers came in, then checked on 2026 games the earlier seasons never saw.</p>';
   }
   var OTHER_CHECKS = [
+    ["Does a hitter's record against one pitcher carry into their next meetings?", "A little at most: beyond each player's own level, a 20 plate-appearance record carried between none and about 15% of its on-base edge, and no strikeout or slugging edge we could tell from noise. The Matchups tab shows the records as facts."],
     ["Do a hitter's last ten games say how his next ten go?", "Hardly: about 2% of a hot or cold stretch in getting on base or slugging carried over, within noise. Strikeouts carried about 15%."],
     ["Does a hitter's split against lefties or righties carry over?", "Beyond the usual split for his side, no (average and slugging: correlation 0.06 a season later). Misses carried over in part. The Expected view leans on the usual split."],
     ["Does a pitcher's split by the batter's side carry over?", "Beyond the usual split for his hand, mostly not (average and slugging against: 0.10 and 0.06)."],
@@ -5185,6 +5318,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       h += "</ul></details>";
     }
     h += "<h2>Player pages</h2><p>Every hitter and pitcher with enough pitches has a page: his season line and last ten games from MLB, percentile rankings against everyone with 300 or more plate appearances or batters faced, his splits, hot zones, where he hits it, and for pitchers the arsenal, how each pitch moves and his fastball speed game by game. A few things we checked before saying them: a hitter's last ten games told almost nothing about his next ten in getting on base or slugging (strikeouts carried a little), and a split against lefties or righties beyond the usual one for his side mostly did not carry over to the next season, for hitters or pitchers, so the Expected view leans on the usual split. A starter's fastball speed did carry: about 45% of a change in his last start showed up again in the next one, and starters coming off a drop of a mile per hour or more struck out about two fewer batters per 100.</p>";
+    h += "<h2>Team stats, props and past meetings</h2><p>Before first pitch the Summary shows both teams' season numbers from MLB, each with the club's rank among the 30. The Odds tab lists each starter's strikeouts the way sportsbooks do, with our chance of going over each line and its fair price; re-run over two seasons, those chances came within about 2 points of how often starters actually got there. Each hitter's chances there are his own, so a pinch hitter taking his last trip is allowed for. The Matchups tab adds each hitter's career line against the starting pitcher, from MLB. Those are small samples: over four seasons, beyond each player's own level, a 20 plate-appearance record carried between none and about 15% of its on-base edge into later meetings.</p>";
     h += "<h2>The projected game</h2><p>One of the ten thousand games: the one closest to the middle on runs, hits and each starter's innings and strikeouts, with our pick winning in nine innings. It reads like a box score, but it is one likely way the night goes, not a promise. The high-scoring, low-scoring and upset versions show the range.</p>";
     h += "<h2>During the game</h2><p>While a game is on, the page checks MLB's feed every 15 seconds for the score, the plays and every pitch. The win chance moves after each play, using the same ten thousand games from before first pitch and how real games have gone from the same spot.</p>";
     h += "<h2>Past and future games</h2><p>Tap Games, then use the date strip or the calendar. Any day of 2025 and 2026 works. Past days show the real box score next to what we said, and how our picks did that day. Before October 6, 2026 those are re-runs: we played each game again after the season using only what was known before it. For tomorrow, we post an early number the night before once both starters are announced, using projected lineups, and update it on game day when the real lineups come out. Further out you see the schedule.</p>";

@@ -1913,7 +1913,8 @@ def bvp_expected(P: dict, num: str, den: str | None, m: float) -> np.ndarray:
 def bvp_centered(P: dict, msk, res_, d) -> np.ndarray:
     """The residuals of one window with each batter's and then each pitcher's own mean gap per trial taken out, so a
     level the season rates miss (shrinkage, a mid-season change) does not pass for a pair effect; a pair's own effect
-    survives, being one of a couple of hundred opponents in each player's mean."""
+    survives, being one of a couple of hundred opponents in each player's mean. A park or a defense a pair meets in also
+    comes out: a pair meets about half the time in each one's home park, the same share as each player's own games."""
     r = np.where(msk, res_, 0.0); w = np.where(msk, d, 0.0)
     for who in ('batter', 'pitcher'):
         _, inv = np.unique(P[who], return_inverse=True)

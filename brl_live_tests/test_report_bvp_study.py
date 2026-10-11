@@ -74,3 +74,36 @@ def test_expected_leaves_the_pairs_own_meetings_out():
     e = rep.bvp_expected(P, 'on', None, 0.0)
     # batter 1 against pitcher 9: his other meeting (against 8) was an out, pitcher 9's other batter (2) was out
     assert e[0] < 1e-5 and e[1] < 1e-5
+
+
+
+def _league(seed=5, teams=20, bats=10, arms=5, home_games=50, park_sd=0.25):
+    """Clubs with their own parks: each game puts one club's batters against the other's pitchers, 4 plate appearances
+    each per half, on-base odds moved by the home club's park; no pair effects."""
+    rng = np.random.default_rng(seed)
+    nb, npi = teams * bats, teams * arms
+    bo, po, park = rng.normal(0, 0.15, nb), rng.normal(0, 0.12, npi), rng.normal(0, park_sd, teams)
+    stand = rng.random(nb) < 0.6; throw = rng.random(npi) < 0.7
+    cols = {k: [] for k in ('batter', 'pitcher', 'season', 'stand_r', 'throw_r', 'last_in_pa', 'out7', 'post')}
+    for season in (2023, 2024, 2025, 2026):
+        for home in range(teams):
+            for _ in range(home_games):
+                away = (home + 1 + rng.integers(0, teams - 1)) % teams
+                for bat_t, pit_t in ((away, home), (home, away)):
+                    b = np.repeat(np.arange(bat_t * bats, bat_t * bats + bats), 4)
+                    p = pit_t * arms + rng.integers(0, arms, len(b))
+                    k = rng.random(len(b)) < 0.2
+                    on = ~k & (rng.random(len(b)) < 1 / (1 + np.exp(-(-0.75 + bo[b] + po[p] + park[home]))))
+                    cols['batter'].append(b + 1000); cols['pitcher'].append(p + 5000); cols['season'].append(np.full(len(b), season))
+                    cols['stand_r'].append(stand[b].astype(int)); cols['throw_r'].append(throw[p].astype(int)); cols['last_in_pa'].append(np.ones(len(b), int))
+                    cols['out7'].append(np.where(k, 1, np.where(on, 3, 0))); cols['post'].append(np.zeros(len(b), int))
+    return {k: np.concatenate(v) for k, v in cols.items()}
+
+
+def test_parks_do_not_pass_for_pair_effects():
+    """A pair meets about half the time in each one's park, as each player's own games do, so centering takes the parks out."""
+    rep = _report()
+    out = rep.bvp_study(_league(), lambda m: None, {'boot': 300})
+    for lab, r in out['replications'].items():
+        lo, hi = r['obp']['tau2_ci']
+        assert lo < 0 < hi, (lab, r['obp'])
