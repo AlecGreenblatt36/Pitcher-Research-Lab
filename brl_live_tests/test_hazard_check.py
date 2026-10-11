@@ -119,3 +119,25 @@ def test_live_correction_is_regular_season_only():
     import json
     live = json.loads((ROOT / 'brl_live/hazard_correction.json').read_text()); rep = json.loads((ROOT / 'brl_replay/hazard_correction.json').read_text())
     assert live['coef'] == rep['coef']                                       # the live table is the one the replays test
+
+
+def test_hazard_pitches_sums_each_starters_pitches_and_scores_both_hazards(tmp_path):
+    """LEASH-03's diagnosis on made-up games with a pitch count on every plate appearance: the bands cover every decision
+    and each hazard's chances are summed per band."""
+    from research_lab.game_sim import starter_hazard as sh
+    rng = np.random.default_rng(12)
+    pa = _games(rng, n=200)
+    pa['pitch_number'] = rng.integers(1, 8, len(pa))
+    pa.to_csv(tmp_path / 'plate_appearances.csv.gz', index=False, compression='gzip')
+    from brl_replay.games import load_history
+    h = load_history(tmp_path / 'plate_appearances.csv.gz')
+    d, starts = sh.build_decisions(h)
+    league = float(starts['bf_total'].mean())
+    d = sh.add_tendencies(d, starts, league)
+    joblib.dump({'model': sh.fit_hazard(d, 1.0), 'league_mean_bf': league}, tmp_path / 'starter_hazard.joblib')
+    out = br.hazard_pitches(tmp_path)
+    assert out['with_pitches'] == out['decisions'] == len(d)
+    assert sum(c[3] for c in out['cells']) == len(d) and sum(c[4] for c in out['cells']) == int(d['y'].sum())
+    assert {c[1] for c in out['cells']} <= set(range(6))
+    no = pa.drop(columns=['pitch_number']); no.to_csv(tmp_path / 'plate_appearances.csv.gz', index=False, compression='gzip')
+    assert br.hazard_pitches(tmp_path)['missing'] == 'pitch_number'

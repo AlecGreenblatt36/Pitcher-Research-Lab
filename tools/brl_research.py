@@ -487,6 +487,43 @@ def hazard_fix(data_root: Path, train=(2023, 2024), lam=10.0) -> dict:
     return out
 
 
+def hazard_pitches(data_root: Path) -> dict:
+    """LEASH-03's diagnosis: does the starter's pitch count say more about his exit than the hazard's batters faced, runs and
+    inning? Every real removal decision of the regular seasons with the starter's pitches so far (each plate appearance's
+    last pitch_number, summed), scored by the plain hazard and by LEASH-02's correction (brl_replay/hazard_correction.json):
+    by season, pitch-count band and whether the inning just ended, decisions, removals and each hazard's summed chance.
+    Aggregates only; reports which columns were missing if the history has no pitch numbers."""
+    import joblib
+    from research_lab.game_sim import starter_hazard as sh
+    from brl_replay.games import load_history
+    pa = load_history(next(data_root.rglob('plate_appearances.csv.gz')))
+    if 'game_type' in pa.columns:
+        pa = pa[pa['game_type'].astype(str) == 'R']
+    if 'pitch_number' not in pa.columns:
+        return {'missing': 'pitch_number', 'columns': sorted(pa.columns)[:80]}
+    pa = pa.copy()
+    pa['pitch_number'] = pd.to_numeric(pa['pitch_number'], errors='coerce')
+    bundle = joblib.load(next(data_root.rglob('starter_hazard.joblib')))
+    d, starts = sh.build_decisions(pa)
+    d = sh.add_tendencies(d, starts, float(bundle['league_mean_bf']))
+    # the starter's pitches through each decision: his plate appearances' pitch counts summed in order
+    d = d.sort_values(['game_pk', 'fielding_team', 'bf'], kind='mergesort')
+    d['pitches'] = d.groupby(['game_pk', 'fielding_team'])['pitch_number'].cumsum()
+    corr = json.loads((ROOT / 'brl_replay' / 'hazard_correction.json').read_text())
+    p0 = np.clip(bundle['model'].predict_proba(d[sh.FEATURES])[:, 1], 1e-6, 1 - 1e-6)
+    off = np.log(p0 / (1 - p0))
+    p1 = 1.0 / (1.0 + np.exp(-(off + sh.correction_matrix(d) @ np.asarray(corr['coef'], float))))
+    known = d['pitches'].notna().to_numpy()
+    edges = [0, 60, 75, 85, 95, 105, 1000]
+    band = np.digitize(d['pitches'].fillna(-1).to_numpy(), edges) - 1
+    out = {'decisions': int(len(d)), 'with_pitches': int(known.sum()), 'bands': ['<60', '60-74', '75-84', '85-94', '95-104', '105+'], 'cells': []}
+    y = d['y'].to_numpy(float)
+    for (season, b, e), idx in pd.DataFrame({'s': d['season'].to_numpy(int), 'b': band, 'e': d['inning_ended'].to_numpy(int)})[known].groupby(['s', 'b', 'e']).indices.items():
+        rows = np.flatnonzero(known)[idx]
+        out['cells'].append([int(season), int(b), int(e), int(len(rows)), int(y[rows].sum()), round(float(p0[rows].sum()), 1), round(float(p1[rows].sum()), 1)])
+    return out
+
+
 def postseason_usage(repo, token, key, branch, seasons=(2023, 2024, 2025, 2026)) -> dict:
     """How starters and bullpens are used in postseason games compared with the regular season (from the sealed study seasons)."""
     import collections
@@ -579,7 +616,7 @@ def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']; key_hex = os.environ['BRL_PA_PACKAGE_KEY']; key = key_bytes(key_hex)
     branch = os.environ.get('BRL_LEDGER_BRANCH', 'brl-live-data')
     experiment = (os.environ.get('BRL_EXPERIMENT') or 'physics').strip()
-    if experiment in ('hazard_check', 'hazard_fix'):
+    if experiment in ('hazard_check', 'hazard_fix', 'hazard_pitches'):
         run_id = os.environ.get('GITHUB_RUN_ID', 'local')
         receipt = {'schema': 'brl.research-receipt.v1', 'experiment': experiment, 'run_id': run_id, 'started_at': datetime.now(timezone.utc).isoformat()}
         try:
@@ -591,7 +628,7 @@ def main():
                 import shutil; shutil.rmtree(data_root)
             data_root.mkdir(parents=True)
             ep.restore_package(repo, token, key_hex, manifest, data_root)
-            receipt['results'] = (hazard_fix if experiment == 'hazard_fix' else hazard_check)(data_root); receipt['status'] = 'completed'
+            receipt['results'] = {'hazard_fix': hazard_fix, 'hazard_pitches': hazard_pitches}.get(experiment, hazard_check)(data_root); receipt['status'] = 'completed'
         except Exception as exc:
             receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:300]
             receipt['where'] = [{'file': Path(f.filename).name, 'function': f.name, 'line': f.lineno} for f in traceback.extract_tb(exc.__traceback__)[-5:]]
