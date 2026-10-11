@@ -91,6 +91,62 @@ def apply_map(games, a, b, lo=0.002, hi=0.998):
     return out
 
 
+LO, HI = 0.002, 0.998
+
+
+def _logit(p):
+    p = np.clip(np.asarray(p, float), LO, HI); return np.log(p / (1 - p))
+
+
+def fit_curve(games, iters=60):
+    """BULLPEN-04: logit(p') = a + b x + c x^2, x = logit(chance), by Newton's method on one season's candidates (shares
+    above 0); the straight map (c = 0) if the curve is not increasing over the clipped range. Returns (a, b, c)."""
+    R = [r for r in rows(games) if r[1] > 0]
+    x = _logit([r[1] for r in R]); y = np.array([r[2] for r in R], float)
+    def fit(cols):
+        X = np.column_stack(cols); w = np.zeros(X.shape[1]); w[1] = 1.0
+        for _ in range(iters):
+            q = 1 / (1 + np.exp(-(X @ w))); g = X.T @ (y - q); H = (X * (q * (1 - q))[:, None]).T @ X
+            step = np.linalg.solve(H, g); w = w + step
+            if np.abs(step).max() < 1e-10:
+                break
+        return w
+    a, b, c = fit([np.ones(len(x)), x, x * x])
+    lo, hi = _logit(LO), _logit(HI)
+    if min(b + 2 * c * lo, b + 2 * c * hi) <= 0:
+        a, b = fit([np.ones(len(x)), x]); c = 0.0
+    return float(a), float(b), float(c)
+
+
+def curve(p, a, b, c):
+    x = _logit(p); return 1 / (1 + np.exp(-(a + b * x + c * x * x)))
+
+
+def candidates_check(games, abc, draws=2000, seed=1):
+    """BULLPEN-04's predictions on one season's candidates with a map (a, b, c) fitted elsewhere."""
+    R = [r for r in rows(games) if r[1] > 0]
+    dates = np.array([r[0] for r in R]); p0 = np.array([r[1] for r in R]); y = np.array([r[2] for r in R], float)
+    p1 = curve(p0, *abc)
+    keys, inv = np.unique(dates, return_inverse=True)
+    rng = np.random.default_rng(seed); idx = rng.integers(0, len(keys), size=(draws, len(keys)))
+    d = (p1 - y) ** 2 - (p0 - y) ** 2
+    s = np.bincount(inv, weights=d, minlength=len(keys)); n = np.bincount(inv, minlength=len(keys)).astype(float)
+    boot = s[idx].sum(1) / n[idx].sum(1)
+    res = {'rows': int(len(y)), 'map': [round(v, 5) for v in abc], 'mean_raw': round(100 * float(p0.mean()), 2), 'mean_mapped': round(100 * float(p1.mean()), 2),
+           'actual': round(100 * float(y.mean()), 2), 'gap_points': round(100 * float(p1.mean() - y.mean()), 2),
+           'brier_raw': round(float(((p0 - y) ** 2).mean()), 5), 'brier_mapped': round(float(((p1 - y) ** 2).mean()), 5),
+           'brier_change': [round(float(d.mean()), 6), round(float(np.quantile(boot, .025)), 6), round(float(np.quantile(boot, .975)), 6)], 'bins': {}}
+    for lo, hi in zip(BINS[:-1], BINS[1:]):
+        m = (p1 >= lo) & (p1 < hi)
+        if m.any():
+            res['bins'][f'{lo:.2f}-{min(hi, 1.0):.2f}'] = {'rows': int(m.sum()), 'chance': round(100 * float(p1[m].mean()), 2), 'actual': round(100 * float(y[m].mean()), 2),
+                                                           'gap_points': round(100 * float(p1[m].mean() - y[m].mean()), 2)}
+    res['holds'] = {'(1) mean within 1.5': bool(abs(res['gap_points']) <= 1.5),
+                    '(2) every bin within 4': bool(all(abs(v['gap_points']) <= 4.0 for v in res['bins'].values() if v['rows'] >= MIN_ROWS)),
+                    '(3) Brier better': bool(res['brier_change'][2] < 0)}
+    return res
+
+
 def load_games(paths):
     seen, out = set(), []
     for f in paths:
@@ -106,7 +162,23 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--season', action='append', required=True)
     ap.add_argument('--out', required=True)
+    ap.add_argument('--map', action='store_true', help='BULLPEN-04: each season with the curve fitted on the other')
     a = ap.parse_args()
+    if a.map:
+        G = {}
+        for spec in a.season:
+            lab, pat = spec.split('=', 1)
+            files = sorted(glob.glob(pat)); assert files, pat
+            G[lab] = load_games(files)
+        out = {}
+        for lab in G:
+            other = [k for k in G if k != lab][0]
+            out[lab] = candidates_check(G[lab], fit_curve(G[other]))
+        out['pooled_map'] = [round(v, 5) for v in fit_curve([g for v in G.values() for g in v])]
+        out['rule_holds'] = bool(all(all(out[lab]['holds'].values()) for lab in G))
+        Path(a.out).write_text(json.dumps(out, indent=1))
+        print(json.dumps(out, indent=1))
+        return
     out = {}
     for spec in a.season:
         lab, pat = spec.split('=', 1)

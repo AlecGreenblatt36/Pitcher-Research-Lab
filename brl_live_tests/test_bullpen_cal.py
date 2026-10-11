@@ -34,3 +34,22 @@ def test_a_map_fitted_on_one_season_fixes_squashed_chances_on_another():
     assert b > 1.3
     fixed = bc.season_check(bc.apply_map(_games(4, squash=0.6), a, b), draws=200)
     assert fixed['holds']['(2) every bin within 5'] and abs(fixed['gap_points']) < 1.5
+
+
+def test_curve_fitted_on_one_season_fixes_overconfident_top_chances():
+    """BULLPEN-04: a quadratic curve on the logit fitted on one season's candidates brings over-confident top chances back
+    on another, and stays increasing."""
+    def overconfident(seed, n=1500):
+        rng = np.random.default_rng(seed); out = []
+        for i in range(n):
+            st = {}
+            for side in ('away', 'home'):
+                shown = np.clip(rng.beta(0.9, 1.6, 8), 0.005, 0.995); true = 1 / (1 + np.exp(-(0.6 * np.log(shown / (1 - shown)) - 0.2)))
+                st[side] = {'relievers': [[j, float(s), int(rng.random() < t)] for j, (s, t) in enumerate(zip(shown, true))]}
+            out.append({'game_pk': i, 'date': '2025-%03d' % (i // 15), 'starters': st})
+        return out
+    abc = bc.fit_curve(overconfident(5))
+    xs = np.linspace(0.01, 0.99, 50); ys = bc.curve(xs, *abc)
+    assert np.all(np.diff(ys) > 0)
+    r = bc.candidates_check(overconfident(6), abc, draws=200)
+    assert r['holds']['(2) every bin within 4'] and r['brier_change'][2] < 0
