@@ -65,7 +65,14 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 6:30 a.m. Eastern October 11, by `date -u`)
+### In flight (updated 7:15 a.m. Eastern October 11, by `date -u`)
+
+- October 11, 7:15 a.m.: REST-01 failed as registered (relievers on no rest lose 0.16 mph, under the 0.2 gate, and no
+  strikeouts; bullpen card unchanged). TTO-01: the third-time penalty against starters is real every season (OBP +1.05
+  points in 2026, strikeouts down 3) but a starter's own gap did not reliably carry over (46 pairs, r 0.12); the
+  starter fold says so (TTO_NOTE). Also: the pitching matchup gives each starter's last three starts from MLB's game logs
+  (psLast3) and his last start's fastball; the bullpen card adds K% and BB% shaded by percentile (penRate) with names
+  sticky; How it works has a Player pages section. Main at d25ab0db7.
 
 - October 11, 6:30 a.m.: three more checks held and are on the page. PSPLITS-01 (run 38128749747): a pitcher's own AVG
   and SLG split by batter side did not carry over (r 0.10, 0.06); his Expected splits use his hand's usual split
