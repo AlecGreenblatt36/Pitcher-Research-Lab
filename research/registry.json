@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 267,
- "rows": 270,
+ "experiments": 268,
+ "rows": 271,
  "records": {
   "ACC-01": [
    {
@@ -4427,6 +4427,22 @@
     ],
     "frozen_commits": [],
     "status": "held: Expected view on every subset at the pooled m"
+   }
+  ],
+  "MATCHUPREAD-01": [
+   {
+    "id": "MATCHUPREAD-01",
+    "columns": {
+     "ID": "MATCHUPREAD-01",
+     "Attempt": "Does a pitcher's own location pattern, laid over a hitter's expected zones, predict the hitter's results against that pitcher beyond the hitter's level on that pitch type? For each 2026 at-bat ending on a pitch of family f from pitcher p to hitter h: the composite E = the sum over MLB's 13 zones of p's share of family-f pitches to h's side in each zone (training seasons) times h's expected slugging there (ZONES-01's shrinkage, m 160, against p's hand and on family f); the baseline B = the same sum with the league's location shares for that hand, side and family instead of p's. Training 2024 and 2025, regular season; pitchers with 200 or more family-f pitches to that side in training, hitters with 100 or more plate appearances. Scored once on 2026 regular-season at-bats: squared error of total bases per at-bat for E against B, and the slope of actual minus B on E minus B, with bootstrap intervals by pitcher (2,000 draws). tools/brl_report.py matchup_read_study, report lane, aggregates only",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: (1) the slope on E minus B is positive with the interval excluding zero; (2) E's squared error is below B's with the interval excluding zero. Decision rule: if (1) and (2) hold, a hitter's plan shows a matchup read per pitch type (his expected slugging where this pitcher throws it against where an average pitcher does), scaled by the slope; if only (1) holds, the read is shown as a lean with its slope; if (1) fails, no matchup read.",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "BOX-01": [
