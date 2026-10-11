@@ -4923,14 +4923,16 @@
     "columns": {
      "ID": "TTO-01",
      "Attempt": "The third time through the order. Plate appearances against starters (his first pitch in the first inning), regular seasons 2023 to 2026 (2026 before August 1), each with the batter's time through (1st, 2nd, 3rd or later against that pitcher in the game, by at-bat order). Per season the league's OBP (times on base per plate appearance), SLG per at-bat and strikeouts per plate appearance by time through; per starter-season his own third-time gap (third against first and second together, net of the league's gap that season) and its carry-over to the next season (2023 to 2024, 2024 to 2025, 2025 to 2026) among starters with 150 or more third-time plate appearances in both: correlation with an interval from resampling pitchers (2,000 draws) and slope. tools/brl_report.py tto_study and tto_table, report lane, aggregates only. Synthetic check (brl_live_tests/test_report_tto_study.py): a planted 3-point league penalty measured; a starter's own gap carries over when it is his (r above 0.3) and not when redrawn.",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: (1) in every season hitters' third-time OBP against starters is at least 1 point above their first and second times together; (2) a starter's own third-time OBP gap carries over with r under 0.2; (3) the same for SLG. Decision rule: if (1) holds, the plan's starter fold notes the league's third-time penalty in 2026; if (2) also holds it adds that a starter's own gap did not carry over, and no per-pitcher third-time numbers are shown; if (2) fails, his own gap is shown shrunk by the carry-over slope.",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: (1) in every season hitters' third-time OBP against starters is at least 1 point above their first and second times together; (2) a starter's own third-time OBP gap carries over with r under 0.2; (3) the same for SLG. Decision rule: if (1) holds, the plan's starter fold notes the league's third-time penalty in 2026; if (2) also holds it adds that a starter's own gap did not carry over, and no per-pitcher third-time numbers are shown; if (2) fails, his own gap is shown shrunk by the carry-over slope. **Results (run 38131192178, receipt research/report-38131192178.json):** OBP against starters by time through, first / second / third or later: 2023 .312 / .318 / .328 (22,601 third-time plate appearances), 2024 .302 / .311 / .323, 2025 .306 / .310 / .322, 2026 before August 1 .304 / .319 / .322; third against first and second together +1.3, +1.7, +1.4 and +1.05 points. SLG third against first and second together about +2 to +3 points each season (2026 .419 against about .397); strikeouts fall each time through (2026 24.5%, 20.7%, 19.5%). Carry-over of a starter's own gap, 46 pitcher-season pairs from 34 starters (150 or more third-time plate appearances in both seasons is rare): OBP r 0.12 [-0.26, 0.38], SLG r 0.23 [-0.03, 0.48], strikeouts r -0.10 [-0.35, 0.15]. **(1) held** (2026 by 1.05 points), **(2) held** on the point estimate with a wide interval, **(3) failed** (SLG 0.23). Decision, as registered: the plan's starter fold notes the league's third-time penalty in 2026 and that a starter's own gap did not reliably carry over; no per-pitcher third-time numbers.",
+     "Delta corrected Brier, 2026": "(1), (2) held; (3) failed"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38131192178"
+    ],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "(1), (2) held; (3) failed"
    }
   ],
   "BOX-01": [
