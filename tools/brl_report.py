@@ -148,13 +148,14 @@ def zone_counts(T: dict, rows, swing, whiff) -> dict:
     return out
 
 
-def zone_split(T: dict, rows, swing, whiff) -> dict:
-    """zone_counts against right-handed and against left-handed pitchers, the split every scouting sheet shows:
-    {'R': {...}, 'L': {...}} keyed by the pitcher's hand (a hand he never faced is left out)."""
+def zone_split(T: dict, rows, swing, whiff, by: str = 'throw_r') -> dict:
+    """zone_counts against right-handed and against left-handed opponents, the split every scouting sheet shows:
+    {'R': {...}, 'L': {...}} keyed by the pitcher's hand for a hitter (by='throw_r') or the batter's side for a pitcher
+    (by='stand_r'); a hand never faced is left out."""
     rows = np.asarray(rows, dtype=np.int64)
     out = {}
     for hand, code in (('R', 1), ('L', 0)):
-        rr = rows[T['throw_r'][rows] == code] if len(rows) else rows
+        rr = rows[T[by][rows] == code] if len(rows) else rows
         if len(rr):
             out[hand] = zone_counts(T, rr, swing, whiff)
     return out
@@ -490,7 +491,8 @@ class Fitted:
                     mix[fname][key] = [[float(GU[k % len(GU)]), float(GZ[k // len(GU)]), round(float(cnt[k] / m2.sum()), 3)] for k in np.argsort(-cnt)[:3] if cnt[k] > 0]
         return {'throws': 'R' if T['throw_r'][r][0] == 1 else 'L', 'pitches': int(len(r)), 'mix': mix,
                 'chase_rate_against': round(float(self.swing[r][self.outside[r]].mean()), 3) if self.outside[r].any() else None,
-                'looks_in_ends_out': round(float(self.looks_in_ends_out[r].mean()), 3)}
+                'looks_in_ends_out': round(float(self.looks_in_ends_out[r].mean()), 3),
+                'zones': zone_split(T, r, self.swing, self.whiff, by='stand_r')}      # where he throws, by the batter's side
 
     def _chain(self, ps_, pw_, pcs_, pfo_, ci_):
         use_c = np.bincount(ci_, minlength=12) >= 15; ki = ci_ % 3

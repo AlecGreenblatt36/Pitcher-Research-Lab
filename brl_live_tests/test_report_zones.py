@@ -54,3 +54,17 @@ def test_zone_split_by_pitcher_hand():
     only_r = B.zone_split(T, [0], swing, whiff)
     assert set(only_r) == {'R'}                     # a hand he never faced is left out
     assert B.zone_split(T, [], swing, whiff) == {}
+
+
+def test_zone_split_by_batter_side_for_pitchers():
+    B = _report()
+    #            zone group call last out7 stand_r
+    rows = [(9, 3, 2, 1, 1, 1),     # a slider down and away to a righty: strike three
+            (7, 3, 0, 0, 2, 0),     # the same pitch to a lefty, taken
+            (7, 3, 1, 1, 0, 0)]     # then put in play for an out
+    a = np.array(rows)
+    T = {'zone': a[:, 0], 'group': a[:, 1], 'call': a[:, 2], 'last_in_pa': a[:, 3], 'out7': a[:, 4], 'stand_r': a[:, 5]}
+    swing = ((T['call'] == 1) | (T['call'] == 2)).astype(float); whiff = (T['call'] == 2).astype(float)
+    out = B.zone_split(T, np.arange(3), swing, whiff, by='stand_r')
+    vr = {c[0]: c[1:] for c in out['R']['breaking']}; vl = {c[0]: c[1:] for c in out['L']['breaking']}
+    assert vr[9] == [1, 1, 1, 1, 0, 0] and vl[7] == [2, 1, 0, 1, 0, 0]
