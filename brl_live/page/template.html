@@ -3977,7 +3977,12 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var tr = box.total_run_distribution ? dist(box.total_run_distribution) : null;
     if (tr) {
       var mkt2 = D.market && D.market[f.game_pk], mline = "";
-      if (mkt2 && mkt2.over_under != null) mline = " Vegas total: " + mkt2.over_under + (mkt2.p_over != null ? " (over " + pct(mkt2.p_over) + ")" : "") + ".";
+      if (mkt2 && mkt2.over_under != null) {
+        /* the simulator's chance of the over, a push left out, as the replays score it (tools/replay_compare.py p_over) */
+        var L0 = Number(mkt2.over_under), ov = 0, un = 0;
+        tr.counts.forEach(function (x) { if (x[0] > L0) ov += x[1]; else if (x[0] < L0) un += x[1]; });
+        mline = " Vegas total: " + mkt2.over_under + "." + (ov + un ? " Over " + mkt2.over_under + (L0 === Math.round(L0) ? " (a push left out)" : "") + ": simulator " + pct(ov / (ov + un)) + (mkt2.p_over != null ? ", Vegas " + pct(mkt2.p_over) : "") + "." : "");
+      }
       var taughtTotal = (mkt2 && mkt2.over_under != null && f.date >= TOTAL_TAUGHT.from) ? (TOTAL_TAUGHT.sim * mean(tr) + TOTAL_TAUGHT.line * Number(mkt2.over_under) + TOTAL_TAUGHT.shift) : null;
       h += '<section class="sec"><h2>Total runs</h2><p class="lede">' + (taughtTotal != null ? "We expect " + taughtTotal.toFixed(1) + " runs: the simulator\'s " + mean(tr).toFixed(1) + " mixed with the Vegas total (over two seasons re-run, the mix beat the Vegas total on its own). " : "We expect " + mean(tr).toFixed(1) + " runs. ") +
         "Most likely " + mode(tr) + ". Half of games land between " + quant(tr, .25) + " and " + quant(tr, .75) + ". " + pct(probAtLeast(tr, 10)) + " reach 10 or more." + esc(mline) + "</p></section>";
