@@ -216,8 +216,26 @@ how often starters got there (PLAYER-04, described after looking).
 The run line, the first inning and the first five innings were checked the same way before being shown (RUNLINE-01,
 NRFI-01, FIRST5-01) and none passed its rule: given a win, the simulator's margins run tight (the narrowness DISP-01 found in
 its run distributions), and the first-inning and five-inning chances held on level but missed a per-fifth bound set near
-the noise. DISP-03 tests taking the market numbers alone from worlds with the centered day-form shock while win chances
-stay plain; two or more total bases is under test as PLAYER-06.
+the noise. DISP-03 took the market numbers alone from worlds with a centered day-form shock while win chances stayed plain:
+the spread and the run line came right in both seasons, but the total's over and under improved only within noise, so it
+stays off. Two or more total bases held on level but its top tenth ran 3.4 points high in 2026 (PLAYER-06), so that column
+stays off too: in 2026, the model's first season unseen in fitting or tuning, the best hitters' rates run high (by tenths
+of the simulated rate, each step up in the simulated rate came with 0.90 of that step in actual hits and 0.82 in home runs,
+against 0.95 and 0.97 in 2025, the season the model was tuned on).
+
+Starters' outs recorded (the pitcher-outs prop) were scored the same way (PLAYER-07): right on average and at the lines near
+each start's median, but the simulator ends too many starts in the 4th inning and too few in the 5th (more than 12.5 outs
+3.8 points short in 2025), so the outs ladder is built and stays off.
+
+## The season's level, re-anchored in-season (October 11, 2026)
+
+Outcome levels move from season to season (more walks and fewer extra-base hits and home runs in 2026 than in 2025), and the
+simulator carries its level from tables fitted on earlier seasons. LEVEL-01 re-anchored each outcome's league level every
+day from the season's real plate appearances on earlier dates only: per class, log((observed + m x share) / (predicted +
+m x share)), with m = 10,000 pseudo plate appearances at the predicted shares. On every real plate appearance of 2025 and
+2026 (tables from the other season), it raised the log-likelihood by 0.11 and 0.15 nats per 1,000 plate appearances, both
+intervals above zero, with m picked on the other season. The layer (LevelAdjust) is built and off; LEVEL-02 tests it in
+full replays against the hitter chances, the totals and the win chances before it can be switched on for a season.
 
 The Summary's team table and the Matchups tab's career lines against the starter are MLB's public numbers, read by the
 browser (PROD-14). How much a career line says was measured on 2023-2026 plate appearances (BVP-01): beyond each player's

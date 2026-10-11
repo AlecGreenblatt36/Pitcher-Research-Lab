@@ -75,9 +75,11 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   `tools/replay_compare.py v2-prod4-tb-1000 v2-prod4-level-1000` and `tools/brl_player_cal.py --pair
   <season>='<tb glob>::<level glob>'`; first-date games must match exactly. If it passes, the live side still needs
   the season's running sums (observed and predicted outcome counts by date) before next season.
-- PLAYER-07 registered (starters' outs, the pitcher-outs prop); replays v2-prod4-outs-1000-<season> (runs 38152417051
-  for 2026, 38152442137 for 2025) record each starter's real outs (harness pitcher_outs); score with
-  tools/brl_outs_cal.py; the page's outs ladder is built behind OUTS_LADDER (false).
+- PLAYER-07 failed its rule (starters' outs: every line within 2.5 points in 2026, but more than 12.5 and 13.5 outs 3.8
+  and 2.9 points short in 2025), so the outs ladder stays off (page OUTS_LADDER false; built and tested). The miss: the
+  simulator ends too many starts in the 4th inning and too few in the 5th (10 to 12 outs 13.6% against 10.9% and 11.5%
+  of real starts; 13 to 15 outs 25.5% against 29.6%, 25.2% against 27.8%). The exit hazard
+  (research_lab/game_sim/starter_hazard.py) has no term for finishing the 5th: next item (LEASH-02).
 - Layout today: table row labels take the light rule, team stats show each rank beside its number, the Odds tab's
   ladders put each price beside its chance (one line a row), bullpen tables list arms at 10% or more with the rest in
   one line.
@@ -856,6 +858,12 @@ far and part of why simulated bullpens struck out fewer batters and allowed more
   context table includes the current season through late September, so October is closer. Next season's item: re-anchor
   each outcome's league level in-season from the season's real plate appearances so far (offsets log(observed/predicted)
   shrunk by plate appearances), tested in replays of both seasons (RUNS-03 pointed the same way for the running plays).
+- (October 11) The plate-appearance model's player differences run wide out of sample: by tenths of the simulated hit and
+  home-run rate per plate appearance (PLAYER-06's replays, live settings), each step in the simulated rate came with 0.90
+  (hits) and 0.82 (home runs) of that step in actual rates in 2026, the model's holdout season, against 0.95 and 0.97 in
+  2025, its tuning season. A shrink of the player part toward the league cannot be gated on two seasons with this model
+  (2025 tuned it); the clean test is next season's refit (train 2023-2025, tune on 2026, hold out 2027) or a refit
+  trained on 2023 and tuned on 2024 with 2025 held out.
 - (October 11) The simulated run distributions are narrow (team-run SD 3.10 against 3.21 to 3.25; games decided by five or
   more 27% against 29%), which sinks the run line (RUNLINE-01); DISP-03 tests market numbers from day-form worlds.
 - Run conversion: with real outcomes replayed through the kernel and steals, the simulator scores 0.04 to 0.07 runs per

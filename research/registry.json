@@ -5254,14 +5254,17 @@
     "columns": {
      "ID": "PLAYER-07",
      "Attempt": "Starters' outs recorded (the pitcher-outs prop, listed at a half line such as 16.5). Each starter's chance of more than each half line comes from his simulated outs (the box's outs distribution, which the page shows today only as an innings range). Full replays of 2025 and 2026 with the live settings and starter lines (RUNLINE-01's settings and seeds: tables fitted on other seasons, the leash fitted on the other season, 1,000 worlds per game), which now record each starter's real outs, read from the plate appearances: the outs before the next plate appearance of the half-inning minus the outs before his (an out on the bases goes to the pitcher on the mound), 3 at a half-inning's end, and a walk-off's last half-inning short of three (brl_replay/harness.py pitcher_outs; tests in test_pitcher_outs.py). Every start with a real line is scored, early exits and openers included, since the market settles those too; scored by tools/brl_outs_cal.py",
-     "Disposition and evidence": "**Registered in the commit that added this row, before its replays.** Predictions: (1) at every half line from 12.5 to 20.5, starters' mean chance of more within 2.5 points of the actual share, in both seasons; (2) by fifths of the simulated mean outs, the simulated mean within 0.6 outs of the actual mean in every fifth, in both seasons; (3) Brier at the lines 14.5 to 17.5 together better than each line's constant share, in both seasons. Decision rule: the Odds tab adds each starter's outs ladder (his chance of more than each half line around his median, with the fair price, as PROD-13 did for strikeouts) if (1) and (2) hold in both seasons; otherwise not",
-     "Delta corrected Brier, 2026": "Registered; replays queued"
+     "Disposition and evidence": "**Registered in the commit that added this row, before its replays.** Predictions: (1) at every half line from 12.5 to 20.5, starters' mean chance of more within 2.5 points of the actual share, in both seasons; (2) by fifths of the simulated mean outs, the simulated mean within 0.6 outs of the actual mean in every fifth, in both seasons; (3) Brier at the lines 14.5 to 17.5 together better than each line's constant share, in both seasons. Decision rule: the Odds tab adds each starter's outs ladder (his chance of more than each half line around his median, with the fair price, as PROD-13 did for strikeouts) if (1) and (2) hold in both seasons; otherwise not. Results (runs 38152442137 for 2025 and 38152417051 for 2026; 4,846 and 4,854 starts): outs 15.51 simulated against 15.57 actual (2025) and 15.16 against 15.15 (2026); by line, more than 12.5 outs 76.5% against 80.3% (2025, -3.8 points) and 74.2% against 76.6% (2026, -2.4), 13.5 -2.9 and -1.3, 14.5 -2.0 and -0.8, 15.5 to 17.5 within 0.7 in both, 18.5 +1.6 and +1.3, 19.5 +1.4 and +1.3, 20.5 +1.0 and +1.1; by fifths of the simulated mean within 0.46 outs (2025) and 0.20 (2026); Brier at 14.5 to 17.5 0.2134 against a constant's 0.2348 (2025) and 0.2080 against 0.2361 (2026); at the lines a ladder would show (each start's median less 1.5 to plus 1.5) 49.1% against 49.4% and 49.5% against 49.8%. (1) failed in 2025 (12.5 and 13.5 outside 2.5 points), held in 2026; (2) and (3) held in both. **The outs ladder stays off under the rule (page OUTS_LADDER false).** Where it misses, described after looking: the simulator ends too many starts in the 4th inning and too few in the 5th (10 to 12 outs 13.6% of simulated starts against 10.9% of real ones in 2025 and 13.6% against 11.5% in 2026; 13 to 15 outs 25.5% against 29.6% and 25.2% against 27.8%), and slightly too many go 7 innings or more (12.6% against 11.6%, 11.8% against 10.8%); the exit hazard has no term for finishing the 5th",
+     "Delta corrected Brier, 2026": "(1) failed in 2025; outs ladder off"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38152417051",
+     "38152442137"
+    ],
     "frozen_commits": [],
-    "status": "Registered; replays queued"
+    "status": "(1) failed in 2025; outs ladder off"
    }
   ],
   "LEVEL-01": [
