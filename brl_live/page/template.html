@@ -2802,7 +2802,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       h += '<h4 class="hz-h">' + esc(lastName(players[now.hid] && players[now.hid].name || now.hitter)) + " against " + esc(hzHandWords(hand)) + "</h4>" + hzLine(hzCells(hc.zones, hand, "all"), hzLeague(doc.league, hc.side, hand, "all"));
       h += '<div class="hz-tools">' + hzMetricSeg() + "</div>";
       h += hzStrip(hc, doc.league, hand, [["all", "All pitches", ""]].concat(shown.map(function (fam) { var mix = pc && pc.mix && pc.mix[fam]; return [fam, PITCH_NAME[fam], mix ? pct(mix.share) + ", " + Math.round(mix.speed) + " mph" : ""]; })), plan, stPlan, "");
-      return h + hzLegend(hzMetric(), true) + "</section>";
+      h += hzLegend(hzMetric(), true);
+      var pname = players[now.pid] && players[now.pid].name || now.pitcher;
+      var loc = pc && pc.zones ? hzPitchStrip(pc, hc.side, shown.map(function (fam) { var mix = pc.mix && pc.mix[fam]; return [fam, PITCH_NAME[fam], mix ? pct(mix.share) + ", " + Math.round(mix.speed) + " mph" : ""]; }), "loc", doc.league, pname + ": ") : "";
+      if (loc) h += '<details class="more" id="lc-loc-' + pk + '"' + (state.rpOpen.lcLoc ? " open" : "") + "><summary>Where " + esc(lastName(pname)) + " throws to " + (hc.side === "L" ? "lefties" : "righties") + "</summary>" + loc + hzLocLegend() + "</details>";
+      return h + "</section>";
     }
     h += '<div class="rp-cards">';
     shown.forEach(function (fam) {
@@ -2821,6 +2825,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var now = liveReportNow(pk, doc);
       host.innerHTML = now ? liveCardHtml(f, pk, doc, now) : "";
       host.querySelectorAll("[data-hzmetric]").forEach(function (b) { b.addEventListener("click", function () { var y = window.scrollY; state.hzMetric = b.getAttribute("data-hzmetric"); loadLiveCard(f, pk); window.scrollTo(0, y); }); });
+      var fold = document.getElementById("lc-loc-" + pk);
+      if (fold) fold.addEventListener("toggle", function () { state.rpOpen.lcLoc = fold.open; });
       if (now && now.lv.plate_umpire && UMPS === null) withUmpires(function () { loadLiveCard(f, pk); });
     });
   }
