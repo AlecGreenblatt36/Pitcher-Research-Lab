@@ -24,6 +24,7 @@ from research_lab.game_sim.running_events import KINDS as RUNNING_KINDS
 from research_lab.game_sim.starter_hazard import FittedStarterPolicy, tendencies_at
 
 MAX_RUNS = 30
+MAX_MARGIN = 15
 NON_PA = frozenset({"stolen_base", "caught_stealing", *RUNNING_KINDS})     # events between plate appearances
 HISTORY_COLUMNS = ["date_key", "game_pk", "at_bat_number", "batter", "pitcher", "stand", "p_throws", "park", "outcome", "age_bat", "age_pit"]
 
@@ -356,6 +357,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
             seeds = rng.integers(0, np.iinfo(np.int32).max, size=n_sims, dtype=np.int64)
             hw = ties = 0
             ha = np.zeros(MAX_RUNS + 1, int); aa = np.zeros(MAX_RUNS + 1, int)
+            mh = np.zeros(2 * MAX_MARGIN + 1, int)                  # home minus away runs, -MAX_MARGIN..+MAX_MARGIN (the run line needs the joint)
             s_outs = {"away": [], "home": []}
             sl = {side: {m_: np.zeros(n_, int) for m_, n_ in (("k", 21), ("bf", 46), ("h", 21), ("bb", 16), ("outs", 28))} for side in ("away", "home")} if starter_lines else None
             tot = {side: np.zeros(4) for side in ("away", "home")} if starter_lines else None   # team pitching: K, BF, BB+HBP, hits
@@ -382,6 +384,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                         halves[si % 2].add(box)
                 ha[min(r.home_score, MAX_RUNS)] += 1
                 aa[min(r.away_score, MAX_RUNS)] += 1
+                mh[min(max(r.home_score - r.away_score, -MAX_MARGIN), MAX_MARGIN) + MAX_MARGIN] += 1
                 if r.winner == "home":
                     hw += 1
                 elif r.winner not in ("away", "home"):
@@ -423,7 +426,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                         if bid_ not in cnt:
                             hl[bid_]["h_hist"][0] += 1; hl[bid_]["hr_hist"][0] += 1; hl[bid_]["bb_hist"][0] += 1; hl[bid_]["k_hist"][0] += 1
             records.append({"game_pk": int(g.game_pk), "date": date, "home": g.home, "away": g.away, "n": n_sims,
-                            "home_wins": hw, "ties": ties, "home_hist": ha.tolist(), "away_hist": aa.tolist(),
+                            "home_wins": hw, "ties": ties, "home_hist": ha.tolist(), "away_hist": aa.tolist(), "margin_hist": mh.tolist(),
                             "home_starter_outs": float(np.mean(s_outs["home"])) if s_outs["home"] else 0.0, "away_starter_outs": float(np.mean(s_outs["away"])) if s_outs["away"] else 0.0,
                             "home_runs": int(g.home_runs), "away_runs": int(g.away_runs)})
             if hl is not None:

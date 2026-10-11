@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 306,
- "rows": 309,
+ "experiments": 307,
+ "rows": 310,
  "records": {
   "ACC-01": [
    {
@@ -5114,6 +5114,22 @@
     ],
     "frozen_commits": [],
     "status": "display"
+   }
+  ],
+  "RUNLINE-01": [
+   {
+    "id": "RUNLINE-01",
+    "columns": {
+     "ID": "RUNLINE-01",
+     "Attempt": "The run line (each team by two runs or more), the third standard market after the moneyline and the total. The page would take each team's run-line chance as the headline win chance times the simulator's chance of winning by two or more given a win, so it agrees with the pick; this checks that conditional piece. Full replays of 2025 and 2026 with the live settings (PLAYER-03's settings and seeds, no hitter lines), each game's margin histogram over 1,000 worlds now recorded (brl_replay/harness.py margin_hist), against the real margins (tools/brl_runline_cal.py; synthetic checks in test_runline_cal.py)",
+     "Disposition and evidence": "**Registered in the commit that added this row, before its replays.** Predictions: (1) given a win, the simulator's chance of winning by two or more within 1.5 points of how often winners did, for home winners and road winners, in both seasons; (2) by fifths of that conditional chance, within 3 points in both seasons; (3) the simulator's own run-line chance beats a constant in Brier for both sides in both seasons. Decision rule: the Odds tab shows the run line for both teams (-1.5 and +1.5) with our chance (the headline win chance times the conditional) and its fair price if (1) and (2) hold in both seasons; otherwise it is not shown. Results: pending",
+     "Delta corrected Brier, 2026": "pending"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "pending"
    }
   ],
   "BOX-01": [
