@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 323,
- "rows": 326,
+ "experiments": 324,
+ "rows": 327,
  "records": {
   "ACC-01": [
    {
@@ -5376,6 +5376,22 @@
     "runs": [],
     "frozen_commits": [],
     "status": "(1) to (3) held; ladder spread"
+   }
+  ],
+  "PLAYER-09": [
+   {
+    "id": "PLAYER-09",
+    "columns": {
+     "ID": "PLAYER-09",
+     "Attempt": "Starters' hits allowed as a prop ladder (the standard pitcher-hits market, next to the strikeout ladder). Each start's simulated hits allowed (the box keeps the distribution) against his real hits, on two sets of full replays of 2025 and 2026: RELIEF-04's (v2-prod4-relief4-1000, the live regular-season settings) and PLAYER-07's (v2-prod4-outs-1000, the plain starter-exit hazard the postseason keeps). Only the season means were seen before this row (4.89 against 4.90 and 4.83 against 4.74 on LEASH-02's). Two candidates: the raw distributions and the same spread to the residual variance by PLAYER-08's step with c from the other season (tools/brl_prop_ladder.py)",
+     "Disposition and evidence": "**Registered in the commit that added this row, before its scoring.** Predictions, per replay set: (1) at every half line from 2.5 to 7.5 the mean chance of more within 2.0 points of the actual share in both seasons; (2) Brier at the lines 3.5 to 6.5 together better than each line's constant share in both seasons. Decision rule: if (1) and (2) hold with the raw distributions on both sets, the Odds tab adds each starter's hits-allowed ladder (his chance of more than each half line around his median, from 2.5 to 7.5, with the fair price) for every box; if they hold only with the spread distributions on both sets, the ladder uses those; if they hold (either way) on RELIEF-04's set but not on PLAYER-07's, it shows only for boxes simulated with the corrected starter exits (as the outs ladder); otherwise it is not shown.",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "LEVEL-01": [
