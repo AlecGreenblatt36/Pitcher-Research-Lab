@@ -544,6 +544,17 @@ class Fitted:
         gb_tr = self.gb_tr = D._groups(T['batter'], tr)
         self.maps_s = D._hitter_maps(self.Bs, swing, self.off_s, gb_tr, D.FAMILY_SHRINKAGE_LEAGUE_FAMILY['location_by_family'], min_pitches)
         self.side = {h: int(np.round(T['stand_r'][r].mean())) for h, r in gb_tr.items()}
+        # a switch hitter bats from different sides against the two hands: the side he took against each (pitcher's
+        # throw_r code -> stand_r), so his plan against a pitcher reads that pitcher's pitches to the side he will take
+        self.side_vs = {}
+        for h, r in gb_tr.items():
+            st_, th_ = T['stand_r'][r], T['throw_r'][r]; sv_ = {}
+            for code in (0, 1):
+                m_ = th_ == code
+                if m_.sum() >= 30:
+                    sv_[code] = int(np.round(st_[m_].mean()))
+            if len(set(sv_.values())) > 1:
+                self.side_vs[h] = sv_
         Ssum = {0: 0.0, 1: 0.0}; Nn = {0: 0, 1: 0}
         for h, m in self.maps_s.items():
             Ssum[self.side[h]] = Ssum[self.side[h]] + m; Nn[self.side[h]] += 1
@@ -566,6 +577,7 @@ class Fitted:
         for h, m in self.maps_w.items():
             sd_ = self.side.get(h, 1); Wsum[sd_] = Wsum[sd_] + m; Wn[sd_] += 1
         self.mbar_w = {h: (Wsum[self.side.get(h, 1)] - m) / max(Wn[self.side.get(h, 1)] - 1, 1) for h, m in self.maps_w.items()}
+        self.mbar_w_side = {sd_: Wsum[sd_] / max(Wn[sd_], 1) for sd_ in (0, 1)}
         # called strikes on takes and fouls on contact (league), for the count chain
         plat_ = (T['stand_r'] == T['throw_r'])[:, None].astype(np.float32)
         tk = tr & (T['call'] == 0); idx = np.flatnonzero(tk); idx = rng.choice(idx, min(len(idx), 400000), replace=False)
@@ -922,7 +934,15 @@ class Fitted:
         """One hitter against one pitcher: chase, strikeout and walk changes, and the aim plan with its value."""
         if h not in self.maps_s or p not in self.gp or len(self.gp[p]) < 150:
             return None
-        sd = self.side[h]; A = self._arsenal(p, sd)
+        sd = self.side[h]
+        sv = getattr(self, 'side_vs', {}).get(h)
+        if sv:          # a switch hitter: the side he takes against this pitcher's hand
+            sd = sv.get(int(self.T['throw_r'][self.gp[p][0]]), sd)
+        # the same-side mean map his own part is read against: his side's others, or for a switch hitter on his other side
+        # that side's mean
+        mbar_h = self.mbar[h] if sd == self.side[h] else self.mbar_side[sd]
+        mbar_wh = self.mbar_w.get(h) if sd == self.side.get(h, 1) else getattr(self, 'mbar_w_side', {}).get(sd)
+        A = self._arsenal(p, sd)
         ph = sig(A['os'] + A['Bs'] @ self.maps_s[h]); pl = sig(A['os'])
         wmap = self.maps_w.get(h)
         hit = self._chain(ph, sig(A['ow'] + (A['Bw'] @ wmap if wmap is not None else 0.0)), A['pcs'], A['pfo'], A['ci'])
@@ -956,7 +976,7 @@ class Fitted:
                 if P_ is None:
                     continue
                 offj, Bj, third, cell, npool, n_all, struct = P_
-                dev_jk = (sig(offj + Bj @ self.maps_s[h]) - sig(offj + Bj @ self.mbar[h])) * 100
+                dev_jk = (sig(offj + Bj @ self.maps_s[h]) - sig(offj + Bj @ mbar_h)) * 100
                 dj = dev_jk.reshape(npool, self.K).mean(1)
                 if struct is not None:
                     # VALUE-18: the structural value of each aim, runs per pitch (negative is good for the pitcher): the calibrated own part
@@ -1030,7 +1050,7 @@ class Fitted:
                         if P_ is None or P_[6] is None:
                             continue
                         offj, Bj, third, cell, npool, n_all, struct = P_
-                        dev_jk = (sig(offj + Bj @ self.maps_s[h]) - sig(offj + Bj @ self.mbar[h])) * 100
+                        dev_jk = (sig(offj + Bj @ self.maps_s[h]) - sig(offj + Bj @ mbar_h)) * 100
                         dj = dev_jk.reshape(npool, self.K).mean(1)
                         blk, bj_, kj, lam_j, out_j, land = struct
                         tau_j = 0.01 * self.PM.swing_minus_take(blk, h, p_scalar, bj_, kj, self.cv)
@@ -1054,10 +1074,10 @@ class Fitted:
                                      'by_count': by_count_i}
         # miss spots (unpriced): among the pitcher's two-strike pitches to this side, where this hitter's own whiff map
         # (his map minus the same-side mean) says he misses most, by family
-        if wmap is not None and h in self.mbar_w:
+        if wmap is not None and mbar_wh is not None:
             r2 = self.gp[p][(T['stand_r'][self.gp[p]] == sd) & (T['strikes'][self.gp[p]] == 2)]
             if len(r2) >= 40:
-                dev = self.Bw[r2] @ (wmap - self.mbar_w[h])
+                dev = self.Bw[r2] @ (wmap - mbar_wh)
                 uu_ = np.where(sd == 1, self.xt[r2], -self.xt[r2])
                 cell2 = np.argmin(np.abs(uu_[:, None] - GU[None, :]), 1) + len(GU) * np.argmin(np.abs(self.zt[r2][:, None] - GZ[None, :]), 1)
                 miss = {}
@@ -1068,7 +1088,7 @@ class Fitted:
                     k3 = max(1, len(mm) // 3); best = mm[np.argsort(dev[mm])[::-1][:k3]]
                     acc = np.bincount(cell2[best], minlength=len(GU) * len(GZ))
                     miss[fname] = {'cells': [[float(GU[k % len(GU)]), float(GZ[k // len(GU)])] for k in np.argsort(acc)[::-1][:3] if acc[k] > 0],
-                                   'own_whiff_points': round(float((sig(self.off_w[r2[best]] + self.Bw[r2[best]] @ wmap) - sig(self.off_w[r2[best]] + self.Bw[r2[best]] @ self.mbar_w[h])).mean()) * 100, 1)}
+                                   'own_whiff_points': round(float((sig(self.off_w[r2[best]] + self.Bw[r2[best]] @ wmap) - sig(self.off_w[r2[best]] + self.Bw[r2[best]] @ mbar_wh)).mean()) * 100, 1)}
                 if miss:
                     out['miss_spots'] = miss
         return out
