@@ -88,6 +88,12 @@ def game_log_checks(out, teams, season):
                  ('gamelog_hitting_post', f'v1/people/{hid}/stats?stats=gameLog&group=hitting&season={season}&gameType=P', GL_HIT),
                  ('gamelog_hitting_one', f'v1/people/{hid}?hydrate=' + quote(f'stats(group=[hitting],type=[season,gameLog],season={season})', safe='()=,[]'), GL_HIT),
                  ('gamelog_hitting_one_rp', f'v1/people/{hid}?hydrate=' + quote(f'stats(group=[hitting],type=[gameLog],season={season},gameType=[R,P])', safe='()=,[]'), GL_HIT)]
+    # the two asks the player pages make (fillPlayerStats): the regular season's line and games, then the postseason's games
+    for grp, who in (('pitching', pitchers[:1]), ('hitting', hitters[:1])):
+        for pid in who:
+            keys = GL_PITCH if grp == 'pitching' else GL_HIT
+            asks += [(f'page_{grp}_reg', f'v1/people?personIds={pid}&hydrate=' + quote(f'stats(group=[{grp}],type=[season,gameLog],season={season})', safe='()=,[]'), keys),
+                     (f'page_{grp}_post', f'v1/people?personIds={pid}&hydrate=' + quote(f'stats(group=[{grp}],type=[gameLog],season={season},gameType=P)', safe='()=,[]'), keys)]
     out['gamelog_players'] = {'pitchers': pitchers, 'hitters': hitters}
     for name, path, keys in asks:
         info, doc = get(API + path)
