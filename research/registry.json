@@ -4815,14 +4815,16 @@
     "columns": {
      "ID": "PZONES-01",
      "Attempt": "Expected zones for pitchers. The pitcher charts (Where he pitches: AVG, SLG, swing and miss rates against in MLB's 13 zones, to right- or left-handed batters) are raw counts over two seasons. ZONES-01's study read per pitcher (his throwing hand as his side; league rates for pitchers of his hand): raw, league, scaled (his level on the league's zone pattern) and shrunk (m fitted), on pitches to right-handed batters and to left-handed batters separately; pitchers with 100 or more batters faced on that side in training; m chosen on 2023-2024 to 2025, scored once on 2024-2025 to 2026 (pitcher zones were never scored before; the 2026 months after July are later-period validation, evidence rule 6); paired bootstrap over pitchers (2,000 draws). tools/brl_report.py zone_shrink_study with who 'pitcher' and a stand_r subset, report lane, aggregates only. Synthetic check (brl_live_tests/test_report_zone_study.py): planted pitcher zone patterns recovered.",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions on 2026, in both batter-side subsets: (1) shrunk beats raw on all four metrics with the interval excluding zero; (2) on swing and miss rates against, shrunk beats scaled with the interval excluding zero; (3) on AVG and SLG against, shrunk is no worse than scaled (upper end at most +0.0005 nats per at-bat, +0.002 squared error). Decision rule: if (1) holds, the pitcher charts' AVG, SLG, swing and miss views get the Expected view (shrunk at the fitted m, or scaled where shrunk does not beat it), with the standard view the default; the location share stays as it is. If (1) fails, nothing changes.",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions on 2026, in both batter-side subsets: (1) shrunk beats raw on all four metrics with the interval excluding zero; (2) on swing and miss rates against, shrunk beats scaled with the interval excluding zero; (3) on AVG and SLG against, shrunk is no worse than scaled (upper end at most +0.0005 nats per at-bat, +0.002 squared error). Decision rule: if (1) holds, the pitcher charts' AVG, SLG, swing and miss views get the Expected view (shrunk at the fitted m, or scaled where shrunk does not beat it), with the standard view the default; the location share stays as it is. If (1) fails, nothing changes. **Results (run 38131952265, receipt research/report-38131952265.json; 2026 scored once):** to right-handed batters (457 pitchers, 62,742 at-bats, 266,241 pitches, 127,830 swings): shrunk minus raw AVG **-0.078 [-0.090, -0.067]** (m 320), SLG **-0.035 [-0.039, -0.031]** (m 640), swing **-0.0049 [-0.0059, -0.0039]** (m 80), miss **-0.0227 [-0.0276, -0.0187]** (m 80); shrunk minus scaled AVG -0.00003 [-0.00017, +0.00010], SLG +0.00008 [-0.00002, +0.00019], swing **-0.0033 [-0.0040, -0.0027]**, miss **-0.0021 [-0.0030, -0.0014]**. To left-handed batters (402 pitchers): shrunk minus raw AVG **-0.108**, SLG **-0.042**, swing **-0.0056**, miss **-0.0304** (all intervals below zero); shrunk minus scaled AVG -0.00008 [-0.00020, +0.00005], SLG -0.00004 [-0.00014, +0.00007], swing **-0.0032 [-0.0039, -0.0025]**, miss **-0.0016 [-0.0023, -0.0010]**. **(1), (2) and (3) held.** Decision, as registered: the pitcher charts' AVG, SLG, swing and miss views get the Expected view; swing and miss shrunk at m 80, AVG and SLG at the scaled rate (shrunk did not beat it), the standard view the default (page PZ_EXP_M, pitcherZoneLegend).",
+     "Delta corrected Brier, 2026": "held: (1), (2), (3)"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38131952265"
+    ],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "held: (1), (2), (3)"
    }
   ],
   "MATCHUPREAD-01": [

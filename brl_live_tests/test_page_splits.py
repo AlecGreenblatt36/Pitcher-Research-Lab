@@ -131,3 +131,22 @@ def test_pitcher_expected_split_is_his_level_with_his_hands_league_split():
     la = la_[5] / la_[4]; h_all = (both[5] + 30 * la) / (both[4] + 30)
     assert abs(got[0]['avg'] - min(0.995, max(0.005, l1[5] / l1[4] * h_all / la))) < 1e-9
     assert got[1] is None
+
+
+def test_pitcher_zone_expected_uses_the_batter_side_m():
+    s = _script()
+    consts = ''.join(re.search(r'\n  var ' + v + r' = .*?;\n', s, re.S).group(0) for v in ('HZ_EXP_M', 'HZ_ANCHOR', 'PZ_EXP_M'))
+    metrics = re.search(r'\n  var HZ_METRICS = \{.*?\n  \};\n', s, re.S).group(0)
+    fns = ''.join(_fn(s, n) for n in ('hzTotal', 'hzExpected'))
+    rng = np.random.default_rng(5)
+    mine, lg = _cells(rng, 200, .300, 500, .3, 400, .3), _cells(rng, 50000, .240, 120000, .25, 90000, .3)
+    js = ("const mine=" + json.dumps(mine) + ",lg=" + json.dumps(lg) + ";"
+          "const a=hzExpected(HZ_METRICS.avg,'avg',mine,lg,null,PZ_EXP_M.R),m=hzExpected(HZ_METRICS.miss,'miss',mine,lg,null,PZ_EXP_M.R);"
+          # AVG at the scaled rate: his level times the league's zone rate over the league's overall rate, his own zone counts all but ignored
+          "const t=hzTotal(mine),lt=hzTotal(lg),la=lt[5]/lt[4],h=(t[5]+30*la)/(t[4]+30);"
+          "lg.forEach(function(c){var sc=Math.min(0.995,Math.max(0.005,(c[4]?c[5]/c[4]:la)*h/la));assert.ok(Math.abs(a[c[0]]-sc)<2e-4,[c[0],a[c[0]],sc]);});"
+          # misses with m 80: his own swings count
+          "const c0=mine[0],l0=lg[0],lm=hzTotal(lg)[3]/hzTotal(lg)[2],hm=(t[3]+30*lm)/(t[2]+30),sc0=Math.min(0.995,Math.max(0.005,(l0[3]/l0[2])*hm/lm));"
+          "assert.ok(Math.abs(m[c0[0]]-(c0[3]+80*sc0)/(c0[2]+80))<1e-9);process.stdout.write('ok');")
+    out = subprocess.run(['node', '-e', "const assert=require('assert');" + consts + metrics + fns + js], check=True, capture_output=True, text=True)
+    assert out.stdout == 'ok'
