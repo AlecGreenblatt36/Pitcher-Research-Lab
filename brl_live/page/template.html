@@ -1075,6 +1075,22 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var p = lp.map(function (x) { var e = Math.exp(x - best); t += e; return e; });
     return p.map(function (x) { return x / t; });
   }
+  /* PLAYER-08: a starter's strikeouts as the page states them (the ladder, the range, the most likely count) keep the
+     simulated distribution's shape and mean, spread to the residual variance: convolved with {-1: w, 0: 1 - 2w, +1: w},
+     w = (K_SPREAD - 1) x its variance / 2, the mass below zero folded onto zero. Re-run over two seasons the simulated
+     distributions ran a little narrow (residual variance 1.07 times theirs); spread, the middle range held the real count
+     within 0.3 points of its own mass in both seasons and every ladder line came within 1.9 points. */
+  var K_SPREAD = 1.0693;
+  function kShape(c) {
+    var t = total(c), m = mean(c), v = 0, n = 0, p = [], i;
+    c.counts.forEach(function (x) { n = Math.max(n, x[0] + 2); });
+    for (i = 0; i < n; i++) p.push(0);
+    c.counts.forEach(function (x) { p[x[0]] += x[1] / t; v += x[1] / t * (x[0] - m) * (x[0] - m); });
+    var w = Math.min(0.25, (K_SPREAD - 1) * v / 2), q = p.map(function (x) { return (1 - 2 * w) * x; });
+    for (i = 0; i < n; i++) { if (i + 1 < n) q[i + 1] += w * p[i]; if (i > 0) q[i - 1] += w * p[i]; }
+    q[0] += w * p[0];
+    return { n: 10000, counts: q.map(function (x, k) { return [k, x * 10000]; }) };
+  }
   function asDist(p) { return { n: 10000, counts: p.map(function (x, k) { return [k, x * 10000]; }) }; }
   function runShape(c) { return asDist(nbRuns(c)); }
   function totalShape(ca, ch) {
@@ -1113,7 +1129,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
      there); outs recorded (three an inning) at the lines PLAYER-07 checked (12.5 to 20.5), which held only with LEASH-02's
      correction on the starter-exit hazard: shown for boxes simulated with it (their adjustments name it; regular-season
      games), never for the plain hazard's. */
-  function kLadder(c) { return propLadder(c, "Strikeouts", 2.5, 8.5); }
+  function kLadder(c) { return propLadder(kShape(c), "Strikeouts", 2.5, 8.5); }
   function outsLadder(c) { return propLadder(c, "Outs", 12.5, 20.5); }
   var OUTS_LADDER = true;
   function exitsByInning(box) { return (box && box.adjustments || []).some(function (a) { return /starter exits by inning/.test(String(a)); }); }
@@ -2674,7 +2690,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       h += '<ol class="lineup" style="--tc:var(--' + side + ')" aria-label="' + esc(nickname(f[side].name)) + ' projected lines"><li class="lineup-h"><b>' + esc(nickname(f[side].name)) + "</b><span>Hit</span><span>HR</span></li>";
       if (sp && sp.means) {
         var d = sp.distributions || {};
-        h += '<li class="sp"><span class="spot">SP</span><span class="who">' + esc(sp.name) + "<small>" + (d.K ? "strikeouts " + quant(d.K, .25) + " to " + quant(d.K, .75) + ", " : "") + (d.outs ? "innings " + ip(quant(d.outs, .25)) + " to " + ip(quant(d.outs, .75)) : "") + '</small></span><span class="line num">' + ip(Math.round(sp.means.outs)) + " IP, " + Math.round(sp.means.K) + " K</span></li>";
+        h += '<li class="sp"><span class="spot">SP</span><span class="who">' + esc(sp.name) + "<small>" + (d.K ? "strikeouts " + quant(kShape(d.K), .25) + " to " + quant(kShape(d.K), .75) + ", " : "") + (d.outs ? "innings " + ip(quant(d.outs, .25)) + " to " + ip(quant(d.outs, .75)) : "") + '</small></span><span class="line num">' + ip(Math.round(sp.means.outs)) + " IP, " + Math.round(sp.means.K) + " K</span></li>";
       }
       bat.forEach(function (b) {
         var m = b.means || {}, ab = Math.max(1, Math.round(m.AB || 0)), hits = Math.round(m.H || 0);
@@ -4713,7 +4729,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (!p || !p.distributions) return;
       var d = p.distributions;
       h += "<li><b>" + esc(p.name) + "</b>" +
-        (d.K ? '<span class="r num">' + quant(d.K, .25) + " to " + quant(d.K, .75) + " strikeouts</span> <small>most likely " + mode(d.K) + "</small><br>" : "") +
+        (d.K ? '<span class="r num">' + quant(kShape(d.K), .25) + " to " + quant(kShape(d.K), .75) + " strikeouts</span> <small>most likely " + mode(kShape(d.K)) + "</small><br>" : "") +
         (d.outs ? '<span class="r num">' + ip(quant(d.outs, .25)) + " to " + ip(quant(d.outs, .75)) + " innings</span><br>" : "") +
         (d.PC ? '<span class="r num">' + quant(d.PC, .25) + " to " + quant(d.PC, .75) + " pitches</span> <small>estimated</small>" : "") +
         ladders(d, outsOn) + "</li>";
@@ -4785,7 +4801,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     ["away", "home"].forEach(function (side) {
       var p = box.teams[side].pitching[0], real = (actualBox.pitching[side] || [])[0];
       if (!p || !real || !p.distributions || !p.distributions.K) return;
-      var lo = quant(p.distributions.K, .25), hi = quant(p.distributions.K, .75);
+      var ks = kShape(p.distributions.K), lo = quant(ks, .25), hi = quant(ks, .75);
       if (real.name === p.name) items.push([real.K >= lo && real.K <= hi, lastName(p.name) + " struck out " + real.K + "; likely range was " + lo + " to " + hi + "."]);
     });
     var within = 0, n = 0;

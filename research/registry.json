@@ -5368,14 +5368,14 @@
     "columns": {
      "ID": "PLAYER-08",
      "Attempt": "Starters' strikeout distributions with their spread made right (the Odds tab's strikeout ladder and the starters' strikeout ranges). Seen on LEASH-02's replays before this row (described after looking): the means are right (4.87 against 4.79 in 2025, 4.69 against 4.70 in 2026) but the residual variance runs 1.07 times the simulated variance in both seasons, and in 2026 the ladder sits high at the low lines and low at the high ones (+0.9 to +1.2 points at 2.5 to 4.5, -0.6 to -1.4 at 6.5 to 8.5), the pattern of a distribution a little too narrow. Candidate: each start's simulated distribution kept and spread, convolved with the step {-1: w, 0: 1 - 2w, +1: w}, w = (c - 1) x its variance / 2, the mass below zero folded onto zero, c from the other season (tools/brl_k_spread.py). Scored against the raw distributions on the same replays (v2-prod4-leash2-1000; the RELIEF-04 replays, if that goes live, change no starter's distribution beyond noise): the chance of more than each line from 2.5 to 8.5 against the actual share, Brier over those lines paired by date, and the middle range's own mass against how often the real count landed in it. Because the motivation was seen on these replays, the decision is a product call on display calibration",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the candidate was scored.** Predictions, in both seasons with c from the other season: (1) the largest gap across the lines 2.5 to 8.5 smaller than the raw distributions'; (2) Brier over those lines not worse (paired upper end at most +0.0001); (3) the middle range within 1.0 point of its own mass. Decision rule: if (1) to (3) hold in both seasons, the page's strikeout ladder and ranges use the spread distribution with c pooled over both seasons; otherwise they keep the raw ones.",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before the candidate was scored.** Predictions, in both seasons with c from the other season: (1) the largest gap across the lines 2.5 to 8.5 smaller than the raw distributions'; (2) Brier over those lines not worse (paired upper end at most +0.0001); (3) the middle range within 1.0 point of its own mass. Decision rule: if (1) to (3) hold in both seasons, the page's strikeout ladder and ranges use the spread distribution with c pooled over both seasons; otherwise they keep the raw ones. Results (LEASH-02's replays, 4,846 and 4,854 starts; c 1.066 for 2025 from 2026 and 1.072 for 2026 from 2025): the largest line gap 2.35 to 1.92 points (2025; 2.5 to 4.5 +2.3, +2.4, +1.8 became +1.7, +1.9, +1.8, the season's level runs 0.08 strikeouts high) and 1.39 to 1.20 (2026; 2.5 +0.9 to +0.2, 8.5 -1.4 to -0.9); Brier over the lines -0.000057 [-0.000117, +0.000003] and -0.000051 [-0.000104, +0.000004]; the middle range 63.2% mass against 62.8% actual (2025, +0.3; raw +1.8) and 63.7% against 63.7% (2026, +0.0; raw +1.5). (1) to (3) held in both seasons. **Adopted: the strikeout ladder, the starters' strikeout ranges and the after-game range use the spread distribution (page K_SPREAD 1.0693, c pooled).**",
+     "Delta corrected Brier, 2026": "(1) to (3) held; ladder spread"
     },
     "registered_before_run": true,
     "diagnostic": false,
     "runs": [],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "(1) to (3) held; ladder spread"
    }
   ],
   "LEVEL-01": [

@@ -34,8 +34,8 @@ def _line(script, name):
 
 def _run(js):
     s = _script()
-    consts = re.search(r'\n  var SLOT_SHARE = .*?;\n', s, re.S).group(0)
-    fns = ''.join(_line(s, n) for n in ('pct', 'total', 'probAtLeast', 'kLadder', 'outsLadder')) + ''.join(_fn(s, n) for n in ('quant', 'ownAtLeast', 'amOdds', 'propLadder'))
+    consts = re.search(r'\n  var SLOT_SHARE = .*?;\n', s, re.S).group(0) + re.search(r'\n  var K_SPREAD = .*?;\n', s).group(0)
+    fns = ''.join(_line(s, n) for n in ('pct', 'total', 'mean', 'probAtLeast', 'kLadder', 'outsLadder')) + ''.join(_fn(s, n) for n in ('quant', 'ownAtLeast', 'amOdds', 'propLadder', 'kShape'))
     out = subprocess.run(['node', '-e', consts + fns + js], check=True, capture_output=True, text=True)
     return out.stdout
 
@@ -69,13 +69,18 @@ def test_strikeout_ladder_centers_on_the_median_and_over_plus_under_is_one():
     html = _run('process.stdout.write(kLadder({counts:' + json.dumps(counts) + '}));')
     rows = re.findall(r'<tr><th scope="row">([\d.]+)</th><td>(\d+)%<small>([^<]+)</small></td><td>(\d+)%<small>([^<]+)</small></td></tr>', html)
     assert [r[0] for r in rows] == ['3.5', '4.5', '5.5', '6.5']          # the median is 5
-    n = sum(c for _, c in counts)
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('brl_k_spread', Path(__file__).parents[1] / 'tools/brl_k_spread.py')
+    ks = importlib.util.module_from_spec(spec); spec.loader.exec_module(ks)
+    c = float(re.search(r'\n  var K_SPREAD = (.*?);\n', _script()).group(1))
+    raw = np.zeros(ks.N); [raw.__setitem__(k, v) for k, v in counts]
+    spread = ks.spread(raw / raw.sum(), c)                                   # PLAYER-08: the page states the spread distribution
     for line, over, o_odds, under, u_odds in rows:
-        p = sum(c for k, c in counts if k > float(line)) / n
+        p = float(spread[int(float(line) + 0.5):].sum())
         assert int(over) == round(p * 100) and int(over) + int(under) in (99, 100, 101)
         assert (o_odds.startswith('−') or o_odds == '+100') if p >= 0.5 else o_odds.startswith('+')
     # only the lines PLAYER-04 checked (2.5 to 8.5): an opener's median of 0 gets none, an ace's median of 9 two
-    low = _run('process.stdout.write(kLadder({counts:[[0,500],[1,300],[2,200]]}));')
+    low = _run('process.stdout.write(kLadder({counts:[[0,700],[1,200],[2,100]]}));')
     assert low == ''
     ace = _run('process.stdout.write(kLadder({counts:[[7,100],[8,200],[9,300],[10,250],[11,150]]}));')
     assert re.findall(r'<th scope="row">([\d.]+)</th>', ace) == ['7.5', '8.5']
@@ -113,7 +118,7 @@ def test_outs_ladder_only_for_boxes_simulated_with_the_exit_correction():
     """LEASH-02 and PLAYER-07: the outs ladder held only with the corrected starter-exit hazard, so it shows for boxes whose
     adjustments name it (regular-season games) and never for the plain hazard's (the postseason, earlier boxes)."""
     s = _script()
-    fns = ''.join(_line(s, n) for n in ('pct', 'total', 'probAtLeast', 'kLadder', 'outsLadder', 'exitsByInning')) + ''.join(_fn(s, n) for n in ('quant', 'amOdds', 'propLadder', 'ladders'))
+    fns = re.search(r'\n  var K_SPREAD = .*?;\n', s).group(0) + ''.join(_line(s, n) for n in ('pct', 'total', 'mean', 'probAtLeast', 'kLadder', 'outsLadder', 'exitsByInning')) + ''.join(_fn(s, n) for n in ('quant', 'amOdds', 'propLadder', 'ladders', 'kShape'))
     js = ("const assert=require('assert');"
           "const d={K:{counts:[[3,100],[5,300],[7,100]]},outs:{counts:[[12,100],[15,200],[16,200],[18,300],[21,200]]}};"
           "assert.ok(exitsByInning({adjustments:['context offsets','LEASH-01 leash; starter exits by inning (LEASH-02)']}));"

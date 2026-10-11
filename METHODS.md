@@ -228,6 +228,9 @@ runs) keep the simulator's mean but take a negative binomial with its variance t
 predictive variance of a team's runs in the replays (TOTALS-05): the raw histograms held the real score up to 2.7 points
 less often than their mass claimed, the widened ones within 1.4 points in both seasons, with CRPS and the 10-or-more
 Brier no worse.
+Starters' strikeouts get the same treatment (PLAYER-08): each start's simulated distribution is kept and spread by a
+one-strikeout step to the residual variance, 1.07 times the simulated one; the ladder's largest gap fell from 2.35 to
+1.92 points (2025) and 1.39 to 1.20 (2026), and the middle range held the real count within 0.3 points of its own mass.
 
 Starters' outs recorded (the pitcher-outs prop) were scored the same way (PLAYER-07): right on average and at the lines
 near each start's median, but the simulator ended too many starts in the 4th inning and too few in the 5th (more than
