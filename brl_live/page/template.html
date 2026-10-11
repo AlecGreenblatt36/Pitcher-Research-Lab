@@ -2618,6 +2618,14 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     }).join("");
     return rows ? '<div class="tbl-wrap hz-types"><table class="box"><thead><tr><th scope="col">Pitch</th><th scope="col">Seen</th><th scope="col">Swing</th><th scope="col">Chase</th><th scope="col">Miss</th><th scope="col">AVG</th><th scope="col">SLG</th></tr></thead><tbody>' + rows + "</tbody></table></div>" : "";
   }
+  /* A pitcher's arsenal the way every scouting sheet lists it: how often, how hard, misses, chases, strikes. */
+  function arsenalTable(mix) {
+    var fams = ["fastball", "breaking", "offspeed"].filter(function (fam) { return mix && mix[fam] && mix[fam].share >= 0.005; });
+    if (!fams.length) return "";
+    var rt = function (v) { return v != null ? pct(v) : "\u2013"; };
+    return '<div class="tbl-wrap hz-types"><table class="box"><thead><tr><th scope="col">Pitch</th><th scope="col">Thrown</th><th scope="col">MPH</th><th scope="col">Miss</th><th scope="col">Chase</th><th scope="col">Zone</th></tr></thead><tbody>' +
+      fams.map(function (fam) { var m = mix[fam]; return "<tr><td>" + PITCH_NAME[fam] + "</td><td>" + pct(m.share) + "</td><td>" + (m.speed != null ? m.speed.toFixed(1) : "\u2013") + "</td><td>" + rt(m.whiff_rate) + "</td><td>" + rt(m.chase_rate) + "</td><td>" + rt(m.zone_rate) + "</td></tr>"; }).join("") + "</tbody></table></div>";
+  }
   function hzSeg(key, cur, opts, aria) {
     return '<div class="seg hz-seg" role="group" aria-label="' + esc(aria) + '">' + opts.map(function (o) { return "<button data-" + key + '="' + o[0] + '" aria-pressed="' + (o[0] === cur) + '">' + esc(o[1]) + "</button>"; }).join("") + "</div>";
   }
@@ -2954,7 +2962,10 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var h = '<h3 class="team-h ' + side + '-c">How to pitch the ' + esc(nickname(doc.teams[side].name)) + '</h3><p class="note">' + (starter.role === "starter" ? esc(nm(starter.id)) + " starting for the " + esc(nickname(doc.teams[other].name)) + ". " :
       "The " + esc(nickname(doc.teams[other].name)) + " haven't named a starter yet. These lines are against " + esc(nm(starter.id)) + " out of their bullpen. ") +
       (po.posted ? "Posted lineup; the plan was built before it came out" + (po.missing.length ? ", so it has no line yet for " + esc(po.missing.join(" or ")) : "") + "." : lineupWords(se.lineup_source)) +
-      " Hot zones against " + esc(hzSheetHand(doc, starter)) + ". Tap a hitter for his full plan, the counts and the bullpen.</p><ol class=\"plan-list\">";
+      " Hot zones against " + esc(hzSheetHand(doc, starter)) + ". Tap a hitter for his full plan, the counts and the bullpen.</p>";
+    var spc = players[String(starter.id)] && players[String(starter.id)].pitcher;
+    if (spc && spc.mix) h += '<details class="more" data-keep="ars-' + side + '"' + (state.rpOpen["ars-" + side] ? " open" : "") + "><summary>" + esc(lastName(nm(starter.id))) + "'s pitches</summary>" + arsenalTable(spc.mix) + "</details>";
+    h += '<ol class="plan-list">';
     var spots = po.spots, benchShown = false;
     /* each hitter's hot zones against the starter's hand, for the number and pitch type picked above the sheets */
     var sc = players[String(starter.id)] && players[String(starter.id)].pitcher, hand = sc && sc.throws ? sc.throws : "all", k = hzMetric();
@@ -3420,12 +3431,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
             (x.looks_in_ends_out != null ? pct(x.looks_in_ends_out) + " of his pitches look like strikes when the hitter has to decide, then end up balls (league " + (lg.looks_in_ends_out != null ? pct(lg.looks_in_ends_out) : "\u2013") + ")." : "") + "</p>";
           /* the arsenal the way every scouting sheet lists it, then where each pitch goes to each side */
           var fams = ["fastball", "breaking", "offspeed"].filter(function (fam) { return mix[fam] && mix[fam].share >= 0.005; });     /* a pitch he all but never throws gets no row */
-          if (fams.length) {
-            var rt = function (v) { return v != null ? pct(v) : "–"; };
-            h += '<div class="tbl-wrap hz-types"><table class="box"><thead><tr><th scope="col">Pitch</th><th scope="col">Thrown</th><th scope="col">MPH</th><th scope="col">Miss</th><th scope="col">Chase</th><th scope="col">Zone</th></tr></thead><tbody>' +
-              fams.map(function (fam) { var m = mix[fam]; return "<tr><td>" + PITCH_NAME[fam] + "</td><td>" + pct(m.share) + "</td><td>" + (m.speed != null ? m.speed.toFixed(1) : "–") + "</td><td>" + rt(m.whiff_rate) + "</td><td>" + rt(m.chase_rate) + "</td><td>" + rt(m.zone_rate) + "</td></tr>"; }).join("") +
-              '</tbody></table></div><p class="note">Miss: misses per swing. Chase: swings at his pitches out of the zone. Zone: pitches in the strike zone.</p>';
-          }
+          if (fams.length) h += arsenalTable(mix) + '<p class="note">Miss: misses per swing. Chase: swings at his pitches out of the zone. Zone: pitches in the strike zone.</p>';
           var goesTo = [];
           fams.forEach(function (fam) {
             var m = mix[fam], to = [];
