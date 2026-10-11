@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 313,
- "rows": 316,
+ "experiments": 314,
+ "rows": 317,
  "records": {
   "ACC-01": [
    {
@@ -5246,6 +5246,22 @@
     ],
     "frozen_commits": [],
     "status": "(2), (3), (4) held; (1) failed; nothing changes"
+   }
+  ],
+  "PLAYER-07": [
+   {
+    "id": "PLAYER-07",
+    "columns": {
+     "ID": "PLAYER-07",
+     "Attempt": "Starters' outs recorded (the pitcher-outs prop, listed at a half line such as 16.5). Each starter's chance of more than each half line comes from his simulated outs (the box's outs distribution, which the page shows today only as an innings range). Full replays of 2025 and 2026 with the live settings and starter lines (RUNLINE-01's settings and seeds: tables fitted on other seasons, the leash fitted on the other season, 1,000 worlds per game), which now record each starter's real outs, read from the plate appearances: the outs before the next plate appearance of the half-inning minus the outs before his (an out on the bases goes to the pitcher on the mound), 3 at a half-inning's end, and a walk-off's last half-inning short of three (brl_replay/harness.py pitcher_outs; tests in test_pitcher_outs.py). Every start with a real line is scored, early exits and openers included, since the market settles those too; scored by tools/brl_outs_cal.py",
+     "Disposition and evidence": "**Registered in the commit that added this row, before its replays.** Predictions: (1) at every half line from 12.5 to 20.5, starters' mean chance of more within 2.5 points of the actual share, in both seasons; (2) by fifths of the simulated mean outs, the simulated mean within 0.6 outs of the actual mean in every fifth, in both seasons; (3) Brier at the lines 14.5 to 17.5 together better than each line's constant share, in both seasons. Decision rule: the Odds tab adds each starter's outs ladder (his chance of more than each half line around his median, with the fair price, as PROD-13 did for strikeouts) if (1) and (2) hold in both seasons; otherwise not",
+     "Delta corrected Brier, 2026": "Registered; replays queued"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "Registered; replays queued"
    }
   ],
   "BOX-01": [

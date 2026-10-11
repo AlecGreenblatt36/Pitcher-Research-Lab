@@ -56,6 +56,30 @@ class CachedProvider:
         return getattr(self.base, item)
 
 
+def pitcher_outs(sub: pd.DataFrame, home_won=None) -> dict:
+    """{(game_pk, pitcher): outs he recorded} from plate appearances (game_pk, at_bat_number, inning, inning_topbot,
+    outs_when_up, pitcher, outcome): the outs before the next plate appearance of the same half-inning minus the outs before
+    his (an out on the bases between plate appearances goes to the pitcher on the mound, as the official line counts it),
+    and 3 at the end of a half-inning. The one half-inning that can end short of three is the home team's last when it wins
+    the game there (a walk-off): its last plate appearance adds its own out, if it made one (a sacrifice fly). home_won is
+    the set of game_pks the home team won; without it, any game's last bottom half is read that way."""
+    s_ = sub.sort_values(["game_pk", "at_bat_number"], kind="mergesort")
+    half = s_["inning_topbot"].astype(str).str.lower().str.startswith("top").to_numpy()
+    key = pd.Series(list(zip(s_["game_pk"].to_numpy(), s_["inning"].to_numpy(), half)), index=s_.index)
+    up = s_["outs_when_up"].astype(int)
+    nxt = up.groupby(key.values).shift(-1).to_numpy()
+    last_pa_game = (s_["game_pk"] != s_["game_pk"].shift(-1)).to_numpy()
+    won = np.ones(len(s_), bool) if home_won is None else s_["game_pk"].isin(set(home_won)).to_numpy()
+    walk_off = last_pa_game & ~half & won
+    made_out = s_["outcome"].isin(["BIP_OUT", "K"]).to_numpy()
+    after = np.where(~np.isnan(nxt), nxt, np.where(walk_off, up.to_numpy() + made_out, 3))
+    rec = np.clip(after - up.to_numpy(), 0, 3)
+    out = {}
+    for g_, p_, r_ in zip(s_["game_pk"].to_numpy(), s_["pitcher"].to_numpy(), rec):
+        k_ = (int(g_), int(p_)); out[k_] = out.get(k_, 0) + int(r_)
+    return out
+
+
 def appearances(h: pd.DataFrame) -> pd.DataFrame:
     top = h["inning_topbot"].str.lower().str.startswith("top")
     h = h.assign(fielding_team=np.where(top, h["home_team"], h["away_team"]))
@@ -224,6 +248,10 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
     if starter_lines:
         want_g = set(int(x) for x in games[games["date"].isin(dates)]["game_pk"])
         sub = h.loc[h["game_pk"].isin(want_g), ["game_pk", "pitcher", "outcome", "inning_topbot"]]
+        gw_ = games[games["game_pk"].isin(want_g)]
+        home_won_ = set(int(x) for x in gw_.loc[gw_["home_runs"] > gw_["away_runs"], "game_pk"]) if {"home_runs", "away_runs"} <= set(gw_.columns) else None
+        outs_by = pitcher_outs(h.loc[h["game_pk"].isin(want_g), ["game_pk", "at_bat_number", "inning", "inning_topbot", "outs_when_up", "pitcher", "outcome"]],
+                               home_won_) if {"at_bat_number", "inning", "outs_when_up"} <= set(h.columns) else {}
         sub_side = np.where(sub["inning_topbot"].astype(str).str.lower().str.startswith("top"), "home", "away")
         npit_act = sub.groupby([sub["game_pk"].to_numpy(), sub_side])["pitcher"].nunique().to_dict()
         for (gpk_, side_), oc in sub.groupby([sub["game_pk"].to_numpy(), sub_side])["outcome"]:
@@ -234,7 +262,8 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
         for (gpk_, pid_), oc in sub.groupby(["game_pk", "pitcher"])["outcome"]:
             vc = oc.value_counts()
             act_lines[(int(gpk_), int(pid_))] = {"bf": int(len(oc)), "k": int(vc.get("K", 0)), "bb": int(vc.get("BB_HBP", 0)),
-                                                 "h": int(vc.get("1B", 0) + vc.get("2B_3B", 0) + vc.get("HR", 0)), "hr": int(vc.get("HR", 0))}
+                                                 "h": int(vc.get("1B", 0) + vc.get("2B_3B", 0) + vc.get("HR", 0)), "hr": int(vc.get("HR", 0)),
+                                                 "outs": outs_by.get((int(gpk_), int(pid_)))}
         hk = pd.DataFrame({"pitcher": h["pitcher"].to_numpy(), "date_key": h["date_key"].astype(str).str[:10].to_numpy(), "k": (h["outcome"] == "K").to_numpy().astype(int)})
         daily = hk.groupby(["pitcher", "date_key"]).agg(bf=("k", "size"), k=("k", "sum")).reset_index()
         daily["ord"] = [pd.Timestamp(x).toordinal() for x in daily["date_key"]]
