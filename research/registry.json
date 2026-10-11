@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 319,
- "rows": 322,
+ "experiments": 320,
+ "rows": 323,
  "records": {
   "ACC-01": [
    {
@@ -5304,6 +5304,24 @@
     ],
     "frozen_commits": [],
     "status": "(a), (b), (1) to (3) held; on for the regular season"
+   }
+  ],
+  "LEASH-03": [
+   {
+    "id": "LEASH-03",
+    "columns": {
+     "ID": "LEASH-03",
+     "Attempt": "Pitch counts in the starter's exit. Diagnosis (described after looking; research run 38165432872: every real removal decision of 2023 to 2026 with the starter's pitches so far, from the sealed physics tables' pitches per plate appearance): against LEASH-02's corrected hazard, which knows batters faced, runs, inning and score but not pitches, real starters come out 0.57 to 0.80 times as often as it expects below 85 pitches and 1.18 to 2.12 times as often from 85 on, the same in all four seasons (60 to 74 pitches 0.57 at an inning's end, 95 to 104 pitches 1.48 to 1.68). The simulator draws no pitches, so efficient starts end as early as labored ones. Built: (i) each plate appearance's pitches drawn in the engine from their real distribution for its outcome (2023 and 2024 physics tables; a separate random stream, so paired replays stay paired), kept on the pitcher's line; (ii) LEASH-02's correction refitted with twelve more terms, the starter's pitches so far in six bands (under 60, 60 to 74, 75 to 84, 85 to 94, 95 to 104, 105 and more) by whether the inning just ended, on 2023 and 2024 decisions with real pitch counts (tools/brl_research.py pitch_counts)",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the fit and the replays.** Stage 1, decisions: (a) on 2025 and on 2026 the refitted correction lowers the decision log loss against LEASH-02's, each game-clustered interval below zero; (b) removals expected within 10% of actual in each pitch band from 60 to 104 in both seasons. Stage 2, full replays of both seasons with LEASH-02's settings and seeds plus the pitch draws and the refitted correction, against LEASH-02's replays: (1) every half line from 12.5 to 20.5 outs within 2.5 points in both seasons and, at the lines a ladder shows (each start's median less 1.5 to plus 1.5), within 1.0 point in both (LEASH-02: +1.3 and +1.4); (2) the win Brier pooled not worse than +0.0002; (3) the mean total's squared error not worse, the pooled paired interval's upper end below +0.03. Decision rule: if (a), (b) and (1) to (3) hold, the pitch draws and the refitted correction replace LEASH-02's for regular-season games; otherwise LEASH-02 stays as it is",
+     "Delta corrected Brier, 2026": "Registered; fit queued"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [
+     "38165432872"
+    ],
+    "frozen_commits": [],
+    "status": "Registered; fit queued"
    }
   ],
   "LEVEL-01": [

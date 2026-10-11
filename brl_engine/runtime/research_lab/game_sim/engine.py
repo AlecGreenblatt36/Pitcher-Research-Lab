@@ -92,6 +92,17 @@ class _PairedStreams:
         self.edges = np.cumsum((0,) + self.WIDTH)
         self.gen = {side: np.random.default_rng([self.seed, j]) for j, side in enumerate(("away", "home"))}
         self.rows: dict[str, np.ndarray] = {}
+        # pitches per plate appearance (LEASH-03) draw from their own generator, so turning them on moves no other number
+        self.pgen = {side: np.random.default_rng([self.seed, j, 99]) for j, side in enumerate(("away", "home"))}
+        self.prows: dict[str, np.ndarray] = {}
+
+    def pitch_uniform(self, side: str, n: int) -> float:
+        rows = self.prows.get(side)
+        while rows is None or n >= len(rows):
+            more = self.pgen[side].random(64)
+            rows = more if rows is None else np.concatenate([rows, more])
+            self.prows[side] = rows
+        return float(rows[n])
 
     def slot(self, kind: str, side: str, n: int) -> _Slot:
         rows = self.rows.get(side)
@@ -163,8 +174,12 @@ class GameSimulator:
         transitions=None,
         running_events=None,
         paired_streams: bool = False,
+        pitch_counts=None,
     ) -> None:
         self.provider = provider
+        # Optional pitches per plate appearance (pitch_counts.PitchCounts, LEASH-03), kept on each pitcher's line for the
+        # exit hazard's pitch terms. None draws exactly the same random numbers as before.
+        self.pitch_counts = pitch_counts
         # Paired streams (_PairedStreams): every draw tied to a team's plate appearance number, for research
         # comparisons between simulators; False keeps the single stream and draws exactly the same numbers as before.
         self.paired_streams = bool(paired_streams)
@@ -279,6 +294,8 @@ class GameSimulator:
                 draw_running = streams.slot("running", batting_side, pa_number)
                 draw_manager = streams.slot("manager", batting_side, pa_number)
             outcome_counts[outcome] += 1
+            if self.pitch_counts is not None:
+                line.pitches += self.pitch_counts.draw(outcome, rng.random() if streams is None else streams.pitch_uniform(batting_side, pa_number))
 
             outs_before = state.outs
             bases_before = state.base_ids()

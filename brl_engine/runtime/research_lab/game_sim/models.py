@@ -160,6 +160,7 @@ class PitcherLine:
     walks_hbp: int = 0
     strikeouts: int = 0
     home_runs: int = 0
+    pitches: int = 0          # drawn only when the simulator has a pitch-count model (LEASH-03); 0 otherwise
 
     @property
     def innings_pitched(self) -> float:

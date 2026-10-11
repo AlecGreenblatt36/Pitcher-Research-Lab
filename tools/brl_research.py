@@ -528,6 +528,52 @@ def hazard_pitches(data_root: Path, physics=None) -> dict:
     return out
 
 
+def pitch_counts_fit(data_root: Path, physics, train=(2023, 2024), lam=10.0, cap=20) -> dict:
+    """LEASH-03, stage 1: (i) pitches per plate appearance by outcome class on the train seasons (counts of 0 to cap
+    pitches, from the physics tables' pitches per plate appearance), for the simulator's draws; (ii) LEASH-02's correction
+    refitted with the pitch terms (starter_hazard.CORRECTION_TERMS_V2) on the train seasons' real decisions with real pitch
+    counts and the plain hazard as the offset; scored on each later season against LEASH-02's correction
+    (brl_replay/hazard_correction.json): decision log loss with a game-clustered interval and removals by pitch band.
+    Coefficients and aggregates only."""
+    import joblib
+    from research_lab.game_sim import starter_hazard as sh
+    from brl_replay.games import load_history
+    pa = load_history(next(data_root.rglob('plate_appearances.csv.gz')))
+    if 'game_type' in pa.columns:
+        pa = pa[pa['game_type'].astype(str) == 'R']
+    n = physics[['game_pk', 'at_bat_number', 'n']].drop_duplicates(['game_pk', 'at_bat_number']).astype({'game_pk': 'int64', 'at_bat_number': 'int64'})
+    pa = pa.drop(columns=[c for c in ('pitch_number',) if c in pa.columns]).merge(n.rename(columns={'n': 'pitch_number'}), on=['game_pk', 'at_bat_number'], how='left')
+    pa['pitch_number'] = pd.to_numeric(pa['pitch_number'], errors='coerce')
+    tr_pa = pa[pa['season'].isin(train) & pa['pitch_number'].notna()]
+    counts = {lab: np.bincount(np.clip(tr_pa.loc[tr_pa['outcome'] == lab, 'pitch_number'].to_numpy(int), 0, cap), minlength=cap + 1).tolist() for lab in LABELS}
+    out = {'table': {'schema': 'brl.pitch-counts.v1', 'labels': list(LABELS), 'cap': cap, 'train': list(train), 'counts': counts,
+                     'mean': {lab: round(float(np.dot(np.arange(cap + 1), c) / max(1, sum(c))), 3) for lab, c in counts.items()}},
+           'pa_with_pitches': {str(int(k)): int(v) for k, v in pa.groupby('season')['pitch_number'].count().items()}}
+    bundle = joblib.load(next(data_root.rglob('starter_hazard.joblib')))
+    d, starts = sh.build_decisions(pa)
+    d = sh.add_tendencies(d, starts, float(bundle['league_mean_bf']))
+    d = d.sort_values(['game_pk', 'fielding_team', 'bf'], kind='mergesort')
+    d['pitches'] = d.groupby(['game_pk', 'fielding_team'])['pitch_number'].cumsum()
+    d = d[d['pitches'].notna()].copy()
+    p0 = np.clip(bundle['model'].predict_proba(d[sh.FEATURES])[:, 1], 1e-6, 1 - 1e-6)
+    off = np.log(p0 / (1 - p0)); y = d['y'].to_numpy(float)
+    old = json.loads((ROOT / 'brl_replay' / 'hazard_correction.json').read_text())
+    p1 = 1.0 / (1.0 + np.exp(-(off + sh.correction_matrix(d) @ np.asarray(old['coef'], float))))
+    Z = sh.correction_matrix_v2(d)
+    tr = d['season'].isin(train).to_numpy()
+    g = ridge_logit_offset(Z[tr], y[tr], off[tr], lam)
+    p2 = 1.0 / (1.0 + np.exp(-(off + Z @ g)))
+    out.update({'terms': list(sh.CORRECTION_TERMS_V2), 'coef': [round(float(x), 5) for x in g], 'lam': lam, 'train': list(train), 'by_season': {}})
+    band = np.searchsorted(sh.PITCH_BANDS, d['pitches'].to_numpy(float), side='right')
+    for season in sorted(int(x) for x in d['season'].unique()):
+        m = (d['season'] == season).to_numpy()
+        diff, lo, hi = sh.clustered_diff_ci(y[m], p2[m], p1[m], d['game_pk'].to_numpy()[m])
+        out['by_season'][str(season)] = {'decisions': int(m.sum()), 'log_loss_leash02': round(sh.log_loss(y[m], p1[m]), 6), 'log_loss_v2': round(sh.log_loss(y[m], p2[m]), 6),
+                                         'log_loss_change': round(diff, 6), 'ci': [round(lo, 6), round(hi, 6)],
+                                         'bands': [[int(b), int((m & (band == b)).sum()), int(y[m & (band == b)].sum()), round(float(p1[m & (band == b)].sum()), 1), round(float(p2[m & (band == b)].sum()), 1)] for b in range(6)]}
+    return out
+
+
 def postseason_usage(repo, token, key, branch, seasons=(2023, 2024, 2025, 2026)) -> dict:
     """How starters and bullpens are used in postseason games compared with the regular season (from the sealed study seasons)."""
     import collections
@@ -620,7 +666,7 @@ def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']; key_hex = os.environ['BRL_PA_PACKAGE_KEY']; key = key_bytes(key_hex)
     branch = os.environ.get('BRL_LEDGER_BRANCH', 'brl-live-data')
     experiment = (os.environ.get('BRL_EXPERIMENT') or 'physics').strip()
-    if experiment in ('hazard_check', 'hazard_fix', 'hazard_pitches'):
+    if experiment in ('hazard_check', 'hazard_fix', 'hazard_pitches', 'pitch_counts'):
         run_id = os.environ.get('GITHUB_RUN_ID', 'local')
         receipt = {'schema': 'brl.research-receipt.v1', 'experiment': experiment, 'run_id': run_id, 'started_at': datetime.now(timezone.utc).isoformat()}
         try:
@@ -632,7 +678,7 @@ def main():
                 import shutil; shutil.rmtree(data_root)
             data_root.mkdir(parents=True)
             ep.restore_package(repo, token, key_hex, manifest, data_root)
-            if experiment == 'hazard_pitches':
+            if experiment in ('hazard_pitches', 'pitch_counts'):
                 import io
                 tables = []
                 for year in (2023, 2024, 2025, 2026):
@@ -640,7 +686,8 @@ def main():
                     if raw is not None:
                         tables.append(pd.read_csv(io.BytesIO(gzip.decompress(unseal(raw, key, physics_purpose(year)))), usecols=['game_pk', 'at_bat_number', 'n']))
                 receipt['physics_seasons'] = len(tables)
-                receipt['results'] = hazard_pitches(data_root, pd.concat(tables, ignore_index=True) if tables else None)
+                phys_n = pd.concat(tables, ignore_index=True) if tables else None
+                receipt['results'] = pitch_counts_fit(data_root, phys_n) if experiment == 'pitch_counts' else hazard_pitches(data_root, phys_n)
             else:
                 receipt['results'] = (hazard_fix if experiment == 'hazard_fix' else hazard_check)(data_root)
             receipt['status'] = 'completed'

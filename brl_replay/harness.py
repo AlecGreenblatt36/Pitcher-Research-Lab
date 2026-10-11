@@ -144,7 +144,7 @@ def bats_lookup(h: pd.DataFrame, cutoff: str) -> dict:
 
 def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates: list, *, model_path: Path, model_sha256: str,
                  history_path: Path, hazard_path: Path, n_sims: int, physics_table=None, offsets=None, rest=False, environment=None,
-                 team_offsets=None, age_layer=None, steals=None, win_states=False, starter_lines=False, role_offsets=None, real_pa_check=False, transitions=None, hitter_lines=False, running_events=None, reliever_choice=None, leash=None, base_state=None, relief_exit=None, relief_hooks=None, day_form=0.0, paired_streams=False, matchup=None, level_offsets=None, hazard_correction=None, log=print) -> list[dict]:
+                 team_offsets=None, age_layer=None, steals=None, win_states=False, starter_lines=False, role_offsets=None, real_pa_check=False, transitions=None, hitter_lines=False, running_events=None, reliever_choice=None, leash=None, base_state=None, relief_exit=None, relief_hooks=None, day_form=0.0, paired_streams=False, matchup=None, level_offsets=None, hazard_correction=None, pitch_counts=None, log=print) -> list[dict]:
     """Simulate every game on the given dates; one record per game (win counts, run histograms, starter outs).
 
     environment: optional {game_pk: seven log-multipliers} (brl_live/environment.py); games without an entry are unadjusted.
@@ -173,6 +173,8 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
     day_form: sd of a per-team, per-world shock on reaching base (brl_live.provider_adjust.DayForm); 0 is off.
     matchup: optional {'table': {(batter, pitcher): (chase points, zone-swing points)}, 'coefs': {'K': (..), 'BB': (..)}}:
         decision-moment matchups (brl_live.provider_adjust.MatchupAdjust), from earlier seasons only.
+    pitch_counts: optional research_lab.game_sim.pitch_counts.PitchCounts: each plate appearance's pitches drawn by outcome
+        (LEASH-03), for the hazard correction's pitch terms.
     hazard_correction: optional {'terms', 'coef'}: LEASH-02's correction on the starter-exit hazard's log-odds by inning, its end
         and the score (research_lab.game_sim.starter_hazard.CORRECTION_TERMS).
     paired_streams: tie every random draw to a team's plate appearance number (engine paired streams), so replays of two
@@ -390,7 +392,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
             if steals is not None:
                 from brl_live.running import steal_model
                 steal = steal_model(int(str(date)[:4]) - 1, **{k: float(v) for k, v in steals.items() if k in ('per_pa', 'third')})
-            sim = GameSimulator(provider, manager_policy=policy, steals=steal, transitions=transitions, running_events=running_events,
+            sim = GameSimulator(provider, manager_policy=policy, steals=steal, transitions=transitions, running_events=running_events, pitch_counts=pitch_counts,
                                 paired_streams=bool(paired_streams))
             rng = np.random.default_rng(int(g.game_pk))
             seeds = rng.integers(0, np.iinfo(np.int32).max, size=n_sims, dtype=np.int64)

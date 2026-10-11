@@ -26,6 +26,7 @@ Settings come from tools/replay_params.json on the trigger branch:
   relief_exit  path in the repository of fitted reliever exits (tools/brl_relief_exit.py): when a reliever comes out
   relief_hooks {'half_life': days, 'k': shrinkage} with relief_exit: each team's hook tendency from prior dates (RELIEF-03)
   day_form     sd of a per-team, per-world shock on reaching base (DISP-01)
+  pitch_counts path in the repository of pitches per plate appearance by outcome (tools/brl_research.py pitch_counts; LEASH-03)
   hazard_correction path in the repository of LEASH-02's correction on the starter-exit hazard (tools/brl_research.py hazard_fix)
   level_offsets path in the repository of in-season league-level offsets by date (tools/brl_level_cal.py --write-offsets;
                LEVEL-02): each date's offsets from the season's earlier real plate appearances only
@@ -116,7 +117,7 @@ def _worker(dates: list) -> list:
                         transitions=s.get('transitions'), hitter_lines=bool(s.get('hitter_lines')), running_events=s.get('running_events'),
                         reliever_choice=s.get('reliever_choice'), leash=s.get('leash'), base_state=s.get('base_state'), relief_exit=s.get('relief_exit'), relief_hooks=s.get('relief_hooks'), day_form=s.get('day_form') or 0.0,
                         paired_streams=bool(s.get('paired_streams')), matchup=s.get('matchup'), level_offsets=s.get('level_offsets'),
-                        hazard_correction=s.get('hazard_correction'), log=lambda m: print(m, flush=True))
+                        hazard_correction=s.get('hazard_correction'), pitch_counts=s.get('pitch_counts'), log=lambda m: print(m, flush=True))
 
 
 def logit(p):
@@ -354,6 +355,11 @@ def main():
             matchup = {'table': {(str(b_), str(p_)): (c_, z_) for b_, p_, c_, z_ in mdoc['pairs']}, 'coefs': mspec['coefs']}
             receipt['matchup'] = {'season': int(mspec['season']), 'pairs': len(matchup['table']), 'coefs': mspec['coefs'],
                                   'train_seasons': mdoc.get('train_seasons'), 'arsenal_season': mdoc.get('arsenal_season')}
+        pitch_counts = None
+        if params.get('pitch_counts'):
+            from research_lab.game_sim.pitch_counts import PitchCounts
+            pitch_counts = PitchCounts(json.loads((ROOT / str(params['pitch_counts'])).read_text()))
+            receipt['pitch_counts'] = {'path': params['pitch_counts']}
         hazard_correction = None
         if params.get('hazard_correction'):
             hdoc = json.loads((ROOT / str(params['hazard_correction'])).read_text())
@@ -373,7 +379,7 @@ def main():
                        age_layer=age_layer, steals=steals, win_states=(params.get('win_states') if params.get('win_states') == 'split' else bool(params.get('win_states'))), starter_lines=bool(params.get('starter_lines')), role_offsets=role_offsets, real_pa_check=bool(params.get('real_pa_check')), transitions=transitions,
                        hitter_lines=bool(params.get('hitter_lines')), running_events=running_events, reliever_choice=reliever_choice, leash=leash, base_state=base_state, relief_exit=relief_exit, relief_hooks=relief_hooks,
                        day_form=(params['day_form'] if isinstance(params.get('day_form'), dict) else float(params.get('day_form') or 0.0)), paired_streams=bool(params.get('streams')), matchup=matchup,
-                       level_offsets=level_offsets, hazard_correction=hazard_correction)
+                       level_offsets=level_offsets, hazard_correction=hazard_correction, pitch_counts=pitch_counts)
         if params.get('streams'):
             receipt['paired_streams'] = True
         if params.get('day_form'):

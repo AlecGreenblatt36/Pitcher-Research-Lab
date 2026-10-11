@@ -113,6 +113,32 @@ def correction_terms(inning, ended, lead, runs) -> np.ndarray:
     return z
 
 
+# LEASH-03: the starter's pitches so far in six bands by whether the inning just ended, after LEASH-02's terms.
+PITCH_BANDS = (60, 75, 85, 95, 105)
+PITCH_TERMS = tuple(f"p{b}{'e' if e else 'm'}" for b in ("lt60", "60_74", "75_84", "85_94", "95_104", "105up") for e in (1, 0))
+CORRECTION_TERMS_V2 = CORRECTION_TERMS + PITCH_TERMS
+
+
+def pitch_band(pitches) -> int:
+    return int(np.searchsorted(PITCH_BANDS, float(pitches), side="right"))
+
+
+def correction_terms_v2(inning, ended, lead, runs, pitches) -> np.ndarray:
+    z = np.zeros(len(CORRECTION_TERMS_V2))
+    z[:len(CORRECTION_TERMS)] = correction_terms(inning, ended, lead, runs)
+    z[len(CORRECTION_TERMS) + 2 * pitch_band(pitches) + (0 if int(bool(ended)) else 1)] = 1.0
+    return z
+
+
+def correction_matrix_v2(d: pd.DataFrame) -> np.ndarray:
+    """correction_terms_v2 for every decision of a build_decisions frame with a 'pitches' column (his pitches so far)."""
+    Z = np.zeros((len(d), len(CORRECTION_TERMS_V2)))
+    Z[:, :len(CORRECTION_TERMS)] = correction_matrix(d)
+    band = np.searchsorted(PITCH_BANDS, d["pitches"].to_numpy(float), side="right")
+    Z[np.arange(len(d)), len(CORRECTION_TERMS) + 2 * band + np.where(d["inning_ended"].to_numpy(int) == 1, 0, 1)] = 1.0
+    return Z
+
+
 def correction_matrix(d: pd.DataFrame) -> np.ndarray:
     """correction_terms for every decision of a build_decisions frame (inning, inning_ended, lead, runs)."""
     inn, ended = d["inning"].to_numpy(int), d["inning_ended"].to_numpy(int)
@@ -221,13 +247,16 @@ class FittedStarterPolicy(ManagerPolicy):
         self._w, self._b = lr.coef_[0], float(lr.intercept_[0])
         # LEASH-02: {'terms': CORRECTION_TERMS, 'coef': [...]} added to the log-odds; None leaves the hazard as fitted
         self._gamma = None
+        self._v2 = False
         if correction is not None:
-            if tuple(correction["terms"]) != CORRECTION_TERMS:
+            terms = tuple(correction["terms"])
+            if terms not in (CORRECTION_TERMS, CORRECTION_TERMS_V2):
                 raise ValueError("hazard correction terms do not match")
             self._gamma = np.asarray(correction["coef"], float)
-            self.name = "fitted-starter-hazard-v1 + inning correction (relievers: heuristic)"
+            self._v2 = terms == CORRECTION_TERMS_V2
+            self.name = "fitted-starter-hazard-v1 + inning" + (" and pitch-count" if self._v2 else "") + " correction (relievers: heuristic)"
 
-    def _prob(self, bf, runs, inning, ended, outs, runners, lead, p_exp, t_exp) -> float:
+    def _prob(self, bf, runs, inning, ended, outs, runners, lead, p_exp, t_exp, pitches=0.0) -> float:
         """Numpy replica of engineer() + scaler + logistic (same order as FEATURES)."""
         d = bf - p_exp
         x = np.array([bf, bf * bf / 30.0, d, d * d / 10.0, float(d > 0), runs, runs * runs,
@@ -235,7 +264,7 @@ class FittedStarterPolicy(ManagerPolicy):
                       float(bf >= 18), p_exp, t_exp, ended * d, runs * float(inning <= 4)])
         z = float(((x - self._mu) / self._sd) @ self._w + self._b)
         if self._gamma is not None:
-            z += float(correction_terms(inning, ended, lead, runs) @ self._gamma)
+            z += float((correction_terms_v2(inning, ended, lead, runs, pitches) if self._v2 else correction_terms(inning, ended, lead, runs)) @ self._gamma)
         return 1.0 / (1.0 + np.exp(-z))
 
     def should_remove(self, pitcher, line, state, fielding_side, inning_ended, rng):
@@ -249,5 +278,5 @@ class FittedStarterPolicy(ManagerPolicy):
                        float(inning_ended), 3.0 if inning_ended else float(state.outs),
                        0.0 if inning_ended else float(sum(b is not None for b in state.bases)),
                        float(max(-8, min(8, lead))), float(self.pitcher_exp.get(pid, self.league)),
-                       float(self.team_exp.get(self.team_of.get(pid), self.league)))
+                       float(self.team_exp.get(self.team_of.get(pid), self.league)), float(getattr(line, "pitches", 0) or 0))
         return bool(rng.random() < p)
