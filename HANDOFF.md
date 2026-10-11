@@ -78,8 +78,17 @@ queue behind the shards (seen October 11 at 16:50 UTC). Check-only replays (n_si
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 4:32 p.m. Eastern October 11, by `date -u`)
+### In flight (updated 4:58 p.m. Eastern October 11, by `date -u`)
 
+- October 11, 4:58 p.m.: RELIEF-04 registered (relievers who come in by the 3rd inning stay far longer than the exit
+  hazard expects; 6th-inning entries come out sooner). Stage 1 held (research run 38174006841: decision log loss -0.0071
+  and -0.0060 on held-out 2025 and 2026). Stage 2 replays v2-prod4-relief4-1000-<season> started 20:57 UTC (runs
+  38174343872 and 38174368300) against v2-prod4-leash2-1000. Score: tools/brl_relief_usage.py on both tags (slope gap at
+  least halved, level no worse by 0.03), tools/replay_compare.py v2-prod4-leash2-1000 v2-prod4-relief4-1000 (win Brier,
+  totals), and check the receipts' settings equal LEASH-02's apart from relief_correction. If it holds: fit the live
+  table (relief_fix 'live' coefficients in the receipt) into brl_live/relief_correction.json, recompute brl_live/
+  relief_hooks.json against the corrected hazard (tools/brl_relief_hooks.py), add ADJUST relief_correction for
+  regular-season games only (manager_for has the game type).
 - October 11, 4:32 p.m.: review fixes. The live builder refuses a hazard correction file that is not LEASH-02's 32 terms
   (LEASH-03's pitch terms would have run with no pitches outside the one simulator it returned); brl_live/pitch_counts.json
   and the idle live branch are gone. The outs ladder shows only 12.5 to 20.5, the lines PLAYER-07 scored (with those lines
