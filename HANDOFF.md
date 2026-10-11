@@ -65,23 +65,32 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 8:35 a.m. Eastern October 11, by `date -u`)
+### In flight (updated 7:10 a.m. Eastern October 11, by `date -u`)
 
-- October 11, 8:35 a.m.: PZONES-01 held (run 38131952265): pitcher charts have the Expected view (swing and miss shrunk
+- October 11, 7:10 a.m.: a separate review of the session's page and report changes (4f10922ba..8cfb431c6) found six
+  wording defects, no crashes or wrong arithmetic; all fixed in d99b9524e: the velocity chart now says it shows games
+  with 8 or more fastballs and its dashed line is his real season average (cards velo_season) or his earlier starts; a
+  last-start read only for a start in the card's as-of season (a 2025 start was called "this season"); the matchup's
+  fastball line names the base of the change; the splits notes pair each correlation with its own sample (190 hitters,
+  242 pitchers); the hot-zone key names the ZONES-03 anchor only where it applies (hzAnchorWords); a pitcher with fewer
+  than three starts reads "Only 2 starts". Cards rebuilt (run 38134409127). Lesson: every number's label must name the
+  quantity actually computed, including its sample and season.
+
+- October 11, 6:41 a.m.: PZONES-01 held (run 38131952265): pitcher charts have the Expected view (swing and miss shrunk
   at m 80; AVG and SLG at his level on his hand's league pattern; page PZ_EXP_M, pitcherZoneLegend). HCHANGE-01 (run
   38132555095; registered as CHANGE-01, renamed because the ID was taken): flagged season changes held 55% to 80% in
   chase, misses, strikeouts and hard-hit; walk-rate changes no longer called out (HC_RATES carry the held share). The
   Record page lists the other checks in plain words (OTHER_CHECKS). The Odds tab shows the line as a sportsbook board with
   our fair price (lineBoard, amOdds). Check new experiment IDs against the ledger before registering (grep "^| ID |").
 
-- October 11, 7:15 a.m.: REST-01 failed as registered (relievers on no rest lose 0.16 mph, under the 0.2 gate, and no
+- October 11, 6:18 a.m.: REST-01 failed as registered (relievers on no rest lose 0.16 mph, under the 0.2 gate, and no
   strikeouts; bullpen card unchanged). TTO-01: the third-time penalty against starters is real every season (OBP +1.05
   points in 2026, strikeouts down 3) but a starter's own gap did not reliably carry over (46 pairs, r 0.12); the
   starter fold says so (TTO_NOTE). Also: the pitching matchup gives each starter's last three starts from MLB's game logs
   (psLast3) and his last start's fastball; the bullpen card adds K% and BB% shaded by percentile (penRate) with names
   sticky; How it works has a Player pages section. Main at d25ab0db7.
 
-- October 11, 6:30 a.m.: three more checks held and are on the page. PSPLITS-01 (run 38128749747): a pitcher's own AVG
+- October 11, 5:55 a.m.: three more checks held and are on the page. PSPLITS-01 (run 38128749747): a pitcher's own AVG
   and SLG split by batter side did not carry over (r 0.10, 0.06); his Expected splits use his hand's usual split
   (pitcherSplitExpected). FORM-01 (run 38129227011): a hitter's last ten games said almost nothing about his next ten
   in OBP or SLG (k 0.02); strikeouts carried about 15%; the game log's note says so. VELO-01 (run 38129631856): about
