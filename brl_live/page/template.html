@@ -4046,7 +4046,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var rows = [["Season", function (c) { return spSpan(c.id, year, false, "wl") || "\u2013"; }],
                 ["Strikeout %", function (c) { return cell(c, "k"); }], ["Walk %", function (c) { return cell(c, "bb"); }],
                 ["Whiff %", function (c) { return cell(c, "whiff"); }], ["Hard-hit % against", function (c) { return cell(c, "hard"); }],
-                ["Average against", function (c) { return cell(c, "avg", "three"); }],
+                ["Average against", function (c) { return cell(c, "avg", "three"); }], ["Expected average against", function (c) { return cell(c, "xavg", "three"); }],
                 ["Fastball", function (c) { var v = c.card && c.card.velo_last; return cell(c, "velo", "mph") + (v ? "<small class=\"pm-sub\">" + v.mph.toFixed(1) + " last start" + (Math.abs(v.delta) >= 1 ? ", " + v.base.toFixed(1) + " in his earlier starts" : "") + "</small>" : ""); }],
                 ["Last 3 starts", function (c) { return c.id ? '<span class="ps-slot" data-ps="' + esc(c.id) + '" data-part="last3" data-grp="pitching" data-year="' + esc(year) + '">\u2013</span>' : "\u2013"; }],
                 ["Main pitches", arsenalCell], ["How he pitches", tagsCell],
