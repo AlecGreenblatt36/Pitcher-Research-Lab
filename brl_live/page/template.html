@@ -3992,7 +3992,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var rgb = gray.map(function (g, i) { return Math.round(g + (end[i] - g) * a); });
     var lin = function (c) { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
     var L = 0.2126 * lin(rgb[0]) + 0.7152 * lin(rgb[1]) + 0.0722 * lin(rgb[2]);
-    return { bg: "rgb(" + rgb.join(",") + ")", fg: 1.05 / (L + 0.05) >= (L + 0.05) / 0.05 ? "#fff" : "#17231C" };
+    return { bg: "rgb(" + rgb.join(",") + ")", fg: 1.05 / (L + 0.05) >= (L + 0.05) / 0.0646 ? "#fff" : "#17231C" };     /* 0.0646: the ink's luminance plus 0.05 */
   }
   function pctPanel(x, lg, asof, hl) {
     if (!x || !x.pct || !x.line) return "";
