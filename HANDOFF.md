@@ -65,9 +65,19 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 8:25 a.m. Eastern October 11, by `date -u`)
+### In flight (updated 8:55 a.m. Eastern October 11, by `date -u`)
 
-- October 11, 8:25 a.m.: PLAYER-03 registered (d6fa2bb37) and its two replays running: the page's hitter chances (1+ hit,
+- October 11, 8:55 a.m.: BVP-01 (run 38139650184): every prediction failed; beyond each player's own level, a hitter's
+  record against one pitcher carried between none and about 15% of a 20 plate-appearance record's on-base edge (2026's
+  interval above zero, 2025's not), and nothing measurable in strikeouts or slugging. PROD-14: the Matchups tab shows each
+  hitter's career line against the opposing starter from MLB (one vsPlayerTotal ask per lineup, never colored, the note
+  states BVP-01's range); the Summary shows both teams' season stats with MLB ranks before first pitch (one teams/stats
+  ask for every club). The stats probe (run 38139188923) found both asks open to the page. The Players page's
+  leaderboard buttons for barrel and the expected stats were blank (labels missing since those rows were added); fixed,
+  with a test tying every percentile row to a label and direction. Local preview mocks: serve.py answers vsPlayerTotal
+  and teams/stats (mlb/gl/team-stats.json).
+
+- October 11, 8:23 a.m.: PLAYER-03 registered (d6fa2bb37) and its two replays running: the page's hitter chances (1+ hit,
   2+ hits, HR, walk, strikeout) on the live engine, 2026 (run 38138601871) and 2025 (run 38138625455), tags
   v2-prod4-hitters-1000-<season>; the harness now records each hitter's histograms of hits, home runs, walks and
   strikeouts. Score them with `python3 tools/brl_player_cal.py --season 2025='<dir>/2025-*.jsonl.gz' --season
