@@ -1222,7 +1222,9 @@ TAG_RULES = (('Chases a lot', 'chase', 0.04), ('Patient', 'chase', -0.06), ('Swi
              ('Puts the bat on the ball', 'whiff', -0.07), ('Takes the first pitch', 'first', -0.12),
              ('Swings at the first pitch', 'first', 0.12), ('Expands with two strikes', 'two', 0.08),
              ('Shrinks the zone with two strikes', 'two', -0.10))
-TAG_FLOOR = {'chase': 1, 'whiff': 1, 'first': 80, 'two': 80}          # the page reads count rows with 80 or more pitches
+# TAGS-02: the coaching line for hitter's counts (countPlan): his swing rate with the pitcher behind, 10 points over his side's league
+TAG_RULES_EXTRA = (('Aggressive in hitter\'s counts', 'behind', 0.10),)
+TAG_FLOOR = {'chase': 1, 'whiff': 1, 'first': 80, 'two': 80, 'behind': 80}          # the page reads count rows with 80 or more pitches
 
 
 def tag_counts(T: dict, mask) -> dict:
@@ -1237,11 +1239,11 @@ def tag_counts(T: dict, mask) -> dict:
     outside = (np.abs(px) > D.ZONE_HALF) | (pz > D.ZONE_TOP) | (pz < D.ZONE_BOT)
     sw = (T['call'][rows] == 1) | (T['call'][rows] == 2); wh = T['call'][rows] == 2
     g = count_group(T['balls'][rows], T['strikes'][rows]); ooz = T['zone'][rows] >= 11
-    first, two = g == 0, g == 3
+    first, two, behind = g == 0, g == 3, g == 2
     n = c(np.ones(len(rows), bool))
     return {'bats': bats, 'side': (c(T['stand_r'][rows] == 1) / np.maximum(n, 1) >= 0.5).astype(np.int64), 'n': n,
             'chase': (c(sw & outside), c(outside)), 'whiff': (c(wh), c(sw)), 'first': (c(sw & first), c(first)),
-            'two': (c(sw & two & ooz), c(two & ooz)), 'other': (c(sw & ~two & ooz), c(~two & ooz))}
+            'two': (c(sw & two & ooz), c(two & ooz)), 'other': (c(sw & ~two & ooz), c(~two & ooz)), 'behind': (c(sw & behind), c(behind))}
 
 
 def _tag_league(tc: dict, rate: str, side_wise: bool) -> np.ndarray:
@@ -1281,8 +1283,8 @@ def tag_study(T: dict, stage, spec: dict) -> dict:
         has_test[has_test] &= b['n'][ti[has_test]] >= min_test
         res['hitters'] = {'cards': int(card.sum()), 'with_test': int(has_test.sum())}
         tagged = {}
-        for name, rate, thr in TAG_RULES:
-            side_wise = rate in ('first', 'two')
+        for name, rate, thr in TAG_RULES + (TAG_RULES_EXTRA if spec.get('extra') else ()):
+            side_wise = rate in ('first', 'two', 'behind')
             num, den = a[rate]
             r_tr = np.where(den >= TAG_FLOOR[rate], num / np.maximum(den, 1e-9), np.nan)
             lg_tr = _tag_league(a, rate, side_wise)
