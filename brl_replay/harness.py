@@ -80,6 +80,19 @@ def pitcher_outs(sub: pd.DataFrame, home_won=None) -> dict:
     return out
 
 
+ENTRY_INN = (5, 6, 7, 8, 9)            # entry inning buckets: 5th or earlier, 6th, 7th, 8th, 9th or later
+ENTRY_LEAD = (-3, -1, 0, 3)            # the fielding team's lead at the half-inning's start: <=-3, -2..-1, 0, 1..3, >=4
+
+
+def entry_key(inning, lead, top2) -> str:
+    """BULLPEN-05's cell for one relief entry: inning bucket, lead bucket and whether the arm is one of the team's top two
+    by 14-day share."""
+    i = min(max(int(inning), 5), 9)
+    lead = int(lead)
+    lb = 0 if lead <= -3 else 1 if lead <= -1 else 2 if lead == 0 else 3 if lead <= 3 else 4
+    return f"{i}:{lb}:{int(bool(top2))}"
+
+
 def appearances(h: pd.DataFrame) -> pd.DataFrame:
     top = h["inning_topbot"].str.lower().str.startswith("top")
     h = h.assign(fielding_team=np.where(top, h["home_team"], h["away_team"]))
@@ -244,7 +257,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
             real_states[int(gpk)] = [(int(r.inning), "top" if str(r.inning_topbot).lower().startswith("top") else "bottom", int(r.outs_when_up),
                                       (bool(r.runner_1b), bool(r.runner_2b), bool(r.runner_3b)), int(r.home_score) - int(r.away_score))
                                      for r in grp.itertuples(index=False)]
-    act_lines, per_k, act_relievers = {}, {}, {}
+    act_lines, per_k, act_relievers, act_entries = {}, {}, {}, {}
     act_innings = {}
     if starter_lines:
         # the batting side's score before its first plate appearance of each inning (runs by inning follow with the final)
@@ -269,6 +282,15 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
             side2 = np.where(sub2["inning_topbot"].astype(str).str.lower().str.startswith("top"), "home", "away")
             for (gpk_, side_), pids_ in sub2.groupby([sub2["game_pk"].to_numpy(), side2], sort=False)["pitcher"]:
                 act_relievers[(int(gpk_), str(side_))] = [int(x) for x in pd.unique(pids_.to_numpy())][1:]
+            if {"fld_score", "bat_score", "inning"} <= set(h.columns):
+                # BULLPEN-05: each real relief entry's inning and the fielding team's lead at that half-inning's start
+                s3 = h.loc[h["game_pk"].isin(want_g), ["game_pk", "at_bat_number", "pitcher", "inning", "inning_topbot", "fld_score", "bat_score"]].sort_values(["game_pk", "at_bat_number"], kind="mergesort")
+                s3 = s3.assign(fside=np.where(s3["inning_topbot"].astype(str).str.lower().str.startswith("top"), "home", "away"))
+                half_first = s3.groupby(["game_pk", "inning", "inning_topbot"], sort=False)[["fld_score", "bat_score"]].transform("first")
+                s3 = s3.assign(lead0=(half_first["fld_score"] - half_first["bat_score"]).to_numpy())
+                firsts = s3.drop_duplicates(["game_pk", "fside", "pitcher"], keep="first")
+                for (gpk_, side_), gg in firsts.groupby(["game_pk", "fside"], sort=False):
+                    act_entries[(int(gpk_), str(side_))] = [(int(r_.pitcher), int(r_.inning), int(r_.lead0)) for r_ in gg.iloc[1:].itertuples()]
         for (gpk_, side_), oc in sub.groupby([sub["game_pk"].to_numpy(), sub_side])["outcome"]:
             vc = oc.value_counts()
             act_lines[(int(gpk_), str(side_))] = {"bf": int(len(oc)), "k": int(vc.get("K", 0)), "bb": int(vc.get("BB_HBP", 0)),
@@ -412,6 +434,9 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
             tot = {side: np.zeros(4) for side in ("away", "home")} if starter_lines else None   # team pitching: K, BF, BB+HBP, hits
             npit = {side: 0 for side in ("away", "home")}                                         # pitchers used, summed over worlds
             rel_n = {side: {} for side in ("away", "home")}                                       # worlds each reliever pitched in
+            ent_n = {side: {} for side in ("away", "home")}                                       # relief entries by BULLPEN-05's cells, summed
+            top2_ = {side: set(str(b_.player_id) for b_ in sorted(teams[side].bullpen, key=lambda b_: -float((getattr(b_, "usage", None) or {}).get("share14", 0.0)))[:2])
+                     for side in ("away", "home")} if starter_lines else None
             nhr = {side: 0 for side in ("away", "home")}                                          # home runs allowed, summed over worlds
             inn_sum = {side: np.zeros(10) for side in ("away", "home")}                           # runs by inning 1-9 and extras, summed
             wt = WinTable() if win_states else None
@@ -464,6 +489,11 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                             nhr[sd_] += int(ln.get("home_runs") or 0)
                             if not ln.get("is_starter"):
                                 rel_n[sd_][str(ln.get("pitcher_id"))] = rel_n[sd_].get(str(ln.get("pitcher_id")), 0) + 1
+                                ei_ = int(ln.get("entry_inning") or 1); ir2_ = r.inning_runs or {}
+                                own_ = sum(v_ for i_, v_ in (ir2_.get(sd_) or {}).items() if int(i_) < ei_ + (1 if sd_ == "away" else 0))
+                                opp_ = sum(v_ for i_, v_ in (ir2_.get("home" if sd_ == "away" else "away") or {}).items() if int(i_) < ei_)
+                                k_ = entry_key(ei_, own_ - opp_, str(ln.get("pitcher_id")) in top2_[sd_])
+                                ent_n[sd_][k_] = ent_n[sd_].get(k_, 0) + 1
                 if hl is not None:
                     cnt = {}
                     for e in r.events:
@@ -587,6 +617,12 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                         cand_ = [str(b.player_id) for b in teams[side].bullpen]
                         ids_ = cand_ + [str(x) for x in used_ if str(x) not in cand_]
                         st_out[side]["relievers"] = [[int(x) if str(x).isdigit() else x, round(rel_n[side].get(x, 0) / n_sims, 4), int(int(x) in used_ if str(x).isdigit() else 0)] for x in ids_]
+                    ents_ = act_entries.get((int(g.game_pk), side))
+                    if ents_ is not None:
+                        real_ = {}
+                        for pid_, inn_, lead_ in ents_:
+                            k_ = entry_key(inn_, lead_, str(pid_) in top2_[side]); real_[k_] = real_.get(k_, 0) + 1
+                        st_out[side]["entries"] = {"sim": {k_: round(v_ / n_sims, 4) for k_, v_ in sorted(ent_n[side].items())}, "real": real_}
                 records[-1]["starters"] = st_out
                 records[-1]["innings"] = {"sim_mean": {sd_: [round(float(v_) / n_sims, 4) for v_ in inn_sum[sd_]] for sd_ in ("away", "home")},
                                           "actual_first_scores": act_innings.get(int(g.game_pk))}

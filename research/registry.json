@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 328,
- "rows": 331,
+ "experiments": 329,
+ "rows": 332,
  "records": {
   "ACC-01": [
    {
@@ -5395,6 +5395,22 @@
     "runs": [],
     "frozen_commits": [],
     "status": "(1), (3) held; (2) failed; note added"
+   }
+  ],
+  "BULLPEN-05": [
+   {
+    "id": "BULLPEN-05",
+    "columns": {
+     "ID": "BULLPEN-05",
+     "Attempt": "Where the simulator's relief entries differ from real ones (diagnostic, descriptive; BULLPEN-03's follow-up). Full replays of 2025 and 2026 with RELIEF-04's settings and seeds (tags v2-prod4-entries-1000-<season>), which now also record every relief entry by its inning (5th or earlier, 6th, 7th, 8th, 9th or later), the fielding team's lead at the start of that half-inning (down 3 or more, down 1 or 2, tied, up 1 to 3, up 4 or more) and whether the arm is one of the team's top two by 14-day share, per world in the simulator and from the plate appearances in real games (brl_replay/harness.py entry_key; recording only, so the games equal RELIEF-04's). Summed per team-game by tools/brl_bullpen_entries.py",
+     "Disposition and evidence": "Diagnostic, no prediction. What it decides: the cells where the top two arms enter more often than in real games point the fix (the situations' frequency, the choice in them, or both); a fix is registered with its own gates.",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": false,
+    "diagnostic": true,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "TOTALS-05": [

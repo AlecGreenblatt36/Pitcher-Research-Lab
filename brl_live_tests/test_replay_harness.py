@@ -101,4 +101,9 @@ def test_reconstruct_and_replay(tmp_path):
             assert all(0.0 <= share <= 1.0 and used in (0, 1) for _, share, used in rel)
             assert abs(sum(share for _, share, _ in rel) - (st['team_pitchers_sim_mean'] - 1)) < 1e-3 * (len(rel) + 1)
             assert sum(used for _, _, used in rel) == st['team_actual']['pitchers'] - 1
+            # BULLPEN-05: relief entries by inning, lead and top-two arms, simulated per world and real
+            ent = st['entries']
+            assert abs(sum(ent['sim'].values()) - (st['team_pitchers_sim_mean'] - 1)) < 1e-3 * (len(ent['sim']) + 1)
+            assert sum(ent['real'].values()) == st['team_actual']['pitchers'] - 1
+            assert all(len(k.split(':')) == 3 for k in list(ent['sim']) + list(ent['real']))
     assert seen > 0
