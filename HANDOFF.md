@@ -85,7 +85,8 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   starter's projected line from the simulator's box; arsenal tables use this season's pitches when 300 or more; the live
   card gives the pitcher's mix in the count at hand. POST-03 held (postseason managers keep good starters in longer: top
   third by K-BB 0.90 of their regular length, bottom 0.77); the tiered factor is built in brl_live/live_extension.py and
-  OFF (ADJUST postseason_starter_tiers None), queued for Alec's OK. The phone check failed once on 12 and 13px text in the new
+  OFF (ADJUST postseason_starter_tiers None), queued for Alec's OK. TAGS-04 failed (velocity misses do not carry over;
+  no tag). TAGS-05 held (pull shares carry over 0.58 to 0.70; page pullShift; lineup notes shade the infield). The phone check failed once on 12 and 13px text in the new
   pieces (its floor is 14px); fixed at 12ac50da0. Run tools/check_brl_phone_page.py against the local build (--url
   http://127.0.0.1:8790/index.html?api=http://127.0.0.1:8790/mlb/) before pushing page changes.
 
