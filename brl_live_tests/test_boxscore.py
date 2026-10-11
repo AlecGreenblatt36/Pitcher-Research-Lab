@@ -193,3 +193,19 @@ def test_box_scores_add_up_with_the_empirical_base_running_kernel(seed):
         assert sum(x['R'] for x in box['batting'][side])==getattr(r,side+'_score')
         assert sum(x['H'] for x in box['batting'][side])==sum(x['H'] for x in box['pitching']['home' if side=='away' else 'away'])
         assert sum(x['PA'] for x in box['batting'][side])==sum(x['AB']+x['BB']+x['HBP']+x['SF'] for x in box['batting'][side])
+
+
+def test_accumulator_keeps_the_first_inning_and_first_five_over_the_same_worlds():
+    """NRFI-01, FIRST5-01: per world, the road and home runs of the first inning and through the fifth, kept together."""
+    a=BoxAccumulator(matchup())
+    worlds=[({'1':{'R':1,'H':1},'6':{'R':2,'H':2}},{'3':{'R':1,'H':1}}),({},{}),({'5':{'R':2,'H':3}},{'1':{'R':1,'H':1}})]*3334
+    for i,(aw,hm) in enumerate(worlds[:10000]):
+        a.add({'seed':i,'score':{'away':sum(v['R'] for v in aw.values()),'home':sum(v['R'] for v in hm.values())},'innings':{'away':aw,'home':hm},
+               'batting':{'away':[],'home':[]},'pitching':{'away':[],'home':[]}})
+    a.features=[]
+    r=a.finish()
+    n0,n1,n2=3334,3333,3333
+    assert r['first_inning']=={'n':10000,'no_run':n1,'away_scores':n0,'home_scores':n2}
+    # through five: road 1 home 1 (tie), 0-0 (tie), road 2 home 1 (road by one)
+    assert r['f5_margin_distribution']=={'n':10000,'counts':[[-1,n2],[0,n0+n1]]}
+    assert r['f5_total_distribution']=={'n':10000,'counts':[[0,n1],[2,n0],[3,n2]]}

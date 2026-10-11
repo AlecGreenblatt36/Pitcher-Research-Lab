@@ -248,7 +248,7 @@ STARTER_SHARE=(0.974,0.976,0.976,0.977,0.969,0.962,0.953,0.942,0.927)
 
 class BoxAccumulator:
     def __init__(self,matchup):
-        self.matchup=matchup;self.n=0;self.hist={s:{'batting':{},'pitching':{}} for s in SIDE}
+        self.matchup=matchup;self.n=0;self.hist={s:{'batting':{},'pitching':{}} for s in SIDE};self.early=[]
         self.innings={s:defaultdict(lambda:Counter()) for s in SIDE};self.score_pairs=[];self.seeds=[];self.features=[];self.win=WinTable()
         for s in SIDE:
             t=getattr(matchup,s)
@@ -265,6 +265,9 @@ class BoxAccumulator:
                     if kind=='pitching':agg['appeared']+=int(pid in index)
                     for k in fields:agg['stats'][k][row[k]]+=1
             for inning,values in box['innings'][s].items():self.innings[s][int(inning)].update(values)
+        # each world's first inning and first five innings, road and home runs (NRFI-01, FIRST5-01)
+        inn={s:{int(k):int(v.get('R',0)) for k,v in box['innings'][s].items()} for s in SIDE}
+        self.early.append((inn['away'].get(1,0),inn['home'].get(1,0),sum(v for k,v in inn['away'].items() if k<=5),sum(v for k,v in inn['home'].items() if k<=5)))
     def finish(self):
         if self.n!=10000:raise Blocked('Box projections require 10,000 finished worlds')
         result={'n_simulations':self.n,'teams':{},'line_score':{},'sample_selection':SELECTION_NOTE,'samples':[]}
@@ -306,6 +309,11 @@ class BoxAccumulator:
         result['total_run_distribution']=_distribution(Counter(a+h for a,h in self.score_pairs),self.n)
         # home minus away runs over the same worlds, for a run line that keeps the dependence between the two scores (RUNLINE-01)
         result['margin_distribution']=_distribution(Counter(h-a for a,h in self.score_pairs),self.n)
+        if len(self.early)==self.n:
+            result['first_inning']={'n':self.n,'no_run':sum(1 for a1,h1,_,_ in self.early if a1+h1==0),'away_scores':sum(1 for a1,_,_,_ in self.early if a1>0),
+                                    'home_scores':sum(1 for _,h1,_,_ in self.early if h1>0)}
+            result['f5_margin_distribution']=_distribution(Counter(h5-a5 for _,_,a5,h5 in self.early),self.n)
+            result['f5_total_distribution']=_distribution(Counter(a5+h5 for _,_,a5,h5 in self.early),self.n)
         result['sample_indices']=selected
         result['typical_score_frequency']=counts[modal]/self.n
         if self.win.games:result['win_table']=self.win.finish()

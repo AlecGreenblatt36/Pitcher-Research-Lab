@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 307,
- "rows": 310,
+ "experiments": 309,
+ "rows": 312,
  "records": {
   "ACC-01": [
    {
@@ -5123,6 +5123,38 @@
      "ID": "RUNLINE-01",
      "Attempt": "The run line (each team by two runs or more), the third standard market after the moneyline and the total. The page would take each team's run-line chance as the headline win chance times the simulator's chance of winning by two or more given a win, so it agrees with the pick; this checks that conditional piece. Full replays of 2025 and 2026 with the live settings (PLAYER-03's settings and seeds, no hitter lines), each game's margin histogram over 1,000 worlds now recorded (brl_replay/harness.py margin_hist), against the real margins (tools/brl_runline_cal.py; synthetic checks in test_runline_cal.py)",
      "Disposition and evidence": "**Registered in the commit that added this row, before its replays.** Predictions: (1) given a win, the simulator's chance of winning by two or more within 1.5 points of how often winners did, for home winners and road winners, in both seasons; (2) by fifths of that conditional chance, within 3 points in both seasons; (3) the simulator's own run-line chance beats a constant in Brier for both sides in both seasons. Decision rule: the Odds tab shows the run line for both teams (-1.5 and +1.5) with our chance (the headline win chance times the conditional) and its fair price if (1) and (2) hold in both seasons; otherwise it is not shown. Results: pending",
+     "Delta corrected Brier, 2026": "pending"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "pending"
+   }
+  ],
+  "NRFI-01": [
+   {
+    "id": "NRFI-01",
+    "columns": {
+     "ID": "NRFI-01",
+     "Attempt": "The first inning (the market on whether anyone scores in it). The same replays as RUNLINE-01 record, over each game's 1,000 worlds, how often nobody scores in the first inning and how often each team does (brl_replay/harness.py first_inning), against the real first inning read from the scores by inning (tools/brl_innings_cal.py; synthetic checks in test_innings_cal.py)",
+     "Disposition and evidence": "**Registered in the commit that added this row, before its replays.** Predictions: (1) the chance that nobody scores in the first inning within 2 points of the actual share in both seasons; (2) each team's chance of scoring in it within 2 points in both; (3) by fifths of the no-run chance within 4 points in both; (4) its Brier better than a constant's in both. Decision rule: the Odds tab shows the first inning (a run scores, no run) with fair prices if (1) and (3) hold in both seasons; otherwise not. Results: pending",
+     "Delta corrected Brier, 2026": "pending"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "pending"
+   }
+  ],
+  "FIRST5-01": [
+   {
+    "id": "FIRST5-01",
+    "columns": {
+     "ID": "FIRST5-01",
+     "Attempt": "The first five innings (the market settled after five). The same replays record each game's margin and total after five innings over its worlds (f5_margin_hist, f5_total_hist), against the real score after five from the scores by inning; games shortened before the sixth are left out",
+     "Disposition and evidence": "**Registered in the commit that added this row, before its replays.** Predictions: (1) the chances that the home team leads, that it is tied and that the road team leads after five each within 2 points of the actual shares in both seasons; (2) over 4.5 runs through five within 2 points in both; (3) by fifths within 4 points for the home lead and the over in both; (4) Brier better than a constant's for the home lead and the over in both. Decision rule: the Odds tab shows the first five innings (each team's chance to lead after five, the tie, and over or under 4.5 runs through five, from the simulator, with fair prices) if (1) to (3) hold in both seasons; otherwise not. Results: pending",
      "Delta corrected Brier, 2026": "pending"
     },
     "registered_before_run": true,
