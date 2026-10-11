@@ -148,6 +148,18 @@ def zone_counts(T: dict, rows, swing, whiff) -> dict:
     return out
 
 
+def zone_split(T: dict, rows, swing, whiff) -> dict:
+    """zone_counts against right-handed and against left-handed pitchers, the split every scouting sheet shows:
+    {'R': {...}, 'L': {...}} keyed by the pitcher's hand (a hand he never faced is left out)."""
+    rows = np.asarray(rows, dtype=np.int64)
+    out = {}
+    for hand, code in (('R', 1), ('L', 0)):
+        rr = rows[T['throw_r'][rows] == code] if len(rows) else rows
+        if len(rr):
+            out[hand] = zone_counts(T, rr, swing, whiff)
+    return out
+
+
 def put(repo, token, path, text, branch, message, tries=14):
     """put_text with patience: several backfills commit to the same branch at once, so a 409 is ordinary; and many runs
     writing at once can hit GitHub's secondary rate limit (403 or 429 with a retry hint), which is waited out."""
@@ -379,7 +391,8 @@ class Fitted:
         self.league = {'chase_rate': round(float(swing[tr & self.outside].mean()), 3), 'whiff_rate': round(float(whiff[tr & (swing == 1)].sum() / max((tr & (swing == 1)).sum(), 1)), 3),
                        'looks_in_ends_out': round(float(self.looks_in_ends_out[tr].mean()), 3)}
         # the standard hot-zone counts for every hitter of each side together, the reference the cards are colored against
-        self.league['zones'] = {sd_: zone_counts(T, np.flatnonzero(tr & (T['stand_r'] == (1 if sd_ == 'R' else 0))), swing, whiff) for sd_ in ('R', 'L')}
+        # (by the hitter's side, then the pitcher's hand)
+        self.league['zones'] = {sd_: zone_split(T, np.flatnonzero(tr & (T['stand_r'] == (1 if sd_ == 'R' else 0))), swing, whiff) for sd_ in ('R', 'L')}
         # the pitcher's training pitches
         self.gp = D._groups(T['pitcher'], tr)
         self.cgrp = np.where(T['strikes'] == 2, 2, np.where(T['balls'] > T['strikes'], 1, 0))
@@ -424,7 +437,7 @@ class Fitted:
         if h in self.zone:
             card['zone_top_ft'], card['zone_bottom_ft'] = round(self.zone[h][0], 2), round(self.zone[h][1], 2)
         if r is not None and len(r):
-            card['zones'] = zone_counts(T, r, self.swing, self.whiff)
+            card['zones'] = zone_split(T, r, self.swing, self.whiff)        # by the pitcher's hand; the page adds the two for all pitchers
         if self.PM is not None and r is not None and len(r) >= 300:
             # VALUE-18 from the hitter's side: what his own swing tendencies cost him on the pitches he actually saw, against the average
             # hitter his side at the same pitches (his calibrated own part times the value of a swing against a take), per 600 plate

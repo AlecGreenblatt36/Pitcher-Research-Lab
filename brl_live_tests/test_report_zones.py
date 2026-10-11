@@ -36,3 +36,21 @@ def test_zone_counts_by_zone_and_family():
     fb = {c[0]: c[1:] for c in out['fastball']}; br = {c[0]: c[1:] for c in out['breaking']}
     assert fb[5][0] == 2 and fb[14][0] == 0 and br[14][0] == 2
     assert B.zone_counts(T, [], swing, whiff) == {}
+
+
+def test_zone_split_by_pitcher_hand():
+    B = _report()
+    #            zone group call last out7 throw_r
+    rows = [(5, 0, 1, 1, 3, 1),     # a single off a righty
+            (5, 0, 2, 0, 1, 0),     # a miss against a lefty
+            (14, 3, 2, 1, 1, 0)]    # strike three against the lefty
+    a = np.array(rows)
+    T = {'zone': a[:, 0], 'group': a[:, 1], 'call': a[:, 2], 'last_in_pa': a[:, 3], 'out7': a[:, 4], 'throw_r': a[:, 5]}
+    swing = ((T['call'] == 1) | (T['call'] == 2)).astype(float); whiff = (T['call'] == 2).astype(float)
+    out = B.zone_split(T, np.arange(3), swing, whiff)
+    vr = {c[0]: c[1:] for c in out['R']['all']}; vl = {c[0]: c[1:] for c in out['L']['all']}
+    assert vr[5] == [1, 1, 0, 1, 1, 1] and vr[14][0] == 0
+    assert vl[5] == [1, 1, 1, 0, 0, 0] and vl[14] == [1, 1, 1, 1, 0, 0]
+    only_r = B.zone_split(T, [0], swing, whiff)
+    assert set(only_r) == {'R'}                     # a hand he never faced is left out
+    assert B.zone_split(T, [], swing, whiff) == {}
