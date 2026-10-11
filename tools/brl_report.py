@@ -1944,13 +1944,13 @@ def build_report(fit: Fitted, T_all: dict, day: str, asof: str, stage, max_relie
         rows_ = fit.gp.get(pid) if pid else None
         return None if rows_ is None or not len(rows_) else ('R' if int(fit.T['throw_r'][rows_[0]]) == 1 else 'L')
     def recent_load(pid):
-        """Pitches he threw on each of the five days before the game (the bullpen card's rest columns), from the training
-        pitches, so nothing from the game day itself."""
+        """Pitches he threw on each of the seven days before the game (the bullpen card's rest columns; a week covers the
+        off days between postseason series), from the training pitches, so nothing from the game day itself."""
         rows_ = fit.gp.get(pid)
         if rows_ is None or not len(rows_):
-            return [0, 0, 0, 0, 0]
+            return [0] * 7
         dd = fit.T['day'][rows_]
-        return [int((dd == d0.toordinal() - k).sum()) for k in range(1, 6)]
+        return [int((dd == d0.toordinal() - k).sum()) for k in range(1, 8)]
     need_names = set()
     for g in games:
         pk = g['game_pk']
