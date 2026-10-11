@@ -18,8 +18,8 @@ def page_functions(*names):
 
 
 def _run(suffix):
-    functions = page_functions('hitterTags', 'twoStrikeShift', 'famWhiffShift', 'pullShift', 'gbShift', 'hzCells', 'hzTotal')
-    prefix = "const assert=require('assert');var TWO_SHIFT=0.065;var FAM_SHIFT={breaking:0.052,offspeed:0.067},FAM_FLOOR={breaking:100,offspeed:60};"
+    functions = page_functions('hitterTags', 'twoStrikeShift', 'famWhiffShift', 'pullShift', 'gbShift', 'vertShift', 'hzCells', 'hzTotal', 'hzLeague')
+    prefix = "const assert=require('assert');var TWO_SHIFT=0.065;var FAM_SHIFT={breaking:0.052,offspeed:0.067},FAM_FLOOR={breaking:100,offspeed:60};var VERT_SHIFT={miss:0.09,hard:0.10},VERT_FLOOR={miss:80,hard:50};"
     subprocess.run(['node', '-e', prefix + functions + suffix], check=True)
 
 
@@ -75,8 +75,8 @@ def test_count_mix_line_reads_the_count_and_side():
 
 
 def test_pitch_type_miss_tags_read_against_his_own_fastball():
-    functions = page_functions('hitterTags', 'twoStrikeShift', 'famWhiffShift', 'pullShift', 'gbShift', 'hzCells', 'hzTotal')
-    prefix = ("const assert=require('assert');var TWO_SHIFT=0.065;var FAM_SHIFT={breaking:0.052,offspeed:0.067},FAM_FLOOR={breaking:100,offspeed:60};"
+    functions = page_functions('hitterTags', 'twoStrikeShift', 'famWhiffShift', 'pullShift', 'gbShift', 'vertShift', 'hzCells', 'hzTotal', 'hzLeague')
+    prefix = ("const assert=require('assert');var TWO_SHIFT=0.065;var FAM_SHIFT={breaking:0.052,offspeed:0.067},FAM_FLOOR={breaking:100,offspeed:60};var VERT_SHIFT={miss:0.09,hard:0.10},VERT_FLOOR={miss:80,hard:50};"
               "function cells(sw,mi){return [[1,sw*2,sw,mi,0,0,0]];}"
               "function zones(fb,br,os){return {R:{all:cells(fb[0]+br[0]+os[0],fb[1]+br[1]+os[1]),fastball:cells(fb[0],fb[1]),breaking:cells(br[0],br[1]),offspeed:cells(os[0],os[1])},L:{all:cells(0,0),fastball:cells(0,0),breaking:cells(0,0),offspeed:cells(0,0)}};}"
               "const lg={chase_rate:0.29,whiff_rate:0.24,zones:{R:zones([1000,180],[600,180],[300,90])}};")
@@ -145,4 +145,24 @@ def test_short_names_tell_two_hernandezes_apart():
     prefix = "const assert=require('assert');var SUFFIX=/^(Jr\\.?|Sr\\.?|II|III|IV)$/;"
     suffix = ("const n=shortNames([{player_id:'1',name:'Teoscar Hernández'},{player_id:'2',name:'Enrique Hernández'},{player_id:'3',name:'Mookie Betts'}]);"
               "assert.equal(n['1'],'T. Hernández');assert.equal(n['2'],'E. Hernández');assert.equal(n['3'],'Betts');")
+    subprocess.run(['node', '-e', prefix + functions + suffix], check=True)
+
+
+def test_vertical_tags_from_the_zone_counts():
+    # TAGS-07 and TAGS-08: misses and hard contact up in the zone against down, net of the league's same difference
+    functions = page_functions('hitterTags', 'twoStrikeShift', 'famWhiffShift', 'pullShift', 'gbShift', 'vertShift', 'hzCells', 'hzTotal', 'hzLeague')
+    prefix = ("const assert=require('assert');var TWO_SHIFT=0.065;var FAM_SHIFT={breaking:0.052,offspeed:0.067},FAM_FLOOR={breaking:100,offspeed:60};"
+              "var VERT_SHIFT={miss:0.09,hard:0.10},VERT_FLOOR={miss:80,hard:50};"
+              # cells [zone, pitches, swings, misses, ab, h, tb, hard, measured]; zones 1-3 up, 7-9 down
+              "function cells(upSw,upMiss,dnSw,dnMiss,upHard,upMeas,dnHard,dnMeas){var out=[];[1,2,3,4,5,6,7,8,9,11,12,13,14].forEach(function(z){"
+              "var up=z<=3,dn=z>=7&&z<=9;out.push([z,100,up?upSw/3:dn?dnSw/3:30,up?upMiss/3:dn?dnMiss/3:6,10,3,4,up?upHard/3:dn?dnHard/3:5,up?upMeas/3:dn?dnMeas/3:12]);});return out;}"
+              "const lg={zones:{R:{R:{all:cells(300,60,300,48,60,150,69,150)},L:{all:cells(300,60,300,48,60,150,69,150)}}}};")
+    suffix = ("let up={side:'R',zones:{R:{all:cells(60,21,60,6,15,30,15,30)},L:{all:cells(60,9,60,6,15,30,15,30)}}};"   # misses up 25%, down 10%: +15 vs league +4
+              "let t=hitterTags(up,lg);assert.ok(t.indexOf('Misses up in the zone')>=0,t);assert.ok(t.indexOf('Hits the high strike hard')<0,t);"
+              "let lowHard={side:'R',zones:{R:{all:cells(60,12,60,9,9,30,24,30)},L:{all:cells(60,12,60,9,9,30,24,30)}}};"   # hard 30% up, 80% down
+              "t=hitterTags(lowHard,lg);assert.ok(t.indexOf('Hits the low strike hard')>=0,t);"
+              "let thin={side:'R',zones:{R:{all:cells(30,15,30,3,5,10,5,10)}}};"
+              "assert.equal(vertShift(thin,lg,'miss'),null);assert.equal(vertShift(thin,lg,'hard'),null);"
+              "let old={side:'R',zones:{R:{all:cells(60,21,60,6,15,30,15,30).map(function(c){return c.slice(0,7);})}}};"
+              "assert.equal(vertShift(old,lg,'hard'),null);")
     subprocess.run(['node', '-e', prefix + functions + suffix], check=True)

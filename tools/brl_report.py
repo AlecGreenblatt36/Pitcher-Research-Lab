@@ -127,7 +127,9 @@ ZONES13 = (1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14)   # MLB's zones, catcher's
 
 def zone_counts(T: dict, rows, swing, whiff) -> dict:
     """The standard hot-zone counts on these rows (MLB's zone number per pitch, catcher's view): for all pitches and for
-    each pitch family, per zone [zone, pitches, swings, misses, at-bats ended there, hits, total bases]. Counts only."""
+    each pitch family, per zone [zone, pitches, swings, misses, at-bats ended there, hits, total bases], and when the
+    table has exit speeds two more: balls in play hit 95 mph or more, and balls in play with a measured speed (TAGS-08).
+    Counts only."""
     out = {}
     rows = np.asarray(rows, dtype=np.int64)
     if not len(rows):
@@ -137,13 +139,21 @@ def zone_counts(T: dict, rows, swing, whiff) -> dict:
     last = T['last_in_pa'][rows] == 1; o7 = T['out7'][rows]
     ab = last & np.isin(o7, (0, 1, 3, 4, 5, 6)); hit = last & np.isin(o7, (3, 4, 5))
     tb = np.where(last & (o7 == 3), 1.0, 0.0) + np.where(last & (o7 == 4), 2.0, 0.0) + np.where(last & (o7 == 5), 4.0, 0.0)
+    speeds = 'ls' in T
+    if speeds:
+        ls = T['ls'][rows].astype(np.float64)
+        inplay = np.isfinite(T['spray'][rows].astype(np.float64)) if 'spray' in T else (last & (T['call'][rows] == 1))
+        meas = inplay & np.isfinite(ls); hard = meas & (np.nan_to_num(ls) >= 95)
     fams = [('all', np.ones(len(rows), bool))] + [(fname, np.isin(g, codes)) for fname, codes, _, _ in FAMILIES]
     for fname, fm in fams:
         cells = []
         for zz in ZONES13:
             m = fm & (z == zz)
             n = int(m.sum())
-            cells.append([zz, n, int(sw[m].sum()), int(wh[m].sum()), int(ab[m].sum()), int(hit[m].sum()), int(round(float(tb[m].sum())))])
+            cell = [zz, n, int(sw[m].sum()), int(wh[m].sum()), int(ab[m].sum()), int(hit[m].sum()), int(round(float(tb[m].sum())))]
+            if speeds:
+                cell += [int(hard[m].sum()), int(meas[m].sum())]
+            cells.append(cell)
         out[fname] = cells
     return out
 

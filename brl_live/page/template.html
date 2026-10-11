@@ -3274,6 +3274,12 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (v == null) return;
       if (v >= FAM_SHIFT[f[0]]) t.push("Misses " + f[1]); else if (v <= -FAM_SHIFT[f[0]]) t.push("Handles " + f[1]);
     });
+    /* TAGS-07: where in the zone he misses, up or down, against his own misses at the other end (carries over 0.46 and 0.71) */
+    var vm = vertShift(card, lg, "miss");
+    if (vm != null) { if (vm >= VERT_SHIFT.miss) t.push("Misses up in the zone"); else if (vm <= -VERT_SHIFT.miss) t.push("Misses down in the zone"); }
+    /* TAGS-08: where in the zone he hits it hard, up or down (0.54 and 0.55) */
+    var vh = vertShift(card, lg, "hard");
+    if (vh != null) { if (vh >= VERT_SHIFT.hard) t.push("Hits the high strike hard"); else if (vh <= -VERT_SHIFT.hard) t.push("Hits the low strike hard"); }
     /* TAGS-05: where he hits it, against most hitters on his side (the field third on his pull side, 15 degrees off center) */
     var pg = pullShift(card, lg, "gb"), pa = pullShift(card, lg, "air");
     if (pg != null) { if (pg >= 0.10) t.push("Pulls grounders"); else if (pg <= -0.10) t.push("Grounders go the other way"); }
@@ -3309,6 +3315,21 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var sum = function (a) { return a[0] + a[1] + a[2]; }, n = sum(sp.gb) + sum(sp.air || [0, 0, 0]) + (sp.popups || 0), ln = sum(ls.gb) + sum(ls.air || [0, 0, 0]) + (ls.popups || 0);
     if (n < 120 || !ln) return null;
     return sum(sp.gb) / n - sum(ls.gb) / ln;
+  }
+  /* TAGS-07 and TAGS-08: the top third of his zone (MLB zones 1-3) against the bottom third (7-9), relative to himself
+     and net of the league's same difference on his side, from the cards' zone counts (both hands, all pitches): misses
+     per swing (80 swings in each third) and hard-hit balls among measured balls in play (50 in each; zone cells carry
+     [.., hard, measured] from October 11). Tags at the study's one standard deviation, 9 and 10 points. */
+  var VERT_SHIFT = { miss: 0.09, hard: 0.10 }, VERT_FLOOR = { miss: 80, hard: 50 };
+  function vertShift(card, lg, kind) {
+    if (!card || !card.zones || !lg || !lg.zones) return null;
+    var mine = hzCells(card.zones, "all", "all"), base = hzLeague(lg, card.side, "all", "all");
+    if (!mine || !base) return null;
+    var num = kind === "hard" ? 7 : 3, den = kind === "hard" ? 8 : 2;
+    var sum = function (cells, lo, hi) { var n = 0, d = 0; cells.forEach(function (c) { if (c[0] >= lo && c[0] <= hi && c.length > den) { n += c[num]; d += c[den]; } }); return [n, d]; };
+    var u = sum(mine, 1, 3), w = sum(mine, 7, 9), lu = sum(base, 1, 3), lw = sum(base, 7, 9);
+    if (u[1] < VERT_FLOOR[kind] || w[1] < VERT_FLOOR[kind] || !lu[1] || !lw[1]) return null;
+    return (u[0] / u[1] - w[0] / w[1]) - (lu[0] / lu[1] - lw[0] / lw[1]);
   }
   function pullShift(card, lg, kind) {
     var sp = card && card.spray, ls = lg && lg.spray ? lg.spray[card && card.side === "L" ? "L" : "R"] : null;
@@ -3505,6 +3526,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
                   ["Swings and misses", "Go for the miss", []], ["Expands with two strikes", "Finish off the plate", []], ["Holds his zone with two strikes", "Finish on the edges", []],
                   ["behind", "Don't give in when behind", []], ["run", "Hold on first", []],
                   ["Misses breaking balls", "Breaking balls for misses", []], ["Misses offspeed", "Offspeed for misses", []],
+                  ["Misses up in the zone", "Up in the zone for misses", []], ["Misses down in the zone", "Down in the zone for misses", []],
+                  ["Hits the high strike hard", "Stay down in the zone", []], ["Hits the low strike hard", "Stay up in the zone", []],
                   ["Pulls grounders", "Shade the infield to pull", []], ["Grounders go the other way", "Shade the infield the other way", []]];
     var short = shortNames(nine.map(function (hid) { return { player_id: hid, name: (players[String(hid)] || {}).name || String(hid) }; }));
     nine.forEach(function (hid) {
@@ -4275,7 +4298,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       el.hidden = false;
     });
   }
-  /* The hitter tags, each checked on the next season (TAGS-01 to 05 in the ledger): tagged from two seasons, then the
+  /* The hitter tags, each checked on the next season (TAGS-01 to 08 in the ledger): tagged from two seasons, then the
      tagged hitters' rate against the league's on the next season's pitches (2026 before August, and 2025). Points. */
   var TAG_CHECKS = [["Chases a lot", "chase rate", 7.9, 8.3, 7.0, 7.3], ["Patient", "chase rate", -8.6, -8.6, -8.0, -7.1],
     ["Swings and misses", "misses per swing", 7.7, 7.8, 7.5, 6.3], ["Puts the bat on the ball", "misses per swing", -10.0, -9.7, -9.2, -9.3],
@@ -4285,6 +4308,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     ["Misses offspeed", "misses vs his fastball misses", 9.9, 9.9, 7.0, 5.4], ["Pulls grounders", "grounders pulled", 13.1, 12.6, 10.3, 8.4],
     ["Pulls in the air", "balls in the air pulled", 11.7, 11.9, 10.2, 10.4], ["Ground-ball hitter", "ground balls", 11.5, 10.2, 7.4, 6.6],
     ["Fly-ball hitter", "ground balls", -10.3, -10.4, -8.4, -8.9],
+    ["Misses up in the zone", "misses up vs down", 13.9, 15.3, 6.6, 10.4], ["Misses down in the zone", "misses up vs down", -12.5, -13.0, -6.5, -10.3],
+    ["Hits the high strike hard", "hard-hit up vs down", 18.0, 14.2, 9.6, 12.2], ["Hits the low strike hard", "hard-hit up vs down", -14.9, -13.6, -7.5, -8.7],
     ["Pitcher: throws first-pitch strikes", "first-pitch strikes", 6.7, 6.8, 3.9, 3.5], ["Pitcher: lives in the zone", "pitches in the zone", 5.6, 5.7, 3.0, 2.9],
     ["Pitcher: gets chases", "chases", 5.8, 6.0, 4.2, 3.2], ["Pitcher: fastballs when behind", "fastballs behind", 19.4, 19.7, 12.9, 12.4],
     ["Pitcher: spins it when behind", "fastballs behind", -19.6, -20.8, -13.9, -16.4], ["Pitcher: starts with spin", "first-pitch fastballs", -21.1, -21.2, -17.1, -16.5]];
@@ -4370,7 +4395,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     h += '<details class="more"><summary>Why blend with Vegas</summary><p>The closing line is the hardest number in baseball to beat, so we use it. We set our model\'s weights on closing lines from 4,140 games in 2025 and 2026, because lines are steadier than wins and losses, then checked it against real results from a season it never saw. When we disagreed with the opening line, the line moved our way by first pitch about 7 times in 10. That is not a betting system. Any change to how we figure the number starts at a stated time and never touches a game that has started. Through October 7, 2026 our number was a straight average of the simulator and the team model.</p></details>';
     h += "<h2>Game plan</h2><p>Every game has a Game plan tab. For each hitter it says where to pitch him and where not to, against each pitcher he is likely to see, using only pitches thrown before that day. A hitter decides whether to swing about a quarter second before the ball gets there, so we map where the pitch looks like it is going at that moment, not just where it ends up. That calls his swings and takes better than a regular heat map, and it shows where he will chase against a certain pitcher's stuff. After the game, the same tab grades it: did the pitches go where we said, and did the hitters chase where we said they would.</p>" +
       "<p>Each hitter also has the standard hot-zone chart: MLB's 13 zones from the catcher's view, nine in the strike zone and four around it, with his batting average, slugging, swing rate or miss rate in each, red above the league average and blue below. These are plain counts from the last two seasons, split by the pitcher's hand; the plan's spots come from the swing map, so the two can differ. Pitcher cards show where he throws each pitch on the same zones, hitter cards show where he hits the ball (ground balls and balls in the air, pulled, up the middle or the other way), and each plan has a bullpen card with every arm's pitches on the days before the game.</p>" +
-      "<p>The tags on each hitter (chases a lot, takes the first pitch, expands or holds his zone with two strikes, misses breaking balls, pulls grounders and the rest) were each checked the same way: tag hitters from two seasons, then watch the next season. Every one of them held up, at about 80 to 95% of the size we said. Pitcher tags (throws first-pitch strikes, lives in the zone, fastballs or spin when behind and the rest) went through the same check. A read that did not hold up, extra misses on hard fastballs, is left off. Each plan sheet starts with what these tags say about the lineup: who to get ahead of, who to start off the plate, how to finish each one, whom to shade the infield for and which runners to hold. Player pages open with percentile rankings like the ones on Baseball Savant.</p>";
+      "<p>The tags on each hitter (chases a lot, takes the first pitch, expands or holds his zone with two strikes, misses breaking balls, misses up in the zone, hits the low strike hard, pulls grounders and the rest) were each checked the same way: tag hitters from two seasons, then watch the next season. Every one of them held up, smaller than in the seasons we tagged from (about half to nine-tenths of the size), since the most extreme hitters drift back toward the middle. Pitcher tags (throws first-pitch strikes, lives in the zone, fastballs or spin when behind and the rest) went through the same check. A read that did not hold up, extra misses on hard fastballs, is left off. Each plan sheet starts with what these tags say about the lineup: who to get ahead of, who to start off the plate, how to finish each one, whom to shade the infield for and which runners to hold. Player pages open with percentile rankings like the ones on Baseball Savant.</p>";
     h += '<details class="more"><summary>What the spots are worth</summary><p>Pitchers do not aim at these spots now; we checked. With normal command and hitters who do not adjust much, we estimate a staff aiming at them would save about 30 to 40 runs over a season on pitches out of the zone, and about 24 more on strikes put where the hitter takes them or cannot do much with them. That is what is possible, not runs already saved. On October 10 we fixed three things in how a pitch is priced: the model was calling about 1 in 10 too many chases, it gave umpires more strikes just off the plate than they really call, and it counted too many foul balls. We re-checked these figures with all three fixed; they barely moved. We tested the method on made-up seasons where we knew the right answer before putting the number up. An earlier estimate, 32 runs, overstated its own method and was withdrawn. Past games work the same way, using only earlier pitches. The Players page has every hitter and pitcher, rebuilt each day. Every test we ran, including the ones that failed, is in the ledger in our code.</p></details>';
     var adj = {};
     Object.keys(D.box_scores || {}).forEach(function (id) { var b = D.box_scores[id]; if (b.date === D.date && b.adjustments) b.adjustments.forEach(function (a) { adj[a] = 1; }); });

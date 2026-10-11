@@ -38,6 +38,25 @@ def test_zone_counts_by_zone_and_family():
     assert B.zone_counts(T, [], swing, whiff) == {}
 
 
+def test_zone_counts_carry_hard_hit_balls_when_speeds_are_known():
+    # TAGS-08: per zone, balls in play at 95 mph or more and balls in play with a measured speed
+    B = _report()
+    nan = float('nan')
+    #            zone group call last out7  spray  ls
+    rows = [(1, 0, 1, 1, 3, -10.0, 101.0),   # up: a hard single
+            (1, 0, 1, 1, 0, 20.0, 80.0),     # up: a soft out
+            (1, 0, 1, 0, 0, nan, nan),       # up: a foul, not in play
+            (8, 0, 1, 1, 0, 5.0, nan),       # down: in play, no speed measured
+            (8, 3, 2, 1, 1, nan, nan)]       # down: strike three
+    a = np.array(rows, dtype=float)
+    T = {'zone': a[:, 0].astype(int), 'group': a[:, 1].astype(int), 'call': a[:, 2].astype(int), 'last_in_pa': a[:, 3].astype(int),
+         'out7': a[:, 4].astype(int), 'spray': a[:, 5], 'ls': a[:, 6]}
+    swing = ((T['call'] == 1) | (T['call'] == 2)).astype(float); whiff = (T['call'] == 2).astype(float)
+    cell = {c[0]: c[1:] for c in B.zone_counts(T, np.arange(len(rows)), swing, whiff)['all']}
+    assert cell[1] == [3, 3, 0, 2, 1, 1, 1, 2]     # two balls in play measured, one hard
+    assert cell[8][-2:] == [0, 0]                  # the unmeasured ball in play is not counted
+
+
 def test_zone_split_by_pitcher_hand():
     B = _report()
     #            zone group call last out7 throw_r
