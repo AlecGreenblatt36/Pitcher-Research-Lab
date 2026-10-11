@@ -158,6 +158,19 @@ coordinates) and trajectory, and each planned arm's pitches on the five days bef
 the same training pitches as the maps. The page colors a zone against the league's rate for that batter side and
 pitcher hand; SLG counts a triple as a double, and zones with few at-bats are shown in gray.
 
+Player cards add percentile ranks (PROD-08): each player's rate among all players with 300 or more plate appearances
+(batters faced for a pitcher) on the same training pitches, counted from those pitches. Walks include hit batters, a
+sacrifice fly counts as an at-bat, and bunt plate appearances are left out, as in the hot zones. Hitter plans add the
+head-to-head line against each arm, which the plan does not use. The running game (PROD-09) comes from public season
+statistics (steals, caught stealing, times on first and sprint speed; steals allowed per pitcher), using a season only
+once it is over.
+
+The hitter tags are levels against the league with fixed thresholds, and they were checked on the next season's
+pitches (TAGS-01, TAGS-02): every tag held in both test seasons, at about 80 to 95% of its training difference. The
+two-strike tags compare a hitter's two-strike chase rate with his own chase rate in the other counts, net of the
+league's change on his side; that change correlates 0.64 and 0.72 from one season to the next. The plan sheets' lineup
+notes are drawn from these tags only.
+
 ## Privacy, storage and publication
 
 Raw source responses, player history, pitch tables and model files stay encrypted on the data branch; the key is an
