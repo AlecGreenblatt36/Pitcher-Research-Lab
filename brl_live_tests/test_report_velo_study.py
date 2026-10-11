@@ -64,10 +64,11 @@ def test_game_velo_list_latest_games_and_the_last_start():
     B = _report()
     T = _world(seed=3, pitchers=2, starts=8, drift_sd=0.0)
     r = np.flatnonzero(T['pitcher'] == 500)
-    games, info, code = B.game_velo_list(T, r, last=5)
+    games, info, code, season_avg = B.game_velo_list(T, r, last=5)
     assert code == 'FF' and len(games) == 5 and games == sorted(games)          # oldest first, the latest five
     assert all(g[3] for g in games) and all(g[2] == 50 for g in games)            # starts, 50 four-seamers each
     assert info and info['earlier_starts'] == 7 and abs(info['delta'] - (info['mph'] - info['base'])) < 0.11
+    assert season_avg['season'] == 2026 and season_avg['n'] == 8 * 50 and abs(season_avg['mph'] - 94) < 5
     # a relief outing last: no last-start read
     T2 = {k: v.copy() for k, v in T.items()}
     lastg = T2['game'][r].max(); m = (T2['game'] == lastg) & (T2['pitcher'] == 500)

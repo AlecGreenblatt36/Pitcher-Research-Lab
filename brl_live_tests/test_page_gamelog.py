@@ -108,6 +108,8 @@ def test_fastball_speed_by_game_and_the_last_start_note():
           "let h=velChart(pc);assert.equal((h.match(/class=\"vel-pt\"/g)||[]).length,3);assert.equal((h.match(/vel-pt rel/g)||[]).length,1);"
           "assert.ok(h.indexOf('Four-seam speed by game')>0&&h.indexOf('earlier starts this season')>0);"
           "assert.equal(velChart({velo_games:pc.velo_games.slice(0,2)}),'');"
+          "h=velChart({velo_type:'SI',velo_games:pc.velo_games,velo_season:{season:2026,mph:96.1,n:900}});assert.ok(h.indexOf('Dashed: his 2026 average')>0&&h.indexOf('>96.1<')>0&&h.indexOf('with 8 or more of them')>0,h);"
+          "h=velChart({velo_type:'SI',velo_games:pc.velo_games});assert.ok(h.indexOf('Dashed: the average of the games shown')>0);"
           "let n=velLastNote(pc);assert.ok(n.indexOf('1.4 mph below his earlier starts this season (96.8)')>0&&n.indexOf('struck out about 2 fewer')>0,n);"
           "n=velLastNote({velo_last:{type:'SI',date:'2026-10-03',mph:95.4,base:94.2,delta:1.2}});assert.ok(n.indexOf('sinker')>0&&n.indexOf('above')>0&&n.indexOf('1.3 per 100')>0,n);"
           "assert.equal(velLastNote({velo_last:{type:'FF',date:'2026-10-03',mph:95.4,base:95.9,delta:-0.5}}),'');assert.equal(velLastNote({}),'');")
@@ -121,7 +123,8 @@ def test_last_three_starts_line():
           "g('2026-09-12','R',true,true,121,st(15,3,5,3,1)),g('2026-10-03','D',true,true,144,st(18,1,7,2,1))];"
           "const h=psLast3({games:games});"
           "assert.ok(h.indexOf('18.0 IP, 4 ER, 21 K, 7 BB')===0,h);"        # Oct 3, Sep 12 and Sep 6: 54 outs; the relief outing left out
-          "assert.ok(h.indexOf('2.00 ERA')>0,h);assert.equal(psLast3({games:[]}),'\\u2013');")
+          "assert.ok(h.indexOf('2.00 ERA')>0,h);assert.equal(psLast3({games:[]}),'\\u2013');"
+          "assert.ok(psLast3({games:games.slice(0,2)}).indexOf('Only 2 starts: 13.0 IP, 2 ER')===0,psLast3({games:games.slice(0,2)}));")
     fns = ''.join(_fn(s, n) for n in ('glNum', 'glAvg', 'glSorted', 'psLast3'))
     prefix = ("const assert=require('assert');function ip(outs){outs=Math.round(outs);return Math.floor(outs/3)+'.'+(outs%3);}")
     subprocess.run(['node', '-e', prefix + fns + js], check=True)

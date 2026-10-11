@@ -844,11 +844,14 @@ class Fitted:
         rp = (getattr(self, 'run_season', {}) or {}).get('pitchers', {}).get(str(int(p)))
         if rp:
             card['run_against'] = {'season': self.run_year, **{k: rp[k] for k in ('sb', 'cs', 'bf') if k in rp}}
-        vg, vl, vt = game_velo_list(T, r)
+        vg, vl, vt, vs = game_velo_list(T, r)
         if vg:
             card['velo_games'] = vg
             card['velo_type'] = vt
-        if vl:
+            if vs:
+                card['velo_season'] = vs
+        # a last-start read only for a start in the season the card is as of ("this season" on the page)
+        if vl and (yr is None or int(vl['date'][:4]) == int(yr)):
             card['velo_last'] = vl
         L = getattr(self, 'lines_p', {}).get(int(p))
         if L:
@@ -1544,15 +1547,15 @@ def form_study(T: dict, stage, spec: dict) -> dict:
     return out
 
 
-def game_velo_list(T: dict, r, last: int = 12, min_fb: int = 8) -> tuple[list, dict | None, str | None]:
+def game_velo_list(T: dict, r, last: int = 12, min_fb: int = 8) -> tuple[list, dict | None, str | None, dict | None]:
     """His main fastball's mean speed in each of his latest games (four-seam or sinker, whichever he threw more in his
     latest season here; min_fb or more of them in the game), oldest first: [date, mph, fastballs, started]; and, when his
     latest game was a start with 15 or more of them after three or more earlier starts that season with 15 or more, that
-    start against the mean of the earlier ones (VELO-01's measure); and the fastball's type code. Display; postseason
-    games count."""
+    start against the mean of the earlier ones (VELO-01's measure); the fastball's type code; and his average speed with it
+    over every game of that latest season (the chart's reference line). Display; postseason games count."""
     r = np.asarray(r, np.int64)
     if not len(r) or any(k not in T for k in ('sub', 'v0', 'game', 'day', 'season', 'inning')):
-        return [], None, None
+        return [], None, None, None
     yr = int(T['season'][r].max())
     rl = r[T['season'][r] == yr]
     ff, si = D.SUBTYPES.index('FF'), D.SUBTYPES.index('SI')
@@ -1574,7 +1577,9 @@ def game_velo_list(T: dict, r, last: int = 12, min_fb: int = 8) -> tuple[list, d
         base = float(sv[e].sum() / n[e].sum())
         info = {'type': D.SUBTYPES[main], 'date': date.fromordinal(int(day[latest])).isoformat(), 'mph': round(float(sv[latest] / n[latest]), 1),
                 'base': round(base, 1), 'delta': round(float(sv[latest] / n[latest]) - base, 1), 'earlier_starts': len(e)}
-    return games, info, D.SUBTYPES[main]
+    cur = sea == yr
+    season_avg = {'season': yr, 'mph': round(float(sv[cur].sum() / n[cur].sum()), 1), 'n': int(n[cur].sum())} if n[cur].sum() >= 30 else None
+    return games, info, D.SUBTYPES[main], season_avg
 
 
 # VELO-01 (LEDGER): does a starter's fastball speed in his last start carry into the next one, and does a drop say

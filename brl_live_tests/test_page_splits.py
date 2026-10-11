@@ -150,3 +150,15 @@ def test_pitcher_zone_expected_uses_the_batter_side_m():
           "assert.ok(Math.abs(m[c0[0]]-(c0[3]+80*sc0)/(c0[2]+80))<1e-9);process.stdout.write('ok');")
     out = subprocess.run(['node', '-e', "const assert=require('assert');" + consts + metrics + fns + js], check=True, capture_output=True, text=True)
     assert out.stdout == 'ok'
+
+
+def test_legend_names_the_anchor_only_where_it_applies():
+    s = _script()
+    consts = re.search(r'\n  var HZ_ANCHOR = .*?;\n', s, re.S).group(0)
+    js = ("var state={hzSheetHand:'sp'};"
+          "assert.ok(hzAnchorWords('avg','R',{side:'R'}).indexOf('against this hand')>0);"
+          "assert.equal(hzAnchorWords('miss','R',{side:'R'}),'');assert.ok(hzAnchorWords('miss','L',{side:'R'}).length>0);"
+          "assert.equal(hzAnchorWords('avg','R',{side:'L',side_by_hand:{R:'L',L:'R'}}),'');assert.equal(hzAnchorWords('avg','all',{side:'R'}),'');"
+          "assert.ok(hzSheetAnchorWords('avg').indexOf('switch hitters')>0);assert.ok(hzSheetAnchorWords('miss').indexOf('against lefties')>0);"
+          "state.hzSheetHand='R';assert.equal(hzSheetAnchorWords('miss'),'');state.hzSheetHand='all';assert.equal(hzSheetAnchorWords('avg'),'');")
+    subprocess.run(['node', '-e', "const assert=require('assert');" + consts + _fn(s, 'isSwitch') + _fn(s, 'hzAnchorWords') + _fn(s, 'hzSheetAnchorWords') + js], check=True)
