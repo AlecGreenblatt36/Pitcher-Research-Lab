@@ -65,7 +65,17 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 10:00 a.m. Eastern October 11, by `date -u`)
+### In flight (updated 10:49 a.m. Eastern October 11, by `date -u`)
+
+- October 11, 10:49 a.m.: PLAYER-06 failed its rule (two or more total bases right on level in both seasons, but the top tenth
+  3.4 points high in 2026), so the 2+ TB column stays off (PROP_COLS.tb2 false; the Odds hitter tables already fit five
+  columns on a phone). The top tenth's miss is in the rates: in 2026, the model's first season unseen in fitting or tuning,
+  the hitters it rates best got 0.249 hits and 0.034 home runs a plate appearance against 0.259 and 0.039 simulated; a
+  model-side item (talent shrinkage for the best hitters), not a display fix. DISP-03 replays running (2026 run
+  38146596899, 2025 run 38146625979, tags v2-prod4-df-1000-<season>): compare with `python3 tools/replay_compare.py
+  v2-prod4-margins-1000 v2-prod4-df-1000 <out>`, the run line with tools/brl_runline_cal.py on the df files, and the spread
+  with $S/disp_sd.py; if (1) and (2) hold set ADJUST market_day_form {'sigma': 0.12, 'center': 0.0035, 'worlds': 4000} (the
+  page already reads box.market_worlds), and if (4) also holds set MORE_MARKETS.runline.
 
 - October 11, 10:00 a.m.: RUNLINE-01, NRFI-01 and FIRST5-01 all failed their registered rules (runs 38141799131, 38141956435),
   so the page's More markets section stays off (MORE_MARKETS all false). The run line's miss is real: given a win, the
