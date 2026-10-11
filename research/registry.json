@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 317,
- "rows": 320,
+ "experiments": 318,
+ "rows": 321,
  "records": {
   "ACC-01": [
    {
@@ -5324,6 +5324,22 @@
     ],
     "frozen_commits": [],
     "status": "(1) failed in 2026, (2) failed; layer off"
+   }
+  ],
+  "LEVEL-03": [
+   {
+    "id": "LEVEL-03",
+    "columns": {
+     "ID": "LEVEL-03",
+     "Attempt": "The in-season level together with the running plays, the pairing RUNS-03 pointed to. RUNS-03 found the simulator's 2026 run level right only because two level errors cancel: the stack's season level carried from the other season (+0.04 runs per team-game) against the base-running shortfall without the running plays (TRANS-02's component check: -0.072 runs per team per nine innings without them, +0.008 with them, in 2026). LEVEL-02 removed the first and its 2026 totals fell 0.077 runs a game below the reference, as that reading predicts; TRANS-02 alone added 0.14. Replays of 2025 and 2026 with PLAYER-06's settings and seeds plus both: LEVEL-02's per-date offsets and the running plays with tables from other seasons (brl_replay/running_events_fit_2023_2025.json for 2026, running_events_fit_2023_2024_2026.json for 2025), against PLAYER-06's replays, scored like LEVEL-02",
+     "Disposition and evidence": "**Registered in the commit that added this row, before its replays.** Gates: (1) the mean total within 0.10 runs of actual in both seasons; (2) the mean total's squared error not worse, the pooled paired interval's upper end below +0.03 runs squared; (3) P(over the closing total) Brier not worse, the pooled interval's upper end below +0.0003; (4) the win Brier pooled not worse than +0.0002; (5) the hitter chances' summed Brier not worse in either season, each interval's upper end below +0.0002. Decision rule: if all five hold, both go on for next season's regular season as a structural fix (ADJUST running_events, and the level layer once the live run keeps the season's running sums); otherwise neither changes",
+     "Delta corrected Brier, 2026": "Registered; replays wait for LEASH-02's"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "Registered; replays wait for LEASH-02's"
    }
   ],
   "BOX-01": [
