@@ -65,7 +65,16 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 5:30 a.m. Eastern October 11, by `date -u`)
+### In flight (updated 6:30 a.m. Eastern October 11, by `date -u`)
+
+- October 11, 6:30 a.m.: three more checks held and are on the page. PSPLITS-01 (run 38128749747): a pitcher's own AVG
+  and SLG split by batter side did not carry over (r 0.10, 0.06); his Expected splits use his hand's usual split
+  (pitcherSplitExpected). FORM-01 (run 38129227011): a hitter's last ten games said almost nothing about his next ten
+  in OBP or SLG (k 0.02); strikeouts carried about 15%; the game log's note says so. VELO-01 (run 38129631856): about
+  45% of a starter's last-start fastball change shows up again next start; each mph down meant 1.3 fewer strikeouts per
+  100 batters (after drops of 1 mph or more, 2.0 fewer); the starter fold and pitcher page note changes of 1 mph or
+  more (velLastNote) and pitcher pages chart speed by game (velChart; cards velo_games, velo_type, velo_last from
+  game_velo_list). Card rebuild for October 11 and the players at 39435adbd (run 38130072455).
 
 - October 11, 5:30 a.m.: SPLITS-01 (run 38127261982): a hitter's own AVG and SLG split by pitcher hand, beyond his side's
   usual one, did not carry over (r 0.06 each, 317 hitters); misses did in part. The splits table, the hot-zone line and
