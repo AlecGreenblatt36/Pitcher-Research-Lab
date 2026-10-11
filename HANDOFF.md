@@ -65,7 +65,14 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 12:30 a.m. Eastern October 11, by `date -u`)
+### In flight (updated 1:50 a.m. Eastern October 11, by `date -u`)
+
+- October 11, 1:50 a.m.: the live at-bat card names the hitter's habit for the count at hand (liveCountTip: first pitch,
+  two strikes, behind; only tags that held a season later). Plans follow this season's arsenal everywhere: the pitcher's
+  mix line, the pitch-type order in the chart headers, the plan's spots and the coaching lines all read famShares (this
+  season's pitches when 300 or more, else the career mix), and a pitch type he throws under 5% this season gets no spots,
+  no bullets and no coaching (nowCells, rare(fam)); checked on the Dodgers' sheet against Misiorowski (no changeups in
+  2026: no offspeed lines). PROD-10 in the ledger lists tonight's display calls in one row.
 
 - October 11, after midnight: the projected game follows our pick (PROD-07: when the team ratings and the line pick the
   other team, the header, line score, box and plays show the saved upset world, the most typical game the pick wins;
