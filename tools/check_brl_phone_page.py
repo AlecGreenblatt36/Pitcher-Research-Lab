@@ -188,6 +188,28 @@ def main():
                         receipt.setdefault('report',[]).append({'width':width,**info})
                 except Exception as exc:
                     receipt.setdefault('report',[]).append({'width':width,'error':type(exc).__name__+': '+str(exc)[:200]})
+                # The preview tables the browser reads from MLB (PROD-14): both teams' season stats on the Summary before first
+                # pitch and each hitter's career line against the starter on Matchups; recorded, only page errors fail.
+                try:
+                    f=next(iter(latest.values()))[1] if latest else None
+                    if f:
+                        go(f'#/game/{f["game_pk"]}/summary');info={'game':f['game_pk']}
+                        for _ in range(10):
+                            page.wait_for_timeout(1000)
+                            if page.locator('.ts-t tbody tr').count() or page.locator('section.ts[hidden]').count() or not page.locator('section.ts').count():break
+                        info['team_stat_rows']=page.locator('.ts-t tbody tr').count()
+                        info['team_stats_text']=re.sub(r'\s+',' ',page.locator('section.ts').first.inner_text()[:320]) if page.locator('section.ts').count() else None
+                        if page.locator('button[data-tab="matchups"]').count():
+                            page.locator('button[data-tab="matchups"]').click()
+                            for _ in range(10):
+                                page.wait_for_timeout(1000)
+                                if page.locator('.bvp-t').count()>=2 or 'did not load' in page.inner_text('#app'):break
+                            info['bvp_tables']=page.locator('.bvp-t').count();info['bvp_rows']=page.locator('.bvp-t tbody tr').count()
+                            info['bvp_text']=re.sub(r'\s+',' ',page.locator('section.bvp').first.inner_text()[:320]) if page.locator('section.bvp').count() else None
+                            if info['bvp_tables']:design_check('game_matchups');page.screenshot(path=str(out/f'game_matchups_{width}.png'),full_page=True)
+                        receipt.setdefault('previews',[]).append({'width':width,**info})
+                except Exception as exc:
+                    receipt.setdefault('previews',[]).append({'width':width,'error':type(exc).__name__+': '+str(exc)[:200]})
                 # Past dates: the season replay's cards come from the page's own files; the game opens from MLB's feed.
                 go('#/day/2026-07-04');page.wait_for_timeout(2500)
                 assert page.locator('nav.dstrip').count()==1,'Missing date strip'
