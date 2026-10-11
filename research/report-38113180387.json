@@ -1,0 +1,525 @@
+{
+ "schema": "brl.report-receipt.v1",
+ "run_id": "38113180387",
+ "params": {
+  "tag_study": {
+   "splits": [
+    {
+     "train": [
+      2024,
+      2025
+     ],
+     "test": 2026,
+     "test_end": "2026-08-01"
+    },
+    {
+     "train": [
+      2023,
+      2024
+     ],
+     "test": 2025
+    }
+   ],
+   "min_pitches": 300,
+   "min_test": 200,
+   "boot": 1000,
+   "spray": true
+  },
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "dates": [
+   "2026-04-01"
+  ],
+  "publish": false
+ },
+ "started_at": "2026-10-11T04:57:04.313278+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 8.1,
+   "peak_rss_mb": 1088
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 16.1,
+   "peak_rss_mb": 1260
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 24.2,
+   "peak_rss_mb": 1431
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 32.1,
+   "peak_rss_mb": 1585
+  },
+  {
+   "stage": "tag study [2024, 2025] -> 2026",
+   "at_seconds": 32.4,
+   "peak_rss_mb": 1585
+  },
+  {
+   "stage": "tag study [2023, 2024] -> 2025",
+   "at_seconds": 32.6,
+   "peak_rss_mb": 1585
+  }
+ ],
+ "reports": {},
+ "environment": {
+  "python": "3.12.15",
+  "commit": "db5180dab1dcdbce0851ea212e83a381e639ab48",
+  "numpy": "2.5.4",
+  "scipy": "1.18.1",
+  "scikit-learn": "1.9.1",
+  "pandas": "3.0.6",
+  "cryptography": "46.0.4"
+ },
+ "tag_study": {
+  "splits": [
+   {
+    "train": [
+     2024,
+     2025
+    ],
+    "test": 2026,
+    "test_end": "2026-08-01",
+    "tags": {
+     "Chases a lot": {
+      "rate": "chase",
+      "threshold": 0.04,
+      "hitters": 152,
+      "with_test": 88,
+      "train_diff": 0.07911129844647774,
+      "test_diff": 0.06956182038419094,
+      "test_ci": [
+       0.05930136412925737,
+       0.07974618339858712
+      ],
+      "test_pitches": 44703,
+      "held": true
+     },
+     "Patient": {
+      "rate": "chase",
+      "threshold": -0.06,
+      "hitters": 92,
+      "with_test": 59,
+      "train_diff": -0.08578284277886696,
+      "test_diff": -0.0795936879598962,
+      "test_ci": [
+       -0.08914247835830293,
+       -0.07051704144522536
+      ],
+      "test_pitches": 29073,
+      "held": true
+     },
+     "Swings and misses": {
+      "rate": "whiff",
+      "threshold": 0.05,
+      "hitters": 147,
+      "with_test": 76,
+      "train_diff": 0.07693998216855394,
+      "test_diff": 0.07521979026522937,
+      "test_ci": [
+       0.06715417992937994,
+       0.08412415736832478
+      ],
+      "test_pitches": 33256,
+      "held": true
+     },
+     "Puts the bat on the ball": {
+      "rate": "whiff",
+      "threshold": -0.07,
+      "hitters": 62,
+      "with_test": 49,
+      "train_diff": -0.10033622571234135,
+      "test_diff": -0.09218380688897795,
+      "test_ci": [
+       -0.10225981006867677,
+       -0.0822318866753563
+      ],
+      "test_pitches": 26335,
+      "held": true
+     },
+     "Takes the first pitch": {
+      "rate": "first",
+      "threshold": -0.12,
+      "hitters": 46,
+      "with_test": 31,
+      "train_diff": -0.15201756518751036,
+      "test_diff": -0.1287240646438008,
+      "test_ci": [
+       -0.14514576991877748,
+       -0.11118748542859902
+      ],
+      "test_pitches": 8166,
+      "held": true
+     },
+     "Swings at the first pitch": {
+      "rate": "first",
+      "threshold": 0.12,
+      "hitters": 50,
+      "with_test": 30,
+      "train_diff": 0.15389557214059515,
+      "test_diff": 0.10734854166855595,
+      "test_ci": [
+       0.08982076933034674,
+       0.12656322606301484
+      ],
+      "test_pitches": 7404,
+      "held": true
+     },
+     "Expands with two strikes": {
+      "rate": "two",
+      "threshold": 0.08,
+      "hitters": 89,
+      "with_test": 53,
+      "train_diff": 0.1185176187721363,
+      "test_diff": 0.09788372079209419,
+      "test_ci": [
+       0.07918846635119267,
+       0.11723680795288695
+      ],
+      "test_pitches": 10194,
+      "held": true
+     },
+     "Shrinks the zone with two strikes": {
+      "rate": "two",
+      "threshold": -0.1,
+      "hitters": 50,
+      "with_test": 32,
+      "train_diff": -0.12037844507548304,
+      "test_diff": -0.09669612920377559,
+      "test_ci": [
+       -0.11507353476347591,
+       -0.07896524097313573
+      ],
+      "test_pitches": 5413,
+      "held": true
+     }
+    },
+    "hitters": {
+     "cards": 610,
+     "with_test": 395
+    },
+    "overlap": {
+     "expands_also_chases": [
+      67,
+      89
+     ],
+     "shrinks_also_patient": [
+      33,
+      50
+     ]
+    },
+    "relative_two_strike": {
+     "hitters": 320,
+     "sd_train": 0.06599406151567952,
+     "corr_train_test": 0.6368324451590338,
+     "corr_with_chase_level": -0.3098033013893634,
+     "tags": {
+      "expands_relative": {
+       "threshold": 0.06599406151567952,
+       "hitters": 49,
+       "train_diff": 0.10666911248786808,
+       "test_diff": 0.07660469124102401,
+       "test_ci": [
+        0.055164586252476035,
+        0.09903239892660824
+       ]
+      },
+      "shrinks_relative": {
+       "threshold": -0.06599406151567952,
+       "hitters": 52,
+       "train_diff": -0.0956038768350236,
+       "test_diff": -0.06668562793685937,
+       "test_ci": [
+        -0.08026145482680541,
+        -0.05415657324822827
+       ]
+      }
+     }
+    },
+    "pull": {
+     "pull_gb": {
+      "hitters": 233,
+      "corr_train_test": 0.5951497475990711,
+      "tags": {
+       "pulls": {
+        "threshold": 0.1,
+        "hitters": 17,
+        "train_diff": 0.13091091336515306,
+        "test_diff": 0.10250268045823238,
+        "test_ci": [
+         0.074926905841291,
+         0.13015113729152356
+        ]
+       },
+       "goes_the_other_way": {
+        "threshold": -0.1,
+        "hitters": 21,
+        "train_diff": -0.13823233457185652,
+        "test_diff": -0.10914901064993682,
+        "test_ci": [
+         -0.14705331645383646,
+         -0.0653045676001631
+        ]
+       }
+      }
+     },
+     "pull_air": {
+      "hitters": 261,
+      "corr_train_test": 0.7024477668125634,
+      "tags": {
+       "pulls": {
+        "threshold": 0.08,
+        "hitters": 37,
+        "train_diff": 0.116705352197366,
+        "test_diff": 0.10206538036817708,
+        "test_ci": [
+         0.08378216070299788,
+         0.12172463653065996
+        ]
+       },
+       "goes_the_other_way": {
+        "threshold": -0.08,
+        "hitters": 38,
+        "train_diff": -0.1176367710086598,
+        "test_diff": -0.07947887004803686,
+        "test_ci": [
+         -0.10188878569041633,
+         -0.05902807821331946
+        ]
+       }
+      }
+     }
+    }
+   },
+   {
+    "train": [
+     2023,
+     2024
+    ],
+    "test": 2025,
+    "test_end": null,
+    "tags": {
+     "Chases a lot": {
+      "rate": "chase",
+      "threshold": 0.04,
+      "hitters": 153,
+      "with_test": 91,
+      "train_diff": 0.0827182620751277,
+      "test_diff": 0.07313738441138415,
+      "test_ci": [
+       0.06339959089211909,
+       0.08361913700239824
+      ],
+      "test_pitches": 65321,
+      "held": true
+     },
+     "Patient": {
+      "rate": "chase",
+      "threshold": -0.06,
+      "hitters": 97,
+      "with_test": 69,
+      "train_diff": -0.08563778271487385,
+      "test_diff": -0.07129642455018627,
+      "test_ci": [
+       -0.07957337022611967,
+       -0.06299511127421598
+      ],
+      "test_pitches": 47415,
+      "held": true
+     },
+     "Swings and misses": {
+      "rate": "whiff",
+      "threshold": 0.05,
+      "hitters": 144,
+      "with_test": 79,
+      "train_diff": 0.07791000424959099,
+      "test_diff": 0.06290489722108925,
+      "test_ci": [
+       0.05277169046441281,
+       0.07254406075623122
+      ],
+      "test_pitches": 50413,
+      "held": true
+     },
+     "Puts the bat on the ball": {
+      "rate": "whiff",
+      "threshold": -0.07,
+      "hitters": 67,
+      "with_test": 52,
+      "train_diff": -0.09671528178630863,
+      "test_diff": -0.09248691149152764,
+      "test_ci": [
+       -0.1027404356131869,
+       -0.08212393514768304
+      ],
+      "test_pitches": 39081,
+      "held": true
+     },
+     "Takes the first pitch": {
+      "rate": "first",
+      "threshold": -0.12,
+      "hitters": 44,
+      "with_test": 33,
+      "train_diff": -0.1438853085299697,
+      "test_diff": -0.1280504877699318,
+      "test_ci": [
+       -0.145120844914903,
+       -0.10935980464391845
+      ],
+      "test_pitches": 11564,
+      "held": true
+     },
+     "Swings at the first pitch": {
+      "rate": "first",
+      "threshold": 0.12,
+      "hitters": 42,
+      "with_test": 27,
+      "train_diff": 0.15663816187759666,
+      "test_diff": 0.13730021780876128,
+      "test_ci": [
+       0.11428881719358004,
+       0.16131054804346728
+      ],
+      "test_pitches": 10343,
+      "held": true
+     },
+     "Expands with two strikes": {
+      "rate": "two",
+      "threshold": 0.08,
+      "hitters": 86,
+      "with_test": 52,
+      "train_diff": 0.12170069798066777,
+      "test_diff": 0.10818994129280989,
+      "test_ci": [
+       0.09084571549840352,
+       0.1236692944852474
+      ],
+      "test_pitches": 13983,
+      "held": true
+     },
+     "Shrinks the zone with two strikes": {
+      "rate": "two",
+      "threshold": -0.1,
+      "hitters": 51,
+      "with_test": 30,
+      "train_diff": -0.1262237155844146,
+      "test_diff": -0.08274743940383016,
+      "test_ci": [
+       -0.09728377909766278,
+       -0.06963635527959187
+      ],
+      "test_pitches": 5833,
+      "held": true
+     }
+    },
+    "hitters": {
+     "cards": 604,
+     "with_test": 419
+    },
+    "overlap": {
+     "expands_also_chases": [
+      67,
+      86
+     ],
+     "shrinks_also_patient": [
+      37,
+      51
+     ]
+    },
+    "relative_two_strike": {
+     "hitters": 345,
+     "sd_train": 0.06364889959618049,
+     "corr_train_test": 0.7242439150091612,
+     "corr_with_chase_level": -0.3412617251972491,
+     "tags": {
+      "expands_relative": {
+       "threshold": 0.06364889959618049,
+       "hitters": 54,
+       "train_diff": 0.1054585113051343,
+       "test_diff": 0.08629226374556297,
+       "test_ci": [
+        0.0710034963328192,
+        0.10246167162453758
+       ]
+      },
+      "shrinks_relative": {
+       "threshold": -0.06364889959618049,
+       "hitters": 49,
+       "train_diff": -0.09455045015850891,
+       "test_diff": -0.07712791189738195,
+       "test_ci": [
+        -0.09091072519484847,
+        -0.06218037261526576
+       ]
+      }
+     }
+    },
+    "pull": {
+     "pull_gb": {
+      "hitters": 278,
+      "corr_train_test": 0.5803380119469361,
+      "tags": {
+       "pulls": {
+        "threshold": 0.1,
+        "hitters": 28,
+        "train_diff": 0.12612881610637927,
+        "test_diff": 0.08434700452293283,
+        "test_ci": [
+         0.057813129825995714,
+         0.10856797344207927
+        ]
+       },
+       "goes_the_other_way": {
+        "threshold": -0.1,
+        "hitters": 20,
+        "train_diff": -0.13629174089119817,
+        "test_diff": -0.09941062699844785,
+        "test_ci": [
+         -0.12485202554215093,
+         -0.07212747842701399
+        ]
+       }
+      }
+     },
+     "pull_air": {
+      "hitters": 304,
+      "corr_train_test": 0.6834859795885528,
+      "tags": {
+       "pulls": {
+        "threshold": 0.08,
+        "hitters": 40,
+        "train_diff": 0.11929293061910333,
+        "test_diff": 0.10385106825496355,
+        "test_ci": [
+         0.08219437881548454,
+         0.12442553975985837
+        ]
+       },
+       "goes_the_other_way": {
+        "threshold": -0.08,
+        "hitters": 39,
+        "train_diff": -0.11520479135683512,
+        "test_diff": -0.08467555935025392,
+        "test_ci": [
+         -0.10216165681660277,
+         -0.06939517252805077
+        ]
+       }
+      }
+     }
+    }
+   }
+  ]
+ },
+ "status": "completed",
+ "finished_at": "2026-10-11T04:57:36.898318+00:00",
+ "seconds": 32.6
+}
