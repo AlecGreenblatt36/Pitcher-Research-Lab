@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 325,
- "rows": 328,
+ "experiments": 326,
+ "rows": 329,
  "records": {
   "ACC-01": [
    {
@@ -5376,6 +5376,22 @@
     "runs": [],
     "frozen_commits": [],
     "status": "(1) to (3) held; ranges widened"
+   }
+  ],
+  "RUNLINE-02": [
+   {
+    "id": "RUNLINE-02",
+    "columns": {
+     "ID": "RUNLINE-02",
+     "Attempt": "The run line again, with TOTALS-05's widened run distributions. RUNLINE-01 failed because the simulator's margins given a win run tight; DISP-03's day-form margins fixed that but were looked at before any run-line test of them. Candidate: given a win, the chance of winning by two or more from the two teams' negative binomials (the simulated means, the simulated variances times c from the other season, as TOTALS-05) convolved as independent, P(margin >= 2) / P(margin >= 1) for the home side and the same for the road side; the page's run-line chance would be the headline win chance times it, as RUNLINE-01 planned. Scored exactly as RUNLINE-01 (tools/brl_runline_shape.py over tools/brl_runline_cal.py) on RELIEF-04's full replays of 2025 and 2026 (v2-prod4-relief4-1000, the live regular-season settings; their margins not yet looked at). The motivation (margins too tight) was seen on earlier replays of the same seasons",
+     "Disposition and evidence": "**Registered in the commit that added this row, before its scoring.** Predictions (RUNLINE-01's): (1) given a win, the chance of winning by two or more within 1.5 points of how often winners did, for home winners and road winners, in both seasons; (2) by fifths of that conditional chance, within 3 points in both seasons. Decision rule: if (1) and (2) hold in both seasons, the Odds tab shows the run line (MORE_MARKETS.runline) from this conditional; otherwise it stays hidden.",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "PLAYER-08": [
