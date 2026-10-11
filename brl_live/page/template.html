@@ -3233,6 +3233,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var pg = pullShift(card, lg, "gb"), pa = pullShift(card, lg, "air");
     if (pg != null) { if (pg >= 0.10) t.push("Pulls grounders"); else if (pg <= -0.10) t.push("Grounders go the other way"); }
     if (pa != null) { if (pa >= 0.08) t.push("Pulls in the air"); else if (pa <= -0.08) t.push("Goes the other way in the air"); }
+    /* TAGS-06: ground balls among his batted balls against the league's on his side (carries over 0.73 and 0.75) */
+    var gs = gbShift(card, lg);
+    if (gs != null) { if (gs >= 0.08) t.push("Ground-ball hitter"); else if (gs <= -0.08) t.push("Fly-ball hitter"); }
     /* TAGS-03: misses by pitch type against his own fastball misses, net of most hitters on his side */
     [["breaking", "breaking balls"], ["offspeed", "offspeed"]].forEach(function (f) {
       var v = famWhiffShift(card, lg, f[0]);
@@ -3247,6 +3250,13 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   var FAM_SHIFT = { breaking: 0.052, offspeed: 0.067 }, FAM_FLOOR = { breaking: 100, offspeed: 60 };
   /* TAGS-05: his pull share of ground balls ("gb") or balls in the air ("air") minus the league's on his side; it carries over
      (0.58 to 0.60 on the ground, 0.68 to 0.70 in the air) and the tags held on the next season's balls. Rows of 60. */
+  function gbShift(card, lg) {
+    var sp = card && card.spray, ls = lg && lg.spray ? lg.spray[card && card.side === "L" ? "L" : "R"] : null;
+    if (!sp || !ls || !sp.gb || !ls.gb) return null;
+    var sum = function (a) { return a[0] + a[1] + a[2]; }, n = sum(sp.gb) + sum(sp.air || [0, 0, 0]) + (sp.popups || 0), ln = sum(ls.gb) + sum(ls.air || [0, 0, 0]) + (ls.popups || 0);
+    if (n < 120 || !ln) return null;
+    return sum(sp.gb) / n - sum(ls.gb) / ln;
+  }
   function pullShift(card, lg, kind) {
     var sp = card && card.spray, ls = lg && lg.spray ? lg.spray[card && card.side === "L" ? "L" : "R"] : null;
     if (!sp || !ls || !sp[kind] || !ls[kind]) return null;
@@ -4189,7 +4199,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     ["Expands with two strikes", "extra two-strike chasing", 10.7, 10.6, 7.7, 8.6], ["Holds his zone with two strikes", "extra two-strike chasing", -9.6, -9.5, -6.7, -7.7],
     ["Aggressive in hitter's counts", "swings when behind", 13.9, 13.5, 11.3, 11.1], ["Misses breaking balls", "misses vs his fastball misses", 7.3, 8.0, 6.5, 5.3],
     ["Misses offspeed", "misses vs his fastball misses", 9.9, 9.9, 7.0, 5.4], ["Pulls grounders", "grounders pulled", 13.1, 12.6, 10.3, 8.4],
-    ["Pulls in the air", "balls in the air pulled", 11.7, 11.9, 10.2, 10.4]];
+    ["Pulls in the air", "balls in the air pulled", 11.7, 11.9, 10.2, 10.4], ["Ground-ball hitter", "ground balls", 11.5, 10.2, 7.4, 6.6],
+    ["Fly-ball hitter", "ground balls", -10.3, -10.4, -8.4, -8.9]];
   function tagChecksHtml() {
     var f = function (v) { return (v > 0 ? "+" : "") + v.toFixed(1); };
     return '<h3 class="hz-h">The hitter tags, a season later</h3><p class="note">Tagged from two seasons, then checked on the next one. Points against the league on the same pitches; what we said first, what happened next.</p>' +
