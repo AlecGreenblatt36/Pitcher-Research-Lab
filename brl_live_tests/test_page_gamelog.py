@@ -1,0 +1,83 @@
+"""Player pages: the season line and the last games from MLB's public stats (display only). The page reads the answer
+the stats probe recorded: a person's stats by type (season, gameLog), each game a split with its date, opponent, home or
+away, the team's result and the box line; AVG and ERA through that game."""
+import re
+import subprocess
+from pathlib import Path
+
+TEMPLATE = Path(__file__).parents[1] / 'brl_live/page/template.html'
+
+
+def _script():
+    return TEMPLATE.read_text(encoding='utf-8').split('<script>')[2].split('</script>')[0]
+
+
+def _fn(script, name):
+    m = re.search(r'\n  function ' + re.escape(name) + r'\(.*?\n  \}\n', script, re.S)
+    assert m, name
+    return m.group(0)
+
+
+def _run(suffix):
+    s = _script()
+    consts = ''.join(re.search(r'\n  var ' + v + r' = .*?;\n', s, re.S).group(0) for v in ('GL_ROUND', 'TEAM_BY_ID'))
+    fns = ''.join(_fn(s, n) for n in ('psParse', 'glNum', 'glAvg', 'glDec', 'glPostLine', 'glSorted', 'psStrip', 'glTable'))
+    prefix = ("const assert=require('assert');function esc(x){return String(x==null?'':x);}"
+              "function ip(outs){outs=Math.round(outs);return Math.floor(outs/3)+'.'+(outs%3);}"
+              "function shortDate(d){return d.slice(5);}function nickname(t){var p=String(t).split(' ');return p[p.length-1];}")
+    subprocess.run(['node', '-e', prefix + consts + fns + suffix], check=True)
+
+
+GAME = ("function g(date,type,home,win,opp,stat,num){return {date:date,gameType:type,isHome:home,isWin:win,opponent:{id:opp,name:'Team '+opp},"
+        "game:{gamePk:Math.floor(Math.random()*1e9),gameNumber:num||1},stat:stat};}")
+
+
+def test_parse_picks_the_person_and_a_traded_players_whole_season():
+    _run("const doc={people:[{id:7,stats:[{type:{displayName:'season'},splits:[{team:{id:1},stat:{avg:'.250'}},{team:{id:2},stat:{avg:'.300'}},{numTeams:2,stat:{avg:'.280'}}]},"
+         "{type:{displayName:'gameLog'},splits:[{date:'2026-09-01',stat:{hits:1}},{stat:{hits:2}},{date:'2026-09-02',stat:null}]}]},{id:8,stats:[{type:{displayName:'gameLog'},splits:[{date:'2026-09-03',stat:{}}]}]}]};"
+         "const r=psParse(doc,'7');assert.equal(r.season.avg,'.280');assert.equal(r.games.length,1);assert.equal(r.games[0].date,'2026-09-01');"
+         "assert.deepEqual(psParse(null,7),{season:null,games:[]});assert.equal(psParse({people:[{id:7,stats:[{type:{displayName:'season'},splits:[{stat:{avg:'.2'}}]}]}]},7).season.avg,'.2');")
+
+
+def test_outs_from_the_outs_count_or_the_innings_string():
+    _run("assert.equal(glOuts({outs:20,inningsPitched:'1.0'}),20);assert.equal(glOuts({inningsPitched:'6.2'}),20);assert.equal(glOuts({inningsPitched:'7'}),21);"
+         "assert.equal(glOuts({inningsPitched:'x'}),0);assert.equal(glOuts({}),0);assert.equal(glOuts(null),0);"
+         "assert.equal(glDec({wins:1,blownSaves:1}),'W, BS');assert.equal(glDec({saves:1,holds:1}),'S');assert.equal(glDec({holds:1}),'H');assert.equal(glDec({}),'');")
+
+
+def test_game_log_latest_first_ten_rows_round_tags_and_totals():
+    _run(GAME +
+         "const games=[];for(let i=1;i<=12;i++)games.push(g('2026-09-'+String(i).padStart(2,'0'),'R',i%2===0,i%3!==0,137,{atBats:4,runs:0,hits:i%2,homeRuns:0,rbi:0,baseOnBalls:0,strikeOuts:1,stolenBases:0,avg:'.250'}));"
+         "games.push(g('2026-10-03','D',true,true,144,{atBats:3,runs:1,hits:2,homeRuns:1,rbi:2,baseOnBalls:1,strikeOuts:0,stolenBases:0,avg:'.667'}));"
+         "const h=glTable({season:null,games:games},'hitting');"
+         "assert.ok(h.indexOf('Last 10 games')>0);"
+         "const rows=h.split('<tr').slice(2);assert.equal(rows.length,11);"  # ten games and the totals row
+         "assert.ok(rows[0].indexOf('10-03')>0&&rows[0].indexOf('<small>DS</small>')>0&&rows[0].indexOf('vs ATL')>0,rows[0]);"
+         "assert.ok(rows[1].indexOf('09-12')>0&&rows[9].indexOf('09-04')>0&&h.indexOf('09-03')<0);"
+         "assert.ok(rows[1].indexOf('vs SF')>0&&rows[2].indexOf('@ SF')>0);"
+         # totals: 3 + 9*4 = 39 at-bats; hits 2 + (12,10,8,6,4 even: 0; 11,9,7,5: 1) = 2+4 = 6; AVG .154
+         "assert.ok(rows[10].indexOf('<td>39</td>')>0&&rows[10].indexOf('<td>6</td>')>0&&rows[10].indexOf('.154')>0,rows[10]);"
+         "assert.equal(glTable({season:null,games:[]},'hitting'),'');")
+
+
+def test_doubleheader_and_pitcher_rows():
+    _run(GAME +
+         "const st=function(o,er,w){return {outs:o,inningsPitched:'0.0',hits:3,runs:er,earnedRuns:er,baseOnBalls:1,strikeOuts:6,homeRuns:0,numberOfPitches:90,wins:w,losses:0,saves:0,holds:0,blownSaves:0,gamesStarted:1,era:'3.00'};};"
+         "const games=[g('2026-09-05','R',true,true,121,st(18,2,1),1),g('2026-09-05','R',true,false,121,st(3,0,0),2),g('2026-09-01','R',false,true,158,st(21,1,0))];"
+         "const h=glTable({games:games},'pitching');const rows=h.split('<tr').slice(2);"
+         "assert.ok(rows[0].indexOf('<td>1.0</td>')>0&&rows[1].indexOf('<td>6.0</td>')>0,rows[0]);"  # game 2 of the doubleheader first
+         "assert.ok(rows[1].indexOf('>W<')>0&&rows[2].indexOf('@ MIL')>0);"
+         "assert.ok(rows[3].indexOf('<td>14.0</td>')>0&&rows[3].indexOf('1.93')>0,rows[3]);")  # 42 outs, 3 ER: 27*3/42
+
+
+def test_strip_starter_reliever_and_postseason_line():
+    _run(GAME +
+         "let h=psStrip({season:{gamesPitched:30,gamesStarted:30,wins:12,losses:7,era:'2.72',inningsPitched:'185.1',strikeOuts:221,whip:'0.98'},games:[]},'pitching','2026');"
+         "assert.ok(h.indexOf('<dt>GS</dt><dd>30</dd>')>0&&h.indexOf('<dt>IP</dt><dd>185.1</dd>')>0&&h.indexOf('<dt>W-L</dt><dd>12-7</dd>')>0,h);"
+         "h=psStrip({season:{gamesPitched:60,gamesStarted:0,wins:3,losses:2,era:'2.10',saves:31,strikeOuts:70,whip:'1.01'},games:[]},'pitching','2026');"
+         "assert.ok(h.indexOf('<dt>SV</dt><dd>31</dd>')>0&&h.indexOf('<dt>GS</dt>')<0);"
+         "const post=[g('2026-10-03','D',true,true,144,{atBats:4,hits:2,homeRuns:1,rbi:2}),g('2026-10-05','D',false,false,144,{atBats:3,hits:0,homeRuns:0,rbi:0})];"
+         "h=psStrip({season:{avg:'.274',homeRuns:22,rbi:70,runs:66,stolenBases:12,ops:'.811'},games:post},'hitting','2026');"
+         "assert.ok(h.indexOf('<dt>OPS</dt><dd>.811</dd>')>0&&h.indexOf('Postseason: 2 games, 2 for 7 (.286), 1 HR, 2 RBI.')>0,h);"
+         "assert.equal(psStrip({season:null,games:[]},'hitting','2026'),'');"
+         "assert.equal(glPostLine([g('2026-10-03','D',true,true,144,{outs:20,earnedRuns:1,gamesStarted:1,wins:1,losses:0,strikeOuts:7})],'pitching'),'Postseason: 1 start, 1-0, 6.2 IP, 1 ER, 7 SO, 1.35 ERA.');")

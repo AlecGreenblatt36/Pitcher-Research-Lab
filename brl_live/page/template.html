@@ -447,6 +447,25 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .roster thead th { text-align: right; white-space: nowrap; }
 .roster thead th:first-child { text-align: left; }
 .roster th[scope="row"], .roster thead th:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); }
+.ps-strip { margin: 12px 0 14px; padding: 10px 12px 12px; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; }
+.ps-strip:empty, .ps-slot:empty { display: none; }
+.ps-h { font-size: 14px; font-weight: 700; color: var(--muted); }
+.ps-cells { display: grid; grid-template-columns: repeat(6, auto); justify-content: space-between; gap: 4px 10px; margin: 6px 0 0; }
+.ps-cells div { min-width: 0; }
+.ps-cells dt { font-size: 14px; color: var(--muted); }
+.ps-cells dd { margin: 0; font-family: var(--display); font-weight: 700; font-size: 22px; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.ps-post { margin: 8px 0 0; font-size: 15px; }
+.ps-cells + .ps-post { padding-top: 8px; border-top: 1px solid var(--rule-soft); }
+@media (max-width: 359px) { .ps-cells { grid-template-columns: repeat(3, auto); } }
+.glog th[scope="row"], .glog thead th:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); }
+.glog th { padding: 7px 5px; }
+.glog td { font-size: 16px; padding: 6px 5px; }
+.glog th[scope="row"] { text-align: left; font-family: var(--body); font-size: 15px; font-weight: 700; color: var(--ink); border-bottom: 1px solid var(--rule-soft); white-space: nowrap; }
+.glog th[scope="row"] small { font-size: 14px; font-weight: 400; color: var(--muted); }
+.glog td.opp { text-align: left; font-family: var(--body); font-size: 15px; }
+.glog thead th.l { text-align: left; }
+.gl-sec .tbl-wrap { max-width: 760px; }
+.glog tr.tot th, .glog tr.tot td { border-top: 2px solid var(--ink); border-bottom: 0; font-weight: 700; }
 .pl-back { display: inline-block; padding: 12px 4px; margin: -12px -4px; min-height: 44px; box-sizing: border-box; }
 .rp-card { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 12px; min-width: 0; }
 .rp-card h4, .rp-card h2.card-h { margin: 0 0 6px; font-size: 16px; }
@@ -4407,6 +4426,122 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     return '<section class="sec pr-sec"><' + hl + ' class="pr-h">Percentile rankings</' + hl + '><p class="lede">Against ' + (pool ? Number(pool).toLocaleString() + " " : "all ") + (kind === "pitcher" ? "pitchers with " + min + "+ batters faced" : "hitters with " + min + "+ plate appearances") + ", " + esc(hzSeasons(asof)) + ". 100 is the best. Red: better than most. Blue: worse." + (kind === "hitter" ? " Fewer strikeouts, chases and misses rank higher." : " Fewer walks, hits and hard contact rank higher.") + '</p><div class="pr-list">' + h +
       '</div><div class="pr-scale" aria-hidden="true"><span></span><span><span>Worst</span><span>Average</span><span>Best</span></span><span></span></div></section>';
   }
+  /* ---------- a player's season line and his last games, the way every player page opens: from MLB's public stats,
+     read by the browser like the starters' lines (statsapi answers any site; the stats probe checked both asks). One ask
+     brings the regular season's line and game log, a second the postseason's games. Display only: no model. ---------- */
+  var PSTATS = {};
+  var GL_ROUND = { F: "WC", D: "DS", L: "CS", W: "WS", P: "Post" };
+  var TEAM_BY_ID = { 108: "LAA", 109: "AZ", 110: "BAL", 111: "BOS", 112: "CHC", 113: "CIN", 114: "CLE", 115: "COL", 116: "DET", 117: "HOU", 118: "KC", 119: "LAD",
+    120: "WSH", 121: "NYM", 133: "ATH", 134: "PIT", 135: "SD", 136: "SEA", 137: "SF", 138: "STL", 139: "TB", 140: "TEX", 141: "TOR", 142: "MIN", 143: "PHI",
+    144: "ATL", 145: "CWS", 146: "MIA", 147: "NYY", 158: "MIL" };
+  function psSlot(part, kind, id, year) {
+    return '<div class="ps-slot" data-ps="' + esc(id) + '" data-part="' + part + '" data-grp="' + (kind === "hitter" ? "hitting" : "pitching") + '" data-year="' + esc(year) + '"></div>';
+  }
+  function psParse(doc, id) {
+    var season = [], games = [];
+    ((doc || {}).people || []).forEach(function (p) {
+      if (String(p.id) !== String(id)) return;
+      (p.stats || []).forEach(function (st) {
+        var t = st && st.type && st.type.displayName;
+        ((st && st.splits) || []).forEach(function (x) {
+          if (!x || !x.stat || typeof x.stat !== "object") return;
+          if (t === "season") season.push(x);
+          else if (t === "gameLog" && typeof x.date === "string") games.push(x);
+        });
+      });
+    });
+    var tot = season.filter(function (x) { return x.numTeams; })[0] || season[season.length - 1];     /* a traded player's whole season */
+    return { season: tot ? tot.stat : null, games: games };
+  }
+  function glNum(v) { var n = Number(v); return isFinite(n) ? n : 0; }
+  function glOuts(s) {
+    if (s && isFinite(Number(s.outs)) && s.outs !== "" && s.outs != null) return Number(s.outs);
+    var m = /^(\d+)(?:\.([0-2]))?$/.exec(String((s && s.inningsPitched) || ""));
+    return m ? 3 * Number(m[1]) + Number(m[2] || 0) : 0;
+  }
+  function glAvg(v) { return v >= 1 ? v.toFixed(3) : v.toFixed(3).slice(1); }
+  function glSum(rows, k) { return rows.reduce(function (a, x) { return a + glNum(x.stat[k]); }, 0); }
+  function glOpp(x) {
+    var o = x.opponent || {}, ab = TEAM_BY_ID[o.id] || (o.name ? nickname(o.name) : "");
+    return ab ? (x.isHome ? "vs " : "@ ") + ab : "";
+  }
+  function glDec(s) {
+    var d = [];
+    if (glNum(s.wins)) d.push("W"); if (glNum(s.losses)) d.push("L");
+    if (glNum(s.saves)) d.push("S"); else if (glNum(s.holds)) d.push("H");
+    if (glNum(s.blownSaves)) d.push("BS");
+    return d.join(", ");
+  }
+  function glPostLine(post, grp) {
+    var n = post.length;
+    if (grp === "hitting") {
+      var ab = glSum(post, "atBats"), hh = glSum(post, "hits"), hr = glSum(post, "homeRuns"), rbi = glSum(post, "rbi");
+      return "Postseason: " + n + (n === 1 ? " game, " : " games, ") + hh + " for " + ab + (ab ? " (" + glAvg(hh / ab) + ")" : "") + (hr ? ", " + hr + " HR" : "") + ", " + rbi + " RBI.";
+    }
+    var outs = post.reduce(function (a, x) { return a + glOuts(x.stat); }, 0), er = glSum(post, "earnedRuns"), gs = glSum(post, "gamesStarted"), sv = glSum(post, "saves");
+    return "Postseason: " + n + (gs === n ? (n === 1 ? " start, " : " starts, ") : (n === 1 ? " game, " : " games, ")) + glSum(post, "wins") + "-" + glSum(post, "losses") + (sv ? ", " + sv + " SV" : "") +
+      ", " + ip(outs) + " IP, " + er + " ER, " + glSum(post, "strikeOuts") + " SO" + (outs ? ", " + (27 * er / outs).toFixed(2) + " ERA" : "") + ".";
+  }
+  function glSorted(games) {
+    var key = function (x) { return x.date + ":" + String(10 + glNum(x.game && x.game.gameNumber)); };
+    return games.slice().sort(function (a, b) { var p = key(a), q = key(b); return p < q ? 1 : p > q ? -1 : 0; });
+  }
+  function psStrip(e, grp, year) {
+    var s = e.season, post = e.games.filter(function (x) { return x.gameType && x.gameType !== "R"; }), cells = [];
+    if (!s && !post.length) return "";
+    if (s && grp === "hitting") cells = [["AVG", s.avg], ["HR", s.homeRuns], ["RBI", s.rbi], ["R", s.runs], ["SB", s.stolenBases], ["OPS", s.ops]];
+    else if (s) {
+      var gp = glNum(s.gamesPitched != null ? s.gamesPitched : s.gamesPlayed), rel = glNum(s.gamesStarted) * 2 < gp;
+      cells = [["W-L", glNum(s.wins) + "-" + glNum(s.losses)], ["ERA", s.era]].concat(rel ? [["G", gp], ["SV", s.saves], ["SO", s.strikeOuts], ["WHIP", s.whip]] :
+        [["GS", s.gamesStarted], ["IP", s.inningsPitched], ["SO", s.strikeOuts], ["WHIP", s.whip]]);
+    }
+    var h = '<div class="ps-strip">' + (cells.length ? '<div class="ps-h">' + esc(year) + ' regular season</div><dl class="ps-cells">' + cells.map(function (c) {
+      return "<div><dt>" + c[0] + "</dt><dd>" + esc(c[1] == null || c[1] === "" ? "–" : c[1]) + "</dd></div>"; }).join("") + "</dl>" : "");
+    if (post.length) h += '<p class="ps-post">' + esc(glPostLine(post, grp)) + "</p>";
+    return h + "</div>";
+  }
+  function glTable(e, grp) {
+    var rows = glSorted(e.games).slice(0, 10), H = grp === "hitting";
+    if (!rows.length) return "";
+    var cols = H ? [["AB", "atBats"], ["R", "runs"], ["H", "hits"], ["HR", "homeRuns"], ["RBI", "rbi"], ["BB", "baseOnBalls"], ["SO", "strikeOuts"], ["SB", "stolenBases"]]
+      : [["H", "hits"], ["R", "runs"], ["ER", "earnedRuns"], ["BB", "baseOnBalls"], ["SO", "strikeOuts"], ["HR", "homeRuns"], ["NP", "numberOfPitches"]];
+    var head = '<tr><th scope="col">Date</th><th scope="col" class="l">Opp</th>' + (H ? '<th scope="col">Result</th>' : '<th scope="col" class="l">Dec</th><th scope="col">IP</th>') +
+      cols.map(function (c) { return '<th scope="col">' + c[0] + "</th>"; }).join("") + '<th scope="col">' + (H ? "AVG" : "ERA") + "</th></tr>";
+    var body = rows.map(function (x) {
+      var s = x.stat, rd = x.gameType && x.gameType !== "R" ? " <small>" + (GL_ROUND[x.gameType] || "Post") + "</small>" : "";
+      return '<tr><th scope="row">' + esc(shortDate(x.date)) + rd + '</th><td class="opp">' + esc(glOpp(x)) + "</td>" +
+        (H ? "<td>" + (x.isWin === true ? "W" : x.isWin === false ? "L" : "") + "</td>" : '<td class="opp">' + esc(glDec(s)) + "</td><td>" + esc(ip(glOuts(s))) + "</td>") +
+        cols.map(function (c) { return "<td>" + (s[c[1]] == null ? "" : glNum(s[c[1]])) + "</td>"; }).join("") + '<td class="avg">' + esc((H ? s.avg : s.era) || "") + "</td></tr>";
+    }).join("");
+    var won = rows.filter(function (x) { return x.isWin === true; }).length, lost = rows.filter(function (x) { return x.isWin === false; }).length;
+    var outs = rows.reduce(function (a, x) { return a + glOuts(x.stat); }, 0), ab = glSum(rows, "atBats");
+    var tot = '<tr class="tot"><th scope="row">Last ' + rows.length + "</th><td></td>" +
+      (H ? "<td>" + won + "-" + lost + "</td>" : "<td>" + glSum(rows, "wins") + "-" + glSum(rows, "losses") + "</td><td>" + ip(outs) + "</td>") +
+      cols.map(function (c) { return "<td>" + glSum(rows, c[1]) + "</td>"; }).join("") +
+      '<td class="avg">' + (H ? (ab ? glAvg(glSum(rows, "hits") / ab) : "–") : (outs ? (27 * glSum(rows, "earnedRuns") / outs).toFixed(2) : "–")) + "</td></tr>";
+    return '<section class="sec gl-sec"><h2>Last ' + rows.length + (rows.length === 1 ? " game" : " games") + '</h2><div class="tbl-wrap"><table class="box glog"><thead>' + head + "</thead><tbody>" + body + tot + "</tbody></table></div>" +
+      '<p class="note">From MLB\'s game logs, latest first. ' + (H ? "Result: his team's. AVG: his season average through that game" : "Dec: win, loss, save, hold or blown save. NP: pitches. ERA: his season ERA through that game") +
+      " (in the postseason, through that game of the postseason); the last row's is over these games.</p></section>";
+  }
+  function psPaint(el, e) {
+    var part = el.getAttribute("data-part"), grp = el.getAttribute("data-grp");
+    el.innerHTML = e && e.games ? (part === "strip" ? psStrip(e, grp, el.getAttribute("data-year")) : glTable(e, grp)) : "";
+  }
+  function fillPlayerStats() {
+    app.querySelectorAll("[data-ps]").forEach(function (el) {
+      var id = el.getAttribute("data-ps"), grp = el.getAttribute("data-grp"), year = el.getAttribute("data-year"), k = grp + ":" + id + ":" + year, e = PSTATS[k];
+      if (e) { if (e.games) psPaint(el, e); return; }          /* pending or failed: painted when it lands, or left empty */
+      PSTATS[k] = { pending: true };
+      var q = function (hyd) { return lcFetch(LIVE_API + "v1/people?personIds=" + encodeURIComponent(id) + "&hydrate=" + hyd); };
+      Promise.all([q("stats(group=[" + grp + "],type=[season,gameLog],season=" + year + ")"), q("stats(group=[" + grp + "],type=[gameLog],season=" + year + ",gameType=P)").catch(function () { return null; })])
+        .then(function (res) {
+          var a = psParse(res[0], id), b = psParse(res[1], id), seen = {};
+          var games = a.games.concat(b.games).filter(function (x) { var g = (x.game && x.game.gamePk) || x.date + (x.opponent && x.opponent.id); if (seen[g]) return false; seen[g] = 1; return true; });
+          PSTATS[k] = { season: a.season, games: games };
+          app.querySelectorAll('[data-ps="' + id + '"][data-grp="' + grp + '"][data-year="' + year + '"]').forEach(function (el2) { psPaint(el2, PSTATS[k]); });
+        }, function () { PSTATS[k] = { failed: true }; });
+    });
+  }
   function renderPlayer(kind, id) {
     withNextSchedules(function () { renderPlayer(kind, id); });
     withPlayers(function () {
@@ -4418,12 +4553,15 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         var h = '<div class="wrap"><div class="page-head"><h1>' + esc(x.name) + '</h1><p>' + esc(x.team) + (x.team ? ", " : "") + (x.kind === "hitter" ? batsWords(x) : (x.throws === "L" ? "throws left" : "throws right")) + ". From " + Number(x.pitches).toLocaleString() + " pitches, updated " + esc(dateLabel(doc.asof)) + '. <a class="pl-back" href="#/players">All players</a></p></div>';
         var ng = nextGameFor(x.team);
         if (ng) h += '<a class="next-day" href="' + ng.href + '">' + (ng.day === D.date ? "Tonight" : "Tomorrow") + ": " + (ng.home ? "vs " : "at ") + esc(nickname(ng.opp)) + ". Open the game plan</a>";
+        var yr = String(doc.asof || D.date).slice(0, 4), pk0 = x.kind === "hitter" ? "hitter" : "pitcher";
+        h += psSlot("strip", pk0, id, yr);
         h += pctPanel(x, lg, doc.asof);
         if (x.kind === "hitter") {
           var oc = x.own_cost, tags = hitterTags(x, lg);
           if (!x.zones) h += '<p class="pd-line">Chases ' + (x.chase_rate != null ? pct(x.chase_rate) : "–") + " of pitches out of the zone (league " + (lg.chase_rate != null ? pct(lg.chase_rate) : "–") + "). Misses on " + (x.whiff_rate != null ? pct(x.whiff_rate) : "–") + " of his swings (league " + (lg.whiff_rate != null ? pct(lg.whiff_rate) : "–") + ").</p>";
           if (tags.length) h += '<div class="pl-tags" style="margin:0 0 10px">' + tags.map(function (s) { return "<span>" + esc(s) + "</span>"; }).join("") + "</div>";
           if (hitterChanges(x)) h += '<p class="pd-line">' + esc(hitterChanges(x)) + "</p>";
+          h += psSlot("log", pk0, id, yr);
           h += splitsTable(x, "hitter", doc.asof);
           if (x.zones) {
             /* the standard hot zones: against both hands or one, by pitch type */
@@ -4464,6 +4602,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
           if (ptg.length) h += '<div class="pl-tags" style="margin:0 0 10px">' + ptg.map(function (s0) { return "<span>" + esc(s0) + "</span>"; }).join("") + "</div>";
           h += '<p class="pd-line">Hitters chase ' + (x.chase_rate_against != null ? pct(x.chase_rate_against) : "\u2013") + " of his pitches out of the zone (league " + (lg.chase_rate != null ? pct(lg.chase_rate) : "\u2013") + "). " +
             (x.looks_in_ends_out != null ? pct(x.looks_in_ends_out) + " of his pitches look like strikes when the hitter has to decide, then end up balls (league " + (lg.looks_in_ends_out != null ? pct(lg.looks_in_ends_out) : "\u2013") + ")." : "") + "</p>";
+          h += psSlot("log", pk0, id, yr);
           h += splitsTable(x, "pitcher", doc.asof);
           /* the arsenal the way every scouting sheet lists it, then where each pitch goes to each side */
           var fams = ["fastball", "breaking", "offspeed"].filter(function (fam) { return mix[fam] && mix[fam].share >= 0.005; });     /* a pitch he all but never throws gets no row */
@@ -4499,6 +4638,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         }
         h += "</div>";
         app.innerHTML = h;
+        fillPlayerStats();
         var again = function () { var y = window.scrollY; show(doc); window.scrollTo(0, y); };
         app.querySelectorAll("[data-hzmetric]").forEach(function (b) { b.addEventListener("click", function () { state.hzMetric = b.getAttribute("data-hzmetric"); again(); }); });
         app.querySelectorAll("[data-hzhand]").forEach(function (b) { b.addEventListener("click", function () { state.hzHand = b.getAttribute("data-hzhand"); again(); }); });
