@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 322,
- "rows": 325,
+ "experiments": 323,
+ "rows": 326,
  "records": {
   "ACC-01": [
    {
@@ -5360,6 +5360,22 @@
     "runs": [],
     "frozen_commits": [],
     "status": "(1) to (3) held; ranges widened"
+   }
+  ],
+  "PLAYER-08": [
+   {
+    "id": "PLAYER-08",
+    "columns": {
+     "ID": "PLAYER-08",
+     "Attempt": "Starters' strikeout distributions with their spread made right (the Odds tab's strikeout ladder and the starters' strikeout ranges). Seen on LEASH-02's replays before this row (described after looking): the means are right (4.87 against 4.79 in 2025, 4.69 against 4.70 in 2026) but the residual variance runs 1.07 times the simulated variance in both seasons, and in 2026 the ladder sits high at the low lines and low at the high ones (+0.9 to +1.2 points at 2.5 to 4.5, -0.6 to -1.4 at 6.5 to 8.5), the pattern of a distribution a little too narrow. Candidate: each start's simulated distribution kept and spread, convolved with the step {-1: w, 0: 1 - 2w, +1: w}, w = (c - 1) x its variance / 2, the mass below zero folded onto zero, c from the other season (tools/brl_k_spread.py). Scored against the raw distributions on the same replays (v2-prod4-leash2-1000; the RELIEF-04 replays, if that goes live, change no starter's distribution beyond noise): the chance of more than each line from 2.5 to 8.5 against the actual share, Brier over those lines paired by date, and the middle range's own mass against how often the real count landed in it. Because the motivation was seen on these replays, the decision is a product call on display calibration",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the candidate was scored.** Predictions, in both seasons with c from the other season: (1) the largest gap across the lines 2.5 to 8.5 smaller than the raw distributions'; (2) Brier over those lines not worse (paired upper end at most +0.0001); (3) the middle range within 1.0 point of its own mass. Decision rule: if (1) to (3) hold in both seasons, the page's strikeout ladder and ranges use the spread distribution with c pooled over both seasons; otherwise they keep the raw ones.",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "LEVEL-01": [
