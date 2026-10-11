@@ -4927,14 +4927,16 @@
     "columns": {
      "ID": "HCHANGE-02",
      "Attempt": "A looser rule for the changes line. HCHANGE-01's rule (3 points, 5 for hard-hit, and three standard errors) flagged only 2 to 8 hitters per rate, while smaller changes held 43% to 69% a season later. The same study with changes of at least 2 points (3 for hard-hit) and two standard errors, same windows and hitters (tools/brl_report.py change_study with se_mult 2 and floors).",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions on the 2026 window: (1) more hitters flagged than under HCHANGE-01 for every rate; (2) flagged chase, miss, strikeout and hard-hit changes held at least 50%, intervals excluding zero; (3) flagged walk-rate changes held at least 40%, interval excluding zero. Decision rule: each rate whose flagged changes held at least 50% (40% for walks) with the interval excluding zero uses the looser rule on the page, quoting its held share; the others keep HCHANGE-01's rule and wording (walks stay off unless (3) holds).",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions on the 2026 window: (1) more hitters flagged than under HCHANGE-01 for every rate; (2) flagged chase, miss, strikeout and hard-hit changes held at least 50%, intervals excluding zero; (3) flagged walk-rate changes held at least 40%, interval excluding zero. Decision rule: each rate whose flagged changes held at least 50% (40% for walks) with the interval excluding zero uses the looser rule on the page, quoting its held share; the others keep HCHANGE-01's rule and wording (walks stay off unless (3) holds). **Results (run 38135647818, receipt research/report-38135647818.json; 2026 window, 201 hitters):** chase 40 flagged (8 before), held **0.62 [0.41, 0.85]**; misses 41, **0.62 [0.44, 0.82]**; strikeouts 28, **0.56 [0.40, 0.71]**; walks 20, 0.39 [0.20, 0.59]; hard-hit 20, **0.70 [0.51, 0.89]** (mean changes 4.6 to 10.1 points). 2025 window: 0.75, 0.64, 0.60, 0.64, 0.71. **(1) and (2) held; (3) failed** (walks 0.39, just under 0.40). Decision, as registered: chase, miss, strikeout and hard-hit changes use the looser rule with their held shares (62%, 62%, 56%, 70%); walk-rate changes stay off (page HC_RATES).",
+     "Delta corrected Brier, 2026": "(1), (2) held; (3) failed"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38135647818"
+    ],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "(1), (2) held; (3) failed"
    }
   ],
   "VELO-01": [

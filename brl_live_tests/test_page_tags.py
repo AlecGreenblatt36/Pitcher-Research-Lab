@@ -211,13 +211,15 @@ def test_hitter_changes_from_last_season():
     suffix = ("const prev={pa:600,outside:1100,chases:340,swings:1300,misses:300,k:130,bb:50,bbe:420,hard:170};"
               "const cur={pa:550,outside:1000,chases:230,swings:1200,misses:282,k:121,bb:48,bbe:400,hard:220};"
               "const t=hitterChanges({line_seasons:{season:2026,cur:cur,prev:prev}});"
-              "assert.ok(t.indexOf('Since 2025: chase rate down 7.9 points (31% to 23%; changes like it held about 60% the next season)')===0,t);"
-              "assert.ok(t.indexOf('hard-hit rate up 14.5 points (40% to 55%; changes like it held about 80% the next season)')>0,t);"
+              "assert.ok(t.indexOf('Since 2025: chase rate down 7.9 points (31% to 23%; changes like it held about 62% the next season)')===0,t);"
+              "assert.ok(t.indexOf('hard-hit rate up 14.5 points (40% to 55%; changes like it held about 70% the next season)')>0,t);"
               # HCHANGE-01: walk-rate changes are no longer called out
               "assert.ok(hitterChanges({line_seasons:{season:2026,cur:Object.assign({},cur,{bb:110}),prev:prev}}).indexOf('walk rate')<0);"
               # a 4-point move on these samples is under three standard errors: not said
               "assert.equal(hitterChanges({line_seasons:{season:2026,cur:Object.assign({},cur,{chases:300,hard:170}),prev:prev}}),'');"
               "assert.ok(t.indexOf('miss rate')<0&&t.indexOf('strikeout rate')<0,t);"
+              # HCHANGE-02: a 4.4-point rise in misses is under three standard errors (5.2) but over two (3.5): said now
+              "assert.ok(hitterChanges({line_seasons:{season:2026,cur:Object.assign({},cur,{misses:330}),prev:prev}}).indexOf('miss rate up 4.4 points (23% to 28%; changes like it held about 62%')>0);"
               "assert.equal(hitterChanges({}),'');")
     subprocess.run(['node', '-e', prefix + functions + suffix], check=True)
 
