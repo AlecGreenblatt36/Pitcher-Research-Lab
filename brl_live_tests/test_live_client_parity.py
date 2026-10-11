@@ -39,11 +39,19 @@ def test_page_reads_plays_and_lines_like_the_saved_runs(tmp_path):
     feed['liveData']['linescore'].update({'currentInning': 1, 'inningState': 'Bottom', 'outs': 1, 'balls': 2, 'strikes': 1,
                                           'offense': {'batter': {'id': 12, 'fullName': 'Batter 12'}, 'first': {'id': 11}},
                                           'defense': {'pitcher': {'id': 60, 'fullName': 'Pitcher 60'}, 'batter': {'id': 3, 'fullName': 'Batter 3'}}})
+    # season marks for the box (AVG and ERA, as printed; a placeholder is left out by both readers)
+    tm = feed['liveData']['boxscore']['teams']
+    for s_ in ('away', 'home'):
+        for key, pl in tm[s_]['players'].items():
+            pl['seasonStats'] = {'batting': {'avg': '.274' if key.endswith('2') else '-.--'}, 'pitching': {'era': '2.72'}}
     got = run_page_reader(tmp_path, feed)
     want = json.loads(json.dumps(plays_from_feed(feed)))
     assert got['plays'] == want
     box = box_from_feed(feed)
     assert got['box']['batting'] == box['batting'] and got['box']['pitching'] == box['pitching']
+    assert any(r.get('AVG') == '.274' for s_ in ('away', 'home') for r in box['batting'][s_])
+    assert all(r.get('AVG') in (None, '.274') for s_ in ('away', 'home') for r in box['batting'][s_])
+    assert all(r.get('ERA') == '2.72' for s_ in ('away', 'home') for r in box['pitching'][s_])
     sit = got['sit']
     assert sit['started'] and not sit['final'] and sit['state']['half'] == 'bottom' and sit['state']['outs'] == 1
     assert sit['state']['bases'] == ['11', None, None] and sit['state']['away_score'] == 2 and sit['state']['balls'] == 2

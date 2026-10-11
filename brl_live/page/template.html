@@ -316,6 +316,7 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .box td { text-align: right; padding: 7px 6px; border-bottom: 1px solid var(--rule-soft); font-family: var(--display); font-size: 18px; white-space: nowrap; }
 .box td:first-child { font-family: var(--body); font-size: 16px; }
 .box td .spot { display: inline-block; width: 18px; color: var(--muted); font-size: 14px; }
+.box td.avg { color: var(--muted); }
 .box td .sub { display: block; color: var(--muted); font-size: 14px; font-family: var(--body); }
 .box tr.tot td { font-weight: 700; border-top: 1px solid var(--ink); border-bottom: 0; }
 .box tr.sub td:first-child { padding-left: 22px; color: var(--muted); }
@@ -2139,6 +2140,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         if (!Object.keys(st).length && !p.battingOrder) return;
         var row = { player_id: String(pid), name: String((p.person || {}).fullName || ""), spot: Math.floor(lcInt(p.battingOrder, 0) / 100), order: lcInt(p.battingOrder, 0) };
         Object.keys(BAT).forEach(function (k) { row[k] = lcInt(st[BAT[k]], 0); });
+        var sa = ((p.seasonStats || {}).batting || {}).avg;            /* his average through this game, as box scores print it */
+        if (sa != null && /^\d?\.\d{3}$/.test(String(sa))) row.AVG = String(sa);
         bat.push(row);
       });
       (t.pitchers || []).forEach(function (pid) {
@@ -2147,6 +2150,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         var ip = String(st.inningsPitched || "0.0").split("."), outs = st.outs != null ? lcInt(st.outs, 0) : 3 * lcInt(ip[0], 0) + lcInt(ip[1], 0);
         var row = { player_id: String(pid), name: String((p.person || {}).fullName || ""), outs: outs };
         Object.keys(PIT).forEach(function (k) { row[k] = lcInt(st[PIT[k]], 0); });
+        var se = ((p.seasonStats || {}).pitching || {}).era;
+        if (se != null && /^\d+\.\d{2}$/.test(String(se))) row.ERA = String(se);
         pit.push(row);
       });
       out.batting[s] = bat; out.pitching[s] = pit;
@@ -2512,13 +2517,13 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       h += '<div class="seg" role="group" aria-label="Which box score"><button data-boxside="actual" aria-pressed="' + (side === "actual") + '">' + esc(label || "Actual") + '</button><button data-boxside="proj" aria-pressed="' + (side !== "actual") + '">Projected</button></div>';
     }
     ["away", "home"].forEach(function (t) {
-      var bat = battingRows(src.batting[t] || []), tot = { AB: 0, R: 0, H: 0, RBI: 0, BB: 0, K: 0 }, names = shortNames(bat);
-      h += '<section class="sec"><h3 class="team-h ' + t + '-c">' + esc(nickname(f[t].name)) + '</h3><div class="tbl-wrap"><table class="box"><thead><tr><th scope="col">Batters</th><th>AB</th><th>R</th><th>H</th><th>RBI</th><th>BB</th><th>K</th></tr></thead><tbody>';
+      var bat = battingRows(src.batting[t] || []), tot = { AB: 0, R: 0, H: 0, RBI: 0, BB: 0, K: 0 }, names = shortNames(bat), avg = bat.some(function (b) { return b.AVG; });
+      h += '<section class="sec"><h3 class="team-h ' + t + '-c">' + esc(nickname(f[t].name)) + '</h3><div class="tbl-wrap"><table class="box"><thead><tr><th scope="col">Batters</th><th>AB</th><th>R</th><th>H</th><th>RBI</th><th>BB</th><th>K</th>' + (avg ? "<th>AVG</th>" : "") + "</tr></thead><tbody>";
       bat.forEach(function (b) {
         ["AB", "R", "H", "RBI", "BB", "K"].forEach(function (k) { tot[k] += b[k] || 0; });
-        h += '<tr' + (b._sub ? ' class="sub"' : "") + '><td><span class="spot">' + (b._sub ? "" : (b.spot || "")) + "</span>" + esc(names[String(b.player_id)]) + "</td><td>" + b.AB + "</td><td>" + b.R + "</td><td>" + b.H + "</td><td>" + b.RBI + "</td><td>" + b.BB + "</td><td>" + b.K + "</td></tr>";
+        h += '<tr' + (b._sub ? ' class="sub"' : "") + '><td><span class="spot">' + (b._sub ? "" : (b.spot || "")) + "</span>" + esc(names[String(b.player_id)]) + "</td><td>" + b.AB + "</td><td>" + b.R + "</td><td>" + b.H + "</td><td>" + b.RBI + "</td><td>" + b.BB + "</td><td>" + b.K + "</td>" + (avg ? '<td class="avg">' + esc(b.AVG || "\u2013") + "</td>" : "") + "</tr>";
       });
-      h += '<tr class="tot"><td>Totals</td><td>' + tot.AB + "</td><td>" + tot.R + "</td><td>" + tot.H + "</td><td>" + tot.RBI + "</td><td>" + tot.BB + "</td><td>" + tot.K + "</td></tr></tbody></table></div>";
+      h += '<tr class="tot"><td>Totals</td><td>' + tot.AB + "</td><td>" + tot.R + "</td><td>" + tot.H + "</td><td>" + tot.RBI + "</td><td>" + tot.BB + "</td><td>" + tot.K + "</td>" + (avg ? "<td></td>" : "") + "</tr></tbody></table></div>";
       var notes = [["2B", "2B"], ["3B", "3B"], ["HR", "HR"], ["HBP", "HBP"]].map(function (k) {
         var who = bat.filter(function (b) { return b[k[0]]; }).map(function (b) { return names[String(b.player_id)] + (b[k[0]] > 1 ? " " + b[k[0]] : ""); });
         var line = who.join(", ");
@@ -2529,10 +2534,10 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     });
     var hasER = ["away", "home"].some(function (t) { return (src.pitching[t] || []).some(function (p) { return p.ER != null; }); });
     ["away", "home"].forEach(function (t) {
-      var pit = src.pitching[t] || [], pnames = shortNames(pit);
-      h += '<section class="sec"><h3 class="team-h ' + t + '-c">' + esc(nickname(f[t].name)) + ' pitching</h3><div class="tbl-wrap"><table class="box"><thead><tr><th scope="col">Pitchers</th><th>IP</th><th>H</th><th>R</th>' + (hasER ? "<th>ER</th>" : "") + '<th>BB</th><th>K</th><th>HR</th><th>Pitches</th></tr></thead><tbody>';
+      var pit = src.pitching[t] || [], pnames = shortNames(pit), era = pit.some(function (p) { return p.ERA; });
+      h += '<section class="sec"><h3 class="team-h ' + t + '-c">' + esc(nickname(f[t].name)) + ' pitching</h3><div class="tbl-wrap"><table class="box"><thead><tr><th scope="col">Pitchers</th><th>IP</th><th>H</th><th>R</th>' + (hasER ? "<th>ER</th>" : "") + '<th>BB</th><th>K</th><th>HR</th><th>Pitches</th>' + (era ? "<th>ERA</th>" : "") + "</tr></thead><tbody>";
       pit.forEach(function (p) {
-        h += "<tr><td>" + esc(pnames[String(p.player_id)]) + "</td><td>" + ip(p.outs) + "</td><td>" + p.H + "</td><td>" + p.R + "</td>" + (hasER ? "<td>" + (p.ER != null ? p.ER : "\u2013") + "</td>" : "") + "<td>" + p.BB + "</td><td>" + p.K + "</td><td>" + p.HR + "</td><td>" + p.PC + "</td></tr>";
+        h += "<tr><td>" + esc(pnames[String(p.player_id)]) + "</td><td>" + ip(p.outs) + "</td><td>" + p.H + "</td><td>" + p.R + "</td>" + (hasER ? "<td>" + (p.ER != null ? p.ER : "\u2013") + "</td>" : "") + "<td>" + p.BB + "</td><td>" + p.K + "</td><td>" + p.HR + "</td><td>" + p.PC + "</td>" + (era ? '<td class="avg">' + esc(p.ERA || "\u2013") + "</td>" : "") + "</tr>";
       });
       h += "</tbody></table></div></section>";
     });

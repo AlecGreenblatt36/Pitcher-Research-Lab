@@ -9,6 +9,7 @@ wording. Nothing here feeds a forecast; it is display and record keeping only.
 from __future__ import annotations
 
 import math
+import re
 
 from .pitch_bridge import contact_of
 
@@ -149,6 +150,17 @@ def plays_from_feed(feed: dict) -> list[dict]:
     return plays
 
 
+def season_mark(p: dict, group: str, key: str) -> str | None:
+    """A player's season average (batting avg) or ERA from the feed's seasonStats, as printed (".274", "2.72"); None
+    for a placeholder such as "-.--". Display only."""
+    v = ((p.get('seasonStats') or {}).get(group) or {}).get(key)
+    if not isinstance(v, str):
+        return None
+    if key == 'avg':
+        return v if re.fullmatch(r'\d?\.\d{3}', v) else None
+    return v if re.fullmatch(r'\d+\.\d{2}', v) else None
+
+
 def box_from_feed(feed: dict) -> dict:
     """Batting and pitching lines and the line score so far, read leniently (an in-progress game has
     partial lines); the final's strict version with its cross-checks is boxscore.parse_actual_box."""
@@ -171,9 +183,13 @@ def box_from_feed(feed: dict) -> dict:
             stats = (p.get('stats') or {}).get('batting') or {}
             if not stats and not p.get('battingOrder'):
                 continue          # listed but never in the lineup; a lineup spot not yet up shows zeros
-            bat.append({'player_id': str(pid), 'name': str((p.get('person') or {}).get('fullName') or ''), 'spot': _int(p.get('battingOrder'), 0) // 100,
-                        'order': _int(p.get('battingOrder'), 0),
-                        **{k: _int(stats.get(v), 0) for k, v in BAT_FIELDS.items()}})
+            row = {'player_id': str(pid), 'name': str((p.get('person') or {}).get('fullName') or ''), 'spot': _int(p.get('battingOrder'), 0) // 100,
+                   'order': _int(p.get('battingOrder'), 0),
+                   **{k: _int(stats.get(v), 0) for k, v in BAT_FIELDS.items()}}
+            avg = season_mark(p, 'batting', 'avg')          # his average through this game, as box scores print it
+            if avg:
+                row['AVG'] = avg
+            bat.append(row)
         for pid in team.get('pitchers') or []:
             p = players.get('ID' + str(pid)) or {}
             stats = (p.get('stats') or {}).get('pitching') or {}
@@ -183,7 +199,11 @@ def box_from_feed(feed: dict) -> dict:
             outs = _int(stats.get('outs'), -1)
             if outs < 0:
                 outs = 3 * _int(ip[0]) + _int(ip[1] if len(ip) > 1 else 0)
-            pit.append({'player_id': str(pid), 'name': str((p.get('person') or {}).get('fullName') or ''), 'outs': outs,
-                        **{k: _int(stats.get(v), 0) for k, v in PIT_FIELDS.items()}})
+            row = {'player_id': str(pid), 'name': str((p.get('person') or {}).get('fullName') or ''), 'outs': outs,
+                   **{k: _int(stats.get(v), 0) for k, v in PIT_FIELDS.items()}}
+            era = season_mark(p, 'pitching', 'era')
+            if era:
+                row['ERA'] = era
+            pit.append(row)
         out['batting'][s], out['pitching'][s] = bat, pit
     return out

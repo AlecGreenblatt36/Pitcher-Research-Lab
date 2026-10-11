@@ -142,6 +142,17 @@ def test_actual_reader_keeps_errors_only_when_the_feed_has_them():
     assert parse_actual_box(f,1,'2026-10-07T00:00:00Z')['errors']=={'away':1,'home':0}
 
 
+def test_actual_reader_keeps_season_average_and_era_for_display():
+    f=actual_fixture()
+    assert 'AVG' not in parse_actual_box(f,1,'2026-10-07T00:00:00Z')['batting']['away'][0]
+    f['liveData']['boxscore']['teams']['away']['players']['ID1']['seasonStats']={'batting':{'avg':'.274'}}
+    f['liveData']['boxscore']['teams']['away']['players']['ID11']['seasonStats']={'pitching':{'era':'2.72'}}
+    f['liveData']['boxscore']['teams']['home']['players']['ID2']['seasonStats']={'batting':{'avg':'-.--'}}
+    b=parse_actual_box(f,1,'2026-10-07T00:00:00Z')
+    assert b['batting']['away'][0]['AVG']=='.274' and b['pitching']['away'][0]['ERA']=='2.72'
+    assert 'AVG' not in b['batting']['home'][0]          # a placeholder is left out
+
+
 def test_actual_reader_never_accepts_in_progress():
     f=actual_fixture();f['gameData']['status']['abstractGameState']='Live'
     with pytest.raises(ValueError):parse_actual_box(f,1,'2026-10-07T00:00:00Z')
