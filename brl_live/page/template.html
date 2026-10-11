@@ -3085,7 +3085,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     }
     if (b > k) {
       var bs = r(c.behind, 1, 0), lbs = r(l.behind, 1, 0);
-      if (bs != null && lbs != null && bs >= lbs + 0.10) return "Behind in the count he gets aggressive (swings at " + pct(bs) + ", most " + pct(lbs) + "): don't give in over the middle.";
+      if (bs != null && lbs != null && bs >= lbs + 0.10) return "In hitter's counts he gets aggressive (swings at " + pct(bs) + ", most " + pct(lbs) + "): don't give in over the middle.";
     }
     return "";
   }
@@ -3441,7 +3441,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   /* Which pitch to lean on, from what each pitch type is worth at its best spots. */
   /* His pitch-type families as the arsenal table counts them: this season's types when the card has them (the arsenal's
      season), else the two seasons' mix. {fastball: {share, speed}, ...} */
-  var TYPE_FAM = { FF: "fastball", FA: "fastball", SI: "fastball", FC: "fastball", SL: "breaking", ST: "breaking", SV: "breaking", CU: "breaking", KC: "breaking", CS: "breaking", CH: "offspeed", FS: "offspeed", FO: "offspeed", SC: "offspeed", KN: "offspeed", EP: "offspeed" };
+  var TYPE_FAM = { FF: "fastball", FA: "fastball", SI: "fastball", FC: "fastball", SL: "breaking", ST: "breaking", SV: "breaking", CU: "breaking", KC: "breaking", CS: "breaking", CH: "offspeed", FS: "offspeed", FO: "offspeed", SC: "offspeed", KN: "fastball", EP: "fastball" };      /* KN and EP: the cards' "other" group, counted with fastballs as the plans count them */
   function famShares(pc) {
     if (pc && pc.arsenal_season && pc.arsenal && pc.arsenal.length) {
       var out = {}, tot = 0;
@@ -3829,25 +3829,30 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     }
     return h + "</section>";
   }
-  function reportHtml(f, pk, doc, now) {
-    var key = RP_METRICS[state.rpMetric] ? state.rpMetric : "chase", m = RP_METRICS[key];
-    var players = doc.players || {}, nm = function (id) { var p = players[String(id)]; return p && p.name ? p.name : String(id); };
-    /* a look back is a plan built after its game; an early plan is built the day before and rebuilt on game day */
-    /* the build day in Eastern time: a plan for tomorrow built tonight after 8 p.m. carries tomorrow's UTC date */
+  /* When a plan was built against its game: early (built the day before, rebuilt on game day) or a look back (a re-run
+     built after its game day from pitches before an earlier date). Neither a plan built on game day before the night's
+     pitches are in (as of the day before) nor the next day's regrade of a game-day plan (as of its own date) is a look
+     back. The build day is read in Eastern time: a plan for tomorrow built tonight after 8 p.m. carries tomorrow's UTC date. */
+  function planWhen(doc) {
     var built = "";
     try {
       var bt = doc.built_at ? new Date(String(doc.built_at).replace(/(\.\d{3})\d+/, "$1")) : null;    /* some browsers refuse microseconds */
       built = bt && !isNaN(bt) ? bt.toLocaleDateString("en-CA", { timeZone: "America/New_York" }) : String(doc.built_at || "").slice(0, 10);
       if (!/^\d{4}-\d{2}-\d{2}$/.test(built)) built = String(doc.built_at || "").slice(0, 10);
     } catch (e) { built = String(doc.built_at || "").slice(0, 10); }
-    /* a look back: built after its game day (a plan built on game day before the night's pitches are in still reads
-       the pitches through the day before, and is not a look back) */
-    var early = doc.date && (built ? built < doc.date : doc.date > D.date), retro = !early && doc.date && (built ? built > doc.date : doc.date < D.date);
+    var early = !!doc.date && (built ? built < doc.date : doc.date > D.date);
+    var retro = !early && !!doc.date && !!doc.asof && doc.asof < doc.date && (built ? built > doc.date : doc.date < D.date);
+    return { early: early, retro: retro, built: built };
+  }
+  function reportHtml(f, pk, doc, now) {
+    var key = RP_METRICS[state.rpMetric] ? state.rpMetric : "chase", m = RP_METRICS[key];
+    var players = doc.players || {}, nm = function (id) { var p = players[String(id)]; return p && p.name ? p.name : String(id); };
+    var when = planWhen(doc), early = when.early, retro = when.retro;
     var sel = state.rpPair[pk], selSide = sel ? sel.split("|")[0] : null;
     var h = '<section class="sec wide"><h2>Game plan</h2><p class="lede">How to pitch every hitter in both lineups, from ' + (Number(doc.training_pitches) / 1e6).toFixed(1) + " million pitches thrown before " + esc(shortDate(doc.asof)) + ". Nothing from this game goes in." +
       (retro ? " This is a look back built the same way." : early ? " Built the day before; it is rebuilt on game day." : "") + "</p>";
     /* jump buttons to each lineup's sheet and the full grid (the plan runs long on a phone) */
-    var jumps = ["away", "home"].filter(function (sd) { return doc.sides && doc.sides[sd] && doc.teams && doc.teams[sd]; });
+    var jumps = ["away", "home"].filter(function (sd) { var se0 = doc.sides && doc.sides[sd]; return se0 && se0.hitters && se0.hitters.length && se0.pitchers && se0.pitchers.length && doc.teams && doc.teams[sd]; });
     if (jumps.length) h += '<div class="jump" role="group" aria-label="Jump to">' + jumps.map(function (sd) { return '<button type="button" data-jump="sheet-' + pk + "-" + sd + '">' + esc(nickname(doc.teams[sd].name)) + " lineup</button>"; }).join("") +
       '<button type="button" data-jump="numbers-' + pk + '">All matchups</button></div>';
     if (now) h += liveNowStrip(f, pk, doc, now, false);

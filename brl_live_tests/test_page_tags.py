@@ -166,3 +166,18 @@ def test_vertical_tags_from_the_zone_counts():
               "let old={side:'R',zones:{R:{all:cells(60,21,60,6,15,30,15,30).map(function(c){return c.slice(0,7);})}}};"
               "assert.equal(vertShift(old,lg,'hard'),null);")
     subprocess.run(['node', '-e', prefix + functions + suffix], check=True)
+
+
+def test_plan_when_early_and_look_back():
+    functions = page_functions('planWhen')
+    prefix = "const assert=require('assert');var D={date:'2026-10-11'};"
+    suffix = (
+        # a plan for tomorrow built tonight (after 8 p.m. Eastern carries tomorrow's UTC date): early
+        "let w=planWhen({date:'2026-10-12',asof:'2026-10-11',built_at:'2026-10-12T01:30:00.123456+00:00'});assert.ok(w.early&&!w.retro,JSON.stringify(w));"
+        # game day, before the night's pitches are in (as of the day before): neither
+        "w=planWhen({date:'2026-10-11',asof:'2026-10-10',built_at:'2026-10-11T05:35:06.165523+00:00'});assert.ok(!w.early&&!w.retro,JSON.stringify(w));"
+        # the next day's regrade of a game-day plan (as of its own date): neither
+        "w=planWhen({date:'2026-10-10',asof:'2026-10-10',built_at:'2026-10-11T06:35:00+00:00'});assert.ok(!w.early&&!w.retro,JSON.stringify(w));"
+        # a re-run built after the season from an earlier date: a look back
+        "w=planWhen({date:'2026-09-29',asof:'2026-09-01',built_at:'2026-10-10T19:00:00+00:00'});assert.ok(!w.early&&w.retro,JSON.stringify(w));")
+    subprocess.run(['node', '-e', prefix + functions + suffix], check=True)
