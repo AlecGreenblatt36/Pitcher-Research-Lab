@@ -86,7 +86,11 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   card gives the pitcher's mix in the count at hand. POST-03 held (postseason managers keep good starters in longer: top
   third by K-BB 0.90 of their regular length, bottom 0.77); the tiered factor is built in brl_live/live_extension.py and
   OFF (ADJUST postseason_starter_tiers None), queued for Alec's OK. TAGS-04 failed (velocity misses do not carry over;
-  no tag). TAGS-05 held (pull shares carry over 0.58 to 0.70; page pullShift; lineup notes shade the infield). The phone check failed once on 12 and 13px text in the new
+  no tag). TAGS-05 held (pull shares carry over 0.58 to 0.70; page pullShift; lineup notes shade the infield).
+  Also: the game Summary opens (pregame) with the pitching matchup side by side (pitchingMatchup: season line from MLB,
+  rates with percentile pills from the plan's cards, our projected line); the Matchups tab outlines each hitter's toughest
+  reliever; How it works describes the tags and how they were checked. Lessons: a visually-hidden span inside a sideways
+  scroll box needs the box positioned (it widened the page); percentile text color uses the ink's real luminance. The phone check failed once on 12 and 13px text in the new
   pieces (its floor is 14px); fixed at 12ac50da0. Run tools/check_brl_phone_page.py against the local build (--url
   http://127.0.0.1:8790/index.html?api=http://127.0.0.1:8790/mlb/) before pushing page changes.
 
