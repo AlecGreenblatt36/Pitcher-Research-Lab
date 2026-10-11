@@ -171,6 +171,9 @@ details.more[open] summary::before { content: "\2212"; }
 .hero-row .abbr { font-size: 28px; }
 .hero-row .team-name { color: var(--chalk); font-size: 18px; }
 .hero-row .team-name small { color: var(--chalk-dim); }
+.hero-row .team-name small.sp-sub { font-size: 13px; line-height: 1.3; white-space: pre-line; }
+.hero-row .team-name small.sp-sub:empty { display: none; }
+.sp-line[data-fmt="card"] { white-space: nowrap; }
 .hero-row .big { font-family: var(--display); font-weight: 700; font-size: 44px; text-align: right; line-height: 1; }
 .hero-row .pct { font-family: var(--display); font-weight: 600; font-size: 24px; text-align: right; color: var(--chalk-dim); }
 .hero-row.fav .pct { color: var(--chalk); }
@@ -819,6 +822,47 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var st = f.lineup_status || {};
     return st[side + "_starter"] === "assumed" ? name + " (assumed opener)" : name;
   }
+  /* The probable starters' lines the way every preview prints them, read by the browser from MLB (the people endpoint
+     answers any site; the stats probe of October 11 checked it): the regular season, and this postseason in October.
+     A traded pitcher's line is his whole season (the split with numTeams). Filled in place once it arrives. */
+  var SP_LINES = {};
+  function starterId(f, box, side) { var s = box && box.starters && box.starters[side]; return s && s.player_id ? String(s.player_id) : (f[side] && f[side].starter && f[side].starter.id ? String(f[side].starter.id) : ""); }
+  function spSpan(id, year, post, fmt) { return id ? '<span class="sp-line" data-sp="' + esc(id) + '" data-year="' + esc(year) + '" data-post="' + (post ? 1 : 0) + '" data-fmt="' + fmt + '">' + esc(spText(id, year, post, fmt)) + "</span>" : ""; }
+  function spText(id, year, post, fmt) {
+    var e = SP_LINES[id + ":" + year], r = e && e.R, q = e && e.P;
+    if (!r && !q) return "";
+    var wl = function (x) { return x.wins + "-" + x.losses + ", " + x.era + " ERA"; };
+    if (fmt === "card") return r ? " (" + r.wins + "-" + r.losses + ", " + r.era + ")" : "";
+    var out = r ? wl(r) + ", " + r.strikeOuts + " K" : "";
+    if (post && q && q.gamesPlayed) out += (out ? "\n" : "") + "Postseason: " + wl(q);
+    return out;
+  }
+  function fillSpLines() {
+    var want = {};
+    app.querySelectorAll("[data-sp]").forEach(function (el) {
+      var id = el.getAttribute("data-sp"), year = el.getAttribute("data-year");
+      if (SP_LINES[id + ":" + year]) return;
+      want[year] = want[year] || {};
+      want[year][id] = want[year][id] || el.getAttribute("data-post") === "1";
+    });
+    var paint = function () { app.querySelectorAll("[data-sp]").forEach(function (el) { el.textContent = spText(el.getAttribute("data-sp"), el.getAttribute("data-year"), el.getAttribute("data-post") === "1", el.getAttribute("data-fmt")); }); };
+    Object.keys(want).forEach(function (year) {
+      var ids = Object.keys(want[year]), post = ids.some(function (id) { return want[year][id]; });
+      ids.forEach(function (id) { SP_LINES[id + ":" + year] = { pending: true }; });
+      var q = function (gt) { return lcFetch(LIVE_API + "v1/people?personIds=" + ids.join(",") + "&hydrate=stats(group=[pitching],type=[season],season=" + year + ",gameType=" + gt + ")"); };
+      Promise.all([q("R"), post ? q("P").catch(function () { return null; }) : Promise.resolve(null)]).then(function (res) {
+        ids.forEach(function (id) { SP_LINES[id + ":" + year] = {}; });
+        [["R", res[0]], ["P", res[1]]].forEach(function (pr) {
+          ((pr[1] || {}).people || []).forEach(function (p) {
+            var sp = []; (p.stats || []).forEach(function (st) { (st.splits || []).forEach(function (x) { sp.push(x); }); });
+            var tot = sp.filter(function (x) { return x.numTeams; })[0] || sp[sp.length - 1];
+            if (tot && tot.stat && SP_LINES[p.id + ":" + year]) SP_LINES[p.id + ":" + year][pr[0]] = tot.stat;
+          });
+        });
+        paint();
+      }, function () { ids.forEach(function (id) { SP_LINES[id + ":" + year] = { failed: true }; }); });
+    });
+  }
   function recordText(f, c, side) {
     var r = c && c.records ? c.records[side] : null;
     if (!r || isPostseason(f)) return "";
@@ -1327,7 +1371,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         var lost = actual && actual[side] < actual[side === "home" ? "away" : "home"];
         html += '<div class="team-row' + (isFav ? " fav" : "") + (lost ? " lost" : "") + '"><span class="abbr ' + side + '-c">' + esc(t.abbr) + '</span><span class="team-name">' + esc(nickname(t.name)) +
           (rec ? ' <span class="rec">' + esc(rec) + "</span>" : "") +
-          (starter ? "<small>" + esc(starter) + "</small>" : "") + '</span><span class="big num">' + esc(score) + '</span><span class="pct num">' + pct(win) + "</span></div>";
+          (starter ? "<small>" + esc(starter) + (actual ? "" : spSpan(starterId(f, box, side), String(f.date || D.date).slice(0, 4), false, "card")) + "</small>" : "") + '</span><span class="big num">' + esc(score) + '</span><span class="pct num">' + pct(win) + "</span></div>";
       });
       var hp = lv && lv.home_win_probability != null ? lv.home_win_probability : homeProb(f);
       html += '<span class="card-bar" aria-hidden="true"><i style="width:' + ((1 - hp) * 100).toFixed(1) + '%;background:var(--away)"></i><i style="flex:1;background:var(--home)"></i></span>';
@@ -1345,6 +1389,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     html += seriesBoard(day) + edgesBoard(games) + "</div>";
     app.innerHTML = html;
     wireDayNav();
+    fillSpLines();
   }
   /* ---------- postseason series (brl_live/series.py) ----------
      Each remaining game at our number: the live win chance for a game in progress, the headline for one not yet
@@ -1781,8 +1826,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var score = actual ? actual[side] : lv ? lv.state[side + "_score"] : (s ? s.score[side] : "");
       var win = lv ? (side === "home" ? lv.home_win_probability : 1 - lv.home_win_probability) : winProb(f, side);
       var isFav = lv ? (side === "home") === (lv.home_win_probability >= 0.5) : side === fav;
+      var spl = actual || lv ? "" : spSpan(starterId(f, box, side), String(f.date || D.date).slice(0, 4), isPostseason(f), "hero");
       html += '<div class="hero-row' + (isFav ? " fav" : "") + '"><span class="abbr"><i class="chip" style="background:var(--' + side + ')"></i>' + esc(t.abbr) + '</span><span class="team-name">' + esc(nickname(t.name)) +
-        (starter ? "<small>" + esc(starter) + "</small>" : "") + '</span><span class="big num">' + esc(score) + '</span><span class="pct num">' + pct(win) + "</span></div>";
+        (starter ? "<small>" + esc(starter) + "</small>" + (spl ? '<small class="sp-sub">' + spl + "</small>" : "") : "") + '</span><span class="big num">' + esc(score) + '</span><span class="pct num">' + pct(win) + "</span></div>";
     });
     html += heroBar(f, lv && lv.home_win_probability != null ? lv.home_win_probability : homeProb(f)) + callLine(f, actual, lv) + seriesLine(f) + '</div><div class="hero-side">';
     if (actual && actualBox && actualBox.innings) {
@@ -1840,6 +1886,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     html += "</div></div></div>";
     app.innerHTML = html;
     if (!keep) window.scrollTo(0, 0);
+    fillSpLines();
     if (tab === "report") loadReport(f, pk);
     else if (tab === "summary" && lv && !lv._final) loadLiveCard(f, pk);
 
