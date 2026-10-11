@@ -218,6 +218,36 @@ def spray_counts(T: dict, rows) -> dict | None:
             'popups': int(((tr == 3) & ok).sum()), 'hard': [int((ls[meas] >= 95).sum()), int(meas.sum())]}
 
 
+# The running game (PROD-09): public season statistics the simulator already uses (brl_live/running.json.gz, from MLB's
+# season statistics and Savant's sprint speed leaderboard): each runner's steals, caught stealing, times on first and
+# sprint speed; each pitcher's steals and caught stealing allowed. A season's numbers are used once it is over (as of
+# October 1), else the season before, so a past plan never shows numbers from after its date.
+RUNNING_PATH = ROOT / 'brl_live' / 'running.json.gz'
+_RUNNING: dict = {}
+
+
+def running_season(asof_day: int) -> tuple[int | None, dict]:
+    if 'doc' not in _RUNNING:
+        try:
+            _RUNNING['doc'] = json.loads(gzip.decompress(RUNNING_PATH.read_bytes()))
+        except Exception:
+            _RUNNING['doc'] = {}
+    seasons = (_RUNNING['doc'] or {}).get('seasons') or {}
+    d = date.fromordinal(int(asof_day))
+    y = d.year if d >= date(d.year, 10, 1) else d.year - 1
+    while y >= 2015 and str(y) not in seasons:
+        y -= 1
+    return (y, seasons[str(y)]) if str(y) in seasons else (None, {})
+
+
+def running_league(season: dict) -> dict:
+    run = list((season.get('runners') or {}).values()); pit = list((season.get('pitchers') or {}).values())
+    att = sum(r.get('sb', 0) + r.get('cs', 0) for r in run); on1 = sum(r.get('on1', 0) for r in run)
+    sb = sum(r.get('sb', 0) for r in run)
+    return {'att_per_on1': round(att / on1, 4) if on1 else None, 'sb_pct': round(sb / att, 3) if att else None,
+            'att_per_bf': round(sum(r.get('sb', 0) + r.get('cs', 0) for r in pit) / max(sum(r.get('bf', 0) for r in pit), 1), 5) if pit else None}
+
+
 # Percentile ranks the way the public player pages show them (PROD-08): each player's rate among every player with PCT_MIN
 # or more plate appearances (hitters) or batters faced (pitchers) over the training window, as the share of those players
 # he does better than (a hitter's strikeouts and a pitcher's walks count lower as better). Counts and ranks only.
@@ -541,6 +571,9 @@ class Fitted:
         self.pct_ref_h, self.pct_ref_p = pct_reference(self.lines_h, PCT_HITTER), pct_reference(self.lines_p, PCT_PITCHER)
         self.league['ranked'] = {'min': PCT_MIN, 'hitters': int(sum(1 for L in self.lines_h.values() if L['pa'] >= PCT_MIN)),
                                  'pitchers': int(sum(1 for L in self.lines_p.values() if L['pa'] >= PCT_MIN))}
+        self.run_year, self.run_season = running_season(asof_day)
+        if self.run_year:
+            self.league['run'] = dict(running_league(self.run_season), season=self.run_year)
         # the pitcher's training pitches
         self.gp = D._groups(T['pitcher'], tr)
         self.cgrp = np.where(T['strikes'] == 2, 2, np.where(T['balls'] > T['strikes'], 1, 0))
@@ -590,6 +623,9 @@ class Fitted:
             if sp:
                 card['spray'] = sp
             card['counts'] = count_tend(T, r, self.swing, self.whiff)
+        rn = (getattr(self, 'run_season', {}) or {}).get('runners', {}).get(str(int(h)))
+        if rn:
+            card['run'] = {'season': self.run_year, **{k: rn[k] for k in ('sb', 'cs', 'on1', 'sprint') if k in rn}}
         L = getattr(self, 'lines_h', {}).get(int(h))
         if L:
             card['line'] = L
@@ -692,6 +728,9 @@ class Fitted:
                 'looks_in_ends_out': round(float(self.looks_in_ends_out[r].mean()), 3),
                 'zones': zone_split(T, r, self.swing, self.whiff, by='stand_r'),      # where he throws, by the batter's side
                 'usage': usage_by_count(T, r)}                                        # what he throws, by count and batter side
+        rp = (getattr(self, 'run_season', {}) or {}).get('pitchers', {}).get(str(int(p)))
+        if rp:
+            card['run_against'] = {'season': self.run_year, **{k: rp[k] for k in ('sb', 'cs', 'bf') if k in rp}}
         L = getattr(self, 'lines_p', {}).get(int(p))
         if L:
             card['line'] = L

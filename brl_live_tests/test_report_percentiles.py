@@ -94,3 +94,13 @@ def test_head_to_head_counts_each_pair_on_training_pitches():
     assert hh[(1, 10)] == [3, 2, 1, 4, 1, 1, 1]       # 3 PA, 2 AB, 1 hit (the homer), 4 bases, 1 HR, 1 K, 1 BB
     assert hh[(1, 11)] == [1, 1, 1, 1, 0, 0, 0] and hh[(2, 10)] == [1, 1, 0, 0, 0, 0, 0] and (2, 11) not in hh
     assert B.Fitted.head_to_head(fake, [], [10]) == {} and B.Fitted.head_to_head(fake, [3], [10]) == {}
+
+
+def test_running_season_waits_for_the_season_to_end():
+    from datetime import date
+    B = _report()
+    y, season = B.running_season(date(2026, 10, 10).toordinal())
+    assert y == 2026 and 'runners' in season
+    assert B.running_season(date(2026, 7, 1).toordinal())[0] == 2025          # a past plan never shows numbers from after its date
+    lg = B.running_league(season)
+    assert 0.05 < lg['att_per_on1'] < 0.2 and 0.6 < lg['sb_pct'] < 0.9 and lg['att_per_bf'] > 0

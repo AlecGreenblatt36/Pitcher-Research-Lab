@@ -49,3 +49,15 @@ def test_line_score_adds_errors_for_real_games_only():
               "const sim={innings:{away:{'1':{R:0,H:1}},home:{'1':{R:2,H:2}}},score:{away:0,home:2},plays:[],_played:9};"
               "h=lineScore(f,sim);assert.ok(h.indexOf('>E</th>')<0);")
     subprocess.run(['node', '-e', prefix + functions + suffix], check=True)
+
+
+def test_runners_to_hold_and_the_running_lines():
+    functions = page_functions('stealThreat', 'runLine', 'runAgainstLine')
+    prefix = "const assert=require('assert');const lg={run:{att_per_on1:0.096,sb_pct:0.77,att_per_bf:0.0232}};"
+    suffix = ("assert.ok(stealThreat({season:2026,sb:23,cs:5,on1:149,sprint:28.9},lg));"
+              "assert.ok(!stealThreat({season:2026,sb:2,cs:3,on1:124,sprint:26.7},lg));"
+              "assert.ok(!stealThreat({season:2026,sb:5,cs:1,on1:20},lg));"
+              "assert.equal(runLine({season:2026,sb:23,cs:5,on1:149,sprint:28.9},lg),'On the bases in 2026: 23 steals in 28 tries, sprint speed 28.9 ft/s (average about 27.4). Hold him on first.');"
+              "assert.equal(runLine({season:2026,sb:0,cs:0,on1:60},lg),'On the bases in 2026: no steal tries in 60 times on first.');"
+              "assert.equal(runAgainstLine({season:2026,sb:12,cs:2,bf:600},lg,'Misiorowski'),'The running game against Misiorowski in 2026: 12 steals in 14 tries over 600 batters (2.3 tries per 100 batters; most pitchers 2.3, 77% safe).');")
+    subprocess.run(['node', '-e', prefix + functions + suffix], check=True)

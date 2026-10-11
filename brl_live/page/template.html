@@ -3347,7 +3347,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var players = doc.players || {}, nine = po.hitters.filter(function (hid, i) { return po.spots ? po.spots[String(hid)] : i < 9; }).slice(0, 9);
     var groups = [["Takes the first pitch", "Get ahead with a strike", []], ["Swings at the first pitch", "Start off the plate", []], ["Chases a lot", "Expand the zone", []],
                   ["Swings and misses", "Go for the miss", []], ["Expands with two strikes", "Finish off the plate", []], ["Holds his zone with two strikes", "Finish on the edges", []],
-                  ["behind", "Don't give in when behind", []]];
+                  ["behind", "Don't give in when behind", []], ["run", "Hold on first", []]];
     var short = shortNames(nine.map(function (hid) { return { player_id: hid, name: (players[String(hid)] || {}).name || String(hid) }; }));
     nine.forEach(function (hid) {
       var p = players[String(hid)], c = p && p.hitter;
@@ -3357,10 +3357,33 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var l = doc.league && doc.league.counts ? doc.league.counts[c.side === "L" ? "L" : "R"] : null, r = function (row) { return row && row[0] >= 80 ? row[1] / row[0] : null; };
       var bs = c.counts ? r(c.counts.behind) : null, lbs = l ? r(l.behind) : null;
       if (bs != null && lbs != null && bs >= lbs + 0.10) groups[6][2].push(nm);
+      if (stealThreat(c.run, doc.league)) groups[7][2].push(nm);
     });
     var rows = groups.filter(function (g) { return g[2].length; });
     if (!rows.length) return "";
     return '<ul class="lineup-keys">' + rows.map(function (g) { return "<li><b>" + esc(g[1]) + ":</b> " + esc(listNames(g[2])) + "</li>"; }).join("") + "</ul>";
+  }
+  /* PROD-09: a runner to hold: 40 or more times on first, 8 or more steal tries, at 1.75 times the league's rate per time on first */
+  function stealThreat(rn, lg) {
+    var L = lg && lg.run;
+    if (!rn || !L || !L.att_per_on1 || !rn.on1) return false;
+    var att = (rn.sb || 0) + (rn.cs || 0);
+    return rn.on1 >= 40 && att >= 8 && att / rn.on1 >= 1.75 * L.att_per_on1;
+  }
+  function runLine(rn, lg) {
+    if (!rn) return "";
+    var att = (rn.sb || 0) + (rn.cs || 0), bits = [];
+    if (att) bits.push(rn.sb + (rn.sb === 1 ? " steal" : " steals") + " in " + att + (att === 1 ? " try" : " tries"));
+    else if (rn.on1) bits.push("no steal tries in " + rn.on1 + " times on first");
+    if (rn.sprint) bits.push("sprint speed " + rn.sprint.toFixed(1) + " ft/s (average about 27.4)");
+    return bits.length ? "On the bases in " + rn.season + ": " + bits.join(", ") + "." + (stealThreat(rn, lg) ? " Hold him on first." : "") : "";
+  }
+  function runAgainstLine(ra, lg, name) {
+    if (!ra || !ra.bf) return "";
+    var att = (ra.sb || 0) + (ra.cs || 0), L = lg && lg.run;
+    var per = 100 * att / ra.bf, lper = L && L.att_per_bf ? 100 * L.att_per_bf : null;
+    return "The running game against " + name + " in " + ra.season + ": " + (att ? ra.sb + " steals in " + att + (att === 1 ? " try" : " tries") : "no steal tries") + " over " + Number(ra.bf).toLocaleString() + " batters" +
+      (lper != null ? " (" + per.toFixed(1) + " tries per 100 batters; most pitchers " + lper.toFixed(1) + (L.sb_pct ? ", " + Math.round(100 * L.sb_pct) + "% safe" : "") + ")" : "") + ".";
   }
   function hzWide() { try { return window.matchMedia("(min-width: 1000px)").matches; } catch (e) { return false; } }
   function hzSheetHand(doc, starter) {
@@ -3389,6 +3412,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (keys) h += '<p class="note hz-cap">Working through this lineup</p>' + keys;
     var spc = players[String(starter.id)] && players[String(starter.id)].pitcher;
     if (spc && spc.mix) h += '<details class="more" data-keep="ars-' + side + '"' + (state.rpOpen["ars-" + side] ? " open" : "") + "><summary>" + esc(lastName(nm(starter.id))) + "'s pitches</summary>" + pctPanel(spc, doc.league, doc.asof, "h4") + (spc.arsenal && spc.arsenal.length ? arsenalTypes(spc) : arsenalTable(spc.mix)) +
+      (runAgainstLine(spc.run_against, doc.league, lastName(nm(starter.id))) ? '<p class="note">' + esc(runAgainstLine(spc.run_against, doc.league, lastName(nm(starter.id)))) + "</p>" : "") +
       (spc.usage ? '<p class="note hz-cap">What he throws by count</p>' + (usageLine(spc) ? '<p class="pd-line">' + esc(usageLine(spc)) + "</p>" : "") + usageTable(spc, "R") + usageTable(spc, "L") : "") + "</details>";
     var pen = bullpenCard(doc, se, nm);
     if (pen) h += '<details class="more" data-keep="pen-' + side + '"' + (state.rpOpen["pen-" + side] ? " open" : "") + "><summary>" + esc(nickname(doc.teams[other].name)) + " bullpen: rest and pitches</summary>" + pen + "</details>";
@@ -3446,6 +3470,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     else if (hc && tags.length) h += '<div class="pl-tags pd-tags">' + tags.map(function (x) { return "<span>" + esc(x) + "</span>"; }).join("") + "</div>";
     var hh = h2hLine(pr2.h2h, lastName(nm(ids[1])), doc.asof);
     if (hh) h += '<p class="note">' + esc(hh) + "</p>";
+    var rl = hc ? runLine(hc.run, doc.league) : "";
+    if (rl) h += '<p class="note">' + esc(rl) + "</p>";
     if (pc && pc.mix) h += '<p class="note">' + esc(lastName(nm(ids[1]))) + " throws " + ["fastball", "breaking", "offspeed"].filter(function (f) { return pc.mix[f] && pc.mix[f].share >= 0.005; }).map(function (f) { return PITCH_NAME[f].toLowerCase() + " " + pct(pc.mix[f].share) + (pc.mix[f].speed != null ? " (" + Math.round(pc.mix[f].speed) + " mph)" : ""); }).join(", ") + ".</p>";
     if (pr2.evidence && pr2.evidence.level === "thin") h += '<p class="note">Small sample: ' + Number(pr2.evidence.hitter_pitches).toLocaleString() + " pitches seen by the hitter, " + Number(pr2.evidence.pitcher_pitches_to_side).toLocaleString() + " thrown by the pitcher to " + (hc && hc.side === "L" ? "lefties" : "righties") + ". Treat it as a lean.</p>";
     var hand = pc && pc.throws ? pc.throws : "all", useHand = hc && hzSplit(hc.zones) ? hand : "all";
