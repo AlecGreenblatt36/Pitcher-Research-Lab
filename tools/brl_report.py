@@ -1296,7 +1296,7 @@ def zone_estimates(tr: dict, num: str, den: str, m: float, k_all: float = 30.0) 
     """The candidates for each training hitter's zone rates: raw, league (his side), scaled (league shape at his own level)
     and shrunk (his counts plus m pseudo-events at the scaled rate)."""
     N, Dn = tr[num], tr[den]
-    lg_z = np.zeros((2, 13)); lg_all = np.zeros(2)
+    lg_z = np.zeros((2, N.shape[1])); lg_all = np.zeros(2)          # 13 zones, or the two pitcher hands (SPLITS-01)
     for sd in (0, 1):
         sel = tr['side'] == sd
         lg_z[sd] = N[sel].sum(0) / np.maximum(Dn[sel].sum(0), 1e-9); lg_all[sd] = N[sel].sum() / max(Dn[sel].sum(), 1e-9)
@@ -1372,6 +1372,114 @@ def zone_shrink_study(T: dict, stage, spec: dict) -> dict:
             res[f'{a}_minus_{b}'] = [round(float(d.sum() / max(tot, 1)), 6), round(float(np.percentile(boot, 2.5)), 6), round(float(np.percentile(boot, 97.5)), 6)]
         out['metrics'][name] = res
         stage(f'zone study: {name}')
+    return out
+
+
+# SPLITS-01 (LEDGER): how much of a hitter's split by pitcher hand carries over. The metrics the splits table shows:
+# AVG and SLG on at-bats ended on the pitch, chase on pitches out of MLB's zone (11-14), misses per swing.
+SPLIT_M_GRID = (0.0, 25.0, 50.0, 100.0, 200.0, 400.0, 800.0, 1600.0, 3200.0, 6400.0, 1e6)
+SPLIT_METRICS = (('avg', 'h', 'ab'), ('slg', 'tb', 'ab'), ('chase', 'osw', 'on'), ('miss', 'wh', 'sw'))
+
+
+def split_tables(T: dict, mask) -> dict:
+    """Per (batter, pitcher hand) counts on the masked pitches, column 0 against right-handers and 1 against left-handers:
+    at-bats ended on the pitch, hits, total bases, pitches out of MLB's zone (11-14) and swings at them, swings and misses;
+    each batter's side (the majority of his pitches) and whether he batted from different sides against the two hands
+    (30 or more pitches against each), so switch hitters can be left out."""
+    rows = np.flatnonzero(mask)
+    bats, bi = np.unique(T['batter'][rows], return_inverse=True)
+    nb = len(bats)
+    key = bi * 2 + (T['throw_r'][rows] == 0).astype(np.int64)
+    call = T['call'][rows]; sw = (call == 1) | (call == 2); wh = call == 2
+    last = T['last_in_pa'][rows] == 1; o7 = T['out7'][rows]
+    ab = last & np.isin(o7, (0, 1, 3, 4, 5, 6)); hit = last & np.isin(o7, (3, 4, 5))
+    tb = np.where(last & (o7 == 3), 1.0, 0.0) + np.where(last & (o7 == 4), 2.0, 0.0) + np.where(last & (o7 == 5), 4.0, 0.0)
+    ooz = T['zone'][rows] >= 11
+    cnt = lambda w: np.bincount(key, weights=np.asarray(w, dtype=np.float64), minlength=nb * 2).reshape(nb, 2)
+    n = cnt(np.ones(len(rows), bool)); rs = cnt(T['stand_r'][rows] == 1)
+    side_h = rs / np.maximum(n, 1) >= 0.5
+    switch = (n[:, 0] >= 30) & (n[:, 1] >= 30) & (side_h[:, 0] != side_h[:, 1])
+    return {'bats': bats, 'side': (rs.sum(1) / np.maximum(n.sum(1), 1) >= 0.5).astype(np.int64), 'switch': switch,
+            'pa': np.bincount(bi, weights=last.astype(np.float64), minlength=nb), 'n': n,
+            'ab': cnt(ab), 'h': cnt(hit), 'tb': cnt(tb), 'on': cnt(ooz), 'osw': cnt(sw & ooz), 'sw': cnt(sw), 'wh': cnt(wh)}
+
+
+def split_shrink_study(T: dict, stage, spec: dict) -> dict:
+    """SPLITS-01 (LEDGER): a hitter's rates against right- and left-handed pitchers a season later, predicted four ways:
+    raw (his rates by hand), league (his side's rates by hand), scaled (his overall level times his side's league split)
+    and shrunk (his counts by hand plus m pseudo-events at the scaled rate, m chosen on fit_train -> fit_test). Scored once
+    on train -> test (log loss, squared error for SLG), with intervals from resampling hitters; plus how a hitter's own
+    split beyond his side's (left minus right) carries over: correlation and slope among hitters with min_cell at-bats (or
+    pitches for chase and misses) against each hand in both windows. Switch hitters are left out. Aggregates only."""
+    reg = (T['post'] == 0) if 'post' in T else np.ones(len(T['season']), bool)
+    fit = spec.get('fit', {'train': [2023, 2024], 'test': 2025})
+    score = spec.get('score', {'train': [2024, 2025], 'test': 2026, 'test_end': '2026-08-01'})
+    min_pa = float(spec.get('min_pa', 300)); min_cell = float(spec.get('min_cell', 100)); boot = int(spec.get('boot', 2000))
+    rng = np.random.default_rng(int(spec.get('seed', 20261011)))
+
+    def joined(sp):
+        tr_m = reg & np.isin(T['season'], sp['train']); te_m = reg & (T['season'] == int(sp['test']))
+        if sp.get('test_end'):
+            te_m &= T['day'] < date.fromisoformat(sp['test_end']).toordinal()
+        tr, te = split_tables(T, tr_m), split_tables(T, te_m)
+        pos = {int(b): i for i, b in enumerate(te['bats'])}
+        keep = np.array([pa >= min_pa and not sw_ and int(b) in pos for b, pa, sw_ in zip(tr['bats'], tr['pa'], tr['switch'])], bool)
+        ti = np.array([pos[int(b)] for b in tr['bats'][keep]], np.int64)
+        trk = {k: (v[keep] if hasattr(v, '__len__') and len(v) == len(keep) else v) for k, v in tr.items()}
+        tek = {k: v[ti] for k, v in te.items() if k in ('ab', 'h', 'tb', 'on', 'osw', 'sw', 'wh', 'side')}
+        return trk, tek
+
+    out = {'fit': fit, 'score': score, 'min_pa': min_pa, 'min_cell': min_cell, 'grid': list(SPLIT_M_GRID), 'metrics': {}}
+    tr1, te1 = joined(fit); stage('split study: fit tables')
+    tr2, te2 = joined(score); stage('split study: score tables')
+    out['hitters'] = {'fit': int(len(tr1['bats'])), 'score': int(len(tr2['bats'])),
+                      'score_lefties': int((tr2['side'] == 0).sum()), 'side_changed_in_test': int((tr2['side'] != te2['side']).sum())}
+    for name, num, den in SPLIT_METRICS:
+        binary = num != 'tb'
+        curve = []
+        for m in SPLIT_M_GRID:
+            est = zone_estimates(tr1, num, den, m)
+            l, e = zone_score(est['shrunk'], te1[num], te1[den], binary)
+            curve.append(float(l.sum() / max(e.sum(), 1)))
+        m_best = SPLIT_M_GRID[int(np.argmin(curve))]
+        est = zone_estimates(tr2, num, den, m_best)
+        per = {cand: zone_score(est[cand], te2[num], te2[den], binary) for cand in ('raw', 'league', 'scaled', 'shrunk')}
+        events = per['raw'][1]; tot = events.sum()
+        res = {'m': m_best, 'fit_curve': [round(c, 6) for c in curve], 'events': int(tot),
+               'loss': {c: round(float(per[c][0].sum() / max(tot, 1)), 6) for c in per}}
+        nh = len(events); draws = rng.integers(0, nh, (boot, nh))
+        for a, b in (('shrunk', 'raw'), ('shrunk', 'scaled'), ('shrunk', 'league'), ('scaled', 'raw')):
+            d = per[a][0] - per[b][0]
+            bs = d[draws].sum(1) / np.maximum(events[draws].sum(1), 1)
+            res[f'{a}_minus_{b}'] = [round(float(d.sum() / max(tot, 1)), 6), round(float(np.percentile(bs, 2.5)), 6), round(float(np.percentile(bs, 97.5)), 6)]
+        # the hitter's own split beyond his side's league split (against lefties minus against righties), in both windows
+        def league_split(w):
+            out_ = np.zeros(2)
+            for sd in (0, 1):
+                sel = tr2['side'] == sd
+                r_ = w[num][sel].sum(0) / np.maximum(w[den][sel].sum(0), 1e-9)
+                out_[sd] = r_[1] - r_[0]
+            return out_
+
+        def net(w):
+            rate = w[num] / np.maximum(w[den], 1e-9)
+            return rate[:, 1] - rate[:, 0] - league_split(w)[tr2['side']]
+        x, y = net(tr2), net(te2)
+        cell_min = min_cell if den == 'ab' else min_cell * 3          # at-bats, or pitches and swings
+        ok = (tr2[den] >= cell_min).all(1) & (te2[den] >= cell_min * 0.5).all(1)
+        if ok.sum() >= 10:
+            idx = np.flatnonzero(ok); bsr = []
+            for _ in range(min(boot, 1000)):
+                j = idx[rng.integers(0, len(idx), len(idx))]
+                bsr.append(np.corrcoef(x[j], y[j])[0, 1])
+            ls = league_split(tr2)
+            res['carry'] = {'hitters': int(ok.sum()), 'r': round(float(np.corrcoef(x[ok], y[ok])[0, 1]), 3),
+                            'r_ci': [round(float(np.nanpercentile(bsr, 2.5)), 3), round(float(np.nanpercentile(bsr, 97.5)), 3)],
+                            'slope': round(float(np.polyfit(x[ok], y[ok], 1)[0]), 3), 'sd_train': round(float(np.std(x[ok])), 4),
+                            'sd_test': round(float(np.std(y[ok])), 4), 'league_split_lefty_batters': round(float(ls[0]), 4),
+                            'league_split_righty_batters': round(float(ls[1]), 4)}
+        out['metrics'][name] = res
+        stage(f'split study: {name}')
     return out
 
 
@@ -2464,6 +2572,9 @@ def main():
             dates = []
         if params.get('pitcher_tag_study'):
             receipt['pitcher_tag_study'] = pitcher_tag_study(T, stage, params['pitcher_tag_study'])
+            dates = []
+        if params.get('split_study'):
+            receipt['split_study'] = split_shrink_study(T, stage, params['split_study'])
             dates = []
         if params.get('zone_study'):
             zs = params['zone_study']

@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 288,
- "rows": 291,
+ "experiments": 289,
+ "rows": 292,
  "records": {
   "ACC-01": [
    {
@@ -4789,6 +4789,22 @@
     ],
     "frozen_commits": [],
     "status": "(1) held, (2) failed; too small to show: no matchup read"
+   }
+  ],
+  "SPLITS-01": [
+   {
+    "id": "SPLITS-01",
+    "columns": {
+     "ID": "SPLITS-01",
+     "Attempt": "How much of a hitter's split by pitcher hand carries over. The splits table and the hot-zone line against a hand show his raw AVG, SLG, chase and miss rates against right- and left-handed pitchers over two seasons; the plans read a hitter against the starter's hand. Candidates for his rates against each hand a season later, from training seasons only: raw (his rates by hand); league (his side's rates by hand); scaled (his overall level, lightly shrunk, times his side's league rates by hand); shrunk (his counts by hand plus m pseudo-events at the scaled rate, m fitted). Metrics: AVG and SLG per at-bat ended on the pitch, chase per pitch out of MLB's zone (11-14), misses per swing (log loss per event; squared error weighted by at-bats for SLG). Regular-season pitches, hitters with 300 or more plate appearances in training, switch hitters left out (a different side against the two hands, 30 or more pitches each); m chosen on 2023-2024 to 2025 from a grid of 0 to 6,400 and 1,000,000 (the scaled rate), then scored once on 2024-2025 to 2026 before August 1; paired bootstrap over hitters (2,000 draws). Also the carry-over of a hitter's own split beyond his side's (against lefties minus against righties, net of his side's league split): correlation and slope among hitters with 100 or more at-bats (300 pitches out of the zone or swings for chase and misses) against each hand in training and half that in the test. tools/brl_report.py split_shrink_study, report lane, aggregates only. Synthetic check (brl_live_tests/test_report_split_study.py): own splits of SD 0.12 log-odds planted, m 800, shrunk beats raw and scaled, carry-over 0.24 to 0.34; none planted, m 800 or more and carry-over near zero.",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions on 2026: (1) shrunk beats raw on all four metrics with the interval excluding zero; (2) on AVG and SLG the fitted m is 400 at-bats or more and the carry-over correlation is under 0.25 (a hitter's own AVG or SLG split beyond his side's is mostly noise); (3) on chase and misses shrunk beats scaled with the interval excluding zero (his own swing-decision split by hand is his). Decision rule: if (1) holds, the splits table and the hot-zone line against a hand show Expected numbers (shrunk at the fitted m) when the page's Expected view is on, and the standard view stays the default; if (2) holds, the splits note says how little of an AVG or SLG split carries over, quoting the correlation; where shrunk does not beat scaled the Expected numbers use scaled. If (1) fails, nothing changes.",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "BOX-01": [
