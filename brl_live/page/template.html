@@ -678,7 +678,8 @@ small { font-size: 14px; }
 .range-list b { display: block; }
 .range-list .r { font-family: var(--display); font-size: 19px; font-weight: 600; }
 .range-list small { color: var(--muted); font-size: 14px; }
-.ladder-wrap { margin-top: 8px; max-width: 360px; }
+.ladders { display: flex; flex-wrap: wrap; gap: 0 16px; }
+.ladder-wrap { margin-top: 8px; max-width: 360px; flex: 1 1 280px; min-width: 0; }
 .box.props th, .box.props td { padding-left: 4px; padding-right: 4px; }
 .box.props td { font-size: 16px; }
 .box.props th:first-child, .box.props td:first-child { padding-left: 10px; }
@@ -699,7 +700,7 @@ small { font-size: 14px; }
 .bvp-t th[scope=row] { text-align: left; font-family: var(--body); font-weight: 400; white-space: nowrap; }
 .bvp-t td.bvp-none { text-align: left; color: var(--muted); font-family: var(--body); font-size: 15px; }
 .bvp-t tr.bvp-tot th, .bvp-t tr.bvp-tot td { font-weight: 700; border-top: 2px solid var(--ink); }
-.ladder td small { display: block; font-family: var(--body); font-size: 14px; color: var(--muted); line-height: 1.2; }
+.ladder td small { display: inline-block; min-width: 42px; margin-left: 6px; text-align: right; font-family: var(--body); font-size: 14px; color: var(--muted); }
 .ladder th[scope=row] { text-align: left; padding-left: 12px; font-family: var(--display); font-size: 18px; color: var(--ink); font-weight: 600; border-bottom: 1px solid var(--rule-soft); }
 
 /* How close */
@@ -1065,18 +1066,28 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     });
     return t ? 1 - below / t : 0;
   }
-  /* A starter's strikeouts the way the prop market lists them: the chance of more than each half line near his middle, with
-     the fair price, at the lines PLAYER-04 checked (2.5 to 8.5: on the live engine within 2.1 points of how often starters
-     got there). */
-  function kLadder(c) {
+  /* A starter's prop the way the market lists it: the chance of more than each half line near his middle (his median less 1.5
+     to plus 1.5, within the lines its check covered, lo to hi), with the fair price; "" when no line is in range. */
+  function propLadder(c, label, lo, hi) {
     var med = quant(c, 0.5), lines = [];
-    for (var L = Math.max(2.5, med - 1.5); L <= Math.min(8.5, med + 1.5); L += 1) lines.push(L);
+    for (var L = Math.max(lo, med - 1.5); L <= Math.min(hi, med + 1.5); L += 1) lines.push(L);
     if (!lines.length) return "";
-    return '<table class="box ladder"><thead><tr><th scope="col">Strikeouts</th><th scope="col">Over</th><th scope="col">Under</th></tr></thead><tbody>' +
+    return '<table class="box ladder"><thead><tr><th scope="col">' + label + '</th><th scope="col">Over</th><th scope="col">Under</th></tr></thead><tbody>' +
       lines.map(function (L) {
         var o = probAtLeast(c, L + 0.5);
         return '<tr><th scope="row">' + L.toFixed(1) + "</th><td>" + pct(o) + "<small>" + amOdds(o) + "</small></td><td>" + pct(1 - o) + "<small>" + amOdds(1 - o) + "</small></td></tr>";
       }).join("") + "</tbody></table>";
+  }
+  /* Strikeouts at the lines PLAYER-04 checked (2.5 to 8.5: on the live engine within 2.1 points of how often starters got
+     there); outs recorded (three an inning) at the lines PLAYER-07 checks (9.5 to 21.5), shown once OUTS_LADDER is on. */
+  function kLadder(c) { return propLadder(c, "Strikeouts", 2.5, 8.5); }
+  function outsLadder(c) { return propLadder(c, "Outs", 9.5, 21.5); }
+  var OUTS_LADDER = false;
+  /* The starter's ladders on the Odds tab: strikeouts, and outs once OUTS_LADDER is on; side by side where there is room. */
+  function ladders(d) {
+    var k = d.K ? kLadder(d.K) : "", o = OUTS_LADDER && d.outs ? outsLadder(d.outs) : "";
+    if (!k && !o) return "";
+    return '<div class="ladders">' + (k ? '<div class="tbl-wrap ladder-wrap">' + k + "</div>" : "") + (o ? '<div class="tbl-wrap ladder-wrap">' + o + "</div>" : "") + "</div>";
   }
 
   /* ---------- data shaping ---------- */
@@ -4671,7 +4682,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         (d.K ? '<span class="r num">' + quant(d.K, .25) + " to " + quant(d.K, .75) + " strikeouts</span> <small>most likely " + mode(d.K) + "</small><br>" : "") +
         (d.outs ? '<span class="r num">' + ip(quant(d.outs, .25)) + " to " + ip(quant(d.outs, .75)) + " innings</span><br>" : "") +
         (d.PC ? '<span class="r num">' + quant(d.PC, .25) + " to " + quant(d.PC, .75) + " pitches</span> <small>estimated</small>" : "") +
-        (d.K && kLadder(d.K) ? '<div class="tbl-wrap ladder-wrap">' + kLadder(d.K) + "</div>" : "") + "</li>";
+        ladders(d) + "</li>";
     });
     h += '</ul><p class="note">Ranges cover the middle half of simulated games. Strikeouts: his chance of more than each line from 2.5 to 8.5, with the fair price (no margin). Over two seasons re-run, these chances came within about 2 points of how often starters actually got there.</p></section>';
 

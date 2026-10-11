@@ -35,7 +35,7 @@ def _line(script, name):
 def _run(js):
     s = _script()
     consts = re.search(r'\n  var SLOT_SHARE = .*?;\n', s, re.S).group(0)
-    fns = ''.join(_line(s, n) for n in ('pct', 'total', 'probAtLeast')) + ''.join(_fn(s, n) for n in ('quant', 'ownAtLeast', 'amOdds', 'kLadder'))
+    fns = ''.join(_line(s, n) for n in ('pct', 'total', 'probAtLeast', 'kLadder', 'outsLadder')) + ''.join(_fn(s, n) for n in ('quant', 'ownAtLeast', 'amOdds', 'propLadder'))
     out = subprocess.run(['node', '-e', consts + fns + js], check=True, capture_output=True, text=True)
     return out.stdout
 
@@ -93,3 +93,15 @@ def test_bullpen_table_lists_likely_arms_and_folds_the_rest():
           "assert.ok(h.indexOf('Less likely: Snell\\u00a06%, Ohtani\\u00a05%.')>0,h);"
           "const low=penTable(pen.slice(2));assert.equal((low.match(/<tr>/g)||[]).length,3);assert.ok(low.indexOf('Less likely')<0,low);")
     subprocess.run(['node', '-e', m + fns + js], check=True)
+
+
+def test_outs_ladder_uses_the_same_rule_at_the_outs_lines():
+    """PLAYER-07's ladder: outs recorded around the median, within 9.5 to 21.5; the header names the prop."""
+    counts = [[k, c] for k, c in zip(range(10, 24), [5, 10, 20, 40, 70, 110, 150, 170, 150, 110, 70, 40, 20, 10])]
+    html = _run('process.stdout.write(outsLadder({counts:' + json.dumps(counts) + '}));')
+    assert '<th scope="col">Outs</th>' in html
+    assert re.findall(r'<th scope="row">([\d.]+)</th>', html) == ['15.5', '16.5', '17.5', '18.5']      # the median is 17
+    n = sum(c for _, c in counts)
+    over = re.findall(r'<th scope="row">16.5</th><td>(\d+)%', html)[0]
+    assert int(over) == round(100 * sum(c for k, c in counts if k >= 17) / n)
+    assert _run('process.stdout.write(outsLadder({counts:[[1,500],[2,300],[3,200]]}));') == ''          # an opener: none
