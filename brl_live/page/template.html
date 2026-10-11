@@ -171,7 +171,7 @@ details.more[open] summary::before { content: "\2212"; }
 .hero-row .abbr { font-size: 28px; }
 .hero-row .team-name { color: var(--chalk); font-size: 18px; }
 .hero-row .team-name small { color: var(--chalk-dim); }
-.hero-row .team-name small.sp-sub { font-size: 13px; line-height: 1.3; white-space: pre-line; }
+.hero-row .team-name small.sp-sub { font-size: 14px; line-height: 1.3; white-space: pre-line; }
 .hero-row .team-name small.sp-sub:empty { display: none; }
 .sp-line[data-fmt="card"] { white-space: nowrap; }
 .hero-row .big { font-family: var(--display); font-weight: 700; font-size: 44px; text-align: right; line-height: 1; }
@@ -495,12 +495,12 @@ details .pr-h { font-size: 18px; }
 .pr-list { display: grid; gap: 7px; margin: 8px 0 6px; }
 .pr-row { display: grid; grid-template-columns: minmax(0, 128px) minmax(0, 1fr) 54px; align-items: center; column-gap: 10px; }
 .pr-l { font-size: 14px; font-weight: 700; color: var(--muted); line-height: 1.2; }
-.pr-track { position: relative; height: 26px; }
-.pr-track::before { content: ""; position: absolute; left: 0; right: 0; top: 12px; height: 2px; background: var(--rule); border-radius: 1px; }
-.pr-fill { position: absolute; left: 0; top: 10px; height: 6px; border-radius: 3px; }
-.pr-dot { position: absolute; top: 0; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; box-shadow: 0 0 0 2px var(--surface); }
+.pr-track { position: relative; height: 30px; }
+.pr-track::before { content: ""; position: absolute; left: 0; right: 0; top: 14px; height: 2px; background: var(--rule); border-radius: 1px; }
+.pr-fill { position: absolute; left: 0; top: 12px; height: 6px; border-radius: 3px; }
+.pr-dot { position: absolute; top: 0; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; letter-spacing: -0.03em; font-weight: 700; font-variant-numeric: tabular-nums; box-shadow: 0 0 0 2px var(--surface); }
 .pr-v { text-align: right; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--ink); }
-.pr-scale { display: grid; grid-template-columns: minmax(0, 128px) minmax(0, 1fr) 54px; column-gap: 10px; font-size: 12px; color: var(--muted); }
+.pr-scale { display: grid; grid-template-columns: minmax(0, 128px) minmax(0, 1fr) 54px; column-gap: 10px; font-size: 14px; color: var(--muted); }
 .pr-scale span:nth-child(2) { display: flex; justify-content: space-between; }
 .hz-line { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 6px 0 10px; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); overflow: hidden; max-width: 460px; }
 .hz-line div { padding: 6px 8px; border-left: 1px solid var(--rule-soft); min-width: 0; }
@@ -3841,7 +3841,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var p = x.pct[r[0]], v = lineRate(x.line, r[0]);
       if (p == null || v == null) return;
       var c = pctColor(p), shown = r[2] === "three" ? (v >= 1 ? v.toFixed(3) : v.toFixed(3).slice(1)) : r[2] === "mph" ? v.toFixed(1) : (100 * v).toFixed(1) + "%";
-      h += '<div class="pr-row"><span class="pr-l">' + esc(r[1]) + '</span><span class="pr-track" role="img" aria-label="' + esc(r[1] + ": " + shown + ", " + ordinal(p) + " percentile") + '"><i class="pr-fill" style="width:calc(13px + (100% - 26px) * ' + (p / 100) + ");background:" + c.bg + '"></i><b class="pr-dot" style="left:calc((100% - 26px) * ' + (p / 100) + ");background:" + c.bg + ";color:" + c.fg + '" aria-hidden="true">' + p + '</b></span><span class="pr-v">' + esc(shown) + "</span></div>";
+      h += '<div class="pr-row"><span class="pr-l">' + esc(r[1]) + '</span><span class="pr-track" role="img" aria-label="' + esc(r[1] + ": " + shown + ", " + ordinal(p) + " percentile") + '"><i class="pr-fill" style="width:calc(15px + (100% - 30px) * ' + (p / 100) + ");background:" + c.bg + '"></i><b class="pr-dot" style="left:calc((100% - 30px) * ' + (p / 100) + ");background:" + c.bg + ";color:" + c.fg + '" aria-hidden="true">' + p + '</b></span><span class="pr-v">' + esc(shown) + "</span></div>";
     });
     if (!h) return "";
     var pool = rk ? (kind === "pitcher" ? rk.pitchers : rk.hitters) : null, min = rk && rk.min ? rk.min : 300;
