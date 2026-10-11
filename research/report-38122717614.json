@@ -1,0 +1,433 @@
+{
+ "schema": "brl.report-receipt.v1",
+ "run_id": "38122717614",
+ "params": {
+  "pitcher_tag_study": {
+   "splits": [
+    {
+     "train": [
+      2024,
+      2025
+     ],
+     "test": 2026,
+     "test_end": "2026-08-01"
+    },
+    {
+     "train": [
+      2023,
+      2024
+     ],
+     "test": 2025
+    }
+   ],
+   "min_pitches": 500,
+   "min_test": 300,
+   "boot": 1000,
+   "side": true
+  },
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "dates": [
+   "2026-04-01"
+  ],
+  "publish": false
+ },
+ "started_at": "2026-10-11T07:50:48.799286+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 10.2,
+   "peak_rss_mb": 1097
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 20.3,
+   "peak_rss_mb": 1260
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 30.4,
+   "peak_rss_mb": 1420
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 40.4,
+   "peak_rss_mb": 1589
+  },
+  {
+   "stage": "pitcher tag study [2024, 2025] -> 2026",
+   "at_seconds": 40.9,
+   "peak_rss_mb": 1589
+  },
+  {
+   "stage": "pitcher tag study [2023, 2024] -> 2025",
+   "at_seconds": 41.3,
+   "peak_rss_mb": 1589
+  }
+ ],
+ "reports": {},
+ "environment": {
+  "python": "3.12.15",
+  "commit": "f1adc5830b8fa0f184ca4cac1cc47440f715d2a9",
+  "numpy": "2.5.4",
+  "scipy": "1.18.1",
+  "scikit-learn": "1.9.1",
+  "pandas": "3.0.6",
+  "cryptography": "46.0.4"
+ },
+ "pitcher_tag_study": {
+  "splits": [
+   {
+    "train": [
+     2024,
+     2025
+    ],
+    "test": 2026,
+    "pitchers": 377,
+    "tags": {
+     "Throws first-pitch strikes": {
+      "rate": "fps",
+      "threshold": 0.05,
+      "pitchers": 35,
+      "train_diff": 0.06741896366821819,
+      "test_diff": 0.03914718847497519,
+      "test_ci": [
+       0.026868247658578308,
+       0.04949707709881102
+      ],
+      "held": true
+     },
+     "Falls behind first": {
+      "rate": "fps",
+      "threshold": -0.05,
+      "pitchers": 34,
+      "train_diff": -0.06932829289730147,
+      "test_diff": -0.020038629369275314,
+      "test_ci": [
+       -0.034762248826882974,
+       -0.005917885608357019
+      ],
+      "held": false
+     },
+     "Lives in the zone": {
+      "rate": "zone",
+      "threshold": 0.04,
+      "pitchers": 44,
+      "train_diff": 0.05586281814128525,
+      "test_diff": 0.029943635916044486,
+      "test_ci": [
+       0.022264712530214545,
+       0.03677962110264579
+      ],
+      "held": true
+     },
+     "Works off the plate": {
+      "rate": "zone",
+      "threshold": -0.04,
+      "pitchers": 21,
+      "train_diff": -0.05366883892714338,
+      "test_diff": -0.035047743703612036,
+      "test_ci": [
+       -0.04306661465116553,
+       -0.026160924558837135
+      ],
+      "held": true
+     },
+     "Gets chases": {
+      "rate": "chase",
+      "threshold": 0.04,
+      "pitchers": 38,
+      "train_diff": 0.05835669483397558,
+      "test_diff": 0.042264487191196375,
+      "test_ci": [
+       0.029635958394056888,
+       0.05350666571359122
+      ],
+      "held": true
+     },
+     "Few chases": {
+      "rate": "chase",
+      "threshold": -0.04,
+      "pitchers": 24,
+      "train_diff": -0.05519646078433819,
+      "test_diff": -0.026627519507795034,
+      "test_ci": [
+       -0.03994544050391215,
+       -0.014451770089134324
+      ],
+      "held": true
+     },
+     "Fastballs when behind": {
+      "rate": "fb_behind",
+      "threshold": 0.12,
+      "pitchers": 73,
+      "train_diff": 0.1935096032205974,
+      "test_diff": 0.12864416639584922,
+      "test_ci": [
+       0.09976573945812593,
+       0.15558773139085436
+      ],
+      "held": true
+     },
+     "Spins it when behind": {
+      "rate": "fb_behind",
+      "threshold": -0.12,
+      "pitchers": 77,
+      "train_diff": -0.19554766319383385,
+      "test_diff": -0.13911755009984592,
+      "test_ci": [
+       -0.1658952341904066,
+       -0.11124750293337178
+      ],
+      "held": true
+     },
+     "Starts with spin": {
+      "rate": "fb_first",
+      "threshold": -0.15,
+      "pitchers": 47,
+      "train_diff": -0.21124300529129666,
+      "test_diff": -0.17108433372392884,
+      "test_ci": [
+       -0.20577084104280152,
+       -0.1363637456834844
+      ],
+      "held": true
+     },
+     "Works inside with the fastball": {
+      "rate": "fb_in",
+      "threshold": 0.06,
+      "pitchers": 44,
+      "train_diff": 0.08695193020727475,
+      "test_diff": 0.05797153055198353,
+      "test_ci": [
+       0.03726720710620179,
+       0.07719052766817276
+      ],
+      "held": true
+     },
+     "Works away with the fastball": {
+      "rate": "fb_away",
+      "threshold": 0.06,
+      "pitchers": 47,
+      "train_diff": 0.0896982445534261,
+      "test_diff": 0.058056382809553816,
+      "test_ci": [
+       0.042894185474589765,
+       0.07319998011481561
+      ],
+      "held": true
+     }
+    },
+    "corr": {
+     "fps": {
+      "pitchers": 349,
+      "r": 0.376587139925875
+     },
+     "zone": {
+      "pitchers": 377,
+      "r": 0.5818675533948549
+     },
+     "chase": {
+      "pitchers": 375,
+      "r": 0.4945363458829363
+     },
+     "fb_behind": {
+      "pitchers": 320,
+      "r": 0.7360795850101942
+     },
+     "fb_first": {
+      "pitchers": 349,
+      "r": 0.7579307938795891
+     },
+     "fb_in": {
+      "pitchers": 347,
+      "r": 0.6068644019102973
+     },
+     "fb_away": {
+      "pitchers": 347,
+      "r": 0.6067883335773918
+     }
+    }
+   },
+   {
+    "train": [
+     2023,
+     2024
+    ],
+    "test": 2025,
+    "pitchers": 400,
+    "tags": {
+     "Throws first-pitch strikes": {
+      "rate": "fps",
+      "threshold": 0.05,
+      "pitchers": 43,
+      "train_diff": 0.06808644701737877,
+      "test_diff": 0.03523420630085547,
+      "test_ci": [
+       0.02455671626726519,
+       0.04536051866720172
+      ],
+      "held": true
+     },
+     "Falls behind first": {
+      "rate": "fps",
+      "threshold": -0.05,
+      "pitchers": 42,
+      "train_diff": -0.07034706682594688,
+      "test_diff": -0.029981477157254008,
+      "test_ci": [
+       -0.04209553145778358,
+       -0.01671211890079039
+      ],
+      "held": true
+     },
+     "Lives in the zone": {
+      "rate": "zone",
+      "threshold": 0.04,
+      "pitchers": 57,
+      "train_diff": 0.0573177177551296,
+      "test_diff": 0.028639614909978264,
+      "test_ci": [
+       0.0227980570252283,
+       0.034051139544744355
+      ],
+      "held": true
+     },
+     "Works off the plate": {
+      "rate": "zone",
+      "threshold": -0.04,
+      "pitchers": 34,
+      "train_diff": -0.059346370418431695,
+      "test_diff": -0.037348371270368955,
+      "test_ci": [
+       -0.044841936211089985,
+       -0.03071000954996669
+      ],
+      "held": true
+     },
+     "Gets chases": {
+      "rate": "chase",
+      "threshold": 0.04,
+      "pitchers": 45,
+      "train_diff": 0.0596385897173679,
+      "test_diff": 0.03207323843434875,
+      "test_ci": [
+       0.022023432669684585,
+       0.04206043552498575
+      ],
+      "held": true
+     },
+     "Few chases": {
+      "rate": "chase",
+      "threshold": -0.04,
+      "pitchers": 41,
+      "train_diff": -0.05397292414074075,
+      "test_diff": -0.017714042327726144,
+      "test_ci": [
+       -0.027650976781677696,
+       -0.007537850021618674
+      ],
+      "held": false
+     },
+     "Fastballs when behind": {
+      "rate": "fb_behind",
+      "threshold": 0.12,
+      "pitchers": 92,
+      "train_diff": 0.1973462866212771,
+      "test_diff": 0.12384863520269351,
+      "test_ci": [
+       0.1023456295661254,
+       0.14846450927358784
+      ],
+      "held": true
+     },
+     "Spins it when behind": {
+      "rate": "fb_behind",
+      "threshold": -0.12,
+      "pitchers": 81,
+      "train_diff": -0.20810060726163207,
+      "test_diff": -0.16419162842274534,
+      "test_ci": [
+       -0.19095136658320702,
+       -0.1383439403118666
+      ],
+      "held": true
+     },
+     "Starts with spin": {
+      "rate": "fb_first",
+      "threshold": -0.15,
+      "pitchers": 48,
+      "train_diff": -0.2116094940011166,
+      "test_diff": -0.16449279602510522,
+      "test_ci": [
+       -0.19627418165177982,
+       -0.1289430067539895
+      ],
+      "held": true
+     },
+     "Works inside with the fastball": {
+      "rate": "fb_in",
+      "threshold": 0.06,
+      "pitchers": 53,
+      "train_diff": 0.08790268961263167,
+      "test_diff": 0.058102366672555625,
+      "test_ci": [
+       0.03716908245366347,
+       0.07641425330704182
+      ],
+      "held": true
+     },
+     "Works away with the fastball": {
+      "rate": "fb_away",
+      "threshold": 0.06,
+      "pitchers": 49,
+      "train_diff": 0.08632892509423509,
+      "test_diff": 0.05370559915641774,
+      "test_ci": [
+       0.03538276489871817,
+       0.07172631986437755
+      ],
+      "held": true
+     }
+    },
+    "corr": {
+     "fps": {
+      "pitchers": 382,
+      "r": 0.47019173420089866
+     },
+     "zone": {
+      "pitchers": 400,
+      "r": 0.5819553070204695
+     },
+     "chase": {
+      "pitchers": 396,
+      "r": 0.4594713117293632
+     },
+     "fb_behind": {
+      "pitchers": 362,
+      "r": 0.7726374046119019
+     },
+     "fb_first": {
+      "pitchers": 382,
+      "r": 0.7376937317489877
+     },
+     "fb_in": {
+      "pitchers": 385,
+      "r": 0.5719323888247024
+     },
+     "fb_away": {
+      "pitchers": 385,
+      "r": 0.5745737188390471
+     }
+    }
+   }
+  ]
+ },
+ "status": "completed",
+ "finished_at": "2026-10-11T07:51:30.135574+00:00",
+ "seconds": 41.3
+}
