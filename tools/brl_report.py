@@ -1019,8 +1019,16 @@ def zone_shrink_study(T: dict, stage, spec: dict) -> dict:
     train = tuple(spec.get('train', (2024, 2025))); test = int(spec.get('test', 2026)); min_pa = float(spec.get('min_pa', 100))
     rng = np.random.default_rng(int(spec.get('seed', 20261011)))
 
+    # ZONES-02: an optional subset of pitches (a pitcher hand or a pitch family), the same on both sides of the split
+    sub = spec.get('subset') or {}
+    base = reg.copy()
+    if 'throw_r' in sub:
+        base &= T['throw_r'] == int(sub['throw_r'])
+    if 'family' in sub:
+        base &= np.isin(T['group'], {'fastball': (0, 1, 2, 6), 'breaking': (3, 4), 'offspeed': (5,)}[sub['family']])
+
     def joined(tr_years, te_year):
-        tr = zone_tables(T, reg & np.isin(T['season'], tr_years)); te = zone_tables(T, reg & (T['season'] == te_year))
+        tr = zone_tables(T, base & np.isin(T['season'], tr_years)); te = zone_tables(T, base & (T['season'] == te_year))
         pos = {int(b): i for i, b in enumerate(te['bats'])}
         keep = np.array([pa >= min_pa and int(b) in pos for b, pa in zip(tr['bats'], tr['pa'])], bool)
         ti = np.array([pos[int(b)] for b in tr['bats'][keep]], np.int64)
@@ -1644,7 +1652,10 @@ def main():
             receipt['lineup_study'] = lineup_study(T, stage, params['lineup_study'])
             dates = []
         if params.get('zone_study'):
-            receipt['zone_study'] = zone_shrink_study(T, stage, params['zone_study'])
+            zs = params['zone_study']
+            receipt['zone_study'] = zone_shrink_study(T, stage, zs)
+            for name, subset in (zs.get('subsets') or {}).items():          # ZONES-02: the same study on each subset
+                receipt.setdefault('zone_study_subsets', {})[name] = zone_shrink_study(T, stage, dict(zs, subset=subset))
             dates = []
         fits = {}
         sim_pens = None

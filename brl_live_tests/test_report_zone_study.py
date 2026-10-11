@@ -53,3 +53,15 @@ def test_zone_shrink_study_null_world_leans_on_the_league_shape():
     assert sw['m'] >= 160                                 # the fit shrinks hard toward the scaled shape
     assert sw['shrunk_minus_raw'][2] < 0
     assert sw['shrunk_minus_scaled'][1] <= 0 <= sw['shrunk_minus_scaled'][2] or abs(sw['shrunk_minus_scaled'][0]) < 0.002
+
+
+def test_zone_shrink_study_on_a_subset():
+    B = _report()
+    T = _league(seed=3)
+    T['throw_r'] = np.resize(np.array([0, 1]), len(T['season']))
+    T['group'] = np.resize(np.array([0, 3, 5]), len(T['season']))
+    full = B.zone_shrink_study(T, lambda *a: None, {'min_pa': 20})
+    half = B.zone_shrink_study(T, lambda *a: None, {'min_pa': 20, 'subset': {'throw_r': 1}})
+    fam = B.zone_shrink_study(T, lambda *a: None, {'min_pa': 10, 'subset': {'family': 'breaking'}})
+    assert half['metrics']['swing']['events'] < full['metrics']['swing']['events']
+    assert fam['metrics']['swing']['events'] < half['metrics']['swing']['events']
