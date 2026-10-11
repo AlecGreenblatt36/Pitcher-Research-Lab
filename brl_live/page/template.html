@@ -515,7 +515,7 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 @media (max-width: 560px) { .sp { grid-template-columns: minmax(0, 1fr); } .sp-fig { max-width: 300px; } }
 .hz-types { margin: 4px 0 10px; max-width: 520px; }
 .hz-types .box td { font-size: 16px; padding: 6px 4px; }
-.hz-types .box th { padding: 7px 4px; }
+.hz-types .box th { padding: 7px 4px; white-space: normal; vertical-align: bottom; line-height: 1.2; }
 .hz-types .box th:first-child, .hz-types .box td:first-child { padding-left: 8px; font-size: 15px; }
 .hz-types .box th:last-child, .hz-types .box td:last-child { padding-right: 8px; }
 .hz-types.ct .box td small { display: block; font-family: var(--body); font-size: 14px; color: var(--muted); line-height: 1.2; }
@@ -2652,7 +2652,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (!fams.length) return "";
     var rt = function (v) { return v != null ? pct(v) : "\u2013"; }, pa = fams.some(function (f) { return mix[f].putaway != null; });
     return '<div class="tbl-wrap hz-types"><table class="box"><thead><tr><th scope="col">Pitch</th><th scope="col">Thrown</th><th scope="col">MPH</th><th scope="col">Miss</th><th scope="col">Chase</th><th scope="col">Zone</th>' + (pa ? '<th scope="col">Put away</th>' : "") + "</tr></thead><tbody>" +
-      fams.map(function (fam) { var m = mix[fam]; return "<tr><td>" + PITCH_NAME[fam] + "</td><td>" + pct(m.share) + "</td><td>" + (m.speed != null ? m.speed.toFixed(1) : "\u2013") + "</td><td>" + rt(m.whiff_rate) + "</td><td>" + rt(m.chase_rate) + "</td><td>" + rt(m.zone_rate) + "</td>" + (pa ? "<td>" + rt(m.putaway) + "</td>" : "") + "</tr>"; }).join("") + "</tbody></table></div>";
+      fams.map(function (fam) { var m = mix[fam]; return "<tr><td>" + { fastball: "Fastball", breaking: "Breaking", offspeed: "Offspeed" }[fam] + "</td><td>" + pct(m.share) + "</td><td>" + (m.speed != null ? m.speed.toFixed(1) : "\u2013") + "</td><td>" + rt(m.whiff_rate) + "</td><td>" + rt(m.chase_rate) + "</td><td>" + rt(m.zone_rate) + "</td>" + (pa ? "<td>" + rt(m.putaway) + "</td>" : "") + "</tr>"; }).join("") + "</tbody></table></div>";
   }
   var COUNT_ROWS = [["first", "First pitch"], ["ahead", "Pitcher ahead or even"], ["behind", "Pitcher behind"], ["two", "Two strikes"]];
   /* A hitter's swings by count (the usual split), each next to the league's for his side. */
