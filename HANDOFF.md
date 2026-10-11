@@ -904,6 +904,9 @@ far and part of why simulated bullpens struck out fewer batters and allowed more
   70% of the simulated game-to-game spread follows the starter's simulated length, and the simulator adds relievers
   faster per out the starter misses than real teams do (0.185 and 0.158 pitchers per starter out against 0.146 and
   0.127 real). It matters for the bullpen's chance-to-pitch table more than for wins.
+- (October 11) Relievers' exits by pitches in the outing (research run 38166582743, the live relief-exit hazard on every
+  real relief decision 2023-2026): under 10 pitches 0.82 to 0.86 of the expected removals, 20 to 39 pitches mid-inning
+  1.11 to 1.42; milder than the starters' (0.5 to 2.1). A pitch term for relievers can follow LEASH-03 if it goes on.
 - (October 11) The 2026 home-run overstatement for the top tenth is in established hitters: at 400 or more prior plate
   appearances 0.0514 real against 0.0598 simulated per plate appearance (0.86), under 400 on level (1.00); in 2025 both
   near level (0.98 and 0.93). Established power hitters fell off in 2026 beyond the league's 4% home-run drop, so the
