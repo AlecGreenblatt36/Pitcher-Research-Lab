@@ -5384,14 +5384,14 @@
     "columns": {
      "ID": "RUNLINE-02",
      "Attempt": "The run line again, with TOTALS-05's widened run distributions. RUNLINE-01 failed because the simulator's margins given a win run tight; DISP-03's day-form margins fixed that but were looked at before any run-line test of them. Candidate: given a win, the chance of winning by two or more from the two teams' negative binomials (the simulated means, the simulated variances times c from the other season, as TOTALS-05) convolved as independent, P(margin >= 2) / P(margin >= 1) for the home side and the same for the road side; the page's run-line chance would be the headline win chance times it, as RUNLINE-01 planned. Scored exactly as RUNLINE-01 (tools/brl_runline_shape.py over tools/brl_runline_cal.py) on RELIEF-04's full replays of 2025 and 2026 (v2-prod4-relief4-1000, the live regular-season settings; their margins not yet looked at). The motivation (margins too tight) was seen on earlier replays of the same seasons",
-     "Disposition and evidence": "**Registered in the commit that added this row, before its scoring.** Predictions (RUNLINE-01's): (1) given a win, the chance of winning by two or more within 1.5 points of how often winners did, for home winners and road winners, in both seasons; (2) by fifths of that conditional chance, within 3 points in both seasons. Decision rule: if (1) and (2) hold in both seasons, the Odds tab shows the run line (MORE_MARKETS.runline) from this conditional; otherwise it stays hidden.",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before its scoring.** Predictions (RUNLINE-01's): (1) given a win, the chance of winning by two or more within 1.5 points of how often winners did, for home winners and road winners, in both seasons; (2) by fifths of that conditional chance, within 3 points in both seasons. Decision rule: if (1) and (2) hold in both seasons, the Odds tab shows the run line (MORE_MARKETS.runline) from this conditional; otherwise it stays hidden. Results (2,423 and 2,427 games): given a home win, by two or more 78.6% against 65.8% actual (2025, +12.8; the simulator's own margins +0.7) and 78.6% against 68.4% (2026, +10.2; own -2.2); given a road win 78.7% against 76.5% (+2.2; own -1.1) and 78.9% against 77.3% (+1.5; own -2.0); by fifths up to 15.5 and 13.2 points (home) and 5.5 and 2.4 (road). (1) and (2) failed in both seasons. **The run line stays hidden.** What it shows: treating the two teams' runs as independent ignores how home wins end (the bottom of the ninth is not played or stops at the winning run, so home winners win by one far more often); the simulator's own margins keep that and are the better base.",
+     "Delta corrected Brier, 2026": "(1), (2) failed; run line hidden"
     },
     "registered_before_run": true,
     "diagnostic": false,
     "runs": [],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "(1), (2) failed; run line hidden"
    }
   ],
   "PLAYER-08": [
