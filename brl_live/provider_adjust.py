@@ -98,6 +98,44 @@ class EnvironmentAdjust:
         return getattr(self.inner, item)
 
 
+class LevelAdjust:
+    """The season's league level, re-anchored in-season (LEVEL-01): multiplies every plate appearance's probabilities by
+    exp(offset) per class (the model's label order) and renormalizes. The offsets come from the season's real plate
+    appearances on earlier dates only: log((observed + m x share) / (predicted + m x share)) per class against the stack's own
+    predictions, m pseudo plate appearances at the predicted shares (level_offsets below). None or zeros change nothing;
+    set_level() changes them between dates."""
+    def __init__(self, inner, log_mult=None):
+        self.inner = inner
+        self.set_level(log_mult)
+        self.name = getattr(inner, 'name', 'provider')
+        self.validation_status = getattr(inner, 'validation_status', '')
+
+    def set_level(self, log_mult):
+        self.m = None if log_mult is None or not np.any(np.asarray(log_mult, float)) else np.exp(np.asarray(log_mult, float))
+
+    def probabilities(self, ctx):
+        base = self.inner.probabilities(ctx)
+        if self.m is None:
+            return base
+        p = np.array([base[k] for k in SIM_LABELS], dtype=float) * self.m
+        p /= p.sum()
+        return dict(zip(SIM_LABELS, map(float, p)))
+
+    def __getattr__(self, item):
+        return getattr(self.inner, item)
+
+
+def level_offsets(observed, predicted, m: float = 10000.0) -> np.ndarray:
+    """LEVEL-01's offsets from the season's sums so far (model label order): log((O + m s) / (P + m s)), s = P / sum(P);
+    zeros before any plate appearance."""
+    O, P = np.asarray(observed, float), np.asarray(predicted, float)
+    n = P.sum()
+    if n <= 0:
+        return np.zeros(len(P))
+    s = P / n
+    return np.log((O + m * s) / (P + m * s))
+
+
 BASE_STATE_PATH = Path(__file__).resolve().parent / 'base_state_offsets.json'
 
 

@@ -105,3 +105,23 @@ def test_two_or_more_total_bases_from_hits_by_singles():
         fh.write(json.dumps(g) + '\n')
     rows = pc.load_rows([f])
     assert [r['y_tb2'] for r in rows] == [1, 0]                                 # a double counts; one single does not
+
+
+def test_paired_study_finds_a_level_fix_and_nothing_when_identical():
+    """LEVEL-02's hitter check: two replays of the same hitter-games; one whose walk chances run 4 points high, the other
+    on level. The level fix lowers the walk Brier; identical replays change nothing."""
+    rng = np.random.default_rng(9)
+    ref, new = [], []
+    for i in range(30000):
+        q = {'hit': rng.uniform(0.45, 0.7), 'hit2': rng.uniform(0.1, 0.3), 'hr': rng.uniform(0.05, 0.2), 'walk': rng.uniform(0.15, 0.45), 'k': rng.uniform(0.4, 0.8)}
+        y = {k: int(rng.random() < v) for k, v in q.items()}
+        base = {'date': '2025-%03d' % (i // 170), 'game_pk': i // 18, 'batter': i % 18, 'spot': 1 + i % 9, 'prior_pa': 300}
+        ref.append({**base, **{'p_' + k: (v + 0.04 if k == 'walk' else v) for k, v in q.items()}, **{'y_' + k: v for k, v in y.items()}})
+        new.append({**base, **{'p_' + k: v for k, v in q.items()}, **{'y_' + k: v for k, v in y.items()}})
+    r = pc.paired_study(ref, new, draws=300)
+    w = r['kinds']['walk']
+    assert abs(w['ref_gap_points'] - 4.0) < 1.0 and abs(w['new_gap_points']) < 1.0
+    assert w['brier_change_ci'][1] < 0 and r['summed']['brier_change_ci'][1] < 0
+    assert r['kinds']['hit']['brier_change'] == 0.0
+    same = pc.paired_study(ref, ref, draws=100)
+    assert same['summed']['brier_change'] == 0.0 and same['pairs'] == 30000

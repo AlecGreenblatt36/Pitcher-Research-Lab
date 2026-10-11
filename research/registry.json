@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 315,
- "rows": 318,
+ "experiments": 316,
+ "rows": 319,
  "records": {
   "ACC-01": [
    {
@@ -5270,12 +5270,34 @@
     "columns": {
      "ID": "LEVEL-01",
      "Attempt": "Re-anchoring each outcome's league level in-season (a screen). Outcome levels drift by season and the simulator carries them from its tables (PLAYER-03: with tables from other seasons, 2025's walk-or-HBP chances ran 2 points high and 2026's hit chances 1 point high); at the start of a season the live tables are of the same kind, fitted on earlier seasons. Each date's offsets come only from the season's real plate appearances on earlier dates: per class (out in play, strikeout, walk or HBP, single, double or triple, home run, other reach), log((observed + m x share) / (predicted + m x share)) with m pseudo plate appearances at the predicted shares (the context table's form, CTX-02), applied to the date's predictions (each chance times exp(offset), renormalized). Check-only replays of 2025 and 2026 on the live stack with tables from other seasons (PLAYER-07's settings with no worlds and the real plate-appearance check, which records each game's observed counts, predicted sums and second moments); the log-likelihood change on each date's real plate appearances is computed from those per-game sums (tools/brl_level_cal.py; within 0.1% of the exact change for offsets up to about 0.1 in its tests). Grid: m of 2,000, 10,000 and 50,000; each season is scored at the m with the larger gain on the other season",
-     "Disposition and evidence": "**Registered in the commit that added this row, before its replays.** Prediction: (1) at the m picked on the other season, the season's held-out log-likelihood gain is positive with its bootstrap interval over dates above zero, in both seasons. Decision rule: if (1) holds in both seasons, an in-season league-level layer is built for next season (off by default) and LEVEL-02 is registered: full replays of both seasons with it, gated on the game totals and the hitter chances; otherwise the item is dropped",
+     "Disposition and evidence": "**Registered in the commit that added this row, before its replays.** Prediction: (1) at the m picked on the other season, the season's held-out log-likelihood gain is positive with its bootstrap interval over dates above zero, in both seasons. Decision rule: if (1) holds in both seasons, an in-season league-level layer is built for next season (off by default) and LEVEL-02 is registered: full replays of both seasons with it, gated on the game totals and the hitter chances; otherwise the item is dropped. Results (check-only runs 38152933999 for 2025 and 38152908828 for 2026; 182,487 and 183,685 real plate appearances over 184 dates each): log-likelihood gain per 1,000 plate appearances at m 2,000, 10,000 and 50,000: 2025 +0.097 [+0.007, +0.182], +0.114 [+0.038, +0.187], +0.108 [+0.053, +0.160]; 2026 +0.124 [-0.002, +0.251], +0.146 [+0.039, +0.249], +0.138 [+0.071, +0.204]. Each season picks m 10,000 from the other, so the scored gains are +0.114 (2025) and +0.146 (2026), both intervals above zero: (1) held in both seasons. The season's own level against the tables from the other season mirrors between the two (observed over predicted, log): walk or HBP -0.045 in 2025 and +0.046 in 2026, doubles and triples +0.031 and -0.038, home runs +0.019 and -0.040, strikeouts -0.009 and +0.012; the in-season offsets find each within weeks. The gain is small per plate appearance (about 0.01 nats a game) and shows in most months of both seasons. **Under the rule: the layer is built (brl_live/provider_adjust.py LevelAdjust, off) and LEVEL-02 is registered.**",
+     "Delta corrected Brier, 2026": "(1) held in both seasons; layer built, off; LEVEL-02 next"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [
+     "38152908828",
+     "38152933999"
+    ],
+    "frozen_commits": [],
+    "status": "(1) held in both seasons; layer built, off; LEVEL-02 next"
+   }
+  ],
+  "LEVEL-02": [
+   {
+    "id": "LEVEL-02",
+    "columns": {
+     "ID": "LEVEL-02",
+     "Attempt": "The in-season league level (LEVEL-01's layer) in full replays. Each date's offsets come from the season's earlier real plate appearances only, m 10,000 (LEVEL-01's pick), applied last in the stack (brl_live/provider_adjust.py LevelAdjust; per-date files brl_replay/level_offsets_<season>.json written from LEVEL-01's check-only runs by tools/brl_level_cal.py --write-offsets). Replays of 2025 and 2026 with PLAYER-06's settings and seeds (live stack, tables from other seasons, hitter and starter lines, paired streams, 1,000 worlds) plus the layer, compared game by game and hitter by hitter with PLAYER-06's replays (runs 38145318753 and 38144947261) by tools/replay_compare.py and tools/brl_player_cal.py --pair. Each season's first date has no offsets, so its games must come out the same in both runs (the check that the pairing holds)",
+     "Disposition and evidence": "**Registered in the commit that added this row, before its replays.** Gates: (1) the hitter chances' Brier summed over the page's five kinds (at least one hit, two or more hits, a home run, a walk, a strikeout) improves in both seasons, the paired interval over dates below zero; (2) the mean total's squared error against the final is not worse, the pooled paired interval's upper end below +0.03 runs squared, and the mean total within 0.1 runs of actual in both seasons; (3) the win Brier pooled not worse than +0.0002. P(over the closing total) is reported, not gated. Decision rule: if (1), (2) and (3) hold, the layer is switched on for next season's regular season (ADJUST level_offsets, the live run keeping the season's sums of observed and predicted outcomes; the postseason keeps the regular season's last offsets); otherwise it stays off",
      "Delta corrected Brier, 2026": "Registered; replays queued"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38144947261",
+     "38145318753"
+    ],
     "frozen_commits": [],
     "status": "Registered; replays queued"
    }

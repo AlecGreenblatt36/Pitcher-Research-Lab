@@ -72,7 +72,7 @@ def load_rows(paths):
                     a = x.get('actual')
                     if not a or not a.get('pa'):
                         continue
-                    r = {'date': g['date'], 'game_pk': g['game_pk'], 'spot': x['spot'], 'prior_pa': x.get('prior_pa_365') or 0}
+                    r = {'date': g['date'], 'game_pk': g['game_pk'], 'batter': x.get('batter'), 'spot': x['spot'], 'prior_pa': x.get('prior_pa_365') or 0}
                     for kind, (field, k, af) in KINDS.items():
                         if field in x:
                             r['p_' + kind] = own_at_least(x[field], k, x['spot'])
@@ -238,13 +238,65 @@ def part_time_study(seasons: dict, draws=2000):
     return res
 
 
+PAIRED_KINDS = ('hit', 'hit2', 'hr', 'walk', 'k')
+
+
+def paired_study(ref_rows, new_rows, kinds=PAIRED_KINDS, draws=2000, seed=1):
+    """LEVEL-02: the page's hitter chances from two replays of the same games with the same seeds (paired streams), matched
+    by game and hitter. Per kind: each replay's mean chance against the actual share, and the Brier change (new minus
+    reference) with a bootstrap over dates; then the change summed over the kinds for each hitter-game."""
+    ref = {(r['game_pk'], r['batter']): r for r in ref_rows}
+    pairs = [(ref[(r['game_pk'], r['batter'])], r) for r in new_rows if (r['game_pk'], r['batter']) in ref]
+    assert pairs, 'no hitter-game in both replays'
+    rng = np.random.default_rng(seed)
+
+    def boot(dates, d):
+        keys, inv = np.unique(np.asarray(dates), return_inverse=True)
+        sd = np.bincount(inv, weights=d, minlength=len(keys)); n = np.bincount(inv, minlength=len(keys)).astype(float)
+        idx = rng.integers(0, len(keys), size=(draws, len(keys)))
+        b = sd[idx].sum(1) / n[idx].sum(1)
+        return [float(np.quantile(b, 0.025)), float(np.quantile(b, 0.975))]
+    res = {'pairs': len(pairs), 'kinds': {}}
+    full = [(a, b) for a, b in pairs if all(np.isfinite(a.get('p_' + k, np.nan)) and np.isfinite(b.get('p_' + k, np.nan)) for k in kinds)]
+    tot = np.zeros(len(full))
+    for k in kinds:
+        sel = [(a, b) for a, b in pairs if np.isfinite(a.get('p_' + k, np.nan)) and np.isfinite(b.get('p_' + k, np.nan))]
+        y = np.array([a['y_' + k] for a, _ in sel], float)
+        assert all(a['y_' + k] == b['y_' + k] for a, b in sel), 'the two replays disagree on what happened'
+        pr, pn = np.array([a['p_' + k] for a, _ in sel]), np.array([b['p_' + k] for _, b in sel])
+        d = (pn - y) ** 2 - (pr - y) ** 2
+        res['kinds'][k] = {'n': len(sel), 'actual': round(float(y.mean()), 4), 'ref_mean': round(float(pr.mean()), 4), 'new_mean': round(float(pn.mean()), 4),
+                           'ref_gap_points': round(100 * float(pr.mean() - y.mean()), 2), 'new_gap_points': round(100 * float(pn.mean() - y.mean()), 2),
+                           'brier_change': float(d.mean()), 'brier_change_ci': boot([a['date'] for a, _ in sel], d)}
+        tot += np.array([(b['p_' + k] - a['y_' + k]) ** 2 - (a['p_' + k] - a['y_' + k]) ** 2 for a, b in full])
+    res['summed'] = {'n': len(full), 'brier_change': float(tot.mean()), 'brier_change_ci': boot([a['date'] for a, _ in full], tot)}
+    return res
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--season', action='append', required=True, help='label=glob of per-game files')
+    ap.add_argument('--season', action='append', help='label=glob of per-game files')
     ap.add_argument('--out', required=True)
     ap.add_argument('--draws', type=int, default=2000)
     ap.add_argument('--part-time', action='store_true', help='PLAYER-05: score the part-time factors instead')
+    ap.add_argument('--pair', action='append', help='LEVEL-02: label=<reference glob>::<new glob>, two replays of the same games and seeds')
     a = ap.parse_args()
+    if a.pair:
+        res = {}
+        for spec in a.pair:
+            lab, globs = spec.split('=', 1)
+            g_ref, g_new = globs.split('::', 1)
+            f_ref, f_new = sorted(glob.glob(g_ref)), sorted(glob.glob(g_new))
+            assert f_ref and f_new, spec
+            res[lab] = paired_study(load_rows(f_ref), load_rows(f_new), draws=a.draws)
+        Path(a.out).write_text(json.dumps(res, indent=1))
+        for lab, r in res.items():
+            for kind, x in r['kinds'].items():
+                print(lab, kind, 'n', x['n'], 'actual %.4f ref %.4f (%+.2f) new %.4f (%+.2f)' % (x['actual'], x['ref_mean'], x['ref_gap_points'], x['new_mean'], x['new_gap_points']),
+                      'dBrier %.7f [%.7f, %.7f]' % (x['brier_change'], *x['brier_change_ci']))
+            print(lab, 'summed over', len(r['kinds']), 'kinds: dBrier %.7f [%.7f, %.7f]' % (r['summed']['brier_change'], *r['summed']['brier_change_ci']), 'pairs', r['pairs'])
+        return
+    assert a.season, '--season or --pair'
     if a.part_time:
         seasons = {}
         for spec in a.season:

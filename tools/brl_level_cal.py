@@ -80,6 +80,15 @@ def season_gains(dates, grid=GRID):
     return keys, {m: np.array(v) for m, v in gains.items()}, np.array(n, float), {m: v.round(4).tolist() for m, v in last.items()}, (O_c, P_c)
 
 
+def date_offsets(dates, m):
+    """{date: offsets} for each date from the season's earlier dates only (what a replay or the live run applies that day)."""
+    O_c, P_c, out = np.zeros(7), np.zeros(7), {}
+    for k in sorted(dates):
+        out[k] = [round(float(x), 5) for x in (offsets(O_c, P_c, m) if P_c.sum() > 0 else np.zeros(7))]
+        O_c += dates[k][1]; P_c += dates[k][2]
+    return out
+
+
 def season_check(games, grid=GRID, draws=2000, seed=1):
     dates = by_date(games)
     assert dates, 'no game carries the real plate-appearance sums with second moments (a check-only replay after s2)'
@@ -130,8 +139,22 @@ def load_games(paths):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--season', action='append', required=True)
-    ap.add_argument('--out', required=True)
+    ap.add_argument('--out', help='the scores (LEVEL-01)')
+    ap.add_argument('--write-offsets', help='directory: write level_offsets_<season>.json, each date from earlier dates only (LEVEL-02)')
+    ap.add_argument('--m', type=float, default=10000.0, help='pseudo plate appearances for --write-offsets (LEVEL-01 picked 10,000)')
     a = ap.parse_args()
+    if a.write_offsets:
+        for spec in a.season:
+            lab, pat = spec.split('=', 1)
+            files = sorted(glob.glob(pat)); assert files, pat
+            doc = {'schema': 'brl.level-offsets.v1', 'labels': list(LABELS), 'm': a.m,
+                   'source': 'LEVEL-01: log((observed + m share) / (predicted + m share)) per class from the season\'s real plate appearances on earlier dates, '
+                             'against the live stack with tables from other seasons (check-only replay files ' + Path(files[0]).name.split('-s')[0] + ')',
+                   'offsets': date_offsets(by_date(load_games(files)), a.m)}
+            Path(a.write_offsets, f'level_offsets_{lab}.json').write_text(json.dumps(doc, indent=0))
+            print('wrote', lab, len(doc['offsets']), 'dates')
+        return
+    assert a.out, '--out or --write-offsets'
     out = {}
     for spec in a.season:
         lab, pat = spec.split('=', 1)

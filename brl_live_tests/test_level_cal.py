@@ -58,3 +58,29 @@ def test_a_planted_drift_is_found_and_no_drift_gains_nothing():
     for s in ('2025', '2026'):
         assert flat[s]['by_m']['50000']['gain_ci_per_1000'][0] < 0.05      # nothing to find: no clear gain
     assert not all(v['holds'] for v in lc.cross_season(flat).values())
+
+
+def test_offsets_by_date_use_earlier_dates_only_and_match_the_live_layer():
+    from types import SimpleNamespace
+    from brl_live.provider_adjust import LevelAdjust, level_offsets, SIM_LABELS
+    games = _season(5, np.array([0.0, 0.05, -0.06, 0.0, 0.0, 0.0, 0.0]), dates=4, games=3)
+    dates = lc.by_date(games)
+    offs = lc.date_offsets(dates, 10000)
+    keys = sorted(dates)
+    assert offs[keys[0]] == [0.0] * 7                                       # nothing before the first date
+    O, P = dates[keys[0]][1] + dates[keys[1]][1], dates[keys[0]][2] + dates[keys[1]][2]
+    assert np.allclose(offs[keys[2]], level_offsets(O, P, 10000), atol=1e-5)      # the third date: the first two only
+    assert np.allclose(lc.offsets(O, P, 10000), level_offsets(O, P, 10000))
+
+    class Base:
+        name = 'm'; validation_status = 'ok'
+        def probabilities(self, ctx):
+            return dict(zip(SIM_LABELS, [0.45, 0.22, 0.09, 0.14, 0.05, 0.03, 0.02]))
+    lay = LevelAdjust(Base())
+    assert lay.probabilities(SimpleNamespace()) == Base().probabilities(None)          # no offsets: unchanged
+    lay.set_level([0.0] * 7)
+    assert lay.probabilities(None) == Base().probabilities(None)
+    lay.set_level([0.0, 0.1, 0.0, 0.0, 0.0, -0.1, 0.0])
+    p = lay.probabilities(None)
+    q = np.array([0.45, 0.22 * np.exp(0.1), 0.09, 0.14, 0.05, 0.03 * np.exp(-0.1), 0.02]); q /= q.sum()
+    assert np.allclose([p[k] for k in SIM_LABELS], q) and abs(sum(p.values()) - 1) < 1e-12

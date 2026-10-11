@@ -144,7 +144,7 @@ def bats_lookup(h: pd.DataFrame, cutoff: str) -> dict:
 
 def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates: list, *, model_path: Path, model_sha256: str,
                  history_path: Path, hazard_path: Path, n_sims: int, physics_table=None, offsets=None, rest=False, environment=None,
-                 team_offsets=None, age_layer=None, steals=None, win_states=False, starter_lines=False, role_offsets=None, real_pa_check=False, transitions=None, hitter_lines=False, running_events=None, reliever_choice=None, leash=None, base_state=None, relief_exit=None, relief_hooks=None, day_form=0.0, paired_streams=False, matchup=None, log=print) -> list[dict]:
+                 team_offsets=None, age_layer=None, steals=None, win_states=False, starter_lines=False, role_offsets=None, real_pa_check=False, transitions=None, hitter_lines=False, running_events=None, reliever_choice=None, leash=None, base_state=None, relief_exit=None, relief_hooks=None, day_form=0.0, paired_streams=False, matchup=None, level_offsets=None, log=print) -> list[dict]:
     """Simulate every game on the given dates; one record per game (win counts, run histograms, starter outs).
 
     environment: optional {game_pk: seven log-multipliers} (brl_live/environment.py); games without an entry are unadjusted.
@@ -224,6 +224,11 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
         a_b, a_p, a_o = hs['batter'].to_numpy(int), hs['pitcher'].to_numpy(int), hs['outcome'].astype(str).to_numpy()
         a_pos = 0
         aadj = provider = AgeAdjust(provider, age_layer, a_state, 0); chain.append(('age', aadj))
+    ladj = None
+    if level_offsets is not None:
+        # LEVEL-02: the season's league level re-anchored in-season, each date's offsets from earlier dates only (LEVEL-01)
+        from brl_live.provider_adjust import LevelAdjust
+        ladj = provider = LevelAdjust(provider); chain.append(('level', ladj))
     hazard = joblib.load(hazard_path)
     real_states = {}
     if win_states:
@@ -334,6 +339,8 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                 a_state.absorb_date(pd.Timestamp(a_dates[a_pos]).toordinal(), a_b[a_pos:a_end], a_p[a_pos:a_end], a_o[a_pos:a_end])
                 a_pos = a_end
             aadj.set_day(a_state, pd.Timestamp(date).toordinal())
+        if ladj is not None:
+            ladj.set_level(level_offsets.get(str(date)[:10]))
         defense = None
         if base.physics is not None:
             from research_lab.pa_model.physics import PhysicsState, DefenseState
