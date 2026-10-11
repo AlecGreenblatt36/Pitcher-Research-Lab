@@ -3922,9 +3922,14 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (!cells || !lg) return;
       n++;
       var add = function (acc, rows) { hzTotal(rows).forEach(function (v, k) { acc[k] += v; }); };
-      add(t, cells); add(o, cells.filter(function (x) { return x[0] >= 11; }));
-      /* the league's rates for his side, carried at his own number of events so the mix of sides matches */
       var L = hzTotal(lg), LO = hzTotal(lg.filter(function (x) { return x[0] >= 11; })), mine = hzTotal(cells), mo = hzTotal(cells.filter(function (x) { return x[0] >= 11; }));
+      /* SPLITS-01: in the Expected view each hitter counts at his expected rates against this hand, at his own number of events */
+      var e = hzView() === "exp" ? splitExpected(c, doc.league, hand) : null;
+      if (e) {
+        t[4] += mine[4]; t[5] += mine[4] * e.avg; t[6] += mine[4] * e.slg; t[2] += mine[2]; t[3] += mine[2] * e.miss;
+        o[1] += mo[1]; o[2] += mo[1] * e.chase;
+      } else { add(t, cells); add(o, cells.filter(function (x) { return x[0] >= 11; })); }
+      /* the league's rates for his side, carried at his own number of events so the mix of sides matches */
       lt[4] += mine[4]; lt[5] += L[4] ? mine[4] * L[5] / L[4] : 0; lt[6] += L[4] ? mine[4] * L[6] / L[4] : 0;
       lt[2] += mine[2]; lt[3] += L[2] ? mine[2] * L[3] / L[2] : 0;
       lo[1] += mo[1]; lo[2] += LO[1] ? mo[1] * LO[2] / LO[1] : 0;
@@ -4063,7 +4068,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       (po.posted ? "Posted lineup; the plan was built before it came out" + (po.missing.length ? ", so it has no line yet for " + esc(po.missing.join(" or ")) : "") + "." : lineupWords(se.lineup_source)) +
       " Hot zones against " + esc(hzSheetHand(doc, starter)) + ". Tap a hitter for his full plan, the counts and the bullpen.</p>";
     var glance = lineupGlance(doc, po, hzSheetPick(players[String(starter.id)] && players[String(starter.id)].pitcher));
-    if (glance) h += '<p class="note hz-cap">The lineup against ' + esc(hzHandWords(hzSheetPick(players[String(starter.id)] && players[String(starter.id)].pitcher))) + "</p>" + glance;
+    var gh = hzSheetPick(players[String(starter.id)] && players[String(starter.id)].pitcher);
+    if (glance) h += '<p class="note hz-cap">The lineup against ' + esc(hzHandWords(gh)) + (hzView() === "exp" && (gh === "R" || gh === "L") ? ", expected" : "") + "</p>" + glance;
     var keys = lineupKeys(doc, po);
     if (keys) h += '<p class="note hz-cap">Working through this lineup</p>' + keys;
     var spc = players[String(starter.id)] && players[String(starter.id)].pitcher, proj = starterProjection(doc, other, starter.id);
