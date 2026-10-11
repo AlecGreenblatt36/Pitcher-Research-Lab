@@ -502,6 +502,9 @@ details .pr-h { font-size: 18px; }
 .pr-v { text-align: right; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--ink); }
 .pr-scale { display: grid; grid-template-columns: minmax(0, 128px) minmax(0, 1fr) 54px; column-gap: 10px; font-size: 14px; color: var(--muted); }
 .pr-scale span:nth-child(2) { display: flex; justify-content: space-between; }
+.lineup-keys { list-style: none; margin: 4px 0 12px; padding: 0; display: grid; gap: 4px; max-width: 620px; }
+.lineup-keys li { font-size: 15px; line-height: 1.4; }
+.lineup-keys b { font-weight: 700; }
 .hz-line { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 6px 0 10px; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); overflow: hidden; max-width: 460px; }
 .hz-line div { padding: 6px 8px; border-left: 1px solid var(--rule-soft); min-width: 0; }
 .hz-line div:first-child { border-left: 0; }
@@ -3338,6 +3341,27 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
                 ["Sides", sides.L + " L, " + sides.R + " R", ""]];
     return '<div class="hz-line num lineup-glance">' + cols.map(function (c) { return "<div><span>" + c[0] + "</span><b>" + c[1] + "</b>" + (c[2] ? "<small>Lg " + c[2] + "</small>" : "") + "</div>"; }).join("") + "</div>";
   }
+  /* How to work through this lineup, from the habits that carried over to the next season (TAGS-01, TAGS-02): who to get
+     ahead of, who to start off the plate, who chases, how to finish each one, who not to give in to when behind. */
+  function lineupKeys(doc, po) {
+    var players = doc.players || {}, nine = po.hitters.filter(function (hid, i) { return po.spots ? po.spots[String(hid)] : i < 9; }).slice(0, 9);
+    var groups = [["Takes the first pitch", "Get ahead with a strike", []], ["Swings at the first pitch", "Start off the plate", []], ["Chases a lot", "Expand the zone", []],
+                  ["Swings and misses", "Go for the miss", []], ["Expands with two strikes", "Finish off the plate", []], ["Holds his zone with two strikes", "Finish on the edges", []],
+                  ["behind", "Don't give in when behind", []]];
+    var short = shortNames(nine.map(function (hid) { return { player_id: hid, name: (players[String(hid)] || {}).name || String(hid) }; }));
+    nine.forEach(function (hid) {
+      var p = players[String(hid)], c = p && p.hitter;
+      if (!c) return;
+      var tags = hitterTags(c, doc.league), nm = short[String(hid)] || lastName(p.name || String(hid));
+      groups.forEach(function (g) { if (tags.indexOf(g[0]) >= 0) g[2].push(nm); });
+      var l = doc.league && doc.league.counts ? doc.league.counts[c.side === "L" ? "L" : "R"] : null, r = function (row) { return row && row[0] >= 80 ? row[1] / row[0] : null; };
+      var bs = c.counts ? r(c.counts.behind) : null, lbs = l ? r(l.behind) : null;
+      if (bs != null && lbs != null && bs >= lbs + 0.10) groups[6][2].push(nm);
+    });
+    var rows = groups.filter(function (g) { return g[2].length; });
+    if (!rows.length) return "";
+    return '<ul class="lineup-keys">' + rows.map(function (g) { return "<li><b>" + esc(g[1]) + ":</b> " + esc(listNames(g[2])) + "</li>"; }).join("") + "</ul>";
+  }
   function hzWide() { try { return window.matchMedia("(min-width: 1000px)").matches; } catch (e) { return false; } }
   function hzSheetHand(doc, starter) {
     var pc = doc.players && doc.players[String(starter.id)] && doc.players[String(starter.id)].pitcher, any = null;
@@ -3361,6 +3385,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       " Hot zones against " + esc(hzSheetHand(doc, starter)) + ". Tap a hitter for his full plan, the counts and the bullpen.</p>";
     var glance = lineupGlance(doc, po, hzSheetPick(players[String(starter.id)] && players[String(starter.id)].pitcher));
     if (glance) h += '<p class="note hz-cap">The lineup against ' + esc(hzHandWords(hzSheetPick(players[String(starter.id)] && players[String(starter.id)].pitcher))) + "</p>" + glance;
+    var keys = lineupKeys(doc, po);
+    if (keys) h += '<p class="note hz-cap">Working through this lineup</p>' + keys;
     var spc = players[String(starter.id)] && players[String(starter.id)].pitcher;
     if (spc && spc.mix) h += '<details class="more" data-keep="ars-' + side + '"' + (state.rpOpen["ars-" + side] ? " open" : "") + "><summary>" + esc(lastName(nm(starter.id))) + "'s pitches</summary>" + pctPanel(spc, doc.league, doc.asof, "h4") + (spc.arsenal && spc.arsenal.length ? arsenalTypes(spc) : arsenalTable(spc.mix)) +
       (spc.usage ? '<p class="note hz-cap">What he throws by count</p>' + (usageLine(spc) ? '<p class="pd-line">' + esc(usageLine(spc)) + "</p>" : "") + usageTable(spc, "R") + usageTable(spc, "L") : "") + "</details>";
