@@ -410,6 +410,15 @@ def leash_for(settings):
     return _KERNEL['l']
 
 HAZARD_CORRECTION_PATH=Path(__file__).resolve().parent/'hazard_correction.json'
+PITCH_COUNTS_PATH=Path(__file__).resolve().parent/'pitch_counts.json'
+
+def pitch_counts_for():
+    """The engine's pitches per plate appearance by outcome (brl_live/pitch_counts.json, LEASH-03); the correction with
+    pitch terms needs it."""
+    if 'pc' not in _KERNEL:
+        from research_lab.game_sim.pitch_counts import PitchCounts
+        _KERNEL['pc']=PitchCounts(json.loads(PITCH_COUNTS_PATH.read_text()))
+    return _KERNEL['pc']
 
 def hazard_correction_for(settings,game_type):
     """LEASH-02's correction ({'terms','coef'}) for a regular-season game when switched on, else None."""

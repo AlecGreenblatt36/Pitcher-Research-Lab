@@ -73,3 +73,13 @@ def test_stage_one_fit_runs_end_to_end(tmp_path):
     assert out['terms'] == list(sh.CORRECTION_TERMS_V2) and len(out['coef']) == 44
     assert set(out['by_season']) == {'2025', '2026'} and len(out['table']['counts']['K']) == 21
     PitchCounts(out['table'])                                                      # the table the engine reads
+
+
+def test_live_pitch_table_matches_the_replays_and_loads():
+    from brl_live import boxscore as bx
+    live = json.loads((ROOT / 'brl_live/pitch_counts.json').read_text()); rep = json.loads((ROOT / 'brl_replay/pitch_counts_fit_2023_2024.json').read_text())
+    assert live['counts'] == rep['counts']
+    pc = bx.pitch_counts_for()
+    assert 4.5 < pc.mean('strikeout') < 5.2 and 3.0 < pc.mean('bip_out') < 3.8
+    # the live correction file decides: LEASH-02's 32 terms draw no pitches; a 44-term file (LEASH-03) turns the draws on
+    assert len(json.loads((ROOT / 'brl_live/hazard_correction.json').read_text())['terms']) in (32, 44)
