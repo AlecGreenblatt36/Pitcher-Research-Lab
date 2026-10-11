@@ -61,3 +61,14 @@ def test_runners_to_hold_and_the_running_lines():
               "assert.equal(runLine({season:2026,sb:0,cs:0,on1:60},lg),'On the bases in 2026: no steal tries in 60 times on first.');"
               "assert.equal(runAgainstLine({season:2026,sb:12,cs:2,bf:600},lg,'Misiorowski'),'The running game against Misiorowski in 2026: 12 steals in 14 tries over 600 batters (2.3 tries per 100 batters; most pitchers 2.3, 77% safe).');")
     subprocess.run(['node', '-e', prefix + functions + suffix], check=True)
+
+
+def test_count_mix_line_reads_the_count_and_side():
+    functions = page_functions('countMixLine')
+    prefix = "const assert=require('assert');const pc={usage:{R:{first:[60,30,10],ahead:[50,40,10],behind:[70,20,10],two:[44,50,6]},L:{first:[10,10,5],two:[30,20,50]}}};"
+    suffix = ("assert.equal(countMixLine(pc,{side:'R'},{balls:1,strikes:2}),'With two strikes to righties: breaking ball 50%, fastball 44%, offspeed 6%.');"
+              "assert.equal(countMixLine(pc,{side:'R'},{balls:0,strikes:0}),'On the first pitch to righties: fastball 60%, breaking ball 30%, offspeed 10%.');"
+              "assert.equal(countMixLine(pc,{side:'L'},{balls:0,strikes:0}),'');"
+              "assert.equal(countMixLine(pc,{side:'L'},{balls:2,strikes:2}),'With two strikes to lefties: offspeed 50%, fastball 30%, breaking ball 20%.');"
+              "assert.equal(countMixLine(null,{side:'R'},{balls:0,strikes:0}),'');")
+    subprocess.run(['node', '-e', prefix + functions + suffix], check=True)

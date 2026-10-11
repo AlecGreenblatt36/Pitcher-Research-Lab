@@ -2998,6 +2998,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     }
     var np = nextPitchNote(now.lv.current, players[now.pid] && players[now.pid].pitcher);
     if (np) h += '<p class="rp-next"><b>Next pitch:</b> ' + esc(np) + "</p>";
+    var cm = st.between_innings ? "" : countMixLine(players[now.pid] && players[now.pid].pitcher, players[now.hid] && players[now.hid].hitter, st);
+    if (cm) h += '<p class="rp-next"><b>His mix in this count:</b> ' + esc(cm) + "</p>";
     var ld = loadNote(now.lv, now.pid, lastName(nm(now.pid, now.pitcher)));
     if (ld) h += '<p class="rp-next"><b>On the mound:</b> ' + esc(ld) + "</p>";
     var bs = (now.lv.state && now.lv.state.bases) || [];
@@ -3007,6 +3009,23 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var ul = umpireLine(now.lv);
     if (ul) h += '<small class="rp-now-miss">' + ul + "</small>";
     return h + "</div>";
+  }
+  /* What the pitcher throws in the count at hand to hitters on this batter's side (usage_by_count over the plan's training
+     pitches, 40 or more in the count group): the standard pitch-tendency line. */
+  function countMixLine(pc, hc, st) {
+    var u = pc && pc.usage;
+    if (!u || !st) return "";
+    var side = hc && (hc.side === "L" || hc.side === "R") ? hc.side : null;
+    if (!side || !u[side]) return "";
+    var b = st.balls || 0, k = st.strikes || 0, g = b === 0 && k === 0 ? "first" : k === 2 ? "two" : b > k ? "behind" : "ahead";
+    var row = u[side][g];
+    if (!row) return "";
+    var n = row[0] + row[1] + row[2];
+    if (n < 40) return "";
+    var names = ["fastball", "breaking ball", "offspeed"], parts = [0, 1, 2].filter(function (i) { return row[i] / n >= 0.03; }).sort(function (x, y) { return row[y] - row[x]; })
+      .map(function (i) { return names[i] + " " + Math.round(100 * row[i] / n) + "%"; });
+    var when = { first: "On the first pitch", two: "With two strikes", behind: "Behind in the count", ahead: "Ahead or even" }[g];
+    return when + " to " + (side === "L" ? "lefties" : "righties") + ": " + parts.join(", ") + ".";
   }
   /* Pitches the pitcher on the mound has thrown today, from the real plays plus the at-bat in progress. */
   function pitchCountNow(lv, pid) {
