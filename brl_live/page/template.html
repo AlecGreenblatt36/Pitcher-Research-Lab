@@ -3033,6 +3033,14 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (!card || !lg) return t;
     if (card.chase_rate != null && lg.chase_rate != null) { if (card.chase_rate >= lg.chase_rate + 0.04) t.push("Chases a lot"); else if (card.chase_rate <= lg.chase_rate - 0.06) t.push("Patient"); }
     if (card.whiff_rate != null && lg.whiff_rate != null) { if (card.whiff_rate >= lg.whiff_rate + 0.05) t.push("Swings and misses"); else if (card.whiff_rate <= lg.whiff_rate - 0.07) t.push("Puts the bat on the ball"); }
+    /* count habits against most hitters on his side: the first pitch, and what he does with two strikes */
+    var c = card.counts, l = lg.counts ? lg.counts[card.side === "L" ? "L" : "R"] : null, r = function (row, a, b) { return row && row[b] >= 80 ? row[a] / row[b] : null; };
+    if (c && l) {
+      var fs = r(c.first, 1, 0), lfs = r(l.first, 1, 0);
+      if (fs != null && lfs != null) { if (fs <= lfs - 0.12) t.push("Takes the first pitch"); else if (fs >= lfs + 0.12) t.push("Swings at the first pitch"); }
+      var tc = r(c.two, 4, 3), ltc = r(l.two, 4, 3);
+      if (tc != null && ltc != null) { if (tc >= ltc + 0.08) t.push("Expands with two strikes"); else if (tc <= ltc - 0.10) t.push("Shrinks the zone with two strikes"); }
+    }
     return t;
   }
   /* The spots for one pair, sorted for a sentence: pitches out of the zone he chases, edges and strikes he takes, strikes he can't do much with. */
