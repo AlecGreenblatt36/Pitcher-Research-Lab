@@ -427,6 +427,7 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .rp-now .rp-follow[aria-pressed="true"] { background: var(--board); color: var(--chalk); border-color: var(--board); }
 .rp-now .rp-deck { border: 0; padding: 12px 4px; margin: -12px -2px; min-height: 44px; background: none; font: inherit; color: var(--ink); text-decoration: underline; cursor: pointer; }
 .rp-now-miss { flex: 1 1 100%; color: var(--muted); font-size: 14px; }
+.rp-next { flex: 1 1 100%; margin: 0; font-size: 15px; padding-top: 6px; border-top: 1px solid var(--rule-soft); }
 .sec h3 .pill { font-size: 14px; line-height: 20px; vertical-align: 3px; }
 .mu td.rp-sel { outline: 3px solid var(--ink); outline-offset: -3px; }
 .plan-list { list-style: none; margin: 8px 0 0; padding: 0; background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; }
@@ -2821,9 +2822,28 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var hn = nm(now.hid, now.hitter), card = hn && now.hid ? ' <a href="#/player/h/' + encodeURIComponent(now.hid) + '">' + esc(lastName(hn)) + "'s card</a> shows where he chases." : "";
       h += '<small class="rp-now-miss">' + (doc.sides && doc.sides[now.side] && doc.sides[now.side].hitters.map(String).indexOf(now.hid) >= 0 ? "No plan for this one: he isn't one of the pitchers we planned for." : "No plan for this one: he wasn't in the lineup we planned for.") + card + "</small>";
     }
+    var np = nextPitchNote(now.lv.current, players[now.pid] && players[now.pid].pitcher);
+    if (np) h += '<p class="rp-next"><b>Next pitch:</b> ' + esc(np) + "</p>";
     var ul = umpireLine(now.lv);
     if (ul) h += '<small class="rp-now-miss">' + ul + "</small>";
     return h + "</div>";
+  }
+  /* The next pitch, from SEQ-03F (credited on months the model never saw): after a taken pitch, and more after a swing and
+     miss, the same pitch family again draws more misses than a change (about 2 points of miss rate after a ball, 2.5
+     after a called strike, 3.4 after a miss) and softer contact; a slower one adds to it; a foul resets it. League-wide. */
+  var SEQ_FAM = { FF: "fastball", FA: "fastball", SI: "fastball", FT: "fastball", FC: "fastball", SL: "breaking", ST: "breaking", SV: "breaking", CU: "breaking", KC: "breaking", CS: "breaking", CH: "offspeed", FS: "offspeed", FO: "offspeed", SC: "offspeed", KN: "offspeed" };
+  function nextPitchNote(cur, pc) {
+    var ps = cur && cur.pitches;
+    if (!ps || !ps.length) return "";
+    var last = ps[ps.length - 1], fam = SEQ_FAM[last[0]], res = last[2];
+    if (!fam || !/^[BCSFT]$/.test(String(res || ""))) return "";
+    var mix = pc && pc.mix ? pc.mix[fam] : null;
+    if (pc && pc.mix && (!mix || mix.share < 0.05)) return "";          /* a pitch he barely throws */
+    var name = PITCH[last[0]] || "pitch", a = /^[aeiou]/.test(name) ? "an " : "a ", again = { fastball: "Another fastball", breaking: "Another breaking ball", offspeed: "Another offspeed pitch" }[fam];
+    if (res === "F" || res === "T") return "He fouled off " + a + name + ". After a foul it makes no difference whether you repeat it or change.";
+    var what = res === "S" ? "He swung through " + a + name + "." : res === "C" ? "He took " + a + name + " for a strike." : "He took " + a + name + " for a ball.";
+    var pts = res === "S" ? "about 3.5" : res === "C" ? "about 2.5" : "about 2";
+    return what + " " + again + " gets " + pts + " more points of swings and misses than changing, and weaker contact. A little slower adds to it.";
   }
   /* The Summary tab's live card: the plan for the at-bat in progress, priced for this count, with the grids. */
   function liveCardHtml(f, pk, doc, now) {
@@ -3291,7 +3311,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     }
     if (RP_RECORD && RP_RECORD.games) planTierLines(RP_RECORD).forEach(function (t) { held += '<p class="note">' + esc(t) + "</p>"; });
     if (held) h += '<details class="more" data-keep="held"' + (state.rpOpen.held ? " open" : "") + "><summary>How these plans have held up</summary>" + held + "</details>";
-    h += '<details class="more" data-keep="tip"' + (state.rpOpen.tip ? " open" : "") + '><summary>Pitch to pitch</summary><p class="note">After he takes a pitch, and even more after he swings through one, coming right back with the same pitch type gets more swings and misses and weaker contact than switching. Taking a little off the next one adds to it. After a foul ball it doesn\'t matter. That holds across the league; it isn\'t built into each hitter\'s plan yet.</p></details>';
+    h += '<details class="more" data-keep="tip"' + (state.rpOpen.tip ? " open" : "") + '><summary>Pitch to pitch</summary><p class="note">After he takes a pitch, and even more after he swings through one, coming right back with the same pitch type gets more swings and misses and weaker contact than switching: about 2 more points of misses after a ball, 2.5 after a called strike and 3.5 after a miss. Taking a little off the next one adds to it. After a foul ball it doesn\'t matter. That holds across the league and held up on months the model never saw; during a game the at-bat strip says it for the pitch coming next. It isn\'t built into each hitter\'s plan yet.</p></details>';
     h += '<details class="more" data-keep="how"' + (state.rpOpen.how ? " open" : "") + '><summary>How the plan is built</summary><p class="note">For every hitter we map where he swings, read about a quarter second before the ball gets there, when he has to decide. We compare that to an average hitter on his side and to the spots this pitcher actually throws each pitch to. Each spot is scored by what usually happens there for this hitter: a chase, a take, a whiff, a foul or a ball in play, and what that does to the count. The spots on the plan are the best of the pitcher\'s usual spots, with normal command (pitches miss by about 7 inches). The run figures assume hitters don\'t adjust much. Every test, including the ones that failed, is in the project ledger.</p></details></section>';
     return h;
   }
