@@ -185,3 +185,8 @@ def test_record_lists_the_props_checks():
     got = json.loads(rows)
     assert [r[0] for r in got][:2] == ['Starter strikeouts', 'Starter hits allowed'] and all(0 < r[2] <= 2.5 for r in got)
     assert 'h += propsRecord();' in s
+
+
+def test_bullpen_note_says_the_top_chances_run_high():
+    """BULLPEN-03 and -04: the raw chance stays and the note says arms at 60% or more pitched about 53% of the time."""
+    assert 'arms we gave 60% or more pitched about 53% of the time' in _fn(_script(), 'oddsTab')

@@ -4766,7 +4766,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (!pen.length) return;
       h += '<section class="sec"><h3 class="team-h ' + side + '-c">' + esc(nickname(f[side].name)) + " bullpen</h3>" + penTable(pen) + "</section>";
     });
-    return h + "</div>";
+    /* BULLPEN-03 and -04: the top chances run high and no simple correction fixed them, so the page says so */
+    return h + '</div><p class="note">Chance to pitch: the share of our simulated games each arm pitches in. Re-run over two seasons, arms we gave 60% or more pitched about 53% of the time; lower chances came within about 3 points.</p>';
   }
   /* A bullpen's chance-to-pitch table (arms sorted by the chance): arms at least PEN_LIST_MIN likely in the table, the rest in
      one line under it (all in the table when none reaches it). */
