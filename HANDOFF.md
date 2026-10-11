@@ -65,7 +65,17 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 9:14 a.m. Eastern October 11, by `date -u`)
+### In flight (updated 9:51 a.m. Eastern October 11, by `date -u`)
+
+- October 11, 9:51 a.m.: a separate review of the day's page and study changes found five defects and six possible issues, all
+  fixed in a78e72b4c: Record page notes now name what was checked (walks or hit-by-pitches; 1 to 2.3 points; the map
+  "did not hold up" rather than "made it worse"; the strikeout check marked as described after looking), the strikeout
+  ladder keeps to the checked lines 2.5 to 8.5, career lines count regular-season splits only and paint once (a failed
+  ask retried after a minute), the run line's favorite follows the book when there is a line, the first-inning reading no
+  longer needs a sixth inning, ledger figures corrected (PLAYER-03 top tenth, PLAYER-05's first group is under 100).
+  PLAYER-05 (part-timers' share of their slot) failed its Brier gate, not adopted. PLAYER-06 (two or more total bases)
+  registered; its replays (hitter lines, tags v2-prod4-tb-1000-<season>) start once the margins replays finish; boxes now
+  carry tb2_probability; the page's 2+ TB column waits behind PROP_COLS.tb2.
 
 - October 11, 9:14 a.m.: PLAYER-03 failed as registered (no kind passes; each replay's level comes from the other seasons'
   tables, so a map from one season moved the other the wrong way); the page keeps the raw chances, and the Record page
