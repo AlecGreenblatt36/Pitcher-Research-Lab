@@ -1432,24 +1432,26 @@ SPLIT_M_GRID = (0.0, 25.0, 50.0, 100.0, 200.0, 400.0, 800.0, 1600.0, 3200.0, 640
 SPLIT_METRICS = (('avg', 'h', 'ab'), ('slg', 'tb', 'ab'), ('chase', 'osw', 'on'), ('miss', 'wh', 'sw'))
 
 
-def split_tables(T: dict, mask) -> dict:
-    """Per (batter, pitcher hand) counts on the masked pitches, column 0 against right-handers and 1 against left-handers:
-    at-bats ended on the pitch, hits, total bases, pitches out of MLB's zone (11-14) and swings at them, swings and misses;
-    each batter's side (the majority of his pitches) and whether he batted from different sides against the two hands
-    (30 or more pitches against each), so switch hitters can be left out."""
+def split_tables(T: dict, mask, who: str = 'batter') -> dict:
+    """Per (player, opponent hand) counts on the masked pitches, column 0 against right-handers and 1 against left-handers:
+    at-bats ended on the pitch, hits, total bases, pitches out of MLB's zone (11-14) and swings at them, swings and misses.
+    who 'batter': each hitter by the pitcher's hand, his side (the majority of his pitches) and whether he batted from
+    different sides against the two hands (30 or more pitches against each), so switch hitters can be left out.
+    who 'pitcher' (PSPLITS-01): each pitcher by the batter's side, his throwing hand as his side; no switch flag."""
     rows = np.flatnonzero(mask)
-    bats, bi = np.unique(T['batter'][rows], return_inverse=True)
+    bats, bi = np.unique(T[who][rows], return_inverse=True)
     nb = len(bats)
-    key = bi * 2 + (T['throw_r'][rows] == 0).astype(np.int64)
+    opp_l = (T['throw_r'][rows] == 0) if who == 'batter' else (T['stand_r'][rows] == 0)
+    key = bi * 2 + opp_l.astype(np.int64)
     call = T['call'][rows]; sw = (call == 1) | (call == 2); wh = call == 2
     last = T['last_in_pa'][rows] == 1; o7 = T['out7'][rows]
     ab = last & np.isin(o7, (0, 1, 3, 4, 5, 6)); hit = last & np.isin(o7, (3, 4, 5))
     tb = np.where(last & (o7 == 3), 1.0, 0.0) + np.where(last & (o7 == 4), 2.0, 0.0) + np.where(last & (o7 == 5), 4.0, 0.0)
     ooz = T['zone'][rows] >= 11
     cnt = lambda w: np.bincount(key, weights=np.asarray(w, dtype=np.float64), minlength=nb * 2).reshape(nb, 2)
-    n = cnt(np.ones(len(rows), bool)); rs = cnt(T['stand_r'][rows] == 1)
+    n = cnt(np.ones(len(rows), bool)); rs = cnt((T['stand_r'][rows] if who == 'batter' else T['throw_r'][rows]) == 1)
     side_h = rs / np.maximum(n, 1) >= 0.5
-    switch = (n[:, 0] >= 30) & (n[:, 1] >= 30) & (side_h[:, 0] != side_h[:, 1])
+    switch = ((n[:, 0] >= 30) & (n[:, 1] >= 30) & (side_h[:, 0] != side_h[:, 1])) if who == 'batter' else np.zeros(nb, bool)
     return {'bats': bats, 'side': (rs.sum(1) / np.maximum(n.sum(1), 1) >= 0.5).astype(np.int64), 'switch': switch,
             'pa': np.bincount(bi, weights=last.astype(np.float64), minlength=nb), 'n': n,
             'ab': cnt(ab), 'h': cnt(hit), 'tb': cnt(tb), 'on': cnt(ooz), 'osw': cnt(sw & ooz), 'sw': cnt(sw), 'wh': cnt(wh)}
@@ -1466,13 +1468,14 @@ def split_shrink_study(T: dict, stage, spec: dict) -> dict:
     fit = spec.get('fit', {'train': [2023, 2024], 'test': 2025})
     score = spec.get('score', {'train': [2024, 2025], 'test': 2026, 'test_end': '2026-08-01'})
     min_pa = float(spec.get('min_pa', 300)); min_cell = float(spec.get('min_cell', 100)); boot = int(spec.get('boot', 2000))
+    who = 'pitcher' if spec.get('who') == 'pitcher' else 'batter'       # PSPLITS-01: pitchers by the batter's side
     rng = np.random.default_rng(int(spec.get('seed', 20261011)))
 
     def joined(sp):
         tr_m = reg & np.isin(T['season'], sp['train']); te_m = reg & (T['season'] == int(sp['test']))
         if sp.get('test_end'):
             te_m &= T['day'] < date.fromisoformat(sp['test_end']).toordinal()
-        tr, te = split_tables(T, tr_m), split_tables(T, te_m)
+        tr, te = split_tables(T, tr_m, who), split_tables(T, te_m, who)
         pos = {int(b): i for i, b in enumerate(te['bats'])}
         keep = np.array([pa >= min_pa and not sw_ and int(b) in pos for b, pa, sw_ in zip(tr['bats'], tr['pa'], tr['switch'])], bool)
         ti = np.array([pos[int(b)] for b in tr['bats'][keep]], np.int64)
@@ -1480,7 +1483,7 @@ def split_shrink_study(T: dict, stage, spec: dict) -> dict:
         tek = {k: v[ti] for k, v in te.items() if k in ('ab', 'h', 'tb', 'on', 'osw', 'sw', 'wh', 'side')}
         return trk, tek
 
-    out = {'fit': fit, 'score': score, 'min_pa': min_pa, 'min_cell': min_cell, 'grid': list(SPLIT_M_GRID), 'metrics': {}}
+    out = {'who': who, 'fit': fit, 'score': score, 'min_pa': min_pa, 'min_cell': min_cell, 'grid': list(SPLIT_M_GRID), 'metrics': {}}
     tr1, te1 = joined(fit); stage('split study: fit tables')
     tr2, te2 = joined(score); stage('split study: score tables')
     out['hitters'] = {'fit': int(len(tr1['bats'])), 'score': int(len(tr2['bats'])),
@@ -1529,6 +1532,9 @@ def split_shrink_study(T: dict, stage, spec: dict) -> dict:
                             'slope': round(float(np.polyfit(x[ok], y[ok], 1)[0]), 3), 'sd_train': round(float(np.std(x[ok])), 4),
                             'sd_test': round(float(np.std(y[ok])), 4), 'league_split_lefty_batters': round(float(ls[0]), 4),
                             'league_split_righty_batters': round(float(ls[1]), 4)}
+            if who == 'pitcher':          # for pitchers the side is the throwing hand
+                res['carry']['league_split_lefty_pitchers'] = res['carry'].pop('league_split_lefty_batters')
+                res['carry']['league_split_righty_pitchers'] = res['carry'].pop('league_split_righty_batters')
         out['metrics'][name] = res
         stage(f'split study: {name}')
     return out
@@ -2626,6 +2632,9 @@ def main():
             dates = []
         if params.get('split_study'):
             receipt['split_study'] = split_shrink_study(T, stage, params['split_study'])
+            dates = []
+        if params.get('pitcher_split_study'):
+            receipt['pitcher_split_study'] = split_shrink_study(T, stage, dict(params['pitcher_split_study'], who='pitcher'))
             dates = []
         if params.get('zone_study'):
             zs = params['zone_study']

@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 291,
- "rows": 294,
+ "experiments": 292,
+ "rows": 295,
  "records": {
   "ACC-01": [
    {
@@ -4843,6 +4843,22 @@
     ],
     "frozen_commits": [],
     "status": "(1) and (2) held; (3) misses only"
+   }
+  ],
+  "PSPLITS-01": [
+   {
+    "id": "PSPLITS-01",
+    "columns": {
+     "ID": "PSPLITS-01",
+     "Attempt": "SPLITS-01 for pitchers: how much of a pitcher's split by the batter's side carries over (the pitcher page's splits table, vs RHB and vs LHB: AVG and SLG against, chases, misses per swing). The same candidates with the pitcher's throwing hand as his side (raw; league for his hand; scaled, his level against all batters times his hand's league split; shrunk, m fitted), the same metrics, windows (m on 2023-2024 to 2025, scored once on 2024-2025 to 2026 before August 1), pitchers with 300 or more batters faced in training, bootstrap over pitchers (2,000 draws) and carry-over of his own split beyond his hand's (against lefties minus against righties). tools/brl_report.py split_shrink_study with who 'pitcher', report lane, aggregates only. Synthetic check: planted own splits recovered (shrunk beats raw and scaled, carry-over above 0.15); none planted, m 800 or more and carry-over near zero.",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions on 2026: (1) shrunk beats raw on all four metrics with the interval excluding zero; (2) on misses and chases shrunk beats scaled with the interval excluding zero (a pitcher's split by side follows his pitch mix, which carries over); (3) on AVG and SLG against, the carry-over correlation is under 0.3. Decision rule: if (1) holds, the pitcher splits table shows Expected numbers in the Expected view (shrunk at the fitted m where it beats scaled, scaled otherwise), with the carry-over quoted in its note; if (1) fails, nothing changes.",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "BOX-01": [
