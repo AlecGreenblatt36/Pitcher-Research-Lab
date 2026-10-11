@@ -2849,6 +2849,10 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (np) h += '<p class="rp-next"><b>Next pitch:</b> ' + esc(np) + "</p>";
     var ld = loadNote(now.lv, now.pid, lastName(nm(now.pid, now.pitcher)));
     if (ld) h += '<p class="rp-next"><b>On the mound:</b> ' + esc(ld) + "</p>";
+    var bs = (now.lv.state && now.lv.state.bases) || [];
+    /* PRESSURE-01 (held on 2025 pitches): with runners in scoring position hitters chase about 2.6 points more than their
+       own maps say and swing at about 3.8 points more strikes; their own chase spots keep working */
+    if (!st.between_innings && (bs[1] || bs[2])) h += '<p class="rp-next"><b>Runners in scoring position:</b> hitters chase about 2.6 points more and swing at about 4 points more strikes here. His chase spots still work.</p>';
     var ul = umpireLine(now.lv);
     if (ul) h += '<small class="rp-now-miss">' + ul + "</small>";
     return h + "</div>";
@@ -2866,7 +2870,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var pc = pitchCountNow(lv, pid);
     if (pc < 60 || !name) return "";
     var per = 0.026 * pc / 100, next9 = 9 * 0.026 * (pc + 17) / 100;
-    return name + " is at " + pc + " pitches. Hitters now do about " + per.toFixed(2) + " runs better per at-bat than when he was fresh, about " + next9.toFixed(1) + " runs over the next nine. The drop follows his pitch count, not how many times they have seen him; a fresh reliever resets it.";
+    return name + " is at " + pc + " pitches: hitters do about " + per.toFixed(2) + " runs better per at-bat than when he was fresh (about " + next9.toFixed(1) + " runs over the next nine). It follows his pitch count; a fresh reliever resets it.";
   }
   /* The next pitch, from SEQ-03F (credited on months the model never saw): after a taken pitch, and more after a swing and
      miss, the same pitch family again draws more misses than a change (about 2 points of miss rate after a ball, 2.5
@@ -2883,7 +2887,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (res === "F" || res === "T") return "He fouled off " + a + name + ". After a foul it makes no difference whether you repeat it or change.";
     var what = res === "S" ? "He swung through " + a + name + "." : res === "C" ? "He took " + a + name + " for a strike." : "He took " + a + name + " for a ball.";
     var pts = res === "S" ? "about 3.5" : res === "C" ? "about 2.5" : "about 2";
-    return what + " " + again + " gets " + pts + " more points of swings and misses than changing, and weaker contact. A little slower adds to it.";
+    return what + " " + again + " gets " + pts + " more points of misses than a change, and weaker contact; a little slower helps.";
   }
   /* The Summary tab's live card: the plan for the at-bat in progress, priced for this count, with the grids. */
   function liveCardHtml(f, pk, doc, now) {
