@@ -2143,7 +2143,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         var row = { player_id: String(pid), name: String((p.person || {}).fullName || ""), spot: Math.floor(lcInt(p.battingOrder, 0) / 100), order: lcInt(p.battingOrder, 0) };
         Object.keys(BAT).forEach(function (k) { row[k] = lcInt(st[BAT[k]], 0); });
         var sa = ((p.seasonStats || {}).batting || {}).avg;            /* his average through this game, as box scores print it */
-        if (sa != null && /^\d?\.\d{3}$/.test(String(sa))) row.AVG = String(sa);
+        if (typeof sa === "string" && /^\d?\.\d{3}$/.test(sa)) row.AVG = sa;
         bat.push(row);
       });
       (t.pitchers || []).forEach(function (pid) {
@@ -2153,7 +2153,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         var row = { player_id: String(pid), name: String((p.person || {}).fullName || ""), outs: outs };
         Object.keys(PIT).forEach(function (k) { row[k] = lcInt(st[PIT[k]], 0); });
         var se = ((p.seasonStats || {}).pitching || {}).era;
-        if (se != null && /^\d+\.\d{2}$/.test(String(se))) row.ERA = String(se);
+        if (typeof se === "string" && /^\d+\.\d{2}$/.test(se)) row.ERA = se;
         pit.push(row);
       });
       out.batting[s] = bat; out.pitching[s] = pit;
@@ -3556,8 +3556,13 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (!cur || !cur.length || !prev || !prev.length) return "";
     var byType = function (list) { var o = {}; list.forEach(function (a) { o[a.type] = a; }); return o; }, C = byType(cur), P = byType(prev), out = [];
     var say = function (t) { return TYPE_SAY[t] || String(t).toLowerCase(); };
-    cur.forEach(function (a) { var q = P[a.type]; if (a.share >= 0.05 && (!q || q.share < 0.02)) out.push("added " + (/^[aeiou]/.test(say(a.type)) ? "an " : "a ") + say(a.type) + " (" + Math.round(100 * a.share) + "% of his pitches)"); });
-    prev.forEach(function (q) { var a = C[q.type]; if (q.share >= 0.05 && (!a || a.share < 0.02)) out.push("dropped his " + say(q.type) + " (" + Math.round(100 * q.share) + "% in " + pv.season + ")"); });
+    /* added or dropped only from the complete shares of both seasons (cards from October 11 on): the arsenal table
+       leaves out a type with under 20 pitches, which is not the same as not throwing it */
+    var now = pc.arsenal_shares;
+    if (now) {
+      Object.keys(now).forEach(function (t) { var q = P[t]; if (now[t] >= 0.05 && (!q || q.share < 0.02)) out.push("added " + (/^[aeiou]/.test(say(t)) ? "an " : "a ") + say(t) + " (" + Math.round(100 * now[t]) + "% of his pitches)"); });
+      prev.forEach(function (q) { var sh = now[q.type] || 0; if (q.share >= 0.05 && sh < 0.02) out.push("dropped his " + say(q.type) + " (" + Math.round(100 * q.share) + "% in " + pv.season + ")"); });
+    }
     cur.forEach(function (a) {
       var q = P[a.type], sub = [];
       if (!q || a.share < 0.05 || q.share < 0.05) return;
@@ -3592,7 +3597,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
        bullpen pitched is an off day), else the latest covered days */
     var span = Math.max.apply(null, arms.map(function (p) { return p.recent.length; }).concat([5]));
     var cov = []; for (var k0 = 1; k0 <= span; k0++) if (!doc.asof || addDays(doc.date, -k0) < doc.asof) cov.push(k0);
-    var played = cov.filter(function (k) { return arms.some(function (p) { return p.recent[k - 1] > 0; }); });
+    var played = cov.filter(function (k) { return se.pen_days ? se.pen_days.indexOf(k) >= 0 : arms.some(function (p) { return p.recent[k - 1] > 0; }); });
     var cols = (played.length ? played : cov).slice(0, 3).map(function (k) { return addDays(doc.date, -k); });
     if (!cols.length) return "";
     var players = doc.players || {};

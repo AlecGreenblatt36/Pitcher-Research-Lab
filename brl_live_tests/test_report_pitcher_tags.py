@@ -108,9 +108,11 @@ def test_side_tags_hold_when_habits_carry_over_and_read_against_the_matchups():
     assert held['corr']['fb_in']['r'] > 0.6 and held['corr']['fb_away']['r'] > 0.6
     null = B.pitcher_tag_study(_world(False), lambda *a: None, spec)['splits'][0]
     assert not null['tags']['Works inside with the fastball']['held'] and abs(null['corr']['fb_in']['r']) < 0.3
-    # the adjusted numerators keep the window's overall count
+    # the adjusted numerators add up to the window's real count of fastballs inside, so the league rate is unchanged
     T = _world(True); m = T['season'] == 3
     pc = B.pitcher_tag_counts(T, m)
     k_, n_ = pc['fb_in']
-    fb = (T['group'][m] == 0) & np.isfinite(T['px'][m])
-    assert abs(k_.sum() - n_.sum() * (k_.sum() / n_.sum())) < 1e-6 and abs(n_.sum() - fb.sum()) < 1e-9
+    px = T['px'][m].astype(float); fb = (T['group'][m] == 0) & np.isfinite(px)
+    toward = np.where(T['stand_r'][m] == 1, -px, px)
+    inside = fb & (toward > B.D.ZONE_HALF / 3.0)
+    assert abs(k_.sum() - inside.sum()) < 1e-6 and abs(n_.sum() - fb.sum()) < 1e-9

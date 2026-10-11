@@ -153,7 +153,9 @@ def plays_from_feed(feed: dict) -> list[dict]:
 def season_mark(p: dict, group: str, key: str) -> str | None:
     """A player's season average (batting avg) or ERA from the feed's seasonStats, as printed (".274", "2.72"); None
     for a placeholder such as "-.--". Display only."""
-    v = ((p.get('seasonStats') or {}).get(group) or {}).get(key)
+    ss = p.get('seasonStats') if isinstance(p, dict) else None
+    grp = ss.get(group) if isinstance(ss, dict) else None
+    v = grp.get(key) if isinstance(grp, dict) else None
     if not isinstance(v, str):
         return None
     if key == 'avg':

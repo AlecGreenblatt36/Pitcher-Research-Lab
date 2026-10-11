@@ -62,6 +62,7 @@ def test_arsenal_uses_the_latest_season_when_it_has_300_pitches():
     # last season's mix for what changed: all four-seamers at 95
     prev = card['arsenal_prev']
     assert prev['season'] == 2025 and prev['pitches'] == 400 and prev['types'] == [{'type': 'FF', 'share': 1.0, 'speed': 95.0}]
+    assert card['arsenal_shares'] == {'FF': 0.5, 'ST': 0.5}             # every type he threw this season, for added and dropped
     fake.asof_day = date(2026, 4, 1).toordinal(); T['season'] = np.where(np.arange(n) < 600, 2025, 2026)   # 200 pitches this season: both seasons
     card = B.Fitted.pitcher_card(fake, 77)
     assert card['arsenal_season'] is None and card['arsenal_prev'] is None

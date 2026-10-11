@@ -151,6 +151,8 @@ def test_actual_reader_keeps_season_average_and_era_for_display():
     b=parse_actual_box(f,1,'2026-10-07T00:00:00Z')
     assert b['batting']['away'][0]['AVG']=='.274' and b['pitching']['away'][0]['ERA']=='2.72'
     assert 'AVG' not in b['batting']['home'][0]          # a placeholder is left out
+    f['liveData']['boxscore']['teams']['home']['players']['ID2']['seasonStats']='odd'
+    assert 'AVG' not in parse_actual_box(f,1,'2026-10-07T00:00:00Z')['batting']['home'][0]     # odd data never stops a final
 
 
 def test_actual_reader_never_accepts_in_progress():

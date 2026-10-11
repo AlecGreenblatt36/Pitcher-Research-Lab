@@ -772,16 +772,21 @@ class Fitted:
         r_prev = r[T['season'][r] == yr - 1] if yr is not None and 'season' in T and ra is r_cur else r[:0]
         prev = None
         if len(r_prev) >= 300:
+            # every pitch type he threw, so a type left off a list for having few pitches is not read as dropped or added;
+            # speeds from 10 or more of a type
             sp_ = T['sub'][r_prev]; prev = []
             for k, code in enumerate(D.SUBTYPES):
                 mm = sp_ == k
-                if mm.sum() < max(20, 0.01 * len(r_prev)):
+                if not mm.any():
                     continue
-                prev.append({'type': code, 'share': round(float(mm.mean()), 3), 'speed': round(float(np.nanmean(T['v0'][r_prev][mm])), 1)})
+                prev.append({'type': code, 'share': round(float(mm.mean()), 4), 'speed': round(float(np.nanmean(T['v0'][r_prev][mm])), 1) if mm.sum() >= 10 else None})
             prev.sort(key=lambda a: -a['share'])
+        # this season's share of every pitch type he threw (the arsenal table lists only those with 20 or more)
+        shares_now = {code: round(float((sub == k).mean()), 4) for k, code in enumerate(D.SUBTYPES) if (sub == k).any()} if ra is r_cur and len(ra) else None
         card = {'throws': 'R' if T['throw_r'][r][0] == 1 else 'L', 'pitches': int(len(r)), 'mix': mix, 'arsenal': arsenal, 'role': role,
                 'arsenal_season': int(yr) if ra is r_cur else None,
                 'arsenal_prev': {'season': int(yr) - 1, 'pitches': int(len(r_prev)), 'types': prev} if prev else None,
+                'arsenal_shares': shares_now if prev else None,
                 'chase_rate_against': round(float(self.swing[r][self.outside[r]].mean()), 3) if self.outside[r].any() else None,
                 'looks_in_ends_out': round(float(self.looks_in_ends_out[r].mean()), 3),
                 'zones': zone_split(T, r, self.swing, self.whiff, by='stand_r'),      # where he throws, by the batter's side
@@ -1965,7 +1970,7 @@ def build_report(fit: Fitted, T_all: dict, day: str, asof: str, stage, max_relie
     from brl_live import lineups as LU
     d0 = date.fromisoformat(day)
     sched = mlb(f'https://statsapi.mlb.com/api/v1/schedule?sportId=1&startDate={(d0 - timedelta(days=46)).isoformat()}&endDate={(d0 - timedelta(days=1)).isoformat()}&gameType=R,F,D,L,W')
-    by_team = {}; team_games = {}; sides_46 = {}
+    by_team = {}; team_games = {}; sides_46 = {}; team_days = {}
     for d in sched.get('dates', []):
         for g in d.get('games', []):
             if (g.get('status') or {}).get('abstractGameState') != 'Final':
@@ -1976,6 +1981,8 @@ def build_report(fit: Fitted, T_all: dict, day: str, asof: str, stage, max_relie
                 ids[side] = tid
                 if tid and d.get('date', '') >= (d0 - timedelta(days=16)).isoformat():
                     by_team.setdefault(tid, []).append(pk); team_games[(pk, tid)] = side
+                if tid and d.get('date'):
+                    team_days.setdefault(tid, set()).add(d['date'])
             if ids['away'] and ids['home']:
                 sides_46[pk] = (ids, g.get('gameType'))
     rec_h, rec_p, rec_o = recent_players(fit.T, by_team, team_games)
@@ -2033,7 +2040,9 @@ def build_report(fit: Fitted, T_all: dict, day: str, asof: str, stage, max_relie
             if not box:                         # a game to come: the starter and the likeliest relievers with enough pitches
                 staff = [x for x in staff if x == starter] + [x for x in staff if x != starter][:max_relievers]
             side_entry = {'lineup_source': source, 'hitters': hitters, 'spots': {str(x): v for x, v in spots.items() if x in hitters},
-                          'pitchers': [{'id': x, 'role': 'starter' if x == starter else 'reliever', 'recent': recent_load(x)} for x in staff], 'pairs': {}}
+                          'pitchers': [{'id': x, 'role': 'starter' if x == starter else 'reliever', 'recent': recent_load(x)} for x in staff], 'pairs': {},
+                          # the days in the week before on which the staff's team played (the bullpen card's columns)
+                          'pen_days': [k for k in range(1, 8) if (d0 - timedelta(days=k)).isoformat() in team_days.get(int(fid or 0), set())]}
             need_names.update(hitters); need_names.update(staff)
             h2h = fit.head_to_head(hitters, staff) if hasattr(fit, 'head_to_head') else {}
             for h in hitters:

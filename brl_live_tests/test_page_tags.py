@@ -187,7 +187,14 @@ def test_arsenal_changes_from_last_season():
     functions = page_functions('arsenalChanges', 'listNames')
     prefix = ("const assert=require('assert');var TYPE_SAY={FF:'four-seam fastball',SI:'sinker',FC:'cutter',SL:'slider',CH:'changeup',CU:'curveball',EP:'eephus'};")
     suffix = ("const pc={arsenal_season:2026,arsenal:[{type:'FF',share:0.64,speed:100.6},{type:'FC',share:0.14,speed:95.8},{type:'SL',share:0.11,speed:91.8},{type:'CU',share:0.10,speed:88.0},{type:'CH',share:0.01,speed:91.0}],"
+              "arsenal_shares:{FF:0.64,FC:0.14,SL:0.11,CU:0.10,CH:0.01},"
               "arsenal_prev:{season:2025,pitches:1500,types:[{type:'FF',share:0.52,speed:99.1},{type:'SL',share:0.20,speed:90.5},{type:'CH',share:0.12,speed:91.5},{type:'CU',share:0.10,speed:87.5}]}};"
+              # a type left off this season's table for few pitches but thrown 3.6% is not dropped
+              "const few={arsenal_season:2026,arsenal:[{type:'FF',share:0.9,speed:95}],arsenal_shares:{FF:0.9,CU:0.036,SL:0.064},"
+              "arsenal_prev:{season:2025,pitches:600,types:[{type:'FF',share:0.85,speed:95},{type:'CU',share:0.09,speed:80},{type:'SL',share:0.06,speed:85}]}};"
+              "assert.equal(arsenalChanges(few),'');"
+              # cards without the complete shares say no added or dropped
+              "assert.ok(arsenalChanges(Object.assign({},pc,{arsenal_shares:null})).indexOf('dropped')<0);"
               "const t=arsenalChanges(pc);"
               "assert.ok(t.indexOf('Since 2025: ')===0,t);assert.ok(t.indexOf('added a cutter (14% of his pitches)')>0,t);"
               "assert.ok(t.indexOf('dropped his changeup (12% in 2025)')>0,t);"
