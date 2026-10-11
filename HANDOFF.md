@@ -65,7 +65,14 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 7:15 a.m. Eastern October 11, by `date -u`)
+### In flight (updated 8:35 a.m. Eastern October 11, by `date -u`)
+
+- October 11, 8:35 a.m.: PZONES-01 held (run 38131952265): pitcher charts have the Expected view (swing and miss shrunk
+  at m 80; AVG and SLG at his level on his hand's league pattern; page PZ_EXP_M, pitcherZoneLegend). HCHANGE-01 (run
+  38132555095; registered as CHANGE-01, renamed because the ID was taken): flagged season changes held 55% to 80% in
+  chase, misses, strikeouts and hard-hit; walk-rate changes no longer called out (HC_RATES carry the held share). The
+  Record page lists the other checks in plain words (OTHER_CHECKS). The Odds tab shows the line as a sportsbook board with
+  our fair price (lineBoard, amOdds). Check new experiment IDs against the ledger before registering (grep "^| ID |").
 
 - October 11, 7:15 a.m.: REST-01 failed as registered (relievers on no rest lose 0.16 mph, under the 0.2 gate, and no
   strikeouts; bullpen card unchanged). TTO-01: the third-time penalty against starters is real every season (OBP +1.05
