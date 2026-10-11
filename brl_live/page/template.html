@@ -2686,6 +2686,40 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       COUNT_ROWS.map(function (k) { var row = c[k[0]], lr = l ? l[k[0]] : null; return "<tr><td>" + k[1] + "</td><td>" + (row ? Number(row[0]).toLocaleString() : "\u2013") + "</td>" + cell(row, lr, 1, 0, 20) + cell(row, lr, 4, 3, 15) + cell(row, lr, 2, 1, 15) + "</tr>"; }).join("") +
       '</tbody></table></div><p class="note">Small numbers: most hitters on his side. Chase: swings at pitches out of the zone. Miss: misses per swing. The counts are from the pitcher\'s side: behind means more balls than strikes.</p>';
   }
+  /* A count plan from his habits against most hitters on his side (raw rates, 80 or more pitches in the count group). */
+  function countPlan(card, lg) {
+    var c = card && card.counts, l = lg && lg.counts ? lg.counts[card.side === "L" ? "L" : "R"] : null;
+    if (!c || !l) return "";
+    var r = function (row, a, b) { return row && row[b] >= 80 ? row[a] / row[b] : null; }, out = [];
+    var fs = r(c.first, 1, 0), lfs = r(l.first, 1, 0);
+    if (fs != null && lfs != null) {
+      if (fs <= lfs - 0.12) out.push("He takes the first pitch (swings at " + pct(fs) + ", most hitters " + pct(lfs) + "): start him with a strike.");
+      else if (fs >= lfs + 0.12) out.push("He swings at the first pitch (" + pct(fs) + ", most hitters " + pct(lfs) + "): start him off the plate.");
+    }
+    var tc = r(c.two, 4, 3), ltc = r(l.two, 4, 3);
+    if (tc != null && ltc != null) {
+      if (tc >= ltc + 0.08) out.push("With two strikes he expands (chases " + pct(tc) + ", most " + pct(ltc) + "): finish him off the plate.");
+      else if (tc <= ltc - 0.10) out.push("With two strikes he shrinks the zone (chases " + pct(tc) + ", most " + pct(ltc) + "): finish him on the edges.");
+    }
+    var bs = r(c.behind, 1, 0), lbs = r(l.behind, 1, 0);
+    if (bs != null && lbs != null && bs >= lbs + 0.10) out.push("In hitter's counts he gets aggressive (swings at " + pct(bs) + ", most " + pct(lbs) + "): don't give in over the middle.");
+    return out.join(" ");
+  }
+  /* The headline of a pitcher's count habits: the pitch he leans on when behind and with two strikes, to each side. */
+  function usageLine(pc) {
+    var u = pc && pc.usage, out = [], nm = ["fastball", "breaking ball", "offspeed pitch"];
+    if (!u) return "";
+    [["R", "righties"], ["L", "lefties"]].forEach(function (sd) {
+      var x = u[sd[0]];
+      if (!x) return;
+      var lead = function (row) { var n = row[0] + row[1] + row[2], i = row.indexOf(Math.max.apply(null, row)); return n >= 40 && row[i] / n >= 0.6 ? [nm[i], row[i] / n] : null; };
+      var b = lead(x.behind || [0, 0, 0]), t = lead(x.two || [0, 0, 0]), bits = [];
+      if (b) bits.push("behind in the count it's the " + b[0] + " " + pct(b[1]) + " of the time");
+      if (t) bits.push("with two strikes the " + t[0] + " " + pct(t[1]));
+      if (bits.length) out.push("To " + sd[1] + ": " + bits.join("; ") + ".");
+    });
+    return out.join(" ");
+  }
   /* What a pitcher throws in each count group, to one side of the plate. */
   function usageTable(pc, side) {
     var u = pc && pc.usage && pc.usage[side];
@@ -3186,7 +3220,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       " Hot zones against " + esc(hzSheetHand(doc, starter)) + ". Tap a hitter for his full plan, the counts and the bullpen.</p>";
     var spc = players[String(starter.id)] && players[String(starter.id)].pitcher;
     if (spc && spc.mix) h += '<details class="more" data-keep="ars-' + side + '"' + (state.rpOpen["ars-" + side] ? " open" : "") + "><summary>" + esc(lastName(nm(starter.id))) + "'s pitches</summary>" + arsenalTable(spc.mix) +
-      (spc.usage ? '<p class="note hz-cap">What he throws by count</p>' + usageTable(spc, "R") + usageTable(spc, "L") : "") + "</details>";
+      (spc.usage ? '<p class="note hz-cap">What he throws by count</p>' + (usageLine(spc) ? '<p class="pd-line">' + esc(usageLine(spc)) + "</p>" : "") + usageTable(spc, "R") + usageTable(spc, "L") : "") + "</details>";
     var pen = bullpenCard(doc, se, nm);
     if (pen) h += '<details class="more" data-keep="pen-' + side + '"' + (state.rpOpen["pen-" + side] ? " open" : "") + "><summary>" + esc(nickname(doc.teams[other].name)) + " bullpen: rest and pitches</summary>" + pen + "</details>";
     h += '<ol class="plan-list">';
@@ -3225,6 +3259,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (arms.length > 1) h += '<div class="seg arms" role="group" aria-label="Pitcher">' + arms.map(function (pt) { var k_ = parts[0] + "|" + ids[0] + ":" + pt.id; return '<button data-rp="' + k_ + '" aria-pressed="' + (k_ === sel) + '">' + esc(lastName(nm(pt.id))) + (pt.role === "starter" ? " <small>SP</small>" : "") + "</button>"; }).join("") + "</div>";
     h += '<p class="pd-line">' + esc(planLine(pr2)) + "</p>";
     var tags = hitterTags(hc, doc.league);
+    var cp = countPlan(hc, doc.league);
+    if (cp) h += '<p class="pd-line">' + esc(cp) + "</p>";
     /* with hot zones, his chase and miss rates are in the strip over the charts; the old sentence otherwise */
     if (hc && !hc.zones) h += '<p class="note">' + esc(lastName(nm(ids[0]))) + " chases " + (hc.chase_rate != null ? pct(hc.chase_rate) : "–") + " of pitches out of the zone (league " + pct(doc.league.chase_rate) + ") and misses on " + (hc.whiff_rate != null ? pct(hc.whiff_rate) : "–") + " of his swings (league " + pct(doc.league.whiff_rate) + ")." + (tags.length ? " " + esc(tags.join(". ")) + "." : "") + "</p>";
     else if (hc && tags.length) h += '<div class="pl-tags pd-tags">' + tags.map(function (x) { return "<span>" + esc(x) + "</span>"; }).join("") + "</div>";
@@ -3676,7 +3712,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
           /* the arsenal the way every scouting sheet lists it, then where each pitch goes to each side */
           var fams = ["fastball", "breaking", "offspeed"].filter(function (fam) { return mix[fam] && mix[fam].share >= 0.005; });     /* a pitch he all but never throws gets no row */
           if (fams.length) h += arsenalTable(mix) + '<p class="note">Miss: misses per swing. Chase: swings at his pitches out of the zone. Zone: pitches in the strike zone. Put away: strikeouts per two-strike pitch of that type.</p>';
-          if (x.usage) h += '<h2 class="hz-h2">What he throws by count</h2>' + usageTable(x, "R") + usageTable(x, "L") + '<p class="note">Share of each pitch type in each count. Behind means more balls than strikes.</p>';
+          if (x.usage) h += '<h2 class="hz-h2">What he throws by count</h2>' + (usageLine(x) ? '<p class="pd-line">' + esc(usageLine(x)) + "</p>" : "") + usageTable(x, "R") + usageTable(x, "L") + '<p class="note">Share of each pitch type in each count. Behind means more balls than strikes.</p>';
           if (x.zones && (x.zones.R || x.zones.L)) {
             /* where he pitches, the standard 13 zones: to righties or lefties, by pitch type */
             var bs = state.hzBat === "L" && x.zones.L ? "L" : x.zones.R ? "R" : "L", pm = HZ_PMETRICS[state.hzPMetric] ? state.hzPMetric : "loc";
