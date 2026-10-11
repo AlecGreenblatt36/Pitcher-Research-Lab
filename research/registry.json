@@ -4435,14 +4435,16 @@
     "columns": {
      "ID": "MATCHUPREAD-01",
      "Attempt": "Does a pitcher's own location pattern, laid over a hitter's expected zones, predict the hitter's results against that pitcher beyond the hitter's level on that pitch type? For each 2026 at-bat ending on a pitch of family f from pitcher p to hitter h: the composite E = the sum over MLB's 13 zones of p's share of family-f pitches to h's side in each zone (training seasons) times h's expected slugging there (ZONES-01's shrinkage, m 160, against p's hand and on family f); the baseline B = the same sum with the league's location shares for that hand, side and family instead of p's. Training 2024 and 2025, regular season; pitchers with 200 or more family-f pitches to that side in training, hitters with 100 or more plate appearances. Scored once on 2026 regular-season at-bats: squared error of total bases per at-bat for E against B, and the slope of actual minus B on E minus B, with bootstrap intervals by pitcher (2,000 draws). tools/brl_report.py matchup_read_study, report lane, aggregates only",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: (1) the slope on E minus B is positive with the interval excluding zero; (2) E's squared error is below B's with the interval excluding zero. Decision rule: if (1) and (2) hold, a hitter's plan shows a matchup read per pitch type (his expected slugging where this pitcher throws it against where an average pitcher does), scaled by the slope; if only (1) holds, the read is shown as a lean with its slope; if (1) fails, no matchup read.",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: (1) the slope on E minus B is positive with the interval excluding zero; (2) E's squared error is below B's with the interval excluding zero. Decision rule: if (1) and (2) hold, a hitter's plan shows a matchup read per pitch type (his expected slugging where this pitcher throws it against where an average pitcher does), scaled by the slope; if only (1) holds, the read is shown as a lean with its slope; if (1) fails, no matchup read. Results (run 38108106040, receipt research/report-38108106040.json; 93,623 at-bats of 2026 against 472 pitchers): slope on E minus B **0.457 [0.107, 0.830]**; squared error E minus B **+0.000029 [-0.000222, +0.000273]** per at-bat; the composite moves from the baseline by 0.0185 total bases per at-bat (standard deviation), so after the slope a read would move expected slugging by about .008. Both sums sit about 0.05 below the actual mean (0.348 and 0.346 against 0.395) because the zone shares are of all pitches while the slugging is per at-bat ending there; the comparison is like for like. **(1) held, (2) failed.** Reading: where a pitcher puts the ball does carry into a hitter's results beyond his level on that pitch type, but the effect is far too small to plan on. Decision (product call, rule 3, superseding the registered lean): no matchup read on the page; a read that moves slugging by under .010 would only look like information.",
+     "Delta corrected Brier, 2026": "(1) held, (2) failed; too small to show: no matchup read"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38108106040"
+    ],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "(1) held, (2) failed; too small to show: no matchup read"
    }
   ],
   "BOX-01": [
