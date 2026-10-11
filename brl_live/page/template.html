@@ -1079,11 +1079,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       }).join("") + "</tbody></table>";
   }
   /* Strikeouts at the lines PLAYER-04 checked (2.5 to 8.5: on the live engine within 2.1 points of how often starters got
-     there); outs recorded (three an inning) at the lines PLAYER-07 checked (9.5 to 21.5), which held only with LEASH-02's
+     there); outs recorded (three an inning) at the lines PLAYER-07 checked (12.5 to 20.5), which held only with LEASH-02's
      correction on the starter-exit hazard: shown for boxes simulated with it (their adjustments name it; regular-season
      games), never for the plain hazard's. */
   function kLadder(c) { return propLadder(c, "Strikeouts", 2.5, 8.5); }
-  function outsLadder(c) { return propLadder(c, "Outs", 9.5, 21.5); }
+  function outsLadder(c) { return propLadder(c, "Outs", 12.5, 20.5); }
   var OUTS_LADDER = true;
   function exitsByInning(box) { return (box && box.adjustments || []).some(function (a) { return /starter exits by inning/.test(String(a)); }); }
   /* The starter's ladders on the Odds tab: strikeouts, and outs when shown; side by side where there is room. */
@@ -2086,9 +2086,10 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var real = realGame(st, lv || (D.live && D.live[pk]), actualBox);
     if (tab === "report") html += reportTab(f, pk);
     else if (tab === "odds") html += oddsTab(f, box);
+    else if (tab === "matchups") html += matchupsTab(f, box);
     else if (!s && (real || actualBox) && tab === "box") html += boxTab(f, real || actualBox, null, pk, "Actual", true);
-    else if (!s && real && real.plays && tab === "plays") html += playsTab(f, real) + '<p class="note">The real game from the official play-by-play.</p>';
-    else if (!s) html += '<p class="empty">' + (real || actualBox ? "No full simulated game was kept for this forecast; the real box score and plays are on their tabs." : actual ? "No full simulated game was kept for this forecast." : "The full simulated game is still being built for this forecast.") + "</p>";
+    else if (!s && real && tab === "plays") html += real.plays.length ? playsTab(f, real) + '<p class="note">The real game from the official play-by-play' + (real._live ? ", through the last completed plate appearance at the last check" : "") + ".</p>" : '<p class="empty">First pitch is in. The first plate appearance shows here when it ends.</p>';
+    else if (!s) html += '<p class="empty">' + (real || actualBox ? "No full simulated game was kept for this forecast; the real box score" + (real ? " and plays are on their tabs." : " is on its tab.") : actual ? "No full simulated game was kept for this forecast." : "The full simulated game is still being built for this forecast.") + "</p>";
     else if (tab === "box") html += ((!(real || actualBox) || state.boxSide[pk] === "proj") ? versions : "") + boxTab(f, s, real || actualBox, pk, real && real._live ? "Live" : "Actual");
     else if (tab === "plays") {
       var pside = state.playSide[pk] || (real ? "actual" : "proj");
@@ -2098,7 +2099,6 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (pside === "actual" && real) html += '<p class="note">The real game from the official play-by-play' + (real._live ? ", through the last completed plate appearance at the last check" : "") + ".</p>";
       else html += '<p class="note">The simulator decides how each at-bat ends. The pitches shown are borrowed from a real at-bat that ended the same way, for the look of it; they decide nothing.</p>';
     }
-    else if (tab === "matchups") html += matchupsTab(f, box);
     else html += summaryTab(f, s, box, actual, actualBox, v, real, lv, versions);
     html += "</div></div></div>";
     app.innerHTML = html;
@@ -4583,10 +4583,6 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (mkt.over_under != null) h += '<tr><th scope="row">Total ' + esc(mkt.over_under) + "</th><td>o" + amText(mkt.over_odds) + " / u" + amText(mkt.under_odds) + "</td><td>" + (et != null ? et.toFixed(1) + " runs" : "\u2013") + "</td></tr>";
     return h + '</tbody></table></div><p class="note">' + esc(mkt.provider || "The book") + "'s prices at " + esc(timeET(mkt.captured_at)) + " ET. Our fair price is our pick as American odds with no margin: below \u2212100 favored, above +100 not. For the total we give the runs we expect instead of a price: re-run over two seasons, no over chance of ours called games better than the closing total, so we do not price the over.</p>";
   }
-  /* The total's distribution for the market numbers: from the day-form worlds when the live run adds them (DISP-03: the
-     total's over and under and the run line come from worlds as spread out as real games, win chances from the plain ones),
-     else the plain worlds. */
-  function marketTotal(box) { var d = box && box.market_worlds ? dist(box.market_worlds.total_run_distribution) : null; return d && d.counts.length ? d : null; }
   /* Markets beyond the moneyline and the total, each shown only once its check held on two seasons re-run (RUNLINE-01,
      FIRST5-01, NRFI-01; until then false). The run line keeps the pick: our win chance times the simulator's chance of
      winning by two or more once a team wins, over the same worlds, so the two scores' dependence is kept. The first five
@@ -4658,6 +4654,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         (wt ? " By first pitch Vegas is a touch sharper, so our pick is " + wt + "." : "")) + "</p>";
     }
     h += "</section>";
+    if (!box) return h + '<p class="empty">Runs, totals and player props show here once the full simulation for this forecast is built.</p>';
 
     var trd = box.team_run_distributions || {}, ra = dist(trd.away), rh = dist(trd.home);
     if (ra && rh) {
@@ -4665,16 +4662,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       h += '<div class="legend"><span><i class="key" style="background:var(--away)"></i>' + esc(nickname(f.away.name)) + '</span><span><i class="key" style="background:var(--home)"></i>' + esc(nickname(f.home.name)) + "</span></div>";
       h += runsChart(ra, rh) + "</section>";
     }
-    var tr = box.total_run_distribution ? dist(box.total_run_distribution) : null, trm = marketTotal(box) || tr;
+    var tr = box.total_run_distribution ? dist(box.total_run_distribution) : null;
     if (tr) {
-      var mkt2 = D.market && D.market[f.game_pk], mline = "";
-      if (mkt2 && mkt2.over_under != null) {
-        /* the simulator's chance of the over, a push left out, as the replays score it (tools/replay_compare.py p_over);
-           from the day-form worlds when the box has them (DISP-03) */
-        var L0 = Number(mkt2.over_under), ov = 0, un = 0;
-        trm.counts.forEach(function (x) { if (x[0] > L0) ov += x[1]; else if (x[0] < L0) un += x[1]; });
-        mline = " Vegas total: " + mkt2.over_under + "." + (ov + un ? " Over " + mkt2.over_under + (L0 === Math.round(L0) ? " (a push left out)" : "") + ": simulator " + pct(ov / (ov + un)) + (mkt2.p_over != null ? ", Vegas " + pct(mkt2.p_over) : "") + "." : "");
-      }
+      /* Vegas's total and its over chance only: TOTALS-03 found no over chance of ours that called games better than the
+         closing total, so the page states none of its own */
+      var mkt2 = D.market && D.market[f.game_pk], mline = mkt2 && mkt2.over_under != null ? " Vegas total: " + mkt2.over_under + (mkt2.p_over != null ? " (over " + pct(mkt2.p_over) + ")" : "") + "." : "";
       var taughtTotal = taughtTotalFor(f, mkt2, tr);
       h += '<section class="sec"><h2>Total runs</h2><p class="lede">' + (taughtTotal != null ? "We expect " + taughtTotal.toFixed(1) + " runs: the simulator\'s " + mean(tr).toFixed(1) + " mixed with the Vegas total (over two seasons re-run, the mix beat the Vegas total on its own). " : "We expect " + mean(tr).toFixed(1) + " runs. ") +
         "Most likely " + mode(tr) + ". Half of games land between " + quant(tr, .25) + " and " + quant(tr, .75) + ". " + pct(probAtLeast(tr, 10)) + " reach 10 or more." + esc(mline) + "</p></section>";
@@ -5423,7 +5415,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       h += "</ul></details>";
     }
     h += "<h2>Player pages</h2><p>Every hitter and pitcher with enough pitches has a page: his season line and last ten games from MLB, percentile rankings against everyone with 300 or more plate appearances or batters faced, his splits, hot zones, where he hits it, and for pitchers the arsenal, how each pitch moves and his fastball speed game by game. A few things we checked before saying them: a hitter's last ten games told almost nothing about his next ten in getting on base or slugging (strikeouts carried a little), and a split against lefties or righties beyond the usual one for his side mostly did not carry over to the next season, for hitters or pitchers, so the Expected view leans on the usual split. A starter's fastball speed did carry: about 45% of a change in his last start showed up again in the next one, and starters coming off a drop of a mile per hour or more struck out about two fewer batters per 100.</p>";
-    h += "<h2>Team stats, props and past meetings</h2><p>Before first pitch the Summary shows both teams' season numbers from MLB, each with the club's rank among the 30. The Odds tab lists each starter's strikeouts the way sportsbooks do, with our chance of going over each line and its fair price; re-run over two seasons, those chances came within about 2 points of how often starters actually got there. In regular-season games it lists each starter's outs recorded the same way. Each hitter's chances there are his own: the trips a pinch hitter or substitute takes from his spot late in games are allowed for, on average for each spot in the order. The Matchups tab adds each hitter's career line against the starting pitcher, from MLB. Those are small samples: over four seasons, beyond each player's own level, a 20 plate-appearance record carried between none and about 15% of its on-base edge into later meetings.</p>";
+    h += "<h2>Team stats, props and past meetings</h2><p>Before first pitch the Summary shows both teams' season numbers from MLB, each with the club's rank among the 30. The Odds tab lists each starter's strikeouts the way sportsbooks do, with our chance of going over each line and its fair price; re-run over two seasons, those chances came within about 2 points of how often starters actually got there. Starting with next season's regular-season games, it also lists each starter's outs recorded the same way. Each hitter's chances there are his own: the trips a pinch hitter or substitute takes from his spot late in games are allowed for, on average for each spot in the order. The Matchups tab adds each hitter's career line against the starting pitcher, from MLB. Those are small samples: over four seasons, beyond each player's own level, a 20 plate-appearance record carried between none and about 15% of its on-base edge into later meetings.</p>";
     h += "<h2>The projected game</h2><p>One of the ten thousand games: the one closest to the middle on runs, hits and each starter's innings and strikeouts, with our pick winning in nine innings. It reads like a box score, but it is one likely way the night goes, not a promise. The high-scoring, low-scoring and upset versions show the range.</p>";
     h += "<h2>During the game</h2><p>While a game is on, the page checks MLB's feed every 15 seconds for the score, the plays and every pitch. The win chance moves after each play, using the same ten thousand games from before first pitch and how real games have gone from the same spot.</p>";
     h += "<h2>Past and future games</h2><p>Tap Games, then use the date strip or the calendar. Any day of 2025 and 2026 works. Past days show the real box score next to what we said, and how our picks did that day. Before October 6, 2026 those are re-runs: we played each game again after the season using only what was known before it. For tomorrow, we post an early number the night before once both starters are announced, using projected lineups, and update it on game day when the real lineups come out. Further out you see the schedule.</p>";

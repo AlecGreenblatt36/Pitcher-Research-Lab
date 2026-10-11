@@ -118,20 +118,14 @@ def make_history_engine(parameters: dict, history_path: Path, physics_table=None
     manager = PortableStarterPolicy(manager_doc, pexp, texp,
         {int(matchup.away.starter.player_id): matchup.away.team_id,
          int(matchup.home.starter.player_id): matchup.home.team_id}, correction=correction)
-    pitch_model = None
     if correction is not None:
         leash_label = (leash_label + '; ' if leash_label else '') + 'starter exits by inning (LEASH-02)'
-        if len(correction['terms']) > 32:
-            # LEASH-03: the correction reads the starter's pitch count, so the engine draws each plate appearance's pitches
-            from .boxscore import pitch_counts_for
-            pitch_model = pitch_counts_for()
-            leash_label += '; and by pitch count (LEASH-03)'
     if scale is not None:
         manager.league = float(manager.league) * scale
         manager.adjust_label = 'postseason starter usage (expected batters x%.2f)' % scale
     elif leash_label:
         manager.adjust_label = leash_label
-    return GameSimulator(provider, manager_policy=manager, pitch_counts=pitch_model,
+    return GameSimulator(provider, manager_policy=manager,
                          config=SimulationConfig(**parameters.get('config', {}))), matchup
 
 

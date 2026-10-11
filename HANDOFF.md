@@ -78,17 +78,26 @@ queue behind the shards (seen October 11 at 16:50 UTC). Check-only replays (n_si
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 3:53 p.m. Eastern October 11, by `date -u`)
+### In flight (updated 4:32 p.m. Eastern October 11, by `date -u`)
 
+- October 11, 4:32 p.m.: review fixes. The live builder refuses a hazard correction file that is not LEASH-02's 32 terms
+  (LEASH-03's pitch terms would have run with no pitches outside the one simulator it returned); brl_live/pitch_counts.json
+  and the idle live branch are gone. The outs ladder shows only 12.5 to 20.5, the lines PLAYER-07 scored (with those lines
+  LEASH-02's ladder runs 1.42 and 1.52 points high, the ledger now says so). The Total runs section no longer states the
+  simulator's over chance (TOTALS-03), only the Vegas total and its over chance. Small page gaps closed: a live game's
+  Plays tab with no plays yet says first pitch is in, the Odds tab without a box stops after win chances, Matchups shows
+  without a simulated sample. Ledger and METHODS wording corrected (the hazard's inning terms, LEVEL-03's totals, the
+  pitch-band figures).
 - October 11, 3:03 p.m.: LEASH-03 (pitch counts in the starter's exit) registered; stage 1 held (research run 38165964534: the
-  hazard expected 50% to 75% too many removals at 60 to 84 pitches and too few from 85 on, in every season; with pitch
+  hazard expected 25% to 75% too many removals at 60 to 84 pitches and too few from 85 on, in every season; with pitch
   terms the decision log loss drops about 0.006 on 2025 and 2026). The engine can draw each plate appearance's pitches by
   outcome (research_lab/game_sim/pitch_counts.py, own random stream; off unless given a table). Stage 2 replays: tags
   v2-prod4-leash3-1000-<season> (started 19:00 UTC) against v2-prod4-leash2-1000; score with tools/brl_outs_cal.py on
-  the leash3 files, then tools/replay_compare.py v2-prod4-leash2-1000 v2-prod4-leash3-1000. To switch on: copy
-  brl_replay/hazard_correction_v2.json over brl_live/hazard_correction.json (the live builder sees 44 terms and turns on
-  the pitch draws from brl_live/pitch_counts.json; regular season only). Then make the box's shown pitch counts use the
-  engine's draws instead of its own estimate.
+  the leash3 files, then tools/replay_compare.py v2-prod4-leash2-1000 v2-prod4-leash3-1000. Not switchable as built:
+  the pitch draws would reach only the simulator the live builder returns, while the box worlds (boxscore.py
+  ObservedSimulator), the market worlds and live updates (live_sim.LiveSimulator, its own plate-appearance loop) build
+  theirs without them, so hazard_correction_for refuses a live file that is not LEASH-02's 32 terms. A pitch-count item
+  that passes needs the draws wired into all of those first (and a live game's real pitch count in live updates).
   **LEASH-03 failed (3:53 p.m.):** the ladder lines stayed 1.38 points high in 2026 (1.0 allowed); every line within 2.3,
   per-start slope 0.98 to 1.00 (better), win Brier and totals unchanged. LEASH-02 stays; the engine's pitch draws are
   built and idle. Next idea there: pitch counts with a per-game command level (a pitcher's whole day runs long or short)

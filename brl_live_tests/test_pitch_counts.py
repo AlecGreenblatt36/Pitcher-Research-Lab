@@ -75,11 +75,18 @@ def test_stage_one_fit_runs_end_to_end(tmp_path):
     PitchCounts(out['table'])                                                      # the table the engine reads
 
 
-def test_live_pitch_table_matches_the_replays_and_loads():
+def test_live_correction_file_must_be_leash02s(tmp_path, monkeypatch):
+    """LEASH-03 failed, so the live correction keeps LEASH-02's 32 terms; a file with pitch terms is refused, since the box
+    worlds, the market worlds and live updates build their simulators without the pitch draws those terms read."""
     from brl_live import boxscore as bx
-    live = json.loads((ROOT / 'brl_live/pitch_counts.json').read_text()); rep = json.loads((ROOT / 'brl_replay/pitch_counts_fit_2023_2024.json').read_text())
-    assert live['counts'] == rep['counts']
-    pc = bx.pitch_counts_for()
-    assert 4.5 < pc.mean('strikeout') < 5.2 and 3.0 < pc.mean('bip_out') < 3.8
-    # the live correction file decides: LEASH-02's 32 terms draw no pitches; a 44-term file (LEASH-03) turns the draws on
-    assert len(json.loads((ROOT / 'brl_live/hazard_correction.json').read_text())['terms']) in (32, 44)
+    rep = json.loads((ROOT / 'brl_replay/hazard_correction_v2.json').read_text())
+    assert len(rep['terms']) == 44
+    f = tmp_path / 'hazard_correction.json'; f.write_text(json.dumps(rep))
+    monkeypatch.setattr(bx, 'HAZARD_CORRECTION_PATH', f)
+    monkeypatch.delitem(bx._KERNEL, 'hc', raising=False)
+    import pytest
+    with pytest.raises(ValueError, match='32 terms'):
+        bx.hazard_correction_for(bx.ADJUST, 'R')
+    assert bx.hazard_correction_for(bx.ADJUST, 'F') is None                    # postseason games never read the file
+    monkeypatch.delitem(bx._KERNEL, 'hc', raising=False)
+    assert len(json.loads((ROOT / 'brl_live/hazard_correction.json').read_text())['terms']) == 32

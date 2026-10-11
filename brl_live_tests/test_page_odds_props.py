@@ -96,7 +96,7 @@ def test_bullpen_table_lists_likely_arms_and_folds_the_rest():
 
 
 def test_outs_ladder_uses_the_same_rule_at_the_outs_lines():
-    """PLAYER-07's ladder: outs recorded around the median, within 9.5 to 21.5; the header names the prop."""
+    """PLAYER-07's ladder: outs recorded around the median, within the lines it checked (12.5 to 20.5); the header names the prop."""
     counts = [[k, c] for k, c in zip(range(10, 24), [5, 10, 20, 40, 70, 110, 150, 170, 150, 110, 70, 40, 20, 10])]
     html = _run('process.stdout.write(outsLadder({counts:' + json.dumps(counts) + '}));')
     assert '<th scope="col">Outs</th>' in html
@@ -105,6 +105,8 @@ def test_outs_ladder_uses_the_same_rule_at_the_outs_lines():
     over = re.findall(r'<th scope="row">16.5</th><td>(\d+)%', html)[0]
     assert int(over) == round(100 * sum(c for k, c in counts if k >= 17) / n)
     assert _run('process.stdout.write(outsLadder({counts:[[1,500],[2,300],[3,200]]}));') == ''          # an opener: none
+    long = _run('process.stdout.write(outsLadder({counts:[[19,100],[20,200],[21,400],[22,300]]}));')   # median 21: only 19.5 and 20.5
+    assert re.findall(r'<th scope="row">([\d.]+)</th>', long) == ['19.5', '20.5']
 
 
 def test_outs_ladder_only_for_boxes_simulated_with_the_exit_correction():
@@ -139,3 +141,13 @@ def test_price_board_gives_expected_runs_for_the_total_not_an_over_price():
           "assert.ok(h.indexOf('we do not price the over')>0,h);"
           "const old=lineBoard(Object.assign({},f,{date:'2026-10-01'}),mkt,box);assert.ok(old.indexOf('<td>7.0 runs</td>')>0,old);")
     subprocess.run(['node', '-e', tt + fns + js], check=True)
+
+
+def test_total_runs_states_no_over_chance_of_ours():
+    """TOTALS-03: the Total runs section gives the runs we expect and Vegas's total with Vegas's over chance, never the
+    simulator's own over chance; and the Odds tab without a box stops after the win chances instead of failing."""
+    s = _script()
+    odds = _fn(s, 'oddsTab')
+    assert 'Vegas total: ' in odds and ': simulator ' not in odds and 'p_over' in odds
+    assert re.search(r'h \+= "</section>";\n    if \(!box\) return h \+ ', odds)
+    assert 'function marketTotal' not in s

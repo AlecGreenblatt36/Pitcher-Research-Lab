@@ -83,12 +83,13 @@ def season_check(games, draws=2000, seed=1):
     bl = [res['lines'][str(L)] for L in BRIER_LINES]
     res['brier_lines'] = round(float(np.mean([b['brier'] for b in bl])), 5)
     res['brier_lines_const'] = round(float(np.mean([b['brier_const'] for b in bl])), 5)
-    # described only: the ladder's lines, each start's median less 1.5 to plus 1.5
+    # described only: the lines the page's ladder shows, each start's median less 1.5 to plus 1.5 within the checked lines
+    # (page propLadder with outsLadder's range, LINES[0] to LINES[-1]; openers and the longest starts get fewer or none)
     lp, lo = [], []
     for x, yy in zip(S, y):
         md = median(x['p'])
         for L in (md - 1.5, md - 0.5, md + 0.5, md + 1.5):
-            if L > 0:
+            if LINES[0] <= L <= LINES[-1]:
                 lp.append(more_than(x['p'], L)); lo.append(float(yy > L))
     lp, lo = np.array(lp), np.array(lo)
     res['ladder_lines'] = {'n': int(len(lp)), 'pred': round(float(lp.mean()), 4), 'actual': round(float(lo.mean()), 4)}

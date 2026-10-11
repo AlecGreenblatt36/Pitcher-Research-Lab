@@ -223,32 +223,34 @@ stays off too: in 2026, the model's first season unseen in fitting or tuning, th
 of the simulated rate, each step up in the simulated rate came with 0.90 of that step in actual hits and 0.82 in home runs,
 against 0.95 and 0.97 in 2025, the season the model was tuned on).
 
-Starters' outs recorded (the pitcher-outs prop) were scored the same way (PLAYER-07): right on average and at the lines near
-each start's median, but the simulator ended too many starts in the 4th inning and too few in the 5th (more than 12.5 outs
-3.8 points short in 2025). The cause was the exit hazard: a logistic fit with the inning as one straight-line term cannot
-hold managers' habit of letting a starter finish the 5th, and after the 4th ends it expected about half again as many
-removals as happen, in every season (LEASH-02). A correction on its log-odds by inning, its end and the score, fitted on
-2023 and 2024 decisions, lowered the decision log loss on 2025 and 2026 and, in full replays of both seasons, put every
-outs line from 12.5 to 20.5 within 2.4 points with win chances and totals unchanged. It is on for regular-season games
-(the postseason keeps the plain hazard with its measured x0.91), and the outs ladder shows for boxes simulated with it.
-Real pitch counts would sharpen it further on real decisions (LEASH-03: the exit hazard's log loss falls by about 0.006),
-but in the simulator, pitches drawn by outcome one plate appearance at a time did not fix the middle outs lines, so the
-engine's pitch draws are built and idle.
+Starters' outs recorded (the pitcher-outs prop) were scored the same way (PLAYER-07): right on average and at the lines
+near each start's median, but the simulator ended too many starts in the 4th inning and too few in the 5th (more than
+12.5 outs 3.8 points short in 2025). The cause was the exit hazard: a logistic fit whose inning terms are a straight
+line and a step from the 6th on has nothing for the 5th, so it cannot hold managers' habit of letting a starter finish
+the 5th, and after the 4th ends it expected about half again as many removals as happen, in every season (LEASH-02). A
+correction on its log-odds by inning, its end and the score, fitted on 2023 and 2024 decisions, lowered the decision log
+loss on 2025 and 2026 and, in full replays of both seasons, put every outs line from 12.5 to 20.5 within 2.4 points with
+win chances and totals unchanged. It is on for regular-season games (the postseason keeps the plain hazard with its
+measured x0.91), and the outs ladder shows for boxes simulated with it. Real pitch counts would sharpen it further on
+real decisions (LEASH-03: the exit hazard's log loss falls by about 0.006), but in the simulator, pitches drawn by
+outcome one plate appearance at a time did not fix the middle outs lines, so the engine's pitch draws are built and
+idle.
 
 ## The season's level, re-anchored in-season (October 11, 2026)
 
-Outcome levels move from season to season (more walks and fewer extra-base hits and home runs in 2026 than in 2025), and the
-simulator carries its level from tables fitted on earlier seasons. LEVEL-01 re-anchored each outcome's league level every
-day from the season's real plate appearances on earlier dates only: per class, log((observed + m x share) / (predicted +
-m x share)), with m = 10,000 pseudo plate appearances at the predicted shares. On every real plate appearance of 2025 and
-2026 (tables from the other season), it raised the log-likelihood by 0.11 and 0.15 nats per 1,000 plate appearances, both
-intervals above zero, with m picked on the other season. In full replays (LEVEL-02) it put 2025's walk chances and 2026's
-hit and home-run chances closer to level, but it lowered 2026's totals to 0.11 runs under the real ones and made the over
-and under worse: with each outcome's rate right, the 2026 mix (more walks, fewer extra-base hits) turns into fewer runs in
-the simulator than in real games, a shortfall the tables' level errors had been hiding. The layer (LevelAdjust) stays
-off. Adding the running plays (wild pitches, passed balls, balks, pickoffs) to it put the totals right in both seasons
-(LEVEL-03) but made the over and under worse in both, so neither is used: the simulator's season level is not what
-limits how it calls totals against the line.
+Outcome levels move from season to season (more walks and fewer extra-base hits and home runs in 2026 than in 2025), and
+the simulator carries its level from tables fitted on earlier seasons. LEVEL-01 re-anchored each outcome's league level
+every day from the season's real plate appearances on earlier dates only: per class, log((observed + m x share) /
+(predicted + m x share)), with m = 10,000 pseudo plate appearances at the predicted shares. On every real plate
+appearance of 2025 and 2026 (tables from the other season), it raised the log-likelihood by 0.11 and 0.15 nats per 1,000
+plate appearances, both intervals above zero, with m picked on the other season. In full replays (LEVEL-02) it put
+2025's walk chances and 2026's hit and home-run chances closer to level, but it lowered 2026's totals to 0.11 runs under
+the real ones and made the over and under worse: with each outcome's rate right, the 2026 mix (more walks, fewer
+extra-base hits) turns into fewer runs in the simulator than in real games, a shortfall the tables' level errors had
+been hiding. The layer (LevelAdjust) stays off. Adding the running plays (wild pitches, passed balls, balks, pickoffs)
+to it put 2026's totals within 0.04 runs of the real ones and moved 2025's from 0.04 under to 0.09 over (LEVEL-03), but
+made the over and under worse in both, so neither is used: the simulator's season level is not what limits how it calls
+totals against the line.
 
 The Summary's team table and the Matchups tab's career lines against the starter are MLB's public numbers, read by the
 browser (PROD-14). How much a career line says was measured on 2023-2026 plate appearances (BVP-01): beyond each player's

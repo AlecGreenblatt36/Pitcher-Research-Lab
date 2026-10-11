@@ -410,21 +410,16 @@ def leash_for(settings):
     return _KERNEL['l']
 
 HAZARD_CORRECTION_PATH=Path(__file__).resolve().parent/'hazard_correction.json'
-PITCH_COUNTS_PATH=Path(__file__).resolve().parent/'pitch_counts.json'
-
-def pitch_counts_for():
-    """The engine's pitches per plate appearance by outcome (brl_live/pitch_counts.json, LEASH-03); the correction with
-    pitch terms needs it."""
-    if 'pc' not in _KERNEL:
-        from research_lab.game_sim.pitch_counts import PitchCounts
-        _KERNEL['pc']=PitchCounts(json.loads(PITCH_COUNTS_PATH.read_text()))
-    return _KERNEL['pc']
-
 def hazard_correction_for(settings,game_type):
-    """LEASH-02's correction ({'terms','coef'}) for a regular-season game when switched on, else None."""
+    """LEASH-02's correction ({'terms','coef'}) for a regular-season game when switched on, else None. The live file must
+    hold LEASH-02's 32 terms in order: LEASH-03's pitch terms read pitch counts that only the engine's pitch draws give,
+    and the box worlds, the market worlds and live updates build their own simulators without them."""
     if not settings.get('hazard_correction') or str(game_type)!='R':return None
     if 'hc' not in _KERNEL:
+        from research_lab.game_sim.starter_hazard import CORRECTION_TERMS
         doc=json.loads(HAZARD_CORRECTION_PATH.read_text())
+        if list(doc['terms'])!=list(CORRECTION_TERMS) or len(doc['coef'])!=len(CORRECTION_TERMS):
+            raise ValueError('brl_live/hazard_correction.json must hold LEASH-02\'s %d terms in order; pitch terms (LEASH-03) are not wired into every simulator'%len(CORRECTION_TERMS))
         _KERNEL['hc']={'terms':doc['terms'],'coef':doc['coef']}
     return _KERNEL['hc']
 
