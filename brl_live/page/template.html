@@ -3229,6 +3229,12 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var ts = twoStrikeShift(c, l);
       if (ts) { if (ts.shift >= TWO_SHIFT) t.push("Expands with two strikes"); else if (ts.shift <= -TWO_SHIFT) t.push("Holds his zone with two strikes"); }
     }
+    /* TAGS-03: misses by pitch type against his own fastball misses, net of most hitters on his side */
+    [["breaking", "breaking balls"], ["offspeed", "offspeed"]].forEach(function (f) {
+      var v = famWhiffShift(card, lg, f[0]);
+      if (v == null) return;
+      if (v >= FAM_SHIFT[f[0]]) t.push("Misses " + f[1]); else if (v <= -FAM_SHIFT[f[0]]) t.push("Handles " + f[1]);
+    });
     /* TAGS-05: where he hits it, against most hitters on his side (the field third on his pull side, 15 degrees off center) */
     var pg = pullShift(card, lg, "gb"), pa = pullShift(card, lg, "air");
     if (pg != null) { if (pg >= 0.10) t.push("Pulls grounders"); else if (pg <= -0.10) t.push("Grounders go the other way"); }
@@ -3236,12 +3242,6 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     /* TAGS-06: ground balls among his batted balls against the league's on his side (carries over 0.73 and 0.75) */
     var gs = gbShift(card, lg);
     if (gs != null) { if (gs >= 0.08) t.push("Ground-ball hitter"); else if (gs <= -0.08) t.push("Fly-ball hitter"); }
-    /* TAGS-03: misses by pitch type against his own fastball misses, net of most hitters on his side */
-    [["breaking", "breaking balls"], ["offspeed", "offspeed"]].forEach(function (f) {
-      var v = famWhiffShift(card, lg, f[0]);
-      if (v == null) return;
-      if (v >= FAM_SHIFT[f[0]]) t.push("Misses " + f[1]); else if (v <= -FAM_SHIFT[f[0]]) t.push("Handles " + f[1]);
-    });
     return t;
   }
   /* TAGS-03: his misses per swing on a pitch type minus on fastballs, net of the same for most hitters on his side, from the
@@ -3545,7 +3545,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var fam = HZ_FAMS.filter(function (x) { return x[0] === state.hzFam; })[0] || HZ_FAMS[0], wide = hzWide();
     po.hitters.forEach(function (hid, i) {
       var key = side + "|" + hid + ":" + starter.id, pr = se.pairs[hid + ":" + starter.id], card = players[String(hid)] && players[String(hid)].hitter;
-      var tags = hitterTags(card, doc.league), edge = edgeTag(pr), thin = pr && pr.evidence && pr.evidence.level === "thin";
+      var tags = hitterTags(card, doc.league).slice(0, 4), edge = edgeTag(pr), thin = pr && pr.evidence && pr.evidence.level === "thin";     /* the rest are in his full plan */
       var spot = spots ? spots[String(hid)] : i + 1;
       var useHand = card && hzSplit(card.zones) ? hand : "all", chart = "";
       /* a phone shows the picked pitch type; a wide screen shows all four side by side, like a scouting sheet */
