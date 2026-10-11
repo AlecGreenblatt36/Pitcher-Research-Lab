@@ -759,8 +759,21 @@ class Fitted:
         if rel.sum():
             role.update({'ninth_share': round(float((entry[rel] >= 9).mean()), 3), 'entry_inning': round(float(entry[rel].mean()), 2),
                          'bf_per_relief': round(float(bf[rel].mean()), 2)})
+        # last season's mix and speeds by pitch type (300 or more pitches), for what changed: a new pitch, a dropped one,
+        # a speed or usage move
+        r_prev = r[T['season'][r] == yr - 1] if yr is not None and 'season' in T and ra is r_cur else r[:0]
+        prev = None
+        if len(r_prev) >= 300:
+            sp_ = T['sub'][r_prev]; prev = []
+            for k, code in enumerate(D.SUBTYPES):
+                mm = sp_ == k
+                if mm.sum() < max(20, 0.01 * len(r_prev)):
+                    continue
+                prev.append({'type': code, 'share': round(float(mm.mean()), 3), 'speed': round(float(np.nanmean(T['v0'][r_prev][mm])), 1)})
+            prev.sort(key=lambda a: -a['share'])
         card = {'throws': 'R' if T['throw_r'][r][0] == 1 else 'L', 'pitches': int(len(r)), 'mix': mix, 'arsenal': arsenal, 'role': role,
                 'arsenal_season': int(yr) if ra is r_cur else None,
+                'arsenal_prev': {'season': int(yr) - 1, 'pitches': int(len(r_prev)), 'types': prev} if prev else None,
                 'chase_rate_against': round(float(self.swing[r][self.outside[r]].mean()), 3) if self.outside[r].any() else None,
                 'looks_in_ends_out': round(float(self.looks_in_ends_out[r].mean()), 3),
                 'zones': zone_split(T, r, self.swing, self.whiff, by='stand_r'),      # where he throws, by the batter's side

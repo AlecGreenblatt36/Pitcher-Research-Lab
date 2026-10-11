@@ -181,3 +181,17 @@ def test_plan_when_early_and_look_back():
         # a re-run built after the season from an earlier date: a look back
         "w=planWhen({date:'2026-09-29',asof:'2026-09-01',built_at:'2026-10-10T19:00:00+00:00'});assert.ok(!w.early&&w.retro,JSON.stringify(w));")
     subprocess.run(['node', '-e', prefix + functions + suffix], check=True)
+
+
+def test_arsenal_changes_from_last_season():
+    functions = page_functions('arsenalChanges', 'listNames')
+    prefix = ("const assert=require('assert');var TYPE_SAY={FF:'four-seam fastball',SI:'sinker',FC:'cutter',SL:'slider',CH:'changeup',CU:'curveball',EP:'eephus'};")
+    suffix = ("const pc={arsenal_season:2026,arsenal:[{type:'FF',share:0.64,speed:100.6},{type:'FC',share:0.14,speed:95.8},{type:'SL',share:0.11,speed:91.8},{type:'CU',share:0.10,speed:88.0},{type:'CH',share:0.01,speed:91.0}],"
+              "arsenal_prev:{season:2025,pitches:1500,types:[{type:'FF',share:0.52,speed:99.1},{type:'SL',share:0.20,speed:90.5},{type:'CH',share:0.12,speed:91.5},{type:'CU',share:0.10,speed:87.5}]}};"
+              "const t=arsenalChanges(pc);"
+              "assert.ok(t.indexOf('Since 2025: ')===0,t);assert.ok(t.indexOf('added a cutter (14% of his pitches)')>0,t);"
+              "assert.ok(t.indexOf('dropped his changeup (12% in 2025)')>0,t);"
+              "assert.ok(t.indexOf('four-seam fastball 1.5 mph faster, thrown 12 points more often')>0,t);"
+              "assert.equal(arsenalChanges({arsenal_season:null,arsenal:pc.arsenal,arsenal_prev:pc.arsenal_prev}),'');"
+              "assert.equal(arsenalChanges({arsenal_season:2026,arsenal:pc.arsenal}),'');")
+    subprocess.run(['node', '-e', prefix + functions + suffix], check=True)

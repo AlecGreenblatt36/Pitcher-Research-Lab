@@ -3520,6 +3520,27 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (role.bf_per_relief >= 7) return "Long";
     return role.entry_inning >= 7.3 ? "Late" : "Middle";
   }
+  /* What changed from last season, the way previews note it: a pitch added or dropped (5% or more of his pitches one
+     season, under 2% the other), a fastball 1 mph or more faster or slower, a pitch used 10 points more or less. From
+     the card's this-season arsenal and last season's (arsenal_prev; 300 or more pitches in each). */
+  var TYPE_SAY = { FF: "four-seam fastball", FA: "fastball", SI: "sinker", FC: "cutter", SL: "slider", ST: "sweeper", SV: "slurve", CU: "curveball", KC: "knuckle curve", CS: "slow curve", CH: "changeup", FS: "splitter", FO: "forkball", SC: "screwball", KN: "knuckleball", EP: "eephus" };
+  function arsenalChanges(pc) {
+    var cur = pc && pc.arsenal_season && pc.arsenal, pv = pc && pc.arsenal_prev, prev = pv && pv.types;
+    if (!cur || !cur.length || !prev || !prev.length) return "";
+    var byType = function (list) { var o = {}; list.forEach(function (a) { o[a.type] = a; }); return o; }, C = byType(cur), P = byType(prev), out = [];
+    var say = function (t) { return TYPE_SAY[t] || String(t).toLowerCase(); };
+    cur.forEach(function (a) { var q = P[a.type]; if (a.share >= 0.05 && (!q || q.share < 0.02)) out.push("added " + (/^[aeiou]/.test(say(a.type)) ? "an " : "a ") + say(a.type) + " (" + Math.round(100 * a.share) + "% of his pitches)"); });
+    prev.forEach(function (q) { var a = C[q.type]; if (q.share >= 0.05 && (!a || a.share < 0.02)) out.push("dropped his " + say(q.type) + " (" + Math.round(100 * q.share) + "% in " + pv.season + ")"); });
+    cur.forEach(function (a) {
+      var q = P[a.type], sub = [];
+      if (!q || a.share < 0.05 || q.share < 0.05) return;
+      var dv = a.speed != null && q.speed != null ? a.speed - q.speed : 0, du = a.share - q.share;
+      if (/^(FF|FA|SI|FC)$/.test(a.type) && Math.abs(dv) >= 1.0) sub.push(Math.abs(dv).toFixed(1) + " mph " + (dv > 0 ? "faster" : "slower"));
+      if (Math.abs(du) >= 0.10) sub.push("thrown " + Math.round(100 * Math.abs(du)) + " points " + (du > 0 ? "more" : "less") + " often");
+      if (sub.length) out.push(say(a.type) + " " + sub.join(", "));
+    });
+    return out.length ? "Since " + pv.season + ": " + out.slice(0, 4).join("; ") + "." : "";
+  }
   function bullpenCard(doc, se, nm) {
     var arms = (se.pitchers || []).filter(function (p) { return p.recent; });
     if (!arms.length || !doc.date) return "";
@@ -3697,7 +3718,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var keys = lineupKeys(doc, po);
     if (keys) h += '<p class="note hz-cap">Working through this lineup</p>' + keys;
     var spc = players[String(starter.id)] && players[String(starter.id)].pitcher, proj = starterProjection(doc, other, starter.id);
-    if (spc && spc.mix) h += '<details class="more" data-keep="ars-' + side + '"' + (state.rpOpen["ars-" + side] ? " open" : "") + "><summary>" + esc(lastName(nm(starter.id))) + "'s pitches</summary>" + (proj ? '<p class="pd-line">' + esc(proj) + "</p>" : "") + (pitcherTags(spc, doc.league).length ? '<div class="pl-tags pd-tags">' + pitcherTags(spc, doc.league).map(function (s0) { return "<span>" + esc(s0) + "</span>"; }).join("") + "</div>" : "") + pctPanel(spc, doc.league, doc.asof, "h4") + (spc.arsenal && spc.arsenal.length ? arsenalTypes(spc, doc.league) : arsenalTable(spc.mix)) +
+    if (spc && spc.mix) h += '<details class="more" data-keep="ars-' + side + '"' + (state.rpOpen["ars-" + side] ? " open" : "") + "><summary>" + esc(lastName(nm(starter.id))) + "'s pitches</summary>" + (proj ? '<p class="pd-line">' + esc(proj) + "</p>" : "") + (pitcherTags(spc, doc.league).length ? '<div class="pl-tags pd-tags">' + pitcherTags(spc, doc.league).map(function (s0) { return "<span>" + esc(s0) + "</span>"; }).join("") + "</div>" : "") + pctPanel(spc, doc.league, doc.asof, "h4") + (spc.arsenal && spc.arsenal.length ? arsenalTypes(spc, doc.league) : arsenalTable(spc.mix)) + (arsenalChanges(spc) ? '<p class="pd-line">' + esc(arsenalChanges(spc)) + "</p>" : "") +
       (runAgainstLine(spc.run_against, doc.league, lastName(nm(starter.id))) ? '<p class="note">' + esc(runAgainstLine(spc.run_against, doc.league, lastName(nm(starter.id)))) + "</p>" : "") +
       (spc.usage ? '<p class="note hz-cap">What he throws by count</p>' + (usageLine(spc) ? '<p class="pd-line">' + esc(usageLine(spc)) + "</p>" : "") + usageTable(spc, "R") + usageTable(spc, "L") : "") + "</details>";
     var pen = bullpenCard(doc, se, nm);
@@ -4323,6 +4344,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
           /* the arsenal the way every scouting sheet lists it, then where each pitch goes to each side */
           var fams = ["fastball", "breaking", "offspeed"].filter(function (fam) { return mix[fam] && mix[fam].share >= 0.005; });     /* a pitch he all but never throws gets no row */
           if (x.arsenal && x.arsenal.length) h += arsenalTypes(x, lg);
+          if (arsenalChanges(x)) h += '<p class="pd-line">' + esc(arsenalChanges(x)) + "</p>";
           else if (fams.length) h += arsenalTable(mix) + '<p class="note">Miss: misses per swing. Chase: swings at his pitches out of the zone. Zone: pitches in the strike zone. Put away: strikeouts per two-strike pitch of that type.</p>';
           if (x.usage) h += '<h2 class="hz-h2">What he throws by count</h2>' + (usageLine(x) ? '<p class="pd-line">' + esc(usageLine(x)) + "</p>" : "") + usageTable(x, "R") + usageTable(x, "L") + '<p class="note">Share of each pitch type in each count. Behind means more balls than strikes.</p>';
           if (x.zones && (x.zones.R || x.zones.L)) {
