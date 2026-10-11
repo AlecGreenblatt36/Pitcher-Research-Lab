@@ -503,6 +503,13 @@ details .pr-h { font-size: 18px; }
 .pr-v { text-align: right; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--ink); }
 .pr-scale { display: grid; grid-template-columns: minmax(0, 128px) minmax(0, 1fr) 54px; column-gap: 10px; font-size: 14px; color: var(--muted); }
 .pr-scale span:nth-child(2) { display: flex; justify-content: space-between; }
+.pm-sec { max-width: 560px; }
+.pm { width: 100%; table-layout: fixed; }
+.pm th, .pm td { white-space: normal; vertical-align: top; }
+.pm th[scope="row"] { text-align: left; font-weight: 700; color: var(--muted); width: 34%; }
+.pm td { text-align: left; }
+.pm thead th { text-align: left; }
+.pm .pm-pct { display: inline-block; min-width: 26px; padding: 0 5px; border-radius: 10px; font-size: 14px; font-weight: 700; text-align: center; line-height: 1.5; }
 .lineup-keys { list-style: none; margin: 4px 0 12px; padding: 0; display: grid; gap: 4px; max-width: 620px; }
 .lineup-keys li { font-size: 15px; line-height: 1.4; }
 .lineup-keys b { font-weight: 700; }
@@ -840,6 +847,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (!r && !q) return "";
     var wl = function (x) { return x.wins + "-" + x.losses + ", " + x.era + " ERA"; };
     if (fmt === "card") return r ? " (" + r.wins + "-" + r.losses + ", " + r.era + ")" : "";
+    if (fmt === "wl") return r ? wl(r) : "";
     var out = r ? wl(r) + ", " + r.strikeOuts + " K" : "";
     if (post && q && q.gamesPlayed) out += (out ? "\n" : "") + "Postseason: " + wl(q);
     return out;
@@ -1894,6 +1902,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     app.innerHTML = html;
     if (!keep) window.scrollTo(0, 0);
     fillSpLines();
+    if (tab === "summary") fillPitchingMatchup(f, pk, box);
     if (tab === "report") loadReport(f, pk);
     else if (tab === "summary" && lv && !lv._final) loadLiveCard(f, pk);
 
@@ -2329,7 +2338,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (!real && lv && lv.state && !lv._final)          /* started, but MLB's play-by-play has not come in: keep the simulated game folded */
       return h0 + '<details class="more proj-fold" data-keep="proj-' + f.game_pk + '"' + (state.rpOpen["proj-" + f.game_pk] ? " open" : "") + "><summary>The game we projected before first pitch</summary>" +
         (versions || "") + projectedSummary(f, s, box, null, null, v) + "</details>";
-    if (!real) return h0 + (versions || "") + projectedSummary(f, s, box, actual, actualBox, v);
+    if (!real) return h0 + (!actual && !lv ? '<div id="pm-' + f.game_pk + '">' + pitchingMatchup(f, box, RP[f.game_pk] || null) + "</div>" : "") + (versions || "") + projectedSummary(f, s, box, actual, actualBox, v);
     /* With the real game on: did we get it right first (after the final), then the real game, then the game we
        projected folded under one line (its versions and the full simulated game open from there). */
     if (actual && actualBox) h0 += howClose(f, box, actualBox, s);
@@ -3428,6 +3437,40 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (!r || !r.means || r.means.outs == null) return "";
     var o = Math.round(r.means.outs), ip = Math.floor(o / 3) + "." + (o % 3), m = r.means;
     return "Projected for this game (our simulator): " + ip + " innings, " + Math.round(m.K) + " strikeouts, " + Math.round(m.H) + " hits, " + Math.round(m.BB) + (Math.round(m.BB) === 1 ? " walk" : " walks") + ", " + Math.round(m.PC) + " pitches.";
+  }
+  /* The pitching matchup the way previews set it side by side: each probable starter's season (MLB), his rates and
+     percentile ranks from the plan's card (PROD-08), and the simulator's line for this game. */
+  function pitchingMatchup(f, box, doc) {
+    var year = String(f.date || D.date).slice(0, 4), cols = ["away", "home"].map(function (side) {
+      var id = starterId(f, box, side), card = doc && doc.players && doc.players[id] ? doc.players[id].pitcher : null;
+      var rows = box && box.teams && box.teams[side] && box.teams[side].pitching, r = (rows || []).filter(function (x) { return String(x.player_id) === id && x.role === "starter"; })[0];
+      return { side: side, id: id, name: starterText(f, box, side), card: card, proj: r && r.means };
+    });
+    if (!cols[0].name || !cols[1].name) return "";
+    var cell = function (c, k, fmt) {
+      if (!c.card || !c.card.line) return "\u2013";
+      var v = lineRate(c.card.line, k);
+      if (v == null) return "\u2013";
+      var shown = fmt === "mph" ? v.toFixed(1) : fmt === "three" ? (v >= 1 ? v.toFixed(3) : v.toFixed(3).slice(1)) : (100 * v).toFixed(1) + "%";
+      var p = c.card.pct ? c.card.pct[k] : null;
+      return esc(shown) + (p != null ? ' <small class="pm-pct" style="background:' + pctColor(p).bg + ";color:" + pctColor(p).fg + '">' + p + "</small>" : "");
+    };
+    var proj = function (c) { if (!c.proj || c.proj.outs == null) return "\u2013"; var o = Math.round(c.proj.outs); return Math.floor(o / 3) + "." + (o % 3) + " IP, " + Math.round(c.proj.K) + " K"; };
+    var rows = [["Season", function (c) { return spSpan(c.id, year, false, "wl") || "\u2013"; }],
+                ["Strikeout %", function (c) { return cell(c, "k"); }], ["Walk %", function (c) { return cell(c, "bb"); }],
+                ["Whiff %", function (c) { return cell(c, "whiff"); }], ["Hard-hit % against", function (c) { return cell(c, "hard"); }],
+                ["Average against", function (c) { return cell(c, "avg", "three"); }], ["Fastball", function (c) { return cell(c, "velo", "mph"); }],
+                ["Our projection", proj]];
+    var h = '<section class="sec pm-sec"><h2>Pitching matchup</h2><div class="tbl-wrap pm-wrap"><table class="box pm"><thead><tr><th scope="col"><span class="visually-hidden">Stat</span></th>' +
+      cols.map(function (c) { return '<th scope="col"><span class="abbr ' + c.side + '-c">' + esc(f[c.side].abbr) + "</span> " + esc(lastName(c.name)) + "</th>"; }).join("") + "</tr></thead><tbody>";
+    rows.forEach(function (r) { h += '<tr><th scope="row">' + esc(r[0]) + "</th>" + cols.map(function (c) { return "<td>" + r[1](c) + "</td>"; }).join("") + "</tr>"; });
+    h += "</tbody></table></div><p class=\"note\">Season: MLB's regular-season line. The rates and the small percentile ranks (100 is the best) are from the last two seasons' pitches, as on the Players page. Our projection: the simulator's average for this game.</p></section>";
+    return h;
+  }
+  function fillPitchingMatchup(f, pk, box) {
+    var el = document.getElementById("pm-" + pk);
+    if (!el || RP[pk]) return;
+    withReportDoc(f, pk, function (doc) { var e2 = document.getElementById("pm-" + pk); if (e2 && doc) { e2.innerHTML = pitchingMatchup(f, box, doc); fillSpLines(); } });
   }
   /* PROD-09: a runner to hold: 40 or more times on first, 8 or more steal tries, at 1.75 times the league's rate per time on first */
   function stealThreat(rn, lg) {
