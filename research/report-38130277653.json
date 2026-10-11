@@ -1,0 +1,254 @@
+{
+ "schema": "brl.report-receipt.v1",
+ "run_id": "38130277653",
+ "params": {
+  "rest_study": {
+   "train": [
+    2024,
+    2025
+   ],
+   "test": 2026,
+   "test_end": "2026-08-01",
+   "boot": 2000
+  },
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "dates": [
+   "2026-04-01"
+  ],
+  "publish": false
+ },
+ "started_at": "2026-10-11T09:59:06.531736+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 9.8,
+   "peak_rss_mb": 1091
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 19.6,
+   "peak_rss_mb": 1263
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 29.3,
+   "peak_rss_mb": 1430
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 38.7,
+   "peak_rss_mb": 1591
+  },
+  {
+   "stage": "rest study: games",
+   "at_seconds": 41.6,
+   "peak_rss_mb": 1591
+  },
+  {
+   "stage": "rest study: appearances",
+   "at_seconds": 41.9,
+   "peak_rss_mb": 1591
+  },
+  {
+   "stage": "rest study: done",
+   "at_seconds": 42.0,
+   "peak_rss_mb": 1591
+  }
+ ],
+ "reports": {},
+ "environment": {
+  "python": "3.12.15",
+  "commit": "2ce6f8395cb292672e1c4b6df6ed25de9b7e4709",
+  "numpy": "2.5.4",
+  "scipy": "1.18.1",
+  "scikit-learn": "1.9.1",
+  "pandas": "3.0.6",
+  "cryptography": "46.0.4"
+ },
+ "rest_study": {
+  "train": [
+   2024,
+   2025
+  ],
+  "test": 2026,
+  "test_end": "2026-08-01",
+  "windows": {
+   "train": {
+    "appearances": {
+     "no_rest": 1264,
+     "one_day": 2778,
+     "rested": 7435,
+     "three_in_four": 1049
+    },
+    "pitchers": 663,
+    "velo": {
+     "means": {
+      "no_rest": -0.0757,
+      "one_day": -0.0128,
+      "rested": 0.0855,
+      "three_in_four": -0.0065
+     },
+     "minus_rested": {
+      "no_rest": [
+       -0.1612,
+       -0.2137,
+       -0.1122
+      ],
+      "one_day": [
+       -0.0983,
+       -0.1353,
+       -0.0621
+      ],
+      "three_in_four": [
+       -0.0921,
+       -0.1454,
+       -0.0383
+      ]
+     }
+    },
+    "k": {
+     "means": {
+      "no_rest": -0.0011,
+      "one_day": 0.0006,
+      "rested": -0.0004,
+      "three_in_four": -0.0057
+     },
+     "minus_rested": {
+      "no_rest": [
+       -0.0007,
+       -0.0113,
+       0.0104
+      ],
+      "one_day": [
+       0.0011,
+       -0.0065,
+       0.0081
+      ],
+      "three_in_four": [
+       -0.0053,
+       -0.0191,
+       0.0083
+      ]
+     }
+    },
+    "on": {
+     "means": {
+      "no_rest": 0.0462,
+      "one_day": 0.0379,
+      "rested": 0.0277,
+      "three_in_four": 0.0492
+     },
+     "minus_rested": {
+      "no_rest": [
+       0.0185,
+       0.0069,
+       0.0301
+      ],
+      "one_day": [
+       0.0102,
+       0.0013,
+       0.0196
+      ],
+      "three_in_four": [
+       0.0215,
+       0.0083,
+       0.0357
+      ]
+     }
+    }
+   },
+   "test": {
+    "appearances": {
+     "no_rest": 370,
+     "one_day": 925,
+     "rested": 2451,
+     "three_in_four": 297
+    },
+    "pitchers": 379,
+    "velo": {
+     "means": {
+      "no_rest": -0.0877,
+      "one_day": -0.0279,
+      "rested": 0.0693,
+      "three_in_four": 0.028
+     },
+     "minus_rested": {
+      "no_rest": [
+       -0.1569,
+       -0.2382,
+       -0.0744
+      ],
+      "one_day": [
+       -0.0972,
+       -0.1645,
+       -0.0305
+      ],
+      "three_in_four": [
+       -0.0413,
+       -0.1456,
+       0.0573
+      ]
+     }
+    },
+    "k": {
+     "means": {
+      "no_rest": 0.0092,
+      "one_day": 0.0014,
+      "rested": -0.0019,
+      "three_in_four": 0.0201
+     },
+     "minus_rested": {
+      "no_rest": [
+       0.0112,
+       -0.007,
+       0.0306
+      ],
+      "one_day": [
+       0.0034,
+       -0.0093,
+       0.017
+      ],
+      "three_in_four": [
+       0.0221,
+       -0.0003,
+       0.0441
+      ]
+     }
+    },
+    "on": {
+     "means": {
+      "no_rest": 0.031,
+      "one_day": 0.0388,
+      "rested": 0.0222,
+      "three_in_four": 0.0433
+     },
+     "minus_rested": {
+      "no_rest": [
+       0.0088,
+       -0.0123,
+       0.0309
+      ],
+      "one_day": [
+       0.0166,
+       0.0033,
+       0.0306
+      ],
+      "three_in_four": [
+       0.0211,
+       -0.0039,
+       0.0488
+      ]
+     }
+    }
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-11T09:59:48.585233+00:00",
+ "seconds": 42.0
+}
