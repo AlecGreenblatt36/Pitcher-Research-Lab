@@ -5311,17 +5311,19 @@
     "columns": {
      "ID": "LEVEL-02",
      "Attempt": "The in-season league level (LEVEL-01's layer) in full replays. Each date's offsets come from the season's earlier real plate appearances only, m 10,000 (LEVEL-01's pick), applied last in the stack (brl_live/provider_adjust.py LevelAdjust; per-date files brl_replay/level_offsets_<season>.json written from LEVEL-01's check-only runs by tools/brl_level_cal.py --write-offsets). Replays of 2025 and 2026 with PLAYER-06's settings and seeds (live stack, tables from other seasons, hitter and starter lines, paired streams, 1,000 worlds) plus the layer, compared game by game and hitter by hitter with PLAYER-06's replays (runs 38145318753 and 38144947261) by tools/replay_compare.py and tools/brl_player_cal.py --pair. Each season's first date has no offsets, so its games must come out the same in both runs (the check that the pairing holds)",
-     "Disposition and evidence": "**Registered in the commit that added this row, before its replays.** Gates: (1) the hitter chances' Brier summed over the page's five kinds (at least one hit, two or more hits, a home run, a walk, a strikeout) improves in both seasons, the paired interval over dates below zero; (2) the mean total's squared error against the final is not worse, the pooled paired interval's upper end below +0.03 runs squared, and the mean total within 0.1 runs of actual in both seasons; (3) the win Brier pooled not worse than +0.0002. P(over the closing total) is reported, not gated. Decision rule: if (1), (2) and (3) hold, the layer is switched on for next season's regular season (ADJUST level_offsets, the live run keeping the season's sums of observed and predicted outcomes; the postseason keeps the regular season's last offsets); otherwise it stays off",
-     "Delta corrected Brier, 2026": "Registered; replays queued"
+     "Disposition and evidence": "**Registered in the commit that added this row, before its replays.** Gates: (1) the hitter chances' Brier summed over the page's five kinds (at least one hit, two or more hits, a home run, a walk, a strikeout) improves in both seasons, the paired interval over dates below zero; (2) the mean total's squared error against the final is not worse, the pooled paired interval's upper end below +0.03 runs squared, and the mean total within 0.1 runs of actual in both seasons; (3) the win Brier pooled not worse than +0.0002. P(over the closing total) is reported, not gated. Decision rule: if (1), (2) and (3) hold, the layer is switched on for next season's regular season (ADJUST level_offsets, the live run keeping the season's sums of observed and predicted outcomes; the postseason keeps the regular season's last offsets); otherwise it stays off. Results (runs 38154688725 for 2025 and 38154660273 for 2026, against PLAYER-06's replays; the first date's game came out the same in both runs in each season, and every later game differs): (1) the hitter chances' summed Brier -0.00033 [-0.00047, -0.00018] in 2025 (walk or HBP 2.0 points high before, 1.1 after; strikeouts 1.0 to 0.5) but -0.00001 [-0.00022, +0.00020] in 2026 (hits 0.95 points high before, 0.47 after, home runs 0.56 to 0.02, but walks -0.36 to +0.98 and strikeouts +0.74 to +1.07); (2) the mean total 8.863 to 8.847 against 8.898 actual (2025) and 8.933 to 8.856 against 8.962 (2026, 0.106 short), squared error pooled +0.019 [-0.004, +0.045]; (3) the win Brier pooled -0.00001 [-0.00017, +0.00015]; P(over) Brier pooled +0.00039 [+0.00008, +0.00071], worse. (1) failed in 2026 and (2) failed. **The layer stays off.** What it shows: putting each outcome's rate right per plate appearance lowers 2026's totals below the real ones (more walks and fewer extra-base hits and home runs, as 2026 had, turn into fewer runs in the simulator than in real games), so the tables' level errors had been offsetting a shortfall in how the simulator turns that mix into runs; and in 2026 the chance of at least one walk was on level before re-anchoring although walks per hitter-game ran 2.7% short (0.390 simulated against 0.401 real; described after looking): real walks bunch into fewer hitter-games than simulated ones, so lifting the rate overshoots the chance. Next: how the simulator converts walks and singles into runs (RUNS-03 and the running plays point the same way)",
+     "Delta corrected Brier, 2026": "(1) failed in 2026, (2) failed; layer off"
     },
     "registered_before_run": true,
     "diagnostic": false,
     "runs": [
      "38144947261",
-     "38145318753"
+     "38145318753",
+     "38154660273",
+     "38154688725"
     ],
     "frozen_commits": [],
-    "status": "Registered; replays queued"
+    "status": "(1) failed in 2026, (2) failed; layer off"
    }
   ],
   "BOX-01": [

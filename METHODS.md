@@ -234,8 +234,11 @@ simulator carries its level from tables fitted on earlier seasons. LEVEL-01 re-a
 day from the season's real plate appearances on earlier dates only: per class, log((observed + m x share) / (predicted +
 m x share)), with m = 10,000 pseudo plate appearances at the predicted shares. On every real plate appearance of 2025 and
 2026 (tables from the other season), it raised the log-likelihood by 0.11 and 0.15 nats per 1,000 plate appearances, both
-intervals above zero, with m picked on the other season. The layer (LevelAdjust) is built and off; LEVEL-02 tests it in
-full replays against the hitter chances, the totals and the win chances before it can be switched on for a season.
+intervals above zero, with m picked on the other season. In full replays (LEVEL-02) it put 2025's walk chances and 2026's
+hit and home-run chances closer to level, but it lowered 2026's totals to 0.11 runs under the real ones and made the over
+and under worse: with each outcome's rate right, the 2026 mix (more walks, fewer extra-base hits) turns into fewer runs in
+the simulator than in real games, a shortfall the tables' level errors had been hiding. The layer (LevelAdjust) stays
+off; how the simulator turns walks and singles into runs is the next thing to measure.
 
 The Summary's team table and the Matchups tab's career lines against the starter are MLB's public numbers, read by the
 browser (PROD-14). How much a career line says was measured on 2023-2026 plate appearances (BVP-01): beyond each player's

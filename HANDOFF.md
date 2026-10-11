@@ -79,8 +79,11 @@ queue behind the shards (seen October 11 at 16:50 UTC). Check-only replays (n_si
   tools/brl_level_cal.py --write-offsets) and off. LEVEL-02 registered: full replays with the layer (tags
   v2-prod4-level-1000-<season>), paired against PLAYER-06's replays (v2-prod4-tb-1000-<season>); score with
   `tools/replay_compare.py v2-prod4-tb-1000 v2-prod4-level-1000` and `tools/brl_player_cal.py --pair
-  <season>='<tb glob>::<level glob>'`; first-date games must match exactly. If it passes, the live side still needs
-  the season's running sums (observed and predicted outcome counts by date) before next season.
+  <season>='<tb glob>::<level glob>'`; first-date games must match exactly.
+  **LEVEL-02 failed (17:20 UTC):** hitter chances better in 2025, flat in 2026; 2026 totals 0.11 runs short and P(over)
+  worse pooled. The layer stays off. The finding: with each outcome's rate right, the simulator turns 2026's mix (more
+  walks, fewer extra-base hits) into too few runs; the tables' level errors were hiding it. Next model item: run
+  conversion (runs per walk and single in the simulator against real games, by base and out state).
 - PLAYER-07 failed its rule (starters' outs: every line within 2.5 points in 2026, but more than 12.5 and 13.5 outs 3.8
   and 2.9 points short in 2025), so the outs ladder stays off (page OUTS_LADDER false; built and tested). The miss: the
   simulator ends too many starts in the 4th inning and too few in the 5th (10 to 12 outs 13.6% against 10.9% and 11.5%
