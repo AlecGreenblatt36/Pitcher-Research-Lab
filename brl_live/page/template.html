@@ -474,7 +474,9 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .vel-pt.rel { fill: var(--surface); stroke: var(--bad); stroke-width: 2; }
 .vel-t { font-family: var(--body); font-size: 12px; fill: var(--muted); }
 .mv-wrap { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: flex-start; }
-.mv-svg { width: 100%; max-width: 340px; height: auto; display: block; }
+.mv-plot { width: 100%; max-width: 340px; }
+.mv-svg { width: 100%; height: auto; display: block; }
+.mv-x { display: flex; justify-content: space-between; font-size: 14px; font-weight: 700; color: var(--muted); padding: 2px 14px 0; }
 .mv-bg { fill: var(--surface); stroke: var(--rule); }
 .mv-gr { stroke: var(--rule-soft); stroke-width: 1; }
 .mv-ax { stroke: var(--rule-strong); stroke-width: 1.5; }
@@ -2969,8 +2971,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         '<line class="' + (g === 0 ? "mv-ax" : "mv-gr") + '" x1="' + X(-lim) + '" y1="' + Y(g) + '" x2="' + X(lim) + '" y2="' + Y(g) + '"/>';
       if (g !== 0 && g % 10 === 0) h += '<text class="mv-t" x="' + X(g) + '" y="' + (W - pad - 5) + '">' + (g > 0 ? "+" : "") + g + '</text><text class="mv-t" x="' + (pad + 4) + '" y="' + (Number(Y(g)) + 4).toFixed(1) + '" text-anchor="start">' + (g > 0 ? "+" : "") + g + "</text>";
     }
-    h += '<text class="mv-ax-l" x="' + (W / 2 + 4) + '" y="' + (pad + 14) + '" text-anchor="start">Rise</text><text class="mv-ax-l" x="' + (W / 2 + 4) + '" y="' + (W - pad - 20) + '" text-anchor="start">Drop</text>' +
-      '<text class="mv-ax-l" x="' + (W - pad - 6) + '" y="' + (W / 2 - 6) + '" text-anchor="end">Arm side</text><text class="mv-ax-l" x="' + (pad + 6) + '" y="' + (W / 2 - 6) + '" text-anchor="start">Glove side</text>';
+    h += '<text class="mv-ax-l" x="' + (W / 2 + 4) + '" y="' + (pad + 14) + '" text-anchor="start">Rise</text><text class="mv-ax-l" x="' + (W / 2 + 4) + '" y="' + (W - pad - 20) + '" text-anchor="start">Drop</text>';
     a.forEach(function (x) { var r = ring(x); if (r) h += '<circle class="mv-lg" cx="' + X(r.h_arm) + '" cy="' + Y(r.v_mov) + '" r="9" stroke="' + (TYPE_COLOR[x.type] || "#777") + '"/>'; });
     a.slice().sort(function (p, q) { return q.share - p.share; }).forEach(function (x) {
       var rr = 6 + 11 * Math.sqrt(x.share), cx = Number(X(x.h_arm)), cy = Number(Y(x.v_mov)), right = cx < W - 70;
@@ -2980,7 +2981,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     h += "</svg>";
     var key = a.map(function (x) { return '<span><i style="background:' + (TYPE_COLOR[x.type] || "#777") + '"></i>' + esc(x.type) + " " + esc(TYPE_NAME[x.type] || "") + " " + pct(x.share) + "</span>"; }).join("");
     var rings = a.some(function (x) { return ring(x); });
-    return '<section class="sec mv-sec">' + (hl === "h4" ? '<h4 class="hz-h">How his pitches move</h4>' : '<h2 class="hz-h2">How his pitches move</h2>') + '<div class="mv-wrap">' + h + '<div class="mv-key">' + key + "</div></div>" +
+    h += '<div class="mv-x" aria-hidden="true"><span>\u2190 Glove side</span><span>Arm side \u2192</span></div>';
+    return '<section class="sec mv-sec">' + (hl === "h4" ? '<h4 class="hz-h">How his pitches move</h4>' : '<h2 class="hz-h2">How his pitches move</h2>') + '<div class="mv-wrap"><div class="mv-plot">' + h + "</div>" + '<div class="mv-key">' + key + "</div></div>" +
       '<p class="note">Each pitch type at its average movement from spin, in inches over the last 40 feet (the classic PITCHf/x measure). Right: toward his arm side. Up: rise against a pitch thrown with no spin; down: more drop. Bigger dots: thrown more.' +
       (rings ? " Rings: the league's average for the same pitch type." : "") + (pc.arsenal_season ? " This season (" + esc(pc.arsenal_season) + ") only." : "") + "</p></section>";
   }
