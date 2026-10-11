@@ -447,15 +447,63 @@ def postseason_usage(repo, token, key, branch, seasons=(2023, 2024, 2025, 2026))
     return out
 
 
+def postseason_tiers(repo, token, key, branch, seasons=(2023, 2024, 2025, 2026), boot=2000, seed=20261011) -> dict:
+    """POST-03 (LEDGER): do postseason managers keep their best starters in longer? Each postseason start's batters faced
+    over the starter's own regular-season median (same season), by his regular-season strikeouts minus walks per plate
+    appearance (terciles of the postseason starts) and by his own regular-season median (workhorses against the rest);
+    intervals from resampling starts. Aggregates only."""
+    import collections
+    starts, lines = [], collections.defaultdict(lambda: [0, 0, 0])
+    for year in seasons:
+        raw = read_blob(repo, token, study_path(year), branch)
+        if raw is None:
+            continue
+        doc = json.loads(gzip.decompress(unseal(raw, key, study_purpose(year))))
+        for pk, game in doc['games'].items():
+            gt = game.get('game_type', 'R'); rows = sorted(game['rows'], key=lambda r: r['i'])
+            by_half = {'top': [], 'bottom': []}
+            for r in rows:
+                by_half[r.get('half', 'top')].append(r)
+                if gt == 'R':
+                    ln = lines[(int(r['p']), year)]; ln[0] += 1; ln[1] += r.get('o') == 'K'; ln[2] += r.get('o') == 'BB_HBP'
+            for half, hr in by_half.items():
+                if hr:
+                    counts = collections.Counter(r['p'] for r in hr)
+                    starts.append({'season': year, 'game_type': gt, 'pitcher': int(hr[0]['p']), 'bf': counts[hr[0]['p']]})
+        del doc
+    st = pd.DataFrame(starts)
+    reg = st[st.game_type == 'R'].groupby(['pitcher', 'season']).bf.median().rename('reg_median')
+    post = st[st.game_type.isin(['F', 'D', 'L'])].join(reg, on=['pitcher', 'season']).dropna().copy()
+    post['ratio'] = post.bf / post.reg_median
+    post['kbb'] = [((lines[(p, y)][1] - lines[(p, y)][2]) / lines[(p, y)][0]) if lines[(p, y)][0] >= 200 else np.nan for p, y in zip(post.pitcher, post.season)]
+    post = post.dropna(subset=['kbb'])
+    rng = np.random.default_rng(seed)
+    def summary(mask):
+        x = post.ratio[mask].to_numpy()
+        if not len(x):
+            return None
+        b = x[rng.integers(0, len(x), size=(boot, len(x)))].mean(1)
+        return {'starts': int(len(x)), 'ratio_mean': round(float(x.mean()), 3), 'ci': [round(float(np.percentile(b, 2.5)), 3), round(float(np.percentile(b, 97.5)), 3)],
+                'mean_bf': round(float(post.bf[mask].mean()), 2), 'own_regular_median': round(float(post.reg_median[mask].mean()), 2)}
+    q1, q2 = np.percentile(post.kbb, [100 / 3, 200 / 3])
+    tiers = {'top': post.kbb >= q2, 'middle': (post.kbb >= q1) & (post.kbb < q2), 'bottom': post.kbb < q1}
+    out = {'starts': int(len(post)), 'kbb_cuts': [round(float(q1), 4), round(float(q2), 4)], 'by_kbb': {k: summary(m) for k, m in tiers.items()},
+           'by_regular_median': {'24_or_more': summary(post.reg_median >= 24), '21_to_23': summary((post.reg_median >= 21) & (post.reg_median < 24)), 'under_21': summary(post.reg_median < 21)}}
+    a, b_ = post.ratio[tiers['top']].to_numpy(), post.ratio[tiers['bottom']].to_numpy()
+    d = (a[rng.integers(0, len(a), size=(boot, len(a)))].mean(1) - b_[rng.integers(0, len(b_), size=(boot, len(b_)))].mean(1))
+    out['top_minus_bottom'] = {'diff': round(float(a.mean() - b_.mean()), 3), 'ci': [round(float(np.percentile(d, 2.5)), 3), round(float(np.percentile(d, 97.5)), 3)]}
+    return out
+
+
 def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']; key_hex = os.environ['BRL_PA_PACKAGE_KEY']; key = key_bytes(key_hex)
     branch = os.environ.get('BRL_LEDGER_BRANCH', 'brl-live-data')
     experiment = (os.environ.get('BRL_EXPERIMENT') or 'physics').strip()
-    if experiment == 'postseason_usage':
+    if experiment in ('postseason_usage', 'postseason_tiers'):
         run_id = os.environ.get('GITHUB_RUN_ID', 'local')
         receipt = {'schema': 'brl.research-receipt.v1', 'experiment': experiment, 'run_id': run_id, 'started_at': datetime.now(timezone.utc).isoformat()}
         try:
-            receipt['results'] = postseason_usage(repo, token, key, branch); receipt['status'] = 'completed'
+            receipt['results'] = (postseason_tiers if experiment == 'postseason_tiers' else postseason_usage)(repo, token, key, branch); receipt['status'] = 'completed'
         except Exception as exc:
             receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:300]
             receipt['where'] = [{'file': Path(f.filename).name, 'function': f.name, 'line': f.lineno} for f in traceback.extract_tb(exc.__traceback__)[-5:]]

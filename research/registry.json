@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 273,
- "rows": 276,
+ "experiments": 274,
+ "rows": 277,
  "records": {
   "ACC-01": [
    {
@@ -1974,6 +1974,22 @@
     "runs": [],
     "frozen_commits": [],
     "status": "realism"
+   }
+  ],
+  "POST-03": [
+   {
+    "id": "POST-03",
+    "columns": {
+     "ID": "POST-03",
+     "Attempt": "Do postseason managers keep their best starters in longer? POST-01's x0.91 on expected batters faced is one number for every starter (postseason starters face 0.866 of their own regular-season median). Each Wild Card, Division and League series start 2023-2026 against the starter's own regular-season median (same season), by his regular-season strikeouts minus walks per plate appearance (terciles of the postseason starts, 200 or more regular-season batters faced) and by his own median (24 or more, 21 to 23, under 21); intervals from resampling starts. Research lane, tools/brl_research.py postseason_tiers; synthetic check (brl_live_tests/test_research_post_tiers.py: a planted ace effect is seen, a null one is not).",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Prediction: the top third by strikeouts minus walks keeps at least 0.05 more of its regular-season length than the bottom third, interval excluding zero. Decision rule: if it holds, a tiered postseason scale is built as a realism calibration like POST-01 and queued for Alec (postseason games are too few for a replay gate), and the plans' projected starter line says how the simulator treats him; if not, x0.91 stays for every starter.",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "PROD-02": [
