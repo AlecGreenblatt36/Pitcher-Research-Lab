@@ -844,6 +844,12 @@ class Fitted:
         rp = (getattr(self, 'run_season', {}) or {}).get('pitchers', {}).get(str(int(p)))
         if rp:
             card['run_against'] = {'season': self.run_year, **{k: rp[k] for k in ('sb', 'cs', 'bf') if k in rp}}
+        vg, vl, vt = game_velo_list(T, r)
+        if vg:
+            card['velo_games'] = vg
+            card['velo_type'] = vt
+        if vl:
+            card['velo_last'] = vl
         L = getattr(self, 'lines_p', {}).get(int(p))
         if L:
             card['line'] = L
@@ -1531,6 +1537,39 @@ def form_study(T: dict, stage, spec: dict) -> dict:
                                 'sd_last10_dev': round(float(np.sqrt(np.average(dev[ok] ** 2, weights=lw[ok]))), 4)}
         stage(f'form study: {name}')
     return out
+
+
+def game_velo_list(T: dict, r, last: int = 12, min_fb: int = 8) -> tuple[list, dict | None, str | None]:
+    """His main fastball's mean speed in each of his latest games (four-seam or sinker, whichever he threw more in his
+    latest season here; min_fb or more of them in the game), oldest first: [date, mph, fastballs, started]; and, when his
+    latest game was a start with 15 or more of them after three or more earlier starts that season with 15 or more, that
+    start against the mean of the earlier ones (VELO-01's measure); and the fastball's type code. Display; postseason
+    games count."""
+    r = np.asarray(r, np.int64)
+    if not len(r) or any(k not in T for k in ('sub', 'v0', 'game', 'day', 'season', 'inning')):
+        return [], None, None
+    yr = int(T['season'][r].max())
+    rl = r[T['season'][r] == yr]
+    ff, si = D.SUBTYPES.index('FF'), D.SUBTYPES.index('SI')
+    main = ff if (T['sub'][rl] == ff).sum() >= (T['sub'][rl] == si).sum() else si
+    ug, inv = np.unique(T['game'][r], return_inverse=True)
+    day = np.zeros(len(ug), np.int64); np.maximum.at(day, inv, T['day'][r].astype(np.int64))
+    sea = np.zeros(len(ug), np.int64); np.maximum.at(sea, inv, T['season'][r].astype(np.int64))
+    entry = np.full(len(ug), 99); np.minimum.at(entry, inv, T['inning'][r])
+    v0 = T['v0'][r].astype(np.float64); fb = (T['sub'][r] == main) & np.isfinite(v0)
+    n = np.bincount(inv, weights=fb.astype(float), minlength=len(ug)); sv = np.bincount(inv, weights=np.where(fb, v0, 0.0), minlength=len(ug))
+    order = np.argsort(day, kind='stable')
+    shown = [i for i in order if n[i] >= min_fb][-last:]
+    games = [[date.fromordinal(int(day[i])).isoformat(), round(float(sv[i] / n[i]), 1), int(n[i]), bool(entry[i] == 1)] for i in shown]
+    starts = [i for i in order if sea[i] == yr and entry[i] == 1 and n[i] >= 15]
+    latest = order[-1] if len(order) else None
+    info = None
+    if latest is not None and starts and starts[-1] == latest and len(starts) >= 4:
+        e = starts[:-1]
+        base = float(sv[e].sum() / n[e].sum())
+        info = {'type': D.SUBTYPES[main], 'date': date.fromordinal(int(day[latest])).isoformat(), 'mph': round(float(sv[latest] / n[latest]), 1),
+                'base': round(base, 1), 'delta': round(float(sv[latest] / n[latest]) - base, 1), 'earlier_starts': len(e)}
+    return games, info, D.SUBTYPES[main]
 
 
 # VELO-01 (LEDGER): does a starter's fastball speed in his last start carry into the next one, and does a drop say

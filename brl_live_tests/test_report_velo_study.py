@@ -58,3 +58,18 @@ def test_steady_speed_neither_carries_nor_predicts():
     v, k = out['targets']['velo'], out['targets']['k']
     assert abs(v['slope_test']) < 0.15, v
     assert k['slope_test_ci'][0] < 0 < k['slope_test_ci'][1], k
+
+
+def test_game_velo_list_latest_games_and_the_last_start():
+    B = _report()
+    T = _world(seed=3, pitchers=2, starts=8, drift_sd=0.0)
+    r = np.flatnonzero(T['pitcher'] == 500)
+    games, info, code = B.game_velo_list(T, r, last=5)
+    assert code == 'FF' and len(games) == 5 and games == sorted(games)          # oldest first, the latest five
+    assert all(g[3] for g in games) and all(g[2] == 50 for g in games)            # starts, 50 four-seamers each
+    assert info and info['earlier_starts'] == 7 and abs(info['delta'] - (info['mph'] - info['base'])) < 0.11
+    # a relief outing last: no last-start read
+    T2 = {k: v.copy() for k, v in T.items()}
+    lastg = T2['game'][r].max(); m = (T2['game'] == lastg) & (T2['pitcher'] == 500)
+    T2['inning'][m] = T2['inning'][m] + 5
+    assert B.game_velo_list(T2, r)[1] is None

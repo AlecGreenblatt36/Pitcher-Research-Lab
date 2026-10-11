@@ -96,3 +96,19 @@ def test_movement_chart_dots_rings_and_thin_arsenals():
           "h=movementChart(pc,{});assert.equal((h.match(/class=\"mv-lg\"/g)||[]).length,0);assert.ok(h.indexOf('Rings:')<0);"
           "assert.equal(movementChart({arsenal:[{type:'FF',share:1,v_mov:10,h_arm:3}]},{}),'');assert.equal(movementChart(null,{}),'');")
     subprocess.run(['node', '-e', prefix + consts + _fn(s, 'movementChart') + js], check=True)
+
+
+def test_fastball_speed_by_game_and_the_last_start_note():
+    s = _script()
+    consts = ''.join(re.search(r'\n  var ' + v + r' = .*?;\n', s, re.S).group(0) for v in ('TYPE_NAME', 'TYPE_SAY'))
+    velo_read = re.search(r'\n  var VELO_READ = function.*?\n  \};\n', s, re.S).group(0)
+    prefix = ("const assert=require('assert');function esc(x){return String(x==null?'':x);}function shortDate(d){return d.slice(5);}")
+    js = ("const pc={velo_type:'FF',velo_games:[['2026-09-14',96.7,42,true],['2026-09-19',96.9,38,true],['2026-09-30',96.4,12,false],['2026-10-03',95.4,41,true]],"
+          "velo_last:{type:'FF',date:'2026-10-03',mph:95.4,base:96.8,delta:-1.4,earlier_starts:25}};"
+          "let h=velChart(pc);assert.equal((h.match(/class=\"vel-pt\"/g)||[]).length,3);assert.equal((h.match(/vel-pt rel/g)||[]).length,1);"
+          "assert.ok(h.indexOf('Four-seam speed by game')>0&&h.indexOf('earlier starts this season')>0);"
+          "assert.equal(velChart({velo_games:pc.velo_games.slice(0,2)}),'');"
+          "let n=velLastNote(pc);assert.ok(n.indexOf('1.4 mph below his earlier starts this season (96.8)')>0&&n.indexOf('struck out about 2 fewer')>0,n);"
+          "n=velLastNote({velo_last:{type:'SI',date:'2026-10-03',mph:95.4,base:94.2,delta:1.2}});assert.ok(n.indexOf('sinker')>0&&n.indexOf('above')>0&&n.indexOf('1.3 per 100')>0,n);"
+          "assert.equal(velLastNote({velo_last:{type:'FF',date:'2026-10-03',mph:95.4,base:95.9,delta:-0.5}}),'');assert.equal(velLastNote({}),'');")
+    subprocess.run(['node', '-e', prefix + consts + velo_read + _fn(s, 'velChart') + _fn(s, 'velLastNote') + js], check=True)

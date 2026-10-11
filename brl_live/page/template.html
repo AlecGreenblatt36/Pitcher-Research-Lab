@@ -466,6 +466,13 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .glog thead th.l { text-align: left; }
 .gl-sec .tbl-wrap { max-width: 760px; }
 .mv-sec { margin-top: 18px; }
+.vel-sec { margin-top: 14px; }
+.vel-svg { width: 100%; max-width: 420px; height: auto; display: block; }
+.vel-avg { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.vel-line { fill: none; stroke: var(--rule-strong); stroke-width: 1.5; }
+.vel-pt { fill: var(--bad); stroke: var(--surface); stroke-width: 1.5; }
+.vel-pt.rel { fill: var(--surface); stroke: var(--bad); stroke-width: 2; }
+.vel-t { font-family: var(--body); font-size: 12px; fill: var(--muted); }
 .mv-wrap { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: flex-start; }
 .mv-svg { width: 100%; max-width: 340px; height: auto; display: block; }
 .mv-bg { fill: var(--surface); stroke: var(--rule); }
@@ -2977,6 +2984,40 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       '<p class="note">Each pitch type at its average movement from spin, in inches over the last 40 feet (the classic PITCHf/x measure). Right: toward his arm side. Up: rise against a pitch thrown with no spin; down: more drop. Bigger dots: thrown more.' +
       (rings ? " Rings: the league's average for the same pitch type." : "") + (pc.arsenal_season ? " This season (" + esc(pc.arsenal_season) + ") only." : "") + "</p></section>";
   }
+  /* His main fastball's speed game by game (the cards' velo_games: date, mph, fastballs, started), the way the public
+     pitch pages chart velocity: starts filled, relief outings hollow, a dashed line at his season average. */
+  function velChart(pc, hl) {
+    var g = (pc && pc.velo_games) || [];
+    if (g.length < 3) return "";
+    var mphs = g.map(function (x) { return x[1]; }), yr = g[g.length - 1][0].slice(0, 4), cur = g.filter(function (x) { return x[0].slice(0, 4) === yr; });
+    var avg = pc.velo_last ? pc.velo_last.base : cur.reduce(function (a, x) { return a + x[1] * x[2]; }, 0) / Math.max(1, cur.reduce(function (a, x) { return a + x[2]; }, 0));
+    var lo = Math.floor((Math.min.apply(null, mphs.concat([avg])) - 0.6) * 2) / 2, hi = Math.ceil((Math.max.apply(null, mphs.concat([avg])) + 0.6) * 2) / 2;
+    var W = 300, H = 128, l = 34, rt = 10, tp = 10, bt = 22, X = function (i) { return l + (g.length === 1 ? 0 : i * (W - l - rt) / (g.length - 1)); }, Y = function (v) { return tp + (hi - v) / (hi - lo) * (H - tp - bt); };
+    var name = TYPE_NAME[pc.velo_type] || "Fastball";
+    var h = '<svg class="vel-svg" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="' + esc(name + " speed by game: " + g.map(function (x) { return shortDate(x[0]) + " " + x[1].toFixed(1); }).join(", ")) + '">';
+    h += '<line class="vel-avg" x1="' + l + '" x2="' + (W - rt) + '" y1="' + Y(avg).toFixed(1) + '" y2="' + Y(avg).toFixed(1) + '"/>' +
+      '<text class="vel-t" x="' + (l - 5) + '" y="' + (Y(avg) + 4).toFixed(1) + '" text-anchor="end">' + avg.toFixed(1) + "</text>";
+    [lo, hi].forEach(function (v) { if (Math.abs(Y(v) - Y(avg)) >= 14) h += '<text class="vel-t" x="' + (l - 5) + '" y="' + (Y(v) + 4).toFixed(1) + '" text-anchor="end">' + v.toFixed(1) + "</text>"; });
+    h += '<polyline class="vel-line" points="' + g.map(function (x, i) { return X(i).toFixed(1) + "," + Y(x[1]).toFixed(1); }).join(" ") + '"/>';
+    g.forEach(function (x, i) { h += '<circle class="vel-pt' + (x[3] ? "" : " rel") + '" cx="' + X(i).toFixed(1) + '" cy="' + Y(x[1]).toFixed(1) + '" r="4.5"/>'; });
+    h += '<text class="vel-t" x="' + l + '" y="' + (H - 6) + '" text-anchor="start">' + esc(shortDate(g[0][0])) + '</text><text class="vel-t" x="' + (W - rt) + '" y="' + (H - 6) + '" text-anchor="end">' + esc(shortDate(g[g.length - 1][0])) + "</text></svg>";
+    var head = hl === "h4" ? '<h4 class="hz-h">' : '<h2 class="hz-h2">';
+    return '<section class="sec vel-sec">' + head + esc(name) + " speed by game" + (hl === "h4" ? "</h4>" : "</h2>") + h +
+      '<p class="note">Average speed of his ' + esc((TYPE_SAY[pc.velo_type] || "fastball")) + " in each of his last " + g.length + " games, in mph. Filled: starts. Hollow: relief. Dashed: his " + (pc.velo_last ? "earlier starts this season" : yr + " average") + ".</p></section>";
+  }
+  /* VELO-01 (2026 before August 1, 1,973 pairs of starts): about 45% of a last-start speed change showed up again in the
+     next start; each mph down meant about 1.3 fewer strikeouts per 100 batters next time, and starts after a drop of 1 mph
+     or more struck out 2.0 fewer per 100 than the others (interval 0.2 to 3.7) and allowed 1.6 more on base. */
+  var VELO_READ = function (d) {
+    return d < 0 ? "In 2026 about 45% of a drop like that showed up again in the next start, and starters coming off a drop of 1 mph or more struck out about 2 fewer batters per 100 the next time out."
+      : "In 2026 about 45% of a change like that showed up again in the next start, and strikeouts moved with the speed, about 1.3 per 100 batters for each mph.";
+  };
+  function velLastNote(pc) {
+    var v = pc && pc.velo_last;
+    if (!v || Math.abs(v.delta) < 1.0) return "";
+    return "His " + (TYPE_SAY[v.type] || "fastball") + " averaged " + v.mph.toFixed(1) + " mph in his last start (" + shortDate(v.date) + "), " + Math.abs(v.delta).toFixed(1) +
+      " mph " + (v.delta < 0 ? "below" : "above") + " his earlier starts this season (" + v.base.toFixed(1) + ")." + (VELO_READ ? " " + VELO_READ(v.delta) : "");
+  }
   var COUNT_ROWS = [["first", "First pitch"], ["ahead", "Pitcher ahead or even"], ["behind", "Pitcher behind"], ["two", "Two strikes"]];
   /* A hitter's swings by count (the usual split), each next to the league's for his side. */
   function countTable(card, lg) {
@@ -3970,7 +4011,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var keys = lineupKeys(doc, po);
     if (keys) h += '<p class="note hz-cap">Working through this lineup</p>' + keys;
     var spc = players[String(starter.id)] && players[String(starter.id)].pitcher, proj = starterProjection(doc, other, starter.id);
-    if (spc && spc.mix) h += '<details class="more" data-keep="ars-' + side + '"' + (state.rpOpen["ars-" + side] ? " open" : "") + "><summary>" + esc(lastName(nm(starter.id))) + "'s pitches</summary>" + (proj ? '<p class="pd-line">' + esc(proj) + "</p>" : "") + (pitcherTags(spc, doc.league).length ? '<div class="pl-tags pd-tags">' + pitcherTags(spc, doc.league).map(function (s0) { return "<span>" + esc(s0) + "</span>"; }).join("") + "</div>" : "") + pctPanel(spc, doc.league, doc.asof, "h4") + (spc.arsenal && spc.arsenal.length ? arsenalTypes(spc, doc.league) : arsenalTable(spc.mix)) + (arsenalChanges(spc) ? '<p class="pd-line">' + esc(arsenalChanges(spc)) + "</p>" : "") + movementChart(spc, doc.league, "h4") +
+    if (spc && spc.mix) h += '<details class="more" data-keep="ars-' + side + '"' + (state.rpOpen["ars-" + side] ? " open" : "") + "><summary>" + esc(lastName(nm(starter.id))) + "'s pitches</summary>" + (proj ? '<p class="pd-line">' + esc(proj) + "</p>" : "") + (pitcherTags(spc, doc.league).length ? '<div class="pl-tags pd-tags">' + pitcherTags(spc, doc.league).map(function (s0) { return "<span>" + esc(s0) + "</span>"; }).join("") + "</div>" : "") + pctPanel(spc, doc.league, doc.asof, "h4") + (spc.arsenal && spc.arsenal.length ? arsenalTypes(spc, doc.league) : arsenalTable(spc.mix)) + (arsenalChanges(spc) ? '<p class="pd-line">' + esc(arsenalChanges(spc)) + "</p>" : "") + (velLastNote(spc) ? '<p class="pd-line">' + esc(velLastNote(spc)) + "</p>" : "") + movementChart(spc, doc.league, "h4") + velChart(spc, "h4") +
       (runAgainstLine(spc.run_against, doc.league, lastName(nm(starter.id))) ? '<p class="note">' + esc(runAgainstLine(spc.run_against, doc.league, lastName(nm(starter.id)))) + "</p>" : "") +
       (spc.usage ? '<p class="note hz-cap">What he throws by count</p>' + (usageLine(spc) ? '<p class="pd-line">' + esc(usageLine(spc)) + "</p>" : "") + usageTable(spc, "R") + usageTable(spc, "L") : "") + "</details>";
     var pen = bullpenCard(doc, se, nm);
@@ -4727,6 +4768,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
             h += movementChart(x, lg);
           }
           else if (fams.length) h += arsenalTable(mix) + '<p class="note">Miss: misses per swing. Chase: swings at his pitches out of the zone. Zone: pitches in the strike zone. Put away: strikeouts per two-strike pitch of that type.</p>';
+          if (velLastNote(x)) h += '<p class="pd-line">' + esc(velLastNote(x)) + "</p>";
+          h += velChart(x);
           if (x.usage) h += '<h2 class="hz-h2">What he throws by count</h2>' + (usageLine(x) ? '<p class="pd-line">' + esc(usageLine(x)) + "</p>" : "") + usageTable(x, "R") + usageTable(x, "L") + '<p class="note">Share of each pitch type in each count. Behind means more balls than strikes.</p>';
           if (x.zones && (x.zones.R || x.zones.L)) {
             /* where he pitches, the standard 13 zones: to righties or lefties, by pitch type */
