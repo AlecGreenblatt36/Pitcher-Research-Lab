@@ -161,6 +161,44 @@ def zone_split(T: dict, rows, swing, whiff, by: str = 'throw_r') -> dict:
     return out
 
 
+COUNT_GROUPS = ('first', 'ahead', 'behind', 'two')      # the pitcher's view: 0-0; 0-1 and 1-1; more balls than strikes; two strikes
+
+
+def count_group(balls, strikes) -> np.ndarray:
+    """0 the first pitch, 1 the pitcher ahead or even (0-1, 1-1), 2 the pitcher behind (1-0, 2-0, 3-0, 2-1, 3-1), 3 two strikes."""
+    b = np.asarray(balls); s = np.asarray(strikes)
+    return np.where(s == 2, 3, np.where((b == 0) & (s == 0), 0, np.where(b > s, 2, 1)))
+
+
+def count_tend(T: dict, rows, swing, whiff) -> dict:
+    """A hitter's swings by count group, the usual scouting split: {group: [pitches, swings, misses, pitches out of the
+    zone, chases]}, out of the zone by MLB's zone (11-14). Counts only."""
+    rows = np.asarray(rows, dtype=np.int64)
+    if not len(rows):
+        return {}
+    g = count_group(T['balls'][rows], T['strikes'][rows]); out_ = T['zone'][rows] >= 11
+    sw = swing[rows]; wh = whiff[rows]
+    res = {}
+    for k, name in enumerate(COUNT_GROUPS):
+        m = g == k
+        res[name] = [int(m.sum()), int(sw[m].sum()), int(wh[m].sum()), int((m & out_).sum()), int(sw[m & out_].sum())]
+    return res
+
+
+def usage_by_count(T: dict, rows) -> dict:
+    """A pitcher's pitch types by count group and batter side: {side: {group: [fastballs, breaking balls, offspeed]}}."""
+    rows = np.asarray(rows, dtype=np.int64)
+    out = {}
+    for side, code in (('R', 1), ('L', 0)):
+        rr = rows[T['stand_r'][rows] == code] if len(rows) else rows
+        if len(rr) < 50:
+            continue
+        g = count_group(T['balls'][rr], T['strikes'][rr]); grp = T['group'][rr]
+        fam = np.where(np.isin(grp, (0, 1, 2, 6)), 0, np.where(np.isin(grp, (3, 4)), 1, 2))
+        out[side] = {name: [int(((g == k) & (fam == f)).sum()) for f in range(3)] for k, name in enumerate(COUNT_GROUPS)}
+    return out
+
+
 def spray_counts(T: dict, rows) -> dict | None:
     """Where a hitter's batted balls go, in field thirds (left, center, right, split at 15 degrees either side of
     straightaway), ground balls and balls in the air (line drives and fly balls) apart, plus pop-ups and hard-hit balls
@@ -414,6 +452,7 @@ class Fitted:
         # (by the hitter's side, then the pitcher's hand)
         self.league['zones'] = {sd_: zone_split(T, np.flatnonzero(tr & (T['stand_r'] == (1 if sd_ == 'R' else 0))), swing, whiff) for sd_ in ('R', 'L')}
         self.league['spray'] = {sd_: spray_counts(T, np.flatnonzero(tr & (T['stand_r'] == (1 if sd_ == 'R' else 0)))) for sd_ in ('R', 'L')}
+        self.league['counts'] = {sd_: count_tend(T, np.flatnonzero(tr & (T['stand_r'] == (1 if sd_ == 'R' else 0))), swing, whiff) for sd_ in ('R', 'L')}
         # the pitcher's training pitches
         self.gp = D._groups(T['pitcher'], tr)
         self.cgrp = np.where(T['strikes'] == 2, 2, np.where(T['balls'] > T['strikes'], 1, 0))
@@ -462,6 +501,7 @@ class Fitted:
             sp = spray_counts(T, r)
             if sp:
                 card['spray'] = sp
+            card['counts'] = count_tend(T, r, self.swing, self.whiff)
         if self.PM is not None and r is not None and len(r) >= 300:
             # VALUE-18 from the hitter's side: what his own swing tendencies cost him on the pitches he actually saw, against the average
             # hitter his side at the same pitches (his calibrated own part times the value of a swing against a take), per 600 plate
@@ -504,6 +544,10 @@ class Fitted:
                     mix[fname]['chase_rate'] = round(float(sw[out].mean()), 3)
                 if len(rr) >= 40:
                     mix[fname]['zone_rate'] = round(float((~out).mean()), 3)
+                # put-away rate: strikeouts on this pitch over the times he threw it with two strikes
+                two = T['strikes'][rr] == 2
+                if two.sum() >= 30:
+                    mix[fname]['putaway'] = round(float((two & (T['last_in_pa'][rr] == 1) & (T['out7'][rr] == 1)).sum() / two.sum()), 3)
                 for sd, key in ((1, 'to_righties'), (0, 'to_lefties')):
                     m2 = T['stand_r'][rr] == sd
                     if m2.sum() < 40:
@@ -515,7 +559,8 @@ class Fitted:
         return {'throws': 'R' if T['throw_r'][r][0] == 1 else 'L', 'pitches': int(len(r)), 'mix': mix,
                 'chase_rate_against': round(float(self.swing[r][self.outside[r]].mean()), 3) if self.outside[r].any() else None,
                 'looks_in_ends_out': round(float(self.looks_in_ends_out[r].mean()), 3),
-                'zones': zone_split(T, r, self.swing, self.whiff, by='stand_r')}      # where he throws, by the batter's side
+                'zones': zone_split(T, r, self.swing, self.whiff, by='stand_r'),      # where he throws, by the batter's side
+                'usage': usage_by_count(T, r)}                                        # what he throws, by count and batter side
 
     def _chain(self, ps_, pw_, pcs_, pfo_, ci_):
         use_c = np.bincount(ci_, minlength=12) >= 15; ki = ci_ % 3

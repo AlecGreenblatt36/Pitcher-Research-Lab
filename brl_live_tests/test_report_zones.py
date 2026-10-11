@@ -86,3 +86,25 @@ def test_spray_counts_by_field_third_and_trajectory():
     assert out['gb'] == [1, 0, 1] and out['air'] == [1, 1, 0]
     assert out['popups'] == 1 and out['hard'] == [2, 5]
     assert B.spray_counts(T, [5]) is None and B.spray_counts({'zone': a[:, 0]}, [0]) is None
+
+
+def test_count_groups_tendencies_and_usage():
+    B = _report()
+    #           balls strikes
+    pairs = [(0, 0), (0, 1), (1, 1), (1, 0), (3, 1), (2, 1), (0, 2), (3, 2)]
+    g = B.count_group([b for b, _ in pairs], [s for _, s in pairs]).tolist()
+    assert g == [0, 1, 1, 2, 2, 2, 3, 3]
+    #            balls strikes zone call group stand_r
+    rows = [(0, 0, 5, 1, 0, 1),     # first pitch fastball in the zone, swung at
+            (0, 1, 13, 2, 3, 1),    # 0-1 slider below the zone: a chase and a miss
+            (2, 0, 12, 0, 0, 1),    # 2-0 fastball up out of the zone, taken
+            (1, 2, 14, 1, 5, 1)]    # two strikes, changeup away, chased and fouled
+    a = np.array(rows)
+    T = {'balls': a[:, 0], 'strikes': a[:, 1], 'zone': a[:, 2], 'call': a[:, 3], 'group': a[:, 4], 'stand_r': a[:, 5]}
+    swing = ((T['call'] == 1) | (T['call'] == 2)).astype(float); whiff = (T['call'] == 2).astype(float)
+    ct = B.count_tend(T, np.arange(4), swing, whiff)
+    assert ct['first'] == [1, 1, 0, 0, 0] and ct['ahead'] == [1, 1, 1, 1, 1]
+    assert ct['behind'] == [1, 0, 0, 1, 0] and ct['two'] == [1, 1, 0, 1, 1]
+    rows60 = np.resize(np.arange(4), 60)                 # enough pitches to righties for a usage line
+    us = B.usage_by_count(T, rows60)
+    assert set(us) == {'R'} and sum(us['R']['first']) == 15 and us['R']['ahead'] == [0, 15, 0] and us['R']['two'] == [0, 0, 15]
