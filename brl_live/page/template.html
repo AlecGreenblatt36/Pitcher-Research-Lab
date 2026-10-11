@@ -388,7 +388,7 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 @media (min-width: 1100px) { .series { max-width: 1120px; } }
 
 /* Matchups grid */
-.mu-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; }
+.mu-wrap { position: relative; overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; }
 .mu { border-collapse: collapse; width: 100%; font-family: var(--display); }
 .mu th, .mu td { padding: 8px 6px; text-align: center; border-bottom: 1px solid var(--rule-soft); white-space: nowrap; }
 .mu thead th { font-family: var(--body); font-size: 14px; font-weight: 700; vertical-align: bottom; border-bottom: 2px solid var(--ink); }
@@ -436,6 +436,7 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .rp-next { flex: 1 1 100%; margin: 0; font-size: 15px; padding-top: 6px; border-top: 1px solid var(--rule-soft); }
 .sec h3 .pill { font-size: 14px; line-height: 20px; vertical-align: 3px; }
 .mu td.rp-sel { outline: 3px solid var(--ink); outline-offset: -3px; }
+.mu td.mu-best { outline: 2px solid var(--ink); outline-offset: -4px; font-weight: 800; }
 .plan-list { list-style: none; margin: 8px 0 0; padding: 0; background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; }
 .plan-row { padding: 12px 14px; border-top: 1px solid var(--rule-soft); }
 .plan-row:first-child { border-top: 0; }
@@ -2531,11 +2532,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     hit: { label: "Hit", hitter: 1, league: 0.217, f: function (p) { return p[3] + p[4] + p[5]; } },
     hr: { label: "Home run", hitter: 1, league: 0.031, f: function (p) { return p[5]; } }
   };
-  function muCell(v, m) {
+  function muCell(v, m, best) {
     var edge = m.hitter * (v - m.league) / m.league, a = Math.min(0.55, Math.abs(edge) * 0.9);
     var bg = edge >= 0 ? "rgba(196,40,36," + a.toFixed(3) + ")" : "rgba(28,90,160," + a.toFixed(3) + ")";
     var txt = m.league < 0.05 ? (v * 100).toFixed(1) + "%" : Math.round(v * 100) + "%";
-    return '<td style="background:' + bg + '">' + txt + "</td>";
+    return '<td' + (best ? ' class="mu-best"' : "") + ' style="background:' + bg + '">' + txt + (best ? '<span class="visually-hidden"> (his toughest reliever)</span>' : "") + "</td>";
   }
   function matchupsTab(f, box) {
     var mu = box && box.matchups;
@@ -2557,10 +2558,13 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       h += "</tr></thead><tbody>";
       g.batters.forEach(function (b, i) {
         h += '<tr><th scope="row" class="mu-who"><span class="spot">' + b.spot + "</span>" + esc(lastName(b.name)) + (b.bats ? " <small>" + esc(b.bats) + "</small>" : "") + "</th>";
-        (g.p[i] || []).forEach(function (pr) { h += muCell(m.f(pr), m); });
+        /* the reliever who is toughest on him by this measure, outlined (the starter is not a choice) */
+        var row = g.p[i] || [], bestJ = -1, bestV = null;
+        row.forEach(function (pr, j) { var pt = g.pitchers[j]; if (!pt || pt.role === "starter") return; var v = -m.hitter * m.f(pr); if (bestV == null || v > bestV) { bestV = v; bestJ = j; } });
+        row.forEach(function (pr, j) { h += muCell(m.f(pr), m, j === bestJ); });
         h += "</tr>";
       });
-      h += "</tbody></table></div></section>";
+      h += "</tbody></table></div>" + '<p class="note">Outlined: the reliever who is toughest on each hitter by this measure.</p></section>';
     });
     return h;
   }
