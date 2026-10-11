@@ -483,6 +483,9 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .seg.hz-seg button { padding: 8px 11px; }
 /* Percentile rankings, the way the public player pages draw them: a bar to his rank, the rank in a dot, the rate at the end */
 .pr-sec { max-width: 520px; margin-top: 18px; }
+.pr-h { margin: 0 0 2px; font-family: var(--display); font-size: 22px; line-height: 1.15; }
+details .pr-sec { margin-top: 6px; }
+details .pr-h { font-size: 18px; }
 .pr-list { display: grid; gap: 7px; margin: 8px 0 6px; }
 .pr-row { display: grid; grid-template-columns: minmax(0, 128px) minmax(0, 1fr) 54px; align-items: center; column-gap: 10px; }
 .pr-l { font-size: 14px; font-weight: 700; color: var(--muted); line-height: 1.2; }
@@ -3293,7 +3296,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var glance = lineupGlance(doc, po, hzSheetPick(players[String(starter.id)] && players[String(starter.id)].pitcher));
     if (glance) h += '<p class="note hz-cap">The lineup against ' + esc(hzHandWords(hzSheetPick(players[String(starter.id)] && players[String(starter.id)].pitcher))) + "</p>" + glance;
     var spc = players[String(starter.id)] && players[String(starter.id)].pitcher;
-    if (spc && spc.mix) h += '<details class="more" data-keep="ars-' + side + '"' + (state.rpOpen["ars-" + side] ? " open" : "") + "><summary>" + esc(lastName(nm(starter.id))) + "'s pitches</summary>" + (spc.arsenal && spc.arsenal.length ? arsenalTypes(spc) : arsenalTable(spc.mix)) +
+    if (spc && spc.mix) h += '<details class="more" data-keep="ars-' + side + '"' + (state.rpOpen["ars-" + side] ? " open" : "") + "><summary>" + esc(lastName(nm(starter.id))) + "'s pitches</summary>" + pctPanel(spc, doc.league, doc.asof, "h4") + (spc.arsenal && spc.arsenal.length ? arsenalTypes(spc) : arsenalTable(spc.mix)) +
       (spc.usage ? '<p class="note hz-cap">What he throws by count</p>' + (usageLine(spc) ? '<p class="pd-line">' + esc(usageLine(spc)) + "</p>" : "") + usageTable(spc, "R") + usageTable(spc, "L") : "") + "</details>";
     var pen = bullpenCard(doc, se, nm);
     if (pen) h += '<details class="more" data-keep="pen-' + side + '"' + (state.rpOpen["pen-" + side] ? " open" : "") + "><summary>" + esc(nickname(doc.teams[other].name)) + " bullpen: rest and pitches</summary>" + pen + "</details>";
@@ -3323,6 +3326,17 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     return h + "</ol>";
   }
   /* One hitter against one arm: the full plan with the grids, by count. */
+  /* The head-to-head line every preview shows ([PA, AB, H, TB, HR, K, BB] over the plan's training pitches). Said plainly as
+     too few to go on: the plan does not use it. */
+  function h2hLine(c, pname, asof) {
+    if (!c || !c[0]) return "";
+    var n = function (k, one, many) { return k === 1 ? one : k + " " + many; }, extra = [];
+    if (c[4]) extra.push(n(c[4], "a home run", "home runs"));
+    if (c[5]) extra.push(n(c[5], "a strikeout", "strikeouts"));
+    if (c[6]) extra.push(n(c[6], "a walk", "walks"));
+    return "Against " + pname + ", " + hzSeasons(asof) + ": " + c[2] + "-for-" + c[1] + (extra.length ? ", " + listNames(extra) : "") + " in " + n(c[0], "one plate appearance", "plate appearances") +
+      ". " + (c[0] < 25 ? "Too few to tell much; the plan doesn't lean on it." : "The plan reads his swings and the pitcher's pitches, not this line.");
+  }
   function pairDetail(doc, pk, sel, now) {
     var players = doc.players || {}, nm = function (id) { var p = players[String(id)]; return p && p.name ? p.name : String(id); };
     var parts = sel.split("|"), se2 = doc.sides[parts[0]], pr2 = se2 && se2.pairs[parts[1]], ids = parts[1].split(":");
@@ -3338,6 +3352,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     /* with hot zones, his chase and miss rates are in the strip over the charts; the old sentence otherwise */
     if (hc && !hc.zones) h += '<p class="note">' + esc(lastName(nm(ids[0]))) + " chases " + (hc.chase_rate != null ? pct(hc.chase_rate) : "–") + " of pitches out of the zone (league " + pct(doc.league.chase_rate) + ") and misses on " + (hc.whiff_rate != null ? pct(hc.whiff_rate) : "–") + " of his swings (league " + pct(doc.league.whiff_rate) + ")." + (tags.length ? " " + esc(tags.join(". ")) + "." : "") + "</p>";
     else if (hc && tags.length) h += '<div class="pl-tags pd-tags">' + tags.map(function (x) { return "<span>" + esc(x) + "</span>"; }).join("") + "</div>";
+    var hh = h2hLine(pr2.h2h, lastName(nm(ids[1])), doc.asof);
+    if (hh) h += '<p class="note">' + esc(hh) + "</p>";
     if (pc && pc.mix) h += '<p class="note">' + esc(lastName(nm(ids[1]))) + " throws " + ["fastball", "breaking", "offspeed"].filter(function (f) { return pc.mix[f] && pc.mix[f].share >= 0.005; }).map(function (f) { return PITCH_NAME[f].toLowerCase() + " " + pct(pc.mix[f].share) + (pc.mix[f].speed != null ? " (" + Math.round(pc.mix[f].speed) + " mph)" : ""); }).join(", ") + ".</p>";
     if (pr2.evidence && pr2.evidence.level === "thin") h += '<p class="note">Small sample: ' + Number(pr2.evidence.hitter_pitches).toLocaleString() + " pitches seen by the hitter, " + Number(pr2.evidence.pitcher_pitches_to_side).toLocaleString() + " thrown by the pitcher to " + (hc && hc.side === "L" ? "lefties" : "righties") + ". Treat it as a lean.</p>";
     var hand = pc && pc.throws ? pc.throws : "all", useHand = hc && hzSplit(hc.zones) ? hand : "all";
@@ -3749,8 +3765,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var L = 0.2126 * lin(rgb[0]) + 0.7152 * lin(rgb[1]) + 0.0722 * lin(rgb[2]);
     return { bg: "rgb(" + rgb.join(",") + ")", fg: 1.05 / (L + 0.05) >= (L + 0.05) / 0.05 ? "#fff" : "#17231C" };
   }
-  function pctPanel(x, lg, asof) {
+  function pctPanel(x, lg, asof, hl) {
     if (!x || !x.pct || !x.line) return "";
+    hl = hl || "h2";
     var kind = x.kind === "pitcher" || x.throws ? "pitcher" : "hitter", rows = PCT_ROWS[kind], rk = lg && lg.ranked, h = "";
     rows.forEach(function (r) {
       var p = x.pct[r[0]], v = lineRate(x.line, r[0]);
@@ -3760,7 +3777,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     });
     if (!h) return "";
     var pool = rk ? (kind === "pitcher" ? rk.pitchers : rk.hitters) : null, min = rk && rk.min ? rk.min : 300;
-    return '<section class="sec pr-sec"><h2>Percentile rankings</h2><p class="lede">Against ' + (pool ? Number(pool).toLocaleString() + " " : "all ") + (kind === "pitcher" ? "pitchers with " + min + "+ batters faced" : "hitters with " + min + "+ plate appearances") + ", " + esc(hzSeasons(asof)) + ". 100 is the best. Red: better than most. Blue: worse." + (kind === "hitter" ? " Fewer strikeouts, chases and misses rank higher." : " Fewer walks, hits and hard contact rank higher.") + '</p><div class="pr-list">' + h +
+    return '<section class="sec pr-sec"><' + hl + ' class="pr-h">Percentile rankings</' + hl + '><p class="lede">Against ' + (pool ? Number(pool).toLocaleString() + " " : "all ") + (kind === "pitcher" ? "pitchers with " + min + "+ batters faced" : "hitters with " + min + "+ plate appearances") + ", " + esc(hzSeasons(asof)) + ". 100 is the best. Red: better than most. Blue: worse." + (kind === "hitter" ? " Fewer strikeouts, chases and misses rank higher." : " Fewer walks, hits and hard contact rank higher.") + '</p><div class="pr-list">' + h +
       '</div><div class="pr-scale" aria-hidden="true"><span></span><span><span>Worst</span><span>Average</span><span>Best</span></span><span></span></div></section>';
   }
   function renderPlayer(kind, id) {

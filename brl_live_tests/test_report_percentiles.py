@@ -74,3 +74,23 @@ def test_percentile_ranks_only_for_players_with_enough_plate_appearances():
     pref = B.pct_reference(p_lines, B.PCT_PITCHER)
     top = B.pct_ranks(p_lines[99], pref, B.PCT_PITCHER)
     assert top['velo'] == 100 and top['k'] == 100            # a pitcher's strikeouts rank higher as better
+
+
+def test_head_to_head_counts_each_pair_on_training_pitches():
+    from types import SimpleNamespace
+    B = _report()
+    #        batter pitcher last out7 train
+    rows = [(1, 10, 0, -1, 1),   # a pitch mid at-bat: not counted
+            (1, 10, 1, 5, 1),    # a home run
+            (1, 10, 1, 1, 1),    # a strikeout
+            (1, 10, 1, 2, 1),    # a walk
+            (1, 11, 1, 3, 1),    # a single off another arm
+            (2, 10, 1, 0, 1),    # an out
+            (1, 10, 1, 4, 0)]    # after the as-of date: left out
+    a = np.array(rows)
+    T = {'batter': a[:, 0], 'pitcher': a[:, 1], 'last_in_pa': a[:, 2], 'out7': a[:, 3]}
+    fake = SimpleNamespace(T=T, train=a[:, 4] == 1)
+    hh = B.Fitted.head_to_head(fake, [1, 2], [10, 11])
+    assert hh[(1, 10)] == [3, 2, 1, 4, 1, 1, 1]       # 3 PA, 2 AB, 1 hit (the homer), 4 bases, 1 HR, 1 K, 1 BB
+    assert hh[(1, 11)] == [1, 1, 1, 1, 0, 0, 0] and hh[(2, 10)] == [1, 1, 0, 0, 0, 0, 0] and (2, 11) not in hh
+    assert B.Fitted.head_to_head(fake, [], [10]) == {} and B.Fitted.head_to_head(fake, [3], [10]) == {}

@@ -760,6 +760,25 @@ class Fitted:
         self.pools[key] = (offj, D.family_basis(Bj0, gj), third, cell, len(r), n_all, struct)
         return self.pools[key]
 
+    def head_to_head(self, hitters, staff) -> dict:
+        """(hitter, pitcher) -> [plate appearances, at-bats, hits, total bases, home runs, strikeouts, walks] over the
+        training pitches, for every pair of these hitters and arms that met (the standard head-to-head line). Counts only."""
+        T = self.T
+        if not len(hitters) or not len(staff):
+            return {}
+        m = self.train & (T['last_in_pa'] == 1) & np.isin(T['batter'], np.asarray(hitters, dtype=np.int64)) & np.isin(T['pitcher'], np.asarray(staff, dtype=np.int64))
+        idx = np.flatnonzero(m)
+        if not len(idx):
+            return {}
+        o7 = T['out7'][idx]
+        u, inv = np.unique(np.stack([T['batter'][idx], T['pitcher'][idx]], 1), axis=0, return_inverse=True)
+        inv = np.asarray(inv).ravel()
+        cnt = lambda mm: np.bincount(inv, weights=np.asarray(mm, dtype=np.float64), minlength=len(u))
+        tb = np.where(o7 == 3, 1.0, 0.0) + np.where(o7 == 4, 2.0, 0.0) + np.where(o7 == 5, 4.0, 0.0)
+        cols = [np.bincount(inv, minlength=len(u)).astype(np.float64), cnt(np.isin(o7, (0, 1, 3, 4, 5, 6))), cnt(np.isin(o7, (3, 4, 5))), cnt(tb),
+                cnt(o7 == 5), cnt(o7 == 1), cnt(o7 == 2)]
+        return {(int(b), int(q)): [int(round(float(c_[i]))) for c_ in cols] for i, (b, q) in enumerate(u)}
+
     def pair(self, h: int, p: int) -> dict | None:
         """One hitter against one pitcher: chase, strikeout and walk changes, and the aim plan with its value."""
         if h not in self.maps_s or p not in self.gp or len(self.gp[p]) < 150:
@@ -1512,11 +1531,14 @@ def build_report(fit: Fitted, T_all: dict, day: str, asof: str, stage, max_relie
             side_entry = {'lineup_source': source, 'hitters': hitters, 'spots': {str(x): v for x, v in spots.items() if x in hitters},
                           'pitchers': [{'id': x, 'role': 'starter' if x == starter else 'reliever', 'recent': recent_load(x)} for x in staff], 'pairs': {}}
             need_names.update(hitters); need_names.update(staff)
+            h2h = fit.head_to_head(hitters, staff) if hasattr(fit, 'head_to_head') else {}
             for h in hitters:
                 for p in staff:
                     pr = fit.pair(h, p)
                     if pr is None:
                         continue
+                    if (int(h), int(p)) in h2h:
+                        pr['h2h'] = h2h[(int(h), int(p))]
                     if g['final']:
                         gr = fit.grade(pk, h, p, (pr.get('aim') or {}).get('cells'))
                         if gr:
