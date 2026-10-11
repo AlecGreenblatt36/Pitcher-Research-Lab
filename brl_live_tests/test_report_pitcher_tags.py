@@ -26,12 +26,14 @@ def _season(rng, tr, season, n_pitch=1500):
     sw = rng.random(n) < np.where(inz, 0.66, np.clip(tr['chase'][pit], 0.05, 0.6))
     wh = sw & (rng.random(n) < 0.25)
     call = np.where(~sw, 0, np.where(wh, 2, 1)); cs = np.where((call == 0) & inz, 1, 0)
+    pz = np.where(fb, rng.normal(2.5 + tr['fbh'][pit], 0.7), rng.normal(1.9 + tr['brh'][pit], 0.7))
     return {'pitcher': pit + 500, 'season': np.full(n, season), 'day': np.full(n, 700000 + season * 400), 'post': np.zeros(n, int),
-            'group': np.where(fb, 0, 3), 'call': call, 'cs': cs, 'balls': balls, 'strikes': strikes, 'zone': zone}
+            'group': np.where(fb, 0, 3), 'call': call, 'cs': cs, 'balls': balls, 'strikes': strikes, 'zone': zone, 'pz': pz.astype(np.float32)}
 
 
 def _traits(rng, k):
-    return {'zone': rng.normal(0.5, 0.06, k), 'fbb': rng.normal(0.6, 0.15, k), 'chase': rng.normal(0.28, 0.05, k)}
+    return {'zone': rng.normal(0.5, 0.06, k), 'fbb': rng.normal(0.6, 0.15, k), 'chase': rng.normal(0.28, 0.05, k),
+            'fbh': rng.normal(0.0, 0.25, k), 'brh': rng.normal(0.0, 0.25, k)}
 
 
 def _world(persist, seed=5, k=150):
@@ -53,3 +55,18 @@ def test_pitcher_tags_hold_when_habits_carry_over():
     for name in ('Lives in the zone', 'Fastballs when behind'):
         assert not null['tags'][name]['held'], (name, null['tags'][name])
     assert abs(null['corr']['zone']['r']) < 0.25
+
+
+def test_location_tags_hold_when_habits_carry_over():
+    # PTAGS-02: fastballs up or down and breaking balls below the zone, by height
+    B = _report()
+    spec = {'splits': [{'train': [1, 2], 'test': 3}], 'min_pitches': 500, 'min_test': 300, 'boot': 300, 'location': True}
+    held = B.pitcher_tag_study(_world(True), lambda *a: None, spec)['splits'][0]
+    for name in ('Elevates fastballs', 'Keeps fastballs down', 'Buries breaking balls'):
+        t = held['tags'][name]
+        assert t['pitchers'] >= 5 and t['held'], (name, t)
+    assert held['corr']['fb_up']['r'] > 0.6 and held['corr']['br_dn']['r'] > 0.6
+    null = B.pitcher_tag_study(_world(False), lambda *a: None, spec)['splits'][0]
+    assert not null['tags']['Elevates fastballs']['held'] and abs(null['corr']['fb_up']['r']) < 0.25
+    plain = B.pitcher_tag_study(_world(True), lambda *a: None, dict(spec, location=False))['splits'][0]
+    assert 'Elevates fastballs' not in plain['tags'] and 'fb_up' not in plain['corr']

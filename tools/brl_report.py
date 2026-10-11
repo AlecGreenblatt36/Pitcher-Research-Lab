@@ -605,8 +605,9 @@ class Fitted:
                                  'pitchers': int(sum(1 for L in self.lines_p.values() if L['pa'] >= PCT_MIN))}
         # pitcher tag counts (PTAGS-01) on the training rows, and the league's rates
         ptc = pitcher_tag_counts(T, tr)
-        self.ptags = {int(pid): {k: [int(ptc[k][0][i]), int(ptc[k][1][i])] for k in ('fps', 'zone', 'chase', 'fb_behind', 'fb_first')} for i, pid in enumerate(ptc['ids'])}
-        self.league['ptags'] = {k: round(float(ptc[k][0].sum() / max(ptc[k][1].sum(), 1)), 4) for k in ('fps', 'zone', 'chase', 'fb_behind', 'fb_first')}
+        pkeys = [k for k in ('fps', 'zone', 'chase', 'fb_behind', 'fb_first', 'fb_up', 'fb_dn', 'br_dn') if k in ptc]
+        self.ptags = {int(pid): {k: [int(ptc[k][0][i]), int(ptc[k][1][i])] for k in pkeys} for i, pid in enumerate(ptc['ids'])}
+        self.league['ptags'] = {k: round(float(ptc[k][0].sum() / max(ptc[k][1].sum(), 1)), 4) for k in pkeys}
         self.run_year, self.run_season = running_season(asof_day)
         if self.run_year:
             self.league['run'] = dict(running_league(self.run_season), season=self.run_year)
@@ -1574,6 +1575,10 @@ PTAG_RULES = (('Throws first-pitch strikes', 'fps', 0.05), ('Falls behind first'
               ('Gets chases', 'chase', 0.04), ('Few chases', 'chase', -0.04),
               ('Fastballs when behind', 'fb_behind', 0.12), ('Spins it when behind', 'fb_behind', -0.12),
               ('Starts with spin', 'fb_first', -0.15))
+PTAG_FLOORS = {'fps': 100, 'zone': 300, 'chase': 150, 'fb_behind': 100, 'fb_first': 100}
+# PTAGS-02: where he puts the ball, by height (fastballs up, fastballs down, breaking balls below the zone)
+PTAG_RULES_LOC = (('Elevates fastballs', 'fb_up', 0.08), ('Keeps fastballs down', 'fb_dn', 0.08), ('Buries breaking balls', 'br_dn', 0.08))
+PTAG_FLOORS_LOC = {'fb_up': 200, 'fb_dn': 200, 'br_dn': 150}
 
 
 def pitcher_tag_counts(T: dict, mask) -> dict:
@@ -1587,8 +1592,17 @@ def pitcher_tag_counts(T: dict, mask) -> dict:
     sw = (call == 1) | (call == 2); z = T['zone'][rows]; inz = (z >= 1) & (z <= 9); ooz = z >= 11
     fb = np.isin(T['group'][rows], (0, 1, 2, 6)); first, behind = g == 0, g == 2
     ball = (call == 0) & (T['cs'][rows] != 1) if 'cs' in T else (call == 0)
-    return {'ids': ids, 'n': c(np.ones(len(rows), bool)), 'fps': (c(first & ~ball), c(first)), 'zone': (c(inz), c(inz | ooz)),
-            'chase': (c(sw & ooz), c(ooz)), 'fb_behind': (c(fb & behind), c(behind)), 'fb_first': (c(fb & first), c(first))}
+    out = {'ids': ids, 'n': c(np.ones(len(rows), bool)), 'fps': (c(first & ~ball), c(first)), 'zone': (c(inz), c(inz | ooz)),
+           'chase': (c(sw & ooz), c(ooz)), 'fb_behind': (c(fb & behind), c(behind)), 'fb_first': (c(fb & first), c(first))}
+    if 'pz' in T:
+        # PTAGS-02: where his fastballs and breaking balls cross, by height against the fixed zone (1.5 to 3.5 ft): fastballs
+        # in its top third or above, in its bottom third or below, and breaking balls below it
+        pz = T['pz'][rows].astype(np.float64); okz = np.isfinite(pz); br = np.isin(T['group'][rows], (3, 4))
+        up_cut = D.ZONE_BOT + 2.0 * (D.ZONE_TOP - D.ZONE_BOT) / 3.0; dn_cut = D.ZONE_BOT + (D.ZONE_TOP - D.ZONE_BOT) / 3.0
+        pzf = np.nan_to_num(pz, nan=2.5)
+        out.update({'fb_up': (c(fb & okz & (pzf > up_cut)), c(fb & okz)), 'fb_dn': (c(fb & okz & (pzf < dn_cut)), c(fb & okz)),
+                    'br_dn': (c(br & okz & (pzf < D.ZONE_BOT)), c(br & okz))})
+    return out
 
 
 def pitcher_tag_study(T: dict, stage, spec: dict) -> dict:
@@ -1599,7 +1613,10 @@ def pitcher_tag_study(T: dict, stage, spec: dict) -> dict:
     ok = reg & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2)
     min_pitches = int(spec.get('min_pitches', 500)); min_test = int(spec.get('min_test', 300)); boot = int(spec.get('boot', 1000))
     rng = np.random.default_rng(int(spec.get('seed', 20261011)))
-    floors = {'fps': 100, 'zone': 300, 'chase': 150, 'fb_behind': 100, 'fb_first': 100}
+    floors = dict(PTAG_FLOORS)
+    rules = PTAG_RULES + (PTAG_RULES_LOC if spec.get('location') else ())
+    if spec.get('location'):
+        floors.update(PTAG_FLOORS_LOC)
     out = {'splits': []}
     for split in spec.get('splits', [{'train': [2024, 2025], 'test': 2026, 'test_end': '2026-08-01'}, {'train': [2023, 2024], 'test': 2025}]):
         tr_m = ok & np.isin(T['season'], split['train']); te_m = ok & (T['season'] == int(split['test']))
@@ -1617,7 +1634,7 @@ def pitcher_tag_study(T: dict, stage, spec: dict) -> dict:
             okr[okr] &= bd[ti[okr]] >= floor
             x = an[okr] / ad[okr] - an.sum() / max(ad.sum(), 1); y = bn[ti[okr]] / bd[ti[okr]] - bn.sum() / max(bd.sum(), 1)
             res['corr'][rate] = {'pitchers': int(okr.sum()), 'r': float(np.corrcoef(x, y)[0, 1]) if okr.sum() >= 20 else None}
-        for name, rate, thr in PTAG_RULES:
+        for name, rate, thr in rules:
             an, ad = a[rate]; bn, bd = b[rate]
             lg_a, lg_b = an.sum() / max(ad.sum(), 1), bn.sum() / max(bd.sum(), 1)
             d_tr = np.where(ad >= floors[rate], an / np.maximum(ad, 1e-9) - lg_a, np.nan)

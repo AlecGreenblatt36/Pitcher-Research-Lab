@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 282,
- "rows": 285,
+ "experiments": 283,
+ "rows": 286,
  "records": {
   "ACC-01": [
    {
@@ -4629,6 +4629,22 @@
     "runs": [],
     "frozen_commits": [],
     "status": "held: 0.54 and 0.55"
+   }
+  ],
+  "PTAGS-02": [
+   {
+    "id": "PTAGS-02",
+    "columns": {
+     "ID": "PTAGS-02",
+     "Attempt": "Where a pitcher puts the ball, by height, checked like PTAGS-01: fastballs crossing in the top third of the fixed zone (above 2.83 ft) or higher, fastballs in its bottom third (below 2.17 ft) or lower, and breaking balls below the zone (under 1.5 ft), each against the league in the same window. Tags at 8 points: Elevates fastballs, Keeps fastballs down, Buries breaking balls (rows of 200 fastballs or 150 breaking balls). Same splits, pitchers (500 training and 300 test pitches) and scoring as PTAGS-01 (pitcher_tag_study with location); 2026 heights are measured at the middle of the plate, a level shift that the comparison with the same window's league absorbs. Synthetic check (brl_live_tests/test_report_pitcher_tags.py): planted height habits carry over, redrawn ones do not.",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: each rate correlates 0.6 or more from one season to the next in both splits; each tag with 10 or more pitchers holds in both splits (test difference at least half its threshold in its direction, interval excluding zero). Decision rule: the tags that hold go on the pitcher cards and the plans' starter folds (page PTAG_RULES, from the cards' ptags counts once rebuilt); the rest do not.",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "ZONES-01": [
