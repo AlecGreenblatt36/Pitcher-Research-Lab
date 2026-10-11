@@ -684,6 +684,11 @@ small { font-size: 14px; }
 .ts-t th[scope=row] { padding-top: 5px; padding-bottom: 5px; }
 .ts-t td small { display: block; font-family: var(--body); font-size: 14px; color: var(--muted); font-weight: 400; }
 .ts-t td.ts-win { font-weight: 700; }
+.mm th[scope=row] { text-align: left; font-family: var(--body); font-weight: 700; font-size: 15px; white-space: normal; }
+.mm th[scope=row] small { display: block; font-weight: 400; color: var(--muted); font-size: 14px; }
+.mm td { font-family: var(--body); font-size: 15px; text-align: right; white-space: nowrap; }
+.mm td b { font-family: var(--display); font-size: 18px; }
+.mm td small { display: block; color: var(--muted); font-size: 14px; }
 .bvp-t th[scope=row] { text-align: left; font-family: var(--body); font-weight: 400; white-space: nowrap; }
 .bvp-t td.bvp-none { text-align: left; color: var(--muted); font-family: var(--body); font-size: 15px; }
 .bvp-t tr.bvp-tot th, .bvp-t tr.bvp-tot td { font-weight: 700; border-top: 2px solid var(--ink); }
@@ -2825,7 +2830,6 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     ["WHIP", "pitching", function (x) { return x.whip != null ? +x.whip : null; }, -1, function (v, x) { return String(x.whip); }],
     ["Strikeouts per 9", "pitching", function (x) { return x.strikeoutsPer9Inn != null ? +x.strikeoutsPer9Inn : null; }, 1, function (v, x) { return String(x.strikeoutsPer9Inn); }],
     ["Walks per 9", "pitching", function (x) { return x.walksPer9Inn != null ? +x.walksPer9Inn : null; }, -1, function (v, x) { return String(x.walksPer9Inn); }]];
-  function ordinal(n) { var t = n % 100, u = n % 10; return n + (t >= 11 && t <= 13 ? "th" : u === 1 ? "st" : u === 2 ? "nd" : u === 3 ? "rd" : "th"); }
   function teamStatsSlot(f) {
     if (!f.away || !f.home || !f.away.team_id || !f.home.team_id) return "";
     return '<section class="sec ts" data-ts="' + esc(String(f.date || "").slice(0, 4)) + '" data-teams="' + esc(f.away.team_id + "," + f.home.team_id) + '" data-abbr="' + esc(f.away.abbr + "," + f.home.abbr) +
@@ -4541,6 +4545,40 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (mkt.over_under != null) h += '<tr><th scope="row">Total ' + esc(mkt.over_under) + "</th><td>o" + amText(mkt.over_odds) + " / u" + amText(mkt.under_odds) + "</td><td>" + (pov != null ? "o" + amOdds(pov) : "\u2013") + "</td></tr>";
     return h + '</tbody></table></div><p class="note">' + esc(mkt.provider || "The book") + "'s prices at " + esc(timeET(mkt.captured_at)) + " ET. Our fair price is our pick as American odds with no margin: below \u2212100 favored, above +100 not. For the total, the simulator's chance of the over, a push left out.</p>";
   }
+  /* Markets beyond the moneyline and the total, each shown only once its check held on two seasons re-run (RUNLINE-01,
+     FIRST5-01, NRFI-01; until then false). The run line keeps the pick: our win chance times the simulator's chance of
+     winning by two or more once a team wins, over the same worlds, so the two scores' dependence is kept. The first five
+     innings (a tie pushes) and the first inning are the simulator's own chances. */
+  var MORE_MARKETS = { runline: false, f5: false, nrfi: false };
+  function mmShare(c, test) { var t = total(c), s = 0; c.counts.forEach(function (x) { if (test(x[0])) s += x[1]; }); return t ? s / t : null; }
+  function runLineMarket(f, box) {
+    var m = box && dist(box.margin_distribution), ph = homeProb(f);
+    if (!m || ph == null) return null;
+    var hw = mmShare(m, function (k) { return k > 0; }), h2 = mmShare(m, function (k) { return k >= 2; });
+    var aw = mmShare(m, function (k) { return k < 0; }), a2 = mmShare(m, function (k) { return k <= -2; });
+    if (!hw || !aw) return null;
+    var favHome = ph >= 0.5, p = favHome ? ph * h2 / hw : (1 - ph) * a2 / aw;
+    return { fav: favHome ? "home" : "away", dog: favHome ? "away" : "home", p: p };
+  }
+  function moreMarkets(f, box) {
+    var rows = [], cell = function (label, p) { return "<td>" + label + " <b>" + pct(p) + "</b><small>" + amOdds(p) + "</small></td>"; };
+    if (MORE_MARKETS.runline) {
+      var rl = runLineMarket(f, box);
+      if (rl) rows.push('<tr><th scope="row">Run line</th>' + cell(esc(f[rl.fav].abbr) + " \u22121.5", rl.p) + cell(esc(f[rl.dog].abbr) + " +1.5", 1 - rl.p) + "</tr>");
+    }
+    var f5 = box && dist(box.f5_margin_distribution), f5t = box && dist(box.f5_total_distribution);
+    if (MORE_MARKETS.f5 && f5) {
+      var hl = mmShare(f5, function (k) { return k > 0; }), al = mmShare(f5, function (k) { return k < 0; }), tie = 1 - hl - al;
+      if (hl + al > 0) rows.push('<tr><th scope="row">First five innings<small>tied after five ' + pct(tie) + ", a push</small></th>" + cell(esc(f.away.abbr), al / (hl + al)) + cell(esc(f.home.abbr), hl / (hl + al)) + "</tr>");
+      if (f5t) { var ov = mmShare(f5t, function (k) { return k >= 5; }); rows.push('<tr><th scope="row">First five total 4.5</th>' + cell("Over", ov) + cell("Under", 1 - ov) + "</tr>"); }
+    }
+    if (MORE_MARKETS.nrfi && box && box.first_inning && box.first_inning.n) {
+      var nr = box.first_inning.no_run / box.first_inning.n;
+      rows.push('<tr><th scope="row">First inning</th>' + cell("A run", 1 - nr) + cell("No run", nr) + "</tr>");
+    }
+    if (!rows.length) return "";
+    return '<section class="sec"><h2>More markets</h2><div class="tbl-wrap"><table class="box mm"><tbody>' + rows.join("") + '</tbody></table></div><p class="note">Our chance of each side and its fair price (no margin). The run line is our pick times how often the simulator\'s winner won by two or more; the first five innings and the first inning are the simulator\'s own chances. Each was checked on two seasons re-run before it was shown here.</p></section>';
+  }
   function oddsTab(f, box) {
     var h = "", pa = winProb(f, "away"), ph = winProb(f, "home");
     var taught = taughtRecipe(f), rc = recipeOf(f), withLine = !!(rc && /market/.test(rc.headline || ""));
@@ -4592,6 +4630,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         "Most likely " + mode(tr) + ". Half of games land between " + quant(tr, .25) + " and " + quant(tr, .75) + ". " + pct(probAtLeast(tr, 10)) + " reach 10 or more." + esc(mline) + "</p></section>";
     }
 
+    h += moreMarkets(f, box);
     h += '<section class="sec"><h2>Starting pitchers</h2><ul class="range-list">';
     ["away", "home"].forEach(function (side) {
       var p = box.teams[side].pitching[0];
