@@ -93,7 +93,8 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
   scroll box needs the box positioned (it widened the page); percentile text color uses the ink's real luminance.
   TAGS-06 held (ground-ball and fly-ball hitters, 0.73 and 0.75; page gbShift). Arsenal tables carry the league's rates
   per pitch type (league_arsenal). The Record page lists every tag's check (TAG_CHECKS). Plan rows show at most four
-  tags, pitching ones first. The phone check failed once on 12 and 13px text in the new
+  tags, pitching ones first. PTAGS-01: seven pitcher tags held (page pitcherTags from card['ptags'] and league['ptags'],
+  Fitted.ptags from pitcher_tag_counts); falls behind first and few chases left off. The phone check failed once on 12 and 13px text in the new
   pieces (its floor is 14px); fixed at 12ac50da0. Run tools/check_brl_phone_page.py against the local build (--url
   http://127.0.0.1:8790/index.html?api=http://127.0.0.1:8790/mlb/) before pushing page changes.
 
