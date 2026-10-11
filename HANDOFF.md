@@ -8,6 +8,13 @@ across seasons), and the ledger row says which gate it passed. Below-floor effec
 see) are not covered and stay queued. Publishing new pages, outside contact and costs still need his approval; the
 discovery page stays private.
 
+## Waiting on Alec (postseason-only changes cannot be replay-gated)
+
+- POST-03: postseason starters kept in by tier (good starters longer); built in brl_live/live_extension.py, off
+  (ADJUST postseason_starter_tiers None).
+- LEASH-02's exit correction in postseason games too; it would need the postseason factor x0.91 re-measured on the
+  corrected hazard first. Regular-season games have it from October 11.
+
 ## Current checkpoint, October 8, 2026, 5 p.m. Eastern (Claude in charge)
 
 Read this section first, then LEDGER.md (every experiment with its registered prediction, result and decision). The
