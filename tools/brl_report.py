@@ -1816,6 +1816,19 @@ def names_for(ids: set, teams: bool = False) -> dict:
 PLAYER_SHARDS = 16
 
 
+def index_line(card: dict, keys) -> dict:
+    """For the players index (leaderboards and team tables): plate appearances (batters faced), the card's rates on the
+    percentile rows and its percentile ranks when ranked. Empty without a line."""
+    L = card.get('line')
+    if not L:
+        return {}
+    r = line_rates(L)
+    out = {'pa': int(L.get('pa', 0)), 'r': {k: (round(float(r[k]), 1) if k == 'velo' else round(float(r[k]), 4)) for k, _ in keys if r.get(k) is not None}}
+    if card.get('pct'):
+        out['pct'] = card['pct']
+    return out
+
+
 def build_players(fit: Fitted, asof: str, stage) -> tuple[dict, dict]:
     """League-wide player cards as of a date (every hitter with a map, every pitcher with 150 pitches): an index for search
     and sharded documents (public/reports/players/h-<n>.json, p-<n>.json), the same cards the game reports carry."""
@@ -1839,14 +1852,15 @@ def build_players(fit: Fitted, asof: str, stage) -> tuple[dict, dict]:
         w = who.get(h, {}); oc = card.get('own_cost') or {}
         index['hitters'][str(h)] = {'name': w.get('name') or str(h), 'team': w.get('team') or '', 'side': card['side'], 'pitches': card['pitches'],
                                     'chase_rate': card.get('chase_rate'), 'whiff_rate': card.get('whiff_rate'), 'own_cost': oc.get('runs_per_600_pa'),
-                                    'own_cost_outside': oc.get('outside_runs_per_600_pa'), 'own_cost_inside': oc.get('inside_runs_per_600_pa')}
+                                    'own_cost_outside': oc.get('outside_runs_per_600_pa'), 'own_cost_inside': oc.get('inside_runs_per_600_pa'),
+                                    **index_line(card, PCT_HITTER)}
         doc = dict(card); doc.update({'id': h, 'name': w.get('name') or str(h), 'team': w.get('team') or '', 'kind': 'hitter'})
         shards.setdefault(f'h-{h % PLAYER_SHARDS}', {})[str(h)] = doc
     for p, card in pitchers.items():
         w = who.get(p, {})
         index['pitchers'][str(p)] = {'name': w.get('name') or str(p), 'team': w.get('team') or '', 'throws': card['throws'], 'pitches': card['pitches'],
                                      'chase_rate_against': card.get('chase_rate_against'), 'looks_in_ends_out': card.get('looks_in_ends_out'),
-                                     'mix': {f_: v_['share'] for f_, v_ in (card.get('mix') or {}).items()}}
+                                     'mix': {f_: v_['share'] for f_, v_ in (card.get('mix') or {}).items()}, **index_line(card, PCT_PITCHER)}
         doc = dict(card); doc.update({'id': p, 'name': w.get('name') or str(p), 'team': w.get('team') or '', 'kind': 'pitcher'})
         shards.setdefault(f'p-{p % PLAYER_SHARDS}', {})[str(p)] = doc
     for k in shards:

@@ -419,6 +419,25 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .pl-list .who { min-width: 0; } .pl-list .who small { color: var(--muted); margin-left: 6px; }
 .pl-list b { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .pl-list .good { color: var(--good); } .pl-list .bad { color: var(--bad); }
+/* leaderboards and team tables on the Players page */
+.ld .seg { margin: 4px 0 8px; }
+.ld-list { list-style: none; margin: 0 0 12px; padding: 0; max-width: 560px; counter-reset: none; }
+.ld-list li { border-top: 1px solid var(--rule-soft); }
+.ld-list a { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto auto; align-items: center; column-gap: 8px; min-height: 48px; padding: 6px 4px; text-decoration: none; color: inherit; }
+.ld-list a:hover { background: var(--hover); }
+.ld-list .who small { display: block; color: var(--muted); font-size: 14px; }
+.ld-list .ld-rank { color: var(--muted); font-weight: 700; text-align: right; }
+.ld-list b { font-family: var(--display); font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pct-pill { display: inline-block; min-width: 28px; padding: 0 5px; border-radius: 10px; font-size: 14px; font-weight: 700; text-align: center; line-height: 1.5; font-variant-numeric: tabular-nums; }
+.roster th[scope="row"] { text-align: left; white-space: nowrap; font-family: var(--body); font-size: 16px; font-weight: 400; color: var(--ink); border-bottom: 1px solid var(--rule-soft); }
+.roster th[scope="row"] a { color: inherit; }
+.ld .seg { display: flex; }
+.ld .seg button { flex: 1 1 auto; }
+.roster th[scope="row"] small { color: var(--muted); font-weight: 400; }
+.roster td { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.roster thead th { text-align: right; white-space: nowrap; }
+.roster thead th:first-child { text-align: left; }
+.roster th[scope="row"], .roster thead th:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); }
 .pl-back { display: inline-block; padding: 12px 4px; margin: -12px -4px; min-height: 44px; box-sizing: border-box; }
 .rp-card { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 12px; min-width: 0; }
 .rp-card h4, .rp-card h2.card-h { margin: 0 0 6px; font-size: 16px; }
@@ -732,7 +751,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   var DATA_URL = "predictions.json";
   var D = null;
   var app = document.getElementById("app");
-  var state = { variant: {}, boxSide: {}, playSide: {}, muMetric: "obp", rpMetric: "chase", rpPair: {}, rpCount: "all", rpFollow: {}, rpCloud: false, rpOpen: {}, hzMetric: "avg", hzFam: "all", hzHand: "", hzBat: "R", hzPMetric: "loc", hzSheetHand: "sp", hzView: "raw" };
+  var state = { variant: {}, boxSide: {}, playSide: {}, muMetric: "obp", rpMetric: "chase", rpPair: {}, rpCount: "all", rpFollow: {}, rpCloud: false, rpOpen: {}, hzMetric: "avg", hzFam: "all", hzHand: "", hzBat: "R", hzPMetric: "loc", hzSheetHand: "sp", hzView: "raw", ldHit: "slg", ldPit: "k" };
   var REPORTS = "https://raw.githubusercontent.com/AlecGreenblatt36/Pitcher-Research-Lab/brl-live-data/public/reports/";
   var TOTAL_TAUGHT = { sim: 0.32, line: 0.78, shift: -0.543, from: "2026-10-10" };   /* TOTALS-03: expected total taught by results, fixed cross-season weights */
   var RP = {};
@@ -4057,6 +4076,48 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var at = location.hash;
     withSchedule(t, function () { withSchedule(n, function () { if (location.hash === at) redraw(); }); });
   }
+  /* Leaderboards and team tables from the players index (tools/brl_report.py index_line: plate appearances or batters
+     faced, the percentile rows' rates and the ranks), laid out like the public leaderboards: one measure at a time with
+     each player's percentile, and a team's hitters and pitchers in one table with every rate. */
+  var LD_DIR = { hitter: { avg: 1, slg: 1, k: -1, bb: 1, chase: -1, whiff: -1, hard: 1 }, pitcher: { k: 1, bb: -1, whiff: 1, chase: 1, hard: -1, avg: -1, velo: 1 } };
+  var LD_SHORT = { hitter: { avg: "AVG", slg: "SLG", k: "K%", bb: "BB%", chase: "Chase", whiff: "Whiff", hard: "Hard-hit" }, pitcher: { k: "K%", bb: "BB%", whiff: "Whiff", chase: "Chase", hard: "Hard-hit", avg: "AVG", velo: "Velo" } };
+  function ldFmt(kind, k, v) {
+    var row = PCT_ROWS[kind].filter(function (r) { return r[0] === k; })[0], f = row ? row[2] : "pct";
+    return v == null ? "\u2013" : f === "three" ? (v >= 1 ? v.toFixed(3) : v.toFixed(3).slice(1)) : f === "mph" ? v.toFixed(1) : (100 * v).toFixed(1) + "%";
+  }
+  function ldPill(p) { if (p == null) return ""; var c = pctColor(p); return ' <small class="pct-pill" style="background:' + c.bg + ";color:" + c.fg + '">' + p + "</small>"; }
+  /* a table cell tinted by the player's percentile: red better than most, blue worse, clear in the middle */
+  function ldTint(p) {
+    if (p == null) return "";
+    var d = Math.max(-1, Math.min(1, (p - 50) / 50)), a = (Math.abs(d) * 0.5).toFixed(3), c = d >= 0 ? HZ_RED : HZ_BLUE;
+    return ' style="background:rgba(' + c.join(",") + "," + a + ')"';
+  }
+  function leaderboard(list, kind, key) {
+    var dir = LD_DIR[kind][key] || 1, rows = list.filter(function (x) { return x.pct && x.pct[key] != null && x.r && x.r[key] != null; });
+    rows.sort(function (a, b) { return b.pct[key] - a.pct[key] || dir * (b.r[key] - a.r[key]); });
+    var seg = '<div class="seg" role="group" aria-label="' + (kind === "hitter" ? "Hitting" : "Pitching") + ' leaders by">' + PCT_ROWS[kind].map(function (r) {
+      return '<button data-ld="' + kind + ":" + r[0] + '" aria-pressed="' + (r[0] === key) + '">' + esc(LD_SHORT[kind][r[0]]) + "</button>";
+    }).join("") + "</div>";
+    var label = (PCT_ROWS[kind].filter(function (r) { return r[0] === key; })[0] || [key, key])[1];
+    var h = seg + '<ol class="ld-list" aria-label="' + esc(label) + ' leaders">';
+    rows.slice(0, 10).forEach(function (x, i) {
+      h += '<li><a href="#/player/' + (kind === "hitter" ? "h" : "p") + "/" + x.id + '"><span class="ld-rank num">' + (i + 1) + '</span><span class="who">' + esc(x.name) + "<small>" + esc(x.team ? nickname(x.team) : "") + "</small></span><b class=\"num\">" + ldFmt(kind, key, x.r[key]) + "</b>" + ldPill(x.pct[key]) + "</a></li>";
+    });
+    return h + "</ol>";
+  }
+  function rosterTable(list, kind) {
+    var rows = list.filter(function (x) { return x.r; }).sort(function (a, b) { return (b.pa || 0) - (a.pa || 0); });
+    if (!rows.length) return "";
+    var cols = PCT_ROWS[kind];
+    var h = '<div class="tbl-wrap roster-wrap" tabindex="0" role="region" aria-label="' + (kind === "hitter" ? "Hitters" : "Pitchers") + ', scrolls sideways"><table class="box roster"><thead><tr><th scope="col">' + (kind === "hitter" ? "Hitter" : "Pitcher") + '</th><th scope="col">' + (kind === "hitter" ? "PA" : "BF") + "</th>" +
+      cols.map(function (r) { return '<th scope="col">' + esc(LD_SHORT[kind][r[0]]) + "</th>"; }).join("") + "</tr></thead><tbody>";
+    rows.forEach(function (x) {
+      var first = String(x.name || "").trim().split(/\s+/)[0] || "", short = (first && first !== lastName(x.name) ? first.charAt(0) + ". " : "") + lastName(x.name);
+      h += '<tr><th scope="row"><a href="#/player/' + (kind === "hitter" ? "h" : "p") + "/" + x.id + '" title="' + esc(x.name) + '" aria-label="' + esc(x.name) + '">' + esc(short) + "</a> <small>" + esc(kind === "hitter" ? x.side : x.throws) + "</small></th><td>" + (x.pa || 0) + "</td>" +
+        cols.map(function (r) { var p = x.pct ? x.pct[r[0]] : null; return "<td" + ldTint(p) + ">" + ldFmt(kind, r[0], x.r[r[0]]) + "</td>"; }).join("") + "</tr>";
+    });
+    return h + "</tbody></table></div>";
+  }
   function renderPlayers(q) {
     withNextSchedules(function () { renderPlayers(q); });
     withPlayers(function () {
@@ -4079,17 +4140,36 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       /* the default lists are big leaguers only; a search finds anyone */
       var match = function (x) { return query ? (x.name + " " + x.team).toLowerCase().indexOf(query) >= 0 : MLB_CLUBS.indexOf(x.team) >= 0; };
       hit = hit.filter(match); pit = pit.filter(match);
-      var isClub = MLB_CLUBS.some(function (k) { return k.toLowerCase() === query; });
-      if (!query || isClub) { hit.sort(function (a, b) { return (a.own_cost == null ? 1e9 : a.own_cost) - (b.own_cost == null ? 1e9 : b.own_cost); }); pit.sort(function (a, b) { return (b.looks_in_ends_out || 0) - (a.looks_in_ends_out || 0); }); }
-      else { hit.sort(function (a, b) { return a.name.localeCompare(b.name); }); pit.sort(function (a, b) { return a.name.localeCompare(b.name); }); }
-      var lim = query ? 200 : 40;
-      h += '<section class="sec"><h2>Hitters</h2><p class="lede">' + (isClub ? hit.length + " hitters, the ones hurting themselves most at the top" : query ? hit.length + " match" : "The 40 big leaguers who hurt themselves most with their swing decisions: chasing bad pitches and taking good ones") + '. The number is runs over a full season (600 trips to the plate) against an average hitter seeing the same pitches. Minus means it costs him.</p><ul class="pl-list">';
-      hit.slice(0, lim).forEach(function (x) { h += '<li><a href="#/player/h/' + x.id + '"><span class="who">' + esc(x.name) + '<small>' + esc(x.team) + (x.team ? ", " : "") + "bats " + esc(x.side) + "</small></span><b class=\"" + (x.own_cost != null && x.own_cost < 0 ? "bad" : "good") + '">' + fmtCost(x.own_cost) + "</b></a></li>"; });
-      h += "</ul></section>";
-      h += '<section class="sec"><h2>Pitchers</h2><p class="lede">' + (isClub ? pit.length + " pitchers, best at getting chases first" : query ? pit.length + " match" : "The 40 big leaguers best at getting chases") + ". The number is how often his pitch looks like a strike when the hitter has to decide, then ends up out of the zone" + (P.league && P.league.looks_in_ends_out != null ? " (league " + pct(P.league.looks_in_ends_out) + ")" : "") + '.</p><ul class="pl-list">';
-      pit.slice(0, lim).forEach(function (x) { h += '<li><a href="#/player/p/' + x.id + '"><span class="who">' + esc(x.name) + '<small>' + esc(x.team) + (x.team ? ", " : "") + "throws " + esc(x.throws) + "</small></span><b>" + (x.looks_in_ends_out != null ? pct(x.looks_in_ends_out) : "\u2013") + "</b></a></li>"; });
-      h += "</ul></section></div>";
+      var isClub = MLB_CLUBS.some(function (k) { return k.toLowerCase() === query; }), rated = hit.concat(pit).some(function (x) { return x.r; });
+      var seasons = hzSeasons(P.asof), rk = P.league && P.league.ranked;
+      /* the swing-decision and chase lists (the cards' own measures), first on the page before the index carried rates */
+      var costList = function (list, lim) { var x2 = list.slice().sort(function (a, b) { return (a.own_cost == null ? 1e9 : a.own_cost) - (b.own_cost == null ? 1e9 : b.own_cost); }); return '<ul class="pl-list">' + x2.slice(0, lim).map(function (x) { return '<li><a href="#/player/h/' + x.id + '"><span class="who">' + esc(x.name) + '<small>' + esc(x.team) + (x.team ? ", " : "") + "bats " + esc(x.side) + "</small></span><b class=\"" + (x.own_cost != null && x.own_cost < 0 ? "bad" : "good") + '">' + fmtCost(x.own_cost) + "</b></a></li>"; }).join("") + "</ul>"; };
+      var lieList = function (list, lim) { var x2 = list.slice().sort(function (a, b) { return (b.looks_in_ends_out || 0) - (a.looks_in_ends_out || 0); }); return '<ul class="pl-list">' + x2.slice(0, lim).map(function (x) { return '<li><a href="#/player/p/' + x.id + '"><span class="who">' + esc(x.name) + '<small>' + esc(x.team) + (x.team ? ", " : "") + "throws " + esc(x.throws) + "</small></span><b>" + (x.looks_in_ends_out != null ? pct(x.looks_in_ends_out) : "\u2013") + "</b></a></li>"; }).join("") + "</ul>"; };
+      var costSay = ". The number is runs over a full season (600 trips to the plate) against an average hitter seeing the same pitches. Minus means it costs him.";
+      var lieSay = ". The number is how often his pitch looks like a strike when the hitter has to decide, then ends up out of the zone" + (P.league && P.league.looks_in_ends_out != null ? " (league " + pct(P.league.looks_in_ends_out) + ")" : "") + ".";
+      if (rated && !query) {
+        var kh = LD_DIR.hitter[state.ldHit] ? state.ldHit : "slg", kp = LD_DIR.pitcher[state.ldPit] ? state.ldPit : "k";
+        h += '<section class="sec ld"><h2>Hitting leaders</h2><p class="lede">The top ten among ' + (rk && rk.hitters ? Number(rk.hitters).toLocaleString() + " " : "") + "hitters with 300 or more plate appearances, " + esc(seasons) + ". The small number is his percentile (100 is the best).</p>" + leaderboard(hit, "hitter", kh) + "</section>";
+        h += '<section class="sec ld"><h2>Pitching leaders</h2><p class="lede">The top ten among ' + (rk && rk.pitchers ? Number(rk.pitchers).toLocaleString() + " " : "") + "pitchers with 300 or more batters faced, " + esc(seasons) + ".</p>" + leaderboard(pit, "pitcher", kp) + "</section>";
+        h += '<section class="sec"><details class="more"><summary>Swing decisions: who costs himself the most</summary><p class="lede">The 40 big leaguers who hurt themselves most with their swing decisions: chasing bad pitches and taking good ones' + costSay + "</p>" + costList(hit, 40) + "</details>";
+        h += '<details class="more"><summary>Getting chases: the best pitchers at it</summary><p class="lede">The 40 big leaguers best at getting chases' + lieSay + "</p>" + lieList(pit, 40) + "</details></section>";
+      } else if (rated && isClub) {
+        h += '<section class="sec wide"><h2>Hitters</h2><p class="lede">' + hit.length + " hitters, most plate appearances first, " + esc(seasons) + ". Shaded by his percentile among hitters with 300 or more: red better than most, blue worse. Tap a name for his card.</p>" + rosterTable(hit, "hitter") + "</section>";
+        h += '<section class="sec wide"><h2>Pitchers</h2><p class="lede">' + pit.length + " pitchers, most batters faced first, shaded the same way.</p>" + rosterTable(pit, "pitcher") + "</section>";
+        h += '<section class="sec"><details class="more"><summary>Swing decisions on this team</summary><p class="lede">The ones hurting themselves most at the top' + costSay + "</p>" + costList(hit, 200) + "</details></section>";
+      } else {
+        var lim = query ? 200 : 40;
+        if (query && !isClub) { hit.sort(function (a, b) { return a.name.localeCompare(b.name); }); pit.sort(function (a, b) { return a.name.localeCompare(b.name); }); }
+        h += '<section class="sec"><h2>Hitters</h2><p class="lede">' + (isClub ? hit.length + " hitters, the ones hurting themselves most at the top" : query ? hit.length + " match" : "The 40 big leaguers who hurt themselves most with their swing decisions: chasing bad pitches and taking good ones") + costSay + "</p>" +
+          (query && !isClub ? '<ul class="pl-list">' + hit.slice(0, lim).map(function (x) { return '<li><a href="#/player/h/' + x.id + '"><span class="who">' + esc(x.name) + '<small>' + esc(x.team) + (x.team ? ", " : "") + "bats " + esc(x.side) + "</small></span><b class=\"" + (x.own_cost != null && x.own_cost < 0 ? "bad" : "good") + '">' + fmtCost(x.own_cost) + "</b></a></li>"; }).join("") + "</ul>" : costList(hit, lim)) + "</section>";
+        h += '<section class="sec"><h2>Pitchers</h2><p class="lede">' + (isClub ? pit.length + " pitchers, best at getting chases first" : query ? pit.length + " match" : "The 40 big leaguers best at getting chases") + lieSay + "</p>" +
+          (query && !isClub ? '<ul class="pl-list">' + pit.slice(0, lim).map(function (x) { return '<li><a href="#/player/p/' + x.id + '"><span class="who">' + esc(x.name) + '<small>' + esc(x.team) + (x.team ? ", " : "") + "throws " + esc(x.throws) + "</small></span><b>" + (x.looks_in_ends_out != null ? pct(x.looks_in_ends_out) : "\u2013") + "</b></a></li>"; }).join("") + "</ul>" : lieList(pit, lim)) + "</section>";
+      }
+      h += "</div>";
       app.innerHTML = h;
+      app.querySelectorAll("[data-ld]").forEach(function (b) {
+        b.addEventListener("click", function () { var kk = b.getAttribute("data-ld").split(":"), y = window.scrollY; if (kk[0] === "hitter") state.ldHit = kk[1]; else state.ldPit = kk[1]; renderPlayers(q); window.scrollTo(0, y); });
+      });
       var inp = document.getElementById("pl-search");
       var selT = document.getElementById("pl-team");
       if (inp) { inp.addEventListener("change", function () { location.hash = "#/players/" + encodeURIComponent(inp.value.trim()); }); inp.addEventListener("keydown", function (e) { if (e.key === "Enter") { location.hash = "#/players/" + encodeURIComponent(inp.value.trim()); } }); if (query && !(selT && selT.value)) inp.focus(); }

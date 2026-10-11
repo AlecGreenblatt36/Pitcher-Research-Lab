@@ -104,3 +104,15 @@ def test_running_season_waits_for_the_season_to_end():
     assert B.running_season(date(2026, 7, 1).toordinal())[0] == 2025          # a past plan never shows numbers from after its date
     lg = B.running_league(season)
     assert 0.05 < lg['att_per_on1'] < 0.2 and 0.6 < lg['sb_pct'] < 0.9 and lg['att_per_bf'] > 0
+
+
+def test_index_line_for_leaderboards():
+    B = _report()
+    card = {'line': {'pa': 400, 'ab': 350, 'h': 100, 'tb': 160, 'hr': 15, 'k': 80, 'bb': 40, 'pitches': 1600, 'swings': 750,
+                     'misses': 180, 'outside': 700, 'chases': 200, 'bbe': 260, 'hard': 110}, 'pct': {'avg': 80, 'k': 55}}
+    out = B.index_line(card, B.PCT_HITTER)
+    assert out['pa'] == 400 and out['pct'] == {'avg': 80, 'k': 55}
+    assert out['r']['avg'] == round(100 / 350, 4) and out['r']['hard'] == round(110 / 260, 4) and 'velo' not in out['r']
+    assert B.index_line({}, B.PCT_HITTER) == {}
+    p = B.index_line({'line': dict(card['line'], velo=96.44)}, B.PCT_PITCHER)
+    assert p['r']['velo'] == 96.4 and 'pct' not in p
