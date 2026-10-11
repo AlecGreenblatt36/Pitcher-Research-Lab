@@ -1,0 +1,150 @@
+{
+ "schema": "brl.report-receipt.v1",
+ "run_id": "38129227011",
+ "params": {
+  "form_study": {
+   "train": [
+    2024,
+    2025
+   ],
+   "test": 2026,
+   "test_end": "2026-08-01",
+   "boot": 2000
+  },
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "dates": [
+   "2026-04-01"
+  ],
+  "publish": false
+ },
+ "started_at": "2026-10-11T09:41:19.706469+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 9.4,
+   "peak_rss_mb": 1088
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 18.8,
+   "peak_rss_mb": 1261
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 28.1,
+   "peak_rss_mb": 1432
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 37.5,
+   "peak_rss_mb": 1587
+  },
+  {
+   "stage": "form study: windows",
+   "at_seconds": 38.0,
+   "peak_rss_mb": 1587
+  },
+  {
+   "stage": "form study: obp",
+   "at_seconds": 38.0,
+   "peak_rss_mb": 1587
+  },
+  {
+   "stage": "form study: slg",
+   "at_seconds": 38.0,
+   "peak_rss_mb": 1587
+  },
+  {
+   "stage": "form study: k",
+   "at_seconds": 38.0,
+   "peak_rss_mb": 1587
+  }
+ ],
+ "reports": {},
+ "environment": {
+  "python": "3.12.15",
+  "commit": "48d06b212b6681990d3ff49fdc3a5610351eb746",
+  "numpy": "2.5.4",
+  "scipy": "1.18.1",
+  "scikit-learn": "1.9.1",
+  "pandas": "3.0.6",
+  "cryptography": "46.0.4"
+ },
+ "form_study": {
+  "train": [
+   2024,
+   2025
+  ],
+  "test": 2026,
+  "test_end": "2026-08-01",
+  "windows": {
+   "2024": 3450,
+   "2025": 3418,
+   "2026": 2039
+  },
+  "metrics": {
+   "obp": {
+    "k_fit": 0.0167,
+    "k_test": 0.0188,
+    "k_test_ci": [
+     -0.0271,
+     0.0624
+    ],
+    "windows": 2039,
+    "hitters": 369,
+    "mse_level": 0.006205,
+    "mse_with_last10": 0.006203,
+    "relative_change": [
+     -0.00031,
+     -0.00159,
+     0.00104
+    ],
+    "sd_last10_dev": 0.0732
+   },
+   "slg": {
+    "k_fit": 0.0175,
+    "k_test": 0.0041,
+    "k_test_ci": [
+     -0.0446,
+     0.0516
+    ],
+    "windows": 2039,
+    "hitters": 369,
+    "mse_level": 0.023458,
+    "mse_with_last10": 0.023461,
+    "relative_change": [
+     0.00015,
+     -0.00133,
+     0.00169
+    ],
+    "sd_last10_dev": 0.1443
+   },
+   "k": {
+    "k_fit": 0.0991,
+    "k_test": 0.1467,
+    "k_test_ci": [
+     0.0999,
+     0.1938
+    ],
+    "windows": 2039,
+    "hitters": 369,
+    "mse_level": 0.005156,
+    "mse_with_last10": 0.005071,
+    "relative_change": [
+     -0.01644,
+     -0.02437,
+     -0.00851
+    ],
+    "sd_last10_dev": 0.0662
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-11T09:41:57.759683+00:00",
+ "seconds": 38.0
+}
