@@ -599,6 +599,37 @@ def relief_pitches(data_root: Path, physics) -> dict:
     return out
 
 
+def pitch_efficiency(data_root: Path, physics, min_bf=300) -> dict:
+    """Do pitchers differ in pitches per plate appearance beyond their outcomes, and does it carry over? Each pitcher-season's
+    pitches over the pitches his outcomes would take at the league's per-outcome means (regular seasons, the physics tables'
+    pitches per plate appearance), for pitcher-seasons with min_bf or more batters: the spread across pitchers, the same
+    for starters only, and season-to-season correlation. Aggregates only (no player rows)."""
+    from brl_replay.games import load_history
+    h = load_history(next(data_root.rglob('plate_appearances.csv.gz')))
+    if 'game_type' in h.columns:
+        h = h[h['game_type'].astype(str) == 'R']
+    n = physics[['game_pk', 'at_bat_number', 'n']].drop_duplicates(['game_pk', 'at_bat_number']).astype({'game_pk': 'int64', 'at_bat_number': 'int64'})
+    h = h.merge(n, on=['game_pk', 'at_bat_number'], how='inner')
+    h = h[h['n'] > 0]
+    mean_by = h.groupby('outcome')['n'].mean()
+    h = h.assign(e=h['outcome'].map(mean_by))
+    top = h['inning_topbot'].astype(str).str.lower().str.startswith('top')
+    h = h.assign(fld=np.where(top, h['home_team'], h['away_team']))
+    first = h.groupby(['game_pk', 'fld'])['pitcher'].transform('first')
+    h = h.assign(starter=(h['pitcher'] == first))
+    ps = h.groupby(['pitcher', 'season']).agg(bf=('n', 'size'), n=('n', 'sum'), e=('e', 'sum'), st=('starter', 'mean')).reset_index()
+    ps = ps[ps['bf'] >= min_bf].assign(f=lambda x: x['n'] / x['e'])
+    out = {'league_mean_by_outcome': {str(k): round(float(v), 3) for k, v in mean_by.items()}, 'pitcher_seasons': int(len(ps)),
+           'factor_sd': round(float(ps['f'].std()), 4), 'factor_q10_q90': [round(float(ps['f'].quantile(.1)), 4), round(float(ps['f'].quantile(.9)), 4)],
+           'starters_factor_sd': round(float(ps.loc[ps['st'] > 0.5, 'f'].std()), 4), 'starter_seasons': int((ps['st'] > 0.5).sum()), 'carry': {}}
+    w = ps.pivot_table(index='pitcher', columns='season', values='f')
+    for a, b in ((2023, 2024), (2024, 2025), (2025, 2026)):
+        if a in w.columns and b in w.columns:
+            m = w[[a, b]].dropna()
+            out['carry'][f'{a}-{b}'] = {'pitchers': int(len(m)), 'corr': round(float(m[a].corr(m[b])), 3)}
+    return out
+
+
 def postseason_usage(repo, token, key, branch, seasons=(2023, 2024, 2025, 2026)) -> dict:
     """How starters and bullpens are used in postseason games compared with the regular season (from the sealed study seasons)."""
     import collections
@@ -691,7 +722,7 @@ def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']; key_hex = os.environ['BRL_PA_PACKAGE_KEY']; key = key_bytes(key_hex)
     branch = os.environ.get('BRL_LEDGER_BRANCH', 'brl-live-data')
     experiment = (os.environ.get('BRL_EXPERIMENT') or 'physics').strip()
-    if experiment in ('hazard_check', 'hazard_fix', 'hazard_pitches', 'pitch_counts', 'relief_pitches'):
+    if experiment in ('hazard_check', 'hazard_fix', 'hazard_pitches', 'pitch_counts', 'relief_pitches', 'pitch_efficiency'):
         run_id = os.environ.get('GITHUB_RUN_ID', 'local')
         receipt = {'schema': 'brl.research-receipt.v1', 'experiment': experiment, 'run_id': run_id, 'started_at': datetime.now(timezone.utc).isoformat()}
         try:
@@ -703,7 +734,7 @@ def main():
                 import shutil; shutil.rmtree(data_root)
             data_root.mkdir(parents=True)
             ep.restore_package(repo, token, key_hex, manifest, data_root)
-            if experiment in ('hazard_pitches', 'pitch_counts', 'relief_pitches'):
+            if experiment in ('hazard_pitches', 'pitch_counts', 'relief_pitches', 'pitch_efficiency'):
                 import io
                 tables = []
                 for year in (2023, 2024, 2025, 2026):
@@ -712,7 +743,7 @@ def main():
                         tables.append(pd.read_csv(io.BytesIO(gzip.decompress(unseal(raw, key, physics_purpose(year)))), usecols=['game_pk', 'at_bat_number', 'n']))
                 receipt['physics_seasons'] = len(tables)
                 phys_n = pd.concat(tables, ignore_index=True) if tables else None
-                receipt['results'] = {'pitch_counts': pitch_counts_fit, 'relief_pitches': relief_pitches}.get(experiment, hazard_pitches)(data_root, phys_n)
+                receipt['results'] = {'pitch_counts': pitch_counts_fit, 'relief_pitches': relief_pitches, 'pitch_efficiency': pitch_efficiency}.get(experiment, hazard_pitches)(data_root, phys_n)
             else:
                 receipt['results'] = (hazard_fix if experiment == 'hazard_fix' else hazard_check)(data_root)
             receipt['status'] = 'completed'

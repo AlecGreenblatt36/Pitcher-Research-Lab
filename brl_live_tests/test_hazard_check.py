@@ -154,3 +154,14 @@ def test_relief_pitches_scores_every_relief_decision_by_pitches_in_the_outing(tm
     out = br.relief_pitches(tmp_path, phys)
     assert out['decisions'] > 0 and sum(c[3] for c in out['cells']) == out['decisions']
     assert all(0 <= c[1] <= 4 and c[4] <= c[3] for c in out['cells'])
+
+
+def test_pitch_efficiency_finds_planted_pitcher_factors_and_their_carry(tmp_path):
+    rng = np.random.default_rng(15)
+    pa = _games(rng, n=400)
+    pa.to_csv(tmp_path / 'plate_appearances.csv.gz', index=False, compression='gzip')
+    fac = {p: f for p, f in zip(sorted(pa['pitcher'].unique()), rng.uniform(0.8, 1.2, pa['pitcher'].nunique()))}
+    phys = pa[['game_pk', 'at_bat_number']].assign(n=np.maximum(1, np.rint(4 * pa['pitcher'].map(fac) + rng.normal(0, 1, len(pa)))).astype(int))
+    out = br.pitch_efficiency(tmp_path, phys, min_bf=50)
+    assert out['pitcher_seasons'] > 0 and out['factor_sd'] > 0.05
+    assert out['carry']['2025-2026']['corr'] > 0.5            # the same pitcher's factor in both seasons
