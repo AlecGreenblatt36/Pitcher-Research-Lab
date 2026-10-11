@@ -10,6 +10,10 @@ discovery page stays private.
 
 ## Waiting on Alec (postseason-only changes cannot be replay-gated)
 
+- The World Series: POST-01 and POST-02 found its starter and reliever usage like the regular season (scale 1.0, exit
+  offset 0.0), but LEASH-02's and RELIEF-04's corrections are on for regular-season games only, so World Series games run
+  the plain hazards. Giving them the corrected regular-season hazards is a postseason change, so it waits for Alec.
+
 - POST-03: postseason starters kept in by tier (good starters longer); built in brl_live/live_extension.py, off
   (ADJUST postseason_starter_tiers None).
 - LEASH-02's exit correction in postseason games too; it would need the postseason factor x0.91 re-measured on the
@@ -54,9 +58,11 @@ October 7 checkpoint below still describes the machinery (lanes, privacy, schedu
   with it the starters' outs ladder on the Odds tab for boxes simulated with it (12.5 to 20.5); the page states no over
   chance of its own anywhere (TOTALS-03); the run charts and ranges are negative binomials with the simulator's mean and
   its variance times 1.095 (TOTALS-05); hitter props switch between chances and fair American odds; the live builder
-  refuses a hazard correction file that is not LEASH-02's 32 terms. Built and off: the in-season level layer (LEVEL-01,
-  failed LEVEL-02 and LEVEL-03), the engine's pitch draws (LEASH-03 failed), and, on from October 11 evening, RELIEF-04's
-  entry-inning correction on the relief-exit hazard for regular-season games (ADJUST relief_correction).
+  refuses a hazard correction file that is not LEASH-02's 32 terms. On from October 11 evening: RELIEF-04's entry-inning
+  correction on the relief-exit hazard for regular-season games (ADJUST relief_correction; postseason games keep the plain
+  relief hazard, brl_live/relief_hooks.json and the +0.4); the strikeout spread (PLAYER-08), the hits-allowed ladder
+  (PLAYER-09) and the batter-strikeouts column (PROD-16). Built and off: the in-season level layer (LEVEL-01, failed
+  LEVEL-02 and LEVEL-03) and the engine's pitch draws (LEASH-03 failed).
 
 ### Evidence (full-season replays, 1,000 worlds per game, each season with tables from other seasons)
 
@@ -110,9 +116,9 @@ queue behind the shards (seen October 11 at 16:50 UTC). Check-only replays (n_si
   38174343872 and 38174368300) against v2-prod4-leash2-1000. Score: tools/brl_relief_usage.py on both tags (slope gap at
   least halved, level no worse by 0.03), tools/replay_compare.py v2-prod4-leash2-1000 v2-prod4-relief4-1000 (win Brier,
   totals), and check the receipts' settings equal LEASH-02's apart from relief_correction. If it holds: fit the live
-  table (relief_fix 'live' coefficients in the receipt) into brl_live/relief_correction.json, recompute brl_live/
-  relief_hooks.json against the corrected hazard (tools/brl_relief_hooks.py), add ADJUST relief_correction for
-  regular-season games only (manager_for has the game type).
+  table (relief_fix 'live' coefficients in the receipt) into brl_live/relief_correction.json, and the hooks against the
+  corrected hazard into brl_live/relief_hooks_corrected.json (tools/brl_relief_hooks.py --correction; keep
+  relief_hooks.json plain, the postseason reads it); ADJUST relief_correction for regular-season games only. (Done 5:51.)
 - October 11, 4:32 p.m.: review fixes. The live builder refuses a hazard correction file that is not LEASH-02's 32 terms
   (LEASH-03's pitch terms would have run with no pitches outside the one simulator it returned); brl_live/pitch_counts.json
   and the idle live branch are gone. The outs ladder shows only 12.5 to 20.5, the lines PLAYER-07 scored (with those lines

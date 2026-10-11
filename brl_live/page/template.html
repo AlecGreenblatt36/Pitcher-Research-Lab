@@ -1079,7 +1079,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
      simulated distribution's shape and mean, spread to the residual variance: convolved with {-1: w, 0: 1 - 2w, +1: w},
      w = (K_SPREAD - 1) x its variance / 2, the mass below zero folded onto zero. Re-run over two seasons the simulated
      distributions ran a little narrow (residual variance 1.07 times theirs); spread, the middle range held the real count
-     within 0.3 points of its own mass in both seasons and every ladder line came within 1.9 points. */
+     within 0.4 points of its own mass in both seasons and every ladder line came within 2 points. */
   var K_SPREAD = 1.0693;
   function kShape(c) {
     var t = total(c), m = mean(c), v = 0, n = 0, p = [], i;
@@ -2060,10 +2060,10 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       h += '<p class="note">The line moved ' + Math.round(Math.abs(g.m - g.mo) * 100) + (Math.round(Math.abs(g.m - g.mo) * 100) === 1 ? " point" : " points") + " from open to close, " + (toward ? "toward" : "away from") + " our model.</p>";
     }
     h += "</section>";
-    var ra = histDist(g.ra), rh = histDist(g.rh);
-    h += '<section class="sec"><h2>Runs each team scores</h2><p class="lede">Half the time each team lands in these ranges: ' + esc(f.away.abbr) + " " + quant(ra, .25) + " to " + quant(ra, .75) + ", " + esc(f.home.abbr) + " " + quant(rh, .25) + " to " + quant(rh, .75) + ".</p>";
+    var ra = histDist(g.ra), rh = histDist(g.rh), sa = runShape(ra), sh = runShape(rh);
+    h += '<section class="sec"><h2>Runs each team scores</h2><p class="lede">Half the time each team lands in these ranges: ' + esc(f.away.abbr) + " " + quant(sa, .25) + " to " + quant(sa, .75) + ", " + esc(f.home.abbr) + " " + quant(sh, .25) + " to " + quant(sh, .75) + ".</p>";
     h += '<div class="legend"><span><i class="key" style="background:var(--away)"></i>' + esc(nickname(f.away.name)) + '</span><span><i class="key" style="background:var(--home)"></i>' + esc(nickname(f.home.name)) + "</span></div>";
-    h += '<div class="chart">' + runsChart(ra, rh) + "</div></section>";
+    h += '<div class="chart">' + runsChart(sa, sh) + "</div></section>";
     if (g.ou != null) h += '<section class="sec"><h2>Total runs</h2><p class="lede">We expected ' + (mean(ra) + mean(rh)).toFixed(1) + ". The book's total was " + g.ou + (g.po != null ? " (over " + pct(g.po) + ")" : "") + ". Final: " + (g.fa + g.fh) + ".</p></section>";
     return h;
   }
@@ -4739,7 +4739,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         (d.PC ? '<span class="r num">' + quant(d.PC, .25) + " to " + quant(d.PC, .75) + " pitches</span> <small>estimated</small>" : "") +
         ladders(d, outsOn) + "</li>";
     });
-    h += '</ul><p class="note">Ranges cover the middle half of simulated games. Strikeouts: his chance of more than each line from 2.5 to 8.5, with the fair price (no margin). Hits allowed the same way, from 2.5 to 7.5. Over two seasons re-run, these chances came within about 2 points of how often starters actually got there.' +
+    h += '</ul><p class="note">Ranges cover the middle half of what we expect. Strikeouts: his chance of more than each line from 2.5 to 8.5, with the fair price (no margin). Hits allowed the same way, from 2.5 to 7.5. Over two seasons re-run, these chances came within about 2 points of how often starters actually got there.' +
       (outsOn ? " Outs: the same for outs recorded (three an inning); re-run, every line from 12.5 to 20.5 came within 2.4 points." : "") + "</p></section>";
 
     var pf = function (p) { return state.propOdds ? amOdds(p) : pct(p); };
@@ -4789,7 +4789,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (a >= .02) o += '<text x="' + (mid - gut - wa - 5).toFixed(1) + '" y="' + (y + 17) + '" text-anchor="end" font-size="12" fill="var(--muted)">' + pct(a) + "</text>";
       if (hh >= .02) o += '<text x="' + (mid + gut + wh + 5).toFixed(1) + '" y="' + (y + 17) + '" font-size="12" fill="var(--muted)">' + pct(hh) + "</text>";
     }
-    return '<svg viewBox="0 0 ' + W + " " + svgH + '" role="img" aria-label="Share of simulated games ending with each run total, by team">' + o + "</svg>";
+    return '<svg viewBox="0 0 ' + W + " " + svgH + '" role="img" aria-label="Share of games ending with each run total, by team">' + o + "</svg>";
   }
 
   /* How close (after the final) */

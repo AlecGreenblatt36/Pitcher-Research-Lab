@@ -28,6 +28,8 @@ Settings come from tools/replay_params.json on the trigger branch:
   day_form     sd of a per-team, per-world shock on reaching base (DISP-01)
   pitch_counts path in the repository of pitches per plate appearance by outcome (tools/brl_research.py pitch_counts; LEASH-03)
   hazard_correction path in the repository of LEASH-02's correction on the starter-exit hazard (tools/brl_research.py hazard_fix)
+  relief_correction path in the repository of RELIEF-04's entry-inning correction on the relief-exit hazard, fitted against
+               the same relief_exit table (tools/brl_research.py relief_fix); needs relief_exit, and the hooks follow it
   level_offsets path in the repository of in-season league-level offsets by date (tools/brl_level_cal.py --write-offsets;
                LEVEL-02): each date's offsets from the season's earlier real plate appearances only
   base_state   path in the repository of base-state offsets (tools/brl_base_state.py): the stack shaped by bases and outs

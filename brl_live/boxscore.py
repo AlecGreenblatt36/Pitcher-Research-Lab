@@ -366,7 +366,8 @@ class BoxAccumulator:
 # vary from game to game as much as real ones do. 0 is off.
 # postseason_exit_offset: with relief_exit, log-odds added to the exit hazard in postseason games (POST-02): postseason
 # managers use 4.2 relievers a team-game against 3.3 in the regular season (POST-01); with the starter scale and the
-# fitted exits the engine gives 3.8, and +0.4 gives 4.15. The World Series keeps the regular hazard, as its starters do.
+# fitted exits the engine gives 3.8, and +0.4 gives 4.15. The World Series gets no offset, as its starters get no scale;
+# like every postseason game it runs the plain hazards, without LEASH-02's and RELIEF-04's regular-season corrections.
 # relief_hooks: with relief_exit, each team's tendency to pull relievers faster or slower than the fitted hazard
 # (RELIEF-03; table brl_live/relief_hooks.json from tools/brl_relief_hooks.py). Off until its replays are read.
 # base_state: the stack's probabilities shaped by bases and outs (RUNS-02; brl_live.provider_adjust.BaseStateAdjust,
