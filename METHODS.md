@@ -193,6 +193,8 @@ fastballs when behind and on the first pitch; seven held in both test seasons an
 few chases) are not. Height tags (PTAGS-02: fastballs in the top third of the fixed zone or above, in the bottom third or
 below, breaking balls below the zone; 8 points over the league) carry over 0.73 to 0.78 and all three held. Ground-ball
 and fly-ball pitchers (PTAGS-03: ground balls among batted balls against, 8 points either way) carry over 0.75 and 0.82
+and both held. Inside and away (PTAGS-04: fastballs on the inner or outer third of the plate or beyond, each pitcher read
+against the league's rate for the pitcher-hand and batter-side matchups he faced, 6 points over) carry over 0.57 to 0.61
 and both held. The plan sheets' lineup notes are drawn from these tags only.
 
 ## Privacy, storage and publication

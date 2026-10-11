@@ -4675,14 +4675,16 @@
     "columns": {
      "ID": "PTAGS-04",
      "Attempt": "Where a pitcher's fastballs go across the plate, checked like PTAGS-01: fastballs on the inner third of the plate (0.28 ft or more from the middle toward the batter, catcher's view) or further in, and on the outer third or further away. Inside and away depend on the matchup (pitcher's hand and batter's side), so each pitcher is read against the league's rate for each matchup he faced: his excess over that expectation, per fastball. Tags at 6 points: Works inside with the fastball, Works away with the fastball (rows of 200 fastballs). Same splits, pitchers and scoring as PTAGS-01 (pitcher_tag_study with side). Synthetic check (brl_live_tests/test_report_pitcher_tags.py): a planted habit carries over and is read against the matchups (lefties facing more lefties); a redrawn one does not.",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: both rates correlate 0.5 or more from one season to the next in both splits; each tag with 10 or more pitchers holds in both splits (test difference at least half the threshold in its direction, interval excluding zero). Decision rule: the tags that hold go on the pitcher cards and starter folds (page PTAG_RULES; the cards carry fb_in and fb_away from the next rebuild); the rest do not.",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: both rates correlate 0.5 or more from one season to the next in both splits; each tag with 10 or more pitchers holds in both splits (test difference at least half the threshold in its direction, interval excluding zero). Decision rule: the tags that hold go on the pitcher cards and starter folds (page PTAG_RULES; the cards carry fb_in and fb_away from the next rebuild); the rest do not. **Results (run 38122717614):** correlations from one season to the next: inside 0.61 and 0.57, away 0.61 and 0.57 (347 and 385 pitchers). Tags on the test pitches: Works inside with the fastball +5.8 [3.7, 7.7] (44 pitchers, training +8.7) and +5.8 [3.7, 7.6] (53, +8.8); Works away with the fastball +5.8 [4.3, 7.3] (47, +9.0) and +5.4 [3.5, 7.2] (49, +8.6). **Every prediction held.** Both tags go on the pitcher cards and starter folds (page PTAG_RULES, floor 200).",
+     "Delta corrected Brier, 2026": "held: 0.57 to 0.61"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38122717614"
+    ],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "held: 0.57 to 0.61"
    }
   ],
   "ZONES-01": [
