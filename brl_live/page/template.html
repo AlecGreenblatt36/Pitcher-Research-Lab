@@ -3185,7 +3185,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       }
       /* the model's own finer grids, where the plan comes from, kept one tap away */
       var hasCloud = ck === "all" && pr2.aim.dangerous_miss && Object.keys(pr2.aim.dangerous_miss).some(function (fam) { return pr2.aim.dangerous_miss[fam].cloud; });
-      if (hasCloud) model += '<div class="seg" role="group" aria-label="What the grid shows"><button data-rpcloud="0" aria-pressed="' + !state.rpCloud + '">His swings</button><button data-rpcloud="1" aria-pressed="' + !!state.rpCloud + '">Where the pitches end up</button></div>';
+      if (hasCloud) model += '<div class="seg arms" role="group" aria-label="What the grid shows"><button data-rpcloud="0" aria-pressed="' + !state.rpCloud + '">His swings</button><button data-rpcloud="1" aria-pressed="' + !!state.rpCloud + '">Where the pitches end up</button></div>';
       model += '<p class="note">Our swing model on a finer grid: red where he swings more than most hitters, blue less. Circles are pitches out of the zone to throw him (filled where he chases, open where he takes a strike on the edge); squares are strikes (filled where he takes more than most hitters, open where he can\'t do much with it). Catcher\'s view.</p><div class="rp-cards">';
       shown.forEach(function (fam) {
         var own = hc.own_chase && hc.own_chase[fam], mix = pc && pc.mix && pc.mix[fam];
@@ -3202,7 +3202,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     }
     if (hc && hc.whiff_grid) model += '<div class="rp-cards" style="margin-top:14px"><div class="rp-card"><h4>Where he swings and misses</h4><div class="lbl">Red: more than most hitters. Blue: less.</div>' + rpGrid(doc, hc.whiff_grid, null, "where he swings and misses", 0.5, null, null, hc.side === "L") + "</div>" +
       (hc.zone_top_ft != null ? '<div class="rp-card"><h4>His strike zone</h4><div class="lbl">Top ' + hc.zone_top_ft + " ft, bottom " + hc.zone_bottom_ft + " ft, from the umpires' calls on him. " + Number(hc.pitches).toLocaleString() + " pitches seen.</div></div>" : "") + "</div>";
-    if (model) h += '<details class="more" data-keep="model"' + (state.rpOpen.model ? " open" : "") + "><summary>Our swing model's grids</summary>" + model + "</details>";
+    /* plans built before the hot zones keep the model's grids in view */
+    if (model) h += hc && hc.zones ? '<details class="more" data-keep="model"' + (state.rpOpen.model ? " open" : "") + "><summary>Our swing model's grids</summary>" + model + "</details>" : model;
     var v = planValue(pr2);
     h += '<details class="more"><summary>The numbers</summary><ul class="compare">' +
       "<li><span>Chases vs an average hitter, per 100 pitches out of the zone</span><b>" + RP_METRICS.chase.fmt(pr2.chase_points) + "</b></li>" +
