@@ -65,7 +65,18 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 4:45 a.m. Eastern October 11, by `date -u`)
+### In flight (updated 5:30 a.m. Eastern October 11, by `date -u`)
+
+- October 11, 5:30 a.m.: SPLITS-01 (run 38127261982): a hitter's own AVG and SLG split by pitcher hand, beyond his side's
+  usual one, did not carry over (r 0.06 each, 317 hitters); misses did in part. The splits table, the hot-zone line and
+  the plan rows' line show Expected numbers in the Expected view (page splitExpected, SPLIT_CARRY). ZONES-03 (run
+  38128261865) held: charts against one hand now anchor the Expected view on his level against both hands (page
+  HZ_ANCHOR, hzAnchor; misses against righties keep the old anchor). Player pages open with the season line and last ten
+  games from MLB's public stats (PROD-12; page PSTATS, fillPlayerStats; the stats probe checked both asks, runs
+  38126258426 and 38126721578). Pitcher pages and the plan's starter fold draw the movement chart (movementChart); the
+  league's ring per pitch type needs league arsenal v_mov and h_arm, which the next card build adds (daily 13:20 UTC).
+  The players index marks switch hitters S. Local preview: $S/tour/serve.py on 127.0.0.1:8790 serves the site and
+  mocks MLB game logs from $S/tour/site/mlb/gl/<id>-<hitting|pitching>-<reg|post>.json. Main at 08624324c.
 
 - October 11, 4:45 a.m.: switch hitters fixed (PROD-11): the plans read the pitcher's pitches to the side the hitter takes
   against that hand (Fitted.side_vs, pair()), and the page orients, labels and compares his charts, splits, pull tags and
