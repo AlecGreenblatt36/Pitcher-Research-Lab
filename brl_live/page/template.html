@@ -535,9 +535,12 @@ details .pr-h { font-size: 18px; }
 .pm-sec { max-width: 560px; }
 .pm { width: 100%; table-layout: fixed; }
 .pm th, .pm td { white-space: normal; vertical-align: top; }
-.pm th[scope="row"] { text-align: left; font-weight: 700; color: var(--muted); width: 34%; }
+.pm th[scope="row"] { text-align: left; font-weight: 700; color: var(--muted); width: 30%; }
 .pm td { text-align: left; }
 .pm thead th { text-align: left; }
+.pm .pm-ars { display: flex; flex-direction: column; gap: 2px; font-family: var(--body); font-size: 14px; line-height: 1.3; white-space: normal; text-align: left; }
+.pm .pm-ars span { overflow-wrap: anywhere; }
+.pm th:last-child, .pm td:last-child { padding-right: 8px; }
 .pm .pm-pct { display: inline-block; min-width: 26px; padding: 0 5px; border-radius: 10px; font-size: 14px; font-weight: 700; text-align: center; line-height: 1.5; }
 .lineup-keys { list-style: none; margin: 4px 0 12px; padding: 0; display: grid; gap: 4px; max-width: 620px; }
 .lineup-keys li { font-size: 15px; line-height: 1.4; }
@@ -3613,10 +3616,22 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       return esc(shown) + (p != null ? ' <small class="pm-pct" style="background:' + pctColor(p).bg + ";color:" + pctColor(p).fg + '">' + p + "</small>" : "");
     };
     var proj = function (c) { if (!c.proj || c.proj.outs == null) return "\u2013"; var o = Math.round(c.proj.outs); return Math.floor(o / 3) + "." + (o % 3) + " IP, " + Math.round(c.proj.K) + " K"; };
+    /* his three most used pitch types (this season's when he has 300 pitches) and how often, as previews list them */
+    var arsenalCell = function (c) {
+      var a = c.card && c.card.arsenal;
+      if (!a || !a.length) return "\u2013";
+      return '<span class="pm-ars">' + a.slice(0, 3).map(function (x) { return "<span>" + esc(TYPE_NAME[x.type] || x.type) + "\u00a0" + Math.round(100 * x.share) + "%</span>"; }).join("") + "</span>";
+    };
+    /* the pitcher tags that held a season later (PTAGS-01 to 03) */
+    var tagsCell = function (c) {
+      var t = c.card ? pitcherTags(c.card, doc.league) : [];
+      return t.length ? '<span class="pm-ars">' + t.slice(0, 3).map(function (x) { return "<span>" + esc(x) + "</span>"; }).join("") + "</span>" : "\u2013";
+    };
     var rows = [["Season", function (c) { return spSpan(c.id, year, false, "wl") || "\u2013"; }],
                 ["Strikeout %", function (c) { return cell(c, "k"); }], ["Walk %", function (c) { return cell(c, "bb"); }],
                 ["Whiff %", function (c) { return cell(c, "whiff"); }], ["Hard-hit % against", function (c) { return cell(c, "hard"); }],
                 ["Average against", function (c) { return cell(c, "avg", "three"); }], ["Fastball", function (c) { return cell(c, "velo", "mph"); }],
+                ["Main pitches", arsenalCell], ["How he pitches", tagsCell],
                 ["Our projection", proj]];
     var h = '<section class="sec pm-sec"><h2>Pitching matchup</h2><div class="tbl-wrap pm-wrap"><table class="box pm"><thead><tr><th scope="col"><span class="visually-hidden">Stat</span></th>' +
       cols.map(function (c) { return '<th scope="col"><span class="abbr ' + c.side + '-c">' + esc(f[c.side].abbr) + "</span> " + esc(lastName(c.name)) + "</th>"; }).join("") + "</tr></thead><tbody>";
