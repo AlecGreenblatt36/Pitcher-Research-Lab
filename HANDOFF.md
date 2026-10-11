@@ -71,7 +71,7 @@ queue behind the shards (seen October 11 at 16:50 UTC). Check-only replays (n_si
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 2:01 p.m. Eastern October 11, by `date -u`)
+### In flight (updated 2:37 p.m. Eastern October 11, by `date -u`)
 
 - October 11, 2:01 p.m.: LEASH-02 held every gate (stage 2 runs 38156905239 and 38156881017): every outs line 12.5 to 20.5
   within 2.4 points in both seasons, starts ending in the 4th right (11.1% against 10.9% and 11.5%), win Brier and totals
@@ -81,6 +81,9 @@ queue behind the shards (seen October 11 at 16:50 UTC). Check-only replays (n_si
   pages. Cost: starters run a little long in the middle (16.5 and 17.5 outs about 2 points high). LEVEL-03 replays (level
   plus running plays, tags v2-prod4-lvrun-1000-<season>, runs started 17:34 and 17:44 UTC) score like LEVEL-02 against
   v2-prod4-tb-1000.
+  LEVEL-03 failed (2:37 p.m.): with the level and the running plays together the totals land right (+0.09, +0.04) but the
+  over and under got worse in both seasons (pooled +0.00064 [+0.00024, +0.00105]) and the squared error's interval
+  reached +0.042; neither changes. Both level studies say the same: the season's level is not what costs the over/under.
   Queued for Alec with POST-03: the correction in postseason games too, which needs the postseason factor x0.91
   re-measured on the corrected hazard (a postseason-only change, so his call).
 - October 11, 12:15 p.m.: LEVEL-01 held (in-season re-anchoring of each outcome's league level: +0.114 and +0.146 nats per

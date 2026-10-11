@@ -243,7 +243,9 @@ intervals above zero, with m picked on the other season. In full replays (LEVEL-
 hit and home-run chances closer to level, but it lowered 2026's totals to 0.11 runs under the real ones and made the over
 and under worse: with each outcome's rate right, the 2026 mix (more walks, fewer extra-base hits) turns into fewer runs in
 the simulator than in real games, a shortfall the tables' level errors had been hiding. The layer (LevelAdjust) stays
-off; how the simulator turns walks and singles into runs is the next thing to measure.
+off. Adding the running plays (wild pitches, passed balls, balks, pickoffs) to it put the totals right in both seasons
+(LEVEL-03) but made the over and under worse in both, so neither is used: the simulator's season level is not what
+limits how it calls totals against the line.
 
 The Summary's team table and the Matchups tab's career lines against the starter are MLB's public numbers, read by the
 browser (PROD-14). How much a career line says was measured on 2023-2026 plate appearances (BVP-01): beyond each player's
