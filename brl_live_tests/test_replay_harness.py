@@ -86,3 +86,19 @@ def test_reconstruct_and_replay(tmp_path):
             assert all(sum(x[k]) == 4 for k in ('h_hist', 'hr_hist', 'bb_hist', 'k_hist'))
             for p_, k in (('p_hit', 'h_hist'), ('p_hr', 'hr_hist'), ('p_bb', 'bb_hist'), ('p_k', 'k_hist')):
                 assert abs(x[p_] - (1 - x[k][0] / 4)) < 1e-9
+
+    # BULLPEN-03: each side's bullpen candidates with their share of worlds pitched in and whether they pitched
+    out_sl = replay_dates(h, app, g, dates, model_path=plain, model_sha256=sha256_file(plain), history_path=history_path, hazard_path=hazard, n_sims=4,
+                          starter_lines=True, log=lambda m: None)
+    seen = 0
+    for r in out_sl:
+        for side in ('away', 'home'):
+            st = r['starters'][side]
+            if 'relievers' not in st:
+                continue
+            seen += 1
+            rel = st['relievers']
+            assert all(0.0 <= share <= 1.0 and used in (0, 1) for _, share, used in rel)
+            assert abs(sum(share for _, share, _ in rel) - (st['team_pitchers_sim_mean'] - 1)) < 1e-3 * (len(rel) + 1)
+            assert sum(used for _, _, used in rel) == st['team_actual']['pitchers'] - 1
+    assert seen > 0

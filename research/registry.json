@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 326,
- "rows": 329,
+ "experiments": 327,
+ "rows": 330,
  "records": {
   "ACC-01": [
    {
@@ -5360,6 +5360,22 @@
     ],
     "frozen_commits": [],
     "status": "(a), (b), (1) to (4) held; on for the regular season"
+   }
+  ],
+  "BULLPEN-03": [
+   {
+    "id": "BULLPEN-03",
+    "columns": {
+     "ID": "BULLPEN-03",
+     "Attempt": "The bullpen's chance to pitch, as the Odds tab and the game plans show it (each reliever's share of the simulated games he pitches in), never scored per reliever before. Full replays of 2025 and 2026 with RELIEF-04's settings and seeds (the live regular-season settings; tags v2-prod4-pen-1000-<season>), which now also record every bullpen candidate's share and whether he pitched, plus relievers who pitched without being a candidate at a share of 0 (brl_replay/harness.py; recording only, so the games equal RELIEF-04's). Scored by tools/brl_bullpen_cal.py",
+     "Disposition and evidence": "**Registered in the commit that added this row, before its replays.** Predictions: (1) the mean chance within 2 points of the actual share in both seasons; (2) in every bin of the chance with 200 or more rows (under 10%, 10 to 25, 25 to 40, 40 to 60, 60 to 80, 80 and up), within 5 points in both seasons; (3) Brier better than the season's constant share. Decision rule: if (1) and (2) hold in both seasons, the page keeps the chances and the bullpen note says how they held up; otherwise BULLPEN-04 (a calibration of the chance fitted on the other season) is registered next.",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "TOTALS-05": [

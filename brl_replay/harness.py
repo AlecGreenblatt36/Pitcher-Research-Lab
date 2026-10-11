@@ -244,7 +244,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
             real_states[int(gpk)] = [(int(r.inning), "top" if str(r.inning_topbot).lower().startswith("top") else "bottom", int(r.outs_when_up),
                                       (bool(r.runner_1b), bool(r.runner_2b), bool(r.runner_3b)), int(r.home_score) - int(r.away_score))
                                      for r in grp.itertuples(index=False)]
-    act_lines, per_k = {}, {}
+    act_lines, per_k, act_relievers = {}, {}, {}
     act_innings = {}
     if starter_lines:
         # the batting side's score before its first plate appearance of each inning (runs by inning follow with the final)
@@ -263,6 +263,12 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                                home_won_) if {"at_bat_number", "inning", "outs_when_up"} <= set(h.columns) else {}
         sub_side = np.where(sub["inning_topbot"].astype(str).str.lower().str.startswith("top"), "home", "away")
         npit_act = sub.groupby([sub["game_pk"].to_numpy(), sub_side])["pitcher"].nunique().to_dict()
+        if "at_bat_number" in h.columns:
+            # the relievers each side actually used, in order (BULLPEN-03: the chance-to-pitch table against them)
+            sub2 = h.loc[h["game_pk"].isin(want_g), ["game_pk", "at_bat_number", "pitcher", "inning_topbot"]].sort_values(["game_pk", "at_bat_number"], kind="mergesort")
+            side2 = np.where(sub2["inning_topbot"].astype(str).str.lower().str.startswith("top"), "home", "away")
+            for (gpk_, side_), pids_ in sub2.groupby([sub2["game_pk"].to_numpy(), side2], sort=False)["pitcher"]:
+                act_relievers[(int(gpk_), str(side_))] = [int(x) for x in pd.unique(pids_.to_numpy())][1:]
         for (gpk_, side_), oc in sub.groupby([sub["game_pk"].to_numpy(), sub_side])["outcome"]:
             vc = oc.value_counts()
             act_lines[(int(gpk_), str(side_))] = {"bf": int(len(oc)), "k": int(vc.get("K", 0)), "bb": int(vc.get("BB_HBP", 0)),
@@ -405,6 +411,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
             sl = {side: {m_: np.zeros(n_, int) for m_, n_ in (("k", 21), ("bf", 46), ("h", 21), ("bb", 16), ("outs", 28))} for side in ("away", "home")} if starter_lines else None
             tot = {side: np.zeros(4) for side in ("away", "home")} if starter_lines else None   # team pitching: K, BF, BB+HBP, hits
             npit = {side: 0 for side in ("away", "home")}                                         # pitchers used, summed over worlds
+            rel_n = {side: {} for side in ("away", "home")}                                       # worlds each reliever pitched in
             nhr = {side: 0 for side in ("away", "home")}                                          # home runs allowed, summed over worlds
             inn_sum = {side: np.zeros(10) for side in ("away", "home")}                           # runs by inning 1-9 and extras, summed
             wt = WinTable() if win_states else None
@@ -455,6 +462,8 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                             tot[sd_] += (ln["strikeouts"], ln["batters_faced"], ln["walks_hbp"], ln["hits_allowed"])
                             npit[sd_] += 1
                             nhr[sd_] += int(ln.get("home_runs") or 0)
+                            if not ln.get("is_starter"):
+                                rel_n[sd_][str(ln.get("pitcher_id"))] = rel_n[sd_].get(str(ln.get("pitcher_id")), 0) + 1
                 if hl is not None:
                     cnt = {}
                     for e in r.events:
@@ -571,6 +580,13 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                                     "expected_bf_record": round(float(pexp.get(sid_, hazard["league_mean_bf"])), 2),
                                     "team_sim_mean": [round(float(v_ / n_sims), 3) for v_ in tot[side]], "team_actual": act_lines.get((int(g.game_pk), side)),
                                     "team_pitchers_sim_mean": round(npit[side] / n_sims, 3), "team_hr_sim_mean": round(nhr[side] / n_sims, 3)}
+                    # BULLPEN-03: each bullpen candidate's share of worlds pitched in and whether he pitched (relievers who
+                    # pitched without being a candidate get a share of 0)
+                    used_ = act_relievers.get((int(g.game_pk), side))
+                    if used_ is not None:
+                        cand_ = [str(b.player_id) for b in teams[side].bullpen]
+                        ids_ = cand_ + [str(x) for x in used_ if str(x) not in cand_]
+                        st_out[side]["relievers"] = [[int(x) if str(x).isdigit() else x, round(rel_n[side].get(x, 0) / n_sims, 4), int(int(x) in used_ if str(x).isdigit() else 0)] for x in ids_]
                 records[-1]["starters"] = st_out
                 records[-1]["innings"] = {"sim_mean": {sd_: [round(float(v_) / n_sims, 4) for v_ in inn_sum[sd_]] for sd_ in ("away", "home")},
                                           "actual_first_scores": act_innings.get(int(g.game_pk))}
