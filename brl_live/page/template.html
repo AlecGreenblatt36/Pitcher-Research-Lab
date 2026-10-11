@@ -3213,7 +3213,26 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var ts = twoStrikeShift(c, l);
       if (ts) { if (ts.shift >= TWO_SHIFT) t.push("Expands with two strikes"); else if (ts.shift <= -TWO_SHIFT) t.push("Holds his zone with two strikes"); }
     }
+    /* TAGS-03: misses by pitch type against his own fastball misses, net of most hitters on his side */
+    [["breaking", "breaking balls"], ["offspeed", "offspeed"]].forEach(function (f) {
+      var v = famWhiffShift(card, lg, f[0]);
+      if (v == null) return;
+      if (v >= FAM_SHIFT[f[0]]) t.push("Misses " + f[1]); else if (v <= -FAM_SHIFT[f[0]]) t.push("Handles " + f[1]);
+    });
     return t;
+  }
+  /* TAGS-03: his misses per swing on a pitch type minus on fastballs, net of the same for most hitters on his side, from the
+     hot-zone counts (both hands). It carries over (correlation 0.62 and 0.57 for breaking balls, 0.57 and 0.52 for offspeed),
+     and tags at one standard deviation held on the next season's pitches. Rows of 100 breaking, 60 offspeed, 150 fastball swings. */
+  var FAM_SHIFT = { breaking: 0.052, offspeed: 0.067 }, FAM_FLOOR = { breaking: 100, offspeed: 60 };
+  function famWhiffShift(card, lg, fam) {
+    if (!card || !card.zones || !lg || !lg.zones) return null;
+    var tot = function (z, f) { var cells = hzCells(z, "all", f); var t = hzTotal(cells || []); return [t[2], t[3]]; };
+    var lz = lg.zones[card.side === "L" ? "L" : "R"];
+    if (!lz) return null;
+    var hf = tot(card.zones, fam), hb = tot(card.zones, "fastball"), lf = tot(lz, fam), lb = tot(lz, "fastball");
+    if (hf[0] < FAM_FLOOR[fam] || hb[0] < 150 || !lf[0] || !lb[0]) return null;
+    return (hf[1] / hf[0] - hb[1] / hb[0]) - (lf[1] / lf[0] - lb[1] / lb[0]);
   }
   /* TAGS-01: with two strikes, how much more he chases than in the other counts, net of the same change for most hitters
      on his side. It carries over from season to season (correlation 0.64 and 0.72), and the tags at about one standard
@@ -3366,7 +3385,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var players = doc.players || {}, nine = po.hitters.filter(function (hid, i) { return po.spots ? po.spots[String(hid)] : i < 9; }).slice(0, 9);
     var groups = [["Takes the first pitch", "Get ahead with a strike", []], ["Swings at the first pitch", "Start off the plate", []], ["Chases a lot", "Expand the zone", []],
                   ["Swings and misses", "Go for the miss", []], ["Expands with two strikes", "Finish off the plate", []], ["Holds his zone with two strikes", "Finish on the edges", []],
-                  ["behind", "Don't give in when behind", []], ["run", "Hold on first", []]];
+                  ["behind", "Don't give in when behind", []], ["run", "Hold on first", []],
+                  ["Misses breaking balls", "Breaking balls for misses", []], ["Misses offspeed", "Offspeed for misses", []]];
     var short = shortNames(nine.map(function (hid) { return { player_id: hid, name: (players[String(hid)] || {}).name || String(hid) }; }));
     nine.forEach(function (hid) {
       var p = players[String(hid)], c = p && p.hitter;

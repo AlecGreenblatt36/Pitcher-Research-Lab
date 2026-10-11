@@ -4498,14 +4498,16 @@
     "columns": {
      "ID": "TAGS-03",
      "Attempt": "A hitter's weakness by pitch type, read relative to himself: his misses per swing on breaking balls (and on offspeed) minus on fastballs, net of the league's same difference on his side (rows of 100 breaking or 60 offspeed swings and 150 fastball swings in each window). Same splits and hitters as TAGS-01 (tag_study with families): the season-to-season correlation, and tags at one standard deviation scored on the test pitches with intervals from resampling hitters. MATCHUP-04F and 05F found real hitter-specific family parts in swing decisions; this asks the plain scouting question for misses. Synthetic check: a planted breaking-ball weakness carries over, an unplanted offspeed one does not.",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: the breaking-ball difference correlates 0.3 or more across seasons in both splits, the offspeed one 0.2 or more; the one-SD tags hold on the test pitches (difference at least a third of the threshold in the tag's direction, interval excluding zero). Decision rule: for each family that holds in both splits, the plans tag hitters who miss it more than most (relative to their fastball misses) and those who handle it; a family that fails gets no tag.",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: the breaking-ball difference correlates 0.3 or more across seasons in both splits, the offspeed one 0.2 or more; the one-SD tags hold on the test pitches (difference at least a third of the threshold in the tag's direction, interval excluding zero). Decision rule: for each family that holds in both splits, the plans tag hitters who miss it more than most (relative to their fastball misses) and those who handle it; a family that fails gets no tag. **Results (run 38112576833):** breaking balls: correlation 0.62 (243 hitters, 2026 test) and 0.57 (294, 2025), standard deviation 5.2 points; tags at one SD: misses more +6.5 [4.7, 8.1] and +5.3 [3.8, 6.6] on the test pitches (training +7.3, +8.0), handles -6.8 [-8.4, -5.1] and -6.7 [-8.0, -5.4]. Offspeed: correlation 0.57 (214) and 0.52 (270), SD 6.7 points; misses more +7.0 [4.5, 9.7] and +5.4 [2.9, 7.7], handles -7.2 [-9.4, -5.0] and -6.4 [-8.1, -4.8]. **Every prediction held.** The plans tag Misses breaking balls and Handles breaking balls at 5.2 points, Misses offspeed and Handles offspeed at 6.7 (page famWhiffShift from the hot-zone counts, both hands), and the lineup notes list who to throw each for misses.",
+     "Delta corrected Brier, 2026": "held: 0.62/0.57 and 0.57/0.52"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38112576833"
+    ],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "held: 0.62/0.57 and 0.57/0.52"
    }
   ],
   "ZONES-01": [

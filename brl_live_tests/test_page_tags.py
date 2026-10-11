@@ -18,8 +18,8 @@ def page_functions(*names):
 
 
 def _run(suffix):
-    functions = page_functions('hitterTags', 'twoStrikeShift')
-    prefix = "const assert=require('assert');var TWO_SHIFT=0.065;"
+    functions = page_functions('hitterTags', 'twoStrikeShift', 'famWhiffShift', 'hzCells', 'hzTotal')
+    prefix = "const assert=require('assert');var TWO_SHIFT=0.065;var FAM_SHIFT={breaking:0.052,offspeed:0.067},FAM_FLOOR={breaking:100,offspeed:60};"
     subprocess.run(['node', '-e', prefix + functions + suffix], check=True)
 
 
@@ -71,4 +71,16 @@ def test_count_mix_line_reads_the_count_and_side():
               "assert.equal(countMixLine(pc,{side:'L'},{balls:0,strikes:0}),'');"
               "assert.equal(countMixLine(pc,{side:'L'},{balls:2,strikes:2}),'With two strikes to lefties: offspeed 50%, fastball 30%, breaking ball 20%.');"
               "assert.equal(countMixLine(null,{side:'R'},{balls:0,strikes:0}),'');")
+    subprocess.run(['node', '-e', prefix + functions + suffix], check=True)
+
+
+def test_pitch_type_miss_tags_read_against_his_own_fastball():
+    functions = page_functions('hitterTags', 'twoStrikeShift', 'famWhiffShift', 'hzCells', 'hzTotal')
+    prefix = ("const assert=require('assert');var TWO_SHIFT=0.065;var FAM_SHIFT={breaking:0.052,offspeed:0.067},FAM_FLOOR={breaking:100,offspeed:60};"
+              "function cells(sw,mi){return [[1,sw*2,sw,mi,0,0,0]];}"
+              "function zones(fb,br,os){return {R:{all:cells(fb[0]+br[0]+os[0],fb[1]+br[1]+os[1]),fastball:cells(fb[0],fb[1]),breaking:cells(br[0],br[1]),offspeed:cells(os[0],os[1])},L:{all:cells(0,0),fastball:cells(0,0),breaking:cells(0,0),offspeed:cells(0,0)}};}"
+              "const lg={chase_rate:0.29,whiff_rate:0.24,zones:{R:zones([1000,180],[600,180],[300,90])}};")
+    suffix = ("let t=hitterTags({side:'R',zones:zones([300,54],[200,90],[100,30])},lg);assert.ok(t.indexOf('Misses breaking balls')>=0,t);"
+              "t=hitterTags({side:'R',zones:zones([300,54],[200,40],[100,30])},lg);assert.ok(t.indexOf('Handles breaking balls')>=0,t);"
+              "t=hitterTags({side:'R',zones:zones([300,54],[50,40],[100,30])},lg);assert.ok(t.indexOf('Misses breaking balls')<0&&t.indexOf('Handles breaking balls')<0,t);")
     subprocess.run(['node', '-e', prefix + functions + suffix], check=True)
