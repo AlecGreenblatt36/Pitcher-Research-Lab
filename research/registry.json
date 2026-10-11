@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 304,
- "rows": 307,
+ "experiments": 305,
+ "rows": 308,
  "records": {
   "ACC-01": [
    {
@@ -5078,6 +5078,22 @@
     "runs": [],
     "frozen_commits": [],
     "status": "display"
+   }
+  ],
+  "BVP-01": [
+   {
+    "id": "BVP-01",
+    "columns": {
+     "ID": "BVP-01",
+     "Attempt": "A hitter's record against one pitcher (the batter-against-pitcher line every preview prints): does it say anything about their next meetings beyond what each one's own level says? Regular-season plate appearances 2023-2026 (report lane, aggregates only). Each plate appearance's expectation from the two players' own levels that season, the batter's against pitchers of that hand and the pitcher's against batters of that side, the pair's own meetings left out, with 100 (on base), 60 (strikeouts) and 150 (total bases per at-bat) league trials added (bvp_expected); each window's gaps centered on each batter's and each pitcher's own mean gap (bvp_centered). The pair's lasting effect: with a constant effect t and independent noise, the sum over pairs of (earlier gap x later gap) over the sum of n1 n2 estimates the variance tau^2 of t (bvp_carry), interval from resampling batters (2,000 draws); a record of n carries n tau^2 / (n tau^2 + sigma^2) of its gap. Two replications: 2023-2024 to 2025 and 2023-2025 to 2026. Synthetic checks (test_report_bvp_study.py): a planted strikeout pair effect is recovered at its size; with none planted the interval covers zero",
+     "Disposition and evidence": "**Registered in the commit that added this row, before its run.** Predictions: (1) on base: the SD of the true pair effect under 1.5 points in both replications (the upper end of tau^2's interval below 0.000225), so a 20 plate-appearance record carries under 2% of its gap; (2) strikeouts: tau^2's interval above zero in both replications, the SD between 0.5 and 3 points, so a 20 plate-appearance record carries 1% to 15% of its gap; (3) total bases per at-bat: a 20 at-bat record carries under 3% of its gap (at the upper end of the interval) in both. Decision rule: the Matchups tab shows each lineup hitter's career line against the opposing starter from MLB's public stats (product call), never colored as a read; its note says what carried over in these words: for a measure whose prediction of little carry held in both replications, that a record this short said almost nothing about the next meetings; for strikeouts, if (2) held, how far a 20 plate-appearance record moved the next meetings. Results: pending",
+     "Delta corrected Brier, 2026": "pending"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "pending"
    }
   ],
   "BOX-01": [

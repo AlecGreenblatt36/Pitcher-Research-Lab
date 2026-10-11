@@ -1873,6 +1873,116 @@ def tto_study(T: dict, stage, spec: dict) -> dict:
     return out
 
 
+def bvp_table(T: dict, mask) -> dict:
+    """Plate appearances on the masked rows (each at its last pitch): batter, pitcher, season, the batter's side and the
+    pitcher's hand, and the outcomes: on base, strikeout, at-bat and total bases."""
+    rows = np.flatnonzero(mask & (T['last_in_pa'] == 1))
+    o7 = T['out7'][rows]
+    rows, o7 = rows[o7 >= 0], o7[o7 >= 0]
+    return {'batter': T['batter'][rows].astype(np.int64), 'pitcher': T['pitcher'][rows].astype(np.int64), 'season': T['season'][rows].astype(np.int64),
+            'stand_r': (T['stand_r'][rows] == 1).astype(np.int64), 'throw_r': (T['throw_r'][rows] == 1).astype(np.int64),
+            'on': np.isin(o7, (2, 3, 4, 5)).astype(float), 'k': (o7 == 1).astype(float), 'ab': np.isin(o7, (0, 1, 3, 4, 5, 6)).astype(float),
+            'tb': np.where(o7 == 3, 1.0, 0.0) + np.where(o7 == 4, 2.0, 0.0) + np.where(o7 == 5, 4.0, 0.0)}
+
+
+def bvp_expected(P: dict, num: str, den: str | None, m: float) -> np.ndarray:
+    """Each plate appearance's expected outcome from the two players' own levels that season, leaving out the pair's own
+    meetings: the batter's rate against pitchers of that hand and the pitcher's rate against batters of that side, each
+    with m league plate appearances (or at-bats) added, combined with the league's rate for those hands that season (odds
+    ratio for a chance per plate appearance; a product over the league for total bases per at-bat)."""
+    d = P[den] if den else np.ones(len(P['batter']))
+    y = P[num]
+    def tot(*cols):
+        key = np.stack(cols, 1)
+        _, inv = np.unique(key, axis=0, return_inverse=True)
+        inv = inv.ravel()
+        return np.bincount(inv, weights=y)[inv], np.bincount(inv, weights=d)[inv]
+    lg_y, lg_d = tot(P['season'], P['stand_r'], P['throw_r'])
+    lg = lg_y / np.maximum(lg_d, 1e-9)
+    q_y, q_d = tot(P['batter'], P['pitcher'], P['season'], P['stand_r'], P['throw_r'])
+    b_y, b_d = tot(P['batter'], P['season'], P['throw_r'])
+    p_y, p_d = tot(P['pitcher'], P['season'], P['stand_r'])
+    rb = (b_y - q_y + m * lg) / (b_d - q_d + m); rp = (p_y - q_y + m * lg) / (p_d - q_d + m)
+    if den:
+        return d * rb * rp / np.maximum(lg, 1e-9)
+    odds = lambda p_: np.clip(p_, 1e-6, 1 - 1e-6) / (1 - np.clip(p_, 1e-6, 1 - 1e-6))
+    o = odds(rb) * odds(rp) / odds(lg)
+    return o / (1 + o)
+
+
+def bvp_centered(P: dict, msk, res_, d) -> np.ndarray:
+    """The residuals of one window with each batter's and then each pitcher's own mean gap per trial taken out, so a
+    level the season rates miss (shrinkage, a mid-season change) does not pass for a pair effect; a pair's own effect
+    survives, being one of a couple of hundred opponents in each player's mean."""
+    r = np.where(msk, res_, 0.0); w = np.where(msk, d, 0.0)
+    for who in ('batter', 'pitcher'):
+        _, inv = np.unique(P[who], return_inverse=True)
+        mean_ = np.bincount(inv, weights=r) / np.maximum(np.bincount(inv, weights=w), 1e-9)
+        r = np.where(msk, r - w * mean_[inv], 0.0)
+    return r
+
+
+def bvp_carry(P: dict, early, late, num: str, den: str | None, m: float, rng, boot: int, min_each: int = 10) -> dict:
+    """BVP-01: how much of a pair's earlier record against expectation shows up in their later meetings. With a constant
+    pair effect t (per plate appearance or at-bat) and independent noise, E[(O1 - E1)(O2 - E2)] = n1 n2 tau^2 over pairs, so
+    tau^2 = the sum of the products over the sum of n1 n2 (every pair that met in both windows, gaps centered by
+    bvp_centered); a record of n carries n tau^2 / (n tau^2 + sigma^2) of its gap, sigma^2 the outcome's variance per
+    trial. Interval from resampling batters. Also the plain correlation and slope of the later rate gap on the earlier one
+    among pairs with min_each or more trials in each window."""
+    exp_ = bvp_expected(P, num, den, m)
+    d = P[den] if den else np.ones(len(P['batter']))
+    res_ = P[num] - exp_
+    pair = P['batter'] * 10_000_000 + P['pitcher']
+    agg = {}
+    for lab, msk in (('early', early), ('late', late)):
+        rc = bvp_centered(P, msk, res_, d)
+        up, inv = np.unique(pair[msk], return_inverse=True)
+        agg[lab] = (up, np.bincount(inv, weights=d[msk]), np.bincount(inv, weights=rc[msk]))
+    both, i1, i2 = np.intersect1d(agg['early'][0], agg['late'][0], return_indices=True)
+    n1, r1 = agg['early'][1][i1], agg['early'][2][i1]; n2, r2 = agg['late'][1][i2], agg['late'][2][i2]
+    keep = (n1 > 0) & (n2 > 0)
+    both, n1, r1, n2, r2 = both[keep], n1[keep], r1[keep], n2[keep], r2[keep]
+    ub, bi = np.unique(both // 10_000_000, return_inverse=True)
+    sp = np.bincount(bi, weights=r1 * r2, minlength=len(ub)); sn = np.bincount(bi, weights=n1 * n2, minlength=len(ub))
+    tau2 = float(sp.sum() / max(sn.sum(), 1e-9))
+    draws = rng.integers(0, len(ub), (boot, len(ub)))
+    tb = sp[draws].sum(1) / np.maximum(sn[draws].sum(1), 1e-9)
+    hi = float(np.percentile(tb, 97.5)); lo = float(np.percentile(tb, 2.5))
+    lt = late & (d > 0)
+    sigma2 = float(np.var(P[num][lt]))
+    share = lambda n_, t2: (n_ * t2 / (n_ * t2 + sigma2)) if t2 > 0 else 0.0
+    sel = (n1 >= min_each) & (n2 >= min_each)
+    x, y_ = r1[sel] / n1[sel], r2[sel] / n2[sel]
+    many = int(sel.sum()) > 2
+    return {'pairs': int(len(both)), 'batters': int(len(ub)), 'trials_early': int(n1.sum()), 'trials_late': int(n2.sum()),
+            'rate_late': round(float(P[num][lt].mean()), 4), 'sigma2': round(sigma2, 4), 'tau2': round(tau2, 7), 'tau2_ci': [round(lo, 7), round(hi, 7)],
+            'tau_points': round(100 * float(np.sqrt(max(tau2, 0.0))), 2), 'k': (round(sigma2 / tau2) if tau2 > 0 else None),
+            'k_low': (round(sigma2 / hi) if hi > 0 else None),
+            'carried_by_n': {str(n_): round(share(n_, tau2), 3) for n_ in (10, 20, 30, 50)},
+            'carried_by_n_high': {str(n_): round(share(n_, hi), 3) for n_ in (10, 20, 30, 50)},
+            'pairs_min_each': int(sel.sum()), 'corr_min_each': (round(float(np.corrcoef(x, y_)[0, 1]), 3) if many else None),
+            'slope_min_each': (round(float(np.polyfit(x, y_, 1)[0]), 3) if many else None)}
+
+
+def bvp_study(T: dict, stage, spec: dict) -> dict:
+    """BVP-01 (LEDGER): does a hitter's record against one pitcher say anything about their next meetings beyond what each
+    one's overall level says? Regular-season plate appearances; each window's expectation from the two players' own
+    season levels by hand, the pair's meetings left out (bvp_expected); the carry-over from an earlier window to a later
+    one (bvp_carry) for on base per plate appearance, strikeouts per plate appearance and total bases per at-bat, in two
+    replications (2023-2024 to 2025, 2023-2025 to 2026). Aggregates only."""
+    reg = (T['post'] == 0) if 'post' in T else np.ones(len(T['season']), bool)
+    boot = int(spec.get('boot', 2000)); rng = np.random.default_rng(int(spec.get('seed', 20261011)))
+    m = dict({'on': 100.0, 'k': 60.0, 'tb': 150.0}, **(spec.get('m') or {}))
+    P = bvp_table(T, reg & np.isin(T['season'], (2023, 2024, 2025, 2026))); stage('bvp study: plate appearances')
+    out = {'plate_appearances': int(len(P['batter'])), 'm': m, 'replications': {}}
+    for lab, early_s, late_s in (('2023-2024 to 2025', (2023, 2024), (2025,)), ('2023-2025 to 2026', (2023, 2024, 2025), (2026,))):
+        early, late = np.isin(P['season'], early_s), np.isin(P['season'], late_s)
+        out['replications'][lab] = {name: bvp_carry(P, early, late, num, den, m[num], rng, boot)
+                                   for name, num, den in (('obp', 'on', None), ('k', 'k', None), ('slg', 'tb', 'ab'))}
+        stage('bvp study: ' + lab)
+    return out
+
+
 # XSTATS-01 (LEDGER): expected batting average and slugging from how hard and at what angle a hitter hits the ball, the
 # way the public player pages compute them: each measured ball in play takes the league's hit rate and total bases for
 # its exit speed and launch angle.
@@ -3257,6 +3367,9 @@ def main():
             dates = []
         if params.get('tto_study'):
             receipt['tto_study'] = tto_study(T, stage, params['tto_study'])
+            dates = []
+        if params.get('bvp_study'):
+            receipt['bvp_study'] = bvp_study(T, stage, params['bvp_study'])
             dates = []
         if params.get('rest_study'):
             receipt['rest_study'] = rest_study(T, stage, params['rest_study'])
