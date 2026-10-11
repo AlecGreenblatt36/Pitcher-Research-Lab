@@ -4635,7 +4635,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       '<td class="avg">' + (H ? (ab ? glAvg(glSum(rows, "hits") / ab) : "–") : (outs ? (27 * glSum(rows, "earnedRuns") / outs).toFixed(2) : "–")) + "</td></tr>";
     return '<section class="sec gl-sec"><h2>Last ' + rows.length + (rows.length === 1 ? " game" : " games") + '</h2><div class="tbl-wrap"><table class="box glog"><thead>' + head + "</thead><tbody>" + body + tot + "</tbody></table></div>" +
       '<p class="note">From MLB\'s game logs, latest first. ' + (H ? "Result: his team's. AVG: his season average through that game" : "Dec: win, loss, save, hold or blown save. NP: pitches. ERA: his season ERA through that game") +
-      " (in the postseason, through that game of the postseason); the last row's is over these games.</p></section>";
+      " (in the postseason, through that game of the postseason); the last row's is over these games." +
+      (H ? " Hot and cold stretches: in 2026 a hitter's last ten games said almost nothing about his next ten beyond his level in getting on base or slugging (about 2% of the difference carried over, within noise); strikeouts carried more, about 15%." : "") + "</p></section>";
   }
   function psPaint(el, e) {
     var part = el.getAttribute("data-part"), grp = el.getAttribute("data-grp");
