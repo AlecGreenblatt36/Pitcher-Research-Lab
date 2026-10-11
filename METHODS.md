@@ -179,7 +179,8 @@ his side: misses per swing (TAGS-07, 0.46 and 0.71, tagged at 9 points) and hard
 difference a season later. A velocity read (extra misses on fastballs at 96 mph and up) did not carry over (TAGS-04:
 0.26 and 0.15) and is not shown. Pitcher tags (PTAGS-01) were checked the same way: first-pitch strikes, pitches in the zone, chases,
 fastballs when behind and on the first pitch; seven held in both test seasons and are shown, two (falling behind first,
-few chases) are not. The plan sheets' lineup notes are drawn from these tags only.
+few chases) are not. Height tags (PTAGS-02: fastballs in the top third of the fixed zone or above, in the bottom third or
+below, breaking balls below the zone; 8 points over the league) carry over 0.73 to 0.78 and all three held. The plan sheets' lineup notes are drawn from these tags only.
 
 ## Privacy, storage and publication
 

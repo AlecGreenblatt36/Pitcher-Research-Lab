@@ -4621,7 +4621,7 @@
     "columns": {
      "ID": "TAGS-08",
      "Attempt": "Where a hitter does damage in the zone, up or down, relative to himself: his share of measured balls in play at 95 mph or more from the top third of his zone minus the bottom third, net of the league's same difference on his side (rows of 50 measured balls in play in each third). Same run, splits and scoring as TAGS-07. Synthetic check: a planted habit carries over (correlation 0.81), a redrawn one does not (0.00).",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: correlation 0.25 or more in both splits; each one-SD tag (hits the high strike hard, hits the low strike hard) holds in both splits under TAGS-07's rule. Decision rule: if a direction holds in both splits, the cards carry hard-hit counts by zone and the plans tag Hits the high strike hard or Hits the low strike hard, with a lineup note on which way to keep the ball; otherwise no tag. **Results (same run):** correlation 0.54 (65 hitters reach 50 measured balls in play in each third of the 2026 test months) and 0.55 (137, 2025); standard deviation 10.8 and 9.1 points (the league hits 41% of measured balls in play hard up and 46% down, righties). Tags at one SD: hits the high strike hard +9.6 [5.6, 13.3] (13 hitters, training +18.0) and +12.2 [8.4, 15.9] (25, +14.2); the low strike -7.5 [-10.7, -3.5] (10, -14.9) and -8.7 [-13.2, -3.6] (18, -13.6). **Every prediction held** (the 2026 low-strike tag at the 10-hitter minimum). Zone cells now carry [.., hard-hit balls, measured balls in play] (tools/brl_report.py zone_counts); the page tags Hits the high strike hard and Hits the low strike hard at 10 points (VERT_SHIFT.hard, 50 measured in each third) once the cards are rebuilt, with the lineup notes \"Stay down (or up) in the zone\".",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: correlation 0.25 or more in both splits; each one-SD tag (hits the high strike hard, hits the low strike hard) holds in both splits under TAGS-07's rule. Decision rule: if a direction holds in both splits, the cards carry hard-hit counts by zone and the plans tag Hits the high strike hard or Hits the low strike hard, with a lineup note on which way to keep the ball; otherwise no tag. **Results (same run):** correlation 0.54 (65 hitters reach 50 measured balls in play in each third of the 2026 test months) and 0.55 (137, 2025); standard deviation 10.8 and 9.1 points (the league hits 41% of measured balls in play hard up and 46% down, righties). Tags at one SD: hits the high strike hard +9.6 [5.6, 13.3] (13 hitters, training +18.0) and +12.2 [8.4, 15.9] (25, +14.2); the low strike -7.5 [-10.7, -3.5] (10, -14.9) and -8.7 [-13.2, -3.6] (18, -13.6). **Every prediction held** (the 2026 low-strike tag at the 10-hitter minimum). Zone cells now carry [.., hard-hit balls, measured balls in play] (tools/brl_report.py zone_counts); the page tags Hits the high strike hard and Hits the low strike hard at 10 points (VERT_SHIFT.hard, 50 measured in each third) once the cards are rebuilt; the lineup notes list those hitters as they are tagged (a product call: a note saying where to stay could contradict a plan's priced strike spot, which already counts what his swings there produce).",
      "Delta corrected Brier, 2026": "held: 0.54 and 0.55"
     },
     "registered_before_run": true,
@@ -4637,14 +4637,18 @@
     "columns": {
      "ID": "PTAGS-02",
      "Attempt": "Where a pitcher puts the ball, by height, checked like PTAGS-01: fastballs crossing in the top third of the fixed zone (above 2.83 ft) or higher, fastballs in its bottom third (below 2.17 ft) or lower, and breaking balls below the zone (under 1.5 ft), each against the league in the same window. Tags at 8 points: Elevates fastballs, Keeps fastballs down, Buries breaking balls (rows of 200 fastballs or 150 breaking balls). Same splits, pitchers (500 training and 300 test pitches) and scoring as PTAGS-01 (pitcher_tag_study with location); 2026 heights are measured at the middle of the plate, a level shift that the comparison with the same window's league absorbs. Synthetic check (brl_live_tests/test_report_pitcher_tags.py): planted height habits carry over, redrawn ones do not.",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: each rate correlates 0.6 or more from one season to the next in both splits; each tag with 10 or more pitchers holds in both splits (test difference at least half its threshold in its direction, interval excluding zero). Decision rule: the tags that hold go on the pitcher cards and the plans' starter folds (page PTAG_RULES, from the cards' ptags counts once rebuilt); the rest do not.",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: each rate correlates 0.6 or more from one season to the next in both splits; each tag with 10 or more pitchers holds in both splits (test difference at least half its threshold in its direction, interval excluding zero). Decision rule: the tags that hold go on the pitcher cards and the plans' starter folds (page PTAG_RULES, from the cards' ptags counts once rebuilt); the rest do not. **Results (run 38118026447):** correlations from one season to the next: fastballs up 0.75 and 0.78, fastballs down 0.75 and 0.74, breaking balls below the zone 0.73 and 0.75 (2026 and 2025 tests; 347 to 385 pitchers, 276 and 321 for breaking balls). Tags on the test pitches: Elevates fastballs +9.2 [7.8, 10.6] (98 pitchers, training +14.2) and +9.4 [7.8, 11.1] (99, +14.5); Keeps fastballs down +8.5 [6.3, 10.8] (54, +13.6) and +9.8 [7.4, 12.0] (65, +13.6); Buries breaking balls +9.1 [6.8, 11.5] (52, +12.8) and +10.4 [8.5, 12.5] (62, +13.9). **Every prediction held.** The three tags go on the pitcher cards and starter folds (page PTAG_RULES); the cards carry the counts from the rebuild after commit 3cfdd4e4c.",
+     "Delta corrected Brier, 2026": "held: 0.73 to 0.78"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
-    "frozen_commits": [],
-    "status": "registered"
+    "runs": [
+     "38118026447"
+    ],
+    "frozen_commits": [
+     "3cfdd4e4c"
+    ],
+    "status": "held: 0.73 to 0.78"
    }
   ],
   "ZONES-01": [

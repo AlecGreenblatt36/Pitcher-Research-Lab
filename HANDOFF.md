@@ -65,7 +65,20 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 1:50 a.m. Eastern October 11, by `date -u`)
+### In flight (updated 2:45 a.m. Eastern October 11, by `date -u`)
+
+- October 11, 2:45 a.m.: TAGS-07 and TAGS-08 held (run 38117275043): a hitter's misses up in the zone against down
+  (top third, MLB zones 1-3, against the bottom third, 7-9; relative to himself, net of the league) carry over 0.46 and
+  0.71, and his hard contact up against down 0.54 and 0.55. The page tags Misses up / down in the zone (vertShift from the
+  cards' zone counts, 9 points) and Hits the high / low strike hard (10 points; zone cells now carry hard-hit and
+  measured balls in play, so it shows once the cards are rebuilt: run 38117812393 for October 10 and 11 and the player
+  cards). Lineup notes: Up / Down in the zone for misses, Stay down / up in the zone. PTAGS-02 registered and running
+  (pitcher heights: Elevates fastballs, Keeps fastballs down, Buries breaking balls); if it holds, add its rules to the
+  page's PTAG_RULES and rebuild the cards again (ptags carry fb_up, fb_dn, br_dn from commit 3cfdd4e4c). Page fixes
+  (08806632d): series games as tiles, distinct names in Matchups, a game-day plan is no longer called a look back
+  (built after its game day only), How it works describes the fitted bullpen, tags in a strip under each plan row,
+  320 px fits. Fetch the data branch with `git fetch origin +brl-live-data:refs/remotes/origin/brl-live-data` (a plain
+  `git fetch origin brl-live-data` leaves origin/brl-live-data stale here).
 
 - October 11, 1:50 a.m.: the live at-bat card names the hitter's habit for the count at hand (liveCountTip: first pitch,
   two strikes, behind; only tags that held a season later). Plans follow this season's arsenal everywhere: the pitcher's
