@@ -1,0 +1,300 @@
+{
+ "schema": "brl.report-receipt.v1",
+ "run_id": "38135647818",
+ "params": {
+  "change_study": {
+   "seasons": [
+    2023,
+    2024,
+    2025,
+    2026
+   ],
+   "test_end": "2026-08-01",
+   "min_pa": 200,
+   "min_pa_test": 150,
+   "boot": 2000,
+   "se_mult": 2.0,
+   "floors": {
+    "chase": 0.02,
+    "whiff": 0.02,
+    "k": 0.02,
+    "bb": 0.02,
+    "hard": 0.03
+   }
+  },
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "dates": [
+   "2026-04-01"
+  ],
+  "publish": false
+ },
+ "started_at": "2026-10-11T11:28:22.417446+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 10.0,
+   "peak_rss_mb": 1094
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 20.1,
+   "peak_rss_mb": 1269
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 30.0,
+   "peak_rss_mb": 1429
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 39.7,
+   "peak_rss_mb": 1596
+  },
+  {
+   "stage": "change study: lines",
+   "at_seconds": 40.0,
+   "peak_rss_mb": 1596
+  },
+  {
+   "stage": "change study: done",
+   "at_seconds": 40.1,
+   "peak_rss_mb": 1596
+  }
+ ],
+ "reports": {},
+ "environment": {
+  "python": "3.12.15",
+  "commit": "19e2818d613c502a04e02e85fe84ffd4a33f347c",
+  "numpy": "2.5.4",
+  "scipy": "1.18.1",
+  "scikit-learn": "1.9.1",
+  "pandas": "3.0.6",
+  "cryptography": "46.0.4"
+ },
+ "change_study": {
+  "se_mult": 2.0,
+  "floors": {
+   "chase": 0.02,
+   "whiff": 0.02,
+   "k": 0.02,
+   "bb": 0.02,
+   "hard": 0.03
+  },
+  "windows": {
+   "train": {
+    "hitters": 223,
+    "chase": {
+     "flagged": {
+      "n": 44,
+      "mean_change_points": 5.15,
+      "held": 0.748,
+      "ci": [
+       0.585,
+       0.923
+      ]
+     },
+     "unflagged": {
+      "n": 179,
+      "mean_change_points": 1.81,
+      "held": 0.453,
+      "ci": [
+       0.21,
+       0.693
+      ]
+     }
+    },
+    "whiff": {
+     "flagged": {
+      "n": 43,
+      "mean_change_points": 5.49,
+      "held": 0.639,
+      "ci": [
+       0.47,
+       0.809
+      ]
+     },
+     "unflagged": {
+      "n": 180,
+      "mean_change_points": 1.75,
+      "held": 0.369,
+      "ci": [
+       0.143,
+       0.608
+      ]
+     }
+    },
+    "k": {
+     "flagged": {
+      "n": 28,
+      "mean_change_points": 7.38,
+      "held": 0.604,
+      "ci": [
+       0.373,
+       0.83
+      ]
+     },
+     "unflagged": {
+      "n": 195,
+      "mean_change_points": 2.0,
+      "held": 0.579,
+      "ci": [
+       0.336,
+       0.827
+      ]
+     }
+    },
+    "bb": {
+     "flagged": {
+      "n": 14,
+      "mean_change_points": 4.87,
+      "held": 0.644,
+      "ci": [
+       0.418,
+       0.899
+      ]
+     },
+     "unflagged": {
+      "n": 209,
+      "mean_change_points": 1.54,
+      "held": 0.554,
+      "ci": [
+       0.364,
+       0.742
+      ]
+     }
+    },
+    "hard": {
+     "flagged": {
+      "n": 31,
+      "mean_change_points": 9.19,
+      "held": 0.711,
+      "ci": [
+       0.552,
+       0.88
+      ]
+     },
+     "unflagged": {
+      "n": 192,
+      "mean_change_points": 3.41,
+      "held": 0.624,
+      "ci": [
+       0.421,
+       0.816
+      ]
+     }
+    }
+   },
+   "test": {
+    "hitters": 201,
+    "chase": {
+     "flagged": {
+      "n": 40,
+      "mean_change_points": 5.34,
+      "held": 0.622,
+      "ci": [
+       0.406,
+       0.847
+      ]
+     },
+     "unflagged": {
+      "n": 161,
+      "mean_change_points": 1.91,
+      "held": 0.486,
+      "ci": [
+       0.242,
+       0.738
+      ]
+     }
+    },
+    "whiff": {
+     "flagged": {
+      "n": 41,
+      "mean_change_points": 5.14,
+      "held": 0.621,
+      "ci": [
+       0.444,
+       0.818
+      ]
+     },
+     "unflagged": {
+      "n": 160,
+      "mean_change_points": 1.66,
+      "held": 0.714,
+      "ci": [
+       0.448,
+       0.972
+      ]
+     }
+    },
+    "k": {
+     "flagged": {
+      "n": 28,
+      "mean_change_points": 6.76,
+      "held": 0.558,
+      "ci": [
+       0.404,
+       0.71
+      ]
+     },
+     "unflagged": {
+      "n": 173,
+      "mean_change_points": 2.26,
+      "held": 0.603,
+      "ci": [
+       0.364,
+       0.827
+      ]
+     }
+    },
+    "bb": {
+     "flagged": {
+      "n": 20,
+      "mean_change_points": 4.6,
+      "held": 0.387,
+      "ci": [
+       0.201,
+       0.592
+      ]
+     },
+     "unflagged": {
+      "n": 181,
+      "mean_change_points": 1.6,
+      "held": 0.433,
+      "ci": [
+       0.215,
+       0.649
+      ]
+     }
+    },
+    "hard": {
+     "flagged": {
+      "n": 20,
+      "mean_change_points": 10.09,
+      "held": 0.698,
+      "ci": [
+       0.512,
+       0.89
+      ]
+     },
+     "unflagged": {
+      "n": 181,
+      "mean_change_points": 2.95,
+      "held": 0.65,
+      "ci": [
+       0.401,
+       0.896
+      ]
+     }
+    }
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-11T11:29:02.511686+00:00",
+ "seconds": 40.1
+}
