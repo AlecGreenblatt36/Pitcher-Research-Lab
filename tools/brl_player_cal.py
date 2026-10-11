@@ -153,12 +153,94 @@ def study(seasons: dict, draws=2000):
     return res
 
 
+PT_BINS = ((0, 100), (100, 200), (200, 400), (400, 10 ** 9))
+
+
+def own_at_least_keep(hist, k, keep):
+    """own_at_least with a given share kept (the spot's share times a part-time factor)."""
+    n_w = sum(hist)
+    if not n_w:
+        return float('nan')
+    below = 0.0
+    for m, c in enumerate(hist):
+        below += c * sum(comb(m, j) * keep ** j * (1 - keep) ** (m - j) for j in range(min(k, m + 1)))
+    return 1.0 - below / n_w
+
+
+def load_hist_rows(paths):
+    """Hitter-game rows with the histograms kept: date, spot, prior plate appearances, simulated mean plate appearances,
+    actual line and the four histograms (PLAYER-05)."""
+    out = []
+    for f in paths:
+        with gzip.open(f, 'rt') as fh:
+            for line in fh:
+                g = json.loads(line)
+                for x in g.get('hitters') or []:
+                    a = x.get('actual')
+                    if not a or not a.get('pa') or 'hr_hist' not in x:
+                        continue
+                    out.append({'date': g['date'], 'spot': x['spot'], 'prior_pa': x.get('prior_pa_365') or 0, 'mean_pa': x['mean_pa'], 'actual': a,
+                                'h_hist': x['h_hist'], 'hr_hist': x['hr_hist'], 'bb_hist': x['bb_hist'], 'k_hist': x['k_hist']})
+    return out
+
+
+def pt_bin(prior):
+    for i, (lo, hi) in enumerate(PT_BINS):
+        if lo <= prior < hi:
+            return i
+    return len(PT_BINS) - 1
+
+
+def pt_factors(rows):
+    """Per prior-playing-time group: actual plate appearances over simulated ones times the spot's share."""
+    num, den = np.zeros(len(PT_BINS)), np.zeros(len(PT_BINS))
+    for r in rows:
+        b = pt_bin(r['prior_pa'])
+        num[b] += r['actual']['pa']; den[b] += r['mean_pa'] * STARTER_SHARE[min(max(int(r['spot']), 1), 9) - 1]
+    return [float(n / d) if d else 1.0 for n, d in zip(num, den)]
+
+
+def part_time_study(seasons: dict, draws=2000):
+    """PLAYER-05: each season scored with the other season's part-time factors against the spot's share alone."""
+    labels = sorted(seasons)
+    res = {'bins': [list(b) for b in PT_BINS], 'factors': {s: [round(v, 4) for v in pt_factors(seasons[s])] for s in labels}, 'by_season': {}}
+    for s in labels:
+        other = labels[1 - labels.index(s)]
+        fac = pt_factors(seasons[other])
+        rows = seasons[s]
+        dates = np.array([r['date'] for r in rows]); bins = np.array([pt_bin(r['prior_pa']) for r in rows])
+        r_s = {}
+        for kind, (field, k, af) in KINDS.items():
+            base = np.array([own_at_least(r[field], k, r['spot']) for r in rows])
+            adj = np.array([own_at_least_keep(r[field], k, min(1.0, STARTER_SHARE[min(max(int(r['spot']), 1), 9) - 1] * fac[pt_bin(r['prior_pa'])])) for r in rows])
+            y = np.array([float((r['actual'].get(af) or 0) >= k) for r in rows])
+            dm, ci = brier_change(dates, base, adj, y, draws=draws)
+            r_s[kind] = {'brier_change': round(dm, 7), 'brier_change_ci': [round(ci[0], 7), round(ci[1], 7)],
+                         'gap_by_bin': [[round(100 * float(base[bins == b].mean() - y[bins == b].mean()), 2), round(100 * float(adj[bins == b].mean() - y[bins == b].mean()), 2), int((bins == b).sum())]
+                                        for b in range(len(PT_BINS)) if (bins == b).any()]}
+        res['by_season'][s] = {'factors_from_other': [round(v, 4) for v in fac], 'kinds': r_s}
+    return res
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--season', action='append', required=True, help='label=glob of per-game files')
     ap.add_argument('--out', required=True)
     ap.add_argument('--draws', type=int, default=2000)
+    ap.add_argument('--part-time', action='store_true', help='PLAYER-05: score the part-time factors instead')
     a = ap.parse_args()
+    if a.part_time:
+        seasons = {}
+        for spec in a.season:
+            lab, pat = spec.split('=', 1)
+            seasons[lab] = load_hist_rows(sorted(glob.glob(pat)))
+        res = part_time_study(seasons, draws=a.draws)
+        Path(a.out).write_text(json.dumps(res, indent=1))
+        print('factors', res['factors'])
+        for s_, r in res['by_season'].items():
+            for kind, x in r['kinds'].items():
+                print(s_, kind, 'dBrier %.7f [%.7f, %.7f]' % (x['brier_change'], *x['brier_change_ci']), 'gaps (before, after, n) by group', x['gap_by_bin'])
+        return
     seasons = {}
     for spec in a.season:
         lab, pat = spec.split('=', 1)

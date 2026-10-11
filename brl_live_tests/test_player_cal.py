@@ -58,3 +58,30 @@ def test_rows_from_replay_files_use_the_pages_chance(tmp_path):
     p2 = 1 - (300 + 400 + 200 * ((1 - keep) ** 2 + 2 * keep * (1 - keep)) + 100 * ((1 - keep) ** 3 + 3 * keep * (1 - keep) ** 2)) / 1000
     assert abs(r['p_hit2'] - p2) < 1e-12
     assert (r['y_hit'], r['y_hit2'], r['y_hr'], r['y_walk'], r['y_k']) == (1, 1, 0, 0, 1)
+
+
+def test_part_time_factors_are_found_and_lower_the_part_timers_chances():
+    """PLAYER-05 on made-up hitter-games: part-timers (under 100 prior plate appearances) really bat 90% as often as their
+    slot share says; the factor is recovered and their chances come down, while regulars stay put."""
+    rng = np.random.default_rng(5)
+
+    def season(n=6000):
+        rows = []
+        for i in range(n):
+            prior = int(rng.choice([50, 150, 300, 600]))
+            spot = int(1 + i % 9)
+            keep = pc.STARTER_SHARE[spot - 1] * (0.90 if prior < 100 else 1.0)
+            pa_sim = rng.poisson(4.2, 1000)
+            hits = rng.binomial(pa_sim, 0.24)
+            h_hist = np.bincount(np.minimum(hits, 5), minlength=6).tolist()
+            zero = [1000, 0, 0, 0]
+            real_pa = int(rng.binomial(5, 0.84 * keep))                   # mean 4.2 x keep, almost never zero
+            rows.append({'date': '2025-%03d' % (i // 40), 'spot': spot, 'prior_pa': prior, 'mean_pa': float(pa_sim.mean()), 'actual': {'pa': real_pa, 'h': int(rng.binomial(real_pa, 0.24)), 'hr': 0, 'bb': 0, 'k': 0},
+                         'h_hist': h_hist, 'hr_hist': zero, 'bb_hist': zero + [0], 'k_hist': zero + [0]})
+        return rows
+    res = pc.part_time_study({'2025': season(), '2026': season()}, draws=200)
+    for s in ('2025', '2026'):
+        f = res['factors'][s]
+        assert 0.85 < f[0] < 0.96 and abs(f[3] - 1.0) < 0.04
+        gaps = res['by_season'][s]['kinds']['hit']['gap_by_bin']
+        assert gaps[0][1] < gaps[0][0] - 1.0 and abs(gaps[3][1] - gaps[3][0]) < 0.5
