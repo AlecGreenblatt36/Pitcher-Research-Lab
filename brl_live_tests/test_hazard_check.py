@@ -2,6 +2,7 @@
 scored back on every removal decision, by season, inning, whether the inning ended and the score, with the starts by the
 outs recorded at the exit; the summed chance tracks the removals."""
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -165,3 +166,25 @@ def test_pitch_efficiency_finds_planted_pitcher_factors_and_their_carry(tmp_path
     out = br.pitch_efficiency(tmp_path, phys, min_bf=50)
     assert out['pitcher_seasons'] > 0 and out['factor_sd'] > 0.05
     assert out['carry']['2025-2026']['corr'] > 0.5            # the same pitcher's factor in both seasons
+
+
+def test_relief_entry_counts_every_relief_decision_and_real_relievers_per_game(tmp_path):
+    """The relievers' per-starter-out diagnosis on made-up games: every legal relief decision lands in one cell with its
+    removal and the hazard's chance, and the real relievers per team-game follow the starter's outs."""
+    rng = np.random.default_rng(31)
+    pa = _games(rng, n=120)
+    late = pa['inning'] >= 8
+    pa.loc[late, 'pitcher'] = pa.loc[late, 'pitcher'] + 50000              # a second reliever from the 8th
+    pa.to_csv(tmp_path / 'plate_appearances.csv.gz', index=False, compression='gzip')
+    out = br.relief_entry(tmp_path)
+    from brl_replay.games import load_history
+    from brl_replay.relief_decisions import decisions, fitted
+    d = decisions(load_history(tmp_path / 'plate_appearances.csv.gz'))
+    p = fitted(d, json.loads((ROOT / 'brl_live/relief_exit.json').read_text()))
+    ok = np.isfinite(p)
+    assert out['decisions'] == int(ok.sum()) == sum(c[5] for c in out['cells'])
+    assert sum(c[6] for c in out['cells']) == int(d.loc[ok, 'removed'].sum()) > 0
+    assert abs(sum(c[7] for c in out['cells']) - float(p[ok].sum())) < 1.0
+    assert {c[1] for c in out['cells']} <= set(range(7)) and {c[3] for c in out['cells']} <= set(range(4))
+    for v in out['team_games'].values():
+        assert 2.0 <= v['pitchers'] <= 3.0 and v['slope_per_starter_out'] < 0      # a starter through the 7th leaves one reliever

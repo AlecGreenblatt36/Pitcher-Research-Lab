@@ -599,6 +599,52 @@ def relief_pitches(data_root: Path, physics) -> dict:
     return out
 
 
+def relief_entry(data_root: Path) -> dict:
+    """Where the simulator's extra relievers come from (the per-starter-out gap in HANDOFF's known gaps): the live
+    relief-exit hazard (brl_live/relief_exit.json, RELIEF-02) on every real relief decision of the regular seasons, by the
+    inning the reliever came in (3rd or earlier, 4th, 5th, 6th, 7th, 8th, 9th or later), whether the inning just ended,
+    his batters faced so far (1 to 2, 3 to 5, 6 to 8, 9 or more) and his usual length (median batters per relief outing
+    over the last year: 4 or fewer, 5 to 6, 7 or more): decisions, removals and the hazard's summed chance. Also the real
+    relievers per team-game by the starter's outs, for the replays' simulated counts. Aggregates only."""
+    from brl_replay.games import load_history
+    from brl_replay.harness import pitcher_outs
+    from brl_replay.relief_decisions import decisions, fitted
+    h = load_history(next(data_root.rglob('plate_appearances.csv.gz')))
+    if 'game_type' not in h.columns:
+        h = h.assign(game_type='R')
+    d = decisions(h)
+    doc = json.loads((ROOT / 'brl_live' / 'relief_exit.json').read_text())
+    d['p'] = fitted(d, doc)
+    d = d[d['p'].notna()]
+    entry = np.digitize(d['entry_inning'].to_numpy(float), [4, 5, 6, 7, 8, 9])
+    bfb = np.digitize(d['bf'].to_numpy(float), [3, 6, 9])
+    exb = np.digitize(d['exp'].to_numpy(float), [5, 7])
+    out = {'decisions': int(len(d)), 'entry': ['<=3', '4', '5', '6', '7', '8', '9+'], 'bf': ['1-2', '3-5', '6-8', '9+'],
+           'usual': ['<=4', '5-6', '7+'], 'cells': []}
+    for (season, e, ended, b, x), g in d.assign(e=entry, b=bfb, x=exb).groupby(['season', 'e', 'ended', 'b', 'x']):
+        out['cells'].append([int(season), int(e), int(ended), int(b), int(x), int(len(g)), int(g['removed'].sum()), round(float(g['p'].sum()), 1)])
+    # real relievers per team-game by the starter's outs (regular season; games that went 9 innings or more)
+    r = h[h['game_type'] == 'R'].copy()
+    top = r['inning_topbot'].astype(str).str.lower().str.startswith('top')
+    r['fld'] = np.where(top, 'home', 'away')
+    r['season'] = r['date_key'].astype(str).str[:4].astype(int)
+    first = r.groupby(['game_pk', 'fld'])['pitcher'].transform('first')
+    po = pd.DataFrame([(g, q, o) for (g, q), o in pitcher_outs(r).items()], columns=['game_pk', 'pitcher', 'outs'])
+    st = r[r['pitcher'] == first].groupby(['game_pk', 'fld', 'pitcher']).size().reset_index()[['game_pk', 'fld', 'pitcher']]
+    st = st.merge(po, on=['game_pk', 'pitcher'], how='left')
+    used = r.groupby(['game_pk', 'fld'])['pitcher'].nunique().rename('pitchers').reset_index()
+    seas = r.groupby('game_pk')['season'].first().rename('season').reset_index()
+    tg = st.merge(used, on=['game_pk', 'fld']).merge(seas, on='game_pk')
+    tg = tg[tg['outs'].notna()]
+    out['team_games'] = {}
+    for season, g in tg.groupby('season'):
+        x, y = g['outs'].to_numpy(float), g['pitchers'].to_numpy(float)
+        out['team_games'][str(int(season))] = {'n': int(len(g)), 'pitchers': round(float(y.mean()), 3), 'starter_outs': round(float(x.mean()), 3),
+                                               'slope_per_starter_out': round(float(np.polyfit(x, y, 1)[0]), 4),
+                                               'by_outs': {str(int(k)): [int(len(v)), round(float(v['pitchers'].mean()), 3)] for k, v in g.groupby(np.minimum(g['outs'], 24) // 3 * 3)}}
+    return out
+
+
 def pitch_efficiency(data_root: Path, physics, min_bf=300) -> dict:
     """Do pitchers differ in pitches per plate appearance beyond their outcomes, and does it carry over? Each pitcher-season's
     pitches over the pitches his outcomes would take at the league's per-outcome means (regular seasons, the physics tables'
@@ -722,7 +768,7 @@ def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']; key_hex = os.environ['BRL_PA_PACKAGE_KEY']; key = key_bytes(key_hex)
     branch = os.environ.get('BRL_LEDGER_BRANCH', 'brl-live-data')
     experiment = (os.environ.get('BRL_EXPERIMENT') or 'physics').strip()
-    if experiment in ('hazard_check', 'hazard_fix', 'hazard_pitches', 'pitch_counts', 'relief_pitches', 'pitch_efficiency'):
+    if experiment in ('hazard_check', 'hazard_fix', 'hazard_pitches', 'pitch_counts', 'relief_pitches', 'pitch_efficiency', 'relief_entry'):
         run_id = os.environ.get('GITHUB_RUN_ID', 'local')
         receipt = {'schema': 'brl.research-receipt.v1', 'experiment': experiment, 'run_id': run_id, 'started_at': datetime.now(timezone.utc).isoformat()}
         try:
@@ -745,7 +791,7 @@ def main():
                 phys_n = pd.concat(tables, ignore_index=True) if tables else None
                 receipt['results'] = {'pitch_counts': pitch_counts_fit, 'relief_pitches': relief_pitches, 'pitch_efficiency': pitch_efficiency}.get(experiment, hazard_pitches)(data_root, phys_n)
             else:
-                receipt['results'] = (hazard_fix if experiment == 'hazard_fix' else hazard_check)(data_root)
+                receipt['results'] = {'hazard_fix': hazard_fix, 'relief_entry': relief_entry}.get(experiment, hazard_check)(data_root)
             receipt['status'] = 'completed'
         except Exception as exc:
             receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:300]
