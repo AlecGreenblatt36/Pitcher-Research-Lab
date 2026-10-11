@@ -186,8 +186,12 @@ his share of ground balls and of balls in the air hit to his pull-side third wit
 0.70), and the ground-ball and fly-ball tags (TAGS-06) his ground-ball share (0.73 and 0.75). The up-or-down tags
 compare the top third of his zone (MLB zones 1-3) with the bottom third (7-9), net of the league's same difference on
 his side: misses per swing (TAGS-07, 0.46 and 0.71, tagged at 9 points) and hard-hit balls among measured balls in play
-(TAGS-08, 0.54 and 0.55, tagged at 10 points). These relative reads keep about half to nine-tenths of their training
-difference a season later. A velocity read (extra misses on fastballs at 96 mph and up) did not carry over (TAGS-04:
+(TAGS-08, 0.54 and 0.55, tagged at 10 points). Across the plate (inside third against away third, read with the side
+he takes against each pitcher hand), hard contact carries over 0.60 and 0.64 (TAGS-10, both directions tagged at 13
+points) but misses only 0.29 and 0.35 (TAGS-09): only the away direction held in both seasons and is tagged (Misses
+away, 4.3 points). These relative reads keep about half to nine-tenths of their training difference a season later.
+Switch hitters' charts, league comparisons and pull reads follow the side he takes against each pitcher hand
+(cards: side_by_hand, spray_pull). A velocity read (extra misses on fastballs at 96 mph and up) did not carry over (TAGS-04:
 0.26 and 0.15) and is not shown. Pitcher tags (PTAGS-01) were checked the same way: first-pitch strikes, pitches in the zone, chases,
 fastballs when behind and on the first pitch; seven held in both test seasons and are shown, two (falling behind first,
 few chases) are not. Height tags (PTAGS-02: fastballs in the top third of the fixed zone or above, in the bottom third or

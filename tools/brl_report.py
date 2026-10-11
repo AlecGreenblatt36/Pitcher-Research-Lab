@@ -209,6 +209,21 @@ def usage_by_count(T: dict, rows) -> dict:
     return out
 
 
+def spray_pull_counts(T: dict, rows) -> dict | None:
+    """Batted balls in the hitter's own frame, for a switch hitter: [pulled, middle, the other way] for ground balls and
+    balls in the air (15 degrees either side of straightaway; a right-handed batter pulls to left field). Counts only."""
+    rows = np.asarray(rows, dtype=np.int64)
+    if 'spray' not in T or not len(rows):
+        return None
+    ang = T['spray'][rows].astype(np.float64); tr = T['traj'][rows]; ok = np.isfinite(ang)
+    if not ok.any():
+        return None
+    a = np.nan_to_num(ang); rb = T['stand_r'][rows] == 1
+    pull = ok & np.where(rb, a < -15.0, a > 15.0); oppo = ok & np.where(rb, a > 15.0, a < -15.0); mid = ok & ~pull & ~oppo
+    air = (tr == 1) | (tr == 2)
+    return {'gb': [int(((tr == 0) & m).sum()) for m in (pull, mid, oppo)], 'air': [int((air & m).sum()) for m in (pull, mid, oppo)]}
+
+
 def spray_counts(T: dict, rows) -> dict | None:
     """Where a hitter's batted balls go, in field thirds (left, center, right, split at 15 degrees either side of
     straightaway), ground balls and balls in the air (line drives and fly balls) apart, plus pop-ups and hard-hit balls
@@ -665,6 +680,19 @@ class Fitted:
             if sp:
                 card['spray'] = sp
             card['counts'] = count_tend(T, r, self.swing, self.whiff)
+            # a switch hitter: the side he batted from against each pitcher hand (the page orients and compares his charts
+            # by it), and his batted balls in his own frame (pull, middle, the other way), since his pull field changes
+            # with the side he bats from
+            sbh = {}
+            for hand, code in (('R', 1), ('L', 0)):
+                rr = r[T['throw_r'][r] == code]
+                if len(rr) >= 30:
+                    sbh[hand] = 'R' if float((T['stand_r'][rr] == 1).mean()) >= 0.5 else 'L'
+            if len(set(sbh.values())) > 1:
+                card['side_by_hand'] = sbh
+                pp = spray_pull_counts(T, r)
+                if pp:
+                    card['spray_pull'] = pp
         rn = (getattr(self, 'run_season', {}) or {}).get('runners', {}).get(str(int(h)))
         if rn:
             card['run'] = {'season': self.run_year, **{k: rn[k] for k in ('sb', 'cs', 'on1', 'sprint') if k in rn}}

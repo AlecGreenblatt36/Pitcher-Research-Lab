@@ -107,6 +107,23 @@ def test_spray_counts_by_field_third_and_trajectory():
     assert B.spray_counts(T, [5]) is None and B.spray_counts({'zone': a[:, 0]}, [0]) is None
 
 
+def test_spray_pull_counts_in_the_hitters_frame():
+    # a switch hitter pulls to left field batting right and to right field batting left
+    B = _report()
+    nan = float('nan')
+    #        spray  traj stand_r
+    rows = [(-30.0, 0, 1),     # batting right, a grounder to the left side: pulled
+            (30.0, 0, 0),      # batting left, a grounder to the right side: pulled
+            (30.0, 2, 1),      # batting right, a fly to right: the other way
+            (0.0, 1, 0),       # a liner up the middle
+            (nan, -1, 1)]
+    a = np.array(rows, dtype=float)
+    T = {'spray': a[:, 0], 'traj': a[:, 1].astype(int), 'stand_r': a[:, 2].astype(int)}
+    out = B.spray_pull_counts(T, np.arange(len(rows)))
+    assert out == {'gb': [2, 0, 0], 'air': [0, 1, 1]}
+    assert B.spray_pull_counts(T, [4]) is None
+
+
 def test_count_groups_tendencies_and_usage():
     B = _report()
     #           balls strikes

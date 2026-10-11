@@ -18,8 +18,8 @@ def page_functions(*names):
 
 
 def _run(suffix):
-    functions = page_functions('hitterTags', 'twoStrikeShift', 'famWhiffShift', 'pullShift', 'gbShift', 'vertShift', 'hzCells', 'hzTotal', 'hzLeague')
-    prefix = "const assert=require('assert');var TWO_SHIFT=0.065;var FAM_SHIFT={breaking:0.052,offspeed:0.067},FAM_FLOOR={breaking:100,offspeed:60};var VERT_SHIFT={miss:0.09,hard:0.10},VERT_FLOOR={miss:80,hard:50};"
+    functions = page_functions('hitterTags', 'twoStrikeShift', 'famWhiffShift', 'pullShift', 'gbShift', 'vertShift', 'horizShift', 'hzSplit', 'hzCells', 'hzTotal', 'hzLeague', 'hzLeagueFor')
+    prefix = "const assert=require('assert');var TWO_SHIFT=0.065;var FAM_SHIFT={breaking:0.052,offspeed:0.067},FAM_FLOOR={breaking:100,offspeed:60};var VERT_SHIFT={miss:0.09,hard:0.10},VERT_FLOOR={miss:80,hard:50},HORZ_SHIFT={miss:0.043,hard:0.13};"
     subprocess.run(['node', '-e', prefix + functions + suffix], check=True)
 
 
@@ -75,8 +75,8 @@ def test_count_mix_line_reads_the_count_and_side():
 
 
 def test_pitch_type_miss_tags_read_against_his_own_fastball():
-    functions = page_functions('hitterTags', 'twoStrikeShift', 'famWhiffShift', 'pullShift', 'gbShift', 'vertShift', 'hzCells', 'hzTotal', 'hzLeague')
-    prefix = ("const assert=require('assert');var TWO_SHIFT=0.065;var FAM_SHIFT={breaking:0.052,offspeed:0.067},FAM_FLOOR={breaking:100,offspeed:60};var VERT_SHIFT={miss:0.09,hard:0.10},VERT_FLOOR={miss:80,hard:50};"
+    functions = page_functions('hitterTags', 'twoStrikeShift', 'famWhiffShift', 'pullShift', 'gbShift', 'vertShift', 'horizShift', 'hzSplit', 'hzCells', 'hzTotal', 'hzLeague', 'hzLeagueFor')
+    prefix = ("const assert=require('assert');var TWO_SHIFT=0.065;var FAM_SHIFT={breaking:0.052,offspeed:0.067},FAM_FLOOR={breaking:100,offspeed:60};var VERT_SHIFT={miss:0.09,hard:0.10},VERT_FLOOR={miss:80,hard:50},HORZ_SHIFT={miss:0.043,hard:0.13};"
               "function cells(sw,mi){return [[1,sw*2,sw,mi,0,0,0]];}"
               "function zones(fb,br,os){return {R:{all:cells(fb[0]+br[0]+os[0],fb[1]+br[1]+os[1]),fastball:cells(fb[0],fb[1]),breaking:cells(br[0],br[1]),offspeed:cells(os[0],os[1])},L:{all:cells(0,0),fastball:cells(0,0),breaking:cells(0,0),offspeed:cells(0,0)}};}"
               "const lg={chase_rate:0.29,whiff_rate:0.24,zones:{R:zones([1000,180],[600,180],[300,90])}};")
@@ -87,7 +87,7 @@ def test_pitch_type_miss_tags_read_against_his_own_fastball():
 
 
 def test_pull_tags_read_his_pull_side():
-    functions = page_functions('pullShift')
+    functions = page_functions('pullShift', 'hzLeague')     # hzLeague brings isSwitch and hzSideFor with it
     prefix = "const assert=require('assert');const lg={spray:{R:{gb:[500,300,200],air:[300,400,300]},L:{gb:[200,300,500],air:[300,400,300]}}};"
     suffix = ("assert.ok(Math.abs(pullShift({side:'R',spray:{gb:[60,25,15],air:[30,40,30]}},lg,'gb')-0.1)<1e-9);"          # 60% pulled against 50%
               "assert.ok(Math.abs(pullShift({side:'L',spray:{gb:[15,25,60],air:[30,40,30]}},lg,'gb')-0.1)<1e-9);"          # a lefty pulls to right field
@@ -150,9 +150,9 @@ def test_short_names_tell_two_hernandezes_apart():
 
 def test_vertical_tags_from_the_zone_counts():
     # TAGS-07 and TAGS-08: misses and hard contact up in the zone against down, net of the league's same difference
-    functions = page_functions('hitterTags', 'twoStrikeShift', 'famWhiffShift', 'pullShift', 'gbShift', 'vertShift', 'hzCells', 'hzTotal', 'hzLeague')
+    functions = page_functions('hitterTags', 'twoStrikeShift', 'famWhiffShift', 'pullShift', 'gbShift', 'vertShift', 'horizShift', 'hzSplit', 'hzCells', 'hzTotal', 'hzLeague', 'hzLeagueFor')
     prefix = ("const assert=require('assert');var TWO_SHIFT=0.065;var FAM_SHIFT={breaking:0.052,offspeed:0.067},FAM_FLOOR={breaking:100,offspeed:60};"
-              "var VERT_SHIFT={miss:0.09,hard:0.10},VERT_FLOOR={miss:80,hard:50};"
+              "var VERT_SHIFT={miss:0.09,hard:0.10},VERT_FLOOR={miss:80,hard:50},HORZ_SHIFT={miss:0.043,hard:0.13};"
               # cells [zone, pitches, swings, misses, ab, h, tb, hard, measured]; zones 1-3 up, 7-9 down
               "function cells(upSw,upMiss,dnSw,dnMiss,upHard,upMeas,dnHard,dnMeas){var out=[];[1,2,3,4,5,6,7,8,9,11,12,13,14].forEach(function(z){"
               "var up=z<=3,dn=z>=7&&z<=9;out.push([z,100,up?upSw/3:dn?dnSw/3:30,up?upMiss/3:dn?dnMiss/3:6,10,3,4,up?upHard/3:dn?dnHard/3:5,up?upMeas/3:dn?dnMeas/3:12]);});return out;}"
@@ -218,3 +218,40 @@ def test_hitter_changes_from_last_season():
               "assert.ok(t.indexOf('miss rate')<0&&t.indexOf('strikeout rate')<0,t);"
               "assert.equal(hitterChanges({}),'');")
     subprocess.run(['node', '-e', prefix + functions + suffix], check=True)
+
+
+def test_switch_hitters_follow_the_side_they_take():
+    functions = page_functions('isSwitch', 'hzSideFor', 'hzLeagueFor', 'hzLeague', 'hzCells', 'pullShift', 'batsWords')
+    prefix = "const assert=require('assert');"
+    suffix = ("const sw={side:'L',side_by_hand:{R:'L',L:'R'}},one={side:'L'};"
+              "assert.ok(isSwitch(sw)&&!isSwitch(one));"
+              "assert.equal(hzSideFor(sw,'R'),'L');assert.equal(hzSideFor(sw,'L'),'R');assert.equal(hzSideFor(sw,'all'),'S');assert.equal(hzSideFor(one,'L'),'L');"
+              "assert.equal(batsWords(sw),'switch-hits');assert.equal(batsWords(one),'bats left');"
+              # league cells: right-handed batters against lefties for his at-bats against lefties; both hands added for 'all'
+              "const cell=function(n){return {all:[[1,n,0,0,0,0,0]]};};"
+              "const lg={zones:{R:{R:cell(10),L:cell(20)},L:{R:cell(30),L:cell(40)}},spray:{R:{gb:[60,25,15]},L:{gb:[15,25,60]}}};"
+              "assert.equal(hzLeagueFor(lg,sw,'L','all')[0][1],20);assert.equal(hzLeagueFor(lg,sw,'R','all')[0][1],30);assert.equal(hzLeagueFor(lg,sw,'all','all')[0][1],50);"
+              # pull share from his own frame against the two sides' league pull shares averaged (0.6)
+              "const v=pullShift({side:'L',side_by_hand:{R:'L',L:'R'},spray_pull:{gb:[70,20,10]}},lg,'gb');assert.ok(Math.abs(v-0.10)<1e-9,v);"
+              "assert.equal(pullShift({side:'L',side_by_hand:{R:'L',L:'R'}},lg,'gb'),null);")
+    subprocess.run(['node', '-e', prefix + functions + suffix], check=True)
+
+
+
+def test_horizontal_tags_follow_the_side_he_takes():
+    # TAGS-09 (misses away) and TAGS-10 (hard contact inside or away), each hand read with the side he takes against it
+    functions = page_functions('horizShift', 'hzSplit', 'hzCells', 'hzLeague')
+    prefix = "const assert=require('assert');var HORZ_SHIFT={miss:0.043,hard:0.13};"
+    # cells [zone, pitches, swings, misses, ab, h, tb, hard, measured]; for a righty zones 1, 4, 7 are inside
+    suffix = ("function cells(inSw,inMiss,outSw,outMiss,inHard,inMeas,outHard,outMeas,lefty){var zi=lefty?[3,6,9]:[1,4,7],zo=lefty?[1,4,7]:[3,6,9],o=[];"
+              "[1,2,3,4,5,6,7,8,9,11,12,13,14].forEach(function(z){var i=zi.indexOf(z)>=0,a=zo.indexOf(z)>=0;o.push([z,100,i?inSw/3:a?outSw/3:30,i?inMiss/3:a?outMiss/3:6,10,3,4,i?inHard/3:a?outHard/3:5,i?inMeas/3:a?outMeas/3:12]);});return {all:o};}"
+              "const lg={zones:{R:{R:cells(300,36,300,57,90,240,102,240,false),L:cells(300,36,300,57,90,240,102,240,false)},L:{R:cells(300,36,300,57,90,240,102,240,true),L:cells(300,36,300,57,90,240,102,240,true)}}};"
+              # a righty who misses away far more than inside: 12% inside, 30% away (league 12% and 19%)
+              "let v=horizShift({side:'R',zones:{R:cells(60,7.2,60,18,15,30,15,30,false),L:cells(60,7.2,60,18,15,30,15,30,false)}},lg,'miss');assert.ok(v<-0.043,v);"
+              # a switch hitter whose hard contact is inside from both sides: left-handed against righties, right-handed against lefties
+              "const sw={side:'L',side_by_hand:{R:'L',L:'R'},zones:{R:cells(60,7,60,11,24,40,8,40,true),L:cells(60,7,60,11,24,40,8,40,false)}};"
+              "v=horizShift(sw,lg,'hard');assert.ok(v>0.13,v);"
+              "function isSwitch(card){var b=card&&card.side_by_hand;return !!(b&&b.R&&b.L&&b.R!==b.L);}"
+              "assert.equal(horizShift({side:'R',zones:{all:[]}},lg,'miss'),null);")
+    prefix_iso = "function hzSideFor(card,hand){if(!card)return 'R';var b=card.side_by_hand;if(b&&b.R&&b.L&&b.R!==b.L)return hand==='R'||hand==='L'?b[hand]:'S';return card.side==='L'?'L':'R';}"
+    subprocess.run(['node', '-e', prefix + prefix_iso + functions + suffix], check=True)

@@ -4693,14 +4693,16 @@
     "columns": {
      "ID": "TAGS-09",
      "Attempt": "Where a hitter misses across the plate, relative to himself: his misses per swing on the inside third of his zone (MLB zones 1, 4, 7 for a right-handed batter, 3, 6, 9 for a left-handed one, catcher's view) minus on the away third, net of the league's same difference on his side (rows of 80 swings in each third). Same splits, hitters and scoring as TAGS-07 (tag_study with horizontal). Synthetic check (brl_live_tests/test_report_tags.py): a planted habit carries over (correlation 0.76), a redrawn one does not (-0.04), and vertical habits do not leak into it.",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: correlation 0.3 or more in both splits; each one-SD tag (misses inside, misses away) holds in both splits (test difference at least a third of the threshold in its direction, interval excluding zero). Decision rule: a direction that holds in both splits becomes a plan and card tag (Misses inside, Misses away; page from the cards' zone counts) with a lineup note; otherwise no tag.",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: correlation 0.3 or more in both splits; each one-SD tag (misses inside, misses away) holds in both splits (test difference at least a third of the threshold in its direction, interval excluding zero). Decision rule: a direction that holds in both splits becomes a plan and card tag (Misses inside, Misses away; page from the cards' zone counts) with a lineup note; otherwise no tag. **Results (run 38125012927):** correlation **0.29** (205 hitters, 2026 test before August) and 0.35 (261, 2025): **the correlation prediction failed in 2026** (0.29 against 0.3). Standard deviation 4.3 points (the league misses 12% of swings inside and 19% away). Tags at one SD: misses inside +1.7 [-0.1, +3.5] (31 hitters, training +5.7) and +1.8 [0.4, 3.0] (35, +6.5): **failed in 2026**; misses away -2.5 [-4.2, -1.0] (40, -6.7) and -3.9 [-5.5, -2.3] (38, -7.0): held in both. Under the rule, Misses away becomes a tag (page horizShift, 4.3 points, 80 swings in each third; lineup note \"Away for misses\"); Misses inside does not. A weak read: it keeps about half its training size.",
+     "Delta corrected Brier, 2026": "misses away held; misses inside and the 2026 correlation failed"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38125012927"
+    ],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "misses away held; misses inside and the 2026 correlation failed"
    }
   ],
   "TAGS-10": [
@@ -4709,14 +4711,14 @@
     "columns": {
      "ID": "TAGS-10",
      "Attempt": "Where a hitter does damage across the plate: his share of measured balls in play at 95 mph or more from the inside third minus the away third, net of the league's same difference on his side (rows of 50). Same run and scoring as TAGS-09. Synthetic check: planted 0.87, redrawn -0.05.",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: correlation 0.25 or more in both splits; each one-SD tag (hits the inside pitch hard, hits the outside pitch hard) holds in both splits under TAGS-09's rule. Decision rule: a direction that holds in both splits becomes a tag, listed in the lineup notes as tagged (no where-to-stay advice, as TAGS-08).",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: correlation 0.25 or more in both splits; each one-SD tag (hits the inside pitch hard, hits the outside pitch hard) holds in both splits under TAGS-09's rule. Decision rule: a direction that holds in both splits becomes a tag, listed in the lineup notes as tagged (no where-to-stay advice, as TAGS-08). **Results (same run):** correlation 0.60 (85 hitters) and 0.64 (192); standard deviation 13 points (the league hits 36% of measured balls in play hard inside and 43% away). Hits the inside pitch hard +13.5 [7.7, 18.7] (15 hitters, training +22.4) and +15.4 [11.8, 19.0] (38, +19.4); hits the outside pitch hard -17.0 [-25.8, -8.4] (9, -21.5) and -15.2 [-19.2, -10.6] (27, -19.6). **Every prediction held** (the 2026 outside tag on 9 hitters). Both tags go on the plans and cards (page horizShift, 13 points, 50 measured in each third), each pitcher hand read with the side the hitter takes against it.",
+     "Delta corrected Brier, 2026": "held: 0.60 and 0.64"
     },
     "registered_before_run": true,
     "diagnostic": false,
     "runs": [],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "held: 0.60 and 0.64"
    }
   ],
   "ZONES-01": [
