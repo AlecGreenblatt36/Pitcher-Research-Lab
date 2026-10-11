@@ -55,8 +55,8 @@ October 7 checkpoint below still describes the machinery (lanes, privacy, schedu
   chance of its own anywhere (TOTALS-03); the run charts and ranges are negative binomials with the simulator's mean and
   its variance times 1.095 (TOTALS-05); hitter props switch between chances and fair American odds; the live builder
   refuses a hazard correction file that is not LEASH-02's 32 terms. Built and off: the in-season level layer (LEVEL-01,
-  failed LEVEL-02 and LEVEL-03), the engine's pitch draws (LEASH-03 failed), RELIEF-04's entry-inning correction on the
-  relief-exit hazard (ADJUST relief_correction; replays running at this writing).
+  failed LEVEL-02 and LEVEL-03), the engine's pitch draws (LEASH-03 failed), and, on from October 11 evening, RELIEF-04's
+  entry-inning correction on the relief-exit hazard for regular-season games (ADJUST relief_correction).
 
 ### Evidence (full-season replays, 1,000 worlds per game, each season with tables from other seasons)
 
@@ -87,8 +87,12 @@ queue behind the shards (seen October 11 at 16:50 UTC). Check-only replays (n_si
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 5:20 p.m. Eastern October 11, by `date -u`)
+### In flight (updated 5:51 p.m. Eastern October 11, by `date -u`)
 
+- October 11, 5:51 p.m.: **RELIEF-04 held every gate and is on for regular-season games** (ADJUST relief_correction;
+  brl_live/relief_correction.json, hooks brl_live/relief_hooks_corrected.json). Pitchers per starter out -0.164 and
+  -0.133 against -0.146 and -0.127 real (gaps were -0.039 and -0.031), win Brier and totals unchanged. The postseason keeps
+  the plain relief hazard with its +0.4. Still open: the level, about 0.1 pitcher a team-game short.
 - October 11, 5:20 p.m.: two display calibrations held and are on the page. TOTALS-05: the run charts and ranges are
   negative binomials with the simulator's mean and variance x1.095 (page RUN_SPREAD; tools/brl_runs_shape.py); the
   ranges now hold the real score within 1.4 points of what they claim (raw up to 2.7 short). PLAYER-08: the strikeout

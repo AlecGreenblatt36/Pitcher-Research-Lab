@@ -392,10 +392,11 @@ ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         # hazard's log-odds, regular season only (brl_live/hazard_correction.json); the postseason keeps its measured usage
         # on the plain hazard
         'hazard_correction':True,
-        # RELIEF-04 (off until its replays are read): the entry-inning correction on the relief-exit hazard, regular season
-        # only (brl_live/relief_correction.json); with it the team hooks come from brl_live/relief_hooks_corrected.json,
-        # measured against the corrected hazard. The postseason keeps the plain hazard, its hooks and its exit offset
-        'relief_correction':False}
+        # RELIEF-04 (on from October 11, 2026; its gates held on both seasons): the entry-inning correction on the
+        # relief-exit hazard, regular season only (brl_live/relief_correction.json); with it the team hooks come from
+        # brl_live/relief_hooks_corrected.json, measured against the corrected hazard. The postseason keeps the plain
+        # hazard, its hooks and its measured exit offset
+        'relief_correction':True}
 
 TRANSITIONS_PATH=Path(__file__).resolve().parent/'transitions.json'
 RUNNING_EVENTS_PATH=Path(__file__).resolve().parent/'running_events.json'

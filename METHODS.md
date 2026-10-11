@@ -245,6 +245,12 @@ real decisions (LEASH-03: the exit hazard's log loss falls by about 0.006), but 
 outcome one plate appearance at a time did not fix the middle outs lines, so the engine's pitch draws are built and
 idle.
 
+Relievers got the same treatment (RELIEF-04): the relief-exit hazard was right on average but pulled relievers who came
+in by the 3rd inning about two thirds more often than real managers do (long relief stays in) and 6th-inning arrivals
+too seldom, so the simulator used more relievers per out its starter missed than real teams. A correction by entry
+inning and batters faced, fitted on other seasons, cut that gap from 0.039 and 0.031 pitchers per out to 0.017 and 0.006
+with win chances and totals unchanged; it is on for regular-season games.
+
 ## The season's level, re-anchored in-season (October 11, 2026)
 
 Outcome levels move from season to season (more walks and fewer extra-base hits and home runs in 2026 than in 2025), and

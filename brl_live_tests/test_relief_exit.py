@@ -170,14 +170,14 @@ def test_entry_inning_correction_maps_cells_and_moves_only_its_cell():
     assert b[0] < 1e-6 < a[0] and abs(a[1] - b[1]) < 1e-12 and abs(a[2] - b[2]) < 1e-12
 
 
-def test_relief_correction_switch_is_off_and_regular_season_only():
-    """RELIEF-04 is built off. Switched on, regular-season games get the corrected exits with hooks measured against them;
-    postseason games keep the plain hazard, its hooks and the postseason exit offset."""
+def test_relief_correction_switch_is_on_and_regular_season_only():
+    """RELIEF-04 is on (its gates held, October 11, 2026): regular-season games get the corrected exits with hooks
+    measured against them; postseason games keep the plain hazard, its hooks and the postseason exit offset."""
     from brl_live import boxscore as bx
     from research_lab.game_sim.relief_exit import CORRECTION_TERMS
-    assert bx.ADJUST['relief_correction'] is False
+    assert bx.ADJUST['relief_correction'] is True
     base = ManagerPolicy()
-    m, _ = bx.manager_for(base, bx.ADJUST, ('NYY', 'BOS'), 'R')
+    m, _ = bx.manager_for(base, dict(bx.ADJUST, relief_correction=False), ('NYY', 'BOS'), 'R')
     assert m.relief_exit.gamma is None
     on = dict(bx.ADJUST, relief_correction=True)
     m, label = bx.manager_for(base, on, ('NYY', 'BOS'), 'R')
