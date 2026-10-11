@@ -3111,11 +3111,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var cname = { even_or_ahead: "Ahead or even", behind: "Behind in the count", two_strikes: "Two strikes" }[ck];
     var line = planSentence(planSpots(pr, plan, stPlan, ck === "all" ? pr.aim.by_family : bc[ck].by_family));
     if (line) h += '<p class="pd-line">' + (cname ? esc(cname) + ": " + esc(line.charAt(0).toLowerCase() + line.slice(1)) : esc(line)) + "</p>";
-    var fl2 = famLine(ck === "all" ? pr.aim.by_family : bc[ck].by_family);
+    var fl2 = famLine(ck === "all" ? pr.aim.by_family : bc[ck].by_family, pc);
     if (fl2) h += '<p class="pd-line">' + esc(fl2) + "</p>";
     if (pr.evidence && pr.evidence.level === "thin") h += '<p class="note">Small sample. Treat it as a lean.</p>';
     var shown = ["fastball", "breaking", "offspeed"].filter(function (fam) {
-      var mix = pc && pc.mix && pc.mix[fam];
+      var mix = famMix(pc, fam);
       return !(mix && mix.share < 0.01 && !(plan[fam] && plan[fam].length) && !(stPlan[fam] && stPlan[fam].length));    /* a pitch he does not throw */
     });
     if (hc.zones) {
@@ -3123,10 +3123,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var hand = pc && pc.throws && hzSplit(hc.zones) ? pc.throws : "all";
       h += '<h4 class="hz-h">' + esc(lastName(players[now.hid] && players[now.hid].name || now.hitter)) + " against " + esc(hzHandWords(hand)) + "</h4>" + hzLine(hzCells(hc.zones, hand, "all"), hzLeague(doc.league, hc.side, hand, "all"));
       h += '<div class="hz-tools">' + hzMetricSeg() + hzViewSeg() + "</div>";
-      h += hzStrip(hc, doc.league, hand, [["all", "All pitches", ""]].concat(shown.map(function (fam) { var mix = pc && pc.mix && pc.mix[fam]; return [fam, PITCH_NAME[fam], mix ? pct(mix.share) + ", " + Math.round(mix.speed) + " mph" : ""]; })), plan, stPlan, "");
+      var fs2 = famShares(pc), head2 = function (fam) { var mix = fs2[fam]; return [fam, PITCH_NAME[fam], mix ? pct(mix.share) + (mix.speed != null ? ", " + Math.round(mix.speed) + " mph" : "") : ""]; };
+      h += hzStrip(hc, doc.league, hand, [["all", "All pitches", ""]].concat(shown.map(head2)), plan, stPlan, "");
       h += hzLegend(hzMetric(), true);
       var pname = players[now.pid] && players[now.pid].name || now.pitcher;
-      var loc = pc && pc.zones ? hzPitchStrip(pc, hc.side, shown.map(function (fam) { var mix = pc.mix && pc.mix[fam]; return [fam, PITCH_NAME[fam], mix ? pct(mix.share) + ", " + Math.round(mix.speed) + " mph" : ""]; }), "loc", doc.league, pname + ": ") : "";
+      var loc = pc && pc.zones ? hzPitchStrip(pc, hc.side, shown.map(head2), "loc", doc.league, pname + ": ") : "";
       if (loc) h += '<details class="more" id="lc-loc-' + pk + '"' + (state.rpOpen.lcLoc ? " open" : "") + "><summary>Where " + esc(lastName(pname)) + " throws to " + (hc.side === "L" ? "lefties" : "righties") + "</summary>" + loc + hzLocLegend() + "</details>";
       var hname = players[now.hid] && players[now.hid].name || now.hitter, spr = sprayTend(hc.spray, doc.league, hc.side, hname + ": ");
       if (spr) h += '<details class="more" id="lc-spr-' + pk + '"' + (state.rpOpen.lcSpr ? " open" : "") + "><summary>Where " + esc(lastName(hname)) + " hits it</summary>" + spr + "</details>";
@@ -3362,9 +3363,28 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     return planSentence(planSpots(pr, pr.aim.cells, pr.strike && pr.strike.cells, pr.aim.by_family)) || "No clear spot to attack.";
   }
   /* Which pitch to lean on, from what each pitch type is worth at its best spots. */
-  function famLine(bf) {
+  /* His pitch-type families as the arsenal table counts them: this season's types when the card has them (the arsenal's
+     season), else the two seasons' mix. {fastball: {share, speed}, ...} */
+  var TYPE_FAM = { FF: "fastball", FA: "fastball", SI: "fastball", FC: "fastball", SL: "breaking", ST: "breaking", SV: "breaking", CU: "breaking", KC: "breaking", CS: "breaking", CH: "offspeed", FS: "offspeed", FO: "offspeed", SC: "offspeed", KN: "offspeed", EP: "offspeed" };
+  function famShares(pc) {
+    if (pc && pc.arsenal_season && pc.arsenal && pc.arsenal.length) {
+      var out = {}, tot = 0;
+      pc.arsenal.forEach(function (a) { var f = TYPE_FAM[a.type]; if (!f) return; var o = out[f] = out[f] || { share: 0, sp: 0, n: 0 }; o.share += a.share; o.sp += (a.speed || 0) * a.pitches; o.n += a.speed ? a.pitches : 0; tot += a.share; });
+      Object.keys(out).forEach(function (f) { out[f] = { share: tot ? out[f].share / tot : 0, speed: out[f].n ? out[f].sp / out[f].n : null }; });
+      return out;
+    }
+    return (pc && pc.mix) || {};
+  }
+  /* one family's share and speed as famShares counts it; a family missing from this season's arsenal counts as not thrown */
+  function famMix(pc, fam) {
+    if (!pc) return null;
+    var sh = famShares(pc);
+    return sh[fam] || (pc.arsenal_season ? { share: 0, speed: null } : null);
+  }
+  function famLine(bf, pc) {
     if (!bf) return "";
-    var order = ["fastball", "breaking", "offspeed"].filter(function (f) { return bf[f] && bf[f].pitches >= 30; }).sort(function (a, b) { return bf[a].runs_per_100_pitches - bf[b].runs_per_100_pitches; });
+    var sh = famShares(pc);
+    var order = ["fastball", "breaking", "offspeed"].filter(function (f) { return bf[f] && bf[f].pitches >= 30 && !(pc && sh[f] && sh[f].share < 0.05) && !(pc && (pc.mix || pc.arsenal) && !sh[f]); }).sort(function (a, b) { return bf[a].runs_per_100_pitches - bf[b].runs_per_100_pitches; });
     if (!order.length) return "";
     return "Lean on the " + PITCH_NAME[order[0]].toLowerCase() + (order.length > 1 ? ", then the " + order.slice(1).map(function (f) { return PITCH_NAME[f].toLowerCase(); }).join(", then the ") : "") + ".";
   }
@@ -3634,16 +3654,17 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (hh) h += '<p class="note">' + esc(hh) + "</p>";
     var rl = hc ? runLine(hc.run, doc.league) : "";
     if (rl) h += '<p class="note">' + esc(rl) + "</p>";
-    if (pc && pc.mix) h += '<p class="note">' + esc(lastName(nm(ids[1]))) + " throws " + ["fastball", "breaking", "offspeed"].filter(function (f) { return pc.mix[f] && pc.mix[f].share >= 0.005; }).map(function (f) { return PITCH_NAME[f].toLowerCase() + " " + pct(pc.mix[f].share) + (pc.mix[f].speed != null ? " (" + Math.round(pc.mix[f].speed) + " mph)" : ""); }).join(", ") + ".</p>";
+    var fsh = famShares(pc);
+    if (pc && pc.mix) h += '<p class="note">' + esc(lastName(nm(ids[1]))) + " throws " + ["fastball", "breaking", "offspeed"].filter(function (f) { return fsh[f] && fsh[f].share >= 0.005; }).map(function (f) { return PITCH_NAME[f].toLowerCase() + " " + pct(fsh[f].share) + (fsh[f].speed != null ? " (" + Math.round(fsh[f].speed) + " mph)" : ""); }).join(", ") + (pc.arsenal_season ? " this season" : "") + ".</p>";
     if (pr2.evidence && pr2.evidence.level === "thin") h += '<p class="note">Small sample: ' + Number(pr2.evidence.hitter_pitches).toLocaleString() + " pitches seen by the hitter, " + Number(pr2.evidence.pitcher_pitches_to_side).toLocaleString() + " thrown by the pitcher to " + (hc && hc.side === "L" ? "lefties" : "righties") + ". Treat it as a lean.</p>";
     var hand = pc && pc.throws ? pc.throws : "all", useHand = hc && hzSplit(hc.zones) ? hand : "all";
     var famsShown = function (plan, stPlan) {
       return ["fastball", "breaking", "offspeed"].filter(function (fam) {
-        var mix = pc && pc.mix && pc.mix[fam];
+        var mix = famMix(pc, fam);
         return !(mix && mix.share < 0.01 && !(plan && plan[fam] && plan[fam].length) && !(stPlan && stPlan[fam] && stPlan[fam].length));   /* a pitch he does not throw */
       });
     };
-    var famHead = function (fam) { var mix = pc && pc.mix && pc.mix[fam]; return [fam, PITCH_NAME[fam], mix ? pct(mix.share) + ", " + Math.round(mix.speed) + " mph" : ""]; };
+    var famHead = function (fam) { var mix = fsh[fam]; return [fam, PITCH_NAME[fam], mix ? pct(mix.share) + (mix.speed != null ? ", " + Math.round(mix.speed) + " mph" : "") : ""]; };
     var model = "";
     if (pr2.aim && hc) {
       var counts = [["all", "All counts"], ["even_or_ahead", "Ahead or even"], ["behind", "Behind"], ["two_strikes", "Two strikes"]], bc = pr2.aim.by_count || {};
@@ -3655,7 +3676,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         var line = planSentence(planSpots(pr2, plan, stPlan, bc[ck].by_family));
         if (line) h += '<p class="pd-line">' + esc(counts.filter(function (c) { return c[0] === ck; })[0][1]) + ": " + esc(line.charAt(0).toLowerCase() + line.slice(1)) + "</p>";
       }
-      var fl = famLine(ck === "all" ? pr2.aim.by_family : bc[ck].by_family);
+      var fl = famLine(ck === "all" ? pr2.aim.by_family : bc[ck].by_family, pc);
       if (fl) h += '<p class="pd-line">' + esc(fl) + "</p>";
       /* the standard hot zones against this pitcher's hand, the plan's spots outlined on each pitch type */
       var shown = famsShown(plan, stPlan);
