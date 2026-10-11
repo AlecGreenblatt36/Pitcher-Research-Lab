@@ -112,7 +112,9 @@ def put_text(repo, token, path, text, branch, message):
 # ---------------------------------------------------------------- pitch table
 SUBTYPES = ('FF', 'FA', 'SI', 'FC', 'SL', 'ST', 'SV', 'CU', 'KC', 'CS', 'CH', 'FS', 'FO', 'SC', 'KN', 'EP')
 FIELDS = ('season', 'day', 'game', 'pitcher', 'batter', 'stand_r', 'throw_r', 'inning', 'group', 'sub', 'balls', 'strikes', 'call',
-          'v0', 'v1', 'spin', 'pfx_x', 'pfx_z', 'px', 'pz', 'x0', 'z0', 'ext', 'last_in_pa', 'bunt_pa', 'ab', 'pitch_no', 'la', 'ls', 'cs', 'zone', 'out7', 'half', 'post')
+          'v0', 'v1', 'spin', 'pfx_x', 'pfx_z', 'px', 'pz', 'x0', 'z0', 'ext', 'last_in_pa', 'bunt_pa', 'ab', 'pitch_no', 'la', 'ls', 'cs', 'zone', 'out7', 'half', 'post',
+          'spray', 'traj')
+TRAJ = {'ground_ball': 0, 'line_drive': 1, 'fly_ball': 2, 'popup': 3}
 OUT7 = ('BIP_OUT', 'K', 'BB_HBP', '1B', '2B_3B', 'HR', 'OTHER_REACH')
 CALLS = {'take': 0, 'swing_contact': 1, 'whiff': 2, 'other': 3}
 
@@ -148,6 +150,11 @@ def pitch_table(doc: dict, season: int, game_types=('R',)) -> dict:
                 cols['ab'].append(int(row.get('i') or 0)); cols['pitch_no'].append(j)
                 hit = row.get('hit') if j == len(pitches) - 1 and code in ('X', 'D', 'E') else None
                 cols['la'].append(np.nan if not hit or hit[1] is None else float(hit[1])); cols['ls'].append(np.nan if not hit or hit[0] is None else float(hit[0]))
+                # the batted ball's direction (degrees off straightaway center, negative toward left field, from the
+                # gameday hit coordinates with home plate at 125.42, 198.27) and its trajectory
+                h8 = (list(hit) + [None] * 8)[:8] if hit else [None] * 8
+                cols['spray'].append(float(np.degrees(np.arctan2(float(h8[3]) - 125.42, 198.27 - float(h8[4])))) if h8[3] is not None and h8[4] is not None else np.nan)
+                cols['traj'].append(TRAJ.get(str(h8[5] or ''), -1))
                 cols['cs'].append(1 if code == 'C' else 0)
                 try:
                     cols['zone'].append(int(_zone) if _zone is not None else -1)
@@ -159,7 +166,7 @@ def pitch_table(doc: dict, season: int, game_types=('R',)) -> dict:
                 cols['post'].append(0 if game.get('game_type') == 'R' else 1)
     out = {}
     for k, v in cols.items():
-        out[k] = np.asarray(v, dtype=np.float32 if k in ('v0', 'v1', 'spin', 'pfx_x', 'pfx_z', 'px', 'pz', 'x0', 'z0', 'ext', 'la', 'ls') else np.int64)
+        out[k] = np.asarray(v, dtype=np.float32 if k in ('v0', 'v1', 'spin', 'pfx_x', 'pfx_z', 'px', 'pz', 'x0', 'z0', 'ext', 'la', 'ls', 'spray') else np.int64)
     return out
 
 

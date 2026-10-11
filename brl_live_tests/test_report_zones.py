@@ -68,3 +68,21 @@ def test_zone_split_by_batter_side_for_pitchers():
     out = B.zone_split(T, np.arange(3), swing, whiff, by='stand_r')
     vr = {c[0]: c[1:] for c in out['R']['breaking']}; vl = {c[0]: c[1:] for c in out['L']['breaking']}
     assert vr[9] == [1, 1, 1, 1, 0, 0] and vl[7] == [2, 1, 0, 1, 0, 0]
+
+
+def test_spray_counts_by_field_third_and_trajectory():
+    B = _report()
+    nan = float('nan')
+    #        spray  traj  ls
+    rows = [(-30.0, 0, 101.0),    # a hard ground ball to the left side
+            (-20.0, 2, 88.0),     # a fly ball to left
+            (2.0, 1, 97.0),       # a line drive up the middle
+            (25.0, 0, 70.0),      # a slow roller to the right side
+            (5.0, 3, 80.0),       # a pop-up
+            (nan, -1, nan)]       # a pitch with no batted ball
+    a = np.array(rows, dtype=float)
+    T = {'spray': a[:, 0], 'traj': a[:, 1].astype(int), 'ls': a[:, 2]}
+    out = B.spray_counts(T, np.arange(len(rows)))
+    assert out['gb'] == [1, 0, 1] and out['air'] == [1, 1, 0]
+    assert out['popups'] == 1 and out['hard'] == [2, 5]
+    assert B.spray_counts(T, [5]) is None and B.spray_counts({'zone': a[:, 0]}, [0]) is None

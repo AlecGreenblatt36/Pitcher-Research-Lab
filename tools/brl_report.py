@@ -161,6 +161,25 @@ def zone_split(T: dict, rows, swing, whiff, by: str = 'throw_r') -> dict:
     return out
 
 
+def spray_counts(T: dict, rows) -> dict | None:
+    """Where a hitter's batted balls go, in field thirds (left, center, right, split at 15 degrees either side of
+    straightaway), ground balls and balls in the air (line drives and fly balls) apart, plus pop-ups and hard-hit balls
+    (95 mph and up, of those measured). Counts only."""
+    rows = np.asarray(rows, dtype=np.int64)
+    if 'spray' not in T or not len(rows):
+        return None
+    ang = T['spray'][rows]; tr = T['traj'][rows]; ls = T['ls'][rows]
+    ok = np.isfinite(ang)
+    if not ok.any():
+        return None
+    third = np.digitize(np.clip(np.where(ok, ang, 0.0), -45, 45), [-15.0, 15.0])
+    air = (tr == 1) | (tr == 2)
+    meas = ok & np.isfinite(ls)
+    return {'gb': [int(((tr == 0) & ok & (third == k)).sum()) for k in range(3)],
+            'air': [int((air & ok & (third == k)).sum()) for k in range(3)],
+            'popups': int(((tr == 3) & ok).sum()), 'hard': [int((ls[meas] >= 95).sum()), int(meas.sum())]}
+
+
 def put(repo, token, path, text, branch, message, tries=14):
     """put_text with patience: several backfills commit to the same branch at once, so a 409 is ordinary; and many runs
     writing at once can hit GitHub's secondary rate limit (403 or 429 with a retry hint), which is waited out."""
@@ -394,6 +413,7 @@ class Fitted:
         # the standard hot-zone counts for every hitter of each side together, the reference the cards are colored against
         # (by the hitter's side, then the pitcher's hand)
         self.league['zones'] = {sd_: zone_split(T, np.flatnonzero(tr & (T['stand_r'] == (1 if sd_ == 'R' else 0))), swing, whiff) for sd_ in ('R', 'L')}
+        self.league['spray'] = {sd_: spray_counts(T, np.flatnonzero(tr & (T['stand_r'] == (1 if sd_ == 'R' else 0)))) for sd_ in ('R', 'L')}
         # the pitcher's training pitches
         self.gp = D._groups(T['pitcher'], tr)
         self.cgrp = np.where(T['strikes'] == 2, 2, np.where(T['balls'] > T['strikes'], 1, 0))
@@ -439,6 +459,9 @@ class Fitted:
             card['zone_top_ft'], card['zone_bottom_ft'] = round(self.zone[h][0], 2), round(self.zone[h][1], 2)
         if r is not None and len(r):
             card['zones'] = zone_split(T, r, self.swing, self.whiff)        # by the pitcher's hand; the page adds the two for all pitchers
+            sp = spray_counts(T, r)
+            if sp:
+                card['spray'] = sp
         if self.PM is not None and r is not None and len(r) >= 300:
             # VALUE-18 from the hitter's side: what his own swing tendencies cost him on the pitches he actually saw, against the average
             # hitter his side at the same pitches (his calibrated own part times the value of a swing against a take), per 600 plate
