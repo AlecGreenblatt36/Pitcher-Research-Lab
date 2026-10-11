@@ -172,7 +172,7 @@ league's change on his side; that change correlates 0.64 and 0.72 from one seaso
 (TAGS-03) compare his misses per swing on breaking balls or offspeed with his misses on fastballs, net of the league's
 same difference on his side (correlations 0.52 to 0.62 from one season to the next). The pull tags (TAGS-05) compare
 his share of ground balls and of balls in the air hit to his pull-side third with the league's (correlations 0.58 to
-0.70). A velocity read (extra misses on fastballs at 96 mph and up) did not carry over (TAGS-04: 0.26 and 0.15) and is
+0.70), and the ground-ball and fly-ball tags (TAGS-06) his ground-ball share (0.73 and 0.75). A velocity read (extra misses on fastballs at 96 mph and up) did not carry over (TAGS-04: 0.26 and 0.15) and is
 not shown. The plan sheets' lineup notes are drawn from these tags only.
 
 ## Privacy, storage and publication
