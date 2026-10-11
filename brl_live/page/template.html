@@ -2805,19 +2805,34 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   var SPLIT_CARRY = { r: 0.06, hitters: 317 };
   function splitExpected(card, lg, hand) {
     if (!card || !hzSplit(card.zones) || isSwitch(card) || (hand !== "R" && hand !== "L")) return null;
-    var side = card.side === "L" ? "L" : "R", lh = hzLeague(lg, side, hand, "all"), lr = hzLeague(lg, side, "R", "all"), ll = hzLeague(lg, side, "L", "all");
-    var mine = hzCells(card.zones, hand, "all"), both = hzCells(card.zones, "all", "all");
+    var side = card.side === "L" ? "L" : "R";
+    return splitCore(hzCells(card.zones, hand, "all"), hzCells(card.zones, "all", "all"), hzLeague(lg, side, hand, "all"), hzLeague(lg, side, "R", "all"), hzLeague(lg, side, "L", "all"), SPLIT_EXP_M);
+  }
+  /* the Expected split's arithmetic: his counts against this hand (or side) and against both, his side's league counts
+     against this one and against each; M per metric (none: the scaled rate) */
+  function splitCore(mine, both, lh, lr, ll, Ms) {
     if (!lh || !lr || !ll || !mine || !both) return null;
     var defs = { avg: [5, 4, false], slg: [6, 4, false], chase: [2, 1, true], miss: [3, 2, false] }, out = {};
     var tot = function (cells, ooz) { return hzTotal(ooz ? cells.filter(function (c) { return c[0] >= 11; }) : cells); };
     Object.keys(defs).forEach(function (k) {
       var d = defs[k], me = tot(mine, d[2]), my = tot(both, d[2]), L1 = tot(lh, d[2]), LA = tot(lr.concat(ll), d[2]);
       if (!L1[d[1]] || !LA[d[1]] || !LA[d[0]]) return;
-      var la = LA[d[0]] / LA[d[1]], hAll = (my[d[0]] + 30 * la) / (my[d[1]] + 30), sc = (L1[d[0]] / L1[d[1]]) * hAll / la, M = SPLIT_EXP_M[k];
+      var la = LA[d[0]] / LA[d[1]], hAll = (my[d[0]] + 30 * la) / (my[d[1]] + 30), sc = (L1[d[0]] / L1[d[1]]) * hAll / la, M = Ms[k];
       if (k !== "slg") sc = Math.min(0.995, Math.max(0.005, sc));
       out[k] = M ? (me[d[0]] + M * sc) / (me[d[1]] + M) : sc;
     });
     return out.avg != null ? out : null;
+  }
+  /* PSPLITS-01 (2024-25 to 2026 before August 1, 343 pitchers): a pitcher's split by the batter's side, beyond the usual
+     one for his hand, mostly did not carry over in AVG and SLG against (correlation 0.10 and 0.06); chases and misses
+     carried over in part (0.26 and 0.32), but shrinking toward his own split did not beat the usual split beyond noise, so
+     every Expected rate is his level against all batters times his hand's league split (no m: the scaled rate). */
+  var PSPLIT_EXP_M = {}, PSPLIT_CARRY = { say: "A pitcher's split beyond the usual one for his hand mostly did not carry over a season later (average and slugging against: correlation 0.10 and 0.06, 343 pitchers).",
+    exp: "his level against all batters with the usual split for pitchers of his hand." };
+  function pitcherSplitExpected(card, lg, side) {
+    if (!PSPLIT_EXP_M || !card || !hzSplit(card.zones) || (side !== "R" && side !== "L")) return null;
+    var hand = card.throws === "L" ? "L" : "R";
+    return splitCore(hzCells(card.zones, side, "all"), hzCells(card.zones, "all", "all"), hzLeague(lg, side, hand, "all"), hzLeague(lg, "R", hand, "all"), hzLeague(lg, "L", hand, "all"), PSPLIT_EXP_M);
   }
   function hzView() { return state.hzView === "exp" ? "exp" : "raw"; }
   function hzViewSeg() { return hzSeg("hzview", hzView(), [["raw", "As it happened"], ["exp", "Expected"]], "Which numbers"); }
@@ -3693,11 +3708,12 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   function splitsTable(card, kind, asof, lg) {
     var z = card && card.zones;
     if (!z || !hzSplit(z)) return "";
-    var body = "", canExp = kind === "hitter" && !isSwitch(card) && !!splitExpected(card, lg, "R"), exp = canExp && hzView() === "exp";
+    var ex = function (h0) { return kind === "hitter" ? splitExpected(card, lg, h0) : pitcherSplitExpected(card, lg, h0); };
+    var body = "", canExp = (kind !== "hitter" || !isSwitch(card)) && !!ex("R"), exp = canExp && hzView() === "exp";
     [["R", kind === "hitter" ? "vs RHP" : "vs RHB"], ["L", kind === "hitter" ? "vs LHP" : "vs LHB"]].forEach(function (r) {
       var c = hzCells(z, r[0], "all");
       if (!c) return;
-      var t = hzTotal(c), o = hzTotal(c.filter(function (x) { return x[0] >= 11; })), e = exp ? splitExpected(card, lg, r[0]) : null;
+      var t = hzTotal(c), o = hzTotal(c.filter(function (x) { return x[0] >= 11; })), e = exp ? ex(r[0]) : null;
       if (t[4] < 10) return;
       body += '<tr><th scope="row">' + r[1] + "</th><td>" + t[4] + "</td><td>" + hzFmt(HZ_METRICS.avg, e ? e.avg : t[5] / t[4]) + "</td><td>" + hzFmt(HZ_METRICS.slg, e && e.slg != null ? e.slg : t[6] / t[4]) + "</td><td>" +
         (e && e.chase != null ? Math.round(100 * e.chase) + "%" : o[1] ? Math.round(100 * o[2] / o[1]) + "%" : "\u2013") + "</td><td>" + (e && e.miss != null ? Math.round(100 * e.miss) + "%" : t[2] ? Math.round(100 * t[3] / t[2]) + "%" : "\u2013") + "</td></tr>";
@@ -3706,7 +3722,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     return '<h2 class="hz-h2">Splits</h2>' + (canExp ? '<div class="hz-tools">' + hzViewSeg() + "</div>" : "") + '<div class="tbl-wrap splits-wrap"><table class="box splits"><thead><tr><th scope="col">' + (exp ? "Expected" : '<span class="visually-hidden">Split</span>') + '</th><th scope="col">AB</th><th scope="col">AVG</th><th scope="col">SLG</th><th scope="col">Chase</th><th scope="col">Miss</th></tr></thead><tbody>' + body +
       '</tbody></table></div><p class="note">' + (kind === "hitter" ? "By the pitcher's hand" : "Hitters against him, by their side") + ", " + esc(hzSeasons(asof)) + ". AB: at-bats ending on a pitch in the zones. Chase: swings at pitches out of the zone. Miss: misses per swing." +
       (kind === "hitter" ? " A hitter's split beyond the usual one for his side mostly did not carry over a season later (average and slugging: correlation " + SPLIT_CARRY.r.toFixed(2) + ", " + SPLIT_CARRY.hitters + " hitters)." +
-        (exp ? " Expected: his level against all pitchers with the usual split for his side; misses keep part of his own split. AB stays as it happened." : "") : "") + "</p>";
+        (exp ? " Expected: his level against all pitchers with the usual split for his side; misses keep part of his own split. AB stays as it happened." : "") :
+        PSPLIT_CARRY ? " " + PSPLIT_CARRY.say + (exp ? " Expected: " + PSPLIT_CARRY.exp + " AB stays as it happened." : "") : "") + "</p>";
   }
   function hzStatLine(card, hand, lg) {
     var c = card && card.zones ? hzCells(card.zones, hand, "all") : null;
@@ -4700,7 +4717,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
           h += '<p class="pd-line">Hitters chase ' + (x.chase_rate_against != null ? pct(x.chase_rate_against) : "\u2013") + " of his pitches out of the zone (league " + (lg.chase_rate != null ? pct(lg.chase_rate) : "\u2013") + "). " +
             (x.looks_in_ends_out != null ? pct(x.looks_in_ends_out) + " of his pitches look like strikes when the hitter has to decide, then end up balls (league " + (lg.looks_in_ends_out != null ? pct(lg.looks_in_ends_out) : "\u2013") + ")." : "") + "</p>";
           h += psSlot("log", pk0, id, yr);
-          h += splitsTable(x, "pitcher", doc.asof);
+          h += splitsTable(x, "pitcher", doc.asof, lg);
           /* the arsenal the way every scouting sheet lists it, then where each pitch goes to each side */
           var fams = ["fastball", "breaking", "offspeed"].filter(function (fam) { return mix[fam] && mix[fam].share >= 0.005; });     /* a pitch he all but never throws gets no row */
           if (x.arsenal && x.arsenal.length) {

@@ -4851,14 +4851,16 @@
     "columns": {
      "ID": "PSPLITS-01",
      "Attempt": "SPLITS-01 for pitchers: how much of a pitcher's split by the batter's side carries over (the pitcher page's splits table, vs RHB and vs LHB: AVG and SLG against, chases, misses per swing). The same candidates with the pitcher's throwing hand as his side (raw; league for his hand; scaled, his level against all batters times his hand's league split; shrunk, m fitted), the same metrics, windows (m on 2023-2024 to 2025, scored once on 2024-2025 to 2026 before August 1), pitchers with 300 or more batters faced in training, bootstrap over pitchers (2,000 draws) and carry-over of his own split beyond his hand's (against lefties minus against righties). tools/brl_report.py split_shrink_study with who 'pitcher', report lane, aggregates only. Synthetic check: planted own splits recovered (shrunk beats raw and scaled, carry-over above 0.15); none planted, m 800 or more and carry-over near zero.",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions on 2026: (1) shrunk beats raw on all four metrics with the interval excluding zero; (2) on misses and chases shrunk beats scaled with the interval excluding zero (a pitcher's split by side follows his pitch mix, which carries over); (3) on AVG and SLG against, the carry-over correlation is under 0.3. Decision rule: if (1) holds, the pitcher splits table shows Expected numbers in the Expected view (shrunk at the fitted m where it beats scaled, scaled otherwise), with the carry-over quoted in its note; if (1) fails, nothing changes.",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions on 2026: (1) shrunk beats raw on all four metrics with the interval excluding zero; (2) on misses and chases shrunk beats scaled with the interval excluding zero (a pitcher's split by side follows his pitch mix, which carries over); (3) on AVG and SLG against, the carry-over correlation is under 0.3. Decision rule: if (1) holds, the pitcher splits table shows Expected numbers in the Expected view (shrunk at the fitted m where it beats scaled, scaled otherwise), with the carry-over quoted in its note; if (1) fails, nothing changes. **Results (run 38128749747, receipt research/report-38128749747.json; 343 pitchers scored on 2026 before August 1, 103 left-handed; 74,144 at-bats, 165,388 pitches out of the zone, 150,638 swings):** AVG m 1,600, shrunk minus raw **-0.00085 [-0.00118, -0.00051]**, minus scaled -0.000023 [-0.000074, +0.000025], carry-over r 0.10 [-0.01, 0.21] (242 pitchers); SLG m 1,600, shrunk minus raw **-0.00114 [-0.00168, -0.00067]**, minus scaled -0.000021 [-0.00011, +0.00006], r 0.06 [-0.07, 0.20]; chase m 800, shrunk minus raw **-0.00037 [-0.00055, -0.00020]**, minus scaled -0.000062 [-0.00017, +0.00004], r 0.26 [0.12, 0.40] (166); misses m 400, shrunk minus raw **-0.00030 [-0.00042, -0.00017]**, minus scaled -0.00011 [-0.00026, +0.00004], r 0.32 [0.18, 0.46] (152). League split (against lefties minus righties, AVG against): left-handed pitchers -17 points, right-handed +5. **(1) held; (2) failed** (on chases and misses shrunk does not beat scaled beyond noise, though the carry-over correlations are 0.26 and 0.32); **(3) held** (0.10 and 0.06). Decision, as registered: the pitcher splits table shows Expected numbers in the Expected view, every rate scaled (his level against all batters times his hand's league split), with the carry-over in its note (page pitcherSplitExpected, PSPLIT_EXP_M empty, PSPLIT_CARRY).",
+     "Delta corrected Brier, 2026": "(1) and (3) held; (2) failed"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38128749747"
+    ],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "(1) and (3) held; (2) failed"
    }
   ],
   "BOX-01": [

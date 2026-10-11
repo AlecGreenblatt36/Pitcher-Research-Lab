@@ -36,8 +36,8 @@ def _cells(rng, ab, avg, swings, miss, ooz_pitches, chase):
 
 def _run(js):
     s = _script()
-    consts = ''.join(re.search(r'\n  var ' + v + r' = .*?;\n', s, re.S).group(0) for v in ('SPLIT_EXP_M', 'SPLIT_CARRY'))
-    fns = ''.join(_fn(s, n) for n in ('hzTotal', 'hzCells', 'hzSplit', 'hzLeague', 'isSwitch', 'splitExpected'))
+    consts = ''.join(re.search(r'\n  var ' + v + r' = .*?;\n', s, re.S).group(0) for v in ('SPLIT_EXP_M', 'SPLIT_CARRY', 'PSPLIT_EXP_M'))
+    fns = ''.join(_fn(s, n) for n in ('hzTotal', 'hzCells', 'hzSplit', 'hzLeague', 'isSwitch', 'splitExpected', 'splitCore', 'pitcherSplitExpected'))
     out = subprocess.run(['node', '-e', "const assert=require('assert');" + consts + fns + js], check=True, capture_output=True, text=True)
     return out.stdout
 
@@ -115,3 +115,19 @@ def test_hot_zones_against_a_hand_anchor_on_his_level_against_both_hands():
     assert np.mean(list(got[0].values())) < np.mean(list(got[1].values()))
     assert got[2] == got[3]                                   # misses against righties keep the old anchor
     assert got[4] is None and got[5] is None                  # switch hitters and both hands: no anchor
+
+
+def test_pitcher_expected_split_is_his_level_with_his_hands_league_split():
+    rng = np.random.default_rng(4)
+    me = {'R': {'all': _cells(rng, 500, .220, 900, .30, 800, .33)}, 'L': {'all': _cells(rng, 300, .290, 600, .22, 500, .28)}}
+    lgz = {'R': {'R': {'all': _cells(rng, 90000, .240, 200000, .25, 150000, .30)}, 'L': {'all': _cells(rng, 40000, .250, 90000, .24, 70000, .29)}},
+           'L': {'R': {'all': _cells(rng, 80000, .255, 180000, .22, 140000, .28)}, 'L': {'all': _cells(rng, 30000, .228, 70000, .28, 50000, .31)}}}
+    card = {'throws': 'L', 'zones': me}
+    got = json.loads(_run("process.stdout.write(JSON.stringify([pitcherSplitExpected(" + json.dumps(card) + "," + json.dumps({'zones': lgz}) + ",'R'),"
+                          "pitcherSplitExpected(" + json.dumps(card) + "," + json.dumps({'zones': lgz}) + ",'all')]));"))
+    tot = lambda cells: np.array(cells, float).sum(0)
+    both = tot(me['R']['all']) + tot(me['L']['all'])
+    l1, la_ = tot(lgz['R']['L']['all']), tot(lgz['R']['L']['all']) + tot(lgz['L']['L']['all'])      # batter side R and both, against lefty pitchers
+    la = la_[5] / la_[4]; h_all = (both[5] + 30 * la) / (both[4] + 30)
+    assert abs(got[0]['avg'] - min(0.995, max(0.005, l1[5] / l1[4] * h_all / la))) < 1e-9
+    assert got[1] is None
