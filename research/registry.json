@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 277,
- "rows": 280,
+ "experiments": 278,
+ "rows": 281,
  "records": {
   "ACC-01": [
    {
@@ -4544,6 +4544,22 @@
     ],
     "frozen_commits": [],
     "status": "held: 0.58 to 0.70"
+   }
+  ],
+  "TAGS-06": [
+   {
+    "id": "TAGS-06",
+    "columns": {
+     "ID": "TAGS-06",
+     "Attempt": "Ground-ball and fly-ball hitters: his share of ground balls among his batted balls with a trajectory (ground balls, liners, fly balls and pop-ups), against the league's on his side, rows of 120. Tags at 8 points either way. Same splits and hitters as TAGS-01 (tag_study with spray and gb_share).",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: correlation 0.5 or more in both splits; each tag with 10 or more hitters holds at half its threshold with the interval excluding zero. Decision rule: the tags that hold in both splits go on the hitter cards and plans (Ground-ball hitter, Fly-ball hitter); the rest do not.",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "ZONES-01": [

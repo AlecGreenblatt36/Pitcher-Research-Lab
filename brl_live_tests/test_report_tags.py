@@ -72,7 +72,8 @@ def test_tags_hold_when_habits_carry_over_and_not_when_redrawn():
     fam = B.tag_study(_world(True), lambda *a: None, dict(spec, families=True))['splits'][0]['relative_family_whiff']
     assert set(fam) == {'breaking', 'offspeed'} and fam['breaking']['hitters'] > 50 and fam['breaking']['corr_train_test'] > 0.4
     assert abs(fam['offspeed']['corr_train_test']) < 0.3                       # nothing planted on offspeed
-    pull = B.tag_study(_world(True), lambda *a: None, dict(spec, spray=True))['splits'][0]['pull']
+    pull = B.tag_study(_world(True), lambda *a: None, dict(spec, spray=True, gb_share=True))['splits'][0]['pull']
+    assert 'gb_share' in pull and pull['gb_share']['hitters'] > 50
     assert pull['pull_gb']['corr_train_test'] > 0.5 and pull['pull_gb']['tags']['pulls']['test_diff'] > 0.05
     vel = B.tag_study(_world(True, velo=True), lambda *a: None, dict(spec, velocity=True))['splits'][0]['relative_velocity_whiff']
     assert vel['hitters'] > 50 and vel['corr_train_test'] > 0.3 and vel['tags']['late_on_velocity']['test_diff'] > 0.03

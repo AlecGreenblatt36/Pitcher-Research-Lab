@@ -1312,9 +1312,9 @@ def tag_counts(T: dict, mask) -> dict:
     if 'spray' in T and 'traj' in T:
         ang = T['spray'][rows].astype(np.float64); okb = np.isfinite(ang); trj = T['traj'][rows]
         pulled = okb & np.where(T['stand_r'][rows] == 1, np.nan_to_num(ang) < -15.0, np.nan_to_num(ang) > 15.0)
-        gb_, air_ = okb & (trj == 0), okb & ((trj == 1) | (trj == 2))
+        gb_, air_, pop_ = okb & (trj == 0), okb & ((trj == 1) | (trj == 2)), okb & (trj == 3)
     else:
-        pulled = gb_ = air_ = np.zeros(len(rows), bool)
+        pulled = gb_ = air_ = pop_ = np.zeros(len(rows), bool)
     n = c(np.ones(len(rows), bool))
     return {'bats': bats, 'side': (c(T['stand_r'][rows] == 1) / np.maximum(n, 1) >= 0.5).astype(np.int64), 'n': n,
             'chase': (c(sw & outside), c(outside)), 'whiff': (c(wh), c(sw)), 'first': (c(sw & first), c(first)),
@@ -1324,7 +1324,9 @@ def tag_counts(T: dict, mask) -> dict:
             # TAGS-04: misses per swing on hard fastballs (96 mph and up) and on softer ones (under 93)
             'wh_hi': (c(wh & fb & (v0 >= 96)), c(sw & fb & (v0 >= 96))), 'wh_lo': (c(wh & fb & (v0 < 93)), c(sw & fb & (v0 < 93))),
             # TAGS-05: pulled ground balls and pulled balls in the air (field third on his pull side, 15 degrees off center)
-            'pull_gb': (c(gb_ & pulled), c(gb_)), 'pull_air': (c(air_ & pulled), c(air_))}
+            'pull_gb': (c(gb_ & pulled), c(gb_)), 'pull_air': (c(air_ & pulled), c(air_)),
+            # TAGS-06: ground balls among his batted balls with a trajectory
+            'gb_share': (c(gb_), c(gb_ | air_ | pop_))}
 
 
 def _tag_league(tc: dict, rate: str, side_wise: bool) -> np.ndarray:
@@ -1448,7 +1450,7 @@ def tag_study(T: dict, stage, spec: dict) -> dict:
         if spec.get('spray'):
             # TAGS-05: his pull share on ground balls and in the air against the league's on his side; tags at fixed thresholds
             res['pull'] = {}
-            for key, thr, floor in (('pull_gb', 0.10, 60), ('pull_air', 0.08, 60)):
+            for key, thr, floor in (('pull_gb', 0.10, 60), ('pull_air', 0.08, 60)) + ((('gb_share', 0.08, 120),) if spec.get('gb_share') else ()):
                 pn, pd_ = a[key]
                 r_tr = np.where(pd_ >= floor, pn / np.maximum(pd_, 1e-9), np.nan)
                 d_tr = r_tr - _tag_league(a, key, True)
