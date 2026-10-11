@@ -222,8 +222,8 @@ details.more[open] summary::before { content: "\2212"; }
 
 /* Tabs */
 .tabs { position: sticky; top: 0; z-index: 5; background: var(--paper); border-bottom: 1px solid var(--rule); }
-[id^="rp-detail-"] { scroll-margin-top: 108px; }   /* a tapped hitter's plan opens below the sticky tabs (two rows on a phone) */
-@media (min-width: 600px) { [id^="rp-detail-"] { scroll-margin-top: 62px; } }
+[id^="rp-detail-"], [id^="sheet-"], [id^="numbers-"] { scroll-margin-top: 108px; }   /* a tapped hitter's plan opens below the sticky tabs (two rows on a phone) */
+@media (min-width: 600px) { [id^="rp-detail-"], [id^="sheet-"], [id^="numbers-"] { scroll-margin-top: 62px; } }
 .tabs .wrap { display: flex; gap: 2px; overflow-x: auto; }
 .tab { border: 0; background: none; padding: 12px 12px 10px; min-height: 48px; font-weight: 700; color: var(--muted); border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap; }
 .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--board); }
@@ -435,6 +435,9 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .roster th[scope="row"] { text-align: left; white-space: nowrap; font-family: var(--body); font-size: 16px; font-weight: 400; color: var(--ink); border-bottom: 1px solid var(--rule-soft); }
 .roster th[scope="row"] a { color: inherit; }
 .ld .seg { display: flex; }
+.jump { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 14px; }
+.jump button { min-height: 44px; padding: 6px 14px; border-radius: 22px; border: 1px solid var(--rule-strong); background: var(--surface); color: var(--ink); font: inherit; font-weight: 700; font-size: 15px; cursor: pointer; }
+.jump button:hover { background: var(--hover); }
 .ld .seg button { flex: 1 1 auto; }
 .roster th[scope="row"] small { color: var(--muted); font-weight: 400; }
 .roster td { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -3208,6 +3211,15 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (!host) return;
     var stop = function () { state.rpFollow[pk] = false; };
     host.querySelectorAll("[data-rpmetric]").forEach(function (b) { b.addEventListener("click", function () { state.rpMetric = b.getAttribute("data-rpmetric"); loadReport(f, pk); }); });
+    host.querySelectorAll("[data-jump]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var id = b.getAttribute("data-jump"), el = document.getElementById(id);
+        if (!el) return;
+        var d = /^numbers-/.test(id) ? el.querySelector("details") : null;      /* the grid sits in a fold: open it */
+        if (d && !d.open) { d.open = true; state.rpOpen.numbers = true; }
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
     host.querySelectorAll("[data-rpcount]").forEach(function (b) { b.addEventListener("click", function () { stop(); state.rpCount = b.getAttribute("data-rpcount"); loadReport(f, pk); var d = document.getElementById("rp-detail-" + pk); if (d) d.scrollIntoView({ behavior: "instant", block: "start" }); }); });
     host.querySelectorAll("[data-rp]").forEach(function (td) {
       td.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); td.click(); } });
@@ -3834,6 +3846,10 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var sel = state.rpPair[pk], selSide = sel ? sel.split("|")[0] : null;
     var h = '<section class="sec wide"><h2>Game plan</h2><p class="lede">How to pitch every hitter in both lineups, from ' + (Number(doc.training_pitches) / 1e6).toFixed(1) + " million pitches thrown before " + esc(shortDate(doc.asof)) + ". Nothing from this game goes in." +
       (retro ? " This is a look back built the same way." : early ? " Built the day before; it is rebuilt on game day." : "") + "</p>";
+    /* jump buttons to each lineup's sheet and the full grid (the plan runs long on a phone) */
+    var jumps = ["away", "home"].filter(function (sd) { return doc.sides && doc.sides[sd] && doc.teams && doc.teams[sd]; });
+    if (jumps.length) h += '<div class="jump" role="group" aria-label="Jump to">' + jumps.map(function (sd) { return '<button type="button" data-jump="sheet-' + pk + "-" + sd + '">' + esc(nickname(doc.teams[sd].name)) + " lineup</button>"; }).join("") +
+      '<button type="button" data-jump="numbers-' + pk + '">All matchups</button></div>';
     if (now) h += liveNowStrip(f, pk, doc, now, false);
     /* one set of hot-zone controls for both lineups */
     var anyZones = Object.keys(players).some(function (id) { return players[id].hitter && players[id].hitter.zones; });
@@ -3845,11 +3861,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     ["away", "home"].forEach(function (side) {
       var sheet = planSheet(doc, side, sel);
       if (!sheet) return;
-      h += '<section class="sec wide">' + sheet + "</section>";
+      h += '<section class="sec wide" id="sheet-' + pk + "-" + side + '">' + sheet + "</section>";
       if (!liveSel && selSide === side) h += detail;
     });
     // every hitter against every arm, as numbers
-    h += '<section class="sec wide"><details class="more" data-keep="numbers"' + (state.rpOpen.numbers ? " open" : "") + '><summary>Every hitter against every arm</summary>';
+    h += '<section class="sec wide" id="numbers-' + pk + '"><details class="more" data-keep="numbers"' + (state.rpOpen.numbers ? " open" : "") + '><summary>Every hitter against every arm</summary>';
     h += '<div class="seg" role="group" aria-label="Which number">' + Object.keys(RP_METRICS).map(function (k2) {
       return '<button data-rpmetric="' + k2 + '" aria-pressed="' + (k2 === key) + '">' + RP_METRICS[k2].label + "</button>";
     }).join("") + '</div><p class="note">' + esc(m.label + ": " + m.unit) + ". Blue is good for the pitcher. Tap a cell for that matchup.</p>";
