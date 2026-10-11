@@ -81,6 +81,8 @@ queue behind the shards (seen October 11 at 16:50 UTC). Check-only replays (n_si
   pages. Cost: starters run a little long in the middle (16.5 and 17.5 outs about 2 points high). LEVEL-03 replays (level
   plus running plays, tags v2-prod4-lvrun-1000-<season>, runs started 17:34 and 17:44 UTC) score like LEVEL-02 against
   v2-prod4-tb-1000.
+  Queued for Alec with POST-03: the correction in postseason games too, which needs the postseason factor x0.91
+  re-measured on the corrected hazard (a postseason-only change, so his call).
 - October 11, 12:15 p.m.: LEVEL-01 held (in-season re-anchoring of each outcome's league level: +0.114 and +0.146 nats per
   1,000 real plate appearances at m 10,000, both intervals above zero; check-only runs 38152933999 and 38152908828). The
   layer is built (brl_live/provider_adjust.py LevelAdjust; per-date offsets brl_replay/level_offsets_<season>.json from
@@ -883,6 +885,10 @@ far and part of why simulated bullpens struck out fewer batters and allowed more
   context table includes the current season through late September, so October is closer. Next season's item: re-anchor
   each outcome's league level in-season from the season's real plate appearances so far (offsets log(observed/predicted)
   shrunk by plate appearances), tested in replays of both seasons (RUNS-03 pointed the same way for the running plays).
+- (October 11) Relievers per team-game: the simulator uses about 0.1 fewer pitchers than real teams (4.19 against 4.29 in
+  2025, 4.15 against 4.28 in 2026, LEASH-02's replays) and its game-to-game differences run wide: actual on simulated
+  slope 0.50 and 0.48; once the starter's real length is known, the simulated count adds little (0.11 and 0.07). The
+  team hooks (RELIEF-03) are the first suspect; it matters for the bullpen's chance-to-pitch table more than for wins.
 - (October 11) The plate-appearance model's player differences run wide out of sample: by tenths of the simulated hit and
   home-run rate per plate appearance (PLAYER-06's replays, live settings), each step in the simulated rate came with 0.90
   (hits) and 0.82 (home runs) of that step in actual rates in 2026, the model's holdout season, against 0.95 and 0.97 in
