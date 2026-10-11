@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 320,
- "rows": 323,
+ "experiments": 321,
+ "rows": 324,
  "records": {
   "ACC-01": [
    {
@@ -5323,6 +5323,24 @@
     ],
     "frozen_commits": [],
     "status": "stage 1 held; (1) failed in 2026; LEASH-02 stays"
+   }
+  ],
+  "RELIEF-04": [
+   {
+    "id": "RELIEF-04",
+    "columns": {
+     "ID": "RELIEF-04",
+     "Attempt": "When long relievers come out, by the inning they entered. The simulator adds relievers faster per out its starter misses than real teams do (LEASH-02's replays: pitchers per team-game on the starter's outs -0.185 and -0.158 against -0.146 and -0.127 real; 4.19 and 4.15 pitchers against 4.29 and 4.28). Diagnosis (described after looking; research run 38173086706, the live relief-exit hazard of RELIEF-02 on every real relief decision of 2023 to 2026, tools/brl_research.py relief_entry): right overall (actual over expected 0.98 to 1.02 by season) but not by the inning the reliever came in: entering in the 3rd inning or earlier, real relievers come out 0.60 to 0.63 times as often as it expects in every season (0.17 after one or two batters at an inning's end, 0.41 to 0.46 at 3 to 5 batters, 0.48 to 0.59 at 6 to 8, 0.68 to 0.78 at 9 or more), in the 4th 0.90 to 0.94, in the 6th 1.12 to 1.17 (one-inning roles pulled more than it expects), mid-inning in the 8th 0.82. The hazard knows the reliever's usual length but not that an early entry is a long man's job. Built: a correction on the hazard's log-odds, one term per entry inning (3rd or earlier, 4th, 5th, 6th, 7th, 8th, 9th or later) and decision cell (an inning's end after one or two batters; 3 to 5, 6 to 8 and 9 or more batters, mid-inning and at an inning's end), 49 terms with a light ridge, fitted with the hazard's own chance as the offset (research_lab.game_sim.relief_exit CORRECTION_TERMS; tools/brl_research.py relief_fix). Each replay season's correction is fitted against that replay's own exit table on the seasons the table was fitted on (2025: 2023, 2024, 2026; 2026: 2023 to 2025), so each season is held out of both; the live one on 2023 to 2026 with the live table. In the replays the team hooks (RELIEF-03) are recomputed against the corrected hazard. Scored by tools/brl_relief_usage.py and tools/replay_compare.py",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the fit and the replays.** Stage 1, decisions: (a) on 2025 and on 2026 (each held out of its table and correction) the decision log loss improves, each game-clustered interval below zero; (b) removals of relievers who entered in the 3rd inning or earlier, and of those who entered in the 6th, expected within 10% of actual in both held-out seasons. Stage 2, full replays of 2025 and 2026 with LEASH-02's settings and seeds plus the correction (tags v2-prod4-relief4-1000-<season>), against LEASH-02's replays: (1) the gap between the simulated and the real slope of pitchers per team-game on the starter's outs at least halved in both seasons (now -0.039 and -0.031); (2) the mean pitchers per team-game no further from actual by more than 0.03 in either season (now -0.10 and -0.13); (3) the win Brier pooled not worse than +0.0002; (4) the mean total's squared error not worse, the pooled paired interval's upper end below +0.03 runs squared. Decision rule: if (a), (b) and (1) to (4) hold, the correction goes live for regular-season games (ADJUST relief_correction, brl_live/relief_correction.json, the live team hooks recomputed against the corrected hazard); the postseason keeps its measured exit offset (+0.4, fitted on the plain hazard). Otherwise nothing changes.",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [
+     "38173086706"
+    ],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "LEVEL-01": [

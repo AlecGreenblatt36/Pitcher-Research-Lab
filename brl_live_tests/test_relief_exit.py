@@ -136,3 +136,35 @@ def test_postseason_exit_offset_adds_to_the_hooks():
     import json as _j
     hooks = _j.loads((ROOT / 'brl_live' / 'relief_hooks.json').read_text())['teams']
     assert abs(m.relief_offsets['away']['mid'] - (hooks['NYY']['mid'] + 0.4)) < 1e-12
+
+
+def test_entry_inning_correction_maps_cells_and_moves_only_its_cell():
+    """RELIEF-04: the correction's term follows the entry inning and the decision cell; zeros change nothing; a term moves
+    only decisions in its cell; the replay helper (relief_decisions.fitted) adds the same log-odds as the engine."""
+    from research_lab.game_sim.relief_exit import CORRECTION_TERMS, correction_index
+    assert len(CORRECTION_TERMS) == 49
+    assert CORRECTION_TERMS[correction_index(2, True, 2)] == 'inle3_e12'
+    assert CORRECTION_TERMS[correction_index(3, False, 4)] == 'inle3_m35'
+    assert CORRECTION_TERMS[correction_index(6, True, 7)] == 'in6_e68'
+    assert CORRECTION_TERMS[correction_index(11, False, 9)] == 'in9up_m9'
+    assert correction_index(5, False, 2) is None
+    zero = ReliefExit(DOC, correction={'terms': list(CORRECTION_TERMS), 'coef': [0.0] * 49})
+    plain = ReliefExit(DOC)
+    p = PitcherProfile('R1', 'Reliever', 'R', role='setup', expected_batters=4, usage={'ninth': 0.1, 'late': 0.8})
+    st = GameState(inning=7, half='top', outs=1, home_score=3, away_score=2)
+    for bf, ended in ((4, False), (4, True), (7, False), (2, True)):
+        r1, r2 = np.random.default_rng(5), np.random.default_rng(5)
+        assert [plain.remove(p, line(bf), st, 'home', ended, r1) for _ in range(300)] == [zero.remove(p, line(bf), st, 'home', ended, r2) for _ in range(300)]
+    coef = [0.0] * 49; coef[CORRECTION_TERMS.index('in7_m35')] = -20.0                  # line() entered in the 7th
+    stay = ReliefExit(DOC, correction={'terms': list(CORRECTION_TERMS), 'coef': coef})
+    rng = np.random.default_rng(2)
+    assert not any(stay.remove(p, line(4), st, 'home', False, rng) for _ in range(500))
+    assert np.mean([stay.remove(p, line(4), st, 'home', True, rng) for _ in range(2000)]) > 0.3   # another cell: unchanged
+    import pytest
+    with pytest.raises(ValueError):
+        ReliefExit(DOC, correction={'terms': list(CORRECTION_TERMS)[:48], 'coef': [0.0] * 48})
+    from brl_replay.relief_decisions import fitted
+    d = pd.DataFrame({'bf': [4, 4, 2], 'exp': [4, 4, 4], 'runs': [0, 0, 0], 'inning': [7, 7, 7], 'lead': [1, 1, 1], 'ninth': [0.1] * 3,
+                      'late': [0.8] * 3, 'n_on': [0, 0, 0], 'n_outs_when_up': [1, 0, 0], 'ended': [0, 1, 1], 'entry_inning': [7, 7, 7]})
+    a, b = fitted(d, DOC), fitted(d, DOC, {'terms': list(CORRECTION_TERMS), 'coef': coef})
+    assert b[0] < 1e-6 < a[0] and abs(a[1] - b[1]) < 1e-12 and abs(a[2] - b[2]) < 1e-12

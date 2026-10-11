@@ -17,7 +17,7 @@ from datetime import date as _date
 import numpy as np
 import pandas as pd
 
-from research_lab.game_sim.relief_exit import COMMON, MID, features
+from research_lab.game_sim.relief_exit import COMMON, CORRECTION_TERMS, MID, correction_index, features
 
 COLS = ['game_pk', 'date_key', 'at_bat_number', 'pitcher', 'inning', 'inning_topbot', 'outs_when_up', 'runner_1b', 'runner_2b',
         'runner_3b', 'bat_score', 'fld_score', 'home_team', 'away_team', 'game_type']
@@ -71,14 +71,32 @@ def design(d: pd.DataFrame, names) -> np.ndarray:
     return np.array([[x[n] for n in names] for x in rows], float)
 
 
-def fitted(d: pd.DataFrame, doc: dict) -> np.ndarray:
+def correction_matrix(d: pd.DataFrame) -> np.ndarray:
+    """RELIEF-04's indicators (relief_exit.CORRECTION_TERMS) for every row of d: the entry inning by decision cell; a
+    mid-inning row before the third batter gets none."""
+    Z = np.zeros((len(d), len(CORRECTION_TERMS)))
+    for r, (e, ended, bf) in enumerate(zip(d['entry_inning'].to_numpy(), d['ended'].to_numpy(), d['bf'].to_numpy())):
+        i = correction_index(e, ended, bf)
+        if i is not None:
+            Z[r, i] = 1.0
+    return Z
+
+
+def fitted(d: pd.DataFrame, doc: dict, correction: dict | None = None) -> np.ndarray:
     """The exit hazard's probability at each legal decision point of d (mid-inning rows with fewer than three batters
-    faced get nan)."""
+    faced get nan); with RELIEF-04's correction ({'terms', 'coef'}) added on the log-odds when given."""
     p = np.full(len(d), np.nan)
+    gamma = None
+    if correction is not None:
+        if list(correction['terms']) != list(CORRECTION_TERMS):
+            raise ValueError('relief exit correction: terms must be CORRECTION_TERMS in order')
+        gamma = np.asarray(correction['coef'], float)
     for key, names, ended in (('mid', MID, 0), ('end', COMMON, 1)):
         m = ((d['ended'] == ended) & ((d['bf'] >= 3) | (ended == 1))).to_numpy()
         if m.any():
             z = float(doc[key]['intercept']) + design(d[m], names) @ np.asarray(doc[key]['beta'], float)
+            if gamma is not None:
+                z = z + correction_matrix(d[m]) @ gamma
             p[m] = 1.0 / (1.0 + np.exp(-z))
     return p
 

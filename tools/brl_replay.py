@@ -323,16 +323,22 @@ def main():
             reliever_choice = RelieverChoice(json.loads((ROOT / str(params['reliever_choice'])).read_text()))
             receipt['reliever_choice'] = {'path': params['reliever_choice'], 'name': reliever_choice.name}
         relief_exit = None
+        relief_correction = None
         if params.get('relief_exit'):
             from research_lab.game_sim.relief_exit import ReliefExit
-            relief_exit = ReliefExit(json.loads((ROOT / str(params['relief_exit'])).read_text()))
+            if params.get('relief_correction'):
+                # RELIEF-04: the entry-inning correction fitted against this replay's own exit table
+                rc = json.loads((ROOT / str(params['relief_correction'])).read_text())
+                relief_correction = {'terms': rc['terms'], 'coef': rc['coef']}
+                receipt['relief_correction'] = {'path': params['relief_correction'], 'source': rc.get('source')}
+            relief_exit = ReliefExit(json.loads((ROOT / str(params['relief_exit'])).read_text()), correction=relief_correction)
             receipt['relief_exit'] = {'path': params['relief_exit'], 'name': relief_exit.name}
         relief_hooks = None
         if params.get('relief_hooks') and relief_exit is not None:
             from brl_replay.relief_decisions import HookOffsets, decisions, fitted
             hk = dict(params['relief_hooks']) if isinstance(params['relief_hooks'], dict) else {}
             dec = decisions(h)
-            relief_hooks = HookOffsets(dec, fitted(dec, json.loads((ROOT / str(params['relief_exit'])).read_text())),
+            relief_hooks = HookOffsets(dec, fitted(dec, json.loads((ROOT / str(params['relief_exit'])).read_text()), relief_correction),
                                        half_life=float(hk.get('half_life', 90)), k=float(hk.get('k', 10)))
             receipt['relief_hooks'] = {'half_life': relief_hooks.half_life, 'k': relief_hooks.k, 'decisions': int(len(dec))}
         base_state = None

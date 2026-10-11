@@ -12,6 +12,14 @@ Teams differ reliably in how fast they pull relievers (RELIEF-03): an optional p
 
 doc (brl_live/relief_exit.json, from tools/brl_relief_exit.py): {'name': ..., 'mid': {'names', 'intercept', 'beta'},
 'end': {'names', 'intercept', 'beta'}}.
+
+RELIEF-04: an optional correction on the hazard's log-odds by the inning the reliever came in. On every real relief
+decision of 2023-2026 the hazard expects about two thirds more removals than happen for relievers who entered in the 3rd
+inning or earlier (long relief stays in) and too few for 6th-inning entries, in every season, so the simulator used more
+relievers per out its starter missed than real teams do. One term per entry inning (3rd or earlier, 4th, 5th, 6th, 7th,
+8th, 9th or later) and decision cell (an inning's end after 1 or 2 batters; 3 to 5, 6 to 8 and 9 or more batters, mid-
+inning and at an inning's end): 49 terms, fitted with the hazard's own chance as the offset (tools/brl_research.py
+relief_fix). correction: {'terms': CORRECTION_TERMS, 'coef': [...]}.
 """
 from __future__ import annotations
 
@@ -21,6 +29,26 @@ COMMON = ('bf', 'bf2', 'over', 'under', 'runs', 'runs2', 'exp', 'late', 'ninth_i
           'ninth_role', 'late_role', 'closer_ninth')
 MID = COMMON + ('runners', 'outs', 'third_batter')
 ROLE_FALLBACK = {'closer': (0.8, 1.0), 'setup': (0.1, 0.8)}
+ENTRY_BANDS = ('le3', '4', '5', '6', '7', '8', '9up')
+CELLS = ('e12', 'm35', 'e35', 'm68', 'e68', 'm9', 'e9')
+CORRECTION_TERMS = tuple(f'in{b}_{c}' for b in ENTRY_BANDS for c in CELLS)
+
+
+def correction_index(entry_inning, ended, bf):
+    """The correction term for one decision (CORRECTION_TERMS order), or None (mid-inning before the third batter)."""
+    e = min(max(int(entry_inning), 3), 9) - 3
+    bf = int(bf); ended = bool(ended)
+    if bf < 3:
+        if not ended:
+            return None
+        c = 0
+    elif bf < 6:
+        c = 2 if ended else 1
+    elif bf < 9:
+        c = 4 if ended else 3
+    else:
+        c = 6 if ended else 5
+    return e * len(CELLS) + c
 
 
 def features(bf: float, exp: float, runs: float, inning: int, lead: float, ninth: float, late: float,
@@ -38,8 +66,14 @@ def features(bf: float, exp: float, runs: float, inning: int, lead: float, ninth
 
 
 class ReliefExit:
-    def __init__(self, doc: dict):
+    def __init__(self, doc: dict, correction: dict | None = None):
         self.name = str(doc.get('name') or 'reliever exits')
+        self.gamma = None
+        if correction is not None:
+            if list(correction['terms']) != list(CORRECTION_TERMS) or len(correction['coef']) != len(CORRECTION_TERMS):
+                raise ValueError('relief exit correction: terms must be CORRECTION_TERMS in order')
+            self.gamma = [float(x) for x in correction['coef']]
+            self.name += ' + entry-inning correction'
         self.parts = {}
         for key in ('mid', 'end'):
             part = doc[key]
@@ -73,7 +107,12 @@ class ReliefExit:
             return False
         key, x = self.facts(pitcher, line, state, fielding_side, inning_ended)
         p = self.probability(key, x)
-        if offset:
-            z = math.log(p / (1.0 - p)) + float(offset.get(key, 0.0))
+        shift = float(offset.get(key, 0.0)) if offset else 0.0
+        if self.gamma is not None:
+            i = correction_index(line.entry_inning, inning_ended, line.batters_faced)
+            if i is not None:
+                shift += self.gamma[i]
+        if shift:
+            z = math.log(p / (1.0 - p)) + shift
             p = 1.0 / (1.0 + math.exp(-z)) if z >= 0 else math.exp(z) / (1.0 + math.exp(z))
         return bool(rng.random() < p)

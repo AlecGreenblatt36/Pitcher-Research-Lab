@@ -188,3 +188,22 @@ def test_relief_entry_counts_every_relief_decision_and_real_relievers_per_game(t
     assert {c[1] for c in out['cells']} <= set(range(7)) and {c[3] for c in out['cells']} <= set(range(4))
     for v in out['team_games'].values():
         assert 2.0 <= v['pitchers'] <= 3.0 and v['slope_per_starter_out'] < 0      # a starter through the 7th leaves one reliever
+
+
+def test_relief_fix_fits_each_table_and_scores_the_held_out_season(tmp_path):
+    """RELIEF-04's stage 1 on made-up games with relievers who enter early and stay: each table gets 49 coefficients, the
+    held-out season's log loss and its removals by entry inning are reported, and a planted stay-in shows as a negative term."""
+    from research_lab.game_sim.relief_exit import CORRECTION_TERMS
+    rng = np.random.default_rng(32)
+    pa = _games(rng, n=160)
+    late = pa['inning'] >= 8
+    pa.loc[late, 'pitcher'] = pa.loc[late, 'pitcher'] + 50000
+    pa.to_csv(tmp_path / 'plate_appearances.csv.gz', index=False, compression='gzip')
+    out = br.relief_fix(tmp_path)
+    assert out['terms'] == list(CORRECTION_TERMS) and set(out['fits']) == {'2025', '2026', 'live'}
+    for lab in ('2025', '2026'):
+        f = out['fits'][lab]
+        assert len(f['coef']) == 49 and f['held_out']['season'] == int(lab)
+        assert sum(v[0] for v in f['held_out']['by_entry'].values()) == f['held_out']['decisions']
+        assert f['held_out']['log_loss_change'] < 0                       # the made-up relievers stay far longer than the real hazard expects
+    assert 'held_out' not in out['fits']['live']

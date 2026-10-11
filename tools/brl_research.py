@@ -645,6 +645,48 @@ def relief_entry(data_root: Path) -> dict:
     return out
 
 
+RELIEF_FIX_TABLES = (('2025', 'brl_replay/relief_exit_fit_2023_2024_2026.json', (2023, 2024, 2026)),
+                     ('2026', 'brl_replay/relief_exit_fit_2023_2025.json', (2023, 2024, 2025)),
+                     ('live', 'brl_live/relief_exit.json', (2023, 2024, 2025, 2026)))
+
+
+def relief_fix(data_root: Path, lam=10.0, tables=RELIEF_FIX_TABLES) -> dict:
+    """RELIEF-04, stage 1: the entry-inning correction on the relief-exit hazard's log-odds (relief_exit.CORRECTION_TERMS),
+    fitted with each hazard's own chance as the offset on the seasons that hazard was fitted on, so each replay season is
+    held out of both its hazard and its correction; the live correction on all four seasons with the live hazard. Scored
+    on the held-out season: the decision log loss against the plain hazard (game-clustered interval) and, by entry inning,
+    removals against the plain and corrected expected counts. Coefficients and aggregates only."""
+    from research_lab.game_sim import starter_hazard as sh
+    from research_lab.game_sim.relief_exit import CORRECTION_TERMS, ENTRY_BANDS
+    from brl_replay.games import load_history
+    from brl_replay.relief_decisions import correction_matrix, decisions, fitted
+    h = load_history(next(data_root.rglob('plate_appearances.csv.gz')))
+    if 'game_type' not in h.columns:
+        h = h.assign(game_type='R')
+    d = decisions(h)
+    y = d['removed'].to_numpy(float); season = d['season'].to_numpy(int); Z = correction_matrix(d)
+    entry = np.clip(d['entry_inning'].to_numpy(int), 3, 9) - 3
+    out = {'terms': list(CORRECTION_TERMS), 'lam': lam, 'decisions': {str(int(k)): int(v) for k, v in d['season'].value_counts().items()}, 'fits': {}}
+    for label, path, train in tables:
+        doc = json.loads((ROOT / path).read_text())
+        p0 = fitted(d, doc); ok = np.isfinite(p0)
+        p0 = np.clip(np.where(ok, p0, 0.5), 1e-6, 1 - 1e-6); off = np.log(p0 / (1 - p0))
+        tr = ok & np.isin(season, train)
+        g = ridge_logit_offset(Z[tr], y[tr], off[tr], lam)
+        p1 = 1.0 / (1.0 + np.exp(-(off + Z @ g)))
+        fit = {'hazard': path, 'train': list(train), 'coef': [round(float(x), 5) for x in g]}
+        held = [s for s in (2025, 2026) if s not in train]
+        for s in held:
+            m = ok & (season == s)
+            diff, lo, hi = sh.clustered_diff_ci(y[m], p1[m], p0[m], d['game_pk'].to_numpy()[m])
+            fit['held_out'] = {'season': s, 'decisions': int(m.sum()), 'log_loss_plain': round(sh.log_loss(y[m], p0[m]), 6),
+                               'log_loss_corrected': round(sh.log_loss(y[m], p1[m]), 6), 'log_loss_change': round(diff, 6), 'ci': [round(lo, 6), round(hi, 6)],
+                               'by_entry': {ENTRY_BANDS[e]: [int((m & (entry == e)).sum()), int(y[m & (entry == e)].sum()), round(float(p0[m & (entry == e)].sum()), 1),
+                                                             round(float(p1[m & (entry == e)].sum()), 1)] for e in range(len(ENTRY_BANDS))}}
+        out['fits'][label] = fit
+    return out
+
+
 def pitch_efficiency(data_root: Path, physics, min_bf=300) -> dict:
     """Do pitchers differ in pitches per plate appearance beyond their outcomes, and does it carry over? Each pitcher-season's
     pitches over the pitches his outcomes would take at the league's per-outcome means (regular seasons, the physics tables'
@@ -768,7 +810,7 @@ def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']; key_hex = os.environ['BRL_PA_PACKAGE_KEY']; key = key_bytes(key_hex)
     branch = os.environ.get('BRL_LEDGER_BRANCH', 'brl-live-data')
     experiment = (os.environ.get('BRL_EXPERIMENT') or 'physics').strip()
-    if experiment in ('hazard_check', 'hazard_fix', 'hazard_pitches', 'pitch_counts', 'relief_pitches', 'pitch_efficiency', 'relief_entry'):
+    if experiment in ('hazard_check', 'hazard_fix', 'hazard_pitches', 'pitch_counts', 'relief_pitches', 'pitch_efficiency', 'relief_entry', 'relief_fix'):
         run_id = os.environ.get('GITHUB_RUN_ID', 'local')
         receipt = {'schema': 'brl.research-receipt.v1', 'experiment': experiment, 'run_id': run_id, 'started_at': datetime.now(timezone.utc).isoformat()}
         try:
@@ -791,7 +833,7 @@ def main():
                 phys_n = pd.concat(tables, ignore_index=True) if tables else None
                 receipt['results'] = {'pitch_counts': pitch_counts_fit, 'relief_pitches': relief_pitches, 'pitch_efficiency': pitch_efficiency}.get(experiment, hazard_pitches)(data_root, phys_n)
             else:
-                receipt['results'] = {'hazard_fix': hazard_fix, 'relief_entry': relief_entry}.get(experiment, hazard_check)(data_root)
+                receipt['results'] = {'hazard_fix': hazard_fix, 'relief_entry': relief_entry, 'relief_fix': relief_fix}.get(experiment, hazard_check)(data_root)
             receipt['status'] = 'completed'
         except Exception as exc:
             receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:300]
