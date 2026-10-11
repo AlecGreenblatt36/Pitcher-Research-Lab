@@ -407,6 +407,39 @@ SETS = {
 }
 
 
+def hazard_check(data_root: Path) -> dict:
+    """LEASH-02's diagnosis: the live starter-exit hazard (starter_hazard.joblib in the sealed package) on every real removal
+    decision of the regular seasons (research_lab.game_sim.starter_hazard.build_decisions and add_tendencies: the states the
+    simulator sees after each plate appearance a starter completes, his and his team's expected batters faced from earlier
+    dates only). By season, inning (9 for 9 and later), whether the inning just ended and the score (the fielding team ahead,
+    tied or behind): decisions, actual removals and the hazard's summed chance; the same in the 4th and 5th innings by runs
+    allowed; and each season's starts by the outs recorded when the starter came out. Aggregates only."""
+    import joblib
+    from research_lab.game_sim import starter_hazard as sh
+    from brl_replay.games import load_history
+    pa = load_history(next(data_root.rglob('plate_appearances.csv.gz')))
+    if 'game_type' in pa.columns:
+        pa = pa[pa['game_type'].astype(str) == 'R']
+    bundle = joblib.load(next(data_root.rglob('starter_hazard.joblib')))
+    league = float(bundle['league_mean_bf'])
+    d, starts = sh.build_decisions(pa)
+    d = sh.add_tendencies(d, starts, league)
+    d['p'] = bundle['model'].predict_proba(d[sh.FEATURES])[:, 1]
+    d['inn'] = d['inning'].clip(upper=9).astype(int)
+    d['score'] = np.sign(d['lead']).astype(int)
+    out = {'league_mean_bf': league, 'decisions': int(len(d)), 'cells': [], 'runs_4_5': [], 'exit_outs': {}}
+    for (season, inn, ended, sc), g in d.groupby(['season', 'inn', 'inning_ended', 'score']):
+        out['cells'].append([int(season), int(inn), int(ended), int(sc), int(len(g)), int(g['y'].sum()), round(float(g['p'].sum()), 2)])
+    m45 = d['inn'].isin([4, 5])
+    for (season, inn, ended, runs), g in d[m45].assign(rb=d.loc[m45, 'runs'].clip(upper=5).astype(int)).groupby(['season', 'inn', 'inning_ended', 'rb']):
+        out['runs_4_5'].append([int(season), int(inn), int(ended), int(runs), int(len(g)), int(g['y'].sum()), round(float(g['p'].sum()), 2)])
+    ex = d[d['y'] == 1]
+    outs_at_exit = (3 * (ex['inning'] - 1) + ex['outs']).clip(upper=27).astype(int)
+    for season, g in outs_at_exit.groupby(ex['season']):
+        out['exit_outs'][str(int(season))] = np.bincount(g.to_numpy(), minlength=28).tolist()
+    return out
+
+
 def postseason_usage(repo, token, key, branch, seasons=(2023, 2024, 2025, 2026)) -> dict:
     """How starters and bullpens are used in postseason games compared with the regular season (from the sealed study seasons)."""
     import collections
@@ -499,6 +532,25 @@ def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']; key_hex = os.environ['BRL_PA_PACKAGE_KEY']; key = key_bytes(key_hex)
     branch = os.environ.get('BRL_LEDGER_BRANCH', 'brl-live-data')
     experiment = (os.environ.get('BRL_EXPERIMENT') or 'physics').strip()
+    if experiment == 'hazard_check':
+        run_id = os.environ.get('GITHUB_RUN_ID', 'local')
+        receipt = {'schema': 'brl.research-receipt.v1', 'experiment': experiment, 'run_id': run_id, 'started_at': datetime.now(timezone.utc).isoformat()}
+        try:
+            work = Path(os.environ.get('RUNNER_TEMP', '/tmp')) / 'brl-research'
+            ep = entrypoint_module()
+            manifest = json.loads((ROOT / 'brl_engine' / 'data_package.json').read_text())
+            data_root = work / 'data'
+            if data_root.exists():
+                import shutil; shutil.rmtree(data_root)
+            data_root.mkdir(parents=True)
+            ep.restore_package(repo, token, key_hex, manifest, data_root)
+            receipt['results'] = hazard_check(data_root); receipt['status'] = 'completed'
+        except Exception as exc:
+            receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:300]
+            receipt['where'] = [{'file': Path(f.filename).name, 'function': f.name, 'line': f.lineno} for f in traceback.extract_tb(exc.__traceback__)[-5:]]
+        put_text(repo, token, f'research/{experiment}-{run_id}.json', json.dumps(receipt, indent=1, default=float), branch, 'BRL: research ' + experiment)
+        print(json.dumps({k: receipt.get(k) for k in ('status', 'error')}))
+        return
     if experiment in ('postseason_usage', 'postseason_tiers'):
         run_id = os.environ.get('GITHUB_RUN_ID', 'local')
         receipt = {'schema': 'brl.research-receipt.v1', 'experiment': experiment, 'run_id': run_id, 'started_at': datetime.now(timezone.utc).isoformat()}
