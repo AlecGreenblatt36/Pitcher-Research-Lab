@@ -956,6 +956,107 @@ def team_game_rows(T: dict, sides: dict, pks=None) -> dict:
     return out
 
 
+ZONE_M_GRID = (0.0, 2.0, 5.0, 10.0, 20.0, 40.0, 80.0, 160.0, 320.0, 640.0)
+ZONE_METRICS = (('avg', 'h', 'ab'), ('swing', 'sw', 'n'), ('miss', 'wh', 'sw'), ('slg', 'tb', 'ab'))
+
+
+def zone_tables(T: dict, mask) -> dict:
+    """Per (batter, zone) counts on the masked pitches: n, swings, misses, at-bats ended there, hits, total bases; plus each
+    batter's side (the majority of his pitches). MLB's 13 zones in ZONES13 order."""
+    rows = np.flatnonzero(mask)
+    zmap = np.full(32, -1, np.int64)
+    for i, zz in enumerate(ZONES13):
+        zmap[zz] = i
+    zi = zmap[np.clip(T['zone'][rows], 0, 31)]
+    rows = rows[zi >= 0]; zi = zi[zi >= 0]
+    bats, bi = np.unique(T['batter'][rows], return_inverse=True)
+    key = bi * 13 + zi; nb = len(bats)
+    sw = (T['call'][rows] == 1) | (T['call'][rows] == 2); wh = T['call'][rows] == 2
+    last = T['last_in_pa'][rows] == 1; o7 = T['out7'][rows]
+    ab = last & np.isin(o7, (0, 1, 3, 4, 5, 6)); hit = last & np.isin(o7, (3, 4, 5))
+    tb = np.where(last & (o7 == 3), 1.0, 0.0) + np.where(last & (o7 == 4), 2.0, 0.0) + np.where(last & (o7 == 5), 4.0, 0.0)
+    cnt = lambda w: np.bincount(key, weights=w.astype(np.float64), minlength=nb * 13).reshape(nb, 13)
+    side = np.bincount(bi, weights=T['stand_r'][rows].astype(np.float64), minlength=nb) / np.maximum(np.bincount(bi, minlength=nb), 1)
+    pa = np.bincount(bi, weights=last.astype(np.float64), minlength=nb)
+    return {'bats': bats, 'side': (side >= 0.5).astype(np.int64), 'pa': pa, 'n': cnt(np.ones(len(rows), bool)), 'sw': cnt(sw), 'wh': cnt(wh),
+            'ab': cnt(ab), 'h': cnt(hit), 'tb': cnt(tb)}
+
+
+def zone_estimates(tr: dict, num: str, den: str, m: float, k_all: float = 30.0) -> dict:
+    """The candidates for each training hitter's zone rates: raw, league (his side), scaled (league shape at his own level)
+    and shrunk (his counts plus m pseudo-events at the scaled rate)."""
+    N, Dn = tr[num], tr[den]
+    lg_z = np.zeros((2, 13)); lg_all = np.zeros(2)
+    for sd in (0, 1):
+        sel = tr['side'] == sd
+        lg_z[sd] = N[sel].sum(0) / np.maximum(Dn[sel].sum(0), 1e-9); lg_all[sd] = N[sel].sum() / max(Dn[sel].sum(), 1e-9)
+    lz = lg_z[tr['side']]; la = lg_all[tr['side']]
+    h_all = (N.sum(1) + k_all * la) / (Dn.sum(1) + k_all)          # his overall rate, lightly shrunk
+    scaled = lz * (h_all / np.maximum(la, 1e-9))[:, None]
+    if num != 'tb':
+        scaled = np.clip(scaled, 0.005, 0.995)
+    raw = np.where(Dn > 0, N / np.maximum(Dn, 1e-9), lz)
+    shrunk = (N + m * scaled) / (Dn + m) if m > 0 else raw
+    return {'raw': raw, 'league': lz, 'scaled': scaled, 'shrunk': shrunk}
+
+
+def zone_score(pred, num_t, den_t, binary: bool):
+    """Per-hitter loss sums and event counts on the test season: binary log loss, or squared error weighted by events."""
+    if binary:
+        p = np.clip(pred, 1e-4, 1 - 1e-4)
+        loss = -(num_t * np.log(p) + (den_t - num_t) * np.log(1 - p))
+    else:
+        obs = np.where(den_t > 0, num_t / np.maximum(den_t, 1e-9), 0.0)
+        loss = den_t * (pred - obs) ** 2
+    return loss.sum(1), den_t.sum(1)
+
+
+def zone_shrink_study(T: dict, stage, spec: dict) -> dict:
+    """ZONES-01 (LEDGER): expected hot zones. m chosen on (fit_train -> fit_test), then every candidate scored once on
+    (train -> test); hitters with min_pa plate appearances in training and a test season. Aggregates only."""
+    reg = (T['post'] == 0) if 'post' in T else np.ones(len(T['season']), bool)
+    fit_train = tuple(spec.get('fit_train', (2023, 2024))); fit_test = int(spec.get('fit_test', 2025))
+    train = tuple(spec.get('train', (2024, 2025))); test = int(spec.get('test', 2026)); min_pa = float(spec.get('min_pa', 100))
+    rng = np.random.default_rng(int(spec.get('seed', 20261011)))
+
+    def joined(tr_years, te_year):
+        tr = zone_tables(T, reg & np.isin(T['season'], tr_years)); te = zone_tables(T, reg & (T['season'] == te_year))
+        pos = {int(b): i for i, b in enumerate(te['bats'])}
+        keep = np.array([pa >= min_pa and int(b) in pos for b, pa in zip(tr['bats'], tr['pa'])], bool)
+        ti = np.array([pos[int(b)] for b in tr['bats'][keep]], np.int64)
+        trk = {k: (v[keep] if hasattr(v, '__len__') and len(v) == len(keep) else v) for k, v in tr.items()}
+        tek = {k: v[ti] for k, v in te.items() if k in ('n', 'sw', 'wh', 'ab', 'h', 'tb')}
+        return trk, tek
+
+    out = {'fit': {'train': list(fit_train), 'test': fit_test}, 'score': {'train': list(train), 'test': test}, 'min_pa': min_pa, 'grid': list(ZONE_M_GRID), 'metrics': {}}
+    tr1, te1 = joined(fit_train, fit_test); stage('zone study: fit tables')
+    tr2, te2 = joined(train, test); stage('zone study: score tables')
+    out['hitters'] = {'fit': int(len(tr1['bats'])), 'score': int(len(tr2['bats']))}
+    for name, num, den in ZONE_METRICS:
+        binary = num != 'tb'
+        curve = []
+        for m in ZONE_M_GRID:
+            est = zone_estimates(tr1, num, den, m)
+            l, e = zone_score(est['shrunk'], te1[num], te1[den], binary)
+            curve.append(float(l.sum() / max(e.sum(), 1)))
+        m_best = ZONE_M_GRID[int(np.argmin(curve))]
+        est = zone_estimates(tr2, num, den, m_best)
+        per = {}
+        for cand in ('raw', 'league', 'scaled', 'shrunk'):
+            per[cand] = zone_score(est[cand], te2[num], te2[den], binary)
+        events = per['raw'][1]; tot = events.sum()
+        res = {'m': m_best, 'fit_curve': [round(c, 6) for c in curve], 'events': int(tot),
+               'loss': {c: round(float(per[c][0].sum() / max(tot, 1)), 6) for c in per}}
+        nh = len(events); draws = rng.integers(0, nh, (2000, nh))
+        for a, b in (('shrunk', 'raw'), ('shrunk', 'scaled'), ('shrunk', 'league'), ('scaled', 'raw')):
+            d = per[a][0] - per[b][0]
+            boot = d[draws].sum(1) / np.maximum(events[draws].sum(1), 1)
+            res[f'{a}_minus_{b}'] = [round(float(d.sum() / max(tot, 1)), 6), round(float(np.percentile(boot, 2.5)), 6), round(float(np.percentile(boot, 97.5)), 6)]
+        out['metrics'][name] = res
+        stage(f'zone study: {name}')
+    return out
+
+
 def lineup_study(T: dict, stage, spec: dict) -> dict:
     """LINEUP-01 and LINEUP-02 (LEDGER): for every team-game of the evaluated seasons, how many of the nine starters each
     pre-lineup rule names (and how many in the right spot), from the team's games on earlier days only. Aggregates only."""
@@ -1541,6 +1642,9 @@ def main():
         T = D.concat(tables); del tables
         if params.get('lineup_study'):
             receipt['lineup_study'] = lineup_study(T, stage, params['lineup_study'])
+            dates = []
+        if params.get('zone_study'):
+            receipt['zone_study'] = zone_shrink_study(T, stage, params['zone_study'])
             dates = []
         fits = {}
         sim_pens = None
