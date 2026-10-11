@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 321,
- "rows": 324,
+ "experiments": 322,
+ "rows": 325,
  "records": {
   "ACC-01": [
    {
@@ -5344,6 +5344,22 @@
     ],
     "frozen_commits": [],
     "status": "stage 1 held; replays running"
+   }
+  ],
+  "TOTALS-05": [
+   {
+    "id": "TOTALS-05",
+    "columns": {
+     "ID": "TOTALS-05",
+     "Attempt": "The published run distributions with their spread made right (TOTALS-04's decision (1), registered then and not yet run). The page states each team's and the total's middle range (\"half of games land between\"), the chance of 10 or more total runs, the most likely total and the runs chart, all from the simulated histograms, which carry the right means but run about a tenth too narrow (TOTALS-04: a team's predictive variance 9.2 against a residual variance of 10.0 to 10.1; middle-half coverage 0.48). Candidate: each team's simulated mean kept, the histogram replaced by a negative binomial with that mean and the simulated variance times c (Poisson if that is not above the mean), c the residual over the predictive variance on the other season; the total is the two teams' convolution (their residuals are uncorrelated, TOTALS-04). Scored against the raw histograms on LEASH-02's full replays of 2025 and 2026 (v2-prod4-leash2-1000, the live regular-season settings; not yet read for this) by tools/brl_runs_shape.py: each range's own mass against how often the real score landed in it, the chance of 10 or more total runs against the actual share and its Brier, CRPS per team and for the total, paired by date. Display only: win chances, the expected total and every market number are unchanged",
+     "Disposition and evidence": "**Registered in the commit that added this row, before its run.** Predictions, in both seasons with c from the other season: (1) the total's and each team's middle range hold the real score within 1.5 points of their own mass; (2) the chance of 10 or more total runs within 1.0 point of the actual share, its Brier not worse (the paired interval's upper end at most +0.0002); (3) CRPS per team and for the total not worse by more than 0.002 (paired upper ends). Decision rule: if (1) to (3) hold in both seasons, the box's published team and total run distributions become the negative binomial with c pooled over both seasons (live and archived boxes alike; the simulated games and win chances unchanged) and How it works says so; otherwise the page keeps the raw histograms.",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "LEVEL-01": [
