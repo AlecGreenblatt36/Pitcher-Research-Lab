@@ -1689,6 +1689,75 @@ def velo_study(T: dict, stage, spec: dict) -> dict:
     return out
 
 
+def rest_study(T: dict, stage, spec: dict) -> dict:
+    """REST-01 (LEDGER): relievers on no rest. Each regular-season relief appearance with 8 or more of his main fastballs,
+    after an earlier appearance that season: days of rest (0: he pitched the day before), whether it was his third game
+    in four days, his fastball's speed against his other appearances that season (leave one out, by fastballs) and his
+    strikeouts and times on base per batter against his level (his other appearances that season, shrunk toward the
+    league with 50 batters). Category means and differences from rested appearances (two or more days off), on the
+    training seasons and the test season, intervals from resampling pitchers. Aggregates only."""
+    reg = (T['post'] == 0) if 'post' in T else np.ones(len(T['season']), bool)
+    train = [int(x) for x in spec.get('train', (2024, 2025))]; test = int(spec.get('test', 2026)); boot = int(spec.get('boot', 2000))
+    rng = np.random.default_rng(int(spec.get('seed', 20261011)))
+    m = reg.copy()
+    if spec.get('test_end'):
+        m &= ~((T['season'] == test) & (T['day'] >= date.fromisoformat(spec['test_end']).toordinal()))
+    G = game_velo_table(T, m); stage('rest study: games')
+    rows = {'season': [], 'pitcher': [], 'cat': [], 'dv': [], 'fb': [], 'bf': [], 'dk': [], 'don': []}
+    lg = {x: G[x].sum() / max(G['bf'].sum(), 1) for x in ('k', 'on')}
+    ps = G['pitcher'] * 10000 + G['season']
+    order = np.lexsort((G['game'], G['day'], ps))
+    ps_o = ps[order]
+    bounds = np.flatnonzero(np.r_[True, ps_o[1:] != ps_o[:-1], True])
+    for a0, a1 in zip(bounds[:-1], bounds[1:]):
+        idx = order[a0:a1]
+        if len(idx) < 4:
+            continue
+        fbn, vel = G['fb_n'][idx], np.nan_to_num(G['velo'][idx])
+        ok_fb = fbn >= 8
+        tot_fb = (fbn * vel * ok_fb).sum(); tot_n = (fbn * ok_fb).sum()
+        totk, toton, totbf = G['k'][idx].sum(), G['on'][idx].sum(), G['bf'][idx].sum()
+        days = G['day'][idx]
+        for j in range(1, len(idx)):
+            if G['started'][idx[j]] or not ok_fb[j] or G['bf'][idx[j]] < 1:
+                continue
+            n_o = tot_n - fbn[j]
+            if n_o < 30:
+                continue
+            base = (tot_fb - fbn[j] * vel[j]) / n_o
+            rest = int(days[j] - days[j - 1] - 1)
+            three = int(((days[:j] >= days[j] - 3) & (days[:j] <= days[j] - 1)).sum()) >= 2
+            cat = 'three_in_four' if three else ('no_rest' if rest <= 0 else ('one_day' if rest == 1 else 'rested'))
+            bf_o = totbf - G['bf'][idx[j]]
+            lk = (totk - G['k'][idx[j]] + 50 * lg['k']) / (bf_o + 50); lon = (toton - G['on'][idx[j]] + 50 * lg['on']) / (bf_o + 50)
+            rows['season'].append(int(G['season'][idx[j]])); rows['pitcher'].append(int(G['pitcher'][idx[j]])); rows['cat'].append(cat)
+            rows['dv'].append(float(vel[j] - base)); rows['fb'].append(float(fbn[j])); rows['bf'].append(float(G['bf'][idx[j]]))
+            rows['dk'].append(float(G['k'][idx[j]] / G['bf'][idx[j]] - lk)); rows['don'].append(float(G['on'][idx[j]] / G['bf'][idx[j]] - lon))
+    R = {k: np.array(v) for k, v in rows.items()}
+    stage('rest study: appearances')
+    out = {'train': train, 'test': test, 'test_end': spec.get('test_end'), 'windows': {}}
+    for label, seasons in (('train', train), ('test', [test])):
+        sel = np.isin(R['season'], seasons)
+        up, pi = np.unique(R['pitcher'][sel], return_inverse=True)
+        draws = rng.integers(0, len(up), (boot, len(up)))
+        res = {'appearances': {c: int(((R['cat'] == c) & sel).sum()) for c in ('no_rest', 'one_day', 'rested', 'three_in_four')}, 'pitchers': int(len(up))}
+        for key, wkey in (('dv', 'fb'), ('dk', 'bf'), ('don', 'bf')):
+            sums = {}
+            for c in ('no_rest', 'one_day', 'rested', 'three_in_four'):
+                mc = R['cat'][sel] == c
+                sums[c] = (np.bincount(pi, weights=np.where(mc, R[wkey][sel] * R[key][sel], 0.0), minlength=len(up)),
+                           np.bincount(pi, weights=np.where(mc, R[wkey][sel], 0.0), minlength=len(up)))
+            means = {c: float(sums[c][0].sum() / max(sums[c][1].sum(), 1e-9)) for c in sums}
+            diffs = {}
+            for c in ('no_rest', 'one_day', 'three_in_four'):
+                b_ = sums[c][0][draws].sum(1) / np.maximum(sums[c][1][draws].sum(1), 1e-9) - sums['rested'][0][draws].sum(1) / np.maximum(sums['rested'][1][draws].sum(1), 1e-9)
+                diffs[c] = [round(means[c] - means['rested'], 4), round(float(np.percentile(b_, 2.5)), 4), round(float(np.percentile(b_, 97.5)), 4)]
+            res[{'dv': 'velo', 'dk': 'k', 'don': 'on'}[key]] = {'means': {c: round(v, 4) for c, v in means.items()}, 'minus_rested': diffs}
+        out['windows'][label] = res
+    stage('rest study: done')
+    return out
+
+
 # SPLITS-01 (LEDGER): how much of a hitter's split by pitcher hand carries over. The metrics the splits table shows:
 # AVG and SLG on at-bats ended on the pitch, chase on pitches out of MLB's zone (11-14), misses per swing.
 SPLIT_M_GRID = (0.0, 25.0, 50.0, 100.0, 200.0, 400.0, 800.0, 1600.0, 3200.0, 6400.0, 1e6)
@@ -2895,6 +2964,9 @@ def main():
             dates = []
         if params.get('split_study'):
             receipt['split_study'] = split_shrink_study(T, stage, params['split_study'])
+            dates = []
+        if params.get('rest_study'):
+            receipt['rest_study'] = rest_study(T, stage, params['rest_study'])
             dates = []
         if params.get('velo_study'):
             receipt['velo_study'] = velo_study(T, stage, params['velo_study'])

@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 294,
- "rows": 297,
+ "experiments": 295,
+ "rows": 298,
  "records": {
   "ACC-01": [
    {
@@ -4897,6 +4897,22 @@
     ],
     "frozen_commits": [],
     "status": "held: (1), (2), (3)"
+   }
+  ],
+  "REST-01": [
+   {
+    "id": "REST-01",
+    "columns": {
+     "ID": "REST-01",
+     "Attempt": "Relievers on no rest. The plans' bullpen card shows each arm's pitches on the team's latest game days; what does pitching the day before cost? Each regular-season relief appearance with 8 or more of his main fastballs after an earlier appearance that season, by rest: no rest (he pitched the day before), one day, rested (two or more days), and third game in four days. Measures: his fastball's speed against his other appearances that season (leave one out, by fastballs; 30 or more), and his strikeouts and times on base per batter against his level from his other appearances (shrunk toward the league with 50 batters). Category means and differences from rested, on 2024 and 2025 and on 2026 before August 1, intervals from resampling pitchers (2,000 draws). tools/brl_report.py rest_study, report lane, aggregates only. Synthetic check (brl_live_tests/test_report_rest_study.py): a planted 0.6 mph and 6-point strikeout cost on no rest recovered; none planted, differences near zero.",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions on 2026: (1) on no rest his fastball is at least 0.2 mph slower than rested, with the interval excluding zero; (2) on no rest he strikes out fewer batters per batter faced than rested (point estimate); (3) a third game in four days costs at least as much speed as no rest (point estimate). Decision rule: if (1) holds, the bullpen card marks arms who pitched the day before (and three games in four days) and its note quotes the measured speed cost, adding the strikeout difference if its interval excludes zero; otherwise the card is unchanged.",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "BOX-01": [
