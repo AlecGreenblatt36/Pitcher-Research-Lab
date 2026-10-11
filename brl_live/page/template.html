@@ -1051,6 +1051,37 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   }
   function probAtLeast(c, k) { var t = total(c), s = 0; c.counts.forEach(function (x) { if (x[0] >= k) s += x[1]; }); return s / t; }
   function mode(c) { var best = c.counts[0]; c.counts.forEach(function (x) { if (x[1] > best[1]) best = x; }); return best[0]; }
+  /* TOTALS-05: the run distributions the page states (each team's chart and middle range, the total's most likely value,
+     middle range and chance of 10 or more) keep the simulator's mean but take a negative binomial with its variance times
+     RUN_SPREAD, the residual over the predictive variance of a team's runs in LEASH-02's replays of 2025 and 2026: the
+     simulated histograms run about a tenth too narrow. The total is the two teams' convolution (their misses are
+     uncorrelated). Re-run, the ranges then held the real score within 1.4 points of what they claimed in both seasons. */
+  var RUN_SPREAD = 1.0954, RUN_MAX = 40;
+  var LANCZOS = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+  function lgam(x) {
+    if (x < 0.5) return Math.log(Math.PI / Math.abs(Math.sin(Math.PI * x))) - lgam(1 - x);
+    x -= 1; var a = LANCZOS[0], t = x + 7.5;
+    for (var i = 1; i < 9; i++) a += LANCZOS[i] / (x + i);
+    return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(a);
+  }
+  function nbRuns(c) {
+    var m = Math.max(mean(c), 0.05), v = sd(c) * sd(c) * RUN_SPREAD, lp = [], best = -Infinity, k, t = 0;
+    for (k = 0; k < RUN_MAX; k++) {
+      var x;
+      if (v <= m * 1.0001) x = k * Math.log(m) - m - lgam(k + 1);
+      else { var r = m * m / (v - m), q = r / (r + m); x = lgam(k + r) - lgam(r) - lgam(k + 1) + r * Math.log(q) + k * Math.log(1 - q); }
+      lp.push(x); if (x > best) best = x;
+    }
+    var p = lp.map(function (x) { var e = Math.exp(x - best); t += e; return e; });
+    return p.map(function (x) { return x / t; });
+  }
+  function asDist(p) { return { n: 10000, counts: p.map(function (x, k) { return [k, x * 10000]; }) }; }
+  function runShape(c) { return asDist(nbRuns(c)); }
+  function totalShape(ca, ch) {
+    var a = nbRuns(ca), b = nbRuns(ch), out = [];
+    for (var i = 0; i < a.length; i++) for (var j = 0; j < b.length; j++) out[i + j] = (out[i + j] || 0) + a[i] * b[j];
+    return asDist(out);
+  }
   /* The hitter's own chance of at least k of his lineup slot's events: each is his with his spot's share of the slot's plate
      appearances (pinch hitters and substitutes take the rest; PLAYER-02, the shares of brl_live/boxscore.py STARTER_SHARE from
      2023-2025). The Summary's hit and home-run meters (the box's hit_probability and hr_probability) are this with k = 1. */
@@ -4657,19 +4688,21 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (!box) return h + '<p class="empty">Runs, totals and player props show here once the full simulation for this forecast is built.</p>';
 
     var trd = box.team_run_distributions || {}, ra = dist(trd.away), rh = dist(trd.home);
+    var sa = ra && runShape(ra), sh = rh && runShape(rh);
     if (ra && rh) {
-      h += '<section class="sec chart"><h2>Runs each team scores</h2><p class="lede">Half of simulated games land in these ranges: ' + esc(f.away.abbr) + " " + quant(ra, .25) + " to " + quant(ra, .75) + ", " + esc(f.home.abbr) + " " + quant(rh, .25) + " to " + quant(rh, .75) + ".</p>";
+      h += '<section class="sec chart"><h2>Runs each team scores</h2><p class="lede">Half of games land in these ranges: ' + esc(f.away.abbr) + " " + quant(sa, .25) + " to " + quant(sa, .75) + ", " + esc(f.home.abbr) + " " + quant(sh, .25) + " to " + quant(sh, .75) + ".</p>";
       h += '<div class="legend"><span><i class="key" style="background:var(--away)"></i>' + esc(nickname(f.away.name)) + '</span><span><i class="key" style="background:var(--home)"></i>' + esc(nickname(f.home.name)) + "</span></div>";
-      h += runsChart(ra, rh) + "</section>";
+      h += runsChart(sa, sh) + "</section>";
     }
     var tr = box.total_run_distribution ? dist(box.total_run_distribution) : null;
     if (tr) {
+      var ts = ra && rh ? totalShape(ra, rh) : tr;
       /* Vegas's total and its over chance only: TOTALS-03 found no over chance of ours that called games better than the
          closing total, so the page states none of its own */
       var mkt2 = D.market && D.market[f.game_pk], mline = mkt2 && mkt2.over_under != null ? " Vegas total: " + mkt2.over_under + (mkt2.p_over != null ? " (over " + pct(mkt2.p_over) + ")" : "") + "." : "";
       var taughtTotal = taughtTotalFor(f, mkt2, tr);
       h += '<section class="sec"><h2>Total runs</h2><p class="lede">' + (taughtTotal != null ? "We expect " + taughtTotal.toFixed(1) + " runs: the simulator\'s " + mean(tr).toFixed(1) + " mixed with the Vegas total (over two seasons re-run, the mix beat the Vegas total on its own). " : "We expect " + mean(tr).toFixed(1) + " runs. ") +
-        "Most likely " + mode(tr) + ". Half of games land between " + quant(tr, .25) + " and " + quant(tr, .75) + ". " + pct(probAtLeast(tr, 10)) + " reach 10 or more." + esc(mline) + "</p></section>";
+        "Most likely " + mode(ts) + ". Half of games land between " + quant(ts, .25) + " and " + quant(ts, .75) + ". " + pct(probAtLeast(ts, 10)) + " reach 10 or more." + esc(mline) + "</p></section>";
     }
 
     h += moreMarkets(f, box, mkt);
@@ -4745,6 +4778,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     else items.push([winner === fav, (winner === fav ? "Called it. " : "Missed. ") + nickname(f[winner].name) + " won; we had " + nickname(f[fav].name) + " at " + pct(pf) + "."]);
     ["away", "home"].forEach(function (side) {
       var c = box.team_run_distributions ? dist(box.team_run_distributions[side]) : null; if (!c) return;
+      c = runShape(c);
       var lo = quant(c, .25), hi = quant(c, .75), got = actualBox.score[side];
       items.push([got >= lo && got <= hi, nickname(f[side].name) + " scored " + got + "; likely range was " + lo + " to " + hi + "."]);
     });
@@ -5420,7 +5454,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     h += "<h2>During the game</h2><p>While a game is on, the page checks MLB's feed every 15 seconds for the score, the plays and every pitch. The win chance moves after each play, using the same ten thousand games from before first pitch and how real games have gone from the same spot.</p>";
     h += "<h2>Past and future games</h2><p>Tap Games, then use the date strip or the calendar. Any day of 2025 and 2026 works. Past days show the real box score next to what we said, and how our picks did that day. Before October 6, 2026 those are re-runs: we played each game again after the season using only what was known before it. For tomorrow, we post an early number the night before once both starters are announced, using projected lineups, and update it on game day when the real lineups come out. Further out you see the schedule.</p>";
     h += "<h2>Checking the work</h2><p>Every number goes up before first pitch and never gets changed. After the final, the Record page grades the last number we posted against a coin flip, always picking the home team, and Vegas. Nothing gets filled in after the fact.</p>";
-    h += "<h2>What it does not do yet</h2><ul><li>In the postseason, which reliever comes in follows regular-season habits. Only how long starters and relievers stay in is set for October.</li><li>The pitches shown inside a simulated at-bat are just for show, borrowed from real at-bats that ended the same way. They do not decide anything.</li><li>No wild pitches or passed balls.</li><li>Simulated games are a little less spread out than real ones: blowouts come up somewhat less often (games decided by five or more, 27% against 29% in the last two seasons re-run), so the page does not show a run line yet.</li><li>Player history runs through " + esc(/^\d{4}-\d{2}-\d{2}$/.test(any.history_through || "") ? dateLabel(any.history_through).replace(/^[A-Za-z]+, /, "") : (any.history_through || "the day before")) + ".</li></ul>";
+    h += "<h2>What it does not do yet</h2><ul><li>In the postseason, which reliever comes in follows regular-season habits. Only how long starters and relievers stay in is set for October.</li><li>The pitches shown inside a simulated at-bat are just for show, borrowed from real at-bats that ended the same way. They do not decide anything.</li><li>No wild pitches or passed balls.</li><li>Simulated games are a little less spread out than real ones: blowouts come up somewhat less often (games decided by five or more, 27% against 29% in the last two seasons re-run), so the page does not show a run line yet. The run charts and ranges on the Odds tab are widened to match: they keep the simulator's averages and spread them as much as real scores spread, and re-run over two seasons they then held the real score about as often as they said.</li><li>Player history runs through " + esc(/^\d{4}-\d{2}-\d{2}$/.test(any.history_through || "") ? dateLabel(any.history_through).replace(/^[A-Za-z]+, /, "") : (any.history_through || "the day before")) + ".</li></ul>";
     var modelNames = []; Object.keys(fx).forEach(function (k) { var m = String(fx[k].model || ""); if (m && modelNames.indexOf(m) < 0) modelNames.push(m); });
     h += "<h2>Nuts and bolts</h2><p>At-bat model " + esc(modelNames.join(", ") || any.model || "") + ". " + Number(any.n_simulations || 0).toLocaleString() + " games played out per forecast. When lineups change we save a new version and keep the old ones. The code is public; the player data and model files are not.</p>";
     var vs = Object.keys(fx).map(function (k) { return fx[k]; }).filter(function (f) { return f.date === D.date; });

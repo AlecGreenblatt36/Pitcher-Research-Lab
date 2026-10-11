@@ -115,12 +115,12 @@ def season_check(rows, c, draws=2000, seed=1):
     out['total_crps_change'] = paired(gr[:, 4], gn[:, 4], inv)
     out['team_crps_change'] = paired(tr[:, 2], tn[:, 2], tinv)
     cand = out['candidate']
-    out['holds'] = {'(1) total range within 1.5': abs(cand['total_range_gap_points']) <= 1.5,
+    out['holds'] = {k: bool(v) for k, v in {'(1) total range within 1.5': abs(cand['total_range_gap_points']) <= 1.5,
                     '(1) team range within 1.5': abs(cand['team_range_gap_points']) <= 1.5,
                     '(2) ten plus within 1.0': abs(cand['ten_plus_gap_points']) <= 1.0,
                     '(2) ten plus Brier not worse': out['ten_plus_brier_change'][2] <= 0.0002,
                     '(3) team CRPS not worse': out['team_crps_change'][2] <= 0.002,
-                    '(3) total CRPS not worse': out['total_crps_change'][2] <= 0.002}
+                    '(3) total CRPS not worse': out['total_crps_change'][2] <= 0.002}.items()}
     return out
 
 
@@ -150,7 +150,7 @@ def main():
     for lab, r in rows.items():
         other = [k for k in rows if k != lab]
         out[lab] = season_check(r, cs[other[0]] if other else cs[lab])
-    out['rule_holds'] = all(all(out[lab]['holds'].values()) for lab in rows)
+    out['rule_holds'] = bool(all(all(out[lab]['holds'].values()) for lab in rows))
     Path(a.out).write_text(json.dumps(out, indent=1))
     print(json.dumps(out, indent=1))
 
