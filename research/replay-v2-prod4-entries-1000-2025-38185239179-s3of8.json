@@ -1,0 +1,149 @@
+{
+ "schema": "brl.replay-receipt.v1",
+ "tag": "v2-prod4-entries-1000-2025",
+ "model": "pa-2026-v2-physics",
+ "season": 2025,
+ "n_sims": 1000,
+ "date_from": "2025-01-01",
+ "step": 1,
+ "offsets": true,
+ "rest": false,
+ "workers": 4,
+ "run_id": "38185239179",
+ "shard": [
+  3,
+  8
+ ],
+ "started_at": "2026-10-11T23:42:13.124983+00:00",
+ "stages": [
+  {
+   "stage": "restore data package",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load physics tables",
+   "at_seconds": 3.1
+  },
+  {
+   "stage": "load history and reconstruct games",
+   "at_seconds": 6.9
+  },
+  {
+   "stage": "replay 296 games with 4 workers",
+   "at_seconds": 45.4
+  }
+ ],
+ "model_selected": {
+  "name": "pa-2026-v2-physics",
+  "source": "private/models/pa-2026-v2-physics.enc",
+  "sha256": "4c8822abcb65eff2ec2fcf3a1d7c3b57f13dec0d21d26a9508e18f74944b3a54",
+  "fitted_at": "2026-10-07T09:43:32.959674+00:00",
+  "physics_features": 30
+ },
+ "physics_years": [
+  2024,
+  2025
+ ],
+ "physics_rows": 372277,
+ "games": 296,
+ "offsets_table": {
+  "path": "brl_replay/context_recent_fit2026.json",
+  "estimated_through": "2026-09-27"
+ },
+ "environment": {
+  "table": "env-v2-fit2026-weather",
+  "conditions": "research/conditions-37697026337.jsonl.gz",
+  "games_with_conditions": 296
+ },
+ "team_offsets": {
+  "rows": "research/team-resid-v2-37712616076.json.gz",
+  "k": 4000,
+  "half_life": 120,
+  "sides": [
+   "bat",
+   "fld"
+  ],
+  "center": true,
+  "dates": 23,
+  "largest_offset": 0.2748
+ },
+ "transitions": {
+  "path": "brl_replay/transitions_fit_2023_2024_2026.json",
+  "name": "base running from 2023, 2024, 2026 play-by-play",
+  "cells": 166
+ },
+ "reliever_choice": {
+  "path": "brl_replay/reliever_choice_fit_2023_2024_2026.json",
+  "name": "reliever choice from 2023, 2024 and 2026 relief entries"
+ },
+ "relief_correction": {
+  "path": "brl_replay/relief_correction_fit_2023_2024_2026.json",
+  "source": "RELIEF-04: the entry-inning correction on the relief-exit hazard brl_replay/relief_exit_fit_2023_2024_2026.json, fitted on the 2023, 2024, 2026 relief decisions with that hazard's own chance as the offset (research run 38174006841, tools/brl_research.py relief_fix); held-out 2025 decision log loss -0.00710 [-0.00818, -0.00610]"
+ },
+ "relief_exit": {
+  "path": "brl_replay/relief_exit_fit_2023_2024_2026.json",
+  "name": "reliever exits from 2023, 2024 and 2026 relief decisions + entry-inning correction"
+ },
+ "relief_hooks": {
+  "half_life": 90.0,
+  "k": 10.0,
+  "decisions": 290114
+ },
+ "leash": {
+  "path": "brl_replay/leash_fit_2026.json",
+  "name": "starter leash from the 2026 replay starts",
+  "terms": {
+   "base": 0.6153,
+   "short": -6.5348,
+   "relief": -2.1324,
+   "lay1": -2.1025,
+   "lay2": -0.8155,
+   "mar": 0.5603,
+   "sep": -0.8734
+  }
+ },
+ "hazard_correction": {
+  "path": "brl_replay/hazard_correction.json",
+  "source": "LEASH-02: a correction on the live starter-exit hazard's log-odds, fitted on every 2023 and 2024 regular-season removal decision with the hazard's own chance as the offset (research run 38156674333, tools/brl_research.py hazard_fix); decision log loss on 2025 -0.00071 [-0.00097, -0.00046] and on 2026 -0.00042 [-0.00069, -0.00016]"
+ },
+ "steals": {
+  "per_pa": 0.85
+ },
+ "paired_streams": true,
+ "status": "failed",
+ "error": "AttributeError: 'tuple' object has no attribute 'get'",
+ "where": [
+  {
+   "file": "brl_replay.py",
+   "function": "main",
+   "line": 403
+  },
+  {
+   "file": "process.py",
+   "function": "_chain_from_iterable_of_lists",
+   "line": 636
+  },
+  {
+   "file": "_base.py",
+   "function": "result_iterator",
+   "line": 619
+  },
+  {
+   "file": "_base.py",
+   "function": "_result_or_cancel",
+   "line": 317
+  },
+  {
+   "file": "_base.py",
+   "function": "result",
+   "line": 456
+  },
+  {
+   "file": "_base.py",
+   "function": "__get_result",
+   "line": 401
+  }
+ ],
+ "finished_at": "2026-10-11T23:43:20.900955+00:00",
+ "seconds": 67.8
+}
