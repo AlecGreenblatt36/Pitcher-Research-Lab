@@ -690,7 +690,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   var DATA_URL = "predictions.json";
   var D = null;
   var app = document.getElementById("app");
-  var state = { variant: {}, boxSide: {}, playSide: {}, muMetric: "obp", rpMetric: "chase", rpPair: {}, rpCount: "all", rpFollow: {}, rpCloud: false, rpOpen: {}, hzMetric: "avg", hzFam: "all", hzHand: "", hzBat: "R", hzPMetric: "loc", hzSheetHand: "sp" };
+  var state = { variant: {}, boxSide: {}, playSide: {}, muMetric: "obp", rpMetric: "chase", rpPair: {}, rpCount: "all", rpFollow: {}, rpCloud: false, rpOpen: {}, hzMetric: "avg", hzFam: "all", hzHand: "", hzBat: "R", hzPMetric: "loc", hzSheetHand: "sp", hzView: "raw" };
   var REPORTS = "https://raw.githubusercontent.com/AlecGreenblatt36/Pitcher-Research-Lab/brl-live-data/public/reports/";
   var TOTAL_TAUGHT = { sim: 0.32, line: 0.78, shift: -0.543, from: "2026-10-10" };   /* TOTALS-03: expected total taught by results, fixed cross-season weights */
   var RP = {};
@@ -2567,6 +2567,24 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   }
   /* One chart. o: metric key, side (the hitter's), lg (league cells for his side, the same hand and pitch type),
      aim and strike (plan spots for this pitch type), top and bot (his zone in feet), label. */
+  /* ZONES-01 (credited on 2026): his rate in each zone pulled toward his own overall level on the league's zone pattern,
+     with m pseudo-events (fitted on 2025): 160 at-bats for average and slugging, 80 for swing and miss rates. */
+  var HZ_EXP_M = { avg: 160, slg: 160, swing: 80, miss: 80 };
+  function hzExpected(m, key, cells, lg) {
+    if (!lg || !lg.length || !cells) return null;
+    var lt = hzTotal(lg), t = hzTotal(cells), lgAll = lt[m.den] ? lt[m.num] / lt[m.den] : 0;
+    if (!lgAll) return null;
+    var hAll = (t[m.num] + 30 * lgAll) / (t[m.den] + 30), M = HZ_EXP_M[key] || 80, lby = {}, out = {};
+    lg.forEach(function (c) { lby[c[0]] = c; });
+    cells.forEach(function (c) {
+      var l = lby[c[0]], lz = l && l[m.den] ? l[m.num] / l[m.den] : lgAll, sc = lz * hAll / lgAll;
+      if (key !== "slg") sc = Math.min(0.995, Math.max(0.005, sc));
+      out[c[0]] = (c[m.num] + M * sc) / (c[m.den] + M);
+    });
+    return out;
+  }
+  function hzView() { return state.hzView === "exp" ? "exp" : "raw"; }
+  function hzViewSeg() { return hzSeg("hzview", hzView(), [["raw", "As it happened"], ["exp", "Expected"]], "Which numbers"); }
   /* One chart. o: metric key ("loc" for where a pitcher's pitches go), side (the batter's), lg (league cells for his side,
      the same hand and pitch type), aim and strike (plan spots for this pitch type), top and bot (his zone in feet), label. */
   function hzChart(cells, o) {
@@ -2574,8 +2592,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     (cells || []).forEach(function (c) { by[c[0]] = c; });
     var lby = {}; (o.lg || []).forEach(function (c) { lby[c[0]] = c; });
     var tot = hzTotal(cells), lt = hzTotal(o.lg && o.lg.length ? o.lg : cells);
-    var val = function (c) { return m.loc ? (c && tot[1] >= m.min ? c[1] / tot[1] : null) : hzVal(m, c); };
-    var thin = function (c) { return m.loc ? null : hzThin(m, c); };
+    var exp = o.expected && !m.loc ? hzExpected(m, o.metric, cells, o.lg) : null;
+    var val = function (c) { return m.loc ? (c && tot[1] >= m.min ? c[1] / tot[1] : null) : exp ? (c ? exp[c[0]] : null) : hzVal(m, c); };
+    var thin = function (c) { return m.loc || exp ? null : hzThin(m, c); };
     var center = m.loc ? 1 / 13 : lt[m.den] ? lt[m.num] / lt[m.den] : null;
     var fill = function (v) {
       if (v == null || center == null) return { bg: "var(--surface)", fg: "var(--muted)" };
@@ -2589,6 +2608,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var tip = function (zn) {
       var c = by[zn], v = val(c), w = hzZoneWords(zn, side) + ": ";
       if (m.loc) return v == null ? w + "too few pitches to say" : w + hzFmt(m, v) + " of these pitches (" + c[1] + " of " + tot[1] + ")";
+      if (exp) { var rv = c && c[m.den] ? hzFmt(m, c[m.num] / c[m.den]) : "\u2013"; return w + hzFmt(m, v) + " expected (as it happened " + rv + " in " + (c ? c[m.den] : 0) + " " + m.unit + ")"; }
       var l = hzVal(m, lby[zn]), th = thin(c);
       if (v == null && th == null) return w + "too few " + m.unit + " to say";
       if (v == null) { v = th; w += "only " + c[m.den] + " " + m.unit + ", "; }
@@ -2691,7 +2711,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (!cells) return;
       var t = hzTotal(cells);
       h += '<div class="hz-card"><' + hl + ">" + esc(fam[1]) + (fam[2] ? " <small>" + esc(fam[2]) + "</small>" : "") + "</" + hl + ">" +
-        hzChart(cells, { metric: k, side: card.side, lg: hzLeague(lg, card.side, useHand, fam[0]), aim: plan ? plan[fam[0]] : null, strike: stPlan ? stPlan[fam[0]] : null, top: card.zone_top_ft, bot: card.zone_bottom_ft, label: (label || "") + fam[1] + ", " + HZ_METRICS[k].label + " by zone" }) +
+        hzChart(cells, { metric: k, side: card.side, lg: hzLeague(lg, card.side, useHand, fam[0]), expected: hzView() === "exp", aim: plan ? plan[fam[0]] : null, strike: stPlan ? stPlan[fam[0]] : null, top: card.zone_top_ft, bot: card.zone_bottom_ft, label: (label || "") + fam[1] + ", " + (hzView() === "exp" ? "expected " : "") + HZ_METRICS[k].label + " by zone" }) +
         '<div class="hz-n">' + Number(t[1]).toLocaleString() + " pitches</div></div>";
     });
     return h + "</div>";
@@ -2752,8 +2772,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       '<div class="sp-words">' + lines.map(function (x) { return "<p>" + esc(x) + "</p>"; }).join("") + '<p class="note">Inner ring: ground balls. Outer ring: line drives and fly balls. Darker means more of his. ' + Number(ng + na).toLocaleString() + " balls in play, " + esc(hzSeasons()) + ".</p></div></div>";
   }
   function hzLegend(k, marks) {
-    var m = HZ_METRICS[k];
-    return '<p class="note hz-key"><span class="hz-sw hot"></span>Above the league average <span class="hz-sw cold"></span>Below. ' + esc(m.say) + ". Gray: fewer than " + m.min + " " + m.unit + ". Catcher's view." +
+    var m = HZ_METRICS[k], exp = hzView() === "exp";
+    return '<p class="note hz-key"><span class="hz-sw hot"></span>Above the league average <span class="hz-sw cold"></span>Below. ' + esc(m.say) +
+      (exp ? ". Expected: each zone pulled toward his own overall level on the league's zone pattern, more where he has been seen less; it predicted 2026 better than the raw numbers" : ". Gray: fewer than " + m.min + " " + m.unit) + ". Catcher's view." +
       (marks ? ' Outlined zones are the plan: <span class="hz-mk"></span> out of the zone where he chases, <span class="hz-mk open"></span> on the edge where he takes, <span class="hz-mk sq"></span> strikes he takes more than most hitters, <span class="hz-mk sq open"></span> strikes he can\'t do much with.' : "") + "</p>";
   }
   function reportTab(f, pk) {
@@ -2910,7 +2931,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       /* his standard hot zones against this pitcher's hand, the plan's spots for this count outlined */
       var hand = pc && pc.throws && hzSplit(hc.zones) ? pc.throws : "all";
       h += '<h4 class="hz-h">' + esc(lastName(players[now.hid] && players[now.hid].name || now.hitter)) + " against " + esc(hzHandWords(hand)) + "</h4>" + hzLine(hzCells(hc.zones, hand, "all"), hzLeague(doc.league, hc.side, hand, "all"));
-      h += '<div class="hz-tools">' + hzMetricSeg() + "</div>";
+      h += '<div class="hz-tools">' + hzMetricSeg() + hzViewSeg() + "</div>";
       h += hzStrip(hc, doc.league, hand, [["all", "All pitches", ""]].concat(shown.map(function (fam) { var mix = pc && pc.mix && pc.mix[fam]; return [fam, PITCH_NAME[fam], mix ? pct(mix.share) + ", " + Math.round(mix.speed) + " mph" : ""]; })), plan, stPlan, "");
       h += hzLegend(hzMetric(), true);
       var pname = players[now.pid] && players[now.pid].name || now.pitcher;
@@ -2937,6 +2958,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var now = liveReportNow(pk, doc);
       host.innerHTML = now ? liveCardHtml(f, pk, doc, now) : "";
       host.querySelectorAll("[data-hzmetric]").forEach(function (b) { b.addEventListener("click", function () { var y = window.scrollY; state.hzMetric = b.getAttribute("data-hzmetric"); loadLiveCard(f, pk); window.scrollTo(0, y); }); });
+      host.querySelectorAll("[data-hzview]").forEach(function (b) { b.addEventListener("click", function () { var y = window.scrollY; state.hzView = b.getAttribute("data-hzview"); loadLiveCard(f, pk); window.scrollTo(0, y); }); });
       var fold = document.getElementById("lc-loc-" + pk), fold2 = document.getElementById("lc-spr-" + pk);
       if (fold) fold.addEventListener("toggle", function () { state.rpOpen.lcLoc = fold.open; });
       if (fold2) fold2.addEventListener("toggle", function () { state.rpOpen.lcSpr = fold2.open; });
@@ -2977,6 +2999,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     } catch (e) { /* an old browser keeps the layout it opened with */ }
     host.querySelectorAll("[data-hzmetric]").forEach(function (b) { b.addEventListener("click", function (e) { e.stopPropagation(); state.hzMetric = b.getAttribute("data-hzmetric"); redraw(); }); });
     host.querySelectorAll("[data-hzfam]").forEach(function (b) { b.addEventListener("click", function (e) { e.stopPropagation(); state.hzFam = b.getAttribute("data-hzfam"); redraw(); }); });
+    host.querySelectorAll("[data-hzview]").forEach(function (b) { b.addEventListener("click", function (e) { e.stopPropagation(); state.hzView = b.getAttribute("data-hzview"); redraw(); }); });
     host.querySelectorAll("[data-hzsheethand]").forEach(function (b) { b.addEventListener("click", function (e) { e.stopPropagation(); state.hzSheetHand = b.getAttribute("data-hzsheethand"); redraw(); }); });
     host.querySelectorAll("[data-rpcloud]").forEach(function (b) { b.addEventListener("click", function () { state.rpCloud = b.getAttribute("data-rpcloud") === "1"; loadReport(f, pk); var d = document.getElementById("rp-detail-" + pk); if (d) d.scrollIntoView({ behavior: "instant", block: "start" }); }); });
     host.querySelectorAll("[data-rpdeck]").forEach(function (b) { b.addEventListener("click", function () { stop(); state.rpPair[pk] = b.getAttribute("data-rpdeck"); state.rpCount = "all"; loadReport(f, pk); var d = document.getElementById("rp-detail-" + pk); if (d) d.scrollIntoView({ behavior: "smooth", block: "nearest" }); }); });
@@ -3179,7 +3202,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       (wide ? HZ_FAMS : [fam]).forEach(function (fm) {
         var cells = card ? hzCells(card.zones, useHand, fm[0]) : null;
         if (!cells) return;
-        chart += '<div class="pl-hz-f">' + (wide ? "<small>" + esc(fm[1]) + "</small>" : "") + hzChart(cells, { metric: k, side: card.side, lg: hzLeague(doc.league, card.side, useHand, fm[0]), tag: HZ_METRICS[k].label, label: nm(hid) + ": " + HZ_METRICS[k].label + " by zone, " + fm[1].toLowerCase() + " from " + hzHandWords(useHand) }) + "</div>";
+        chart += '<div class="pl-hz-f">' + (wide ? "<small>" + esc(fm[1]) + "</small>" : "") + hzChart(cells, { metric: k, side: card.side, lg: hzLeague(doc.league, card.side, useHand, fm[0]), expected: hzView() === "exp", tag: (hzView() === "exp" ? "xp " : "") + HZ_METRICS[k].label, label: nm(hid) + ": " + (hzView() === "exp" ? "expected " : "") + HZ_METRICS[k].label + " by zone, " + fm[1].toLowerCase() + " from " + hzHandWords(useHand) }) + "</div>";
       });
       if (chart) chart = '<div class="pl-hz' + (wide ? " wide" : "") + '">' + chart + "</div>";
       if (spots && !spot && !benchShown) { h += '<li class="plan-bench">Off the bench</li>'; benchShown = true; }
@@ -3233,7 +3256,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         h += '<h4 class="hz-h">' + esc(lastName(nm(ids[0]))) + " against " + esc(hzHandWords(useHand)) + ", " + esc(hzSeasons(doc.asof)) + "</h4>" + hzLine(hzCells(hc.zones, useHand, "all"), hzLeague(doc.league, hc.side, useHand, "all")) + hzTypes(hc, useHand);
         var ctab = countTable(hc, doc.league);
         if (ctab) h += '<details class="more" data-keep="counts"' + (state.rpOpen.counts ? " open" : "") + "><summary>His swings by count</summary>" + ctab + "</details>";
-        h += '<div class="hz-tools">' + hzMetricSeg() + "</div>";
+        h += '<div class="hz-tools">' + hzMetricSeg() + hzViewSeg() + "</div>";
         h += hzStrip(hc, doc.league, useHand, [["all", "All pitches", ""]].concat(shown.map(famHead)), plan, stPlan, nm(ids[0]) + ": ");
         h += hzLegend(hzMetric(), true);
       }
@@ -3317,7 +3340,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (now) h += liveNowStrip(f, pk, doc, now, false);
     /* one set of hot-zone controls for both lineups */
     var anyZones = Object.keys(players).some(function (id) { return players[id].hitter && players[id].hitter.zones; });
-    if (anyZones) h += '<div class="hz-tools">' + hzMetricSeg() + (hzWide() ? "" : hzSeg("hzfam", (HZ_FAMS.filter(function (x) { return x[0] === state.hzFam; })[0] || HZ_FAMS[0])[0], [["all", "All"], ["fastball", "Fastballs"], ["breaking", "Breaking"], ["offspeed", "Offspeed"]], "Pitch type")) +
+    if (anyZones) h += '<div class="hz-tools">' + hzMetricSeg() + hzViewSeg() + (hzWide() ? "" : hzSeg("hzfam", (HZ_FAMS.filter(function (x) { return x[0] === state.hzFam; })[0] || HZ_FAMS[0])[0], [["all", "All"], ["fastball", "Fastballs"], ["breaking", "Breaking"], ["offspeed", "Offspeed"]], "Pitch type")) +
       hzSeg("hzsheethand", state.hzSheetHand === "R" || state.hzSheetHand === "L" || state.hzSheetHand === "all" ? state.hzSheetHand : "sp", [["sp", "SP's hand"], ["R", "vs RHP"], ["L", "vs LHP"], ["all", "Both"]], "Pitcher's hand") + "</div>" + hzLegend(hzMetric(), false);
     h += "</section>";
     var liveSel = !!(now && now.pair && now.key === sel), detail = sel ? pairDetail(doc, pk, sel, now) : "";
@@ -3615,7 +3638,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
             /* the standard hot zones: against both hands or one, by pitch type */
             var split = hzSplit(x.zones), hh = split && (state.hzHand === "R" || state.hzHand === "L") ? state.hzHand : "all";
             h += '<section class="sec hz-sec"><h2>Hot zones</h2><p class="lede">Against ' + esc(hzHandWords(hh)) + ", " + esc(hzSeasons(doc.asof)) + ".</p>";
-            h += '<div class="hz-tools">' + (split ? hzSeg("hzhand", hh, [["all", "All"], ["R", "vs RHP"], ["L", "vs LHP"]], "Pitcher's hand") : "") + hzMetricSeg() + "</div>";
+            h += '<div class="hz-tools">' + (split ? hzSeg("hzhand", hh, [["all", "All"], ["R", "vs RHP"], ["L", "vs LHP"]], "Pitcher's hand") : "") + hzMetricSeg() + hzViewSeg() + "</div>";
             h += hzLine(hzCells(x.zones, hh, "all"), hzLeague(lg, x.side, hh, "all")) + hzTypes(x, hh);
             var ctab2 = countTable(x, lg);
             if (ctab2) h += '<h3 class="hz-h">By count, against all pitchers</h3>' + ctab2;
@@ -3681,6 +3704,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         var again = function () { var y = window.scrollY; show(doc); window.scrollTo(0, y); };
         app.querySelectorAll("[data-hzmetric]").forEach(function (b) { b.addEventListener("click", function () { state.hzMetric = b.getAttribute("data-hzmetric"); again(); }); });
         app.querySelectorAll("[data-hzhand]").forEach(function (b) { b.addEventListener("click", function () { state.hzHand = b.getAttribute("data-hzhand"); again(); }); });
+        app.querySelectorAll("[data-hzview]").forEach(function (b) { b.addEventListener("click", function () { state.hzView = b.getAttribute("data-hzview"); again(); }); });
         app.querySelectorAll("[data-hzbat]").forEach(function (b) { b.addEventListener("click", function () { state.hzBat = b.getAttribute("data-hzbat"); again(); }); });
         app.querySelectorAll("[data-hzpmetric]").forEach(function (b) { b.addEventListener("click", function () { state.hzPMetric = b.getAttribute("data-hzpmetric"); again(); }); });
         var fold = document.getElementById("pl-model");
