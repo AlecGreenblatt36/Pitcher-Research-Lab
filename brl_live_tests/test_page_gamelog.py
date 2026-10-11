@@ -134,3 +134,10 @@ def test_bullpen_rates():
           "assert.equal(penRate({line:{pa:200,k:50,bb:16}},'k'),'25.0');"
           "assert.ok(penRate({line:{pa:400,k:120,bb:20},pct:{k:91,bb:70}},'bb').indexOf('background:B70')>0);")
     subprocess.run(['node', '-e', prefix + _fn(s, 'lineRate') + _fn(s, 'penRate') + js], check=True)
+
+
+def test_american_odds_from_a_win_chance():
+    s = _script()
+    js = ("assert.equal(amOdds(0.5),'\\u2212100');assert.equal(amOdds(0.6),'\\u2212150');assert.equal(amOdds(0.4),'+150');assert.equal(amOdds(0.25),'+300');"
+          "assert.equal(amOdds(null),'\\u2013');assert.equal(amOdds(1),'\\u2013');assert.equal(amText(-113),'\\u2212113');assert.equal(amText(105),'+105');assert.equal(amText(null),'\\u2013');")
+    subprocess.run(['node', '-e', "const assert=require('assert');" + _fn(s, 'amOdds') + _fn(s, 'amText') + js], check=True)

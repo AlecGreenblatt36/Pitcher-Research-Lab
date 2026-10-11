@@ -452,6 +452,8 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .pm-sub { display: block; font-family: var(--body); font-size: 14px; color: var(--muted); }
 .pen-pct { display: inline-block; min-width: 38px; padding: 0 4px; border-radius: 4px; text-align: center; }
 .pen td:first-child, .pen th:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); }
+.board-wrap { max-width: 460px; margin-top: 12px; }
+.price-board th[scope="row"] { text-align: left; font-family: var(--body); font-size: 16px; font-weight: 700; color: var(--ink); border-bottom: 1px solid var(--rule-soft); white-space: nowrap; }
 .ps-h { font-size: 14px; font-weight: 700; color: var(--muted); }
 .ps-cells { display: grid; grid-template-columns: repeat(6, auto); justify-content: space-between; gap: 4px 10px; margin: 6px 0 0; }
 .ps-cells div { min-width: 0; }
@@ -4275,6 +4277,30 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     h += '<details class="more" data-keep="how"' + (state.rpOpen.how ? " open" : "") + '><summary>How the plan is built</summary><p class="note">For every hitter we map where he swings, read about a quarter second before the ball gets there, when he has to decide. We compare that to an average hitter on his side and to the spots this pitcher actually throws each pitch to. Each spot is scored by what usually happens there for this hitter: a chase, a take, a whiff, a foul or a ball in play, and what that does to the count. The spots on the plan are the best of the pitcher\'s usual spots, with normal command (pitches miss by about 7 inches). The run figures assume hitters don\'t adjust much. Every test, including the ones that failed, is in the project ledger.</p></details></section>';
     return h;
   }
+  /* American odds for a win chance (no vig), the way a sportsbook board prints a price */
+  function amOdds(p) {
+    if (p == null || !(p > 0 && p < 1)) return "\u2013";
+    var v = p >= 0.5 ? -100 * p / (1 - p) : 100 * (1 - p) / p;
+    return (v > 0 ? "+" : "\u2212") + Math.round(Math.abs(v));
+  }
+  function amText(v) { return v == null || !isFinite(v) ? "\u2013" : (v > 0 ? "+" : "\u2212") + Math.abs(Math.round(v)); }
+  /* the line as a sportsbook board shows it, next to our pick as a fair price */
+  function lineBoard(f, mkt, box) {
+    if (!mkt || mkt.away_ml == null || mkt.home_ml == null) return "";
+    var ph = homeProb(f), row = function (side, ml, p) {
+      return '<tr><th scope="row"><span class="abbr ' + side + '-c">' + esc(f[side].abbr) + "</span> " + esc(nickname(f[side].name)) + "</th><td>" + amText(ml) + "</td><td>" + amOdds(p) + "</td></tr>";
+    };
+    var h = '<div class="tbl-wrap board-wrap"><table class="box price-board"><thead><tr><th scope="col"><span class="visually-hidden">Team</span></th><th scope="col">' + esc(mkt.provider || "Line") + '</th><th scope="col">Our fair price</th></tr></thead><tbody>' +
+      row("away", mkt.away_ml, ph == null ? null : 1 - ph) + row("home", mkt.home_ml, ph);
+    var tr = box && box.total_run_distribution ? dist(box.total_run_distribution) : null, pov = null;
+    if (tr && mkt.over_under != null) {
+      var L0 = Number(mkt.over_under), ov = 0, un = 0;
+      tr.counts.forEach(function (x) { if (x[0] > L0) ov += x[1]; else if (x[0] < L0) un += x[1]; });
+      pov = ov + un ? ov / (ov + un) : null;
+    }
+    if (mkt.over_under != null) h += '<tr><th scope="row">Total ' + esc(mkt.over_under) + "</th><td>o" + amText(mkt.over_odds) + " / u" + amText(mkt.under_odds) + "</td><td>" + (pov != null ? "o" + amOdds(pov) : "\u2013") + "</td></tr>";
+    return h + '</tbody></table></div><p class="note">' + esc(mkt.provider || "The book") + "'s prices at " + esc(timeET(mkt.captured_at)) + " ET. Our fair price is our pick as American odds with no margin: below \u2212100 favored, above +100 not. For the total, the simulator's chance of the over, a push left out.</p>";
+  }
   function oddsTab(f, box) {
     var h = "", pa = winProb(f, "away"), ph = winProb(f, "home");
     var taught = taughtRecipe(f), rc = recipeOf(f), withLine = !!(rc && /market/.test(rc.headline || ""));
@@ -4297,6 +4323,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     } else if (mkt && mkt.p_home != null) h += "<li><span>Vegas, " + esc(mkt.provider || "") + " (" + esc(timeET(mkt.captured_at)) + " ET)</span><b>" + fmt(mkt.p_home) + "</b></li>";
     else if (f.market_probability != null) { var mk = f.market_probability; h += "<li><span>Vegas</span><b>" + (mk >= .5 ? esc(f.home.abbr) + " " + pct(mk) : esc(f.away.abbr) + " " + pct(1 - mk)) + "</b></li>"; }
     h += "</ul>";
+    h += lineBoard(f, mkt, box);
     if (taught && pmk != null) {
       var gap = po - pmk, side = gap >= 0 ? "home" : "away", pts = Math.round(Math.abs(gap) * 100), wt = weightsText();
       h += '<p class="note">' + (pts < 2 ? "We and Vegas agree on this game." + (wt ? " Our pick is " + wt + "." : "") :
