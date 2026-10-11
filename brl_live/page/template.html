@@ -2735,10 +2735,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (fs <= lfs - 0.12) out.push("He takes the first pitch (swings at " + pct(fs) + ", most hitters " + pct(lfs) + "): start him with a strike.");
       else if (fs >= lfs + 0.12) out.push("He swings at the first pitch (" + pct(fs) + ", most hitters " + pct(lfs) + "): start him off the plate.");
     }
-    var tc = r(c.two, 4, 3), ltc = r(l.two, 4, 3);
-    if (tc != null && ltc != null) {
-      if (tc >= ltc + 0.08) out.push("With two strikes he expands (chases " + pct(tc) + ", most " + pct(ltc) + "): finish him off the plate.");
-      else if (tc <= ltc - 0.10) out.push("With two strikes he shrinks the zone (chases " + pct(tc) + ", most " + pct(ltc) + "): finish him on the edges.");
+    var ts = twoStrikeShift(c, l);
+    if (ts) {
+      var walk = " (his chase rate goes from " + pct(ts.other) + " to " + pct(ts.two) + "; most hitters " + pct(ts.lgOther) + " to " + pct(ts.lgTwo) + ")";
+      if (ts.shift >= TWO_SHIFT) out.push("With two strikes he expands more than most" + walk + ": finish him off the plate.");
+      else if (ts.shift <= -TWO_SHIFT) out.push("With two strikes he holds his zone" + walk + ": finish him on the edges, not off the plate.");
     }
     var bs = r(c.behind, 1, 0), lbs = r(l.behind, 1, 0);
     if (bs != null && lbs != null && bs >= lbs + 0.10) out.push("In hitter's counts he gets aggressive (swings at " + pct(bs) + ", most " + pct(lbs) + "): don't give in over the middle.");
@@ -3135,10 +3136,23 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (c && l) {
       var fs = r(c.first, 1, 0), lfs = r(l.first, 1, 0);
       if (fs != null && lfs != null) { if (fs <= lfs - 0.12) t.push("Takes the first pitch"); else if (fs >= lfs + 0.12) t.push("Swings at the first pitch"); }
-      var tc = r(c.two, 4, 3), ltc = r(l.two, 4, 3);
-      if (tc != null && ltc != null) { if (tc >= ltc + 0.08) t.push("Expands with two strikes"); else if (tc <= ltc - 0.10) t.push("Shrinks the zone with two strikes"); }
+      var ts = twoStrikeShift(c, l);
+      if (ts) { if (ts.shift >= TWO_SHIFT) t.push("Expands with two strikes"); else if (ts.shift <= -TWO_SHIFT) t.push("Holds his zone with two strikes"); }
     }
     return t;
+  }
+  /* TAGS-01: with two strikes, how much more he chases than in the other counts, net of the same change for most hitters
+     on his side. It carries over from season to season (correlation 0.64 and 0.72), and the tags at about one standard
+     deviation (6.5 points) held on later pitches in both test seasons; his chase level was already the Chases a lot and
+     Patient tags, which the old level tags mostly repeated. Rows of 80 two-strike and 150 other pitches out of the zone. */
+  var TWO_SHIFT = 0.065;
+  function twoStrikeShift(c, l) {
+    if (!c || !l || !c.two || !l.two) return null;
+    var sum = function (x, k) { return ["first", "ahead", "behind"].reduce(function (a, g) { return a + (x[g] ? x[g][k] : 0); }, 0); };
+    var td = c.two[3], od = sum(c, 3), ltd = l.two[3], lod = sum(l, 3);
+    if (td < 80 || od < 150 || !ltd || !lod) return null;
+    var two = c.two[4] / td, other = sum(c, 4) / od, lgTwo = l.two[4] / ltd, lgOther = sum(l, 4) / lod;
+    return { shift: (two - other) - (lgTwo - lgOther), two: two, other: other, lgTwo: lgTwo, lgOther: lgOther };
   }
   /* The spots for one pair, sorted for a sentence: pitches out of the zone he chases, edges and strikes he takes, strikes he can't do much with. */
   function planSpots(pr, cells, strikeCells, byFamily) {
@@ -3515,6 +3529,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         (R.scored && R.scored.decisions >= 1000 && R.scored.map_gain_nats_per_1000 != null ? " Pitch by pitch, on " + Number(R.scored.decisions).toLocaleString() + " swing-or-take decisions, our read called them better than league averages " + (R.scored.map_gain_nats_per_1000 >= 5 ? "by a clear margin." : R.scored.map_gain_nats_per_1000 >= 0 ? "by a small margin." : "only some of the time; it trailed overall.") : "") + "</p>";
     }
     if (RP_RECORD && RP_RECORD.games) planTierLines(RP_RECORD).forEach(function (t) { held += '<p class="note">' + esc(t) + "</p>"; });
+    /* TAGS-01: the tags checked on the next season's pitches (2024-2025 tags on 2026 through July; 2023-2024 on 2025) */
+    if (held) held += '<p class="note">The tags carry over. Hitters we tagged from two seasons chased, missed and swung at first pitches about as differently from most hitters the next season as we said: chasers 7.0 and 7.3 points over the league (we had said 7.9 and 8.3), patient hitters 8.0 and 7.1 under (8.6 and 8.6), hitters who swing and miss 7.5 and 6.3 over (7.7 and 7.8), first-pitch takers 12.9 and 12.8 under (15.2 and 14.4), and the two-strike reads 7.7 to 8.6 points of extra chasing for hitters who expand and 6.7 to 7.7 fewer for hitters who hold their zone.</p>';
     if (held) h += '<details class="more" data-keep="held"' + (state.rpOpen.held ? " open" : "") + "><summary>How these plans have held up</summary>" + held + "</details>";
     h += '<details class="more" data-keep="tip"' + (state.rpOpen.tip ? " open" : "") + '><summary>Pitch to pitch</summary><p class="note">After he takes a pitch, and even more after he swings through one, coming right back with the same pitch type gets more swings and misses and weaker contact than switching: about 2 more points of misses after a ball, 2.5 after a called strike and 3.5 after a miss. Taking a little off the next one adds to it. After a foul ball it doesn\'t matter. That holds across the league and held up on months the model never saw; during a game the at-bat strip says it for the pitch coming next. It isn\'t built into each hitter\'s plan yet.</p></details>';
     h += '<details class="more" data-keep="how"' + (state.rpOpen.how ? " open" : "") + '><summary>How the plan is built</summary><p class="note">For every hitter we map where he swings, read about a quarter second before the ball gets there, when he has to decide. We compare that to an average hitter on his side and to the spots this pitcher actually throws each pitch to. Each spot is scored by what usually happens there for this hitter: a chase, a take, a whiff, a foul or a ball in play, and what that does to the count. The spots on the plan are the best of the pitcher\'s usual spots, with normal command (pitches miss by about 7 inches). The run figures assume hitters don\'t adjust much. Every test, including the ones that failed, is in the project ledger.</p></details></section>';
