@@ -40,3 +40,25 @@ def test_pitcher_card_arsenal_by_pitch_type():
 
     role = card['role']
     assert role['apps'] == 10 and role['starts'] == 4 and role['relief'] == 6 and role['ninth_share'] == 1.0
+
+
+def test_arsenal_uses_the_latest_season_when_it_has_300_pitches():
+    from datetime import date
+    B = _report()
+    n = 800
+    season = np.where(np.arange(n) < 400, 2025, 2026)
+    sub = np.where(season == 2026, np.where(np.arange(n) % 2 == 0, 5, 0), 0)     # in 2026 he added a sweeper (ST) to the four-seamer
+    T = {'group': np.where(sub == 5, 3, 0), 'sub': sub, 'v0': np.where(season == 2026, 97.0, 95.0), 'spin': np.full(n, 2300.0),
+         'pfx_x': np.zeros(n), 'pfx_z': np.zeros(n), 'throw_r': np.ones(n, int), 'stand_r': np.resize([0, 1], n), 'strikes': np.resize([0, 1, 2], n),
+         'balls': np.zeros(n, int), 'last_in_pa': np.resize([0, 0, 1], n), 'out7': np.resize([1, 0, 3], n), 'zone': np.resize([5, 14], n),
+         'game': np.repeat(np.arange(20), n // 20), 'inning': np.ones(n, int), 'season': season}
+    z = np.zeros(n)
+    fake = SimpleNamespace(T=T, gp={77: np.arange(n)}, swing=z, whiff=z, outside=np.zeros(n, bool), xt=z, zt=np.full(n, 2.5),
+                           looks_in_ends_out=np.zeros(n, bool), asof_day=date(2026, 10, 1).toordinal())
+    card = B.Fitted.pitcher_card(fake, 77)
+    assert card['arsenal_season'] == 2026
+    ff = [a for a in card['arsenal'] if a['type'] == 'FF'][0]
+    assert ff['speed'] == 97.0 and abs(ff['share'] - 0.5) < 0.01 and any(a['type'] == 'ST' for a in card['arsenal'])
+    fake.asof_day = date(2026, 4, 1).toordinal(); T['season'] = np.where(np.arange(n) < 600, 2025, 2026)   # 200 pitches this season: both seasons
+    card = B.Fitted.pitcher_card(fake, 77)
+    assert card['arsenal_season'] is None

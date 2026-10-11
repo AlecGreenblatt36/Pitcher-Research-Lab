@@ -652,13 +652,18 @@ class Fitted:
                     mix[fname][key] = [[float(GU[k % len(GU)]), float(GZ[k // len(GU)]), round(float(cnt[k] / m2.sum()), 3)] for k in np.argsort(-cnt)[:3] if cnt[k] > 0]
         # the arsenal by pitch type, the way the public pitch pages list it: share, speed, spin, movement (PITCHf/x inches over
         # the last 40 feet; horizontal positive to his arm side), misses per swing, chases, strikes and put-aways
+        # the latest season's pitches when there are 300 or more of them (speeds and mixes move from season to season, and the
+        # public pitch pages list each season), else both seasons
+        yr = date.fromordinal(self.asof_day).year if hasattr(self, 'asof_day') else None
+        r_cur = r[T['season'][r] == yr] if yr is not None and 'season' in T else r[:0]
+        ra = r_cur if len(r_cur) >= 300 else r
         arsenal = []
-        sub = T['sub'][r]; rh = T['throw_r'][r][0] == 1
+        sub = T['sub'][ra]; rh = T['throw_r'][r][0] == 1
         for k, code in enumerate(D.SUBTYPES):
             mm = sub == k
-            if mm.sum() < max(20, 0.01 * len(r)):
+            if mm.sum() < max(20, 0.01 * len(ra)):
                 continue
-            rr = r[mm]; sw = self.swing[rr]; out = self.outside[rr]; two = T['strikes'][rr] == 2
+            rr = ra[mm]; sw = self.swing[rr]; out = self.outside[rr]; two = T['strikes'][rr] == 2
             fin = lambda v: None if not np.isfinite(v) else v
             spin = fin(float(np.nanmean(np.where(T['spin'][rr] > 0, T['spin'][rr], np.nan)))) if np.isfinite(T['spin'][rr]).any() else None
             arsenal.append({'type': code, 'pitches': int(mm.sum()), 'share': round(float(mm.mean()), 3),
@@ -682,6 +687,7 @@ class Fitted:
             role.update({'ninth_share': round(float((entry[rel] >= 9).mean()), 3), 'entry_inning': round(float(entry[rel].mean()), 2),
                          'bf_per_relief': round(float(bf[rel].mean()), 2)})
         card = {'throws': 'R' if T['throw_r'][r][0] == 1 else 'L', 'pitches': int(len(r)), 'mix': mix, 'arsenal': arsenal, 'role': role,
+                'arsenal_season': int(yr) if ra is r_cur else None,
                 'chase_rate_against': round(float(self.swing[r][self.outside[r]].mean()), 3) if self.outside[r].any() else None,
                 'looks_in_ends_out': round(float(self.looks_in_ends_out[r].mean()), 3),
                 'zones': zone_split(T, r, self.swing, self.whiff, by='stand_r'),      # where he throws, by the batter's side
