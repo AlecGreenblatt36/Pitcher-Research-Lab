@@ -4417,14 +4417,16 @@
     "columns": {
      "ID": "ZONES-02",
      "Attempt": "ZONES-01's Expected view on the subsets the charts show: the same study run separately on pitches from right-handed pitchers, from left-handed pitchers, and on fastballs, breaking balls and offspeed pitches (the prior from the same subset, m refitted in each on 2023-2024 to 2025, scored once on 2024-2025 to 2026; hitters with 100 or more plate appearances in training)",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: (1) in every subset shrunk beats raw on all four metrics with the interval excluding zero; (2) each subset's fitted m is within a factor of four of the pooled one (160 for average and slugging, 80 for swing and miss rates). Decision rule: if (1) holds, the Expected view stays on every chart; where (2) fails, that subset's charts use its own m; if (1) fails for a subset, its charts show the standard view only.",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: (1) in every subset shrunk beats raw on all four metrics with the interval excluding zero; (2) each subset's fitted m is within a factor of four of the pooled one (160 for average and slugging, 80 for swing and miss rates). Decision rule: if (1) holds, the Expected view stays on every chart; where (2) fails, that subset's charts use its own m; if (1) fails for a subset, its charts show the standard view only. Results (run 38107266015, receipt research/report-38107266015.json, 2026 scored once): shrunk minus raw, nats per event (slugging in squared error), all intervals below zero: against righties average -0.040, swing -0.0032, miss -0.0113, slugging -0.0205; against lefties -0.102, -0.0060, -0.0384, -0.0420; fastballs -0.051, -0.0035, -0.0167, -0.0269; breaking balls -0.119, -0.0093, -0.0499, -0.0501; offspeed -0.172, -0.0323, -0.0680, -0.0898 (the smaller the subset, the worse raw rates do). Fitted m: righties 160, 80, 80, 320; lefties 320, 80, 80, 160; fastballs 320, 40, 80, 320; breaking 160, 80, 80, 160; offspeed 160, 40, 160, 160, every one within a factor of two of the pooled values. Shrunk against scaled stays below zero on swing and miss in every subset. **(1) and (2) held**: the Expected view stays on every chart at the pooled m.",
+     "Delta corrected Brier, 2026": "held: Expected view on every subset at the pooled m"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38107266015"
+    ],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "held: Expected view on every subset at the pooled m"
    }
   ],
   "BOX-01": [
