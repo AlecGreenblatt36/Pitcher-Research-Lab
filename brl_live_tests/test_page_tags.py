@@ -114,3 +114,15 @@ def test_pitcher_tags_from_counts_against_the_league():
               "assert.deepEqual(t,['Spins it when behind']);"                          # the rest under their floors
               "assert.deepEqual(pitcherTags({},lg),[]);")
     subprocess.run(['node', '-e', prefix + functions + suffix], check=True)
+
+
+def test_live_count_tip_follows_the_count():
+    functions = page_functions('liveCountTip', 'twoStrikeShift')
+    prefix = ("const assert=require('assert');var TWO_SHIFT=0.065;function pct(v){return Math.round(100*v)+'%';}"
+              "const lg={counts:{R:{first:[1000,300,0,400,120],ahead:[1000,450,0,450,135],behind:[1000,480,0,350,105],two:[1000,520,0,500,210]}}};"
+              "const hc={side:'R',counts:{first:[300,45,0,120,36],ahead:[300,135,0,135,40],behind:[300,200,0,105,32],two:[300,170,0,150,83]}};")
+    suffix = ("assert.ok(liveCountTip(hc,lg,{balls:0,strikes:0}).indexOf('takes the first pitch')>0);"
+              "assert.ok(liveCountTip(hc,lg,{balls:1,strikes:2}).indexOf('expands more than most')>0);"
+              "assert.ok(liveCountTip(hc,lg,{balls:2,strikes:0}).indexOf('aggressive')>0);"
+              "assert.equal(liveCountTip(hc,lg,{balls:1,strikes:1}),'');")
+    subprocess.run(['node', '-e', prefix + functions + suffix], check=True)

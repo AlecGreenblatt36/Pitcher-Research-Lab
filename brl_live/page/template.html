@@ -3016,6 +3016,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (np) h += '<p class="rp-next"><b>Next pitch:</b> ' + esc(np) + "</p>";
     var cm = st.between_innings ? "" : countMixLine(players[now.pid] && players[now.pid].pitcher, players[now.hid] && players[now.hid].hitter, st);
     if (cm) h += '<p class="rp-next"><b>His mix in this count:</b> ' + esc(cm) + "</p>";
+    var ct = st.between_innings ? "" : liveCountTip(players[now.hid] && players[now.hid].hitter, doc.league, st);
+    if (ct) h += '<p class="rp-next"><b>The hitter in this count:</b> ' + esc(ct) + "</p>";
     var ld = loadNote(now.lv, now.pid, lastName(nm(now.pid, now.pitcher)));
     if (ld) h += '<p class="rp-next"><b>On the mound:</b> ' + esc(ld) + "</p>";
     var bs = (now.lv.state && now.lv.state.bases) || [];
@@ -3025,6 +3027,30 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var ul = umpireLine(now.lv);
     if (ul) h += '<small class="rp-now-miss">' + ul + "</small>";
     return h + "</div>";
+  }
+  /* The hitter's count habit that applies to the count at hand (TAGS-01 and TAGS-02 held a season later): the first pitch,
+     two strikes (his change against his own chase in the other counts), or the pitcher behind. */
+  function liveCountTip(hc, lg, st) {
+    var c = hc && hc.counts, l = lg && lg.counts ? lg.counts[hc && hc.side === "L" ? "L" : "R"] : null;
+    if (!c || !l || !st) return "";
+    var b = st.balls || 0, k = st.strikes || 0, r = function (row, a, d) { return row && row[d] >= 80 ? row[a] / row[d] : null; };
+    if (b === 0 && k === 0) {
+      var fs = r(c.first, 1, 0), lfs = r(l.first, 1, 0);
+      if (fs != null && lfs != null && fs <= lfs - 0.12) return "He takes the first pitch (swings at " + pct(fs) + ", most hitters " + pct(lfs) + "): get a strike.";
+      if (fs != null && lfs != null && fs >= lfs + 0.12) return "He swings at the first pitch (" + pct(fs) + ", most hitters " + pct(lfs) + "): start him off the plate.";
+      return "";
+    }
+    if (k === 2) {
+      var ts = twoStrikeShift(c, l);
+      if (ts && ts.shift >= TWO_SHIFT) return "With two strikes he expands more than most (chases " + pct(ts.two) + ", " + pct(ts.other) + " before two strikes): finish him off the plate.";
+      if (ts && ts.shift <= -TWO_SHIFT) return "With two strikes he holds his zone (chases " + pct(ts.two) + ", " + pct(ts.other) + " before): finish him on the edges.";
+      return "";
+    }
+    if (b > k) {
+      var bs = r(c.behind, 1, 0), lbs = r(l.behind, 1, 0);
+      if (bs != null && lbs != null && bs >= lbs + 0.10) return "Behind in the count he gets aggressive (swings at " + pct(bs) + ", most " + pct(lbs) + "): don't give in over the middle.";
+    }
+    return "";
   }
   /* What the pitcher throws in the count at hand to hitters on this batter's side (usage_by_count over the plan's training
      pitches, 40 or more in the count group): the standard pitch-tendency line. */
