@@ -65,9 +65,9 @@ https://claude.ai/artifact/HFxTsd3ZXTQs7d7cTivr4h (Version 8 adds the ABS challe
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 5:05 a.m. Eastern October 11, by `date -u`)
+### In flight (updated 4:45 a.m. Eastern October 11, by `date -u`)
 
-- October 11, 5 a.m.: switch hitters fixed (PROD-11): the plans read the pitcher's pitches to the side the hitter takes
+- October 11, 4:45 a.m.: switch hitters fixed (PROD-11): the plans read the pitcher's pitches to the side the hitter takes
   against that hand (Fitted.side_vs, pair()), and the page orients, labels and compares his charts, splits, pull tags and
   spray by that side (cards: side_by_hand, spray_pull; page isSwitch, hzSideFor, hzLeagueFor; a both-hands chart is
   labeled 3B side and 1B side). TAGS-10 held (hard contact inside or away, 0.60 and 0.64); TAGS-09 only partly (misses
