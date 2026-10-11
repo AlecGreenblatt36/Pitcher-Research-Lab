@@ -4516,14 +4516,16 @@
     "columns": {
      "ID": "TAGS-04",
      "Attempt": "Is a hitter late on velocity, relative to himself? His misses per swing on fastballs at 96 mph or more minus on fastballs under 93, net of the league's same difference on his side (rows of 80 hard and 150 softer fastball swings in each window). Same splits and hitters as TAGS-01 (tag_study with velocity): the season-to-season correlation and tags at one standard deviation scored on the test pitches. Synthetic check: a planted velocity weakness carries over. MATCHUP-01's mx_velo term (fastball weakness times the pitcher's velocity) added nothing to the plate-appearance model, so this is a scouting read, not a model change.",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: correlation 0.25 or more in both splits; the one-SD tags hold on the test pitches (difference at least a third of the threshold in the tag's direction, interval excluding zero). Decision rule: if both hold in both splits, the cards carry the counts and the plans tag Late on velocity and Handles velocity, with a lineup note against a starter whose main fastball averages 95 mph or more; otherwise no velocity tag.",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: correlation 0.25 or more in both splits; the one-SD tags hold on the test pitches (difference at least a third of the threshold in the tag's direction, interval excluding zero). Decision rule: if both hold in both splits, the cards carry the counts and the plans tag Late on velocity and Handles velocity, with a lineup note against a starter whose main fastball averages 95 mph or more; otherwise no velocity tag. **Results (run 38112995882):** few hitters reach the floors (53 on 2026's test months, 170 on 2025). Correlation 0.26 (2026) and 0.15 (2025, under the 0.25 predicted); SD about 4 points. Tags at one SD on the test pitches: late on velocity -0.0 [-2.7, +2.6] (2026) and +2.2 [+0.3, +4.4] (2025), against training +5.7 and +6.5; handles velocity -2.5 [-6.1, +0.3] and -1.0 [-2.4, +0.5]. **Failed: a hitter's extra misses on hard fastballs mostly do not carry over.** No velocity tag goes on the plans (a hard thrower's edge is already in each pitch's miss rate and the matchup grid).",
+     "Delta corrected Brier, 2026": "failed: 0.26 and 0.15; no tag"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38112995882"
+    ],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "failed: 0.26 and 0.15; no tag"
    }
   ],
   "ZONES-01": [
