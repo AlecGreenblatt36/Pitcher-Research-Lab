@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 295,
- "rows": 298,
+ "experiments": 296,
+ "rows": 299,
  "records": {
   "ACC-01": [
    {
@@ -4915,6 +4915,22 @@
     ],
     "frozen_commits": [],
     "status": "failed: (1), (2), (3)"
+   }
+  ],
+  "TTO-01": [
+   {
+    "id": "TTO-01",
+    "columns": {
+     "ID": "TTO-01",
+     "Attempt": "The third time through the order. Plate appearances against starters (his first pitch in the first inning), regular seasons 2023 to 2026 (2026 before August 1), each with the batter's time through (1st, 2nd, 3rd or later against that pitcher in the game, by at-bat order). Per season the league's OBP (times on base per plate appearance), SLG per at-bat and strikeouts per plate appearance by time through; per starter-season his own third-time gap (third against first and second together, net of the league's gap that season) and its carry-over to the next season (2023 to 2024, 2024 to 2025, 2025 to 2026) among starters with 150 or more third-time plate appearances in both: correlation with an interval from resampling pitchers (2,000 draws) and slope. tools/brl_report.py tto_study and tto_table, report lane, aggregates only. Synthetic check (brl_live_tests/test_report_tto_study.py): a planted 3-point league penalty measured; a starter's own gap carries over when it is his (r above 0.3) and not when redrawn.",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: (1) in every season hitters' third-time OBP against starters is at least 1 point above their first and second times together; (2) a starter's own third-time OBP gap carries over with r under 0.2; (3) the same for SLG. Decision rule: if (1) holds, the plan's starter fold notes the league's third-time penalty in 2026; if (2) also holds it adds that a starter's own gap did not carry over, and no per-pitcher third-time numbers are shown; if (2) fails, his own gap is shown shrunk by the carry-over slope.",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "BOX-01": [

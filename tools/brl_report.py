@@ -1758,6 +1758,93 @@ def rest_study(T: dict, stage, spec: dict) -> dict:
     return out
 
 
+def tto_table(T: dict, mask) -> dict:
+    """Plate appearances against starters (pitchers whose first pitch of the game came in the first inning) on the masked
+    rows, each with the time through the order (the batter's 1st, 2nd, 3rd or later plate appearance against that pitcher
+    in the game, by at-bat order), and its outcome counts: at-bat, times on base, total bases, strikeout."""
+    rows = np.flatnonzero(mask & (T['last_in_pa'] == 1))
+    allr = np.flatnonzero(mask)
+    pg = T['pitcher'][allr].astype(np.int64) * 10_000_000 + T['game'][allr].astype(np.int64) % 10_000_000
+    upg, inv = np.unique(pg, return_inverse=True)
+    entry = np.full(len(upg), 99); np.minimum.at(entry, inv, T['inning'][allr])
+    key = T['pitcher'][rows].astype(np.int64) * 10_000_000 + T['game'][rows].astype(np.int64) % 10_000_000
+    started = entry[np.searchsorted(upg, key)] == 1
+    rows = rows[started]
+    gpb = np.stack([T['game'][rows].astype(np.int64), T['pitcher'][rows].astype(np.int64), T['batter'][rows].astype(np.int64), T['ab'][rows].astype(np.int64)], 1)
+    order = np.lexsort((gpb[:, 3], gpb[:, 2], gpb[:, 1], gpb[:, 0]))
+    rows, gpb = rows[order], gpb[order]
+    newgrp = np.r_[True, (gpb[1:, :3] != gpb[:-1, :3]).any(1)]
+    grp_start = np.maximum.accumulate(np.where(newgrp, np.arange(len(rows)), 0))
+    times = np.arange(len(rows)) - grp_start + 1
+    o7 = T['out7'][rows]
+    return {'pitcher': gpb[:, 1], 'season': T['season'][rows].astype(np.int64), 'times': np.minimum(times, 3),
+            'ab': np.isin(o7, (0, 1, 3, 4, 5, 6)).astype(float), 'on': np.isin(o7, (2, 3, 4, 5)).astype(float),
+            'tb': np.where(o7 == 3, 1.0, 0.0) + np.where(o7 == 4, 2.0, 0.0) + np.where(o7 == 5, 4.0, 0.0), 'k': (o7 == 1).astype(float)}
+
+
+def tto_study(T: dict, stage, spec: dict) -> dict:
+    """TTO-01 (LEDGER): the third time through the order. Per season, the league's rates against starters the first,
+    second and third (or later) time a batter faces him in a game; per starter-season his own third-time gap (third
+    against first and second together, net of the league's gap that season) and its carry-over to the next season among
+    starters with min_third or more third-time plate appearances in both: correlation and slope, intervals from resampling
+    pitchers. Aggregates only."""
+    reg = (T['post'] == 0) if 'post' in T else np.ones(len(T['season']), bool)
+    seasons = [int(x) for x in spec.get('seasons', (2023, 2024, 2025, 2026))]; boot = int(spec.get('boot', 2000))
+    min_third = float(spec.get('min_third', 150))
+    rng = np.random.default_rng(int(spec.get('seed', 20261011)))
+    m = reg & np.isin(T['season'], seasons)
+    if spec.get('test_end'):
+        m &= ~((T['season'] == max(seasons)) & (T['day'] >= date.fromisoformat(spec['test_end']).toordinal()))
+    P = tto_table(T, m); stage('tto study: plate appearances')
+    out = {'seasons': seasons, 'test_end': spec.get('test_end'), 'league': {}, 'carry': {}}
+    rates = {'obp': ('on', None), 'slg': ('tb', 'ab'), 'k': ('k', None)}
+    for y in seasons:
+        sy = P['season'] == y
+        res = {}
+        for name, (num, den) in rates.items():
+            vals = []
+            for t in (1, 2, 3):
+                mm = sy & (P['times'] == t)
+                d = P[den][mm].sum() if den else mm.sum()
+                vals.append(round(float(P[num][mm].sum() / max(d, 1)), 4))
+            res[name] = vals
+        res['pa'] = [int((sy & (P['times'] == t)).sum()) for t in (1, 2, 3)]
+        out['league'][str(y)] = res
+    # his own gap: third-time rate minus his first-and-second rate, net of the league's same gap that season
+    def gaps(y, name):
+        num, den = rates[name]
+        sy = P['season'] == y
+        up, inv = np.unique(P['pitcher'][sy], return_inverse=True)
+        third = P['times'][sy] == 3
+        dvec = P[den][sy] if den else np.ones(sy.sum())
+        n3 = np.bincount(inv, weights=np.where(third, dvec, 0.0), minlength=len(up)); n12 = np.bincount(inv, weights=np.where(third, 0.0, dvec), minlength=len(up))
+        s3 = np.bincount(inv, weights=np.where(third, P[num][sy], 0.0), minlength=len(up)); s12 = np.bincount(inv, weights=np.where(third, 0.0, P[num][sy]), minlength=len(up))
+        lg = s3.sum() / max(n3.sum(), 1) - s12.sum() / max(n12.sum(), 1)
+        g = s3 / np.maximum(n3, 1) - s12 / np.maximum(n12, 1) - lg
+        return {int(p): (float(g[i]), float(n3[i])) for i, p in enumerate(up)}
+    for name in rates:
+        xs, ys, who = [], [], []
+        for y0, y1 in zip(seasons[:-1], seasons[1:]):
+            a, b = gaps(y0, name), gaps(y1, name)
+            for pid in set(a) & set(b):
+                if a[pid][1] >= min_third and b[pid][1] >= min_third:
+                    xs.append(a[pid][0]); ys.append(b[pid][0]); who.append(pid)
+        x, yv, w = np.array(xs), np.array(ys), np.array(who)
+        if len(x) < 20:
+            out['carry'][name] = {'pairs': int(len(x))}
+            continue
+        up, pi = np.unique(w, return_inverse=True)
+        sxy = np.bincount(pi, weights=(x - x.mean()) * (yv - yv.mean()), minlength=len(up)); sxx = np.bincount(pi, weights=(x - x.mean()) ** 2, minlength=len(up))
+        syy = np.bincount(pi, weights=(yv - yv.mean()) ** 2, minlength=len(up))
+        draws = rng.integers(0, len(up), (boot, len(up)))
+        rb = sxy[draws].sum(1) / np.sqrt(np.maximum(sxx[draws].sum(1) * syy[draws].sum(1), 1e-18))
+        out['carry'][name] = {'pairs': int(len(x)), 'pitchers': int(len(up)), 'r': round(float(sxy.sum() / np.sqrt(max(sxx.sum() * syy.sum(), 1e-18))), 3),
+                              'r_ci': [round(float(np.percentile(rb, 2.5)), 3), round(float(np.percentile(rb, 97.5)), 3)],
+                              'slope': round(float(sxy.sum() / max(sxx.sum(), 1e-18)), 3), 'sd_gap': round(float(np.std(x)), 4)}
+    stage('tto study: done')
+    return out
+
+
 # SPLITS-01 (LEDGER): how much of a hitter's split by pitcher hand carries over. The metrics the splits table shows:
 # AVG and SLG on at-bats ended on the pitch, chase on pitches out of MLB's zone (11-14), misses per swing.
 SPLIT_M_GRID = (0.0, 25.0, 50.0, 100.0, 200.0, 400.0, 800.0, 1600.0, 3200.0, 6400.0, 1e6)
@@ -2964,6 +3051,9 @@ def main():
             dates = []
         if params.get('split_study'):
             receipt['split_study'] = split_shrink_study(T, stage, params['split_study'])
+            dates = []
+        if params.get('tto_study'):
+            receipt['tto_study'] = tto_study(T, stage, params['tto_study'])
             dates = []
         if params.get('rest_study'):
             receipt['rest_study'] = rest_study(T, stage, params['rest_study'])
