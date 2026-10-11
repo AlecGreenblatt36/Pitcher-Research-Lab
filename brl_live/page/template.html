@@ -472,8 +472,8 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .hz-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px 14px; margin: 4px 0 6px; }
 @media (min-width: 720px) { .hz-row { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); } .hz-card { max-width: 240px; } }
 .hz-card { min-width: 0; }
-.hz-card h4 { margin: 0 0 4px; font-size: 15px; line-height: 1.25; min-height: 38px; }
-.hz-card h4 small { display: block; font-weight: 400; color: var(--muted); font-size: 14px; }
+.hz-card h4, .hz-card h3 { margin: 0 0 4px; font-size: 15px; line-height: 1.25; min-height: 38px; }
+.hz-card h4 small, .hz-card h3 small { display: block; font-weight: 400; color: var(--muted); font-size: 14px; }
 .hz-n { font-size: 14px; color: var(--muted); text-align: center; }
 .hz-h { margin: 14px 0 6px; font-size: 16px; }
 .hz-h2 { font-family: var(--display); font-weight: 700; font-size: 22px; margin: 18px 0 2px; }
@@ -488,8 +488,8 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .hz-line small { display: block; color: var(--muted); font-size: 14px; white-space: nowrap; }
 .hz-key { line-height: 1.6; }
 .hz-sw { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: -1px; margin: 0 5px 0 0; }
-.hz-sw.hot { background: rgb(205,44,38); }
-.hz-sw.cold { background: rgb(33,102,172); margin-left: 8px; }
+.hz-sw.hot { background: rgb(196,40,36); }
+.hz-sw.cold { background: rgb(28,90,160); margin-left: 8px; }
 .hz-mk { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--ink); vertical-align: -1px; }
 .hz-mk.open { background: transparent; border: 2px solid var(--ink); }
 .hz-mk.sq { border-radius: 2px; }
@@ -2435,7 +2435,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   };
   function muCell(v, m) {
     var edge = m.hitter * (v - m.league) / m.league, a = Math.min(0.55, Math.abs(edge) * 0.9);
-    var bg = edge >= 0 ? "rgba(205,44,38," + a.toFixed(3) + ")" : "rgba(33,102,172," + a.toFixed(3) + ")";
+    var bg = edge >= 0 ? "rgba(196,40,36," + a.toFixed(3) + ")" : "rgba(28,90,160," + a.toFixed(3) + ")";
     var txt = m.league < 0.05 ? (v * 100).toFixed(1) + "%" : Math.round(v * 100) + "%";
     return '<td style="background:' + bg + '">' + txt + "</td>";
   }
@@ -2475,7 +2475,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   function rpCell(v, m, key, sel) {
     if (v == null) return '<td class="rp-cell" data-rp="' + key + '">–</td>';
     var edge = m.good * v / m.scale, a = Math.min(0.55, Math.abs(edge) * 0.35);
-    var bg = edge >= 0 ? "rgba(33,102,172," + a.toFixed(3) + ")" : "rgba(205,44,38," + a.toFixed(3) + ")";
+    var bg = edge >= 0 ? "rgba(28,90,160," + a.toFixed(3) + ")" : "rgba(196,40,36," + a.toFixed(3) + ")";
     return '<td class="rp-cell' + (sel ? " rp-sel" : "") + '" data-rp="' + key + '" style="background:' + bg + '">' + m.fmt(v) + "</td>";
   }
   /* The model's 7x7 grid, kept in the hitter's own frame (negative side values inside); drawn from the catcher's view,
@@ -2486,7 +2486,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     for (var r = gz.length - 1; r >= 0; r--) for (var c0 = 0; c0 < gu.length; c0++) {
       var c = lefty ? gu.length - 1 - c0 : c0;
       var k = r * gu.length + c, v = grid ? grid[k] : 0, a = Math.min(0.85, Math.abs(v) / scale);
-      var bg = v >= 0 ? "rgba(205,44,38," + a.toFixed(3) + ")" : "rgba(33,102,172," + a.toFixed(3) + ")";
+      var bg = v >= 0 ? "rgba(196,40,36," + a.toFixed(3) + ")" : "rgba(28,90,160," + a.toFixed(3) + ")";
       if (cloud) { v = Math.round(100 * cloud[k]); bg = "rgba(23,35,28," + (0.85 * cloud[k] / cmax).toFixed(3) + ")"; }
       var inz = Math.abs(gu[c]) < 0.83 && gz[r] > 1.5 && gz[r] < 3.5;
       var aimAt = (aim || []).filter(function (p) { return Math.abs(p[0] - gu[c]) < 0.01 && Math.abs(p[1] - gz[r]) < 0.01; })[0];
@@ -2512,7 +2512,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   var HZ_FAMS = [["all", "All pitches"], ["fastball", "Fastballs"], ["breaking", "Breaking balls"], ["offspeed", "Offspeed"]];
   var HZ_CELL = { 1: [0, 0], 2: [1, 0], 3: [2, 0], 4: [0, 1], 5: [1, 1], 6: [2, 1], 7: [0, 2], 8: [1, 2], 9: [2, 2] };
   var HZ_OUT = { 11: ["M0 0H66V20H20V75H0Z", 33, 10.5, 10, 10], 12: ["M66 0H132V75H112V20H66Z", 99, 10.5, 122, 10], 13: ["M0 75H20V130H66V150H0Z", 33, 140, 10, 140], 14: ["M112 75H132V150H66V130H112Z", 99, 140, 122, 140] };
-  var HZ_UID = 0, HZ_MQ = null, HZ_MQ_PK = null;
+  var HZ_UID = 0, HZ_MQ = null, HZ_MQ_PK = null, HZ_RED = [196, 40, 36], HZ_BLUE = [28, 90, 160], HZ_DARK = false;
+  try { HZ_DARK = window.matchMedia("(prefers-color-scheme: dark)").matches; } catch (e) { /* light */ }
   function hzMetric() { return HZ_METRICS[state.hzMetric] ? state.hzMetric : "avg"; }
   function hzFmt(m, v) { return m.three ? (v >= 1 ? v.toFixed(3) : v.toFixed(3).slice(1)) : Math.round(v * 100) + "%"; }
   function hzVal(m, c) { return c && c[m.den] >= m.min ? c[m.num] / c[m.den] : null; }
@@ -2556,8 +2557,12 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var lt = hzTotal(o.lg && o.lg.length ? o.lg : cells), center = lt[m.den] ? lt[m.num] / lt[m.den] : null;
     var fill = function (v) {
       if (v == null || center == null) return { bg: "var(--surface)", fg: "var(--muted)" };
-      var d = Math.max(-1, Math.min(1, (v - center) / m.scale)), a = Math.abs(d) * 0.9;
-      return { bg: (d >= 0 ? "rgba(205,44,38," : "rgba(33,102,172,") + a.toFixed(3) + ")", fg: a >= 0.5 ? "#fff" : "var(--ink)" };
+      var d = Math.max(-1, Math.min(1, (v - center) / m.scale)), a = Math.abs(d) * 0.9, rgb = d >= 0 ? HZ_RED : HZ_BLUE;
+      /* the number in white or ink, whichever reads better on the color over a white page (a dark page is always light text) */
+      var lin = function (c) { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+      var mix = rgb.map(function (c) { return 255 + (c - 255) * a; }), L = 0.2126 * lin(mix[0]) + 0.7152 * lin(mix[1]) + 0.0722 * lin(mix[2]);
+      var white = HZ_DARK ? a >= 0.45 : 1.05 / (L + 0.05) > (L + 0.05) / 0.0645;
+      return { bg: "rgba(" + rgb.join(",") + "," + a.toFixed(3) + ")", fg: white ? "#fff" : "var(--ink)" };
     };
     var tip = function (zn) {
       var c = by[zn], v = hzVal(m, c), l = hzVal(m, lby[zn]), w = hzZoneWords(zn, side) + ": ";
@@ -2633,14 +2638,15 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   function hzHandWords(hand) { return hand === "R" ? "right-handed pitchers" : hand === "L" ? "left-handed pitchers" : "all pitchers"; }
   function hzSeasons(asof) { var y = parseInt(String(asof || D.date).slice(0, 4), 10); return (y - 1) + " and " + y; }
   /* A hitter's charts by pitch type against one hand, the plan's spots marked when given (plan[fam], stPlan[fam]). */
-  function hzStrip(card, lg, hand, fams, plan, stPlan, label) {
+  function hzStrip(card, lg, hand, fams, plan, stPlan, label, hl) {
+    hl = hl || "h4";
     var z = card && card.zones, k = hzMetric(), h = '<div class="hz-row">';
     var useHand = hzSplit(z) ? hand : "all";
     fams.forEach(function (fam) {
       var cells = hzCells(z, useHand, fam[0]);
       if (!cells) return;
       var t = hzTotal(cells);
-      h += '<div class="hz-card"><h4>' + esc(fam[1]) + (fam[2] ? " <small>" + esc(fam[2]) + "</small>" : "") + "</h4>" +
+      h += '<div class="hz-card"><' + hl + ">" + esc(fam[1]) + (fam[2] ? " <small>" + esc(fam[2]) + "</small>" : "") + "</" + hl + ">" +
         hzChart(cells, { metric: k, side: card.side, lg: hzLeague(lg, card.side, useHand, fam[0]), aim: plan ? plan[fam[0]] : null, strike: stPlan ? stPlan[fam[0]] : null, top: card.zone_top_ft, bot: card.zone_bottom_ft, label: (label || "") + fam[1] + ", " + HZ_METRICS[k].label + " by zone" }) +
         '<div class="hz-n">' + Number(t[1]).toLocaleString() + " pitches</div></div>";
     });
@@ -3401,7 +3407,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
             h += '<section class="sec hz-sec"><h2>Hot zones</h2><p class="lede">Against ' + esc(hzHandWords(hh)) + ", " + esc(hzSeasons(doc.asof)) + ".</p>";
             h += '<div class="hz-tools">' + (split ? hzSeg("hzhand", hh, [["all", "All"], ["R", "vs RHP"], ["L", "vs LHP"]], "Pitcher's hand") : "") + hzMetricSeg() + "</div>";
             h += hzLine(hzCells(x.zones, hh, "all"), hzLeague(lg, x.side, hh, "all")) + hzTypes(x, hh);
-            h += hzStrip(x, lg, hh, HZ_FAMS, null, null, x.name + ": ") + hzLegend(hzMetric(), false) + "</section>";
+            h += hzStrip(x, lg, hh, HZ_FAMS, null, null, x.name + ": ", "h3") + hzLegend(hzMetric(), false) + "</section>";
           }
           if (oc) {
             /* where his decisions cost him, said once per spot and grouped by what he does there */
