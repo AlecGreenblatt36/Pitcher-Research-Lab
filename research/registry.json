@@ -5387,14 +5387,14 @@
     "columns": {
      "ID": "BULLPEN-04",
      "Attempt": "A calibration of the shown chance to pitch (BULLPEN-03's follow-up). The table shows only the bullpen candidates, so it is fitted and scored on them (shares above 0): logit of the shown chance = a + b x logit(chance) + c x logit(chance) squared, fitted by maximum likelihood on one season's candidates of BULLPEN-03's replays and applied to the other season's (chances clipped to 0.002 to 0.998 first; if the fitted curve is not increasing over that range, the straight map with c = 0 is used instead). tools/brl_bullpen_cal.py",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the map was fitted or scored.** Predictions, in both seasons with the map from the other season, on the candidates: (1) the mean chance within 1.5 points of the share who pitched; (2) every bin of the mapped chance with 200 or more rows (under 10%, 10 to 25, 25 to 40, 40 to 60, 60 to 80, 80 and up) within 4 points; (3) Brier better than the unmapped chance, the paired interval over dates below zero. Decision rule: if (1) to (3) hold in both seasons, the Odds tab's bullpen tables show the mapped chance with the map fitted on both seasons (the order of the arms, the game plans' order and the Matchups tab's choice of relievers do not change, the map being increasing); otherwise the raw chance stays and its note says the likeliest arms pitch less often than shown.",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before the map was fitted or scored.** Predictions, in both seasons with the map from the other season, on the candidates: (1) the mean chance within 1.5 points of the share who pitched; (2) every bin of the mapped chance with 200 or more rows (under 10%, 10 to 25, 25 to 40, 40 to 60, 60 to 80, 80 and up) within 4 points; (3) Brier better than the unmapped chance, the paired interval over dates below zero. Decision rule: if (1) to (3) hold in both seasons, the Odds tab's bullpen tables show the mapped chance with the map fitted on both seasons (the order of the arms, the game plans' order and the Matchups tab's choice of relievers do not change, the map being increasing); otherwise the raw chance stays and its note says the likeliest arms pitch less often than shown. Results (50,111 and 51,220 candidate rows): the curve was not increasing over the whole clipped range in either fit, so the straight map was used (a -0.14, b 0.90 from either season); mean 29.5% against 29.5% (2025) and 28.6% against 28.6% (2026); Brier -0.00057 [-0.00085, -0.00030] and -0.00060 [-0.00087, -0.00035]; but by bins 25 to 40 -3.3 and -3.1, 60 to 80 66.0% against 54.0% (+12.1) and 66.2% against 53.0% (+13.2), 80 and up +32.7 and +34.8 (81 and 100 rows). (1) and (3) held, (2) failed in both seasons: a straight map cannot pull the top down that far. **The raw chance stays; the bullpen note says the likeliest arms pitch less often than shown** (arms at 60% or more pitched about 53% of the time in both seasons). The miss is in the simulator's usage of its top relievers, a modeling item (HANDOFF known gaps).",
+     "Delta corrected Brier, 2026": "(1), (3) held; (2) failed; note added"
     },
     "registered_before_run": true,
     "diagnostic": false,
     "runs": [],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "(1), (3) held; (2) failed; note added"
    }
   ],
   "TOTALS-05": [
