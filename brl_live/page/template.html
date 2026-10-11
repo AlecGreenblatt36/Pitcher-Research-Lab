@@ -520,6 +520,8 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .hz-types .box th:last-child, .hz-types .box td:last-child { padding-right: 8px; }
 .hz-types.ct .box td small { display: block; font-family: var(--body); font-size: 14px; color: var(--muted); line-height: 1.2; }
 .hz-cap { margin: 10px 0 4px; font-weight: 700; color: var(--ink); }
+.hz-types.ars { max-width: 760px; }
+.hz-types.ars .box th:first-child, .hz-types.ars .box td:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); }
 @media (min-width: 720px) { .pl-body { grid-template-columns: minmax(0, 1fr) 156px; gap: 20px; } }
 .pl-hz-f small { display: block; font-size: 14px; font-weight: 700; color: var(--muted); margin: 0 0 2px; }
 @media (min-width: 1000px) {
@@ -2675,6 +2677,17 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     return '<div class="tbl-wrap hz-types"><table class="box"><thead><tr><th scope="col">Pitch</th><th scope="col">Thrown</th><th scope="col">MPH</th><th scope="col">Miss</th><th scope="col">Chase</th><th scope="col">Zone</th>' + (pa ? '<th scope="col">Put away</th>' : "") + "</tr></thead><tbody>" +
       fams.map(function (fam) { var m = mix[fam]; return "<tr><td>" + { fastball: "Fastball", breaking: "Breaking", offspeed: "Offspeed" }[fam] + "</td><td>" + pct(m.share) + "</td><td>" + (m.speed != null ? m.speed.toFixed(1) : "\u2013") + "</td><td>" + rt(m.whiff_rate) + "</td><td>" + rt(m.chase_rate) + "</td><td>" + rt(m.zone_rate) + "</td>" + (pa ? "<td>" + rt(m.putaway) + "</td>" : "") + "</tr>"; }).join("") + "</tbody></table></div>";
   }
+  /* The arsenal by pitch type, when the card has it (plans built from October 10): the standard pitch table. */
+  var TYPE_NAME = { FF: "Four-seam", FA: "Fastball", SI: "Sinker", FC: "Cutter", SL: "Slider", ST: "Sweeper", SV: "Slurve", CU: "Curve", KC: "Knuckle curve", CS: "Slow curve", CH: "Changeup", FS: "Splitter", FO: "Forkball", SC: "Screwball", KN: "Knuckleball", EP: "Eephus" };
+  function arsenalTypes(pc) {
+    var a = pc && pc.arsenal;
+    if (!a || !a.length) return "";
+    var rt = function (v) { return v != null ? pct(v) : "\u2013"; }, num = function (v, d) { return v != null ? v.toFixed(d) : "\u2013"; };
+    var mv = function (v) { return v == null ? "\u2013" : (v > 0 ? "+" : "") + v.toFixed(1); };
+    return '<div class="tbl-wrap hz-types ars"><table class="box"><thead><tr><th scope="col">Pitch</th><th scope="col">Thrown</th><th scope="col">MPH</th><th scope="col">Spin</th><th scope="col">Vert</th><th scope="col">Horiz</th><th scope="col">Miss</th><th scope="col">Chase</th><th scope="col">Zone</th><th scope="col">Put away</th></tr></thead><tbody>' +
+      a.map(function (x) { return "<tr><td>" + esc(TYPE_NAME[x.type] || x.type) + "</td><td>" + pct(x.share) + "</td><td>" + num(x.speed, 1) + "</td><td>" + (x.spin != null ? Number(x.spin).toLocaleString() : "\u2013") + "</td><td>" + num(x.v_mov, 1) + "</td><td>" + mv(x.h_arm) + "</td><td>" + rt(x.whiff_rate) + "</td><td>" + rt(x.chase_rate) + "</td><td>" + rt(x.zone_rate) + "</td><td>" + rt(x.putaway) + "</td></tr>"; }).join("") +
+      '</tbody></table></div><p class="note">Vert and Horiz: inches of movement from spin over the last 40 feet (the classic PITCHf/x measure; TrackMan-style induced break reads about twice as big). Horizontal is positive toward his arm side. Miss: misses per swing. Chase: swings at it out of the zone. Zone: share in the strike zone. Put away: strikeouts per two-strike pitch.</p>';
+  }
   var COUNT_ROWS = [["first", "First pitch"], ["ahead", "Pitcher ahead or even"], ["behind", "Pitcher behind"], ["two", "Two strikes"]];
   /* A hitter's swings by count (the usual split), each next to the league's for his side. */
   function countTable(card, lg) {
@@ -3219,7 +3232,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       (po.posted ? "Posted lineup; the plan was built before it came out" + (po.missing.length ? ", so it has no line yet for " + esc(po.missing.join(" or ")) : "") + "." : lineupWords(se.lineup_source)) +
       " Hot zones against " + esc(hzSheetHand(doc, starter)) + ". Tap a hitter for his full plan, the counts and the bullpen.</p>";
     var spc = players[String(starter.id)] && players[String(starter.id)].pitcher;
-    if (spc && spc.mix) h += '<details class="more" data-keep="ars-' + side + '"' + (state.rpOpen["ars-" + side] ? " open" : "") + "><summary>" + esc(lastName(nm(starter.id))) + "'s pitches</summary>" + arsenalTable(spc.mix) +
+    if (spc && spc.mix) h += '<details class="more" data-keep="ars-' + side + '"' + (state.rpOpen["ars-" + side] ? " open" : "") + "><summary>" + esc(lastName(nm(starter.id))) + "'s pitches</summary>" + (spc.arsenal && spc.arsenal.length ? arsenalTypes(spc) : arsenalTable(spc.mix)) +
       (spc.usage ? '<p class="note hz-cap">What he throws by count</p>' + (usageLine(spc) ? '<p class="pd-line">' + esc(usageLine(spc)) + "</p>" : "") + usageTable(spc, "R") + usageTable(spc, "L") : "") + "</details>";
     var pen = bullpenCard(doc, se, nm);
     if (pen) h += '<details class="more" data-keep="pen-' + side + '"' + (state.rpOpen["pen-" + side] ? " open" : "") + "><summary>" + esc(nickname(doc.teams[other].name)) + " bullpen: rest and pitches</summary>" + pen + "</details>";
@@ -3711,7 +3724,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
             (x.looks_in_ends_out != null ? pct(x.looks_in_ends_out) + " of his pitches look like strikes when the hitter has to decide, then end up balls (league " + (lg.looks_in_ends_out != null ? pct(lg.looks_in_ends_out) : "\u2013") + ")." : "") + "</p>";
           /* the arsenal the way every scouting sheet lists it, then where each pitch goes to each side */
           var fams = ["fastball", "breaking", "offspeed"].filter(function (fam) { return mix[fam] && mix[fam].share >= 0.005; });     /* a pitch he all but never throws gets no row */
-          if (fams.length) h += arsenalTable(mix) + '<p class="note">Miss: misses per swing. Chase: swings at his pitches out of the zone. Zone: pitches in the strike zone. Put away: strikeouts per two-strike pitch of that type.</p>';
+          if (x.arsenal && x.arsenal.length) h += arsenalTypes(x);
+          else if (fams.length) h += arsenalTable(mix) + '<p class="note">Miss: misses per swing. Chase: swings at his pitches out of the zone. Zone: pitches in the strike zone. Put away: strikeouts per two-strike pitch of that type.</p>';
           if (x.usage) h += '<h2 class="hz-h2">What he throws by count</h2>' + (usageLine(x) ? '<p class="pd-line">' + esc(usageLine(x)) + "</p>" : "") + usageTable(x, "R") + usageTable(x, "L") + '<p class="note">Share of each pitch type in each count. Behind means more balls than strikes.</p>';
           if (x.zones && (x.zones.R || x.zones.L)) {
             /* where he pitches, the standard 13 zones: to righties or lefties, by pitch type */
