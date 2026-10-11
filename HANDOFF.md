@@ -93,8 +93,15 @@ queue behind the shards (seen October 11 at 16:50 UTC). Check-only replays (n_si
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 6:34 p.m. Eastern October 11, by `date -u`)
+### In flight (updated 7:36 p.m. Eastern October 11, by `date -u`)
 
+- October 11, 7:36 p.m.: BULLPEN-03 and -04 failed: the bullpen's top chances run high (60% to 80% shown, about 53%
+  pitched) and a straight calibration cannot fix them; the Odds tab now says so under the bullpen tables. Next for it
+  (BULLPEN-05, a diagnostic): record, per world, each relief entry's inning, the lead at that half-inning's start and
+  whether the arm is the team's top one or two by 14-day share, and compare with real entries; then try a temperature on
+  the choice model (per entry it is a little over-confident from 40% to 70% chosen) gated on the per-game chances. The
+  simulator's games are slightly closer than real ones (final margin within 3 runs 62% against 59% to 61%), which
+  explains only a little of it.
 - October 11, 6:34 p.m.: BULLPEN-03 registered (the chance-to-pitch table, scored per reliever for the first time).
   Replays v2-prod4-pen-1000-<season> started 22:34 UTC (runs 38180906147 and 38180930219), RELIEF-04's settings plus the
   new recording, so their games must equal RELIEF-04's (check home_wins per game). Score with tools/brl_bullpen_cal.py.
