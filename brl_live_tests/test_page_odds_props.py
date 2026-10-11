@@ -176,3 +176,12 @@ def test_hitter_props_list_a_strikeout_column():
     """PROD-16: the hitter props table adds 1+ K with the same own-chance rule as the other columns."""
     s = _script()
     assert '<th>Walk</th><th>1+ K</th>' in s and 'pf(ownAtLeast(d.K, 1, b.spot))' in s
+
+
+def test_record_lists_the_props_checks():
+    """The Record page's props table carries the re-run gaps the ledger reports, one row per market the Odds tab lists."""
+    s = _script()
+    rows = re.search(r'\n  var PROPS_RECORD = (\[.*?\]\]);\n', s, re.S).group(1)
+    got = json.loads(rows)
+    assert [r[0] for r in got][:2] == ['Starter strikeouts', 'Starter hits allowed'] and all(0 < r[2] <= 2.5 for r in got)
+    assert 'h += propsRecord();' in s

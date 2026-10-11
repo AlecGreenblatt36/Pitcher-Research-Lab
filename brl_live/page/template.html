@@ -687,6 +687,8 @@ small { font-size: 14px; }
 .box.props th:last-child, .box.props td:last-child { padding-right: 10px; }
 .bvp-t td, .bvp-t th { font-size: 16px; padding: 7px 5px; }
 .bvp-t th .spot { display: inline-block; width: 18px; color: var(--muted); font-size: 14px; }
+.props-rec th[scope=row] { text-align: left; font-family: var(--body); font-weight: 400; font-size: 15px; white-space: normal; }
+.props-rec td { white-space: nowrap; }
 .ts-t th[scope=row] { text-align: left; font-family: var(--body); font-weight: 400; font-size: 15px; white-space: normal; }
 .ts-t td { font-size: 17px; vertical-align: baseline; padding: 7px 6px; }
 .ts-t th[scope=row] { padding-top: 7px; padding-bottom: 7px; vertical-align: baseline; }
@@ -5263,6 +5265,20 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     });
   }
 
+  /* The props and ranges the Odds tab shows, as the two seasons re-run scored them: the largest gap in either season between
+     our chance and how often it happened (LEDGER PLAYER-08, PLAYER-09, LEASH-02, PLAYER-03, PROD-16, TOTALS-05; walks are left out: PLAYER-03 scored walks with
+     hit-by-pitches, the column shows walks alone). */
+  var PROPS_RECORD = [
+    ["Starter strikeouts", "2.5 to 8.5", 1.9], ["Starter hits allowed", "2.5 to 7.5", 1.6],
+    ["Starter outs (regular season)", "12.5 to 20.5", 2.3], ["Hitter: 1+ hit", "0.5", 0.9], ["Hitter: 2+ hits", "1.5", 0.6],
+    ["Hitter: home run", "0.5", 0.6], ["Hitter: 1+ strikeout", "0.5", 1.0],
+    ["Run ranges, team and total", "middle half", 1.4]];
+  function propsRecord() {
+    return '<section class="sec"><h2>Props and ranges</h2><p class="lede">The same two seasons re-run, for what the Odds tab lists: the biggest gap, in either season, between our chance and how often it happened.</p>' +
+      '<div class="tbl-wrap"><table class="box props-rec"><thead><tr><th scope="col">Market</th><th scope="col">Lines</th><th scope="col">Gap</th></tr></thead><tbody>' +
+      PROPS_RECORD.map(function (r) { return '<tr><th scope="row">' + esc(r[0]) + "</th><td>" + esc(r[1]) + "</td><td>" + r[2].toFixed(1) + " pts</td></tr>"; }).join("") +
+      '</tbody></table></div><p class="note">Points are percentage points: at 1.9, at every line our average chance and the share of games that went over were at most 1.9 points apart. The best hitters run a little high in 2026 (about 2.5 points on hits and home runs for the top tenth), the season the at-bat model never saw.</p></section>';
+  }
   function renderRecord() {
     var rec = D.record || {}, n = rec.n_scored || 0, N = recordNumbers();
     var h = '<div class="wrap"><div class="page-head"><h1>Our record</h1><p>Every game of 2025 and 2026 re-run with only what was known before it, plus every live pick since ' + (N.since ? esc(shortDate(N.since)) : "the record began") + ".</p></div>";
@@ -5280,6 +5296,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (parts.length) h += '<section class="sec"><h2>The bottom line</h2><p class="lede">' + esc(parts.join(". ")) + (years.indexOf("2025") >= 0 ? ". The at-bat model was tuned on 2025 games, so 2026 is the fairer test" : "") + ". Nobody picks much more than 57% of baseball games; the best team in baseball still loses 4 out of 10. What separates a good model is whether its percentages hold up: when it says 60%, that team should win about 60% of the time.</p></section>";
     h += '<div id="rec-seasons"><p class="empty">Loading the two seasons\u2026</p></div>';
     h += replaySeasons(rec);
+    h += propsRecord();
     if (!n) {
       h += '<section class="sec"><h2>Live games</h2><p class="empty">No live games scored yet. The first scores post after the next finals.</p></section></div>';
       app.innerHTML = h; fillSeasonChecks(); return;
