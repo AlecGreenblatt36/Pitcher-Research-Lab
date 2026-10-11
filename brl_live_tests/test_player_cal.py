@@ -85,3 +85,23 @@ def test_part_time_factors_are_found_and_lower_the_part_timers_chances():
         assert 0.85 < f[0] < 0.96 and abs(f[3] - 1.0) < 0.04
         gaps = res['by_season'][s]['kinds']['hit']['gap_by_bin']
         assert gaps[0][1] < gaps[0][0] - 1.0 and abs(gaps[3][1] - gaps[3][0]) < 0.5
+
+
+def test_two_or_more_total_bases_from_hits_by_singles():
+    """PLAYER-06: the page's chance from the replay's hits-by-singles table, and the real outcome from hits and extra-base
+    hits (a double or triple counts the same for two or more bases, so the history's 2B_3B class is enough)."""
+    hs = [[0] * 6 for _ in range(6)]
+    hs[0][0] = 250; hs[1][1] = 250; hs[1][0] = 250; hs[2][1] = 250          # none; a single; an extra-base hit; a single and an extra-base hit
+    keep = pc.STARTER_SHARE[0]
+    assert abs(pc.own_tb2(hs, 1) - (0 + 0 + keep + keep) / 4) < 1e-12
+    g = {'game_pk': 1, 'date': '2026-05-01', 'hitters': [
+        {'batter': 1, 'spot': 1, 'h_hist': [1000, 0, 0, 0, 0, 0], 'hr_hist': [1000, 0, 0, 0], 'bb_hist': [1000, 0, 0, 0, 0], 'k_hist': [1000, 0, 0, 0, 0],
+         'hs_hist': hs, 'prior_pa_365': 500, 'actual': {'pa': 4, 'h': 1, 'hr': 0, 'xbh': 1, 'k': 0, 'bb': 0}},
+        {'batter': 2, 'spot': 2, 'h_hist': [1000, 0, 0, 0, 0, 0], 'hr_hist': [1000, 0, 0, 0], 'bb_hist': [1000, 0, 0, 0, 0], 'k_hist': [1000, 0, 0, 0, 0],
+         'hs_hist': hs, 'prior_pa_365': 500, 'actual': {'pa': 4, 'h': 1, 'hr': 0, 'xbh': 0, 'k': 0, 'bb': 0}}]}
+    import tempfile, os
+    d = tempfile.mkdtemp(); f = os.path.join(d, 'x.jsonl.gz')
+    with gzip.open(f, 'wt') as fh:
+        fh.write(json.dumps(g) + '\n')
+    rows = pc.load_rows([f])
+    assert [r['y_tb2'] for r in rows] == [1, 0]                                 # a double counts; one single does not

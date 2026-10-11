@@ -209,3 +209,20 @@ def test_accumulator_keeps_the_first_inning_and_first_five_over_the_same_worlds(
     # through five: road 1 home 1 (tie), 0-0 (tie), road 2 home 1 (road by one)
     assert r['f5_margin_distribution']=={'n':10000,'counts':[[-1,n2],[0,n0+n1]]}
     assert r['f5_total_distribution']=={'n':10000,'counts':[[0,n1],[2,n0],[3,n2]]}
+
+
+def test_two_or_more_total_bases_of_his_own_keep_each_hit_with_the_spots_share():
+    """PLAYER-06: per world, his own total bases reach two unless no hit is his or the only one that is his is a single."""
+    from brl_live.boxscore import STARTER_SHARE
+    a=BoxAccumulator(matchup())
+    z=lambda **k:{**{x:0 for x in ('PA','AB','H','2B','3B','HR','R','RBI','BB','HBP','K','SF','SB','CS')},'player_id':'away0',**k}
+    kinds=[z(PA=4,AB=4,H=1),z(PA=4,AB=4,H=1,**{'2B':1}),z(PA=4,AB=4,H=2,HR=1),z(PA=4,AB=4)]
+    for i in range(10000):
+        a.add({'seed':i,'score':{'away':0,'home':0},'innings':{'away':{},'home':{}},'batting':{'away':[kinds[i%4]],'home':[]},'pitching':{'away':[],'home':[]}})
+    a.features=[]
+    r=a.finish()
+    row=[x for x in r['teams']['away']['batting'] if x['player_id']=='away0'][0]
+    k=STARTER_SHARE[0]
+    # a single alone never reaches two; a double does when kept; a single and a home run do when the home run is kept
+    assert abs(row['tb2_probability']-k/2)<1e-12
+    assert 'hs' not in row

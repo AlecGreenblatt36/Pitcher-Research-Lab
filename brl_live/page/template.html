@@ -4560,6 +4560,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
      winning by two or more once a team wins, over the same worlds, so the two scores' dependence is kept. The first five
      innings (a tie pushes) and the first inning are the simulator's own chances. */
   var MORE_MARKETS = { runline: false, f5: false, nrfi: false };
+  /* the hitters' two or more total bases (total bases over 1.5), off until PLAYER-06 holds */
+  var PROP_COLS = { tb2: false };
   function mmShare(c, test) { var t = total(c), s = 0; c.counts.forEach(function (x) { if (test(x[0])) s += x[1]; }); return t ? s / t : null; }
   /* the run line's favorite lays the run and a half: the book's moneyline favorite when there is a line (so the two sides
      match the book's), else our pick's; its chance is our win chance for it times the simulator's by-two-or-more given a win */
@@ -4662,10 +4664,12 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     h += '<div class="pair wide">';
     ["away", "home"].forEach(function (side) {
       var bat = box.teams[side].batting || [], bnames = shortNames(bat);
-      h += '<section class="sec"><h3 class="team-h ' + side + '-c">' + esc(nickname(f[side].name)) + ' hitters</h3><div class="tbl-wrap"><table class="box"><thead><tr><th scope="col">Batters</th><th>1+ hit</th><th>2+ hits</th><th>HR</th><th>Walk</th></tr></thead><tbody>';
+      var tb = PROP_COLS.tb2 && bat.some(function (b) { return b.tb2_probability != null; });
+      h += '<section class="sec"><h3 class="team-h ' + side + '-c">' + esc(nickname(f[side].name)) + ' hitters</h3><div class="tbl-wrap"><table class="box"><thead><tr><th scope="col">Batters</th><th>1+ hit</th><th>2+ hits</th>' + (tb ? "<th>2+ TB</th>" : "") + "<th>HR</th><th>Walk</th></tr></thead><tbody>";
       bat.forEach(function (b) {
         var d = b.distributions || {};
         h += '<tr><td><span class="spot">' + (b.spot || "") + "</span>" + esc(bnames[String(b.player_id)]) + "</td><td>" + (d.H ? pct(ownAtLeast(d.H, 1, b.spot)) : "") + "</td><td>" + (d.H ? pct(ownAtLeast(d.H, 2, b.spot)) : "") +
+          (tb ? "</td><td>" + (b.tb2_probability != null ? pct(b.tb2_probability) : "") : "") +
           "</td><td>" + (d.HR ? pct(ownAtLeast(d.HR, 1, b.spot)) : "") + "</td><td>" + (d.BB ? pct(ownAtLeast(d.BB, 1, b.spot)) : "") + "</td></tr>";
       });
       h += '</tbody></table></div><p class="note">Each hitter\'s own chance: a pinch hitter or a substitute takes some of his spot\'s trips late in games, the same as the Summary\'s meters.</p></section>';

@@ -252,7 +252,7 @@ class BoxAccumulator:
         self.innings={s:defaultdict(lambda:Counter()) for s in SIDE};self.score_pairs=[];self.seeds=[];self.features=[];self.win=WinTable()
         for s in SIDE:
             t=getattr(matchup,s)
-            for i,p in enumerate(t.lineup):self.hist[s]['batting'][p.player_id]={'name':p.name,'spot':i+1,'stats':{k:Counter() for k in BAT}}
+            for i,p in enumerate(t.lineup):self.hist[s]['batting'][p.player_id]={'name':p.name,'spot':i+1,'stats':{k:Counter() for k in BAT},'hs':Counter()}
             for i,p in enumerate((t.starter,*t.bullpen)):self.hist[s]['pitching'][p.player_id]={'name':p.name,'role':p.role,'order':i,'appeared':0,'stats':{k:Counter() for k in PIT}}
     def add(self,box):
         self.n+=1;self.score_pairs.append((box['score']['away'],box['score']['home']));self.seeds.append(box['seed']);self.features.append(world_features(box))
@@ -264,6 +264,8 @@ class BoxAccumulator:
                     row=index.get(pid,_zeros(fields))
                     if kind=='pitching':agg['appeared']+=int(pid in index)
                     for k in fields:agg['stats'][k][row[k]]+=1
+                    # hits by singles among them, for his chance of two or more total bases (PLAYER-06)
+                    if kind=='batting':agg['hs'][(min(int(row['H']),5),min(int(row['H'])-int(row['2B'])-int(row['3B'])-int(row['HR']),5))]+=1
             for inning,values in box['innings'][s].items():self.innings[s][int(inning)].update(values)
         # each world's first inning and first five innings, road and home runs (NRFI-01, FIRST5-01)
         inn={s:{int(k):int(v.get('R',0)) for k,v in box['innings'][s].items()} for s in SIDE}
@@ -276,7 +278,7 @@ class BoxAccumulator:
             for kind,fields in [('batting',BAT),('pitching',PIT)]:
                 result['teams'][s][kind]=[]
                 for pid,v in self.hist[s][kind].items():
-                    row={'player_id':pid,**{k:x for k,x in v.items() if k not in ('stats','appeared')},
+                    row={'player_id':pid,**{k:x for k,x in v.items() if k not in ('stats','appeared','hs')},
                          'means':{k:sum(value*count for value,count in v['stats'][k].items())/self.n for k in fields},
                          'distributions':{k:_distribution(v['stats'][k],self.n) for k in fields}}
                     if kind=='batting':
@@ -286,6 +288,8 @@ class BoxAccumulator:
                         keep=STARTER_SHARE[min(max(int(v.get('spot') or 1),1),9)-1]
                         row['hit_probability']=1-sum(c*(1-keep)**k for k,c in v['stats']['H'].items())/self.n
                         row['hr_probability']=1-sum(c*(1-keep)**k for k,c in v['stats']['HR'].items())/self.n
+                        # two or more total bases of his own: not (no hit kept, or one kept hit that is a single)
+                        row['tb2_probability']=1-sum(c*((1-keep)**h+(s1*keep*(1-keep)**(h-1) if h else 0)) for (h,s1),c in v['hs'].items())/self.n
                     else:
                         row['appearance_probability']=v['appeared']/self.n
                         row['means']['IP']=row['means']['outs']/3

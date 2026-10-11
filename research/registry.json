@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 310,
- "rows": 313,
+ "experiments": 311,
+ "rows": 314,
  "records": {
   "ACC-01": [
    {
@@ -5081,6 +5081,22 @@
     "runs": [],
     "frozen_commits": [],
     "status": "(2), (3) held; (1) failed; not adopted"
+   }
+  ],
+  "PLAYER-06": [
+   {
+    "id": "PLAYER-06",
+    "columns": {
+     "ID": "PLAYER-06",
+     "Attempt": "Two or more total bases (the total-bases prop at 1.5, the most common hitter prop after hits and home runs). Each hitter's own chance, each of his slot's hits kept with the spot's share (PLAYER-02): below two only when no hit is kept or the only one kept is a single (brl_live/boxscore.py tb2_probability; boxes saved from now carry it). Full replays of 2025 and 2026 with the live settings and hitter lines (PLAYER-03's settings and seeds), which now record each hitter's worlds by hits and singles among them (brl_replay/harness.py hs_hist) and his real extra-base hits (a double or triple reaches two bases either way, so the history's 2B_3B class is enough); scored by tools/brl_player_cal.py (kind tb2)",
+     "Disposition and evidence": "**Registered in the commit that added this row, before its replays.** Predictions: (1) the chance within 1.5 points of the actual share in both seasons; (2) by tenths of the chance, within 3 points in both; (3) Brier better than the season's constant share in both. Decision rule: the Odds tab's hitter tables add a 2+ TB column (page PROP_COLS.tb2) if (1) and (2) hold in both seasons; otherwise not. Results: pending",
+     "Delta corrected Brier, 2026": "pending"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "pending"
    }
   ],
   "PROD-13": [

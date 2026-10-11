@@ -248,6 +248,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
         for (gpk_, bid_), oc in sub_b.groupby(["game_pk", "batter"])["outcome"]:
             vc = oc.value_counts()
             act_bat[(int(gpk_), int(bid_))] = {"pa": int(len(oc)), "h": int(vc.get("1B", 0) + vc.get("2B_3B", 0) + vc.get("HR", 0)), "hr": int(vc.get("HR", 0)),
+                                               "xbh": int(vc.get("2B_3B", 0) + vc.get("HR", 0)),
                                                "k": int(vc.get("K", 0)), "bb": int(vc.get("BB_HBP", 0))}
         hb = pd.DataFrame({"batter": h["batter"].to_numpy(), "date_key": h["date_key"].astype(str).str[:10].to_numpy(),
                            "h": h["outcome"].isin(["1B", "2B_3B", "HR"]).to_numpy().astype(int), "hr": (h["outcome"] == "HR").to_numpy().astype(int)})
@@ -372,7 +373,8 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
             if hitter_lines:
                 # per lineup hitter: worlds with >=1 hit, >=1 home run, >=1 strikeout, >=1 walk; sums of PA, hits, home runs; hits histogram
                 hl = {(side, str(b.player_id)): {"any": np.zeros(4), "sum": np.zeros(3), "h_hist": np.zeros(6, int), "hr_hist": np.zeros(4, int),
-                                                 "bb_hist": np.zeros(5, int), "k_hist": np.zeros(5, int)}
+                                                 "bb_hist": np.zeros(5, int), "k_hist": np.zeros(5, int),
+                                                 "hs_hist": np.zeros((6, 6), int)}
                       for side in ("away", "home") for b in teams[side].lineup}
             for si, s in enumerate(seeds):
                 if dform is not None:
@@ -419,19 +421,21 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                         o_ = e.get("outcome"); bid_ = (str(e.get("batting_side")), str(e.get("batter_id")))
                         if o_ in NON_PA or bid_ not in hl:
                             continue
-                        c_ = cnt.setdefault(bid_, [0, 0, 0, 0, 0])            # PA, hits, home runs, strikeouts, walks
+                        c_ = cnt.setdefault(bid_, [0, 0, 0, 0, 0, 0])         # PA, hits, home runs, strikeouts, walks, singles
                         c_[0] += 1
                         c_[1] += o_ in ("single", "double_triple", "home_run"); c_[2] += o_ == "home_run"
-                        c_[3] += o_ == "strikeout"; c_[4] += o_ == "bb_hbp"
+                        c_[3] += o_ == "strikeout"; c_[4] += o_ == "bb_hbp"; c_[5] += o_ == "single"
                     for bid_, c_ in cnt.items():
                         a_ = hl[bid_]
                         a_["any"] += (c_[1] > 0, c_[2] > 0, c_[3] > 0, c_[4] > 0)
                         a_["sum"] += (c_[0], c_[1], c_[2])
                         a_["h_hist"][min(c_[1], 5)] += 1
                         a_["hr_hist"][min(c_[2], 3)] += 1; a_["bb_hist"][min(c_[4], 4)] += 1; a_["k_hist"][min(c_[3], 4)] += 1
+                        a_["hs_hist"][min(c_[1], 5), min(c_[5], 5)] += 1          # hits by singles among them (total bases 2+ needs both)
                     for bid_ in hl:
                         if bid_ not in cnt:
                             hl[bid_]["h_hist"][0] += 1; hl[bid_]["hr_hist"][0] += 1; hl[bid_]["bb_hist"][0] += 1; hl[bid_]["k_hist"][0] += 1
+                            hl[bid_]["hs_hist"][0, 0] += 1
             records.append({"game_pk": int(g.game_pk), "date": date, "home": g.home, "away": g.away, "n": n_sims,
                             "home_wins": hw, "ties": ties, "home_hist": ha.tolist(), "away_hist": aa.tolist(), "margin_hist": mh.tolist(),
                             "f5_margin_hist": f5m.tolist(), "f5_total_hist": f5t.tolist(), "first_inning": first.tolist(),
@@ -449,6 +453,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                                       "mean_pa": round(float(a_["sum"][0] / n_sims), 3), "mean_h": round(float(a_["sum"][1] / n_sims), 4),
                                       "mean_hr": round(float(a_["sum"][2] / n_sims), 4), "h_hist": a_["h_hist"].tolist(),
                                       "hr_hist": a_["hr_hist"].tolist(), "bb_hist": a_["bb_hist"].tolist(), "k_hist": a_["k_hist"].tolist(),
+                                      "hs_hist": a_["hs_hist"].tolist(),
                                       "prior_h_rate": round(float(ph_), 4), "prior_hr_rate": round(float(phr_), 4), "prior_pa_365": prior_pa_,
                                       "actual": act_bat.get((int(g.game_pk), int(b.player_id)))})
                 records[-1]["hitters"] = out_h

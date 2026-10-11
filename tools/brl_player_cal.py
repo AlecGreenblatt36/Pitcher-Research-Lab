@@ -34,6 +34,7 @@ STARTER_SHARE = _starter_share()
 
 # kind: (histogram field, at least k, actual field)
 KINDS = {'hit': ('h_hist', 1, 'h'), 'hit2': ('h_hist', 2, 'h'), 'hr': ('hr_hist', 1, 'hr'), 'walk': ('bb_hist', 1, 'bb'), 'k': ('k_hist', 1, 'k')}
+ALL_KINDS = tuple(KINDS) + ('tb2',)      # tb2: two or more total bases (PLAYER-06), from the hits-by-singles table
 EPS = 1e-4
 
 
@@ -46,6 +47,17 @@ def own_at_least(hist, k, spot):
     below = 0.0
     for m, c in enumerate(hist):
         below += c * sum(comb(m, j) * keep ** j * (1 - keep) ** (m - j) for j in range(min(k, m + 1)))
+    return 1.0 - below / n_w
+
+
+def own_tb2(hs, spot):
+    """His own chance of two or more total bases: each of the slot's hits kept with the spot's share; below two only when
+    no hit is kept, or exactly one is and it is a single. hs[h][s]: worlds with h hits, s of them singles."""
+    keep = STARTER_SHARE[min(max(int(spot or 1), 1), 9) - 1]
+    n_w = sum(sum(r) for r in hs)
+    if not n_w:
+        return float('nan')
+    below = sum(c * ((1 - keep) ** h + (s1 * keep * (1 - keep) ** (h - 1) if h else 0.0)) for h, row in enumerate(hs) for s1, c in enumerate(row))
     return 1.0 - below / n_w
 
 
@@ -65,6 +77,9 @@ def load_rows(paths):
                         if field in x:
                             r['p_' + kind] = own_at_least(x[field], k, x['spot'])
                             r['y_' + kind] = int((a.get(af) or 0) >= k)
+                    if 'hs_hist' in x and 'xbh' in a:
+                        r['p_tb2'] = own_tb2(x['hs_hist'], x['spot'])
+                        r['y_tb2'] = int((a.get('h') or 0) >= 2 or (a.get('xbh') or 0) >= 1)
                     out.append(r)
     return out
 
@@ -122,7 +137,7 @@ def study(seasons: dict, draws=2000):
     labels = sorted(seasons)
     assert len(labels) == 2
     res = {'kinds': {}, 'seasons': {s: len(seasons[s]) for s in labels}}
-    for kind in KINDS:
+    for kind in ALL_KINDS:
         arrs = {s: season_arrays(seasons[s], kind) for s in labels}
         if any(len(arrs[s][1]) == 0 for s in labels):
             continue
@@ -136,6 +151,7 @@ def study(seasons: dict, draws=2000):
             dm, ci = brier_change(d, p, pc, y, draws=draws)
             row = {'n': int(len(p)), 'mean_p': round(float(p.mean()), 4), 'actual': round(float(y.mean()), 4),
                    'gap_points': round(100 * float(p.mean() - y.mean()), 2), 'brier_raw': round(float(((p - y) ** 2).mean()), 5),
+                   'brier_const': round(float(((y.mean() - y) ** 2).mean()), 5),
                    'map_from_other': [round(a, 4), round(b, 4)], 'mean_cal': round(float(pc.mean()), 4),
                    'cal_gap_points': round(100 * float(pc.mean() - y.mean()), 2), 'brier_change': round(dm, 6), 'brier_change_ci': [round(ci[0], 6), round(ci[1], 6)],
                    'deciles_raw': deciles(p, y), 'deciles_cal': deciles(pc, y),
