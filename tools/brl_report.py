@@ -277,8 +277,8 @@ def running_league(season: dict) -> dict:
 # or more plate appearances (hitters) or batters faced (pitchers) over the training window, as the share of those players
 # he does better than (a hitter's strikeouts and a pitcher's walks count lower as better). Counts and ranks only.
 PCT_MIN = 300
-PCT_HITTER = (('avg', 1), ('slg', 1), ('k', -1), ('bb', 1), ('chase', -1), ('whiff', -1), ('hard', 1))
-PCT_PITCHER = (('k', 1), ('bb', -1), ('whiff', 1), ('chase', 1), ('hard', -1), ('avg', -1), ('xavg', -1), ('xslg', -1), ('velo', 1))
+PCT_HITTER = (('avg', 1), ('slg', 1), ('k', -1), ('bb', 1), ('chase', -1), ('whiff', -1), ('hard', 1), ('barrel', 1))
+PCT_PITCHER = (('k', 1), ('bb', -1), ('whiff', 1), ('chase', 1), ('hard', -1), ('barrel', -1), ('avg', -1), ('xavg', -1), ('xslg', -1), ('velo', 1))
 
 
 def league_arsenal(T: dict, rows, swing, whiff, outside) -> dict:
@@ -332,6 +332,12 @@ def player_lines(T: dict, rows, swing, whiff, outside, key: str) -> dict:
             'tb': cnt(np.where(last, tb, 0.0)), 'hr': cnt(last & (o7 == 5)), 'k': cnt(last & (o7 == 1)), 'bb': cnt(last & (o7 == 2)),
             'pitches': np.bincount(inv, minlength=n).astype(np.float64), 'swings': cnt(sw), 'misses': cnt(np.asarray(whiff)[idx]),
             'outside': cnt(out), 'chases': cnt(out & sw), 'bbe': cnt(meas), 'hard': cnt(meas & (np.nan_to_num(ls) >= 95))}
+    if 'la' in T:
+        # barrels, the public definition: 98 mph or more at 26 to 30 degrees, the window widening with each mph to 8 to 50
+        # degrees at 116 (counted among balls with a measured exit speed and launch angle)
+        la = T['la'][idx].astype(np.float64); ok = meas & np.isfinite(la); ev = np.nan_to_num(ls); a_ = np.nan_to_num(la)
+        lo_, hi_ = np.maximum(8.0, 26.0 - (ev - 98.0)), np.minimum(50.0, 30.0 + (ev - 98.0) * (20.0 / 18.0))
+        cols['brl'] = cnt(ok & (ev >= 98.0) & (a_ >= lo_) & (a_ <= hi_)); cols['bbe_la'] = cnt(ok)
     velo = None
     if key == 'pitcher' and 'sub' in T:
         sub = T['sub'][idx]; v0 = T['v0'][idx].astype(np.float64); okv = np.isfinite(v0)
@@ -360,6 +366,8 @@ def line_rates(L: dict) -> dict:
         r['velo'] = float(L['velo'])
     if L.get('xh') is not None:                    # PXSTATS-01: expected AVG and SLG against, for pitchers
         r['xavg'] = div('xh', 'ab'); r['xslg'] = div('xtb', 'ab')
+    if L.get('bbe_la'):
+        r['barrel'] = div('brl', 'bbe_la')
     return r
 
 

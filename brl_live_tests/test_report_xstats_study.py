@@ -78,3 +78,14 @@ def test_line_rates_carry_expected_against_and_rank_it():
     ref = B.pct_reference(lines, B.PCT_PITCHER)
     lo, hi = B.pct_ranks(lines[0], ref, B.PCT_PITCHER), B.pct_ranks(lines[39], ref, B.PCT_PITCHER)
     assert lo['xavg'] > hi['xavg'] and lo['xslg'] > hi['xslg']        # fewer expected hits against rank higher
+
+
+def test_barrels_by_the_public_window():
+    B = _report()
+    # five measured balls in play: 98 at 28 (barrel), 98 at 32 (not), 105 at 20 (barrel: 19 to 37.8), 116 at 9 (barrel), 95 at 28 (not)
+    T = {'batter': np.array([1, 1, 1, 1, 1, 1]), 'last_in_pa': np.ones(6, int), 'out7': np.array([3, 0, 4, 5, 0, 1]), 'call': np.array([1, 1, 1, 1, 1, 2]),
+         'ls': np.array([98, 98, 105, 116, 95, np.nan], np.float32), 'la': np.array([28, 32, 20, 9, 28, np.nan], np.float32),
+         'spray': np.array([0, 0, 0, 0, 0, np.nan], np.float32)}
+    sw = np.ones(6); wh = np.zeros(6, bool); out = np.zeros(6, bool)
+    L = B.player_lines(T, np.ones(6, bool), sw, wh, out, 'batter')[1]
+    assert L['brl'] == 3 and L['bbe_la'] == 5 and abs(B.line_rates(L)['barrel'] - 0.6) < 1e-12

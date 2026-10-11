@@ -4675,15 +4675,16 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   /* PROD-08: percentile ranks among every player with 300 or more plate appearances (batters faced for a pitcher) over the
      cards' seasons, computed with the cards; higher is better for him on every row, red above the middle, blue below. */
   var PCT_ROWS = {
-    hitter: [["avg", "Batting average", "three"], ["slg", "Slugging", "three"], ["k", "Strikeout %", "pct"], ["bb", "Walk %", "pct"], ["chase", "Chase %", "pct"], ["whiff", "Whiff %", "pct"], ["hard", "Hard-hit %", "pct"]],
-    pitcher: [["k", "Strikeout %", "pct"], ["bb", "Walk %", "pct"], ["whiff", "Whiff %", "pct"], ["chase", "Chase %", "pct"], ["hard", "Hard-hit % against", "pct"], ["avg", "Average against", "three"],
+    hitter: [["avg", "Batting average", "three"], ["slg", "Slugging", "three"], ["k", "Strikeout %", "pct"], ["bb", "Walk %", "pct"], ["chase", "Chase %", "pct"], ["whiff", "Whiff %", "pct"], ["hard", "Hard-hit %", "pct"], ["barrel", "Barrel %", "pct"]],
+    pitcher: [["k", "Strikeout %", "pct"], ["bb", "Walk %", "pct"], ["whiff", "Whiff %", "pct"], ["chase", "Chase %", "pct"], ["hard", "Hard-hit % against", "pct"], ["barrel", "Barrel % against", "pct"], ["avg", "Average against", "three"],
       ["xavg", "Expected average against", "three"], ["xslg", "Expected slugging against", "three"], ["velo", "Fastball speed", "mph"]]
   };
   function lineRate(L, k) {
     var d = function (a, b) { return L[b] ? L[a] / L[b] : null; };
     return k === "avg" ? d("h", "ab") : k === "slg" ? d("tb", "ab") : k === "k" ? d("k", "pa") : k === "bb" ? d("bb", "pa") : k === "chase" ? d("chases", "outside") :
       k === "whiff" ? d("misses", "swings") : k === "hard" ? d("hard", "bbe") : k === "velo" ? (L.velo != null ? L.velo : null) :
-      k === "xavg" ? (L.xh != null ? d("xh", "ab") : null) : k === "xslg" ? (L.xtb != null ? d("xtb", "ab") : null) : null;
+      k === "xavg" ? (L.xh != null ? d("xh", "ab") : null) : k === "xslg" ? (L.xtb != null ? d("xtb", "ab") : null) :
+      k === "barrel" ? (L.bbe_la ? d("brl", "bbe_la") : null) : null;
   }
   function pctColor(p) {
     /* gray at the middle, deepening to red toward 100 and to blue toward 1 */
@@ -4705,7 +4706,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     });
     if (!h) return "";
     var pool = rk ? (kind === "pitcher" ? rk.pitchers : rk.hitters) : null, min = rk && rk.min ? rk.min : 300;
-    return '<section class="sec pr-sec"><' + hl + ' class="pr-h">Percentile rankings</' + hl + '><p class="lede">Against ' + (pool ? Number(pool).toLocaleString() + " " : "all ") + (kind === "pitcher" ? "pitchers with " + min + "+ batters faced" : "hitters with " + min + "+ plate appearances") + ", " + esc(hzSeasons(asof)) + ". 100 is the best. Red: better than most. Blue: worse." + (kind === "hitter" ? " Fewer strikeouts, chases and misses rank higher." : " Fewer walks, hits and hard contact rank higher." +
+    return '<section class="sec pr-sec"><' + hl + ' class="pr-h">Percentile rankings</' + hl + '><p class="lede">Against ' + (pool ? Number(pool).toLocaleString() + " " : "all ") + (kind === "pitcher" ? "pitchers with " + min + "+ batters faced" : "hitters with " + min + "+ plate appearances") + ", " + esc(hzSeasons(asof)) + ". 100 is the best. Red: better than most. Blue: worse." + (x.pct && x.pct.barrel != null ? " Barrel: hit 98 mph or harder at the angles that most often go for extra-base hits." : "") +
+      (kind === "hitter" ? " Fewer strikeouts, chases and misses rank higher." : " Fewer walks, hits and hard contact rank higher." +
       (x.pct && x.pct.xavg != null ? " Expected: from how hard and at what angle the balls were hit off him; it predicted pitchers' next seasons better than their actual average and slugging against." : "")) + '</p><div class="pr-list">' + h +
       '</div><div class="pr-scale" aria-hidden="true"><span></span><span><span>Worst</span><span>Average</span><span>Best</span></span><span></span></div></section>';
   }

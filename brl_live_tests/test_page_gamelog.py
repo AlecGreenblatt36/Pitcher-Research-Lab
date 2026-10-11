@@ -156,5 +156,5 @@ def test_hitter_season_line_text():
 def test_line_rate_reads_expected_against():
     s = _script()
     js = ("assert.equal(lineRate({ab:200,xh:50,xtb:80},'xavg'),0.25);assert.equal(lineRate({ab:200,xh:50,xtb:80},'xslg'),0.4);"
-          "assert.equal(lineRate({ab:200,h:50},'xavg'),null);")
+          "assert.equal(lineRate({ab:200,h:50},'xavg'),null);assert.equal(lineRate({brl:12,bbe_la:200},'barrel'),0.06);assert.equal(lineRate({bbe:200},'barrel'),null);")
     subprocess.run(['node', '-e', "const assert=require('assert');" + _fn(s, 'lineRate') + js], check=True)
