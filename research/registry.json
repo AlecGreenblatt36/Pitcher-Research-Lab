@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 285,
- "rows": 288,
+ "experiments": 287,
+ "rows": 290,
  "records": {
   "ACC-01": [
    {
@@ -4685,6 +4685,38 @@
     ],
     "frozen_commits": [],
     "status": "held: 0.57 to 0.61"
+   }
+  ],
+  "TAGS-09": [
+   {
+    "id": "TAGS-09",
+    "columns": {
+     "ID": "TAGS-09",
+     "Attempt": "Where a hitter misses across the plate, relative to himself: his misses per swing on the inside third of his zone (MLB zones 1, 4, 7 for a right-handed batter, 3, 6, 9 for a left-handed one, catcher's view) minus on the away third, net of the league's same difference on his side (rows of 80 swings in each third). Same splits, hitters and scoring as TAGS-07 (tag_study with horizontal). Synthetic check (brl_live_tests/test_report_tags.py): a planted habit carries over (correlation 0.76), a redrawn one does not (-0.04), and vertical habits do not leak into it.",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: correlation 0.3 or more in both splits; each one-SD tag (misses inside, misses away) holds in both splits (test difference at least a third of the threshold in its direction, interval excluding zero). Decision rule: a direction that holds in both splits becomes a plan and card tag (Misses inside, Misses away; page from the cards' zone counts) with a lineup note; otherwise no tag.",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
+   }
+  ],
+  "TAGS-10": [
+   {
+    "id": "TAGS-10",
+    "columns": {
+     "ID": "TAGS-10",
+     "Attempt": "Where a hitter does damage across the plate: his share of measured balls in play at 95 mph or more from the inside third minus the away third, net of the league's same difference on his side (rows of 50). Same run and scoring as TAGS-09. Synthetic check: planted 0.87, redrawn -0.05.",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions: correlation 0.25 or more in both splits; each one-SD tag (hits the inside pitch hard, hits the outside pitch hard) holds in both splits under TAGS-09's rule. Decision rule: a direction that holds in both splits becomes a tag, listed in the lineup notes as tagged (no where-to-stay advice, as TAGS-08).",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "ZONES-01": [

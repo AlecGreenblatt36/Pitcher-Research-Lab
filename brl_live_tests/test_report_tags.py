@@ -34,8 +34,11 @@ def _season(rng, traits, season, n_pitch=1500):
     group = rng.choice(np.array([0, 0, 3, 5]), n)
     v0 = np.where(group == 0, rng.choice(np.array([91.0, 91.0, 97.5]), n), 85.0)
     up, dn = (zone >= 1) & (zone <= 3), (zone >= 7) & (zone <= 9)
+    rb = (np.arange(n) // n_pitch) % 2 == 1; colz = np.where(zone <= 9, (zone - 1) % 3, -1)
+    ins, away = np.where(rb, colz == 0, colz == 2), np.where(rb, colz == 2, colz == 0)
     wh = sw & (rng.random(n) < np.clip(traits['whiff'][bat] + np.where(group == 3, traits['brk'][bat], 0.0) + np.where(v0 >= 96, traits['velo'][bat], 0.0)
-                                       + np.where(up, traits['vert'][bat] / 2, 0.0) - np.where(dn, traits['vert'][bat] / 2, 0.0), 0.01, 0.9))
+                                       + np.where(up, traits['vert'][bat] / 2, 0.0) - np.where(dn, traits['vert'][bat] / 2, 0.0)
+                                       + np.where(ins, traits['horz'][bat] / 2, 0.0) - np.where(away, traits['horz'][bat] / 2, 0.0), 0.01, 0.9))
     call = np.where(~sw, 0, np.where(wh, 2, 1))
     inplay = call == 1
     side_r = (np.arange(n) // n_pitch) % 2 == 1
@@ -43,7 +46,8 @@ def _season(rng, traits, season, n_pitch=1500):
     pulled = rng.random(n) < pull_p
     spray = np.where(inplay, np.where(pulled, np.where(side_r, -30.0, 30.0), np.where(rng.random(n) < 0.5, 0.0, np.where(side_r, 30.0, -30.0))), np.nan)
     traj = np.where(inplay, rng.choice(np.array([0, 0, 1, 2]), n), -1)
-    p_hard = np.clip(0.38 + np.where(up, traits['hhv'][bat] / 2, 0.0) - np.where(dn, traits['hhv'][bat] / 2, 0.0), 0.02, 0.98)
+    p_hard = np.clip(0.38 + np.where(up, traits['hhv'][bat] / 2, 0.0) - np.where(dn, traits['hhv'][bat] / 2, 0.0)
+                     + np.where(ins, traits['hhh'][bat] / 2, 0.0) - np.where(away, traits['hhh'][bat] / 2, 0.0), 0.02, 0.98)
     ls = np.where(inplay, np.where(rng.random(n) < p_hard, 101.0, 84.0), np.nan)
     day = 700000 + season * 400 + rng.integers(0, 180, n)
     return {'batter': bat + 1000, 'season': np.full(n, season), 'day': day, 'post': np.zeros(n, int), 'group': group, 'call': call,
@@ -54,10 +58,10 @@ def _season(rng, traits, season, n_pitch=1500):
 def _traits(rng, nh):
     return {'chase': rng.normal(0.28, 0.07, nh), 'whiff': rng.normal(0.24, 0.06, nh), 'first': rng.normal(-0.36, 0.2, nh), 'two': rng.normal(0.0, 0.07, nh),
             'brk': rng.normal(0.08, 0.08, nh), 'velo': rng.normal(0.05, 0.08, nh), 'pull': rng.normal(0.4, 0.12, nh),
-            'vert': rng.normal(0.0, 0.10, nh), 'hhv': rng.normal(0.0, 0.14, nh)}
+            'vert': rng.normal(0.0, 0.10, nh), 'hhv': rng.normal(0.0, 0.14, nh), 'horz': rng.normal(0.0, 0.10, nh), 'hhh': rng.normal(0.0, 0.14, nh)}
 
 
-def _world(persist, seed=3, nh=160, velo=False, vert=False):
+def _world(persist, seed=3, nh=160, velo=False, vert=False, horz=False):
     rng = np.random.default_rng(seed)
     t1 = _traits(rng, nh); t2 = t1 if persist else _traits(rng, nh)
     if not velo:
@@ -65,6 +69,9 @@ def _world(persist, seed=3, nh=160, velo=False, vert=False):
     if not vert:
         for t in (t1, t2):
             t['vert'] = t['vert'] * 0.0; t['hhv'] = t['hhv'] * 0.0
+    if not horz:
+        for t in (t1, t2):
+            t['horz'] = t['horz'] * 0.0; t['hhh'] = t['hhh'] * 0.0
     parts = [_season(rng, t1, 1), _season(rng, t1, 2), _season(rng, t2, 3)]
     return {k: np.concatenate([p[k] for p in parts]) for k in parts[0]}
 
@@ -109,3 +116,18 @@ def test_vertical_reads_carry_over_only_when_planted():
     redrawn = B.tag_study(_world(False, vert=True), lambda *a: None, spec)['splits'][0]['vertical']
     assert abs(redrawn['miss']['corr_train_test']) < 0.25 and abs(redrawn['hard']['corr_train_test']) < 0.25
     assert not redrawn['miss']['tags']['up']['held']
+
+
+def test_horizontal_reads_carry_over_only_when_planted():
+    # TAGS-09 and TAGS-10: misses and hard contact on the inside third against the away third, relative to himself
+    B = _report()
+    spec = {'splits': [{'train': [1, 2], 'test': 3}], 'min_pitches': 300, 'min_test': 200, 'boot': 300, 'horizontal': True}
+    v = B.tag_study(_world(True, horz=True), lambda *a: None, spec)['splits'][0]['horizontal']
+    assert set(v) == {'miss', 'hard'}
+    assert v['miss']['corr_train_test'] > 0.4 and v['miss']['tags']['in']['held'] and v['miss']['tags']['away']['held'], v['miss']
+    assert v['hard']['corr_train_test'] > 0.25 and v['hard']['tags']['in']['test_diff'] > 0.02 and v['hard']['tags']['away']['test_diff'] < -0.02
+    # nothing planted across the plate: no carry-over (the vertical habits alone do not leak into it)
+    w = B.tag_study(_world(True, vert=True), lambda *a: None, spec)['splits'][0]['horizontal']
+    assert abs(w['miss']['corr_train_test']) < 0.25 and abs(w['hard']['corr_train_test']) < 0.25
+    redrawn = B.tag_study(_world(False, horz=True), lambda *a: None, spec)['splits'][0]['horizontal']
+    assert abs(redrawn['miss']['corr_train_test']) < 0.25 and not redrawn['miss']['tags']['in']['held']

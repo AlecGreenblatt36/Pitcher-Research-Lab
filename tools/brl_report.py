@@ -1368,10 +1368,16 @@ def tag_counts(T: dict, mask) -> dict:
         hard_ = hit_ & (np.nan_to_num(ls_) >= 95)
     else:
         hit_ = hard_ = np.zeros(len(rows), bool)
+    # TAGS-09 and TAGS-10: the third of his zone nearest him (inside) and the far third (away); MLB zones 1, 4, 7 are the
+    # catcher's left column, inside to a right-handed batter
+    col_ = np.where((z_ >= 1) & (z_ <= 9), (z_ - 1) % 3, -1); rb_ = T['stand_r'][rows] == 1
+    in_ = np.where(rb_, col_ == 0, col_ == 2); out_ = np.where(rb_, col_ == 2, col_ == 0)
     n = c(np.ones(len(rows), bool))
     return {'bats': bats, 'side': (c(T['stand_r'][rows] == 1) / np.maximum(n, 1) >= 0.5).astype(np.int64), 'n': n,
             'wh_up': (c(wh & up_), c(sw & up_)), 'wh_dn': (c(wh & dn_), c(sw & dn_)),
             'hh_up': (c(hard_ & up_), c(hit_ & up_)), 'hh_dn': (c(hard_ & dn_), c(hit_ & dn_)),
+            'wh_in': (c(wh & in_), c(sw & in_)), 'wh_out': (c(wh & out_), c(sw & out_)),
+            'hh_in': (c(hard_ & in_), c(hit_ & in_)), 'hh_out': (c(hard_ & out_), c(hit_ & out_)),
             'chase': (c(sw & outside), c(outside)), 'whiff': (c(wh), c(sw)), 'first': (c(sw & first), c(first)),
             'two': (c(sw & two & ooz), c(two & ooz)), 'other': (c(sw & ~two & ooz), c(~two & ooz)), 'behind': (c(sw & behind), c(behind)),
             # TAGS-03: misses per swing by pitch family
@@ -1555,12 +1561,16 @@ def tag_study(T: dict, stage, spec: dict) -> dict:
                                    'test_diff': float((w * d).sum() / max(w.sum(), 1e-9)), 'test_ci': [float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5))]}
                     entry['tags'] = ft
                 res['relative_family_whiff'][fam] = entry
-        if spec.get('vertical'):
-            # TAGS-07 (misses) and TAGS-08 (hard contact): the top third of his zone against the bottom third, relative to
+        for opt, (n_pos, n_neg), pairs in (('vertical', ('up', 'down'), (('miss', 'wh_up', 'wh_dn', 80), ('hard', 'hh_up', 'hh_dn', 50))),
+                                           ('horizontal', ('in', 'away'), (('miss', 'wh_in', 'wh_out', 80), ('hard', 'hh_in', 'hh_out', 50)))):
+            # TAGS-07 and TAGS-08 (vertical: the top third of his zone against the bottom third) and TAGS-09 and TAGS-10
+            # (horizontal: the inside third against the away third): misses per swing and hard contact, relative to
             # himself and net of the league's same difference on his side; season-to-season correlation and tags at one
             # standard deviation, scored on the test pitches (weights: the smaller of his two test rows)
-            res['vertical'] = {}
-            for read, ku, kd, floor in (('miss', 'wh_up', 'wh_dn', 80), ('hard', 'hh_up', 'hh_dn', 50)):
+            if not spec.get(opt):
+                continue
+            res[opt] = {}
+            for read, ku, kd, floor in pairs:
                 def relz(tc, ku=ku, kd=kd, floor=floor):
                     un, ud = tc[ku]; dn2, dd = tc[kd]
                     ok_ = (ud >= floor) & (dd >= floor)
@@ -1578,7 +1588,7 @@ def tag_study(T: dict, stage, spec: dict) -> dict:
                        'corr_train_test': float(np.corrcoef(xz, yz)[0, 1]) if len(xz) >= 20 else None}
                 if len(xz) >= 20:
                     sdz = float(np.std(xz)); zt = {}
-                    for nm_, sgn in (('up', 1), ('down', -1)):
+                    for nm_, sgn in ((n_pos, 1), (n_neg, -1)):
                         sel = np.flatnonzero(bz)[(xz * sgn) >= sdz]
                         if not len(sel):
                             continue
@@ -1589,7 +1599,7 @@ def tag_study(T: dict, stage, spec: dict) -> dict:
                         zt[nm_] = {'threshold': sgn * sdz, 'hitters': int(len(sel)), 'train_diff': float(za[sel].mean()), 'test_diff': m_,
                                    'test_ci': [lo_, hi_], 'held': bool(sgn * m_ >= sdz / 3 and (lo_ > 0 if sgn > 0 else hi_ < 0))}
                     ent['tags'] = zt
-                res['vertical'][read] = ent
+                res[opt][read] = ent
         out['splits'].append(res)
         stage(f"tag study {split['train']} -> {split['test']}")
     return out
