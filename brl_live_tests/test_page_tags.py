@@ -126,3 +126,23 @@ def test_live_count_tip_follows_the_count():
               "assert.ok(liveCountTip(hc,lg,{balls:2,strikes:0}).indexOf('aggressive')>0);"
               "assert.equal(liveCountTip(hc,lg,{balls:1,strikes:1}),'');")
     subprocess.run(['node', '-e', prefix + functions + suffix], check=True)
+
+
+def test_starter_lines_card_and_postseason_forms():
+    # the card form has no leading space (the card puts a breakable space before it); the header's postseason line is short
+    functions = page_functions('spText')
+    prefix = ("const assert=require('assert');var SP_LINES={'1:2026':{R:{wins:16,losses:5,era:'1.80',strikeOuts:252},"
+              "P:{gamesPlayed:2,wins:1,losses:0,era:'1.50'}},'2:2026':{R:{wins:12,losses:7,era:'2.72',strikeOuts:186},P:{gamesPlayed:0}}};")
+    suffix = ("assert.equal(spText('1','2026',false,'card'),'(16-5, 1.80)');"
+              "assert.equal(spText('1','2026',true,'hero'),'16-5, 1.80 ERA, 252 K\\nPostseason: 1-0, 1.50');"
+              "assert.equal(spText('2','2026',true,'hero'),'12-7, 2.72 ERA, 186 K');"
+              "assert.equal(spText('1','2026',true,'wl'),'16-5, 1.80 ERA');")
+    subprocess.run(['node', '-e', prefix + functions + suffix], check=True)
+
+
+def test_short_names_tell_two_hernandezes_apart():
+    functions = page_functions('lastName', 'shortNames')
+    prefix = "const assert=require('assert');var SUFFIX=/^(Jr\\.?|Sr\\.?|II|III|IV)$/;"
+    suffix = ("const n=shortNames([{player_id:'1',name:'Teoscar Hernández'},{player_id:'2',name:'Enrique Hernández'},{player_id:'3',name:'Mookie Betts'}]);"
+              "assert.equal(n['1'],'T. Hernández');assert.equal(n['2'],'E. Hernández');assert.equal(n['3'],'Betts');")
+    subprocess.run(['node', '-e', prefix + functions + suffix], check=True)

@@ -113,7 +113,7 @@ details.more summary::-webkit-details-marker { display: none; }
 details.more summary::before { content: "+"; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--rule-strong); font-size: 16px; line-height: 1; flex: 0 0 22px; }
 details.more[open] summary { color: var(--ink); }
 details.more[open] summary::before { content: "\2212"; }
-.cards { list-style: none; margin: 14px 0 32px; padding: 0; display: grid; gap: 12px; }
+.cards { list-style: none; margin: 14px 0 32px; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .card { display: block; position: relative; overflow: hidden; text-decoration: none; background: var(--surface); border: 1px solid var(--rule); border-radius: 14px; padding: 12px 16px 16px; }
 .card:hover { border-color: var(--rule-strong); }
 .card-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; display: flex; }
@@ -322,7 +322,7 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .box-notes { font-size: 15px; margin: 8px 2px 0; }
 .box-notes b { font-weight: 700; }
 .team-h { font-family: var(--display); font-weight: 700; font-size: 22px; margin: 0 0 6px; }
-.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; margin-bottom: 14px; }
+.seg { display: inline-flex; flex-wrap: wrap; max-width: 100%; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; margin-bottom: 14px; }
 .seg button { border: 0; background: var(--surface); padding: 8px 16px; min-height: 44px; font-weight: 700; color: var(--muted); cursor: pointer; }
 .seg button[aria-pressed="true"] { background: var(--board); color: var(--chalk); }
 
@@ -376,9 +376,12 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .sr-team.out { opacity: .55; }
 .sr-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin: 8px 0 6px; }
 .sr-bar i { display: block; height: 100%; }
-.sr-games { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
-.sr-games li { font-size: 14px; border: 1px solid var(--rule); border-radius: 8px; padding: 4px 8px; background: var(--paper); }
-.sr-games li b { display: block; font-size: 14px; font-weight: 700; color: var(--muted); }
+.sr-games { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 6px; }
+.sr-games li { font-size: 14px; line-height: 1.35; border: 1px solid var(--rule); border-radius: 8px; padding: 6px; background: var(--paper); display: flex; flex-direction: column; white-space: nowrap; }
+.sr-games li b { font-size: 14px; font-weight: 700; color: var(--muted); }
+.sr-games li .sg-p { font-weight: 700; font-variant-numeric: tabular-nums; }
+.sr-games li .sg-if { color: var(--muted); }
+.sr-games li.maybe { border-style: dashed; }
 .sr-games li.live { border-color: var(--lamp); }
 .sr-games li.done { color: var(--muted); }
 .sr-foot { margin: 8px 0 0; font-size: 15px; }
@@ -556,7 +559,10 @@ details .pr-h { font-size: 18px; }
 .hz-types.ars { max-width: 760px; }
 .lineup-glance b { font-size: 20px; }
 .hz-types.ars .box th:first-child, .hz-types.ars .box td:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); }
-@media (min-width: 720px) { .pl-body { grid-template-columns: minmax(0, 1fr) 156px; gap: 20px; } }
+/* the tags run the full width of the row on a phone (a strip under the plan and the chart); on a wider screen they stay
+   under the plan's words, next to the chart */
+.pl-body > .pl-tags { grid-column: 1 / -1; margin-top: 0; }
+@media (min-width: 720px) { .pl-body { grid-template-columns: minmax(0, 1fr) 156px; gap: 4px 20px; } .pl-body > .pl-hz { grid-row: span 2; } .pl-body > .pl-tags { grid-column: 1; } }
 .pl-hz-f small { display: block; font-size: 14px; font-weight: 700; color: var(--muted); margin: 0 0 2px; }
 @media (min-width: 1000px) {
   .pl-body { grid-template-columns: minmax(0, 1fr) auto; }
@@ -847,10 +853,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var e = SP_LINES[id + ":" + year], r = e && e.R, q = e && e.P;
     if (!r && !q) return "";
     var wl = function (x) { return x.wins + "-" + x.losses + ", " + x.era + " ERA"; };
-    if (fmt === "card") return r ? " (" + r.wins + "-" + r.losses + ", " + r.era + ")" : "";
+    if (fmt === "card") return r ? "(" + r.wins + "-" + r.losses + ", " + r.era + ")" : "";
     if (fmt === "wl") return r ? wl(r) : "";
     var out = r ? wl(r) + ", " + r.strikeOuts + " K" : "";
-    if (post && q && q.gamesPlayed) out += (out ? "\n" : "") + "Postseason: " + wl(q);
+    /* the postseason line in the short form ("1-0, 1.50"), so it stays on one line under the season's */
+    if (post && q && q.gamesPlayed) out += (out ? "\n" : "") + "Postseason: " + q.wins + "-" + q.losses + ", " + q.era;
     return out;
   }
   function fillSpLines() {
@@ -1387,7 +1394,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         var lost = actual && actual[side] < actual[side === "home" ? "away" : "home"];
         html += '<div class="team-row' + (isFav ? " fav" : "") + (lost ? " lost" : "") + '"><span class="abbr ' + side + '-c">' + esc(t.abbr) + '</span><span class="team-name">' + esc(nickname(t.name)) +
           (rec ? ' <span class="rec">' + esc(rec) + "</span>" : "") +
-          (starter ? "<small>" + esc(starter) + (actual ? "" : spSpan(starterId(f, box, side), String(f.date || D.date).slice(0, 4), false, "card")) + "</small>" : "") + '</span><span class="big num">' + esc(score) + '</span><span class="pct num">' + pct(win) + "</span></div>";
+          (starter ? "<small>" + esc(starter) + (actual ? "" : " " + spSpan(starterId(f, box, side), String(f.date || D.date).slice(0, 4), false, "card")) + "</small>" : "") + '</span><span class="big num">' + esc(score) + '</span><span class="pct num">' + pct(win) + "</span></div>";
       });
       var hp = lv && lv.home_win_probability != null ? lv.home_win_probability : homeProb(f);
       html += '<span class="card-bar" aria-hidden="true"><i style="width:' + ((1 - hp) * 100).toFixed(1) + '%;background:var(--away)"></i><i style="flex:1;background:var(--home)"></i></span>';
@@ -1474,9 +1481,13 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var chips = [], played = now.wins[s.high] + now.wins[s.low], sure = played + now.need - Math.max(now.wins[s.high], now.wins[s.low]);
       s.games.forEach(function (g) {
         var ph = now.p[g.n], fav = ph >= .5 ? s.high : s.low, fp = ph >= .5 ? ph : 1 - ph;
-        if (g.game_pk != null && now.cur && now.cur.won) chips.push('<li class="done"><b>Game ' + g.n + "</b>" + esc(now.cur.won) + " won</li>");
-        else if (g.game_pk != null && now.cur && now.cur.st === "live") chips.push('<li class="live"><b>Game ' + g.n + "</b>Live, " + esc(fav) + " " + pct(fp) + "</li>");
-        else if (!now.done) chips.push("<li><b>Game " + g.n + "</b>" + (g.game_pk != null || g.n <= sure ? "" : "If needed, ") + "at " + esc(g.home) + ", " + esc(fav) + " " + pct(fp) + "</li>");
+        /* one tile per game, the way series schedules list them: the game, where, our number; dashed if it may not be played */
+        if (g.game_pk != null && now.cur && now.cur.won) chips.push('<li class="done"><b>Game ' + g.n + "</b><span>at " + esc(g.home) + "</span><span>" + esc(now.cur.won) + " won</span></li>");
+        else if (g.game_pk != null && now.cur && now.cur.st === "live") chips.push('<li class="live"><b>Game ' + g.n + '</b><span>Live</span><span class="sg-p">' + esc(fav) + " " + pct(fp) + "</span></li>");
+        else if (!now.done) {
+          var maybe = !(g.game_pk != null || g.n <= sure);
+          chips.push("<li" + (maybe ? ' class="maybe"' : "") + "><b>Game " + g.n + "</b><span>at " + esc(g.home) + '</span><span class="sg-p">' + esc(fav) + " " + pct(fp) + "</span>" + (maybe ? '<span class="sg-if">If needed</span>' : "") + "</li>");
+        }
       });
       if (chips.length) h += '<ol class="sr-games">' + chips.join("") + "</ol>";
       if (!now.done) {
@@ -2562,12 +2573,13 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (!g) return;
       h += '<section class="sec wide"><h3 class="team-h ' + side + '-c">' + esc(nickname(f[side].name)) + " hitters against the " + esc(nickname(f[other].name)) + " staff</h3>";
       h += '<div class="mu-wrap" tabindex="0" role="region" aria-label="' + esc(nickname(f[side].name)) + ' hitters against pitchers, scrolls sideways"><table class="mu num"><thead><tr><th scope="col" class="mu-who">Hitter</th>';
+      var bn = shortNames(g.batters.map(function (b) { return { player_id: b.id, name: b.name }; })), pn = shortNames(g.pitchers.map(function (pt) { return { player_id: pt.id, name: pt.name }; }));
       g.pitchers.forEach(function (pt) {
-        h += '<th scope="col"><span>' + esc(lastName(pt.name)) + "</span><small>" + (pt.role === "starter" ? "Starter" : pt.appear != null ? pct(pt.appear) + " to pitch" : "Reliever") + "</small></th>";
+        h += '<th scope="col"><span>' + esc(pn[String(pt.id)] || lastName(pt.name)) + "</span><small>" + (pt.role === "starter" ? "Starter" : pt.appear != null ? pct(pt.appear) + " to pitch" : "Reliever") + "</small></th>";
       });
       h += "</tr></thead><tbody>";
       g.batters.forEach(function (b, i) {
-        h += '<tr><th scope="row" class="mu-who"><span class="spot">' + b.spot + "</span>" + esc(lastName(b.name)) + (b.bats ? " <small>" + esc(b.bats) + "</small>" : "") + "</th>";
+        h += '<tr><th scope="row" class="mu-who"><span class="spot">' + b.spot + "</span>" + esc(bn[String(b.id)] || lastName(b.name)) + (b.bats ? " <small>" + esc(b.bats) + "</small>" : "") + "</th>";
         /* the reliever who is toughest on him by this measure, outlined (the starter is not a choice) */
         var row = g.p[i] || [], bestJ = -1, bestV = null;
         row.forEach(function (pr, j) { var pt = g.pitchers[j]; if (!pt || pt.role === "starter") return; var v = -m.hitter * m.f(pr); if (bestV == null || v > bestV) { bestV = v; bestJ = j; } });
@@ -3626,7 +3638,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       h += "<li" + (pr ? ' class="plan-row rp-cell' + (sel === key ? " rp-sel" : "") + '" data-rp="' + key + '" tabindex="0"' : ' class="plan-row"') + '><div class="pl-top"><b><span class="spot">' + (spot || "") + "</span>" + esc(nm(hid)) + (card ? " <small>" + esc(card.side === "L" ? "bats left" : "bats right") + "</small>" : "") + "</b>" +
         (edge ? '<span class="pl-edge ' + edge.split(" ")[0].toLowerCase() + '">' + edge + "</span>" : "") + "</div>" +
         '<div class="pl-body' + (chart ? "" : " no-hz") + '"><div class="pl-main">' + hzStatLine(card, useHand) + '<div class="pl-txt">' + esc(pr ? planLine(pr, players[String(starter.id)] && players[String(starter.id)].pitcher) : "Not enough pitches to say yet.") + "</div>" +
-        (tags.length || thin ? '<div class="pl-tags">' + tags.concat(thin ? ["Small sample"] : []).map(function (x) { return "<span>" + esc(x) + "</span>"; }).join("") + "</div>" : "") + "</div>" + chart + "</div></li>";
+        "</div>" + chart + (tags.length || thin ? '<div class="pl-tags">' + tags.concat(thin ? ["Small sample"] : []).map(function (x) { return "<span>" + esc(x) + "</span>"; }).join("") + "</div>" : "") + "</div></li>";
     });
     return h + "</ol>";
   }
@@ -3769,7 +3781,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       built = bt && !isNaN(bt) ? bt.toLocaleDateString("en-CA", { timeZone: "America/New_York" }) : String(doc.built_at || "").slice(0, 10);
       if (!/^\d{4}-\d{2}-\d{2}$/.test(built)) built = String(doc.built_at || "").slice(0, 10);
     } catch (e) { built = String(doc.built_at || "").slice(0, 10); }
-    var early = doc.date && (built ? built < doc.date : doc.date > D.date), retro = !early && doc.asof && doc.date && doc.asof < doc.date;
+    /* a look back: built after its game day (a plan built on game day before the night's pitches are in still reads
+       the pitches through the day before, and is not a look back) */
+    var early = doc.date && (built ? built < doc.date : doc.date > D.date), retro = !early && doc.date && (built ? built > doc.date : doc.date < D.date);
     var sel = state.rpPair[pk], selSide = sel ? sel.split("|")[0] : null;
     var h = '<section class="sec wide"><h2>Game plan</h2><p class="lede">How to pitch every hitter in both lineups, from ' + (Number(doc.training_pitches) / 1e6).toFixed(1) + " million pitches thrown before " + esc(shortDate(doc.asof)) + ". Nothing from this game goes in." +
       (retro ? " This is a look back built the same way." : early ? " Built the day before; it is rebuilt on game day." : "") + "</p>";
@@ -4367,6 +4381,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (has(/postseason/)) h += "<li><b>Postseason starters.</b> In the Wild Card round, the Division Series and the LCS, starters face about 87% as many batters as in a regular-season start, and a quarter of them are gone before the order turns over twice (294 postseason starts, 2023 to 2026). We shorten the starter's expected outing to match. The World Series looks like the regular season, so it is left alone.</li>";
       if (has(/run environment/)) h += "<li><b>Weather and ballpark.</b> The at-bat model only knows the park through the home team and knows nothing about weather. We adjust each game for the temperature at first pitch (about 8% more home runs for every 10 degrees), a closed roof, day games and the wind at Wrigley. We tried adding how each park played beyond what the model expects, but a park's number one year told us nothing about the next, so it is out. If the weather is not posted yet, we use the park's normal temperature for that month.</li>";
       if (has(/team offsets/)) h += "<li><b>Team effects.</b> The at-bat model rates players one at a time, and some teams beat that all year: defenses that turn more balls in play into outs, staffs and catchers that get more strikeouts than the pitchers' own numbers say, lineups that run better or worse than their history. Each team gets a small adjustment from its earlier games, with recent games counting more. On full re-runs of 2025 and 2026 it made the win chances better in both seasons.</li>";
+      if (has(/reliever choice|reliever exits/)) h += "<li><b>Bullpens.</b> Who comes out of the bullpen is fitted on every relief appearance from 2023 to 2026: how much each arm has pitched the last few days, the inning he usually works over the year and the last three weeks, his strikeout record, the hands of the next three hitters, and the score and inning. When a pitcher comes out is fitted on every real pitching change, with each team's own habit of going to the bullpen early or late." + (has(/postseason reliever exits/) ? " In the Wild Card round, the Division Series and the LCS, managers make more changes (4.2 relievers a team per game, against 3.3 in the regular season), so relievers come out sooner there too." : "") + " On full re-runs of 2025 and 2026, each team used 4.2 pitchers a game against 4.3 in the real games, and the win chances were a little better in both seasons.</li>";
       if (has(/stolen bases/)) h += "<li><b>Base running.</b> Every runner runs at his own sprint speed, and runners steal at their own rates, adjusted for how often the pitcher on the mound gets run on and how often runners make it against him. On all of 2026 it moved the simulator closer to both the results and Vegas.</li>";
       if (has(/play-by-play/)) h += "<li><b>Runners after each play.</b> After every play, runners move the way they do in real games, taken from every play of 2023 to 2026 with the same result, bases and outs: how often an out with a man on first turns into a double play (23% with fewer than two out), how often the runner on third scores on an out (54% with fewer than two out), how often a runner scores from second on a single or from first on a double. Faster runners take the extra base more often and faster hitters beat out more double plays. On all of 2025 and 2026 it got batters per game right and made the win chances a little better both seasons.</li>";
       if (has(/talent noise/)) h += "<li><b>How sure we are about each player.</b> Nobody knows exactly how good a player is. Each of the ten thousand games uses a slightly different level for every player, with more spread for players with less history, so the ranges show what we do not know.</li>";
@@ -4376,7 +4391,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     h += "<h2>During the game</h2><p>While a game is on, the page checks MLB's feed every 15 seconds for the score, the plays and every pitch. The win chance moves after each play, using the same ten thousand games from before first pitch and how real games have gone from the same spot.</p>";
     h += "<h2>Past and future games</h2><p>Tap Games, then use the date strip or the calendar. Any day of 2025 and 2026 works. Past days show the real box score next to what we said, and how our picks did that day. Before October 6, 2026 those are re-runs: we played each game again after the season using only what was known before it. For tomorrow, we post an early number the night before once both starters are announced, using projected lineups, and update it on game day when the real lineups come out. Further out you see the schedule.</p>";
     h += "<h2>Checking the work</h2><p>Every number goes up before first pitch and never gets changed. After the final, the Record page grades the last number we posted against a coin flip, always picking the home team, and Vegas. Nothing gets filled in after the fact.</p>";
-    h += "<h2>What it does not do yet</h2><ul><li>In the postseason, bullpen roles stay the same as in the regular season. Only the starter's length changes.</li><li>The pitches shown inside a simulated at-bat are just for show, borrowed from real at-bats that ended the same way. They do not decide anything.</li><li>No wild pitches or passed balls.</li><li>Player history runs through " + esc(/^\d{4}-\d{2}-\d{2}$/.test(any.history_through || "") ? dateLabel(any.history_through).replace(/^[A-Za-z]+, /, "") : (any.history_through || "the day before")) + ".</li></ul>";
+    h += "<h2>What it does not do yet</h2><ul><li>In the postseason, which reliever comes in follows regular-season habits. Only how long starters and relievers stay in is set for October.</li><li>The pitches shown inside a simulated at-bat are just for show, borrowed from real at-bats that ended the same way. They do not decide anything.</li><li>No wild pitches or passed balls.</li><li>Player history runs through " + esc(/^\d{4}-\d{2}-\d{2}$/.test(any.history_through || "") ? dateLabel(any.history_through).replace(/^[A-Za-z]+, /, "") : (any.history_through || "the day before")) + ".</li></ul>";
     var modelNames = []; Object.keys(fx).forEach(function (k) { var m = String(fx[k].model || ""); if (m && modelNames.indexOf(m) < 0) modelNames.push(m); });
     h += "<h2>Nuts and bolts</h2><p>At-bat model " + esc(modelNames.join(", ") || any.model || "") + ". " + Number(any.n_simulations || 0).toLocaleString() + " games played out per forecast. When lineups change we save a new version and keep the old ones. The code is public; the player data and model files are not.</p>";
     var vs = Object.keys(fx).map(function (k) { return fx[k]; }).filter(function (f) { return f.date === D.date; });
