@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 290,
- "rows": 293,
+ "experiments": 291,
+ "rows": 294,
  "records": {
   "ACC-01": [
    {
@@ -4789,6 +4789,22 @@
     ],
     "frozen_commits": [],
     "status": "held: Expected view on every subset at the pooled m"
+   }
+  ],
+  "ZONES-03": [
+   {
+    "id": "ZONES-03",
+    "columns": {
+     "ID": "ZONES-03",
+     "Attempt": "The hot zones' Expected view against one hand anchors each hitter's level on his own pitches against that hand (ZONES-02). SPLITS-01 found a hitter's own level against a hand, beyond his side's usual split, mostly does not carry over (AVG and SLG r 0.06). Candidate 'anchored': the prior's level from all his pitches of the same family against both hands, relative to his side's league rate on them, applied to the league's zone rates for this hand; m refitted on the same grid. Subsets: pitches from right-handed pitchers and from left-handed pitchers (these decide), and the six hand-by-family crosses the plan rows show (reported). Same windows and hitters as ZONES-02: m chosen on 2023-2024 to 2025, scored once on 2024-2025 to 2026, 100 or more plate appearances in the subset in training, paired bootstrap over hitters (2,000 draws). 2026 was scored before by ZONES-01 and ZONES-02 with other candidates, so this is later-period validation with adaptive reuse (evidence rule 6) and the decision is a product call on it. tools/brl_report.py zone_shrink_study with anchor, zone_estimates_anchored, report lane, aggregates only. Synthetic check (brl_live_tests/test_report_zone_study.py): with only the league split by hand, anchored beats shrunk; with a large own split by hand, the anchored prior misses it.",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the run.** Predictions on 2026: (1) against lefties, anchored beats shrunk on AVG and SLG with the interval excluding zero; (2) against righties, anchored is no worse than shrunk on any of the four metrics (upper end at most +0.0002 nats per event, +0.0005 squared error for SLG); (3) on swing and miss rates anchored is no worse than shrunk against either hand (the same bounds). Decision rule: if (1) and (2) hold, the page's Expected charts against a hand anchor AVG and SLG on his level against both hands (with the anchored m), and swing and miss rates too where (3) holds and anchored beats shrunk with the interval excluding zero; otherwise nothing changes.",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "MATCHUPREAD-01": [

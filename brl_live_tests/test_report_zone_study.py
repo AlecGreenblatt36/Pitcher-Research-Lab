@@ -65,3 +65,40 @@ def test_zone_shrink_study_on_a_subset():
     fam = B.zone_shrink_study(T, lambda *a: None, {'min_pa': 10, 'subset': {'family': 'breaking'}})
     assert half['metrics']['swing']['events'] < full['metrics']['swing']['events']
     assert fam['metrics']['swing']['events'] < half['metrics']['swing']['events']
+
+
+def _hand_league(seed=4, hitters=160, pitches=700, hand_sd=0.0):
+    """Hitters with a level, a zone pattern of their own and (hand_sd > 0) an own extra split against lefties, on top of a
+    league split; about a third of the pitches from lefties."""
+    rng = np.random.default_rng(seed)
+    zones = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14])
+    base_sw = np.array([.65, .7, .62, .72, .8, .7, .6, .66, .55, .3, .25, .28, .24])
+    own = rng.normal(0, 0.4, (hitters, 13)); level = rng.normal(0, 0.4, hitters); hand_own = rng.normal(0, hand_sd, hitters)
+    cols = {k: [] for k in ('season', 'batter', 'stand_r', 'throw_r', 'zone', 'call', 'last_in_pa', 'out7', 'post')}
+    for season in (2023, 2024, 2025, 2026):
+        n = hitters * pitches
+        b = np.repeat(np.arange(hitters), pitches); zi = rng.integers(0, 13, n)
+        lefty = rng.random(n) < 0.33
+        logit = np.log(base_sw[zi] / (1 - base_sw[zi])) + level[b] + own[b, zi] + np.where(lefty, 0.15 + hand_own[b], 0.0)
+        swing = rng.random(n) < 1 / (1 + np.exp(-logit)); whiff = swing & (rng.random(n) < 0.25)
+        cols['season'].append(np.full(n, season)); cols['batter'].append(1000 + b); cols['stand_r'].append(b % 2)
+        cols['throw_r'].append((~lefty).astype(int)); cols['zone'].append(zones[zi]); cols['call'].append(np.where(whiff, 2, np.where(swing, 1, 0)))
+        cols['last_in_pa'].append((rng.random(n) < 0.25).astype(int)); cols['out7'].append(np.where(rng.random(n) < 0.25, 3, 0)); cols['post'].append(np.zeros(n, int))
+    return {k: np.concatenate(v) for k, v in cols.items()}
+
+
+def test_anchored_prior_wins_when_the_hand_level_is_only_the_league_split():
+    B = _report()
+    out = B.zone_shrink_study(_hand_league(), lambda *a: None, {'min_pa': 30, 'subset': {'throw_r': 0}, 'anchor': True})
+    sw = out['metrics']['swing']
+    assert sw['anchored_minus_shrunk'][2] < 0, sw          # his level against everyone beats his level against lefties alone
+    assert sw['anchored_scaled_minus_scaled'][0] < 0, sw
+    plain = B.zone_shrink_study(_hand_league(), lambda *a: None, {'min_pa': 30, 'subset': {'throw_r': 0}})
+    assert 'anchored' not in plain['metrics']['swing']
+
+
+def test_anchored_prior_loses_when_hitters_own_a_big_hand_split():
+    B = _report()
+    sw = B.zone_shrink_study(_hand_league(seed=5, hand_sd=0.6), lambda *a: None, {'min_pa': 30, 'subset': {'throw_r': 0}, 'anchor': True})['metrics']['swing']
+    assert sw['anchored_scaled_minus_scaled'][1] > 0, sw    # the scaled prior misses his own split
+    assert sw['anchored_minus_shrunk'][0] > 0

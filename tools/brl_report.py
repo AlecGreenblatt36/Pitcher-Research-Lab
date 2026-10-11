@@ -1344,6 +1344,14 @@ def zone_shrink_study(T: dict, stage, spec: dict) -> dict:
     if 'family' in sub:
         base &= np.isin(T['group'], {'fastball': (0, 1, 2, 6), 'breaking': (3, 4), 'offspeed': (5,)}[sub['family']])
 
+    # ZONES-03: with a pitcher-hand subset, a second prior anchored on the hitter's level against both hands (the same pitch
+    # family) times his side's league ratio for this hand, since his own level against one hand mostly does not carry over
+    # beyond the usual split (SPLITS-01)
+    anchor = bool(spec.get('anchor')) and 'throw_r' in sub
+    base_all = reg.copy()
+    if 'family' in sub:
+        base_all &= np.isin(T['group'], {'fastball': (0, 1, 2, 6), 'breaking': (3, 4), 'offspeed': (5,)}[sub['family']])
+
     def joined(tr_years, te_year):
         tr = zone_tables(T, base & np.isin(T['season'], tr_years)); te = zone_tables(T, base & (T['season'] == te_year))
         pos = {int(b): i for i, b in enumerate(te['bats'])}
@@ -1351,6 +1359,11 @@ def zone_shrink_study(T: dict, stage, spec: dict) -> dict:
         ti = np.array([pos[int(b)] for b in tr['bats'][keep]], np.int64)
         trk = {k: (v[keep] if hasattr(v, '__len__') and len(v) == len(keep) else v) for k, v in tr.items()}
         tek = {k: v[ti] for k, v in te.items() if k in ('n', 'sw', 'wh', 'ab', 'h', 'tb')}
+        if anchor:
+            ta = zone_tables(T, base_all & np.isin(T['season'], tr_years))
+            apos = {int(b): i for i, b in enumerate(ta['bats'])}
+            ai = np.array([apos[int(b)] for b in trk['bats']], np.int64)          # every kept hitter has these pitches too
+            trk['all_hands'] = {k: ta[k][ai] for k in ('n', 'sw', 'wh', 'ab', 'h', 'tb')}
         return trk, tek
 
     out = {'fit': {'train': list(fit_train), 'test': fit_test}, 'score': {'train': list(train), 'test': test}, 'min_pa': min_pa, 'grid': list(ZONE_M_GRID), 'metrics': {}}
@@ -1373,13 +1386,44 @@ def zone_shrink_study(T: dict, stage, spec: dict) -> dict:
         res = {'m': m_best, 'fit_curve': [round(c, 6) for c in curve], 'events': int(tot),
                'loss': {c: round(float(per[c][0].sum() / max(tot, 1)), 6) for c in per}}
         nh = len(events); draws = rng.integers(0, nh, (2000, nh))
-        for a, b in (('shrunk', 'raw'), ('shrunk', 'scaled'), ('shrunk', 'league'), ('scaled', 'raw')):
+        pairs = [('shrunk', 'raw'), ('shrunk', 'scaled'), ('shrunk', 'league'), ('scaled', 'raw')]
+        if anchor:
+            curve_x = []
+            for m in ZONE_M_GRID:
+                l, e = zone_score(zone_estimates_anchored(tr1, num, den, m)['shrunk'], te1[num], te1[den], binary)
+                curve_x.append(float(l.sum() / max(e.sum(), 1)))
+            m_x = ZONE_M_GRID[int(np.argmin(curve_x))]
+            ex = zone_estimates_anchored(tr2, num, den, m_x)
+            per['anchored'] = zone_score(ex['shrunk'], te2[num], te2[den], binary)
+            per['anchored_scaled'] = zone_score(ex['scaled'], te2[num], te2[den], binary)
+            res['anchored'] = {'m': m_x, 'fit_curve': [round(c, 6) for c in curve_x], 'loss': round(float(per['anchored'][0].sum() / max(tot, 1)), 6),
+                               'loss_scaled': round(float(per['anchored_scaled'][0].sum() / max(tot, 1)), 6)}
+            pairs += [('anchored', 'shrunk'), ('anchored', 'raw'), ('anchored_scaled', 'scaled')]
+        for a, b in pairs:
             d = per[a][0] - per[b][0]
             boot = d[draws].sum(1) / np.maximum(events[draws].sum(1), 1)
             res[f'{a}_minus_{b}'] = [round(float(d.sum() / max(tot, 1)), 6), round(float(np.percentile(boot, 2.5)), 6), round(float(np.percentile(boot, 97.5)), 6)]
         out['metrics'][name] = res
         stage(f'zone study: {name}')
     return out
+
+
+def zone_estimates_anchored(tr: dict, num: str, den: str, m: float, k_all: float = 30.0) -> dict:
+    """ZONES-03: zone_estimates with each hitter's level taken from his pitches against both hands (tr['all_hands'], the
+    same pitch family) relative to his side's league rate on them, applied to the league's zone rates for this hand."""
+    N, Dn, A = tr[num], tr[den], tr['all_hands']
+    Na, Da = A[num].sum(1), A[den].sum(1)
+    lg_z = np.zeros((2, N.shape[1])); lg_a = np.zeros(2)
+    for sd in (0, 1):
+        sel = tr['side'] == sd
+        lg_z[sd] = N[sel].sum(0) / np.maximum(Dn[sel].sum(0), 1e-9); lg_a[sd] = Na[sel].sum() / max(Da[sel].sum(), 1e-9)
+    lz = lg_z[tr['side']]; la = lg_a[tr['side']]
+    h_all = (Na + k_all * la) / (Da + k_all)
+    scaled = lz * (h_all / np.maximum(la, 1e-9))[:, None]
+    if num != 'tb':
+        scaled = np.clip(scaled, 0.005, 0.995)
+    shrunk = (N + m * scaled) / (Dn + m) if m > 0 else np.where(Dn > 0, N / np.maximum(Dn, 1e-9), lz)
+    return {'scaled': scaled, 'shrunk': shrunk}
 
 
 # SPLITS-01 (LEDGER): how much of a hitter's split by pitcher hand carries over. The metrics the splits table shows:
