@@ -79,3 +79,17 @@ def test_strikeout_ladder_centers_on_the_median_and_over_plus_under_is_one():
     assert low == ''
     ace = _run('process.stdout.write(kLadder({counts:[[7,100],[8,200],[9,300],[10,250],[11,150]]}));')
     assert re.findall(r'<th scope="row">([\d.]+)</th>', ace) == ['7.5', '8.5']
+
+
+def test_bullpen_table_lists_likely_arms_and_folds_the_rest():
+    s = _script()
+    m = re.search(r'\n  var PEN_LIST_MIN = .*?;\n', s).group(0)
+    fns = ''.join(_line(s, n) for n in ('pct', 'esc')) + ''.join(_fn(s, n) for n in ('lastName', 'penTable'))
+    js = ("const assert=require('assert');"
+          "const pen=[{name:'Tanner Scott',appearance_probability:.62},{name:'Edwin Diaz',appearance_probability:.49},"
+          "{name:'Blake Snell',appearance_probability:.06},{name:'Shohei Ohtani',appearance_probability:.05}];"
+          "const h=penTable(pen);"
+          "assert.equal((h.match(/<tr>/g)||[]).length,3);"                       # the header and two arms
+          "assert.ok(h.indexOf('Less likely: Snell\\u00a06%, Ohtani\\u00a05%.')>0,h);"
+          "const low=penTable(pen.slice(2));assert.equal((low.match(/<tr>/g)||[]).length,3);assert.ok(low.indexOf('Less likely')<0,low);")
+    subprocess.run(['node', '-e', m + fns + js], check=True)

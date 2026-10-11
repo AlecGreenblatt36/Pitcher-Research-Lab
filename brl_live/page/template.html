@@ -311,6 +311,8 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .tbl-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; }
 .box { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .box th { font-size: 14px; font-weight: 700; color: var(--muted); text-align: right; padding: 8px 6px; border-bottom: 2px solid var(--ink); white-space: nowrap; }
+.box th[scope="row"] { border-bottom: 1px solid var(--rule-soft); }
+.box tr.tot th { border-top: 1px solid var(--ink); border-bottom: 0; }
 .box th:first-child, .box td:first-child { text-align: left; padding-left: 12px; }
 .box th:last-child, .box td:last-child { padding-right: 12px; }
 .box td { text-align: right; padding: 7px 6px; border-bottom: 1px solid var(--rule-soft); font-family: var(--display); font-size: 18px; white-space: nowrap; }
@@ -685,9 +687,9 @@ small { font-size: 14px; }
 .bvp-t td, .bvp-t th { font-size: 16px; padding: 7px 5px; }
 .bvp-t th .spot { display: inline-block; width: 18px; color: var(--muted); font-size: 14px; }
 .ts-t th[scope=row] { text-align: left; font-family: var(--body); font-weight: 400; font-size: 15px; white-space: normal; }
-.ts-t td { font-size: 17px; vertical-align: top; padding: 5px 6px; }
-.ts-t th[scope=row] { padding-top: 5px; padding-bottom: 5px; }
-.ts-t td small { display: block; font-family: var(--body); font-size: 14px; color: var(--muted); font-weight: 400; }
+.ts-t td { font-size: 17px; vertical-align: baseline; padding: 7px 6px; }
+.ts-t th[scope=row] { padding-top: 7px; padding-bottom: 7px; vertical-align: baseline; }
+.ts-t td small { display: inline-block; width: 34px; margin-left: 4px; text-align: left; font-family: var(--body); font-size: 14px; color: var(--muted); font-weight: 400; }
 .ts-t td.ts-win { font-weight: 700; }
 .mm th[scope=row] { text-align: left; font-family: var(--body); font-weight: 700; font-size: 15px; white-space: normal; }
 .mm th[scope=row] small { display: block; font-weight: 400; color: var(--muted); font-size: 14px; }
@@ -1052,6 +1054,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
      appearances (pinch hitters and substitutes take the rest; PLAYER-02, the shares of brl_live/boxscore.py STARTER_SHARE from
      2023-2025). The Summary's hit and home-run meters (the box's hit_probability and hr_probability) are this with k = 1. */
   var SLOT_SHARE = [0.974, 0.976, 0.976, 0.977, 0.969, 0.962, 0.953, 0.942, 0.927];
+  /* The Odds tab's bullpen tables list arms at least this likely to pitch; the rest go in one line under the table. */
+  var PEN_LIST_MIN = 0.1;
   function ownAtLeast(c, k, spot) {
     var keep = SLOT_SHARE[Math.min(Math.max(Math.round(Number(spot)) || 1, 1), 9) - 1], t = 0, below = 0;
     c.counts.forEach(function (x) {
@@ -4689,11 +4693,18 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var pen = (box.teams[side].pitching || []).filter(function (p) { return p.role !== "starter"; })
         .sort(function (a, b) { return b.appearance_probability - a.appearance_probability; });
       if (!pen.length) return;
-      h += '<section class="sec"><h3 class="team-h ' + side + '-c">' + esc(nickname(f[side].name)) + ' bullpen</h3><div class="tbl-wrap"><table class="box"><thead><tr><th scope="col">Pitchers</th><th>Chance to pitch</th></tr></thead><tbody>';
-      pen.forEach(function (p) { h += "<tr><td>" + esc(lastName(p.name)) + "</td><td>" + pct(p.appearance_probability) + "</td></tr>"; });
-      h += "</tbody></table></div></section>";
+      h += '<section class="sec"><h3 class="team-h ' + side + '-c">' + esc(nickname(f[side].name)) + " bullpen</h3>" + penTable(pen) + "</section>";
     });
     return h + "</div>";
+  }
+  /* A bullpen's chance-to-pitch table (arms sorted by the chance): arms at least PEN_LIST_MIN likely in the table, the rest in
+     one line under it (all in the table when none reaches it). */
+  function penTable(pen) {
+    var main = pen.filter(function (p) { return p.appearance_probability >= PEN_LIST_MIN; }), rest = pen.slice(main.length);
+    if (!main.length) { main = pen; rest = []; }
+    return '<div class="tbl-wrap"><table class="box"><thead><tr><th scope="col">Pitchers</th><th scope="col">Chance to pitch</th></tr></thead><tbody>' +
+      main.map(function (p) { return "<tr><td>" + esc(lastName(p.name)) + "</td><td>" + pct(p.appearance_probability) + "</td></tr>"; }).join("") + "</tbody></table></div>" +
+      (rest.length ? '<p class="note">Less likely: ' + rest.map(function (p) { return esc(lastName(p.name)) + "\u00a0" + pct(p.appearance_probability); }).join(", ") + ".</p>" : "");
   }
   function runsChart(ra, rh) {
     var cap = 10, A = {}, H = {}, maxP = 0;
@@ -5045,7 +5056,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var st = glSorted(e.games).filter(function (x) { return glNum(x.stat.gamesStarted) > 0; }).slice(0, 3);
     if (!st.length) return "\u2013";
     var outs = st.reduce(function (a, x) { return a + glOuts(x.stat); }, 0), er = glSum(st, "earnedRuns");
-    return (st.length < 3 ? "Only " + st.length + (st.length === 1 ? " start: " : " starts: ") : "") + ip(outs) + " IP, " + er + " ER, " + glSum(st, "strikeOuts") + " K, " + glSum(st, "baseOnBalls") + " BB" + (outs ? " <small>" + (27 * er / outs).toFixed(2) + " ERA</small>" : "");
+    return (st.length < 3 ? "Only " + st.length + (st.length === 1 ? " start: " : " starts: ") : "") + ip(outs) + "\u00a0IP, " + er + "\u00a0ER, " + glSum(st, "strikeOuts") + "\u00a0K, " + glSum(st, "baseOnBalls") + "\u00a0BB" + (outs ? " <small>" + (27 * er / outs).toFixed(2) + "\u00a0ERA</small>" : "");
   }
   function psPaint(el, e) {
     var part = el.getAttribute("data-part"), grp = el.getAttribute("data-grp");

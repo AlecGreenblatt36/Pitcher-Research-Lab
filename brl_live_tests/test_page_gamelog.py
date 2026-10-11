@@ -122,9 +122,9 @@ def test_last_three_starts_line():
           "const games=[g('2026-09-01','R',true,true,121,st(18,2,7,1,1)),g('2026-09-06','R',true,true,121,st(21,0,9,2,1)),g('2026-09-08','R',true,true,121,st(3,1,1,0,0)),"
           "g('2026-09-12','R',true,true,121,st(15,3,5,3,1)),g('2026-10-03','D',true,true,144,st(18,1,7,2,1))];"
           "const h=psLast3({games:games});"
-          "assert.ok(h.indexOf('18.0 IP, 4 ER, 21 K, 7 BB')===0,h);"        # Oct 3, Sep 12 and Sep 6: 54 outs; the relief outing left out
-          "assert.ok(h.indexOf('2.00 ERA')>0,h);assert.equal(psLast3({games:[]}),'\\u2013');"
-          "assert.ok(psLast3({games:games.slice(0,2)}).indexOf('Only 2 starts: 13.0 IP, 2 ER')===0,psLast3({games:games.slice(0,2)}));")
+          "assert.ok(h.indexOf('18.0\\u00a0IP, 4\\u00a0ER, 21\\u00a0K, 7\\u00a0BB')===0,h);"        # Oct 3, Sep 12 and Sep 6: 54 outs; the relief outing left out
+          "assert.ok(h.indexOf('2.00\\u00a0ERA')>0,h);assert.equal(psLast3({games:[]}),'\\u2013');"
+          "assert.ok(psLast3({games:games.slice(0,2)}).indexOf('Only 2 starts: 13.0\\u00a0IP, 2\\u00a0ER')===0,psLast3({games:games.slice(0,2)}));")
     fns = ''.join(_fn(s, n) for n in ('glNum', 'glAvg', 'glSorted', 'psLast3'))
     prefix = ("const assert=require('assert');function ip(outs){outs=Math.round(outs);return Math.floor(outs/3)+'.'+(outs%3);}")
     subprocess.run(['node', '-e', prefix + fns + js], check=True)
