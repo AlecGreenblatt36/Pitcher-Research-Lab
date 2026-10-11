@@ -678,6 +678,7 @@ small { font-size: 14px; }
 .range-list .r { font-family: var(--display); font-size: 19px; font-weight: 600; }
 .range-list small { color: var(--muted); font-size: 14px; }
 .ladders { display: flex; flex-wrap: wrap; gap: 0 16px; }
+.seg.prop-fmt { margin: 4px 0 0; }
 .ladder-wrap { margin-top: 8px; max-width: 360px; flex: 1 1 280px; min-width: 0; }
 .box.props th, .box.props td { padding-left: 4px; padding-right: 4px; }
 .box.props td { font-size: 16px; }
@@ -844,7 +845,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   var DATA_URL = "predictions.json";
   var D = null;
   var app = document.getElementById("app");
-  var state = { variant: {}, boxSide: {}, playSide: {}, muMetric: "obp", rpMetric: "chase", rpPair: {}, rpCount: "all", rpFollow: {}, rpCloud: false, rpOpen: {}, hzMetric: "avg", hzFam: "all", hzHand: "", hzBat: "R", hzPMetric: "loc", hzSheetHand: "sp", hzView: "raw", ldHit: "slg", ldPit: "k" };
+  var state = { variant: {}, boxSide: {}, playSide: {}, muMetric: "obp", rpMetric: "chase", rpPair: {}, rpCount: "all", rpFollow: {}, rpCloud: false, rpOpen: {}, hzMetric: "avg", hzFam: "all", hzHand: "", hzBat: "R", hzPMetric: "loc", hzSheetHand: "sp", hzView: "raw", ldHit: "slg", ldPit: "k", propOdds: false };
   var REPORTS = "https://raw.githubusercontent.com/AlecGreenblatt36/Pitcher-Research-Lab/brl-live-data/public/reports/";
   var TOTAL_TAUGHT = { sim: 0.32, line: 0.78, shift: -0.543, from: "2026-10-10" };   /* TOTALS-03: expected total taught by results, fixed cross-season weights */
   var RP = {};
@@ -2123,6 +2124,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     });
     app.querySelectorAll("[data-mumetric]").forEach(function (b) {
       b.addEventListener("click", function () { state.muMetric = b.getAttribute("data-mumetric"); renderGame(pk, "matchups", true); });
+    });
+    app.querySelectorAll("[data-propfmt]").forEach(function (b) {
+      b.addEventListener("click", function () { state.propOdds = b.getAttribute("data-propfmt") === "odds"; renderGame(pk, "odds", true); });
     });
   }
 
@@ -4690,6 +4694,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     h += '</ul><p class="note">Ranges cover the middle half of simulated games. Strikeouts: his chance of more than each line from 2.5 to 8.5, with the fair price (no margin). Over two seasons re-run, these chances came within about 2 points of how often starters actually got there.' +
       (outsOn ? " Outs: the same for outs recorded (three an inning); re-run, every line from 12.5 to 20.5 came within 2.4 points." : "") + "</p></section>";
 
+    var pf = function (p) { return state.propOdds ? amOdds(p) : pct(p); };
+    h += '<div class="seg prop-fmt" role="group" aria-label="Show hitter props as"><button data-propfmt="pct" aria-pressed="' + !state.propOdds + '">Chance</button><button data-propfmt="odds" aria-pressed="' + state.propOdds + '">Fair odds</button></div>';
     h += '<div class="pair wide">';
     ["away", "home"].forEach(function (side) {
       var bat = box.teams[side].batting || [], bnames = shortNames(bat);
@@ -4697,11 +4703,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       h += '<section class="sec"><h3 class="team-h ' + side + '-c">' + esc(nickname(f[side].name)) + ' hitters</h3><div class="tbl-wrap"><table class="box props"><thead><tr><th scope="col">Batters</th><th>1+ hit</th><th>2+ hits</th>' + (tb ? "<th>2+ TB</th>" : "") + "<th>HR</th><th>Walk</th></tr></thead><tbody>";
       bat.forEach(function (b) {
         var d = b.distributions || {};
-        h += '<tr><td><span class="spot">' + (b.spot || "") + "</span>" + esc(bnames[String(b.player_id)]) + "</td><td>" + (d.H ? pct(ownAtLeast(d.H, 1, b.spot)) : "") + "</td><td>" + (d.H ? pct(ownAtLeast(d.H, 2, b.spot)) : "") +
-          (tb ? "</td><td>" + (b.tb2_probability != null ? pct(b.tb2_probability) : "") : "") +
-          "</td><td>" + (d.HR ? pct(ownAtLeast(d.HR, 1, b.spot)) : "") + "</td><td>" + (d.BB ? pct(ownAtLeast(d.BB, 1, b.spot)) : "") + "</td></tr>";
+        h += '<tr><td><span class="spot">' + (b.spot || "") + "</span>" + esc(bnames[String(b.player_id)]) + "</td><td>" + (d.H ? pf(ownAtLeast(d.H, 1, b.spot)) : "") + "</td><td>" + (d.H ? pf(ownAtLeast(d.H, 2, b.spot)) : "") +
+          (tb ? "</td><td>" + (b.tb2_probability != null ? pf(b.tb2_probability) : "") : "") +
+          "</td><td>" + (d.HR ? pf(ownAtLeast(d.HR, 1, b.spot)) : "") + "</td><td>" + (d.BB ? pf(ownAtLeast(d.BB, 1, b.spot)) : "") + "</td></tr>";
       });
-      h += '</tbody></table></div><p class="note">Each hitter\'s own chance: a pinch hitter or a substitute takes some of his spot\'s trips late in games, the same as the Summary\'s meters.</p></section>';
+      h += '</tbody></table></div><p class="note">Each hitter\'s own chance: a pinch hitter or a substitute takes some of his spot\'s trips late in games, the same as the Summary\'s meters.' + (state.propOdds ? " Fair odds: the chance as American odds with no margin." : "") + "</p></section>";
     });
     h += '</div><div class="pair wide">';
     ["away", "home"].forEach(function (side) {
