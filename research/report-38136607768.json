@@ -1,0 +1,176 @@
+{
+ "schema": "brl.report-receipt.v1",
+ "run_id": "38136607768",
+ "params": {
+  "pitcher_xstats_study": {
+   "fit": {
+    "train": [
+     2023,
+     2024
+    ],
+    "test": 2025
+   },
+   "score": {
+    "train": [
+     2024,
+     2025
+    ],
+    "test": 2026,
+    "test_end": "2026-08-01"
+   },
+   "min_pa": 300,
+   "min_test": 150,
+   "boot": 2000
+  },
+  "seasons": [
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "dates": [
+   "2026-04-01"
+  ],
+  "publish": false
+ },
+ "started_at": "2026-10-11T11:44:02.531339+00:00",
+ "stages": [
+  {
+   "stage": "load 2023",
+   "at_seconds": 10.1,
+   "peak_rss_mb": 1091
+  },
+  {
+   "stage": "load 2024",
+   "at_seconds": 19.8,
+   "peak_rss_mb": 1258
+  },
+  {
+   "stage": "load 2025",
+   "at_seconds": 29.7,
+   "peak_rss_mb": 1426
+  },
+  {
+   "stage": "load 2026",
+   "at_seconds": 39.4,
+   "peak_rss_mb": 1587
+  },
+  {
+   "stage": "xstats study: fit",
+   "at_seconds": 39.7,
+   "peak_rss_mb": 1587
+  },
+  {
+   "stage": "xstats study: score",
+   "at_seconds": 39.9,
+   "peak_rss_mb": 1587
+  },
+  {
+   "stage": "xstats study: done",
+   "at_seconds": 39.9,
+   "peak_rss_mb": 1587
+  }
+ ],
+ "reports": {},
+ "environment": {
+  "python": "3.12.15",
+  "commit": "f71ea4a905a97a3fc95fb3650fd29094bab5aea3",
+  "numpy": "2.5.4",
+  "scipy": "1.18.1",
+  "scikit-learn": "1.9.1",
+  "pandas": "3.0.6",
+  "cryptography": "46.0.4"
+ },
+ "pitcher_xstats_study": {
+  "who": "pitcher",
+  "fit": {
+   "train": [
+    2023,
+    2024
+   ],
+   "test": 2025
+  },
+  "score": {
+   "train": [
+    2024,
+    2025
+   ],
+   "test": 2026,
+   "test_end": "2026-08-01"
+  },
+  "hitters": {
+   "fit": 273,
+   "score": 227
+  },
+  "measured_share": 0.9959,
+  "metrics": {
+   "avg": {
+    "blend_weight": 0.84,
+    "mse": {
+     "raw": 0.001147,
+     "expected": 0.000956,
+     "blend": 0.000961
+    },
+    "corr": {
+     "raw": 0.36,
+     "expected": 0.425
+    },
+    "mean": {
+     "raw": 0.2389,
+     "expected": 0.2424,
+     "test": 0.2404
+    },
+    "expected_minus_raw": [
+     -0.0001904,
+     -0.000311,
+     -7.04e-05
+    ],
+    "blend_minus_raw": [
+     -0.0001856,
+     -0.000288,
+     -8.32e-05
+    ],
+    "blend_minus_expected": [
+     4.9e-06,
+     -1.4e-05,
+     2.24e-05
+    ]
+   },
+   "slg": {
+    "blend_weight": 0.995,
+    "mse": {
+     "raw": 0.004553,
+     "expected": 0.004111,
+     "blend": 0.00411
+    },
+    "corr": {
+     "raw": 0.347,
+     "expected": 0.371
+    },
+    "mean": {
+     "raw": 0.3867,
+     "expected": 0.3927,
+     "test": 0.3914
+    },
+    "expected_minus_raw": [
+     -0.0004416,
+     -0.0008934,
+     -1.98e-05
+    ],
+    "blend_minus_raw": [
+     -0.0004428,
+     -0.0008926,
+     -2.22e-05
+    ],
+    "blend_minus_expected": [
+     -1.2e-06,
+     -3e-06,
+     8e-07
+    ]
+   }
+  }
+ },
+ "status": "completed",
+ "finished_at": "2026-10-11T11:44:42.484815+00:00",
+ "seconds": 39.9
+}
