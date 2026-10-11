@@ -70,3 +70,14 @@ def test_day_form_worlds_take_over_the_market_numbers_when_the_box_has_them():
                                    'total_run_distribution': {'n': 1000, 'counts': [[5, 500], [9, 500]]}})
     got = json.loads(_run('process.stdout.write(JSON.stringify(runLineMarket(' + json.dumps(F) + ',' + json.dumps(box) + ',null)));', 0.51, {}))
     assert got['fav'] == 'home' and abs(got['p'] - 0.51 * 400 / 600) < 1e-12        # by two or more given a win: 400 of 600
+
+
+def test_empty_market_worlds_fall_back_to_the_plain_ones():
+    s = _script()
+    js = (_line(s, 'dist') + _line(s, 'marketTotal') + 'process.stdout.write(JSON.stringify([marketTotal({market_worlds:{total_run_distribution:{n:0,counts:[]}}}),'
+          'marketTotal({market_worlds:{error:"x"}}),marketTotal({}),marketTotal({market_worlds:{total_run_distribution:{n:2,counts:[[5,2]]}}}).counts]));')
+    out = json.loads(subprocess.run(['node', '-e', js], check=True, capture_output=True, text=True).stdout)
+    assert out == [None, None, None, [[5, 2]]]
+    box = dict(BOX, market_worlds={'n': 0, 'margin_distribution': {'n': 0, 'counts': []}})
+    got = json.loads(_run('process.stdout.write(JSON.stringify(runLineMarket(' + json.dumps(F) + ',' + json.dumps(box) + ',null)));', 0.51, {}))
+    assert abs(got['p'] - 0.51 * 350 / 600) < 1e-12                                  # the plain margins

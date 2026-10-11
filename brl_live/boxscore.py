@@ -212,9 +212,10 @@ def build_game_box(result,matchup,fit:BookkeepingFit) -> dict[str,Any]:
             charged=pid if responsible is None else str(responsible)
             if charged not in pitching[fs]:raise Blocked('Missing responsible pitcher in box score')
             pitching[fs][charged]['R']+=1
-        # MLB's scoring rule 9.04: a run that scores on a hit, a walk or hit-by-pitch, a sacrifice fly or an out in play other
-        # than a double play is batted in (the simulator has no errors)
-        rbi=e['runs_scored'] if hit or o=='bb_hbp' or sf or (o=='bip_out' and 'double play' not in e['description'] and 'triple play' not in e['description']) else 0
+        # MLB's scoring rule 9.04: a run that scores on a hit, a walk or hit-by-pitch, a sacrifice fly, an out in play other
+        # than a double or triple play, or a fielder's choice is batted in; one that scores on an error is not
+        dsc=e['description']
+        rbi=e['runs_scored'] if hit or o=='bb_hbp' or sf or (o=='bip_out' and 'double play' not in dsc and 'triple play' not in dsc) or (o=='other_reach' and "fielder's choice" in dsc) else 0
         b['RBI']+=rbi;e['rbi']=rbi;e['scoring_players']=[str(x[0]) for x in scored]
         inning=str(e['inning']);line=innings[s].setdefault(inning,{'R':0,'H':0})
         line['R']+=e['runs_scored'];line['H']+=int(hit)
@@ -537,15 +538,17 @@ def adjusted_provider(provider,full_history,date,settings=ADJUST,environment=Non
 
 def market_worlds(sim_for,matchup,provider,seeds,spec,world_hook=None):
     """DISP-03: worlds with the centered day-form shock (brl_live.provider_adjust.DayForm) on top of the game's provider, for
-    the market numbers only. sim_for(provider) builds the game's simulator around a provider; each world's seed is the box
-    seed mixed with a constant, so these worlds never repeat the plain ones. Returns the joint distributions they need."""
+    the market numbers only. sim_for(provider) builds the game's simulator around a provider; each world's seed is its box
+    seed mixed with a constant, so it differs from that world's plain seed (it can equal another world's), and the shock
+    draws from the seed with its own salt. run_box_worlds does not call it when the provider already has a day-form shock.
+    Returns the joint distributions the market numbers need."""
     from .provider_adjust import DayForm
     dform=DayForm(provider,float(spec['sigma']),float(spec.get('center',0.0)))
     sim=sim_for(dform);pairs=[]
     for seed in list(seeds)[:int(spec.get('worlds',4000))]:
         s2=(int(seed)*2654435761+0x5EED)&0x7FFFFFFF
         if world_hook:world_hook(s2)
-        dform.new_world(s2)
+        dform.new_world(s2^0x3C6EF372)
         r=sim.simulate(matchup,s2)
         if r.winner=='tie' or r.ended_by_plate_appearance_cap:raise Blocked('Unfinished market world')
         pairs.append((r.away_score,r.home_score))
@@ -579,9 +582,14 @@ def run_box_worlds(engine,matchup,history,date,seeds,full_history=None,settings=
         results.append(result)
     payload=accumulator.finish()
     payload['adjustments']=adjust_label
-    if settings.get('market_day_form'):
-        payload['market_worlds']=market_worlds(lambda pv:ObservedSimulator(pv,config=engine.config,manager_policy=manager,steals=steals,transitions=kernel,running_events=running),
-                                               matchup,provider,seeds,settings['market_day_form'],world_hook)
+    if settings.get('market_day_form') and not float(settings.get('day_form_sigma') or 0.0)>0:
+        # never stacked on a day-form shock already in the provider; a failure here costs the market numbers only, never
+        # the forecast (the page falls back to the plain worlds)
+        try:
+            payload['market_worlds']=market_worlds(lambda pv:ObservedSimulator(pv,config=engine.config,manager_policy=manager,steals=steals,transitions=kernel,running_events=running),
+                                                   matchup,provider,seeds,settings['market_day_form'],world_hook)
+        except Exception as exc:
+            payload['market_worlds']={'error':type(exc).__name__+': '+str(exc)[:160]}
     for j,i in enumerate(payload['sample_indices']):
         if world_hook:world_hook(int(seeds[i]))
         sample=build_game_box(sim.simulate(matchup,int(seeds[i]),record_events=True),matchup,fit)

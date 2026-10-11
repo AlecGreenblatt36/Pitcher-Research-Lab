@@ -269,7 +269,7 @@ def main():
         for s, r in kr['by_season'].items():
             print(kind, s, 'n', r['n'], 'p %.4f act %.4f gap %+.2f' % (r['mean_p'], r['actual'], r['gap_points']), 'top10 %+.2f' % r['top_tenth_gap_points'],
                   'map', r['map_from_other'], 'cal gap %+.2f' % r['cal_gap_points'], 'dBrier %.6f [%.6f, %.6f]' % (r['brier_change'], *r['brier_change_ci']), 'pass', r['passes'])
-        print(kind, 'RULE', kr['passes_rule'], kr.get('map_both'))
+        print(kind, "PLAYER-03's map rule" + (' (not the rule for tb2: PLAYER-06 reads the level and the tenths)' if kind == 'tb2' else ''), kr['passes_rule'], kr.get('map_both'))
 
 
 if __name__ == '__main__':

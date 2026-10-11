@@ -258,3 +258,20 @@ def test_market_worlds_carry_the_day_form_and_their_own_seeds():
     tot=sum(k*c for k,c in out['total_run_distribution']['counts'])
     assert tot==sum(k*c for k,c in out['team_run_distributions']['away']['counts'])+sum(k*c for k,c in out['team_run_distributions']['home']['counts'])
     assert all(k!=0 for k,_ in out['margin_distribution']['counts'])          # finished games have a winner
+
+
+def test_runs_on_a_fielders_choice_are_batted_in_and_on_an_error_are_not():
+    """MLB's rule 9.04 for the kernel's other reaches: a fielder's choice that scores a run is an RBI; an error is not."""
+    from brl_live.boxscore import transitions_for
+    kernel=transitions_for({'transitions':True})
+    m=matchup();sim=ObservedSimulator(Provider(),SimulationConfig(max_innings=100,max_plate_appearances=4000),transitions=kernel)
+    fit=BookkeepingFit(history(),'2026-10-06');fc=err=0
+    for seed in range(1,120):
+        box=build_game_box(sim.simulate(m,seed,record_events=True),m,fit)
+        for p in box['plays']:
+            if not p['runs_scored'] or p['box_outcome'] in ('single','double','triple','home_run','walk','hit_by_pitch','bip_out','strikeout'):continue
+            if "fielder's choice" in p['description']:
+                assert p['rbi']==p['runs_scored'];fc+=1
+            elif 'error' in p['description']:
+                assert p['rbi']==0;err+=1
+    assert fc>=1
