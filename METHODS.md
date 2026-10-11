@@ -163,8 +163,8 @@ shown in gray.
 What changed from last season is said plainly and only when it is large (display, no claim): for a pitcher with 300 or
 more pitches in each season, a pitch type added or dropped (5% or more of his pitches one season, under 2% the other),
 a fastball 1 mph or more faster or slower, or a pitch used 10 points more or less; for a hitter with 200 or more plate
-appearances in each, a chase, miss, strikeout, walk or hard-hit rate that moved by more than twice its sampling error
-and by 3 points (5 for hard-hit). Box scores of real games show each hitter's average and each pitcher's ERA through
+appearances in each, a chase, miss, strikeout, walk or hard-hit rate that moved by more than three times its sampling
+error and by 3 points (5 for hard-hit). Box scores of real games show each hitter's average and each pitcher's ERA through
 the game, as MLB's feed prints them. The Players page ranks the leaders on each percentile row and shows a team's
 players in one table, shaded by those ranks (the players index carries each player's rates and ranks).
 

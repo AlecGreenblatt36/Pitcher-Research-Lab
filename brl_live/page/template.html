@@ -3548,8 +3548,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     });
     return out.length ? "Since " + pv.season + ": " + out.slice(0, 4).join("; ") + "." : "";
   }
-  /* What changed for a hitter from last season: a rate that moved by more than twice its sampling error and by a
-     practical amount (3 points; hard-hit 5), from the card's two season lines (200 or more plate appearances in each). */
+  /* What changed for a hitter from last season: a rate that moved by more than three times its sampling error (so
+     with five rates a hitter whose habits did not change shows one about once in eighty) and by a practical amount
+     (3 points; hard-hit 5), from the card's two season lines (200 or more plate appearances in each). */
   var HC_RATES = [["chase", "chase rate", "chases", "outside", 0.03], ["whiff", "miss rate", "misses", "swings", 0.03], ["k", "strikeout rate", "k", "pa", 0.03],
                   ["bb", "walk rate", "bb", "pa", 0.03], ["hard", "hard-hit rate", "hard", "bbe", 0.05]];
   function hitterChanges(card) {
@@ -3560,7 +3561,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var n1 = ls.cur[r[3]], n0 = ls.prev[r[3]];
       if (!n1 || !n0) return;
       var p1 = ls.cur[r[2]] / n1, p0 = ls.prev[r[2]] / n0, d = p1 - p0, se = Math.sqrt(p1 * (1 - p1) / n1 + p0 * (1 - p0) / n0);
-      if (Math.abs(d) >= r[4] && Math.abs(d) >= 2 * se) out.push(r[1] + " " + (d > 0 ? "up " : "down ") + (100 * Math.abs(d)).toFixed(1) + " points (" + Math.round(100 * p0) + "% to " + Math.round(100 * p1) + "%)");
+      if (Math.abs(d) >= r[4] && Math.abs(d) >= 3 * se) out.push(r[1] + " " + (d > 0 ? "up " : "down ") + (100 * Math.abs(d)).toFixed(1) + " points (" + Math.round(100 * p0) + "% to " + Math.round(100 * p1) + "%)");
     });
     return out.length ? "Since " + (ls.season - 1) + ": " + out.join("; ") + "." : "";
   }
