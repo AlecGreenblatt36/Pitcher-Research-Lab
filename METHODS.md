@@ -154,9 +154,19 @@ that would settle the last link; they need a team.
 The report also carries plain counts for the standard scouting views (PROD-06, a display change with no claim): each
 hitter's results over MLB's 13 zones (the per-pitch zone, catcher's view) by the pitcher's hand and pitch type, each
 pitcher's by the batter's side, each hitter's batted-ball direction (field thirds at 15 degrees from the gameday hit
-coordinates) and trajectory, and each planned arm's pitches on the five days before the game. All of it comes from
-the same training pitches as the maps. The page colors a zone against the league's rate for that batter side and
-pitcher hand; SLG counts a triple as a double, and zones with few at-bats are shown in gray.
+coordinates) and trajectory, and each planned arm's pitches on the seven days before the game (the bullpen card shows
+the team's latest game days among them). Zone cells also count balls in play hit 95 mph or more and balls in play with
+a measured speed. All of it comes from the same training pitches as the maps. The page colors a zone against the
+league's rate for that batter side and pitcher hand; SLG counts a triple as a double, and zones with few at-bats are
+shown in gray.
+
+What changed from last season is said plainly and only when it is large (display, no claim): for a pitcher with 300 or
+more pitches in each season, a pitch type added or dropped (5% or more of his pitches one season, under 2% the other),
+a fastball 1 mph or more faster or slower, or a pitch used 10 points more or less; for a hitter with 200 or more plate
+appearances in each, a chase, miss, strikeout, walk or hard-hit rate that moved by more than twice its sampling error
+and by 3 points (5 for hard-hit). Box scores of real games show each hitter's average and each pitcher's ERA through
+the game, as MLB's feed prints them. The Players page ranks the leaders on each percentile row and shows a team's
+players in one table, shaded by those ranks (the players index carries each player's rates and ranks).
 
 Player cards add percentile ranks (PROD-08): each player's rate among all players with 300 or more plate appearances
 (batters faced for a pitcher) on the same training pitches, counted from those pitches. Walks include hit batters, a
@@ -166,7 +176,8 @@ statistics (steals, caught stealing, times on first and sprint speed; steals all
 once it is over.
 
 The hitter tags are levels against the league with fixed thresholds, and they were checked on the next season's
-pitches (TAGS-01, TAGS-02): every tag held in both test seasons, at about 80 to 95% of its training difference. The
+pitches (TAGS-01, TAGS-02): every tag held in both test seasons, at about 80 to 95% of its training difference (the
+relative reads below keep about half to nine-tenths). The
 two-strike tags compare a hitter's two-strike chase rate with his own chase rate in the other counts, net of the
 league's change on his side; that change correlates 0.64 and 0.72 from one season to the next. The pitch-type tags
 (TAGS-03) compare his misses per swing on breaking balls or offspeed with his misses on fastballs, net of the league's
