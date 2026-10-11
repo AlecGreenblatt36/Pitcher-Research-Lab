@@ -165,6 +165,8 @@ def test_score_pairs_keep_dependence_not_marginal_sums():
     result=a.finish()
     assert result['total_run_distribution']=={'n':10000,'counts':[[10,10000]]}
     assert result['team_run_distributions']['away']['counts']==[[0,5000],[10,5000]]
+    # the margin keeps the pairing too: home by 10 or away by 10, never a tie, though the marginals alone would allow one
+    assert result['margin_distribution']=={'n':10000,'counts':[[-10,5000],[10,5000]]}
 
 
 def test_all_registered_ideas_start_unfitted():

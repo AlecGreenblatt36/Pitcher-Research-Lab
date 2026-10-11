@@ -157,7 +157,7 @@ def lean_box(box: dict, home_pick: float | None = None) -> dict:
     so the page never shows the pick losing its own projected game."""
     out = {k: box[k] for k in ('schema', 'game_pk', 'date', 'saved_at', 'forecast_origin', 'team_ids', 'starters', 'lineup_status',
                                'history_through', 'forecast_id', 'n_simulations', 'sample_roles', 'sample_indices', 'adjustments',
-                               'team_model', 'team_run_distributions', 'total_run_distribution', 'line_score', 'win_table', 'matchups') if k in box}
+                               'team_model', 'team_run_distributions', 'total_run_distribution', 'margin_distribution', 'line_score', 'win_table', 'matchups') if k in box}
     out['teams'] = {}
     for side in ('away', 'home'):
         out['teams'][side] = {}

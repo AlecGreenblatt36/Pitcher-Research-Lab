@@ -304,6 +304,8 @@ class BoxAccumulator:
         result['team_run_distributions']={side:_distribution(Counter(p[i] for p in self.score_pairs),self.n)
                                          for i,side in enumerate(SIDE)}
         result['total_run_distribution']=_distribution(Counter(a+h for a,h in self.score_pairs),self.n)
+        # home minus away runs over the same worlds, for a run line that keeps the dependence between the two scores (RUNLINE-01)
+        result['margin_distribution']=_distribution(Counter(h-a for a,h in self.score_pairs),self.n)
         result['sample_indices']=selected
         result['typical_score_frequency']=counts[modal]/self.n
         if self.win.games:result['win_table']=self.win.finish()
