@@ -451,14 +451,14 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .sr-team.out .abbr, .sr-team.out .team-name, .sr-team.out .big, .sr-team.out .pct { color: var(--muted); }
 .sr-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin: 8px 0 6px; }
 .sr-bar i { display: block; height: 100%; }
-.sr-games { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 6px; }
-.sr-games li { font-size: 14px; line-height: 1.35; border: 1px solid var(--rule); border-radius: 8px; padding: 6px; background: var(--paper); display: flex; flex-direction: column; white-space: nowrap; }
-.sr-games li b { font-size: 14px; font-weight: 700; color: var(--muted); }
-.sr-games li .sg-p { font-weight: 700; font-variant-numeric: tabular-nums; }
-.sr-games li .sg-if { color: var(--muted); }
-.sr-games li.maybe { border-style: dashed; }
-.sr-games li.live { border-color: var(--lamp); }
+.sr-games { list-style: none; margin: 10px 0 0; padding: 0; }
+.sr-games li { display: grid; grid-template-columns: 70px minmax(0, 1fr) auto; align-items: baseline; gap: 8px; font-size: 15px; padding: 7px 0; border-top: 1px solid var(--rule-soft); }
+.sr-games li b { font-weight: 700; }
+.sr-games li .sg-p { font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+.sr-games li.maybe { color: var(--muted); }
+.sr-games li.live b::after { content: ""; display: inline-block; width: 7px; height: 7px; margin-left: 6px; border-radius: 50%; background: var(--live); vertical-align: 2px; }
 .sr-games li.done { color: var(--muted); }
+.sr-games li > span:last-child { text-align: right; }
 .sr-foot { margin: 8px 0 0; font-size: 15px; }
 .hero-series { margin: 10px 0 0; font-size: 15px; }
 .hero-series b { font-family: var(--display); font-size: 17px; }
@@ -1859,7 +1859,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         else if (g.game_pk != null && now.cur && now.cur.st === "live") chips.push('<li class="live"><b>Game ' + g.n + '</b><span>Live</span><span class="sg-p">' + esc(fav) + " " + pct(fp) + "</span></li>");
         else if (!now.done) {
           var maybe = !(g.game_pk != null || g.n <= sure);
-          chips.push("<li" + (maybe ? ' class="maybe"' : "") + "><b>Game " + g.n + "</b><span>at " + esc(g.home) + '</span><span class="sg-p">' + esc(fav) + " " + pct(fp) + "</span>" + (maybe ? '<span class="sg-if">If needed</span>' : "") + "</li>");
+          chips.push("<li" + (maybe ? ' class="maybe"' : "") + "><b>Game " + g.n + "</b><span>at " + esc(g.home) + (maybe ? ", if needed" : "") + '</span><span class="sg-p">' + esc(fav) + " " + pct(fp) + "</span></li>");
         }
       });
       if (chips.length) h += '<ol class="sr-games">' + chips.join("") + "</ol>";
