@@ -161,14 +161,17 @@ details.more[open] summary::before { content: "\2212"; }
 .wt-ball.hit { fill: var(--lamp); stroke: #9A6A10; }
 .wt-spark { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 8px; margin: 6px 14px 0; font-family: var(--display); font-weight: 700; font-size: 14px; }
 .wt-spark span { grid-column: 1; line-height: 1; }
-.wt-spark svg { grid-column: 2; grid-row: 1 / 3; width: 100%; height: 40px; }
+.wt-spark svg { grid-column: 2; grid-row: 1 / 3; width: 100%; height: 64px; }
+.wt-spark span:first-child { align-self: start; }
+.wt-spark span:nth-child(3) { align-self: end; }
 .wt-mid { stroke: var(--rule-strong); stroke-width: 1; stroke-dasharray: 2 3; }
 .wt-line { fill: none; stroke: var(--ink); stroke-width: 2; stroke-linejoin: round; }
+.wt-who { margin: 8px 14px 0; font-size: 14px; color: var(--muted); }
 .wt-play { display: flex; gap: 10px; align-items: flex-start; min-height: 3.2em; margin: 6px 14px 0; font-size: 16px; }
 .wt-play .tag { flex: 0 0 42px; }
 .wt-wp { display: flex; justify-content: space-between; margin: 4px 14px 10px; font-weight: 700; }
 .wt-wp .num { color: var(--muted); font-weight: 400; font-size: 14px; }
-.wt-ctl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 14px 12px; border-top: 1px solid var(--rule-soft); }
+.wt-ctl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px 14px 10px; border-bottom: 1px solid var(--rule-soft); }
 .wt-ctl button { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; border: 1px solid var(--rule-strong); background: var(--surface); color: var(--ink); font: inherit; font-weight: 700; cursor: pointer; }
 .wt-ctl button svg { width: 20px; height: 20px; fill: currentColor; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
 .wt-ctl .wt-go { flex: 1 1 auto; background: var(--btn); color: var(--btn-ink); border-color: var(--btn); }
@@ -183,6 +186,8 @@ details.more[open] summary::before { content: "\2212"; }
 .card.pre .team-row .pct { font-size: 28px; font-weight: 700; }
 .call.even { background: var(--tint); }
 .g-pieces { margin: 6px 0 0; font-size: 14px; color: var(--muted); }
+.to-mu { margin: 0 0 26px; color: var(--muted); }
+.linkish { border: 0; background: none; padding: 0; min-height: 44px; font: inherit; font-weight: 700; color: var(--ink); text-decoration: underline; cursor: pointer; }
 .card-call { font-family: var(--display); font-weight: 700; font-size: 21px; line-height: 1.15; color: var(--ink); margin: 0 0 6px; text-wrap: balance; }
 .card-call.hit::before, .card-call.miss::before { display: inline-block; margin-right: 6px; font-size: 16px; vertical-align: 1px; }
 .card-call.hit::before { content: "\2713"; color: var(--good); }
@@ -216,14 +221,14 @@ details.more[open] summary::before { content: "\2212"; }
 .lamp { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--lamp); margin-right: 6px; vertical-align: 1px; }
 
 /* Game hero */
-.hero { background-color: var(--board); background-image: linear-gradient(100deg, var(--away-d, var(--board)) 0%, var(--board) 50%, var(--home-d, var(--board)) 100%); color: var(--chalk); }
+.hero { background-color: var(--board); background-image: radial-gradient(90% 130% at 0% 0%, var(--away-d, var(--board)) 0%, transparent 62%), radial-gradient(90% 130% at 100% 0%, var(--home-d, var(--board)) 0%, transparent 62%); color: var(--chalk); }
 .vs { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; gap: 8px; margin: 8px 0 4px; }
 .vs-team { display: flex; flex-direction: column; min-width: 0; }
 .vs-team.home { align-items: flex-end; text-align: right; }
 .vs-abbr { font-family: var(--display); font-weight: 700; font-size: 20px; letter-spacing: .02em; color: var(--chalk-dim); }
 .vs-name { font-family: var(--display); font-weight: 700; font-size: 26px; line-height: 1.05; color: var(--chalk); }
-.vs-pct { font-family: var(--display); font-weight: 700; font-size: 64px; line-height: 1; margin: 6px 0 4px; color: var(--chalk-dim); }
-.vs-team.fav .vs-pct { color: var(--chalk); }
+.vs-pct { font-family: var(--display); font-weight: 500; font-size: 64px; line-height: 1; margin: 6px 0 4px; color: var(--chalk); opacity: .78; }
+.vs-team.fav .vs-pct { font-weight: 700; opacity: 1; }
 .vs-sp { font-size: 15px; color: var(--chalk); line-height: 1.35; }
 .vs-sp small { display: block; color: var(--chalk-dim); font-size: 14px; white-space: pre-line; }
 .vs-sp small:empty { display: none; }
@@ -309,7 +314,9 @@ details.more[open] summary::before { content: "\2212"; }
 .tab { border: 0; background: none; padding: 12px 12px 10px; min-height: 48px; font-weight: 700; color: var(--muted); border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap; }
 .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--board); }
 @media (max-width: 560px) {
-  /* one row that scrolls sideways, like the market's game pages; the open tab is scrolled into view */
+  /* one row that scrolls sideways, like the market's game pages; the open tab is scrolled into view, and a fade at
+     the right edge says there is more */
+  .tabs::after { content: ""; position: absolute; top: 0; right: 0; bottom: 1px; width: 28px; background: linear-gradient(to right, transparent, var(--paper)); pointer-events: none; }
   .tabs .wrap { gap: 0; scrollbar-width: none; scroll-padding: 0 16px; }
   .tabs .wrap::-webkit-scrollbar { display: none; }
   .tab { padding: 12px 10px 9px; min-height: 46px; font-size: 16px; flex: 0 0 auto; }
@@ -354,7 +361,7 @@ details.more[open] summary::before { content: "\2212"; }
 .spray .legend i.f { background: currentColor; }
 .spray .legend i.hr { background: var(--lamp); border-color: var(--ink); }
 .swings { list-style: none; margin: 10px 0 0; padding: 0; }
-h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--rule); color: var(--muted); }
+h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--rule); color: var(--ink); }
 .swings li { display: grid; grid-template-columns: 64px 1fr auto; gap: 10px; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--rule-soft); font-size: 16px; }
 .swings + .note { margin-top: 6px; }
 .panel > p.note + .sec, .panel > p.note + div { margin-top: 26px; }
@@ -1005,7 +1012,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   function teamColors(f) {
     var a = TEAM_COLORS[(f.away && f.away.abbr) || ""] || ["#2E5C9A", "#2E5C9A"], h = TEAM_COLORS[(f.home && f.home.abbr) || ""] || ["#B42A30", "#B42A30"];
     var ca = a[0], ch = h[0];
-    if (colorGap(ca, ch) < 120) { if (colorGap(a[1], ch) >= 120) ca = a[1]; else if (colorGap(ca, h[1]) >= 120) ch = h[1]; }
+    /* Two clubs too close in color: one wears its second color, whichever pairing reads apart best (the road club on a tie). */
+    if (colorGap(ca, ch) < 120) { var g1 = colorGap(a[1], ch), g2 = colorGap(ca, h[1]); if (Math.max(g1, g2) >= 120) { if (g1 >= g2) ca = a[1]; else ch = h[1]; } }
     return NIGHT ? { away: lift(ca), home: lift(ch), awayT: lift(ca), homeT: lift(ch) } : { away: ca, home: ch, awayT: deepen(ca), homeT: deepen(ch) };
   }
   /* The style that carries a game's club colors: fills use the colors as they are, text a version dark enough to read. */
@@ -1041,6 +1049,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     return d.toLocaleDateString("en-US", { timeZone: "UTC", weekday: "long", month: "long", day: "numeric" });
   }
   function ip(outs) { outs = Math.round(outs); return Math.floor(outs / 3) + "." + (outs % 3); }
+  /* Innings in words for the plain sections: 5.1 in a box score is five and a third innings. */
+  function ipWords(outs) { outs = Math.round(outs); var w = Math.floor(outs / 3), r = outs % 3; return (w || !r ? String(w) : "") + (r === 1 ? "\u2153" : r === 2 ? "\u2154" : ""); }
   var SERIES = { R: "Regular season", F: "Wild Card", D: "Division Series", L: "League Championship Series", W: "World Series", P: "Postseason", S: "Spring training", E: "Exhibition" };
   var SERIES_SHORT = { F: "Wild Card", D: "Division Series", L: "LCS", W: "World Series" };
   function contextFor(pk) { return (D.context && D.context[String(pk)]) || null; }
@@ -1919,7 +1929,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         (pts >= 1 ? "The line has moved " + pts + (pts === 1 ? " point " : " points ") + (r.moved * r.gap > 0 ? "toward" : "away from") + " our number since we first read it." : "The line has not moved since we first read it.")
         : "Within 2 points of Vegas.";
       h += '<li class="' + (big ? "big" : "") + '"><a href="#/game/' + r.f.game_pk + '"><span class="eg-game">' + esc(r.f.away.abbr + " at " + r.f.home.abbr) + '</span><span class="eg-ours"><small>Our model</small>' + side(r.f, r.po) +
-        '</span><span class="eg-mkt"><small>Vegas</small>' + side(r.f, r.open) + " first, " + side(r.f, r.now) + ' now</span><span class="eg-gap">' + lean + "</span></a></li>";
+        '</span><span class="eg-mkt"><small>Vegas</small>' + "opened " + side(r.f, r.open) + ", now " + side(r.f, r.now) + '</span><span class="eg-gap">' + lean + "</span></a></li>";
     });
     var lm = D.record && D.record.line_moves;
     /* the live count of line moves shows once there are enough games to mean something */
@@ -2285,7 +2295,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     }
 
     var tabs = [["summary", "Summary"], ["report", "Game plan"], ["box", "Box score"], ["plays", "Plays"]];
-    if (box && box.matchups && box.matchups.away && !box.matchups.error) tabs.push(["matchups", "Matchups"]);
+    if (hasMatchupsTab(box)) tabs.push(["matchups", "Matchups"]);
     tabs.push(["odds", "Odds"]);
     html += '<nav class="tabs"><div class="wrap" role="tablist">' + tabs.map(function (t) {
       return '<button class="tab" role="tab" data-tab="' + t[0] + '" aria-selected="' + (t[0] === tab) + '">' + t[1] + "</button>";
@@ -2318,8 +2328,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     fillPlayerStats();
     if (tab === "matchups") fillBvp();
     if (s) wireWatch(f, box, s, pk); else if (WATCH.t) { clearInterval(WATCH.t); WATCH.t = null; }
-    if (tab === "summary") fillTeamStats();
-    if (tab === "summary") fillPitchingMatchup(f, pk, box);
+    if (tab === "summary" || tab === "matchups") fillTeamStats();
+    if (tab === "summary" || tab === "matchups") fillPitchingMatchup(f, pk, box);
     if (tab === "report") loadReport(f, pk);
     else if (tab === "summary" && lv && !lv._final) loadLiveCard(f, pk);
 
@@ -2884,17 +2894,18 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     return '<div class="wt-bug"><span class="wt-t' + (bat === "away" ? " bat" : "") + '"><b>' + esc(f.away.abbr) + '</b><b class="num">' + away + '</b></span><span class="wt-t' + (bat === "home" ? " bat" : "") + '"><b>' + esc(f.home.abbr) + '</b><b class="num">' + home + "</b></span>" +
       '<span class="wt-inn">' + esc(where) + '</span><span class="wt-outs" role="img" aria-label="' + Math.min(outs, 3) + (Math.min(outs, 3) === 1 ? " out" : " outs") + '">' + dots + "</span></div>" +
       watchField(p) + watchSpark(f, pts, i, n) +
+      (p && p.pitcher_name ? '<p class="wt-who">' + esc(lastName(p.batter_name || "") + " vs " + lastName(p.pitcher_name)) + "</p>" : "") +
       '<p class="wt-play">' + (parts ? '<span class="tag ' + parts.cls + '"' + (parts.cls === "hit" ? ' style="background:var(--' + (p.half === "top" ? "away" : "home") + '-b)"' : "") + ">" + esc(parts.tag) + "</span>" + esc(parts.text) : esc("One of our simulated games, play by play.")) + "</p>" +
       '<p class="wt-wp"><span>' + (i === n ? esc(nickname(f[home > away ? "home" : "away"].name) + " win " + Math.max(home, away) + "-" + Math.min(home, away) + ".") : esc(nickname(f[fs].name) + " " + pct(fp) + " to win")) + '</span><span class="num">' + i + " of " + n + "</span></p>";
   }
   function watchPanel(f, box, s, pk) {
     if (!s || !s.plays || !s.plays.length || !box || !box.win_table) return "";
     var i = Math.min((state.watch && state.watch[pk]) || 0, s.plays.length), playing = WATCH.t && WATCH.pk === pk;
-    return '<div class="watch" id="watch-' + pk + '" aria-live="polite"><div class="wt-stage">' + watchState(f, s, winSeries(f, box, Object.assign({}, s, { _final: true }), null), i, nameMap(s), shortMap(s)) + "</div>" +
-      '<div class="wt-ctl"><button data-watch="prev" aria-label="Previous play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 6v12M18 6l-9 6 9 6z"/></svg></button>' +
+    return '<div class="watch" id="watch-' + pk + '"><div class="wt-ctl"><button data-watch="prev" aria-label="Previous play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 6v12M18 6l-9 6 9 6z"/></svg></button>' +
       '<button data-watch="play" class="wt-go">' + (playing ? "Pause" : i && i < s.plays.length ? "Keep playing" : "Watch it") + "</button>" +
       '<button data-watch="next" aria-label="Next play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 6v12M6 6l9 6-9 6z"/></svg></button>' +
-      '<input type="range" min="0" max="' + s.plays.length + '" value="' + i + '" aria-label="Play number" data-watch="seek"></div></div>';
+      '<input type="range" min="0" max="' + s.plays.length + '" value="' + i + '" aria-label="Play number" data-watch="seek"></div>' +
+      '<div class="wt-stage" aria-live="polite">' + watchState(f, s, winSeries(f, box, Object.assign({}, s, { _final: true }), null), i, nameMap(s), shortMap(s)) + "</div></div>";
   }
   function wireWatch(f, box, s, pk) {
     var el = document.getElementById("watch-" + pk);
@@ -2940,7 +2951,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (!real && !actual && !lv)    /* before first pitch: the game in words, then one simulated game played out, then the matchup */
       return h0 + forecastStory(f, box, s) + '<section class="sec sim-game"><h2>One game, played out</h2><p class="lede">Read one of our simulated games like a real one. Switch versions to see a slugfest, a pitchers\' duel or an upset.</p>' +
         (versions || "") + simLine(f, box, s, v) + watchPanel(f, box, s, f.game_pk) + "</section>" + projectedSummary(f, s, box, null, null, v, true) +
-        keysSection(f, box) + projectedLines(f, box) + '<div id="pm-' + f.game_pk + '">' + pitchingMatchup(f, box, RP[f.game_pk] || null) + "</div>" + teamStatsSlot(f);
+        keysSection(f, box) + projectedLines(f, box) + (hasMatchupsTab(box) ? '<p class="to-mu">The pitching matchup and both teams\' season numbers are on the <button type="button" data-tab="matchups" class="linkish">Matchups tab</button>.</p>' :
+        '<div id="pm-' + f.game_pk + '">' + pitchingMatchup(f, box, RP[f.game_pk] || null) + "</div>" + teamStatsSlot(f));
     if (!real) return h0 + (versions || "") + projectedSummary(f, s, box, actual, actualBox, v);
     /* With the real game on: did we get it right first (after the final), then the real game, then the game we
        projected folded under one line (its versions and the full simulated game open from there). */
@@ -3015,8 +3027,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     h += '<section class="sec"><h2>Starting pitchers in this version</h2><div class="perf">';
     ["away", "home"].forEach(function (side) {
       var p = starterOf(s, side);
-      if (p) h += "<div><small>" + esc(nickname(f[side].name)) + "</small><b>" + esc(p.name) + '</b><span class="stat num">' + ip(p.outs) + " IP, " + p.K + " K</span><small>" +
-        p.H + " H, " + p.R + " R, " + p.BB + " BB, " + p.PC + " pitches</small></div>";
+      if (p) h += "<div><small>" + esc(nickname(f[side].name)) + "</small><b>" + esc(p.name) + '</b><span class="stat num">' + ipWords(p.outs) + " innings, " + p.K + " strikeouts</span><small>" +
+        p.H + (p.H === 1 ? " hit, " : " hits, ") + p.R + (p.R === 1 ? " run, " : " runs, ") + p.BB + (p.BB === 1 ? " walk, " : " walks, ") + p.PC + " pitches</small></div>";
     });
     h += "</div></section>";
 
@@ -3035,7 +3047,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       h += '<ol class="lineup" style="--tc:var(--' + side + ')" aria-label="' + esc(nickname(f[side].name)) + ' projected lines"><li class="lineup-h"><b>' + esc(nickname(f[side].name)) + "</b><span>Hit</span><span>HR</span></li>";
       if (sp && sp.means) {
         var d = sp.distributions || {};
-        h += '<li class="sp"><span class="spot">SP</span><span class="who">' + esc(sp.name) + "<small>" + (d.K ? "strikeouts " + quant(kShape(d.K), .25) + " to " + quant(kShape(d.K), .75) + ", " : "") + (d.outs ? "innings " + ip(quant(d.outs, .25)) + " to " + ip(quant(d.outs, .75)) : "") + '</small></span><span class="line num">' + ip(Math.round(sp.means.outs)) + " IP, " + Math.round(sp.means.K) + " K</span></li>";
+        h += '<li class="sp"><span class="spot">SP</span><span class="who">' + esc(sp.name) + "<small>" + (d.K ? "strikeouts " + quant(kShape(d.K), .25) + " to " + quant(kShape(d.K), .75) + ", " : "") + (d.outs ? ipWords(quant(d.outs, .25)) + " to " + ipWords(quant(d.outs, .75)) + " innings" : "") + '</small></span><span class="line num">' + ip(Math.round(sp.means.outs)) + " IP, " + Math.round(sp.means.K) + " K</span></li>";
       }
       bat.forEach(function (b) {
         var m = b.means || {};
@@ -3151,11 +3163,14 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var txt = m.league < 0.05 ? (v * 100).toFixed(1) + "%" : Math.round(v * 100) + "%";
     return '<td' + (best ? ' class="mu-best"' : "") + ' style="background:' + bg + '">' + txt + (best ? '<span class="visually-hidden"> (his toughest reliever)</span>' : "") + "</td>";
   }
+  function hasMatchupsTab(box) { return !!(box && box.matchups && box.matchups.away && !box.matchups.error); }
   function matchupsTab(f, box) {
     var mu = box && box.matchups;
     if (!mu || mu.error || !mu.away) return '<p class="empty">The hitter-against-pitcher grid is not part of this forecast.</p>';
+    /* the stat tables live here, so the Summary stays the game in words */
+    var top = '<div id="pm-' + f.game_pk + '">' + pitchingMatchup(f, box, RP[f.game_pk] || null) + "</div>" + teamStatsSlot(f);
     var key = MU_METRICS[state.muMetric] ? state.muMetric : "obp", m = MU_METRICS[key];
-    var h = '<section class="sec wide"><h2>Hitter against pitcher</h2><p class="lede">Each hitter against the starter and the relievers most likely to pitch: our chance for one at-bat, bases empty, nobody out, tie game. ' +
+    var h = top + '<section class="sec wide"><h2>Hitter against pitcher</h2><p class="lede">Each hitter against the starter and the relievers most likely to pitch: our chance for one at-bat, bases empty, nobody out, tie game. ' +
       "Red favors the hitter, blue the pitcher, against the league rate of " + (m.league < 0.05 ? (m.league * 100).toFixed(1) : Math.round(m.league * 100)) + "%.</p>";
     h += '<div class="seg" role="group" aria-label="Which chance">' + Object.keys(MU_METRICS).map(function (k2) {
       return '<button data-mumetric="' + k2 + '" aria-pressed="' + (k2 === key) + '">' + MU_METRICS[k2].label + "</button>";
@@ -5061,7 +5076,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var trd = box.team_run_distributions || {}, ra = dist(trd.away), rh = dist(trd.home);
     var sa = ra && runShape(ra), sh = rh && runShape(rh);
     if (ra && rh) {
-      h += '<section class="sec chart"><h2>Runs each team scores</h2><p class="lede">Half of games land in these ranges: ' + esc(f.away.abbr) + " " + quant(sa, .25) + " to " + quant(sa, .75) + ", " + esc(f.home.abbr) + " " + quant(sh, .25) + " to " + quant(sh, .75) + ".</p>";
+      h += '<section class="sec chart"><h2>Runs each team scores</h2><p class="lede">At least half of games land in these ranges: ' + esc(f.away.abbr) + " " + quant(sa, .25) + " to " + quant(sa, .75) + ", " + esc(f.home.abbr) + " " + quant(sh, .25) + " to " + quant(sh, .75) + ".</p>";
       h += '<div class="legend"><span><i class="key" style="background:var(--away)"></i>' + esc(nickname(f.away.name)) + '</span><span><i class="key" style="background:var(--home)"></i>' + esc(nickname(f.home.name)) + "</span></div>";
       h += runsChart(sa, sh) + "</section>";
     }
@@ -5073,7 +5088,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var mkt2 = D.market && D.market[f.game_pk], mline = mkt2 && mkt2.over_under != null ? " Vegas total: " + mkt2.over_under + (mkt2.p_over != null ? " (over " + pct(mkt2.p_over) + ")" : "") + "." : "";
       var taughtTotal = taughtTotalFor(f, mkt2, tr);
       h += '<section class="sec"><h2>Total runs</h2><p class="lede">' + (taughtTotal != null ? "We expect " + taughtTotal.toFixed(1) + " runs: the simulator\'s " + mean(tr).toFixed(1) + " mixed with the Vegas total (over two seasons re-run, the mix beat the Vegas total on its own). " : "We expect " + mean(tr).toFixed(1) + " runs. ") +
-        "Most likely " + mode(ts) + ". Half of games land between " + quant(ts, .25) + " and " + quant(ts, .75) + ". " + pct(probAtLeast(ts, 10)) + " reach 10 or more." + esc(mline) + "</p></section>";
+        "Most likely " + mode(ts) + ". At least half of games land between " + quant(ts, .25) + " and " + quant(ts, .75) + ". " + pct(probAtLeast(ts, 10)) + " reach 10 or more." + esc(mline) + "</p></section>";
     }
 
     h += moreMarkets(f, box, mkt);
@@ -5105,7 +5120,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
           (tb ? "</td><td>" + (b.tb2_probability != null ? pf(b.tb2_probability) : "") : "") +
           "</td><td>" + (d.HR ? pf(ownAtLeast(d.HR, 1, b.spot)) : "") + "</td><td>" + (d.BB ? pf(ownAtLeast(d.BB, 1, b.spot)) : "") + "</td><td>" + (d.K ? pf(ownAtLeast(d.K, 1, b.spot)) : "") + "</td></tr>";
       });
-      h += '</tbody></table></div><p class="note">Each hitter\'s own chance: a pinch hitter or a substitute takes some of his spot\'s trips late in games, the same as the Summary\'s meters.' + (state.propOdds ? " Fair odds: the chance as American odds with no margin." : "") + "</p></section>";
+      h += "</tbody></table></div>" + (side === "home" ? '<p class="note">Each hitter\'s own chance: a pinch hitter or a substitute takes some of his spot\'s trips late in games.' + (state.propOdds ? " Fair odds: the chance as American odds with no margin." : "") + "</p>" : "") + "</section>";
     });
     h += '</div><div class="pair wide">';
     ["away", "home"].forEach(function (side) {
@@ -5690,7 +5705,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       h += '<li><div class="g-top"><b>' + esc(g.away + " at " + g.home) + "</b><span>" + esc(shortDate(g.date)) + '</span></div><div class="final num">Final: ' + esc(g.away) + " " + g.actual.away + ", " + esc(g.home) + " " + g.actual.home + '</div><div class="calls">' +
         call("Our pick", g.p_blend) + call("Vegas", g.p_market) + "</div>" + (pieces.length ? '<p class="g-pieces">' + esc(pieces.join(", ").replace(/^./, function (c) { return c.toUpperCase(); })) + "</p>" : "") + "</li>";
     });
-    h += '</ol><p class="note">Green: the team favored won. Gray: a coin flip (under 52%).</p></section>';
+    h += '</ol><p class="note">Green: the team favored won. Red: the favorite lost. Gray: a coin flip (under 52%).</p></section>';
     app.innerHTML = h + "</div>";
     fillSeasonChecks();
     withPlanRecord(function (R) {
@@ -5778,10 +5793,10 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var h = '<section class="sec"><h2>When we say 60%, do they win 60%?</h2><p class="lede">Every game of both seasons, grouped by how sure we were of the favorite. The dark bar is how often the favorite actually won; the tick is what we said.</p><ul class="cal">';
     rows.forEach(function (r) {
       if (!r.n) return;
-      var said = 100 * r.p / r.n, got = 100 * r.won / r.n, x = function (v) { return Math.max(0, Math.min(100, (v - 40) / 50 * 100)).toFixed(1); };
+      var said = 100 * r.p / r.n, got = 100 * r.won / r.n, x = function (v) { return Math.max(0, Math.min(100, (v - 50) / 35 * 100)).toFixed(1); };
       h += '<li><div class="cal-top"><b>' + r.label + '</b><span>' + Number(r.n).toLocaleString() + ' games</span></div><div class="cal-bar" role="img" aria-label="' + esc("We said " + Math.round(said) + "%, they won " + Math.round(got) + "%") + '"><i style="width:' + x(got) + '%"></i><em style="left:' + x(said) + '%"></em></div><div class="cal-words">We said ' + Math.round(said) + "%. They won " + Math.round(got) + "%.</div></li>";
     });
-    h += '</ul><p class="note">The bar runs from 40% to 90%. Small groups bounce around more.</p></section>';
+    h += '</ul><p class="note">The bar runs from 50% (left edge) to 85% (right edge). Small groups bounce around more.</p></section>';
     order.sort();
     h += '<section class="sec"><details class="more" data-keep="months"' + (state.rpOpen.months ? " open" : "") + '><summary>Month by month</summary><p class="lede">How often our pick won each month, next to how often the Vegas favorite won.</p><div class="tbl-wrap"><table class="box"><thead><tr><th scope="col">Month</th><th scope="col">Games</th><th scope="col">Our picks</th><th scope="col">Vegas</th></tr></thead><tbody>';
     order.forEach(function (k) {
