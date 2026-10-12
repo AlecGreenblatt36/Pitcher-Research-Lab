@@ -435,7 +435,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
             npit = {side: 0 for side in ("away", "home")}                                         # pitchers used, summed over worlds
             rel_n = {side: {} for side in ("away", "home")}                                       # worlds each reliever pitched in
             ent_n = {side: {} for side in ("away", "home")}                                       # relief entries by BULLPEN-05's cells, summed
-            top2_ = {side: set(str(b_.player_id) for b_ in sorted(teams[side].bullpen, key=lambda b_: -float((getattr(b_, "usage", None) or {}).get("share14", 0.0)))[:2])
+            top2_ = {side: set(str(b_.player_id) for b_ in sorted(teams[side].bullpen, key=lambda b_: -float(dict(getattr(b_, "usage", None) or ()).get("share14", 0.0)))[:2])
                      for side in ("away", "home")} if starter_lines else None
             nhr = {side: 0 for side in ("away", "home")}                                          # home runs allowed, summed over worlds
             inn_sum = {side: np.zeros(10) for side in ("away", "home")}                           # runs by inning 1-9 and extras, summed
