@@ -74,7 +74,7 @@ def test_watch_steps_from_before_first_pitch_to_the_final():
     js = (_var(s, 'WATCH_ANGLE') + _var(s, 'WATCH_FT') +
           "var f={p:0.51,away:{name:'Dodgers',abbr:'LAD'},home:{name:'Brewers',abbr:'MIL'}},sm={plays:" + json.dumps(plays) + "},pts=[{p:.51},{p:.5},{p:.4},{p:.42},{p:0}];"
           "process.stdout.write(JSON.stringify([watchState(f,sm,pts,0,{},{}),watchState(f,sm,pts,1,{},{}),watchState(f,sm,pts,2,{},{})]));")
-    start, one, end = _run(js, names_fn=('watchField', 'watchState'))
+    start, one, end = _run(js, names_fn=('watchField', 'watchSpark', 'watchState'))
     assert 'Before first pitch' in start and 'Brewers 51% to win' in start and '0 of 2' in start
     assert 'Top of the 1th' in one and 'Betts homers.' in one and 'Brewers 60%' not in one and 'Dodgers 60% to win' in one and 'wt-ball hit' in one
     assert 'Final' in end and 'Dodgers win 1-0.' in end and '2 of 2' in end
