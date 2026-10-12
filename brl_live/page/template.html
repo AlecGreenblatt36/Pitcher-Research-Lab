@@ -2897,9 +2897,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   }
   function summaryTab(f, s, box, actual, actualBox, v, real, lv, versions) {
     var h0 = "";
-    if (lv && !lv._final && lv.state) h0 += '<div id="rp-live-' + f.game_pk + '"></div>';
+    var liveSlot = lv && !lv._final && lv.state ? '<div id="rp-live-' + f.game_pk + '"></div>' : "";
     if (!real && lv && lv.state && !lv._final)          /* started, but MLB's play-by-play has not come in: keep the simulated game folded */
-      return h0 + '<details class="more proj-fold" data-keep="proj-' + f.game_pk + '"' + (state.rpOpen["proj-" + f.game_pk] ? " open" : "") + "><summary>The game we projected before first pitch</summary>" +
+      return h0 + liveSlot + '<details class="more proj-fold" data-keep="proj-' + f.game_pk + '"' + (state.rpOpen["proj-" + f.game_pk] ? " open" : "") + "><summary>The game we projected before first pitch</summary>" +
         (versions || "") + projectedSummary(f, s, box, null, null, v) + "</details>";
     if (!real && !actual && !lv)    /* before first pitch: the game in words, then one simulated game played out, then the matchup */
       return h0 + forecastStory(f, box, s) + '<section class="sec sim-game"><h2>One game, played out</h2><p class="lede">Read one of our simulated games like a real one. Switch versions to see a slugfest, a pitchers\' duel or an upset.</p>' +
@@ -2909,7 +2909,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     /* With the real game on: did we get it right first (after the final), then the real game, then the game we
        projected folded under one line (its versions and the full simulated game open from there). */
     if (actual && actualBox) h0 += howClose(f, box, actualBox, s);
-    h0 += realSummary(f, box, real, lv);
+    h0 += realSummary(f, box, real, lv, liveSlot);     /* the at-bat card sits under the win chance chart */
     var pv = box && box.samples && box.samples.length ? variantsFor(box, f).filter(function (x) { return x.key === "proj"; })[0] : null;
     var proj = pv ? box.samples[pv.i].score : null, open = state.rpOpen["proj-" + f.game_pk];
     h0 += '<details class="more proj-fold" data-keep="proj-' + f.game_pk + '"' + (open ? " open" : "") + "><summary>The game we projected before first pitch" +
@@ -2917,7 +2917,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     return h0 + (versions || "") + projectedSummary(f, s, box, null, null, v) + "</details>";
   }
   /* The real game's sections: win chance through the game, scoring plays, top performers, where the ball went. */
-  function realSummary(f, box, real, lv) {
+  function realSummary(f, box, real, lv, liveSlot) {
     var h0 = "";
     {
       var rn = nameMap(real), rs = shortMap(real);
@@ -2925,6 +2925,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       if (chart) {
         h0 += '<section class="sec wide"><h2>Win chance through the game</h2><p class="lede">' + (real._final ? "Our win chance play by play, first pitch to final." : "Our win chance so far, play by play.") + "</p>" + chart + biggestSwings(f, box, real, lv, rs) + "</section>";
       }
+      h0 += liveSlot || "";
       var realScoring = real.plays.filter(function (p) { return p.runs_scored > 0; });
       h0 += '<section class="sec"><h2>' + (real._final ? "Scoring plays" : "Scoring plays so far") + "</h2>";
       if (!realScoring.length) h0 += '<p class="empty">No runs yet.</p>';
@@ -4859,8 +4860,12 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (now) h += liveNowStrip(f, pk, doc, now, false);
     /* one set of hot-zone controls for both lineups */
     var anyZones = Object.keys(players).some(function (id) { return players[id].hitter && players[id].hitter.zones; });
-    if (anyZones) h += '<div class="hz-tools">' + hzMetricSeg() + hzViewSeg() + (hzWide() ? "" : hzSeg("hzfam", (HZ_FAMS.filter(function (x) { return x[0] === state.hzFam; })[0] || HZ_FAMS[0])[0], [["all", "All"], ["fastball", "Fastballs"], ["breaking", "Breaking"], ["offspeed", "Offspeed"]], "Pitch type")) +
-      hzSeg("hzsheethand", state.hzSheetHand === "R" || state.hzSheetHand === "L" || state.hzSheetHand === "all" ? state.hzSheetHand : "sp", [["sp", "SP's hand"], ["R", "vs RHP"], ["L", "vs LHP"], ["all", "Both"]], "Pitcher's hand") + "</div>" + hzLegend(hzMetric(), false, null, hzSheetAnchorWords(hzMetric()));
+    /* The hot-zone settings fold under one line that says what is showing, so the plan itself comes first. */
+    var famNow = (HZ_FAMS.filter(function (x) { return x[0] === state.hzFam; })[0] || HZ_FAMS[0])[0], handNow = state.hzSheetHand === "R" || state.hzSheetHand === "L" || state.hzSheetHand === "all" ? state.hzSheetHand : "sp";
+    var famWords = { all: "all pitches", fastball: "fastballs", breaking: "breaking balls", offspeed: "offspeed" }, handWords = { sp: "the starter's hand", R: "vs righties", L: "vs lefties", all: "both hands" };
+    if (anyZones) h += '<details class="more hz-opts" data-keep="hzopts"' + (state.rpOpen.hzopts ? " open" : "") + "><summary>Hot zones: " + esc((HZ_METRICS[hzMetric()] || {}).label || "") + ", " + (hzView() === "exp" ? "expected" : "as it happened") + (hzWide() ? "" : ", " + famWords[famNow]) + ", " + handWords[handNow] + "</summary>" +
+      '<div class="hz-tools">' + hzMetricSeg() + hzViewSeg() + (hzWide() ? "" : hzSeg("hzfam", famNow, [["all", "All"], ["fastball", "Fastballs"], ["breaking", "Breaking"], ["offspeed", "Offspeed"]], "Pitch type")) +
+      hzSeg("hzsheethand", handNow, [["sp", "SP's hand"], ["R", "vs RHP"], ["L", "vs LHP"], ["all", "Both"]], "Pitcher's hand") + "</div></details>" + hzLegend(hzMetric(), false, null, hzSheetAnchorWords(hzMetric()));
     h += "</section>";
     var liveSel = !!(now && now.pair && now.key === sel), detail = sel ? pairDetail(doc, pk, sel, now) : "";
     if (liveSel) h += detail;
