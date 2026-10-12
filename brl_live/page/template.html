@@ -2307,7 +2307,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       versions += "</div>";
     }
 
-    var tabs = [["summary", "Summary"], ["report", "Game plan"], ["box", "Box score"], ["plays", "Plays"]];
+    /* before first pitch the box score and plays are a simulated game's, and the tab names say so */
+    var tabs = [["summary", "Summary"], ["report", "Game plan"], ["box", !actual && !lv ? "Sim box score" : "Box score"], ["plays", !actual && !lv ? "Sim plays" : "Plays"]];
     if (hasMatchupsTab(box)) tabs.push(["matchups", "Matchups"]);
     tabs.push(["odds", "Odds"]);
     html += '<nav class="tabs"><div class="wrap" role="tablist">' + tabs.map(function (t) {
