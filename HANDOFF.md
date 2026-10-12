@@ -101,8 +101,13 @@ queue behind the shards (seen October 11 at 16:50 UTC). Check-only replays (n_si
   arms; held-out log-likelihood -1.7229 and -1.6960 from -1.7651 and -1.7333) is registered and replaying (runs
   38193362713 for 2025 and 38193385340 for 2026, tags v2-prod4-choice6-1000-<season>). Score with
   tools/brl_bullpen_entries.py and tools/brl_bullpen_cal.py on those runs, and tools/replay_compare.py against
-  BULLPEN-05's (38186824402, 38186847009). If it passes, refit brl_live/reliever_choice.json on 2023 to 2026 with
-  --features 6 and switch it on. WATCH-01 (play-by-play player for the simulated game) is live.
+  BULLPEN-05's (38186824402, 38186847009). WATCH-01 (play-by-play player for the simulated game) is live.
+- October 11, 10:50 p.m.: BULLPEN-06 scored and stays off under its rule: wins and totals unchanged, top-two entries
+  from 24% high to 11% (2025) and 9% (2026), but the chance to pitch at 60% and up is still 12 to 31 points high. The
+  choice is now right entry by entry; the game-level miss is availability (every world has the same arms). Next for
+  the bullpen: a per-world availability draw, registered with the same gates. The 2023-2026 live fit with the new
+  features is in the scratchpad only (reliever_choice6_live.json), not served. An outside review of the pages (fresh
+  reviewer on phone screenshots) drove the evening's layout fixes (LEDGER WATCH-01 lists them).
 
 - October 11, 8:35 p.m.: Alec: the page is hard to read for someone who does not follow baseball and does not yet show
   what sets it apart (simulating the game before it happens). KEYS-01 (display): a game to come opens with the matchup
