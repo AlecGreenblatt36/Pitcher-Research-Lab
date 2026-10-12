@@ -5035,17 +5035,19 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var fmt = function (p) { return p >= .5 ? esc(f.home.abbr) + " " + pct(p) : esc(f.away.abbr) + " " + pct(1 - p); };
     var po = oursProb(f);
     h += "<li><span>" + (!taught ? "Our pick (simulator and team ratings averaged)" : withLine ? "Our pick (with the line)" : "Our pick (no line yet)") + "</span><b>" + fmt(homeProb(f)) + "</b></li>";
-    if (taught) h += "<li><span>Our model alone (never sees this game's line)</span><b>" + fmt(po) + "</b></li>";
-    h += "<li><span>Simulator alone, " + Number(f.n_simulations).toLocaleString() + " games</span><b>" + fmt(f.home_win_probability) + "</b></li>";
+    /* the pieces of our pick fold under one line; Vegas stays in view */
+    var pieces = "";
+    if (taught) pieces += "<li><span>Our model alone (never sees this game's line)</span><b>" + fmt(po) + "</b></li>";
+    pieces += "<li><span>Simulator alone, " + Number(f.n_simulations).toLocaleString() + " games</span><b>" + fmt(f.home_win_probability) + "</b></li>";
     var tmp = box && box.team_model && box.team_model.p_home != null ? box.team_model.p_home : f.team_baseline_probability;
-    if (tmp != null) h += "<li><span>Team ratings alone</span><b>" + fmt(tmp) + "</b></li>";
+    if (tmp != null) pieces += "<li><span>Team ratings alone</span><b>" + fmt(tmp) + "</b></li>";
     var mkt = D.market && D.market[f.game_pk], pmk = marketProb(mkt);
     if (mkt && mkt.p_home_cons != null && (mkt.n_books || 0) >= 3) {
       h += "<li><span>Vegas, average of " + mkt.n_books + " books (" + esc(timeET(mkt.captured_at)) + " ET)</span><b>" + fmt(mkt.p_home_cons) + "</b></li>";
       if (mkt.p_home != null) h += "<li><span>" + esc(mkt.provider || "Single book") + "</span><b>" + fmt(mkt.p_home) + "</b></li>";
     } else if (mkt && mkt.p_home != null) h += "<li><span>Vegas, " + esc(mkt.provider || "") + " (" + esc(timeET(mkt.captured_at)) + " ET)</span><b>" + fmt(mkt.p_home) + "</b></li>";
     else if (f.market_probability != null) { var mk = f.market_probability; h += "<li><span>Vegas</span><b>" + (mk >= .5 ? esc(f.home.abbr) + " " + pct(mk) : esc(f.away.abbr) + " " + pct(1 - mk)) + "</b></li>"; }
-    h += "</ul>";
+    h += "</ul>" + '<details class="more" data-keep="pieces"' + (state.rpOpen.pieces ? " open" : "") + '><summary>How our pick is built</summary><ul class="compare">' + pieces + "</ul></details>";
     h += lineBoard(f, mkt, box);
     if (taught && pmk != null) {
       var gap = po - pmk, side = gap >= 0 ? "home" : "away", pts = Math.round(Math.abs(gap) * 100), wt = weightsText();

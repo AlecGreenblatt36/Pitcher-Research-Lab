@@ -127,7 +127,7 @@ def main():
                     design_check('game_plays');page.screenshot(path=str(out/f'game_plays_{width}.png'),full_page=True)
                     page.locator('button[data-tab="odds"]').click();page.wait_for_timeout(150)
                     assert page.locator('.winbar').count()==1
-                    assert 'Simulator alone' in page.inner_text('#app')
+                    assert 'Simulator alone' in page.text_content('#app')
                     design_check('game_odds');page.screenshot(path=str(out/f'game_odds_{width}.png'),full_page=True)
                     page.locator('button[data-tab="summary"]').click();page.wait_for_timeout(150)
                     # once the real game is on, the projected game sits folded under one line: open it to read its versions
