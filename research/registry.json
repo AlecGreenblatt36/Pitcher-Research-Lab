@@ -5451,14 +5451,17 @@
     "columns": {
      "ID": "BULLPEN-05",
      "Attempt": "Where the simulator's relief entries differ from real ones (diagnostic, descriptive; BULLPEN-03's follow-up). Full replays of 2025 and 2026 with RELIEF-04's settings and seeds (tags v2-prod4-entries-1000-<season>), which now also record every relief entry by its inning (5th or earlier, 6th, 7th, 8th, 9th or later), the fielding team's lead at the start of that half-inning (down 3 or more, down 1 or 2, tied, up 1 to 3, up 4 or more) and whether the arm is one of the team's top two by 14-day share, per world in the simulator and from the plate appearances in real games (brl_replay/harness.py entry_key; recording only, so the games equal RELIEF-04's). Summed per team-game by tools/brl_bullpen_entries.py",
-     "Disposition and evidence": "Diagnostic, no prediction. What it decides: the cells where the top two arms enter more often than in real games point the fix (the situations' frequency, the choice in them, or both); a fix is registered with its own gates.",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "Diagnostic, no prediction. What it decides: the cells where the top two arms enter more often than in real games point the fix (the situations' frequency, the choice in them, or both); a fix is registered with its own gates. Results (runs 38186824402 and 38186847009, 4,846 and 4,854 team-games; tools/brl_bullpen_entries.py): relief entries per team-game 3.20 simulated against 3.30 real (2025) and 3.15 against 3.28 (2026); the top two arms by 14-day share entered 0.641 times a team-game against 0.515 real (2025) and 0.618 against 0.498 (2026), about a quarter too often. The excess is in every cell: given an entry, a top-two arm was chosen about 20% of the time in the simulator against about 15.7% in real games, in every inning (5th or earlier 21.6% against 15.9%, 7th 20.9% against 15.6%, 8th 19.9% against 15.7%, 9th 18.9% against 15.6%, 2025) and at every score (down three or more 19.5% against 13.5%). The simulator also brings relievers in a little earlier (5th or earlier 0.40 against 0.36 a team-game) and a little less often in the 6th to 9th. Follow-up on real entries (the choice model's own held-out seasons, the production features; log-likelihood -1.7333 and -1.7651, matching the fits): the model gives the top two arms 20.0% of entries against 16.6% chosen (2025) and 19.5% against 16.6% (2026), too high in every bin of its own chance; so the miss is mostly in the choice model, not in the situations the simulator creates. Its features read recent use as shares and days (share of 14 and 30 days' relief batters, yesterday, back to back, appearances over three days) and nothing about a heavy week. **Reading: the fix belongs in the choice model (a workload term, or the top arms' share against the pool), registered with its own gates as BULLPEN-06.**",
+     "Delta corrected Brier, 2026": "diagnostic done; fix is BULLPEN-06"
     },
     "registered_before_run": false,
     "diagnostic": true,
-    "runs": [],
+    "runs": [
+     "38186824402",
+     "38186847009"
+    ],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "diagnostic done; fix is BULLPEN-06"
    }
   ],
   "TOTALS-05": [
