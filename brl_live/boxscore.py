@@ -253,6 +253,8 @@ class BoxAccumulator:
     def __init__(self,matchup):
         self.matchup=matchup;self.n=0;self.hist={s:{'batting':{},'pitching':{}} for s in SIDE};self.early=[]
         self.innings={s:defaultdict(lambda:Counter()) for s in SIDE};self.score_pairs=[];self.seeds=[];self.features=[];self.win=WinTable()
+        # What decides the game (KEYS-01): for each condition, the worlds where it happened and those the team then won
+        self.keys=Counter()
         for s in SIDE:
             t=getattr(matchup,s)
             for i,p in enumerate(t.lineup):self.hist[s]['batting'][p.player_id]={'name':p.name,'spot':i+1,'stats':{k:Counter() for k in BAT},'hs':Counter()}
@@ -270,9 +272,40 @@ class BoxAccumulator:
                     # hits by singles among them, for his chance of two or more total bases (PLAYER-06)
                     if kind=='batting':agg['hs'][(min(int(row['H']),5),min(int(row['H'])-int(row['2B'])-int(row['3B'])-int(row['HR']),5))]+=1
             for inning,values in box['innings'][s].items():self.innings[s][int(inning)].update(values)
+        self._keys(box)
         # each world's first inning and first five innings, road and home runs (NRFI-01, FIRST5-01)
         inn={s:{int(k):int(v.get('R',0)) for k,v in box['innings'][s].items()} for s in SIDE}
         self.early.append((inn['away'].get(1,0),inn['home'].get(1,0),sum(v for k,v in inn['away'].items() if k<=5),sum(v for k,v in inn['home'].items() if k<=5)))
+    def _keys(self,box):
+        """KEYS-01: count, per team, the worlds where each condition held and where it held and the team won: scoring first,
+        leading after five innings, its starter getting 18 or more outs, and each of its hitters homering or getting two or
+        more hits."""
+        win='home' if box['score']['home']>box['score']['away'] else 'away'
+        first=next(('away' if pl.get('half')=='top' else 'home' for pl in box.get('plays') or [] if int(pl.get('runs_scored') or 0)>0),None)
+        r5={s:sum(int(v.get('R',0)) for k,v in box['innings'][s].items() if int(k)<=5) for s in SIDE}
+        lead5='home' if r5['home']>r5['away'] else 'away' if r5['away']>r5['home'] else None
+        for s in SIDE:
+            w=int(win==s);conds=[('first',''),] if first==s else []
+            if lead5==s:conds.append(('lead5',''))
+            sp=str(getattr(self.matchup,s).starter.player_id)
+            for row in box['pitching'][s]:
+                if str(row['player_id'])==sp and int(row.get('outs') or 0)>=18:conds.append(('sp6',sp))
+            for row in box['batting'][s]:
+                if int(row.get('HR') or 0)>=1:conds.append(('hr',str(row['player_id'])))
+                if int(row.get('H') or 0)>=2:conds.append(('h2',str(row['player_id'])))
+            for c in conds:
+                self.keys[(s,)+c+('n',)]+=1;self.keys[(s,)+c+('w',)]+=w
+            self.keys[(s,'all','','w')]+=w
+    def keys_summary(self):
+        """KEYS-01: [{'side','kind','player_id','share','win_if','win_else'}]: how often each condition happened and the team's
+        win chance when it did and when it did not, over this game's worlds."""
+        out=[]
+        for (s,kind,pid,what),n in sorted(self.keys.items()):
+            if what!='n' or kind=='all' or not n:continue
+            w=self.keys[(s,kind,pid,'w')];wa=self.keys[(s,'all','','w')]
+            out.append({'side':s,'kind':kind,'player_id':pid,'share':round(n/self.n,4),'win_if':round(w/n,4),
+                        'win_else':round((wa-w)/(self.n-n),4) if self.n>n else None})
+        return out
     def finish(self):
         if self.n!=10000:raise Blocked('Box projections require 10,000 finished worlds')
         result={'n_simulations':self.n,'teams':{},'line_score':{},'sample_selection':SELECTION_NOTE,'samples':[]}
@@ -324,6 +357,7 @@ class BoxAccumulator:
         result['sample_indices']=selected
         result['typical_score_frequency']=counts[modal]/self.n
         if self.win.games:result['win_table']=self.win.finish()
+        result['keys']=self.keys_summary()
         return result
 
 # Simulation-time adjustments on the locked model (brl_live/provider_adjust.py), measured on the

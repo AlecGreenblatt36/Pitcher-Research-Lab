@@ -93,7 +93,16 @@ queue behind the shards (seen October 11 at 16:50 UTC). Check-only replays (n_si
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 7:36 p.m. Eastern October 11, by `date -u`)
+### In flight (updated 8:35 p.m. Eastern October 11, by `date -u`)
+
+- October 11, 8:35 p.m.: Alec: the page is hard to read for someone who does not follow baseball and does not yet show
+  what sets it apart (simulating the game before it happens). KEYS-01 (display): a game to come opens with the matchup
+  side by side, a one-line call, "What to expect" (typical score, runs, one-run share, 100 games as squares), "What
+  decides it" (scoring first, each starter's 18 outs, two hitters; counts over the box's own simulated games, shifted
+  on the log-odds scale to add up to the pick) and "One game, played out" (the versions with the line score, now in the
+  Summary instead of the header). Home cards get the same one-line call; their footer names Vegas only. Palette: night
+  navy. Next: the Odds and Record pages in the same plain style, the live and final headers, and a replay check of the
+  conditional chances (scored first, starter's 18 outs) against real games.
 
 - October 11, 7:36 p.m.: BULLPEN-03 and -04 failed: the bullpen's top chances run high (60% to 80% shown, about 53%
   pitched) and a straight calibration cannot fix them; the Odds tab now says so under the bullpen tables. Next for it

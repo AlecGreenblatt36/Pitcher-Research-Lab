@@ -260,6 +260,13 @@ shown, about 53% pitched, in both seasons). The choice model itself is calibrate
 explain little of it, so the miss is in how often the simulated games call for the top relievers. A straight calibration
 could not pull those chances down (BULLPEN-04), so the page keeps them and says so under the tables.
 
+A game to come now opens with what the simulated games say in plain words (KEYS-01, display). Each box counts, over
+its own simulated games, how often each team scores first, leads after five, gets 18 outs from its starter, and how
+often each hitter homers or gets two hits, with the team's wins in each case. The page shows the few that swing the
+game most (the swing in the win chance times the square root of share x (1 - share)), with both chances shifted by the
+same amount on the log-odds scale so that, mixed by the share, they give the published pick (which also uses the team
+model and the betting line). These are counts from the simulation and have not been checked against real games yet.
+
 ## The season's level, re-anchored in-season (October 11, 2026)
 
 Outcome levels move from season to season (more walks and fewer extra-base hits and home runs in 2026 than in 2025), and

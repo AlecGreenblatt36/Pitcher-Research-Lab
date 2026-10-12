@@ -275,3 +275,26 @@ def test_runs_on_a_fielders_choice_are_batted_in_and_on_an_error_are_not():
             elif 'error' in p['description']:
                 assert p['rbi']==0;err+=1
     assert fc>=1
+
+
+def test_keys_count_what_decides_the_game_over_the_same_worlds():
+    """KEYS-01: per team, how often it scored first, led after five, its starter got 18 outs and each hitter homered or got
+    two hits, with its win chance when that happened and when it did not."""
+    m=matchup();a=BoxAccumulator(m)
+    sp=str(m.away.starter.player_id);hitter=str(m.away.lineup[0].player_id)
+    z=lambda **k:{**{x:0 for x in ('PA','AB','H','2B','3B','HR','R','RBI','BB','HBP','K','SF','SB','CS')},'player_id':hitter,**k}
+    for i in range(10000):
+        road_first=i%4==0
+        plays=[{'half':'top' if road_first else 'bottom','runs_scored':1,'inning':1,'outs_before':0,'bases_before':[None,None,None],
+                'away_score':1 if road_first else 0,'home_score':0 if road_first else 1}]
+        score={'away':3,'home':1} if road_first or i%4==1 else {'away':1,'home':2}
+        a.add({'seed':i,'score':score,'innings':{'away':{'1':{'R':1 if road_first else 0,'H':1}},'home':{'1':{'R':0 if road_first else 1,'H':1}}},'plays':plays,
+               'batting':{'away':[z(H=2,HR=1)] if i%2==0 else [z()],'home':[]},'pitching':{'away':[{**{x:0 for x in ('outs','PC','H','R','BB','HBP','K','HR','BF')},'player_id':sp,'outs':18 if i%5==0 else 12}],'home':[]}})
+    a.features=[]
+    r=a.finish()
+    k={(x['side'],x['kind'],x['player_id']):x for x in r['keys']}
+    first=k[('away','first','')]
+    assert first['share']==0.25 and first['win_if']==1.0 and abs(first['win_else']-2500/7500)<1e-4      # road wins 50%: all when first, a third otherwise
+    hr=k[('away','hr',hitter)]
+    assert hr['share']==0.5 and abs(hr['win_if']-0.5)<1e-4                                             # i%2==0: i%4 in (0, 2)
+    assert k[('away','sp6',sp)]['share']==0.2 and ('home','first','') in k

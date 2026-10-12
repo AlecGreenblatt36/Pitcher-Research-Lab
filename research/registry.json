@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 329,
- "rows": 332,
+ "experiments": 330,
+ "rows": 333,
  "records": {
   "ACC-01": [
    {
@@ -5195,6 +5195,22 @@
      "ID": "PROD-16",
      "Attempt": "Product call, October 11, 6:05 p.m. Eastern (display). The Odds tab's hitter props add each hitter's chance of at least one strikeout (the batter-strikeouts market at 0.5), the same own-chance rule as the other columns (PLAYER-02's slot shares). Evidence: PLAYER-03's replays, where the strikeout chance came within 1.0 point of the actual share in both seasons (62.9% against 61.9% in 2025, 61.8% against 61.1% in 2026; its prediction (4) held for strikeouts), and no map was needed",
      "Disposition and evidence": "Done in the evening commits; the table still fits a 390-pixel screen with fair odds on (it scrolls inside its frame at 320); tests test_page_odds_props.py",
+     "Delta corrected Brier, 2026": "display"
+    },
+    "registered_before_run": false,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "display"
+   }
+  ],
+  "KEYS-01": [
+   {
+    "id": "KEYS-01",
+    "columns": {
+     "ID": "KEYS-01",
+     "Attempt": "Product call, October 11, 9 p.m. Eastern (display). The game page for a game to come opens in plain words, for readers who do not follow baseball: the matchup side by side with each team's win chance, a one-line call (\"A coin flip, leaning the Brewers\"; under 53% a coin flip, under 58% a slight edge, under 65% favored, else clear favorites), a typical final score, the expected runs and one-run share, a picture of 100 games, and \"What decides it\": up to five events from the same simulated games, each with how often it happens and the team's win chance when it does and when it does not. The box now counts, over its simulated games, each team scoring first, leading after five, its starter getting 18 or more outs, and each hitter homering or getting two or more hits, with the team's wins in each case (BoxAccumulator keys; no new simulation). Shown are scoring first, each starter's 18 outs if its weight is 0.02 or more, and the two hitters with the largest weight (one per team when possible); weight is the swing in the win chance times the square root of share x (1 - share); events under 8% or over 92% are left out. The two chances are shifted together on the log-odds scale so that, mixed by the share, they give the published pick. Game cards on the home page get the same one-line call (before the game the call, during it the score and win chance, after it the winner and our pick), and the card footer names Vegas only (the simulator-alone line stays on the game page). The palette moves from green to night navy and the pregame header uses both teams' colors",
+     "Disposition and evidence": "Done in the evening commits; test_boxscore.py (the counts over the same worlds); How it works says these are counts from the simulated games, not yet checked against real games. Open: replay check of the conditional chances against real games (scored first, starter's 18 outs) before any claim about them",
      "Delta corrected Brier, 2026": "display"
     },
     "registered_before_run": false,
