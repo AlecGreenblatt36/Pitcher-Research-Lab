@@ -53,7 +53,7 @@ def main():
                 # fonts.ready waits for used faces; check(default 400) alone can
                 # fail for an unused declared weight and can pass for a missing face.
                 fonts=page.evaluate('''async () => {
-                    const requests = ['400 16px "Atkinson Hyperlegible"',
+                    const requests = ['400 16px "Barlow"',
                                       '700 24px "Barlow Condensed"'];
                     const before = Array.from(document.fonts, f => ({family:f.family,weight:f.weight,status:f.status}));
                     const loaded = await Promise.race([
@@ -66,7 +66,7 @@ def main():
                 receipt.setdefault('font_checks',[]).append({'width':width,**fonts})
                 page.screenshot(path=str(out/f'font_evidence_{width}.png'))
                 assert all(item['faces'] and all(face['status']=='loaded' for face in item['faces']) for item in fonts['loaded']),'Requested font faces unavailable'
-                assert 'Atkinson Hyperlegible' in fonts['body_family'] and 'Barlow Condensed' in fonts['heading_family'],'Requested fonts not applied'
+                assert fonts['body_family'].split(',')[0].strip(' "\'')=='Barlow' and 'Barlow Condensed' in fonts['heading_family'],'Requested fonts not applied'
                 # Deterministic screenshot positioning; do not alter page content.
                 page.add_style_tag(content='html{scroll-behavior:auto!important}')
                 def design_check(name):

@@ -21,8 +21,8 @@ FONTS = (
     ('Barlow Condensed', 500, 'barlow-condensed-latin-500-normal.woff2'),
     ('Barlow Condensed', 600, 'barlow-condensed-latin-600-normal.woff2'),
     ('Barlow Condensed', 700, 'barlow-condensed-latin-700-normal.woff2'),
-    ('Atkinson Hyperlegible', 400, 'atkinson-hyperlegible-latin-400-normal.woff2'),
-    ('Atkinson Hyperlegible', 700, 'atkinson-hyperlegible-latin-700-normal.woff2'),
+    ('Barlow', 400, 'barlow-latin-400-normal.woff2'),
+    ('Barlow', 700, 'barlow-latin-700-normal.woff2'),
 )
 PUBLIC_KEYS = ('date', 'forecasts', 'publications', 'actuals', 'status', 'box_scores',
                'box_publications', 'actual_boxes', 'player_scores', 'skill_scores', 'live', 'market', 'context')

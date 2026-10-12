@@ -38,7 +38,7 @@
   --dirt: #E9DFC7;
   --field-line: #FFFFFF;
   --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
-  --body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --body: "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 /* Night: the same night board, a dark field around it; team colors are lifted in script (teamColors) so dark
    club colors stay readable. */
@@ -178,10 +178,14 @@ details.more[open] summary::before { content: "\2212"; }
 .hero.compact .vs-sp small, .hero.compact .hero-series, .hero.compact .hero-venue, .hero.compact .vs-abbr { display: none; }
 .hero.compact .vs-call { font-size: 20px; margin-top: 8px; }
 .hero.compact .vs-at { margin-top: 18px; }
+/* before first pitch the win chance is the headline number; the projected score is a quieter guide */
+.card.pre .team-row .big { font-size: 22px; font-weight: 600; color: var(--muted); }
+.card.pre .team-row .pct { font-size: 28px; font-weight: 700; }
 .card-call { font-family: var(--display); font-weight: 700; font-size: 21px; line-height: 1.15; color: var(--ink); margin: 0 0 6px; text-wrap: balance; }
 .card-call.hit::before, .card-call.miss::before { display: inline-block; margin-right: 6px; font-size: 16px; vertical-align: 1px; }
 .card-call.hit::before { content: "\2713"; color: var(--good); }
 .card-call.miss::before { content: "\2717"; color: var(--bad); }
+.card-call.flip::before { content: "\2013"; color: var(--muted); display: inline-block; margin-right: 6px; }
 .team-name .rec { font-size: 14px; color: var(--muted); font-weight: 500; }
 .state { font-weight: 700; font-size: 14px; }
 .state.live { color: var(--live); }
@@ -297,14 +301,16 @@ details.more[open] summary::before { content: "\2212"; }
 
 /* Tabs */
 .tabs { position: sticky; top: 0; z-index: 5; background: var(--paper); border-bottom: 1px solid var(--rule); }
-[id^="rp-detail-"], [id^="sheet-"], [id^="numbers-"] { scroll-margin-top: 108px; }   /* a tapped hitter's plan opens below the sticky tabs (two rows on a phone) */
+[id^="rp-detail-"], [id^="sheet-"], [id^="numbers-"] { scroll-margin-top: 62px; }   /* a tapped hitter's plan opens below the sticky tabs */
 @media (min-width: 600px) { [id^="rp-detail-"], [id^="sheet-"], [id^="numbers-"] { scroll-margin-top: 62px; } }
 .tabs .wrap { display: flex; gap: 2px; overflow-x: auto; }
 .tab { border: 0; background: none; padding: 12px 12px 10px; min-height: 48px; font-weight: 700; color: var(--muted); border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap; }
 .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--board); }
 @media (max-width: 560px) {
-  .tabs .wrap { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; overflow: visible; }
-  .tab { padding: 10px 4px 8px; min-height: 44px; font-size: 15px; text-align: center; }
+  /* one row that scrolls sideways, like the market's game pages; the open tab is scrolled into view */
+  .tabs .wrap { gap: 0; scrollbar-width: none; scroll-padding: 0 16px; }
+  .tabs .wrap::-webkit-scrollbar { display: none; }
+  .tab { padding: 12px 10px 9px; min-height: 46px; font-size: 16px; flex: 0 0 auto; }
 }
 .hero-call { margin: 10px 0 0; font-size: 16px; color: var(--chalk-dim); }
 .hero-call b { color: var(--chalk); }
@@ -349,6 +355,7 @@ details.more[open] summary::before { content: "\2212"; }
 h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--rule); color: var(--muted); }
 .swings li { display: grid; grid-template-columns: 64px 1fr auto; gap: 10px; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--rule-soft); font-size: 16px; }
 .swings + .note { margin-top: 6px; }
+.panel > p.note + .sec, .panel > p.note + div { margin-top: 26px; }
 .swings .inn { font-family: var(--display); font-weight: 600; color: var(--muted); }
 .swings .d { font-family: var(--display); font-weight: 700; font-size: 18px; white-space: nowrap; }
 .moments { list-style: none; margin: 0; padding: 0; }
@@ -373,9 +380,10 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .lineup li.lineup-h b { font-family: var(--display); font-size: 20px; color: var(--tc); }
 .lineup li.lineup-h span { font-size: 14px; font-weight: 700; color: var(--muted); text-align: right; }
 .lineup li.bat { grid-template-columns: 22px 1fr 64px 64px; align-items: center; }
-.meter { position: relative; display: block; height: 22px; border-radius: 4px; background: var(--rule-soft); overflow: hidden; margin-left: 6px; }
-.meter i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--tc); opacity: .22; }
-.meter em { position: relative; display: block; font-style: normal; font-family: var(--display); font-weight: 700; font-size: 16px; line-height: 22px; text-align: right; padding-right: 6px; }
+.meter { position: relative; display: block; margin-left: 6px; padding-bottom: 6px; }
+.meter::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; border-radius: 2px; background: var(--rule-soft); }
+.meter i { position: absolute; left: 0; bottom: 0; height: 4px; border-radius: 2px; background: var(--tc); z-index: 1; }
+.meter em { display: block; font-style: normal; font-family: var(--display); font-weight: 700; font-size: 18px; line-height: 22px; text-align: right; }
 .perf { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .perf div { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px; }
 .perf b { display: block; font-size: 16px; }
@@ -876,9 +884,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
 @media (max-width: 380px) {
   .line td { font-size: 17px; min-width: 21px; }
 }
-@media (max-width: 430px) {
-  .tab { padding: 12px 7px 10px; font-size: 15px; }
-}
+
 /* Desktop: wider pages; the game header splits in two; summary, odds and record read in two columns. */
 @media (min-width: 1000px) {
   .hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr); gap: 0 48px; align-items: start; }
@@ -1046,7 +1052,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (post && r.away && r.home) {
       var a = r.away.wins, h = r.home.wins, best = c.games_in_series || 7;
       if (a + r.away.losses <= best && h + r.home.losses <= best && a + h > 0) {
-        parts.push(a === h ? "Series tied " + a + "-" + h : (h > a ? f.home.abbr + " leads " + h + "-" + a : f.away.abbr + " leads " + a + "-" + h));
+        var won = Math.max(a, h) >= Math.floor(best / 2) + 1 ? " wins " : " leads ";     /* after the clinching game the records already count it */
+        parts.push(a === h ? "Series tied " + a + "-" + h : (h > a ? f.home.abbr + won + h + "-" + a : f.away.abbr + won + a + "-" + h));
       }
     }
     if (withVenue && c.venue) parts.push(c.venue);
@@ -1457,7 +1464,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var fin = actual && actual.home != null ? actual : lv && lv._final && lv.state ? { home: lv.state.home_score, away: lv.state.away_score } : null;
     if (fin && fin.home !== fin.away) {
       var w = fin.home > fin.away ? "home" : "away", l = w === "home" ? "away" : "home", fav = favorite(f), flip = winProb(f, fav) < 0.52;
-      return '<p class="card-call' + (flip ? "" : w === fav ? " hit" : " miss") + '">' + esc(nickname(f[w].name) + " won " + fin[w] + "-" + fin[l] + ". " +
+      return '<p class="card-call' + (flip ? " flip" : w === fav ? " hit" : " miss") + '">' + esc(nickname(f[w].name) + " won " + fin[w] + "-" + fin[l] + ". " +
         (flip ? "We had it a coin flip." : w === fav ? "We had them at " + pct(winProb(f, w)) + "." : "We had the " + nickname(f[fav].name) + " at " + pct(winProb(f, fav)) + ".")) + "</p>";
     }
     if (lv && lv.state && !lv._final && lv.home_win_probability != null) {
@@ -1760,7 +1767,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var fav = favorite(f);
       var ctx = contextFor(f.game_pk), ctxLine = contextLine(f, ctx, true);
       var tcl = teamColors(f);
-      html += '<li><a class="card" style="' + teamStyle(tcl) + '" data-game="' + f.game_pk + '" href="#/game/' + f.game_pk + '"><div class="card-top"><span>' + esc(timeET(f.scheduled_start)) + '</span><span class="state ' + st + '">' + (lv ? miniBases(lv) + esc(liveWhere(lv)) : STATE_TEXT[st]) + "</span></div>";
+      html += '<li><a class="card' + (!actual && !lv ? " pre" : "") + '" style="' + teamStyle(tcl) + '" data-game="' + f.game_pk + '" href="#/game/' + f.game_pk + '"><div class="card-top"><span>' + esc(timeET(f.scheduled_start)) + '</span><span class="state ' + st + '">' + (lv ? miniBases(lv) + esc(liveWhere(lv)) : STATE_TEXT[st]) + "</span></div>";
       if (ctxLine) html += '<div class="card-ctx">' + esc(ctxLine) + "</div>";
       html += cardCall(f, actual, lv);
       html += '<div class="cols"><span></span><span>' + (actual ? "Final" : lv ? "Score" : "Proj") + "</span><span>Win</span></div>";
@@ -1913,7 +1920,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         '</span><span class="eg-mkt"><small>Vegas</small>' + side(r.f, r.open) + " first, " + side(r.f, r.now) + ' now</span><span class="eg-gap">' + lean + "</span></a></li>";
     });
     var lm = D.record && D.record.line_moves;
-    h += "</ul>" + (lm && lm.n ? '<p class="note">This October: the line moved our way in ' + lm.toward_ours + " of " + lm.n + (lm.n === 1 ? " game" : " games") + " where we differed from the first line we saw.</p>" : "") + "</section>";
+    /* the live count of line moves shows once there are enough games to mean something */
+    h += "</ul>" + (lm && lm.n >= 10 ? '<p class="note">This October: the line moved our way in ' + lm.toward_ours + " of " + lm.n + " games where we differed from the first line we saw.</p>" : "") + "</section>";
     return h;
   }
 
@@ -1934,7 +1942,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var n = recordNumbers(), h = '<a class="scorebar" href="#/record" aria-label="Our record">';
     if (n.replayPct != null) h += "<div><b>" + n.replayPct + "%</b><span>our picks won, " + Number(n.replayed).toLocaleString() + " games re-run</span></div>";
     if (n.marketPct != null) h += "<div><b>" + n.marketPct + "%</b><span>Vegas favorites won, same games</span></div>";
-    h += "<div><b>" + n.right + "-" + (n.live - n.right) + "</b><span>our live picks" + (n.since ? " since " + esc(shortDate(n.since)) : "") + "</span></div>";
+    h += "<div><b>" + n.right + " of " + n.live + "</b><span>live picks right" + (n.since ? " since " + esc(shortDate(n.since)) : "") + (n.live < 100 ? ", too few to judge" : "") + "</span></div>";
     return h + "</a>";
   }
   function shortDate(ymd) { if (!ymd) return ""; var d = new Date(ymd + "T12:00:00Z"); return d.toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric" }); }
@@ -2302,6 +2310,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     html += "</div></div></div>";
     app.innerHTML = html;
     if (!keep) window.scrollTo(0, 0);
+    var openTab = app.querySelector('.tab[aria-selected="true"]'), tabRow = openTab && openTab.parentNode;
+    if (openTab && tabRow.scrollWidth > tabRow.clientWidth) tabRow.scrollLeft = Math.max(0, openTab.offsetLeft - (tabRow.clientWidth - openTab.offsetWidth) / 2);
     fillSpLines();
     fillPlayerStats();
     if (tab === "matchups") fillBvp();
@@ -2788,7 +2798,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var names = keyNames(box), who = names[k.side + ":" + k.player_id] || "", team = "the " + nickname(f[k.side].name);
     return k.kind === "first" ? [team.charAt(0).toUpperCase() + team.slice(1) + " score first", "They do", "They don't"]
       : k.kind === "lead5" ? [team.charAt(0).toUpperCase() + team.slice(1) + " lead after 5 innings", "They do", "They don't"]
-      : k.kind === "sp6" ? [lastName(who) + " pitches into the 7th inning", "He does", "He doesn't"]
+      : k.kind === "sp6" ? [lastName(who) + " goes 6 innings or more", "He does", "He doesn't"]
       : k.kind === "hr" ? [lastName(who) + " hits a home run", "He does", "He doesn't"]
       : [lastName(who) + " gets 2 or more hits", "He does", "He doesn't"];
   }
@@ -2821,11 +2831,13 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var md = box && box.margin_distribution ? dist(box.margin_distribution) : null, close = null;
     if (md) { var t = total(md), one = 0; md.counts.forEach(function (x) { if (Math.abs(x[0]) === 1) one += x[1]; }); close = one / t; }
     var tr = box && box.total_run_distribution ? dist(box.total_run_distribution) : null, mk = D.market && D.market[f.game_pk], tt = tr ? taughtTotalFor(f, mk, tr) : null;
-    var proj = s && s.score ? s.score : null, lines = [];
+    var proj = s && s.score ? s.score : null, lines = [], nSim = Number(f.n_simulations || (box && box.n_simulations) || 10000);
+    lines.push("We played this game " + nSim.toLocaleString() + " times. The " + nickname(f[simFav].name) + " won " + Math.round(simP * nSim).toLocaleString() + " of them." +
+      (simFav !== fav ? " Add the team ratings and the Vegas line, and our pick flips to the " + nickname(f[fav].name) + ", " + pct(winProb(f, fav)) + "." :
+        Math.abs(winProb(f, fav) - simP) >= 0.015 ? " With the team ratings and the Vegas line, our pick is " + nickname(f[fav].name) + " " + pct(winProb(f, fav)) + "." : ""));
     if (proj) lines.push("A typical game: " + nickname(f[proj.home > proj.away ? "home" : "away"].name) + " " + Math.max(proj.home, proj.away) + ", " + nickname(f[proj.home > proj.away ? "away" : "home"].name) + " " + Math.min(proj.home, proj.away) + ".");
     if (tr) lines.push("About " + (tt != null ? tt : mean(tr)).toFixed(1) + " runs in all" + (close != null ? ", and " + Math.round(close * 10) + " in 10 games are decided by one run." : "."));
-    if (simFav !== fav) lines.push("The simulator alone leans the " + nickname(f[simFav].name) + " (" + pct(simP) + "); with the team ratings and the betting line our pick is the " + nickname(f[fav].name) + ".");
-    return '<section class="sec story"><h2 class="story-h">What to expect</h2><p class="story-p">' + esc(lines.join(" ")) + "</p>" + hundredGames(f) + '<p class="note">Each square is one game out of 100 played like this one. Our pick: ' + esc(nickname(f[fav].name)) + " " + pct(winProb(f, fav)) + ".</p></section>" + keysSection(f, box);
+    return '<section class="sec story"><h2 class="story-h">What to expect</h2><p class="story-p">' + esc(lines.join(" ")) + "</p>" + hundredGames(f) + '<p class="note">Our pick as 100 games: ' + esc(nickname(f[fav].name)) + " " + Math.round(winProb(f, fav) * 100) + ", " + esc(nickname(f[fav === "home" ? "away" : "home"].name)) + " " + (100 - Math.round(winProb(f, fav) * 100)) + ".</p></section>";
   }
   /* ---------- watch the simulated game (WATCH) ----------
      One simulated game stepped through play by play, like a live game tracker: the score, inning, outs, runners, where
@@ -2914,9 +2926,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var fav = favorite(f), simFav = f.home_win_probability == null ? null : f.home_win_probability >= 0.5 ? "home" : "away";
     var split = v && v.key === "proj" && simFav && simFav !== fav && sampleWinner(s) === simFav;
     var flipped = v && v.key === "proj" && v.flipped;
-    var lean = function () { return "The simulator by itself leans the " + esc(nickname(f[simFav].name)) + " (" + pct(simFav === "home" ? f.home_win_probability : 1 - f.home_win_probability) + "); with the team ratings" + (taughtRecipe(f) && marketProb(D.market && D.market[f.game_pk]) != null ? " and the betting line" : "") + " in, our pick is the " + esc(nickname(f[fav].name)); };
-    return '<div class="sim-line">' + lineScore(f, s) + '</div><p class="note">' + (v && v.key !== "proj" ? esc(v.label) + ": another of the simulated games. " : "The most typical of the simulated games. ") + "Not a real score." +
-      (flipped ? " " + lean() + ", so this is the most typical simulated game they win." : "") + (split ? " It follows the simulator. " + lean() + "." : "") + "</p>";
+    return '<div class="sim-line">' + lineScore(f, s) + '</div><p class="note">' + (v && v.key !== "proj" ? esc(v.label) + ": another of the simulated games." :
+      flipped ? "The most typical simulated game that our pick, the " + esc(nickname(f[fav].name)) + ", wins." : split ? "The most typical simulated game; it follows the simulator, which leans the " + esc(nickname(f[simFav].name)) + "." : "The most typical of the simulated games.") + " Not a real score.</p>";
   }
   function summaryTab(f, s, box, actual, actualBox, v, real, lv, versions) {
     var h0 = "";
@@ -2926,8 +2937,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         (versions || "") + projectedSummary(f, s, box, null, null, v) + "</details>";
     if (!real && !actual && !lv)    /* before first pitch: the game in words, then one simulated game played out, then the matchup */
       return h0 + forecastStory(f, box, s) + '<section class="sec sim-game"><h2>One game, played out</h2><p class="lede">Read one of our simulated games like a real one. Switch versions to see a slugfest, a pitchers\' duel or an upset.</p>' +
-        (versions || "") + simLine(f, box, s, v) + watchPanel(f, box, s, f.game_pk) + "</section>" + projectedSummary(f, s, box, null, null, v) +
-        '<div id="pm-' + f.game_pk + '">' + pitchingMatchup(f, box, RP[f.game_pk] || null) + "</div>" + teamStatsSlot(f);
+        (versions || "") + simLine(f, box, s, v) + watchPanel(f, box, s, f.game_pk) + "</section>" + projectedSummary(f, s, box, null, null, v, true) +
+        keysSection(f, box) + projectedLines(f, box) + '<div id="pm-' + f.game_pk + '">' + pitchingMatchup(f, box, RP[f.game_pk] || null) + "</div>" + teamStatsSlot(f);
     if (!real) return h0 + (versions || "") + projectedSummary(f, s, box, actual, actualBox, v);
     /* With the real game on: did we get it right first (after the final), then the real game, then the game we
        projected folded under one line (its versions and the full simulated game open from there). */
@@ -2972,7 +2983,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     }
     return h0;
   }
-  function projectedSummary(f, s, box, actual, actualBox, v) {
+  function projectedSummary(f, s, box, actual, actualBox, v, skipLines) {     /* skipLines: the caller places the projected lines */
     var names = nameMap(s), short = shortMap(s), h = "";
     if (actual && actualBox) h += howClose(f, box, actualBox, s);
     h += '<section class="sec"><h2>Scoring plays</h2>';
@@ -2998,7 +3009,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     });
     h += "</div></section>";
 
-    h += projectedLines(f, box);
+    if (!skipLines) h += projectedLines(f, box);
     h += '<section class="sec"><h2>Starting pitchers in this version</h2><div class="perf">';
     ["away", "home"].forEach(function (side) {
       var p = starterOf(s, side);
@@ -3025,9 +3036,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         h += '<li class="sp"><span class="spot">SP</span><span class="who">' + esc(sp.name) + "<small>" + (d.K ? "strikeouts " + quant(kShape(d.K), .25) + " to " + quant(kShape(d.K), .75) + ", " : "") + (d.outs ? "innings " + ip(quant(d.outs, .25)) + " to " + ip(quant(d.outs, .75)) : "") + '</small></span><span class="line num">' + ip(Math.round(sp.means.outs)) + " IP, " + Math.round(sp.means.K) + " K</span></li>";
       }
       bat.forEach(function (b) {
-        var m = b.means || {}, ab = Math.max(1, Math.round(m.AB || 0)), hits = Math.round(m.H || 0);
+        var m = b.means || {};
         var meter = function (p, cap) { return p == null ? "<span></span>" : '<span class="meter num" aria-label="' + pct(p) + '"><i style="width:' + Math.min(100, p / cap * 100).toFixed(0) + '%"></i><em>' + pct(p) + "</em></span>"; };
-        h += '<li class="bat"><span class="spot">' + (b.spot || "") + '</span><span class="who">' + esc(names[String(b.player_id)] || b.name) + "<small>" + hits + " for " + ab + (Math.round(m.RBI || 0) ? ", " + Math.round(m.RBI) + " RBI" : "") + "</small></span>" +
+        h += '<li class="bat"><span class="spot">' + (b.spot || "") + '</span><span class="who">' + esc(names[String(b.player_id)] || b.name) + "<small>" + (m.H || 0).toFixed(1) + " hits, " + (m.RBI || 0).toFixed(1) + " RBI a game</small></span>" +
           meter(b.hit_probability, 1) + meter(b.hr_probability, 0.4) + "</li>";
       });
       h += "</ol>";
@@ -4964,7 +4975,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       row("away", mkt.away_ml, ph == null ? null : 1 - ph) + row("home", mkt.home_ml, ph);
     var tr = box && box.total_run_distribution ? dist(box.total_run_distribution) : null, et = tr ? (taughtTotalFor(f, mkt, tr) != null ? taughtTotalFor(f, mkt, tr) : mean(tr)) : null;
     if (mkt.over_under != null) h += '<tr><th scope="row">Total ' + esc(mkt.over_under) + "</th><td>o" + amText(mkt.over_odds) + " / u" + amText(mkt.under_odds) + "</td><td>" + (et != null ? et.toFixed(1) + " runs" : "\u2013") + "</td></tr>";
-    return h + '</tbody></table></div><p class="note">' + esc(mkt.provider || "The book") + "'s prices at " + esc(timeET(mkt.captured_at)) + " ET. Our fair price is our pick as American odds with no margin: below \u2212100 favored, above +100 not. For the total we give the runs we expect instead of a price: re-run over two seasons, no over chance of ours called games better than the closing total, so we do not price the over.</p>";
+    return h + '</tbody></table></div><p class="note">' + esc(mkt.provider || "The book") + "'s prices at " + esc(timeET(mkt.captured_at)) + " ET. Our fair price is our pick as American odds with no margin: below \u2212100 favored, above +100 not. For the total we show how many runs we expect, not a price: over two seasons, our chance of the over was no better than Vegas's own line, so we do not offer one.</p>";
   }
   /* Markets beyond the moneyline and the total, each shown only once its check held on two seasons re-run (RUNLINE-01,
      FIRST5-01, NRFI-01; until then false). The run line keeps the pick: our win chance times the simulator's chance of
@@ -5619,7 +5630,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     h += '<div class="board-stats">' +
       (N.replayPct != null ? '<div><b class="num">' + N.replayPct + "%</b><span>our picks won, " + Number(N.replayed).toLocaleString() + " games re-run</span></div>" : "") +
       (N.marketPct != null ? '<div><b class="num">' + N.marketPct + "%</b><span>Vegas favorites won, same games</span></div>" : "") +
-      '<div><b class="num">' + N.right + "-" + (N.live - N.right) + "</b><span>our live picks" + (N.since ? " since " + esc(shortDate(N.since)) : "") + "</span></div></div>";
+      '<div><b class="num">' + N.right + " of " + N.live + "</b><span>live picks right" + (N.since ? " since " + esc(shortDate(N.since)) : "") + (N.live < 100 ? ", too few to judge" : "") + "</span></div></div>";
     /* the bottom line, in words */
     var rp = rec.replay || {}, years = Object.keys(rp).sort().reverse(), parts = [];
     years.forEach(function (y) {
@@ -5648,16 +5659,16 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var dg = rec.disagreements, lm = rec.line_moves;
     if ((dg && dg.n) || (lm && lm.n)) {
       h += '<section class="sec"><h2>Us and Vegas</h2>';
-      if (lm && lm.n) h += '<p class="lede">When our number differed from the first line we saw, the line moved our way by first pitch ' + lm.toward_ours + " of " + lm.n + (lm.n === 1 ? " time" : " times") + ". In the two seasons re-run it moved our way about 7 times in 10.</p>";
+      if (lm && lm.n) h += '<p class="lede">In the two seasons re-run, when our number differed from the first line, the line moved our way by first pitch about 7 times in 10.' + (lm.n >= 10 ? " Live so far: " + lm.toward_ours + " of " + lm.n + "." : "") + "</p>";
       if (dg && dg.n) h += '<p class="lede">Games where we and Vegas were ' + Math.round(dg.threshold * 100) + " points or more apart: " + dg.n + ". Our side won " + dg.our_side_won + ". Closer to the result on average: " + (dg.ours_brier < dg.market_brier ? "us" : dg.ours_brier > dg.market_brier ? "Vegas" : "neither") + ".</p>";
       h += "</section>";
     }
     var aggs = (D.skill_scores && D.skill_scores.aggregates) || [];
     var live = aggs.filter(function (a) { return a.n_games && a.model_score != null && a.baseline_score != null; });
-    if (live.length) {
-      var most = Math.max.apply(null, live.map(function (a) { return a.n_games; }));
+    var most = live.length ? Math.max.apply(null, live.map(function (a) { return a.n_games; })) : 0;
+    if (most >= 50) {      /* box-score calls show once there are enough games to judge */
       h += '<section class="sec"><h2>Box score calls</h2><p class="lede">How much closer our projected box score lands than a plain average. Plus is better.' +
-        (most < 50 ? " " + most + (most === 1 ? " game is" : " games are") + " far too few to judge; one blowout swings these." : "") + '</p><ul class="compare">';
+ '</p><ul class="compare">';
       live.forEach(function (a) { var g = (a.baseline_score - a.model_score) / a.baseline_score; h += "<li><span>" + esc(a.label) + " <small>(" + a.n_games + (a.n_games === 1 ? " game" : " games") + ")</small></span><b>" + (g >= 0 ? "+" : "") + Math.round(g * 100) + "%</b></li>"; });
       h += "</ul></section>";
     }

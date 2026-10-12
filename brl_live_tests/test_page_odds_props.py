@@ -143,7 +143,7 @@ def test_price_board_gives_expected_runs_for_the_total_not_an_over_price():
           "const h=lineBoard(f,mkt,box);"
           "const want=(0.32*7.0+0.78*6-0.543).toFixed(1)+' runs';"
           "assert.ok(h.indexOf('Total 6</th><td>o\\u2212112 / u\\u2212108</td><td>'+want+'</td></tr>')>0,h);"
-          "assert.ok(h.indexOf('we do not price the over')>0,h);"
+          "assert.ok(h.indexOf('so we do not offer one')>0,h);"
           "const old=lineBoard(Object.assign({},f,{date:'2026-10-01'}),mkt,box);assert.ok(old.indexOf('<td>7.0 runs</td>')>0,old);")
     subprocess.run(['node', '-e', tt + fns + js], check=True)
 
