@@ -1945,15 +1945,19 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   function lastDay() { return addDays(D.date, 14); }      /* the schedule is shown two weeks ahead; our numbers come the morning of each game */
   /* Our record in one strip: the two seasons re-run game by game, and the live games since the record began. */
   function recordNumbers() {
-    var R = D.record || {}, rp = R.replay || {}, keys = Object.keys(rp).sort(), g = 0, r = 0, mg = 0, mr = 0;
-    keys.forEach(function (s) { var x = rp[s]; if (x.headline) { g += x.games; r += x.games * x.headline.picks_right_pct / 100; } if (x.market) { mg += x.games; mr += x.games * x.market.picks_right_pct / 100; } });
+    var R = D.record || {}, rp = R.replay || {}, keys = Object.keys(rp).sort(), g = 0, r = 0, mg = 0, mr = 0, bh = 0, bm = 0, bg = 0;
+    keys.forEach(function (s) { var x = rp[s]; if (x.headline) { g += x.games; r += x.games * x.headline.picks_right_pct / 100; } if (x.market) { mg += x.games; mr += x.games * x.market.picks_right_pct / 100; }
+      if (x.headline && x.market && x.headline.brier != null && x.market.brier != null) { bg += x.games; bh += x.games * x.headline.brier; bm += x.games * x.market.brier; } });
     var games = R.games || [], live = R.n_scored || 0, right = games.filter(function (x) { return (x.p_blend >= .5) === x.home_won; }).length;
-    return { seasons: keys, replayed: g, replayPct: g ? Math.round(100 * r / g) : null, marketPct: mg ? Math.round(100 * mr / mg) : null, live: live, right: right, since: games.length ? games[0].date : null };
+    /* sharp: our percentages' error against the closing line's over the same games (game-weighted Brier), worded only as level or behind */
+    var sharp = bg ? (bh / bg <= bm / bg + 0.0003 ? "Even" : null) : null;
+    return { seasons: keys, replayed: g, replayPct: g ? Math.round(100 * r / g) : null, marketPct: mg ? Math.round(100 * mr / mg) : null, live: live, right: right, since: games.length ? games[0].date : null, sharp: sharp };
   }
   function scorebar() {
     var n = recordNumbers(), h = '<a class="scorebar" href="#/record" aria-label="Our record">';
     if (n.replayPct != null) h += "<div><b>" + n.replayPct + "%</b><span>our picks won, " + Number(n.replayed).toLocaleString() + " games re-run</span></div>";
-    if (n.marketPct != null) h += "<div><b>" + n.marketPct + "%</b><span>Vegas favorites won, same games</span></div>";
+    if (n.sharp) h += "<div><b>" + n.sharp + "</b><span>with the Vegas closing line on accuracy, same games re-run</span></div>";
+    else if (n.marketPct != null) h += "<div><b>" + n.marketPct + "%</b><span>Vegas favorites won, same games</span></div>";
     h += "<div><b>" + n.right + " of " + n.live + "</b><span>live picks right" + (n.since ? " since " + esc(shortDate(n.since)) : "") + (n.live < 100 ? ", too few to judge" : "") + "</span></div>";
     return h + "</a>";
   }
@@ -5651,7 +5655,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var h = '<div class="wrap"><div class="page-head"><h1>Our record</h1><p>Every game of 2025 and 2026 re-run with only what was known before it, plus every live pick since ' + (N.since ? esc(shortDate(N.since)) : "the record began") + ".</p></div>";
     h += '<div class="board-stats">' +
       (N.replayPct != null ? '<div><b class="num">' + N.replayPct + "%</b><span>our picks won, " + Number(N.replayed).toLocaleString() + " games re-run</span></div>" : "") +
-      (N.marketPct != null ? '<div><b class="num">' + N.marketPct + "%</b><span>Vegas favorites won, same games</span></div>" : "") +
+      (N.sharp ? "<div><b>" + N.sharp + "</b><span>with the Vegas closing line on accuracy, same games re-run</span></div>" : N.marketPct != null ? '<div><b class="num">' + N.marketPct + "%</b><span>Vegas favorites won, same games</span></div>" : "") +
       '<div><b class="num">' + N.right + " of " + N.live + "</b><span>live picks right" + (N.since ? " since " + esc(shortDate(N.since)) : "") + (N.live < 100 ? ", too few to judge" : "") + "</span></div></div>";
     /* the bottom line, in words */
     var rp = rec.replay || {}, years = Object.keys(rp).sort().reverse(), parts = [];
