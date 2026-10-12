@@ -173,6 +173,11 @@ details.more[open] summary::before { content: "\2212"; }
 .wt-ctl button svg { width: 20px; height: 20px; fill: currentColor; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
 .wt-ctl .wt-go { flex: 1 1 auto; background: var(--btn); color: var(--btn-ink); border-color: var(--btn); }
 .wt-ctl input[type=range] { flex: 1 1 100%; accent-color: var(--btn); min-height: 28px; }
+.hero.compact .vs-pct { font-size: 40px; margin: 2px 0 0; }
+.hero.compact .vs-name { font-size: 22px; }
+.hero.compact .vs-sp small, .hero.compact .hero-series, .hero.compact .hero-venue, .hero.compact .vs-abbr { display: none; }
+.hero.compact .vs-call { font-size: 20px; margin-top: 8px; }
+.hero.compact .vs-at { margin-top: 18px; }
 .card-call { font-family: var(--display); font-weight: 700; font-size: 21px; line-height: 1.15; color: var(--ink); margin: 0 0 6px; text-wrap: balance; }
 .card-call.hit::before, .card-call.miss::before { display: inline-block; margin-right: 6px; font-size: 16px; vertical-align: 1px; }
 .card-call.hit::before { content: "\2713"; color: var(--good); }
@@ -2215,7 +2220,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var fav = favorite(f);
 
     var back = f.date && f.date !== D.date ? "#/day/" + f.date : "#/", tcg = teamColors(f);
-    var html = '<div class="game" style="' + teamStyle(tcg) + '"><section class="hero"><div class="wrap"><a class="back" href="' + back + '">' + CHEV_LEFT + "Back to games</a>" +
+    /* Before first pitch, the tabs past the Summary get a shorter header so the tab's own content starts higher. */
+    var html = '<div class="game" style="' + teamStyle(tcg) + '"><section class="hero' + (!actual && !lv && tab !== "summary" ? " compact" : "") + '"><div class="wrap"><a class="back" href="' + back + '">' + CHEV_LEFT + "Back to games</a>" +
       '<h1 class="visually-hidden">' + esc(nickname(f.away.name) + " at " + nickname(f.home.name) + (f.date ? ", " + dateLabel(f.date) : "")) + "</h1>";
     var gctx = contextFor(f.game_pk), gline = contextLine(f, gctx, false) || SERIES[f.game_type], gw = weatherLine(gctx);
     html += '<div class="hero-grid' + (!actual && !lv ? " pre" : "") + '"><div class="hero-main"><p class="hero-meta">' + statusPill(st, lv ? liveWhere(lv) : STATE_TEXT[st], lv && !lv._final) + esc([gline, timeET(f.scheduled_start) + " ET"].filter(Boolean).join(". ")) + "</p>";
