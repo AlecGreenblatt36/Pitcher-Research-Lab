@@ -86,12 +86,18 @@ def test_reconstruct_and_replay(tmp_path):
             assert all(sum(x[k]) == 4 for k in ('h_hist', 'hr_hist', 'bb_hist', 'k_hist'))
             for p_, k in (('p_hit', 'h_hist'), ('p_hr', 'hr_hist'), ('p_bb', 'bb_hist'), ('p_k', 'k_hist')):
                 assert abs(x[p_] - (1 - x[k][0] / 4)) < 1e-9
+            # KEYS-02: worlds his team won with his home run (at most the worlds he homered) and with his two or more hits
+            assert 0 <= x['kw'][0] <= 4 - x['hr_hist'][0] and 0 <= x['kw'][1] <= 4 - x['h_hist'][0] - x['h_hist'][1]
 
     # BULLPEN-03: each side's bullpen candidates with their share of worlds pitched in and whether they pitched
     out_sl = replay_dates(h, app, g, dates, model_path=plain, model_sha256=sha256_file(plain), history_path=history_path, hazard_path=hazard, n_sims=4,
                           starter_lines=True, log=lambda m: None)
     seen = 0
     for r in out_sl:
+        # KEYS-02: per side over the n worlds: scored first, that and won, won, starter 18+ outs, that and won
+        ka, kh = r['starters']['away']['keys'], r['starters']['home']['keys']
+        assert kh[2] == r['home_wins'] and ka[2] == r['n'] - r['home_wins'] - r['ties']
+        assert ka[0] + kh[0] <= r['n'] and all(k[1] <= min(k[0], k[2]) and k[4] <= min(k[3], k[2]) for k in (ka, kh))
         for side in ('away', 'home'):
             st = r['starters'][side]
             if 'relievers' not in st:

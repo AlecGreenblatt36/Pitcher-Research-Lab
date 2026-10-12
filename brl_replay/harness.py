@@ -438,6 +438,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
             top2_ = {side: set(str(b_.player_id) for b_ in sorted(teams[side].bullpen, key=lambda b_: -float(dict(getattr(b_, "usage", None) or ()).get("share14", 0.0)))[:2])
                      for side in ("away", "home")} if starter_lines else None
             nhr = {side: 0 for side in ("away", "home")}                                          # home runs allowed, summed over worlds
+            keys_n = {side: np.zeros(5, int) for side in ("away", "home")}                       # KEYS-02: scored first, and won; won; starter 18+ outs, and won
             inn_sum = {side: np.zeros(10) for side in ("away", "home")}                           # runs by inning 1-9 and extras, summed
             wt = WinTable() if win_states else None
             halves = (WinTable(), WinTable()) if win_states == "split" else None
@@ -446,7 +447,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                 # per lineup hitter: worlds with >=1 hit, >=1 home run, >=1 strikeout, >=1 walk; sums of PA, hits, home runs; hits histogram
                 hl = {(side, str(b.player_id)): {"any": np.zeros(4), "sum": np.zeros(3), "h_hist": np.zeros(6, int), "hr_hist": np.zeros(4, int),
                                                  "bb_hist": np.zeros(5, int), "k_hist": np.zeros(5, int),
-                                                 "hs_hist": np.zeros((6, 6), int)}
+                                                 "hs_hist": np.zeros((6, 6), int), "kw": np.zeros(2, int)}
                       for side in ("away", "home") for b in teams[side].lineup}
             for si, s in enumerate(seeds):
                 if dform is not None:
@@ -470,9 +471,13 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                     hw += 1
                 elif r.winner not in ("away", "home"):
                     ties += 1
+                ia_ = min((i_ for i_, v_ in ir_["away"].items() if v_ > 0), default=99); ih_ = min((i_ for i_, v_ in ir_["home"].items() if v_ > 0), default=99)
+                fs_ = "away" if ia_ < 99 and ia_ <= ih_ else ("home" if ih_ < 99 else None)    # the road team bats first in each inning
                 for side in ("away", "home"):
                     line = r.pitcher_lines.get(teams[side].starter.player_id)
                     s_outs[side].append(int(line["outs_recorded"]) if line else 0)
+                    won_, sp6_ = r.winner == side, bool(line and int(line["outs_recorded"]) >= 18)
+                    keys_n[side] += (fs_ == side, fs_ == side and won_, won_, sp6_, sp6_ and won_)
                     if sl is not None and line:
                         for m_, f_ in (("k", "strikeouts"), ("bf", "batters_faced"), ("h", "hits_allowed"), ("bb", "walks_hbp"), ("outs", "outs_recorded")):
                             arr = sl[side][m_]; arr[min(int(line[f_]), len(arr) - 1)] += 1
@@ -511,6 +516,8 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                         a_["h_hist"][min(c_[1], 5)] += 1
                         a_["hr_hist"][min(c_[2], 3)] += 1; a_["bb_hist"][min(c_[4], 4)] += 1; a_["k_hist"][min(c_[3], 4)] += 1
                         a_["hs_hist"][min(c_[1], 5), min(c_[5], 5)] += 1          # hits by singles among them (total bases 2+ needs both)
+                        won_h = r.winner == bid_[0]
+                        a_["kw"] += (c_[2] > 0 and won_h, c_[1] >= 2 and won_h)  # KEYS-02: worlds his team won with his home run, with his 2+ hits
                     for bid_ in hl:
                         if bid_ not in cnt:
                             hl[bid_]["h_hist"][0] += 1; hl[bid_]["hr_hist"][0] += 1; hl[bid_]["bb_hist"][0] += 1; hl[bid_]["k_hist"][0] += 1
@@ -532,7 +539,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                                       "mean_pa": round(float(a_["sum"][0] / n_sims), 3), "mean_h": round(float(a_["sum"][1] / n_sims), 4),
                                       "mean_hr": round(float(a_["sum"][2] / n_sims), 4), "h_hist": a_["h_hist"].tolist(),
                                       "hr_hist": a_["hr_hist"].tolist(), "bb_hist": a_["bb_hist"].tolist(), "k_hist": a_["k_hist"].tolist(),
-                                      "hs_hist": a_["hs_hist"].tolist(),
+                                      "hs_hist": a_["hs_hist"].tolist(), "kw": a_["kw"].tolist(),
                                       "prior_h_rate": round(float(ph_), 4), "prior_hr_rate": round(float(phr_), 4), "prior_pa_365": prior_pa_,
                                       "actual": act_bat.get((int(g.game_pk), int(b.player_id)))})
                 records[-1]["hitters"] = out_h
@@ -623,6 +630,8 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                         for pid_, inn_, lead_ in ents_:
                             k_ = entry_key(inn_, lead_, str(pid_) in top2_[side]); real_[k_] = real_.get(k_, 0) + 1
                         st_out[side]["entries"] = {"sim": {k_: round(v_ / n_sims, 4) for k_, v_ in sorted(ent_n[side].items())}, "real": real_}
+                for side in ("away", "home"):
+                    st_out[side]["keys"] = [int(x) for x in keys_n[side]]       # KEYS-02, over n worlds: first, first and won, won, sp 18+ outs, that and won
                 records[-1]["starters"] = st_out
                 records[-1]["innings"] = {"sim_mean": {sd_: [round(float(v_) / n_sims, 4) for v_ in inn_sum[sd_]] for sd_ in ("away", "home")},
                                           "actual_first_scores": act_innings.get(int(g.game_pk))}

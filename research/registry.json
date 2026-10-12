@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 330,
- "rows": 333,
+ "experiments": 331,
+ "rows": 334,
  "records": {
   "ACC-01": [
    {
@@ -5218,6 +5218,22 @@
     "runs": [],
     "frozen_commits": [],
     "status": "display"
+   }
+  ],
+  "KEYS-02": [
+   {
+    "id": "KEYS-02",
+    "columns": {
+     "ID": "KEYS-02",
+     "Attempt": "Are KEYS-01's \"What decides it\" chances right on real games? Replays with starter_lines and hitter_lines now record, per team-game over its worlds, how often the team scored first and won when it did, won, its starter got 18 or more outs and won when he did (starters[side]['keys']), and per lineup hitter the worlds his team won with his home run and with his two or more hits (hitters[i]['kw']); recording only (paired streams keep the games of BULLPEN-05's replays). Replays: BULLPEN-05's settings (the live regular-season settings) plus hitter_lines, v2-prod4-keys-1000-<season>, 2025 and 2026. Scored with tools/brl_keys_check.py: per kind, the mean simulated chance of the event against how often it happened, and over team-games where it happened (did not) the mean simulated win chance given it (given not) against the real win rate. The simulator's own conditionals (the page shifts them to the pick; the mix of the raw ones is the simulator's win chance). Tied finals left out; the hitter and starter kinds also scored inside the page's 8% to 92% window",
+     "Disposition and evidence": "**Registered in the commit that added this row, before its replays.** Predictions, each in both seasons: (1) scoring first: share within 2 points, win chance if and else each within 3 points; (2) starter 18+ outs (in the window): share within 3 points, if within 4, else within 3; (3) hitter home run (in the window): share within 1.5 points, if within 4, else within 2; (4) hitter 2+ hits (in the window): share within 2, if within 4, else within 2. Decision rule: a kind that meets its prediction in both seasons stays in \"What decides it\" and How it works says it was checked on two seasons re-run; a kind that misses any part in either season is taken off the page (its counts stay in the box) until a fix passes the same test",
+     "Delta corrected Brier, 2026": "pending"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "pending"
    }
   ],
   "RUNLINE-01": [
