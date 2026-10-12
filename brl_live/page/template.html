@@ -188,6 +188,12 @@ details.more[open] summary::before { content: "\2212"; }
 .g-pieces { margin: 6px 0 0; font-size: 14px; color: var(--muted); }
 .to-mu { margin: 0 0 26px; color: var(--muted); }
 .linkish { border: 0; background: none; padding: 0; min-height: 44px; font: inherit; font-weight: 700; color: var(--ink); text-decoration: underline; cursor: pointer; }
+.ka-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+.ka { display: grid; grid-template-columns: 78px minmax(0, 1fr); gap: 10px; align-items: start; background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 10px 12px; }
+.ka-tag { font-family: var(--display); font-weight: 700; font-size: 15px; text-align: center; border-radius: 6px; padding: 2px 0; background: var(--tint); color: var(--muted); }
+.ka.did .ka-tag { background: var(--board); color: var(--chalk); }
+.ka-t b { display: block; }
+.ka-t small { display: block; color: var(--muted); font-size: 14px; }
 .card-call { font-family: var(--display); font-weight: 700; font-size: 21px; line-height: 1.15; color: var(--ink); margin: 0 0 6px; text-wrap: balance; }
 .card-call.hit::before, .card-call.miss::before { display: inline-block; margin-right: 6px; font-size: 16px; vertical-align: 1px; }
 .card-call.hit::before { content: "\2713"; color: var(--good); }
@@ -2813,13 +2819,13 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     hs.forEach(function (x) { if (pick.length < 2 && (!pick.length || pick[0].k.side !== x.k.side || hs.filter(function (y) { return y.k.side !== pick[0].k.side; }).length === 0)) pick.push(x); });
     return out.concat(pick).sort(function (a, b) { return b.w - a.w; }).slice(0, 5).map(function (x) { return x.k; });
   }
-  function keyText(f, box, k) {
-    var names = keyNames(box), who = names[k.side + ":" + k.player_id] || "", team = "the " + nickname(f[k.side].name);
-    return k.kind === "first" ? [team.charAt(0).toUpperCase() + team.slice(1) + " score first", "They do", "They don't"]
-      : k.kind === "lead5" ? [team.charAt(0).toUpperCase() + team.slice(1) + " lead after 5 innings", "They do", "They don't"]
-      : k.kind === "sp6" ? [lastName(who) + " goes 6 innings or more", "He does", "He doesn't"]
-      : k.kind === "hr" ? [lastName(who) + " hits a home run", "He does", "He doesn't"]
-      : [lastName(who) + " gets 2 or more hits", "He does", "He doesn't"];
+  function keyText(f, box, k, past) {     /* past: after the final, the same keys in the past tense */
+    var names = keyNames(box), who = names[k.side + ":" + k.player_id] || "", team = "the " + nickname(f[k.side].name), T = team.charAt(0).toUpperCase() + team.slice(1);
+    return k.kind === "first" ? [T + (past ? " scored first" : " score first"), "They do", "They don't"]
+      : k.kind === "lead5" ? [T + (past ? " led after 5 innings" : " lead after 5 innings"), "They do", "They don't"]
+      : k.kind === "sp6" ? [lastName(who) + (past ? " went 6 innings or more" : " goes 6 innings or more"), "He does", "He doesn't"]
+      : k.kind === "hr" ? [lastName(who) + (past ? " hit a home run" : " hits a home run"), "He does", "He doesn't"]
+      : [lastName(who) + (past ? " got 2 or more hits" : " gets 2 or more hits"), "He does", "He doesn't"];
   }
   /* The simulated games alone can lean a little differently from our pick (which also uses the team ratings and the
      betting line). So both win chances move by the same amount on the log-odds scale until, mixed by how often the
@@ -2843,6 +2849,29 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         '<p class="key-who">' + esc(team) + " win:</p>" + bar(tx[1], al[0], "yes") + bar(tx[2], al[1], "no") + "</li>";
     });
     return h + "</ol></section>";
+  }
+  /* After the final: the keys we showed before the game, and whether each one happened (KEYS-01's counts against the
+     real box score). Not a grade: what decided the real game, read against how often it happened in our games. */
+  function keysAfter(f, box, real) {
+    var ks = gameKeys(f, box);
+    if (!ks.length || !real || !real.batting || !real.innings) return "";
+    var inn = real.innings, first = function (side) { var xs = Object.keys(inn[side] || {}).filter(function (k) { var v = inn[side][k]; return +(v && typeof v === "object" ? v.R : v) > 0; }).map(Number); return xs.length ? Math.min.apply(null, xs) : 99; };
+    var fa = first("away"), fh = first("home"), scoredFirst = fa === 99 && fh === 99 ? null : fa <= fh ? "away" : "home";
+    var row = function (side, pid, list) { return ((real[list] || {})[side] || []).filter(function (r) { return String(r.player_id) === String(pid); })[0] || null; };
+    var won = real.score ? (real.score.home > real.score.away ? "home" : "away") : null;
+    var items = ks.map(function (k) {
+      var did = null;
+      if (k.kind === "first") did = scoredFirst == null ? null : scoredFirst === k.side;
+      else if (k.kind === "lead5") did = null;
+      else if (k.kind === "sp6") { var p = row(k.side, k.player_id, "pitching"); did = p ? (p.outs || 0) >= 18 : false; }
+      else if (k.kind === "hr") { var b = row(k.side, k.player_id, "batting"); did = b ? (b.HR || 0) >= 1 : null; }
+      else if (k.kind === "h2") { var b2 = row(k.side, k.player_id, "batting"); did = b2 ? (b2.H || 0) >= 2 : null; }
+      if (did == null) return "";
+      var tx = keyText(f, box, k, true), al = keyAligned(f, k), team = nickname(f[k.side].name);
+      return '<li class="ka ' + (did ? "did" : "didnt") + '"><span class="ka-tag">' + (did ? "Happened" : "Didn't") + '</span><span class="ka-t"><b>' + esc(tx[0]) + "</b><small>" +
+        esc(Math.round(k.share * 100) + " in 100 of our games. When " + (did ? "it did" : "it did not") + ", the " + team + " won " + pct(did ? al[0] : al[1]) + " of the time" + (won ? (won === k.side ? "; they won this one." : "; they lost this one.") : ".")) + "</small></span></li>";
+    }).join("");
+    return items ? '<section class="sec"><h2>What decided it</h2><p class="lede">The things we said would swing this game, and whether they happened.</p><ul class="ka-list">' + items + "</ul></section>" : "";
   }
   function forecastStory(f, box, s) {
     if (f.home_win_probability == null) return "";
@@ -2963,7 +2992,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (!real) return h0 + (versions || "") + projectedSummary(f, s, box, actual, actualBox, v);
     /* With the real game on: did we get it right first (after the final), then the real game, then the game we
        projected folded under one line (its versions and the full simulated game open from there). */
-    if (actual && actualBox) h0 += howClose(f, box, actualBox, s);
+    if (actual && actualBox) h0 += howClose(f, box, actualBox, s) + keysAfter(f, box, actualBox);
     h0 += realSummary(f, box, real, lv, liveSlot);     /* the at-bat card sits under the win chance chart */
     var pv = box && box.samples && box.samples.length ? variantsFor(box, f).filter(function (x) { return x.key === "proj"; })[0] : null;
     var proj = pv ? box.samples[pv.i].score : null, open = state.rpOpen["proj-" + f.game_pk];

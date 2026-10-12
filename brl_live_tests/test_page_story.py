@@ -80,3 +80,21 @@ def test_watch_steps_from_before_first_pitch_to_the_final():
     assert 'Final' in end and 'Dodgers win 1-0.' in end and '2 of 2' in end
     # a grounder is drawn at the fielder, not at its short carry
     assert 'wt-flight gb' in end
+
+
+def test_keys_after_the_final_read_the_real_box():
+    """After the final, each key shown before the game says whether it happened, from the real box score."""
+    s = _script()
+    box = {'teams': {'away': {'batting': [{'player_id': '1', 'name': 'Al Away'}], 'pitching': [{'player_id': '2', 'name': 'Sam Starter'}]},
+                     'home': {'batting': [{'player_id': '3', 'name': 'Hal Home'}], 'pitching': [{'player_id': '4', 'name': 'Pat Pitcher'}]}},
+           'keys': [{'side': 'home', 'kind': 'first', 'player_id': '', 'share': 0.5, 'win_if': 0.7, 'win_else': 0.4},
+                    {'side': 'away', 'kind': 'sp6', 'player_id': '2', 'share': 0.4, 'win_if': 0.6, 'win_else': 0.4},
+                    {'side': 'home', 'kind': 'hr', 'player_id': '3', 'share': 0.15, 'win_if': 0.75, 'win_else': 0.5}]}
+    real = {'innings': {'away': {'1': {'R': 0}, '2': {'R': 1}}, 'home': {'1': {'R': 0}, '2': {'R': 0}, '3': {'R': 2}}}, 'score': {'away': 1, 'home': 2},
+            'batting': {'away': [{'player_id': '1', 'H': 2, 'HR': 0}], 'home': [{'player_id': '3', 'H': 1, 'HR': 1}]},
+            'pitching': {'away': [{'player_id': '2', 'outs': 18}], 'home': [{'player_id': '4', 'outs': 15}]}}
+    js = ("var f={p:0.55,away:{name:'Dodgers'},home:{name:'Brewers'}};process.stdout.write(JSON.stringify(keysAfter(f," + json.dumps(box) + "," + json.dumps(real) + ")));")
+    out = _run(js, names_fn=('lastName', 'keyNames', 'gameKeys', 'keyText', 'keyAligned', 'keysAfter'))
+    assert 'The Brewers scored first' in out and 'ka didnt' in out           # the Dodgers scored first, in the 2nd
+    assert 'Starter went 6 innings or more' in out and out.count('ka did"') == 2
+    assert 'Home hit a home run' in out and 'they won this one' in out
