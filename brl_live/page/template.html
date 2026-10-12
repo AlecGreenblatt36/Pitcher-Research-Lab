@@ -43,7 +43,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --paper: #0A0F18; --surface: #121A27; --ink: #E6EBF3; --muted: #9AA6B9; --rule: #26324A; --rule-soft: #1A2335;
-    --board: #0F1B2F; --board-slot: #0A1322; --board-line: #263A58; --good: #4DB184; --bad: #E2595F;
+    --board: #0F1B2F; --board-slot: #0A1322; --board-line: #263A58; --good: #4DB184; --bad: #E2595F; --live: #F06A63;
     --hover: #182235; --rule-strong: #3E4D66; --mid: #5E6C84; --tint: #151E2D; --good-tint: #12291F;
     --grass: #1A2A20; --dirt: #2B271E; --field-line: #3B4B41;
   }
@@ -122,6 +122,13 @@ details.more[open] summary::before { content: "\2212"; }
 .card-ctx { font-size: 14px; color: var(--muted); margin: -2px 0 8px; }
 .sim-line { margin: 12px -16px 0; padding: 2px 16px 12px; background: var(--board); color: var(--chalk); }
 @media (min-width: 600px) { .sim-line { margin: 12px 0 0; border-radius: 12px; } }
+.bl { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
+.bl li { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 12px 14px; }
+.bl li > b { font-family: var(--display); font-size: 22px; line-height: 1; }
+.bl li > span:nth-child(2) { justify-self: end; align-self: center; color: var(--muted); font-size: 14px; }
+.bl-v { display: flex; flex-direction: column; font-size: 14px; color: var(--muted); margin-top: 6px; }
+.bl-v b { font-family: var(--display); font-weight: 700; font-size: 34px; line-height: 1; color: var(--ink); }
+.bl-w { grid-column: 1 / -1; font-size: 14px; color: var(--muted); margin-top: 6px; }
 .card-call { font-family: var(--display); font-weight: 700; font-size: 21px; line-height: 1.15; color: var(--ink); margin: 0 0 6px; text-wrap: balance; }
 .card-call.hit::before, .card-call.miss::before { display: inline-block; margin-right: 6px; font-size: 16px; vertical-align: 1px; }
 .card-call.hit::before { content: "\2713"; color: var(--good); }
@@ -174,7 +181,7 @@ details.more[open] summary::before { content: "\2212"; }
 .back svg { width: 16px; height: 16px; }
 .back:hover { color: var(--chalk); }
 .pill { display: inline-flex; align-items: center; gap: 6px; margin: 0 10px 4px 0; padding: 1px 10px; border-radius: 999px; font-weight: 700; font-size: 14px; line-height: 22px; vertical-align: 1px; background: rgba(255,255,255,.12); color: var(--chalk); }
-.pill.live { background: var(--live); color: #fff; }
+.pill.live { background: #C8312B; color: #fff; }
 .pill.final { background: var(--chalk); color: var(--board); }
 .pill i { width: 7px; height: 7px; border-radius: 50%; background: #fff; animation: pulse 1.8s ease-in-out infinite; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
@@ -397,7 +404,7 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .sr-team .big { font-family: var(--display); font-size: 22px; font-weight: 700; text-align: right; }
 .sr-team .pct { font-family: var(--display); font-size: 20px; font-weight: 600; text-align: right; color: var(--muted); }
 .sr-team.fav .pct { color: var(--ink); font-weight: 700; }
-.sr-team.out { opacity: .55; }
+.sr-team.out .abbr, .sr-team.out .team-name, .sr-team.out .big, .sr-team.out .pct { color: var(--muted); }
 .sr-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin: 8px 0 6px; }
 .sr-bar i { display: block; height: 100%; }
 .sr-games { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 6px; }
@@ -1250,6 +1257,22 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (lv && !lv._final) return '<p class="hero-call">Before first pitch we had ' + who + ".</p>";
     return '<p class="hero-call">Our pick: <b>' + who + "</b></p>";
   }
+  /* The header's plain-words line once the game is on: who leads and the chance from here, or who won. */
+  function heroStory(f, actual, lv) {
+    var fin = actual && actual.home != null ? actual : lv && lv._final && lv.state ? { home: lv.state.home_score, away: lv.state.away_score } : null;
+    if (fin) {
+      if (fin.home === fin.away) return "";
+      var w = fin.home > fin.away ? "home" : "away", l = w === "home" ? "away" : "home";
+      return '<p class="mu-call">' + esc(nickname(f[w].name) + " win " + fin[w] + "-" + fin[l]) + "</p>";
+    }
+    if (!lv || !lv.state || lv.home_win_probability == null) return "";
+    var hs = lv.state.home_score || 0, as = lv.state.away_score || 0, lead = hs === as ? null : hs > as ? "home" : "away", fh = lv.home_win_probability >= 0.5 ? "home" : "away";
+    var lp = fh === "home" ? lv.home_win_probability : 1 - lv.home_win_probability;
+    var n = Math.round(lp * 100) + " times in 100 from here", sc = Math.max(hs, as) + "-" + Math.min(hs, as);
+    return '<p class="mu-call">' + esc(!lead ? "Tied " + hs + "-" + as + ". The " + nickname(f[fh].name) + " win " + n + "."
+      : lead === fh ? "The " + nickname(f[lead].name) + " lead " + sc + " and win " + n + "."
+      : "The " + nickname(f[lead].name) + " lead " + sc + ", but the " + nickname(f[fh].name) + " still win " + n + ".") + "</p>";
+  }
   /* The win chance as one bar in the team colors, the away share from the left. */
   function heroBar(f, hp) {
     if (hp == null || !isFinite(hp)) return "";
@@ -1379,9 +1402,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   function cardCall(f, actual, lv) {
     var fin = actual && actual.home != null ? actual : lv && lv._final && lv.state ? { home: lv.state.home_score, away: lv.state.away_score } : null;
     if (fin && fin.home !== fin.away) {
-      var w = fin.home > fin.away ? "home" : "away", l = w === "home" ? "away" : "home", fav = favorite(f);
-      return '<p class="card-call ' + (w === fav ? "hit" : "miss") + '">' + esc(nickname(f[w].name) + " won " + fin[w] + "-" + fin[l] + ". " +
-        (w === fav ? "We had them at " + pct(winProb(f, w)) + "." : "We had the " + nickname(f[fav].name) + " at " + pct(winProb(f, fav)) + ".")) + "</p>";
+      var w = fin.home > fin.away ? "home" : "away", l = w === "home" ? "away" : "home", fav = favorite(f), flip = winProb(f, fav) < 0.52;
+      return '<p class="card-call' + (flip ? "" : w === fav ? " hit" : " miss") + '">' + esc(nickname(f[w].name) + " won " + fin[w] + "-" + fin[l] + ". " +
+        (flip ? "We had it a coin flip." : w === fav ? "We had them at " + pct(winProb(f, w)) + "." : "We had the " + nickname(f[fav].name) + " at " + pct(winProb(f, fav)) + ".")) + "</p>";
     }
     if (lv && lv.state && !lv._final && lv.home_win_probability != null) {
       var hs = lv.state.home_score, as = lv.state.away_score, lead = hs === as ? null : hs > as ? "home" : "away", fh = lv.home_win_probability >= 0.5 ? "home" : "away";
@@ -2170,7 +2193,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       html += '<div class="hero-row' + (isFav ? " fav" : "") + '"><span class="abbr"><i class="chip" style="background:var(--' + side + ')"></i>' + esc(t.abbr) + '</span><span class="team-name">' + esc(nickname(t.name)) +
         (starter ? "<small>" + esc(starter) + "</small>" + (spl ? '<small class="sp-sub">' + spl + "</small>" : "") : "") + '</span><span class="big num">' + esc(score) + '</span><span class="pct num">' + pct(win) + "</span></div>";
     });
-    html += heroBar(f, lv && lv.home_win_probability != null ? lv.home_win_probability : homeProb(f)) + callLine(f, actual, lv) + seriesLine(f) + '</div><div class="hero-side">';
+    html += heroBar(f, lv && lv.home_win_probability != null ? lv.home_win_probability : homeProb(f)) + heroStory(f, actual, lv) + callLine(f, actual, lv) + seriesLine(f) + '</div><div class="hero-side">';
     if (actual && actualBox && actualBox.innings) {
       html += lineScore(f, actualBox);
       html += '<p class="hero-note">' + (actualBox.plays && actualBox.plays.length ? "Final. The tabs show the real game and the game we projected before first pitch." : "The line score is the real game. The tabs show what we projected before first pitch.") + "</p>";
@@ -5454,13 +5477,14 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       (N.marketPct != null ? '<div><b class="num">' + N.marketPct + "%</b><span>Vegas favorites won, same games</span></div>" : "") +
       '<div><b class="num">' + N.right + "-" + (N.live - N.right) + "</b><span>our live picks" + (N.since ? " since " + esc(shortDate(N.since)) : "") + "</span></div></div>";
     /* the bottom line, in words */
-    var rp = rec.replay || {}, years = Object.keys(rp).sort(), parts = [];
+    var rp = rec.replay || {}, years = Object.keys(rp).sort().reverse(), parts = [];
     years.forEach(function (y) {
       var x = rp[y]; if (!x.headline || !x.market) return;
       var d = x.headline.better_than_coin_pct - x.market.better_than_coin_pct;
-      parts.push("In " + y + " (" + Number(x.games).toLocaleString() + " games) our pick won " + x.headline.picks_right_pct.toFixed(0) + "% and the Vegas favorite " + x.market.picks_right_pct.toFixed(0) + "%. Our percentages were " + (Math.abs(d) < 0.15 ? "about as accurate as Vegas" : d > 0 ? "a little more accurate than Vegas" : "a little less accurate than Vegas"));
+      parts.push('<li><b>' + y + "</b><span>" + Number(x.games).toLocaleString() + ' games</span><span class="bl-v"><b class="num">' + x.headline.picks_right_pct.toFixed(0) + '%</b>our pick won</span><span class="bl-v"><b class="num">' + x.market.picks_right_pct.toFixed(0) +
+        '%</b>Vegas favorite won</span><span class="bl-w">Our percentages: ' + (Math.abs(d) < 0.15 ? "about as accurate as Vegas" : d > 0 ? "a little more accurate than Vegas" : "a little less accurate than Vegas") + (y === "2025" ? ". The at-bat model was tuned on 2025 games, so 2026 is the fairer test." : ".") + "</span></li>");
     });
-    if (parts.length) h += '<section class="sec"><h2>The bottom line</h2><p class="lede">' + esc(parts.join(". ")) + (years.indexOf("2025") >= 0 ? ". The at-bat model was tuned on 2025 games, so 2026 is the fairer test" : "") + ". Nobody picks much more than 57% of baseball games; the best team in baseball still loses 4 out of 10. What separates a good model is whether its percentages hold up: when it says 60%, that team should win about 60% of the time.</p></section>";
+    if (parts.length) h += '<section class="sec"><h2>The bottom line</h2><p class="lede">Baseball is close to a coin flip: the best team still loses about 4 games in 10, and nobody picks much more than 57% of games right. So the real test is whether the percentages hold up. When we say 60%, that team should win about 60 times in 100.</p><ul class="bl">' + parts.join("") + "</ul></section>";
     h += '<div id="rec-seasons"><p class="empty">Loading the two seasons\u2026</p></div>';
     h += replaySeasons(rec);
     h += propsRecord();
@@ -5539,13 +5563,13 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     ["Pitcher: works inside with the fastball", "fastballs inside", 8.7, 8.8, 5.8, 5.8], ["Pitcher: works away with the fastball", "fastballs away", 9.0, 8.6, 5.8, 5.4]];
   function tagChecksHtml() {
     var f = function (v) { return (v > 0 ? "+" : "") + v.toFixed(1); };
-    return '<h3 class="hz-h">The tags, a season later</h3><p class="note">Tagged from two seasons, then checked on the next one. Points against the league on the same pitches: what we said, then what happened.</p>' +
+    return '<details class="more" data-keep="tagchecks"' + (state.rpOpen.tagchecks ? " open" : "") + '><summary>The ' + TAG_CHECKS.length + ' tags, each checked a season later</summary><p class="note">Tagged from two seasons, then checked on the next one. Points against the league on the same pitches: what we said, then what happened.</p>' +
       '<div class="tbl-wrap tag-checks"><table class="box"><thead><tr><th scope="col">Tag</th><th scope="col">2026</th><th scope="col">2025</th></tr></thead><tbody>' +
       TAG_CHECKS.map(function (r) { return "<tr><td>" + esc(r[0]) + "<small>" + esc(r[1]) + "</small></td><td>" + f(r[2]) + " \u2192 <b>" + f(r[4]) + "</b></td><td>" + f(r[3]) + " \u2192 <b>" + f(r[5]) + "</b></td></tr>"; }).join("") +
-      '</tbody></table></div><p class="note">Every tag listed held in both seasons. Reads that did not hold up are not used: extra misses on hard fastballs, extra misses on the inside third, and for pitchers, falling behind first and allowing few chases.</p>' +
-      '<h3 class="hz-h">Other things we checked before saying them</h3><div class="tbl-wrap other-checks"><table class="box"><thead><tr><th scope="col">The question</th><th scope="col">What we found</th></tr></thead><tbody>' +
+      '</tbody></table></div><p class="note">Every tag listed held in both seasons. Reads that did not hold up are not used: extra misses on hard fastballs, extra misses on the inside third, and for pitchers, falling behind first and allowing few chases.</p></details>' +
+      '<details class="more" data-keep="otherchecks"' + (state.rpOpen.otherchecks ? " open" : "") + '><summary>' + OTHER_CHECKS.length + ' other things we checked before saying them</summary><div class="tbl-wrap other-checks"><table class="box"><thead><tr><th scope="col">The question</th><th scope="col">What we found</th></tr></thead><tbody>' +
       OTHER_CHECKS.map(function (r) { return "<tr><td>" + esc(r[0]) + "</td><td>" + esc(r[1]) + "</td></tr>"; }).join("") + "</tbody></table></div>" +
-      '<p class="note">Each was written down with its test before the numbers came in (the strikeout check is the exception: we described it after looking), and checked on games the fitted numbers never saw.</p>';
+      '<p class="note">Each was written down with its test before the numbers came in (the strikeout check is the exception: we described it after looking), and checked on games the fitted numbers never saw.</p></details>';
   }
   var OTHER_CHECKS = [
     ["Are the hitter chances on the Odds tab right?", "Close. Over two seasons re-run, the chance of at least one hit came within 1 point of how often hitters got one (61.2% against 61.3% in 2025, 61.6% against 60.7% in 2026), a home run within 0.6 points, and reaching by a walk or hit-by-pitch within about 2. The likeliest home-run hitters ran 1 to 2.3 points high. A correction fitted on one season did not hold up on the other (hits, two hits and walks got worse), so the chances are shown as the simulator gives them."],
@@ -5597,12 +5621,12 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     });
     h += '</ul><p class="note">The bar runs from 40% to 90%. Small groups bounce around more.</p></section>';
     order.sort();
-    h += '<section class="sec"><h2>Month by month</h2><p class="lede">How often our pick won each month, next to how often the Vegas favorite won.</p><div class="tbl-wrap"><table class="box"><thead><tr><th scope="col">Month</th><th scope="col">Games</th><th scope="col">Our picks</th><th scope="col">Vegas</th></tr></thead><tbody>';
+    h += '<section class="sec"><details class="more" data-keep="months"' + (state.rpOpen.months ? " open" : "") + '><summary>Month by month</summary><p class="lede">How often our pick won each month, next to how often the Vegas favorite won.</p><div class="tbl-wrap"><table class="box"><thead><tr><th scope="col">Month</th><th scope="col">Games</th><th scope="col">Our picks</th><th scope="col">Vegas</th></tr></thead><tbody>';
     order.forEach(function (k) {
       var m = months[k], d = new Date(k + "-15T12:00:00Z");
       h += "<tr><td>" + esc(d.toLocaleDateString("en-US", { timeZone: "UTC", month: "short", year: "numeric" })) + "</td><td>" + m.n + "</td><td>" + Math.round(100 * m.hit / m.n) + "%</td><td>" + (m.mn ? Math.round(100 * m.mhit / m.mn) + "%" : "\u2013") + "</td></tr>";
     });
-    h += '</tbody></table></div><p class="note">Vegas is the closing line, where we have it.</p></section>';
+    h += '</tbody></table></div><p class="note">Vegas is the closing line, where we have it.</p></details></section>';
     /* team by team for the latest season: wins next to what our pregame numbers added up to */
     var yr = years.map(Number).sort().reverse()[0], S2 = SEASONS[yr], teams = {};
     if (S2 && S2.doc && S2.doc.games) S2.doc.games.forEach(function (g) {
