@@ -2256,7 +2256,10 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         html += '<div class="vs-team ' + side + (side === fav ? " fav" : "") + '"><span class="vs-abbr">' + esc(t.abbr) + '</span><span class="vs-name">' + esc(nickname(t.name)) + '</span><span class="vs-pct num">' + pct(winProb(f, side)) + "</span>" +
           (starter ? '<span class="vs-sp">' + esc(starter) + (spl ? '<small class="sp-sub">' + spl + "</small>" : "") + "</span>" : "") + "</div>";
       });
-      html += "</div>" + heroBar(f, homeProb(f)) + '<p class="vs-call">' + esc(storyHeadline(f)) + "</p>" + seriesLine(f) + "</div></div></div></section>";
+      /* the two numbers behind the pick, in view: the simulation's own and Vegas's */
+      var hpS = f.home_win_probability, pmH = marketProb(D.market && D.market[f.game_pk]), side2 = function (p) { var sd = p >= .5 ? "home" : "away"; return nickname(f[sd].name) + " " + pct(sd === "home" ? p : 1 - p); };
+      var behind = (hpS != null ? "Simulation alone: " + side2(hpS) + "." : "") + (pmH != null ? " Vegas: " + side2(pmH) + "." : "");
+      html += "</div>" + heroBar(f, homeProb(f)) + '<p class="vs-call">' + esc(storyHeadline(f)) + "</p>" + (behind ? '<p class="hero-call">' + esc(behind.trim()) + "</p>" : "") + seriesLine(f) + "</div></div></div></section>";
     } else {
     html += '<div class="hero-cols"><span></span><span>' + (actual ? "Final" : lv ? "Score" : (v && v.key !== "proj" ? v.label : "Projected")) + "</span><span>Win</span></div>";
     ["away", "home"].forEach(function (side) {
