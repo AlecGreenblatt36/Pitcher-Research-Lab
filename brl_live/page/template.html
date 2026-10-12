@@ -181,6 +181,8 @@ details.more[open] summary::before { content: "\2212"; }
 /* before first pitch the win chance is the headline number; the projected score is a quieter guide */
 .card.pre .team-row .big { font-size: 22px; font-weight: 600; color: var(--muted); }
 .card.pre .team-row .pct { font-size: 28px; font-weight: 700; }
+.call.even { background: var(--tint); }
+.g-pieces { margin: 6px 0 0; font-size: 14px; color: var(--muted); }
 .card-call { font-family: var(--display); font-weight: 700; font-size: 21px; line-height: 1.15; color: var(--ink); margin: 0 0 6px; text-wrap: balance; }
 .card-call.hit::before, .card-call.miss::before { display: inline-block; margin-right: 6px; font-size: 16px; vertical-align: 1px; }
 .card-call.hit::before { content: "\2713"; color: var(--good); }
@@ -855,7 +857,7 @@ details.more.proj-fold > summary { font-family: var(--display); font-size: 21px;
 .games-list .g-top span { color: var(--muted); font-size: 15px; }
 .games-list .final { font-family: var(--display); font-size: 19px; font-weight: 600; margin: 2px 0 8px; }
 .games-list .calls { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-@media (min-width: 560px) { .games-list .calls { grid-template-columns: repeat(4, 1fr); } }
+@media (min-width: 560px) { .games-list .calls { grid-template-columns: repeat(2, minmax(0, 220px)); } }
 .games-list .call { border: 1px solid var(--rule-soft); border-radius: 8px; padding: 6px 8px; min-width: 0; }
 .games-list .call small { display: block; color: var(--muted); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .games-list .call b { font-family: var(--display); font-size: 19px; font-weight: 700; }
@@ -5675,15 +5677,18 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     h += '<section class="sec" id="plan-record" hidden></section>';
     h += '<section class="sec"><h2>Game by game</h2><ol class="games-list">';
     (rec.games || []).slice().reverse().forEach(function (g) {
+      /* our pick and Vegas as the two calls; the pieces as one quiet line. A pick under 52% is a coin flip, neither right nor wrong. */
       var call = function (label, p) {
         if (p == null) return "";
-        var fav = p >= .5 ? g.home : g.away, hit = (p >= .5) === g.home_won;
-        return '<div class="call ' + (hit ? "yes" : "no") + '"><small>' + label + "</small><b>" + esc(fav) + " " + pct(p >= .5 ? p : 1 - p) + "</b></div>";
+        var fav = p >= .5 ? g.home : g.away, hit = (p >= .5) === g.home_won, flip = Math.max(p, 1 - p) < 0.52;
+        return '<div class="call ' + (flip ? "even" : hit ? "yes" : "no") + '"><small>' + label + "</small><b>" + esc(fav) + " " + pct(p >= .5 ? p : 1 - p) + "</b></div>";
       };
+      var piece = function (label, p) { return p == null ? null : label + " " + (p >= .5 ? g.home : g.away) + " " + pct(p >= .5 ? p : 1 - p); };
+      var pieces = [g.p_ours != null && Math.abs(g.p_ours - g.p_blend) >= 0.005 ? piece("our model", g.p_ours) : null, piece("simulator", g.p_sim), piece("team ratings", g.p_team)].filter(Boolean);
       h += '<li><div class="g-top"><b>' + esc(g.away + " at " + g.home) + "</b><span>" + esc(shortDate(g.date)) + '</span></div><div class="final num">Final: ' + esc(g.away) + " " + g.actual.away + ", " + esc(g.home) + " " + g.actual.home + '</div><div class="calls">' +
-        call("Our pick", g.p_blend) + (g.p_ours != null && Math.abs(g.p_ours - g.p_blend) >= 0.005 ? call("Our model", g.p_ours) : "") + call("Simulator", g.p_sim) + call("Team ratings", g.p_team) + call("Vegas", g.p_market) + "</div></li>";
+        call("Our pick", g.p_blend) + call("Vegas", g.p_market) + "</div>" + (pieces.length ? '<p class="g-pieces">' + esc(pieces.join(", ").replace(/^./, function (c) { return c.toUpperCase(); })) + "</p>" : "") + "</li>";
     });
-    h += '</ol><p class="note">Green: the team we favored won.</p></section>';
+    h += '</ol><p class="note">Green: the team favored won. Gray: a coin flip (under 52%).</p></section>';
     app.innerHTML = h + "</div>";
     fillSeasonChecks();
     withPlanRecord(function (R) {
