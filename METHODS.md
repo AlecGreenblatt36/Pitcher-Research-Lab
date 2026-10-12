@@ -265,7 +265,9 @@ its own simulated games, how often each team scores first, leads after five, get
 often each hitter homers or gets two hits, with the team's wins in each case. The page shows the few that swing the
 game most (the swing in the win chance times the square root of share x (1 - share)), with both chances shifted by the
 same amount on the log-odds scale so that, mixed by the share, they give the published pick (which also uses the team
-model and the betting line). These are counts from the simulation and have not been checked against real games yet.
+model and the betting line). KEYS-02 checked the simulator's own conditional chances on every game of 2025 and 2026
+re-run: teams that scored first won 67.4% and 66.8% of the time against 67.2% simulated, and the starter's 18 outs, a
+hitter's home run and a hitter's two hits came within about a point both when they happened and when they did not.
 
 ## The season's level, re-anchored in-season (October 11, 2026)
 

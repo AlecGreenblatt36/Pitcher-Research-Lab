@@ -93,7 +93,16 @@ queue behind the shards (seen October 11 at 16:50 UTC). Check-only replays (n_si
 - A live run that reports "blocked" with HTTP 409 lost its writes to other writers on the branch; the next run tries
   again. Many in a row means something is committing every second (October 10: rebuild runs).
 
-### In flight (updated 8:35 p.m. Eastern October 11, by `date -u`)
+### In flight (updated 10:05 p.m. Eastern October 11, by `date -u`)
+
+- October 11, 10:05 p.m.: KEYS-02 held every gate: the What decides it chances are within about a point of real games
+  in 2025 and 2026 (scored first: 67.2% simulated against 67.4% and 66.8% real). BULLPEN-05 found the choice model gives
+  the top two arms 20% of real held-out entries against 16.6%; BULLPEN-06 (a heavy week and the pool's two most used
+  arms; held-out log-likelihood -1.7229 and -1.6960 from -1.7651 and -1.7333) is registered and replaying (runs
+  38193362713 for 2025 and 38193385340 for 2026, tags v2-prod4-choice6-1000-<season>). Score with
+  tools/brl_bullpen_entries.py and tools/brl_bullpen_cal.py on those runs, and tools/replay_compare.py against
+  BULLPEN-05's (38186824402, 38186847009). If it passes, refit brl_live/reliever_choice.json on 2023 to 2026 with
+  --features 6 and switch it on. WATCH-01 (play-by-play player for the simulated game) is live.
 
 - October 11, 8:35 p.m.: Alec: the page is hard to read for someone who does not follow baseball and does not yet show
   what sets it apart (simulating the game before it happens). KEYS-01 (display): a game to come opens with the matchup

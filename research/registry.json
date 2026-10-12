@@ -5226,14 +5226,17 @@
     "columns": {
      "ID": "KEYS-02",
      "Attempt": "Are KEYS-01's \"What decides it\" chances right on real games? Replays with starter_lines and hitter_lines now record, per team-game over its worlds, how often the team scored first and won when it did, won, its starter got 18 or more outs and won when he did (starters[side]['keys']), and per lineup hitter the worlds his team won with his home run and with his two or more hits (hitters[i]['kw']); recording only (paired streams keep the games of BULLPEN-05's replays). Replays: BULLPEN-05's settings (the live regular-season settings) plus hitter_lines, v2-prod4-keys-1000-<season>, 2025 and 2026. Scored with tools/brl_keys_check.py: per kind, the mean simulated chance of the event against how often it happened, and over team-games where it happened (did not) the mean simulated win chance given it (given not) against the real win rate. The simulator's own conditionals (the page shifts them to the pick; the mix of the raw ones is the simulator's win chance). Tied finals left out; the hitter and starter kinds also scored inside the page's 8% to 92% window",
-     "Disposition and evidence": "**Registered in the commit that added this row, before its replays.** Predictions, each in both seasons: (1) scoring first: share within 2 points, win chance if and else each within 3 points; (2) starter 18+ outs (in the window): share within 3 points, if within 4, else within 3; (3) hitter home run (in the window): share within 1.5 points, if within 4, else within 2; (4) hitter 2+ hits (in the window): share within 2, if within 4, else within 2. Decision rule: a kind that meets its prediction in both seasons stays in \"What decides it\" and How it works says it was checked on two seasons re-run; a kind that misses any part in either season is taken off the page (its counts stay in the box) until a fix passes the same test",
-     "Delta corrected Brier, 2026": "pending"
+     "Disposition and evidence": "**Registered in the commit that added this row, before its replays.** Predictions, each in both seasons: (1) scoring first: share within 2 points, win chance if and else each within 3 points; (2) starter 18+ outs (in the window): share within 3 points, if within 4, else within 3; (3) hitter home run (in the window): share within 1.5 points, if within 4, else within 2; (4) hitter 2+ hits (in the window): share within 2, if within 4, else within 2. Decision rule: a kind that meets its prediction in both seasons stays in \"What decides it\" and How it works says it was checked on two seasons re-run; a kind that misses any part in either season is taken off the page (its counts stay in the box) until a fix passes the same test Results (runs 38190007667 and 38190031039, 4,846 and 4,854 team-games, ties left out; tools/brl_keys_check.py; simulated against real, points): (1) scoring first: win chance given it 67.2 against 67.4 (2025) and 67.2 against 66.8 (2026), given not 32.8 against 32.6 and 32.8 against 33.2 (the share is 50 against 50 by construction, one team or the other); (2) starter 18+ outs, in the window: share 41.5 against 39.7 and 40.8 against 38.5, if 63.8 against 64.1 and 63.9 against 64.7, else 40.3 against 41.0 and 40.5 against 41.2; (3) hitter home run, in the window: share 13.8 against 13.5 and 14.2 against 13.0, if 65.3 against 65.6 and 64.8 against 64.4, else 48.2 against 48.0 and 48.0 against 48.0; (4) hitter 2+ hits: share 23.0 against 22.0 and 23.4 against 21.5, if 63.1 against 64.1 and 63.0 against 63.8, else 46.1 against 46.0 and 46.0 against 46.2. Every prediction held in both seasons. **All four kinds stay in What decides it, and How it works says they were checked.** The starter's 18 outs and the hitters' 2+ hits run 1 to 2 points high in their share (the same lean as the outs and hits ladders), well inside the bounds.",
+     "Delta corrected Brier, 2026": "(1) to (4) held both seasons; all kinds stay"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38190007667",
+     "38190031039"
+    ],
     "frozen_commits": [],
-    "status": "pending"
+    "status": "(1) to (4) held both seasons; all kinds stay"
    }
   ],
   "WATCH-01": [
