@@ -201,19 +201,19 @@ details.more[open] summary::before { content: "\2212"; }
 
 /* Game hero */
 .hero { background-color: var(--board); background-image: linear-gradient(100deg, var(--away-d, var(--board)) 0%, var(--board) 50%, var(--home-d, var(--board)) 100%); color: var(--chalk); }
-.mu { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; gap: 8px; margin: 8px 0 4px; }
-.mu-team { display: flex; flex-direction: column; min-width: 0; }
-.mu-team.home { align-items: flex-end; text-align: right; }
-.mu-abbr { font-family: var(--display); font-weight: 700; font-size: 20px; letter-spacing: .02em; color: var(--chalk-dim); }
-.mu-name { font-family: var(--display); font-weight: 700; font-size: 26px; line-height: 1.05; color: var(--chalk); }
-.mu-pct { font-family: var(--display); font-weight: 700; font-size: 64px; line-height: 1; margin: 6px 0 4px; color: var(--chalk-dim); }
-.mu-team.fav .mu-pct { color: var(--chalk); }
-.mu-sp { font-size: 15px; color: var(--chalk); line-height: 1.35; }
-.mu-sp small { display: block; color: var(--chalk-dim); font-size: 14px; white-space: pre-line; }
-.mu-sp small:empty { display: none; }
-.mu-at { align-self: center; margin-top: 30px; font-size: 15px; color: var(--chalk-dim); }
-.mu-call { margin: 12px 0 0; font-family: var(--display); font-weight: 700; font-size: 26px; line-height: 1.1; color: var(--chalk); text-wrap: balance; }
-@media (max-width: 380px) { .mu-pct { font-size: 52px; } .mu-name { font-size: 22px; } }
+.vs { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; gap: 8px; margin: 8px 0 4px; }
+.vs-team { display: flex; flex-direction: column; min-width: 0; }
+.vs-team.home { align-items: flex-end; text-align: right; }
+.vs-abbr { font-family: var(--display); font-weight: 700; font-size: 20px; letter-spacing: .02em; color: var(--chalk-dim); }
+.vs-name { font-family: var(--display); font-weight: 700; font-size: 26px; line-height: 1.05; color: var(--chalk); }
+.vs-pct { font-family: var(--display); font-weight: 700; font-size: 64px; line-height: 1; margin: 6px 0 4px; color: var(--chalk-dim); }
+.vs-team.fav .vs-pct { color: var(--chalk); }
+.vs-sp { font-size: 15px; color: var(--chalk); line-height: 1.35; }
+.vs-sp small { display: block; color: var(--chalk-dim); font-size: 14px; white-space: pre-line; }
+.vs-sp small:empty { display: none; }
+.vs-at { align-self: center; margin-top: 30px; font-size: 15px; color: var(--chalk-dim); }
+.vs-call { margin: 12px 0 0; font-family: var(--display); font-weight: 700; font-size: 26px; line-height: 1.1; color: var(--chalk); text-wrap: balance; }
+@media (max-width: 380px) { .vs-pct { font-size: 52px; } .vs-name { font-size: 22px; } }
 .chip { display: inline-block; width: 6px; height: 24px; border-radius: 2px; margin-right: 9px; vertical-align: -3px; box-shadow: 0 0 0 1px rgba(255,255,255,.25); }
 .hero .wrap { padding-top: 14px; padding-bottom: 18px; }
 .back { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; margin-left: -4px; padding-right: 8px; color: var(--chalk-dim); text-decoration: none; font-weight: 700; font-size: 15px; }
@@ -872,6 +872,11 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
 /* Desktop: wider pages; the game header splits in two; summary, odds and record read in two columns. */
 @media (min-width: 1000px) {
   .hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr); gap: 0 48px; align-items: start; }
+  .hero-grid.pre { grid-template-columns: minmax(0, 1fr); max-width: 880px; margin: 0 auto; }
+  .hero-grid.pre .vs-pct { font-size: 96px; }
+  .hero-grid.pre .vs-name { font-size: 34px; }
+  .hero-grid.pre .vs-call { font-size: 34px; text-align: center; }
+  .hero-grid.pre .hero-meta, .hero-grid.pre .hero-series { text-align: center; }
   .hero-side .line-wrap { margin-top: 30px; }
 }
 @media (min-width: 1100px) {
@@ -1302,13 +1307,13 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (fin) {
       if (fin.home === fin.away) return "";
       var w = fin.home > fin.away ? "home" : "away", l = w === "home" ? "away" : "home";
-      return '<p class="mu-call">' + esc(nickname(f[w].name) + " win " + fin[w] + "-" + fin[l]) + "</p>";
+      return '<p class="vs-call">' + esc(nickname(f[w].name) + " win " + fin[w] + "-" + fin[l]) + "</p>";
     }
     if (!lv || !lv.state || lv.home_win_probability == null) return "";
     var hs = lv.state.home_score || 0, as = lv.state.away_score || 0, lead = hs === as ? null : hs > as ? "home" : "away", fh = lv.home_win_probability >= 0.5 ? "home" : "away";
     var lp = fh === "home" ? lv.home_win_probability : 1 - lv.home_win_probability;
     var n = Math.round(lp * 100) + " times in 100 from here", sc = Math.max(hs, as) + "-" + Math.min(hs, as);
-    return '<p class="mu-call">' + esc(!lead ? "Tied " + hs + "-" + as + ". The " + nickname(f[fh].name) + " win " + n + "."
+    return '<p class="vs-call">' + esc(!lead ? "Tied " + hs + "-" + as + ". The " + nickname(f[fh].name) + " win " + n + "."
       : lead === fh ? "The " + nickname(f[lead].name) + " lead " + sc + " and win " + n + "."
       : "The " + nickname(f[lead].name) + " lead " + sc + ", but the " + nickname(f[fh].name) + " still win " + n + ".") + "</p>";
   }
@@ -2208,19 +2213,19 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var html = '<div class="game" style="' + teamStyle(tcg) + '"><section class="hero"><div class="wrap"><a class="back" href="' + back + '">' + CHEV_LEFT + "Back to games</a>" +
       '<h1 class="visually-hidden">' + esc(nickname(f.away.name) + " at " + nickname(f.home.name) + (f.date ? ", " + dateLabel(f.date) : "")) + "</h1>";
     var gctx = contextFor(f.game_pk), gline = contextLine(f, gctx, false) || SERIES[f.game_type], gw = weatherLine(gctx);
-    html += '<div class="hero-grid"><div class="hero-main"><p class="hero-meta">' + statusPill(st, lv ? liveWhere(lv) : STATE_TEXT[st], lv && !lv._final) + esc([gline, timeET(f.scheduled_start) + " ET"].filter(Boolean).join(". ")) + "</p>";
+    html += '<div class="hero-grid' + (!actual && !lv ? " pre" : "") + '"><div class="hero-main"><p class="hero-meta">' + statusPill(st, lv ? liveWhere(lv) : STATE_TEXT[st], lv && !lv._final) + esc([gline, timeET(f.scheduled_start) + " ET"].filter(Boolean).join(". ")) + "</p>";
     if (gctx && (gctx.venue || gw)) html += '<p class="hero-meta hero-venue">' + esc([gctx.venue, gw].filter(Boolean).join(". ")) + "</p>";
     var pregame = !actual && !lv;
     if (pregame) {
       /* Before first pitch: the two clubs side by side with their win chance, the call in words, the series. */
-      html += '<div class="mu">';
+      html += '<div class="vs">';
       ["away", "home"].forEach(function (side, i) {
         var t = f[side], starter = starterText(f, box, side), spl = spSpan(starterId(f, box, side), String(f.date || D.date).slice(0, 4), isPostseason(f), "hero");
-        if (i === 1) html += '<span class="mu-at" aria-hidden="true">at</span>';
-        html += '<div class="mu-team ' + side + (side === fav ? " fav" : "") + '"><span class="mu-abbr">' + esc(t.abbr) + '</span><span class="mu-name">' + esc(nickname(t.name)) + '</span><span class="mu-pct num">' + pct(winProb(f, side)) + "</span>" +
-          (starter ? '<span class="mu-sp">' + esc(starter) + (spl ? '<small class="sp-sub">' + spl + "</small>" : "") + "</span>" : "") + "</div>";
+        if (i === 1) html += '<span class="vs-at" aria-hidden="true">at</span>';
+        html += '<div class="vs-team ' + side + (side === fav ? " fav" : "") + '"><span class="vs-abbr">' + esc(t.abbr) + '</span><span class="vs-name">' + esc(nickname(t.name)) + '</span><span class="vs-pct num">' + pct(winProb(f, side)) + "</span>" +
+          (starter ? '<span class="vs-sp">' + esc(starter) + (spl ? '<small class="sp-sub">' + spl + "</small>" : "") + "</span>" : "") + "</div>";
       });
-      html += "</div>" + heroBar(f, homeProb(f)) + '<p class="mu-call">' + esc(storyHeadline(f)) + "</p>" + seriesLine(f) + "</div></div></div></section>";
+      html += "</div>" + heroBar(f, homeProb(f)) + '<p class="vs-call">' + esc(storyHeadline(f)) + "</p>" + seriesLine(f) + "</div></div></div></section>";
     } else {
     html += '<div class="hero-cols"><span></span><span>' + (actual ? "Final" : lv ? "Score" : (v && v.key !== "proj" ? v.label : "Projected")) + "</span><span>Win</span></div>";
     ["away", "home"].forEach(function (side) {
