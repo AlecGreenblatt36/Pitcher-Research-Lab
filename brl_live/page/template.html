@@ -24,6 +24,8 @@
   --away: #2E5C9A;
   --home: #B42A30;
   --lamp: #F0B23A;
+  --btn: #12213A;
+  --btn-ink: #F5F7FB;
   --good: #1F6B47;
   --bad: #B42A30;
   --live: #C8312B;
@@ -43,7 +45,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --paper: #0A0F18; --surface: #121A27; --ink: #E6EBF3; --muted: #9AA6B9; --rule: #26324A; --rule-soft: #1A2335;
-    --board: #0F1B2F; --board-slot: #0A1322; --board-line: #263A58; --good: #4DB184; --bad: #E2595F; --live: #F06A63;
+    --board: #0F1B2F; --board-slot: #0A1322; --board-line: #263A58; --good: #4DB184; --bad: #E2595F; --live: #F06A63; --btn: #F0B23A; --btn-ink: #0A0F18;
     --hover: #182235; --rule-strong: #3E4D66; --mid: #5E6C84; --tint: #151E2D; --good-tint: #12291F;
     --grass: #1A2A20; --dirt: #2B271E; --field-line: #3B4B41;
   }
@@ -130,6 +132,42 @@ details.more[open] summary::before { content: "\2212"; }
 .bl-v { display: flex; flex-direction: column; font-size: 14px; color: var(--muted); margin-top: 6px; }
 .bl-v b { font-family: var(--display); font-weight: 700; font-size: 34px; line-height: 1; color: var(--ink); }
 .bl-w { grid-column: 1 / -1; font-size: 14px; color: var(--muted); margin-top: 6px; }
+.steps { list-style: none; counter-reset: st; margin: 6px 0 28px; padding: 0; display: grid; gap: 0; }
+.steps li { counter-increment: st; position: relative; display: flex; flex-direction: column; padding: 0 0 18px 48px; }
+.steps li::before { content: counter(st); position: absolute; left: 0; top: -2px; width: 32px; height: 32px; border-radius: 50%; background: var(--board); color: var(--chalk); font-family: var(--display); font-weight: 700; font-size: 18px; display: flex; align-items: center; justify-content: center; }
+.steps li:not(:last-child)::after { content: ""; position: absolute; left: 15px; top: 34px; bottom: 2px; width: 2px; background: var(--rule); }
+.steps b { font-family: var(--display); font-size: 21px; line-height: 1.15; }
+.steps span { color: var(--muted); }
+.watch { margin: 14px 0 0; border: 1px solid var(--rule); border-radius: 14px; background: var(--surface); overflow: hidden; }
+.wt-stage { padding: 0 0 4px; }
+.wt-bug { display: flex; align-items: center; gap: 14px; padding: 10px 14px; background: var(--board); color: var(--chalk); }
+.wt-t { display: inline-flex; gap: 8px; align-items: baseline; font-family: var(--display); font-size: 22px; color: var(--chalk-dim); }
+.wt-t.bat { color: var(--chalk); }
+.wt-t.bat b:first-child::after { content: ""; display: inline-block; width: 6px; height: 6px; margin-left: 5px; border-radius: 50%; background: var(--lamp); vertical-align: 4px; }
+.wt-t .num { color: var(--chalk); font-weight: 700; }
+.wt-inn { margin-left: auto; font-size: 14px; color: var(--chalk-dim); text-align: right; }
+.wt-outs { display: inline-flex; gap: 4px; }
+.wt-outs i { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--chalk-dim); }
+.wt-outs i.on { background: var(--lamp); border-color: var(--lamp); }
+.wt-field { display: block; width: 100%; max-width: 420px; margin: 8px auto 0; }
+.wt-grass { fill: var(--grass); }
+.wt-dirt { fill: var(--dirt); }
+.wt-base { fill: var(--surface); stroke: var(--rule-strong); stroke-width: 1.2; }
+.wt-base.on { fill: var(--lamp); stroke: #9A6A10; }
+.wt-plate { fill: var(--surface); stroke: var(--rule-strong); }
+.wt-flight { fill: none; stroke: var(--ink); stroke-width: 1.4; stroke-dasharray: 3 3; opacity: .55; }
+.wt-flight.gb { stroke-dasharray: 1 3; }
+.wt-ball { fill: var(--surface); stroke: var(--ink); stroke-width: 1.6; }
+.wt-ball.hit { fill: var(--lamp); stroke: #9A6A10; }
+.wt-play { display: flex; gap: 10px; align-items: flex-start; min-height: 3.2em; margin: 6px 14px 0; font-size: 16px; }
+.wt-play .tag { flex: 0 0 42px; }
+.wt-wp { display: flex; justify-content: space-between; margin: 4px 14px 10px; font-weight: 700; }
+.wt-wp .num { color: var(--muted); font-weight: 400; font-size: 14px; }
+.wt-ctl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 14px 12px; border-top: 1px solid var(--rule-soft); }
+.wt-ctl button { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; border: 1px solid var(--rule-strong); background: var(--surface); color: var(--ink); font: inherit; font-weight: 700; cursor: pointer; }
+.wt-ctl button svg { width: 20px; height: 20px; fill: currentColor; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+.wt-ctl .wt-go { flex: 1 1 auto; background: var(--btn); color: var(--btn-ink); border-color: var(--btn); }
+.wt-ctl input[type=range] { flex: 1 1 100%; accent-color: var(--btn); min-height: 28px; }
 .card-call { font-family: var(--display); font-weight: 700; font-size: 21px; line-height: 1.15; color: var(--ink); margin: 0 0 6px; text-wrap: balance; }
 .card-call.hit::before, .card-call.miss::before { display: inline-block; margin-right: 6px; font-size: 16px; vertical-align: 1px; }
 .card-call.hit::before { content: "\2713"; color: var(--good); }
@@ -948,12 +986,12 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     return NIGHT ? { away: lift(ca), home: lift(ch), awayT: lift(ca), homeT: lift(ch) } : { away: ca, home: ch, awayT: deepen(ca), homeT: deepen(ch) };
   }
   /* The style that carries a game's club colors: fills use the colors as they are, text a version dark enough to read. */
-  function teamStyle(tc) { return "--away:" + tc.away + ";--home:" + tc.home + ";--away-t:" + (tc.awayT || tc.away) + ";--home-t:" + (tc.homeT || tc.home) + ";--away-d:" + shade(tc.away) + ";--home-d:" + shade(tc.home); }
+  function teamStyle(tc) { return "--away:" + tc.away + ";--home:" + tc.home + ";--away-t:" + (tc.awayT || tc.away) + ";--home-t:" + (tc.homeT || tc.home) + ";--away-d:" + shade(tc.away) + ";--home-d:" + shade(tc.home) + ";--away-b:" + shade(tc.away, 0.18) + ";--home-b:" + shade(tc.home, 0.18); }
   /* The game page's top band runs from the road club's color to the home club's: each darkened toward the night board
      until white text on it keeps a contrast of 7 to 1 or more. */
-  function shade(hex) {
+  function shade(hex, lum) {     /* lum 0.18: white text on it keeps 4.5 to 1 (small badges) */
     var rgb = hexRgb(hex), base = [11, 20, 36], t = 0, mix = function (t) { return rgb.map(function (v, i) { return v * (1 - t) + base[i] * t; }); };
-    while (luminance(mix(t)) > 0.09 && t < 0.95) t += 0.05;
+    while (luminance(mix(t)) > (lum || 0.09) && t < 0.95) t += 0.05;
     return "#" + mix(t).map(function (v) { v = Math.round(v); return (v < 16 ? "0" : "") + v.toString(16); }).join("");
   }
   /* Night theme: club colors darker than a set brightness are mixed with white until they read on the dark field. */
@@ -964,7 +1002,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   }
   function lift(hex) {
     var rgb = hexRgb(hex), t = 0;
-    while (luminance(rgb.map(function (v) { return v + (255 - v) * t; })) < 0.16 && t < 0.9) t += 0.05;
+    while (luminance(rgb.map(function (v) { return v + (255 - v) * t; })) < 0.22 && t < 0.9) t += 0.05;     /* 4.5 to 1 on the dark page and cards */
     var out = rgb.map(function (v) { return Math.round(v + (255 - v) * t); });
     return "#" + out.map(function (v) { return (v < 16 ? "0" : "") + v.toString(16); }).join("");
   }
@@ -2239,7 +2277,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     else if (tab === "plays") {
       var pside = state.playSide[pk] || (real ? "actual" : "proj");
       if (real) html += '<div class="seg" role="group" aria-label="Which plays"><button data-playside="actual" aria-pressed="' + (pside === "actual") + '">' + (real._live ? "Live" : "Actual") + '</button><button data-playside="proj" aria-pressed="' + (pside !== "actual") + '">Projected</button></div>';
-      if (pside !== "actual" || !real) html += versions;
+      if (pside !== "actual" || !real) html += versions + watchPanel(f, box, s, pk);
       html += pside === "actual" && real && !real.plays.length ? '<p class="empty">First pitch is in. The first plate appearance shows here when it ends.</p>' : playsTab(f, pside === "actual" && real ? real : s);
       if (pside === "actual" && real) html += '<p class="note">The real game from the official play-by-play' + (real._live ? ", through the last completed plate appearance at the last check" : "") + ".</p>";
       else html += '<p class="note">The simulator decides how each at-bat ends. The pitches shown are borrowed from a real at-bat that ended the same way, for the look of it; they decide nothing.</p>';
@@ -2251,6 +2289,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     fillSpLines();
     fillPlayerStats();
     if (tab === "matchups") fillBvp();
+    if (s) wireWatch(f, box, s, pk); else if (WATCH.t) { clearInterval(WATCH.t); WATCH.t = null; }
     if (tab === "summary") fillTeamStats();
     if (tab === "summary") fillPitchingMatchup(f, pk, box);
     if (tab === "report") loadReport(f, pk);
@@ -2772,6 +2811,80 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (simFav !== fav) lines.push("The simulator alone leans the " + nickname(f[simFav].name) + " (" + pct(simP) + "); with the team ratings and the betting line our pick is the " + nickname(f[fav].name) + ".");
     return '<section class="sec story"><h2 class="story-h">What to expect</h2><p class="story-p">' + esc(lines.join(" ")) + "</p>" + hundredGames(f) + '<p class="note">Each square is one game out of 100 played like this one. Our pick: ' + esc(nickname(f[fav].name)) + " " + pct(winProb(f, fav)) + ".</p></section>" + keysSection(f, box);
   }
+  /* ---------- watch the simulated game (WATCH) ----------
+     One simulated game stepped through play by play, like a live game tracker: the score, inning, outs, runners, where
+     the ball went and the win chance after each play (from the same table the live page uses). */
+  var WATCH = { t: null };
+  var WATCH_ANGLE = { 1: 0, 2: 0, 3: 40, 4: 16, 5: -40, 6: -16, 7: -28, 8: 0, 9: 28 };
+  var WATCH_FT = { 1: 50, 2: 12, 3: 95, 4: 135, 5: 95, 6: 135, 7: 250, 8: 280, 9: 250 };
+  function watchField(p) {
+    /* Distances from home on a square-root-like scale so the infield reads at phone size: 400 ft is the fence. */
+    var hx = 150, hy = 182, R = function (ft) { return 160 * Math.pow(Math.max(ft, 0) / 400, 0.6); }, s45 = Math.SQRT1_2, fence = R(400), inf = R(155), b = R(90) * s45;
+    var on = p ? p.bases_after || [] : [], done = p && p.outs_after >= 3;
+    var h = '<svg class="wt-field" viewBox="0 0 300 192" aria-hidden="true">';
+    h += '<path d="M' + hx + " " + hy + " L" + (hx - fence * s45).toFixed(1) + " " + (hy - fence * s45).toFixed(1) + " A" + fence + " " + fence + " 0 0 1 " + (hx + fence * s45).toFixed(1) + " " + (hy - fence * s45).toFixed(1) + ' Z" class="wt-grass"/>';
+    h += '<path d="M' + hx + " " + hy + " L" + (hx - inf * s45).toFixed(1) + " " + (hy - inf * s45).toFixed(1) + " A" + inf + " " + inf + " 0 0 1 " + (hx + inf * s45).toFixed(1) + " " + (hy - inf * s45).toFixed(1) + ' Z" class="wt-dirt"/>';
+    var base = function (x, y, occ, i) { return '<rect x="' + (x - 6).toFixed(1) + '" y="' + (y - 6).toFixed(1) + '" width="12" height="12" transform="rotate(45 ' + x.toFixed(1) + " " + y.toFixed(1) + ')" class="wt-base' + (occ ? " on" : "") + '"/>'; };
+    h += base(hx + b, hy - b, !done && on[0]) + base(hx, hy - 2 * b, !done && on[1]) + base(hx - b, hy - b, !done && on[2]);
+    h += '<path d="M' + (hx - 5) + " " + (hy - 2) + " h10 v4 l-5 4 l-5 -4 Z" + '" class="wt-plate"/>';
+    var c = p && p.contact;
+    if (c && c.loc) {
+      var ft = c.t === "G" || !c.dist ? WATCH_FT[c.loc] || 150 : c.dist, a = (WATCH_ANGLE[c.loc] || 0) * Math.PI / 180, r = R(Math.min(ft, 470));
+      var x = hx + r * Math.sin(a), y = hy - r * Math.cos(a), hit = /single|double|triple|home_run/.test(p.box_outcome);
+      h += '<path d="M' + hx + " " + (hy - 4) + " L" + x.toFixed(1) + " " + y.toFixed(1) + '" class="wt-flight' + (c.t === "G" ? " gb" : "") + '"/>';      /* seen from above: a straight line */
+      h += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="5" class="wt-ball' + (hit ? " hit" : "") + '"/>';
+    }
+    return h + "</svg>";
+  }
+  function watchState(f, s, pts, i, names, short) {
+    var n = s.plays.length, p = i ? s.plays[i - 1] : null, q = pts[i === 0 ? 0 : Math.min(i + 1, pts.length - 1)];
+    var away = p ? p.away_score : 0, home = p ? p.home_score : 0, outs = p ? p.outs_after : 0;
+    var where = !p ? "Before first pitch" : (outs >= 3 ? "End of the " : p.half === "top" ? "Top of the " : "Bottom of the ") + ordinal(p.inning);
+    if (i === n) where = "Final" + (p && p.inning > 9 ? ", " + p.inning + " innings" : "");
+    var parts = p ? playParts(p, names, short) : null, hp = q ? q.p : homeProb(f), fs = hp >= .5 ? "home" : "away", fp = fs === "home" ? hp : 1 - hp;
+    var dots = ""; for (var o = 0; o < 3; o++) dots += '<i class="' + (o < Math.min(outs, 3) && i < n ? "on" : "") + '"></i>';
+    var bat = p ? (outs >= 3 ? null : p.half === "top" ? "away" : "home") : "away";
+    return '<div class="wt-bug"><span class="wt-t' + (bat === "away" ? " bat" : "") + '"><b>' + esc(f.away.abbr) + '</b><b class="num">' + away + '</b></span><span class="wt-t' + (bat === "home" ? " bat" : "") + '"><b>' + esc(f.home.abbr) + '</b><b class="num">' + home + "</b></span>" +
+      '<span class="wt-inn">' + esc(where) + '</span><span class="wt-outs" role="img" aria-label="' + Math.min(outs, 3) + (Math.min(outs, 3) === 1 ? " out" : " outs") + '">' + dots + "</span></div>" +
+      watchField(p) +
+      '<p class="wt-play">' + (parts ? '<span class="tag ' + parts.cls + '"' + (parts.cls === "hit" ? ' style="background:var(--' + (p.half === "top" ? "away" : "home") + '-b)"' : "") + ">" + esc(parts.tag) + "</span>" + esc(parts.text) : esc("One of our simulated games, play by play.")) + "</p>" +
+      '<p class="wt-wp"><span>' + (i === n ? esc(nickname(f[home > away ? "home" : "away"].name) + " win " + Math.max(home, away) + "-" + Math.min(home, away) + ".") : esc(nickname(f[fs].name) + " " + pct(fp) + " to win")) + '</span><span class="num">' + i + " of " + n + "</span></p>";
+  }
+  function watchPanel(f, box, s, pk) {
+    if (!s || !s.plays || !s.plays.length || !box || !box.win_table) return "";
+    var i = Math.min((state.watch && state.watch[pk]) || 0, s.plays.length), playing = WATCH.t && WATCH.pk === pk;
+    return '<div class="watch" id="watch-' + pk + '" aria-live="polite"><div class="wt-stage">' + watchState(f, s, winSeries(f, box, Object.assign({}, s, { _final: true }), null), i, nameMap(s), shortMap(s)) + "</div>" +
+      '<div class="wt-ctl"><button data-watch="prev" aria-label="Previous play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 6v12M18 6l-9 6 9 6z"/></svg></button>' +
+      '<button data-watch="play" class="wt-go">' + (playing ? "Pause" : i && i < s.plays.length ? "Keep playing" : "Watch it") + "</button>" +
+      '<button data-watch="next" aria-label="Next play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 6v12M6 6l9 6-9 6z"/></svg></button>' +
+      '<input type="range" min="0" max="' + s.plays.length + '" value="' + i + '" aria-label="Play number" data-watch="seek"></div></div>';
+  }
+  function wireWatch(f, box, s, pk) {
+    var el = document.getElementById("watch-" + pk);
+    if (WATCH.t && (!el || WATCH.pk !== pk)) { clearInterval(WATCH.t); WATCH.t = null; }
+    if (!el) return;
+    state.watch = state.watch || {};
+    var n = s.plays.length, pts = winSeries(f, box, Object.assign({}, s, { _final: true }), null), names = nameMap(s), short = shortMap(s);
+    var stage = el.querySelector(".wt-stage"), go = el.querySelector(".wt-go"), seek = el.querySelector("[data-watch=seek]");
+    var draw = function (i) {
+      state.watch[pk] = i = Math.max(0, Math.min(n, i));
+      stage.innerHTML = watchState(f, s, pts, i, names, short); seek.value = i;
+    };
+    var stop = function () { if (WATCH.t) clearInterval(WATCH.t); WATCH.t = null; go.textContent = (state.watch[pk] || 0) < n ? "Keep playing" : "Watch again"; };
+    var tick = function () {
+      if (!document.getElementById("watch-" + pk)) { clearInterval(WATCH.t); WATCH.t = null; return; }
+      var i = (state.watch[pk] || 0) + 1; draw(i); if (i >= n) stop();
+    };
+    var start = function () {
+      if ((state.watch[pk] || 0) >= n) draw(0);
+      if (WATCH.t) clearInterval(WATCH.t);
+      WATCH.pk = pk; WATCH.t = setInterval(tick, 1500); go.textContent = "Pause"; tick();
+    };
+    el.querySelector("[data-watch=play]").addEventListener("click", function () { if (WATCH.t) stop(); else start(); });
+    el.querySelector("[data-watch=prev]").addEventListener("click", function () { stop(); draw((state.watch[pk] || 0) - 1); });
+    el.querySelector("[data-watch=next]").addEventListener("click", function () { stop(); draw((state.watch[pk] || 0) + 1); });
+    seek.addEventListener("input", function () { stop(); draw(+seek.value); });
+  }
   /* The line score of the simulated game being shown (the projected one or another version), with what it is. */
   function simLine(f, box, s, v) {
     if (!s) return "";
@@ -2790,7 +2903,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         (versions || "") + projectedSummary(f, s, box, null, null, v) + "</details>";
     if (!real && !actual && !lv)    /* before first pitch: the game in words, then one simulated game played out, then the matchup */
       return h0 + forecastStory(f, box, s) + '<section class="sec sim-game"><h2>One game, played out</h2><p class="lede">Read one of our simulated games like a real one. Switch versions to see a slugfest, a pitchers\' duel or an upset.</p>' +
-        (versions || "") + simLine(f, box, s, v) + "</section>" + projectedSummary(f, s, box, null, null, v) +
+        (versions || "") + simLine(f, box, s, v) + watchPanel(f, box, s, f.game_pk) + "</section>" + projectedSummary(f, s, box, null, null, v) +
         '<div id="pm-' + f.game_pk + '">' + pitchingMatchup(f, box, RP[f.game_pk] || null) + "</div>" + teamStatsSlot(f);
     if (!real) return h0 + (versions || "") + projectedSummary(f, s, box, actual, actualBox, v);
     /* With the real game on: did we get it right first (after the final), then the real game, then the game we
@@ -2972,7 +3085,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         if (lastPitcher[field] && lastPitcher[field] !== p.pitcher_name) h += '<p class="change">Pitching change: ' + esc(p.pitcher_name) + " replaces " + esc(lastPitcher[field]) + ".</p>";
         lastPitcher[field] = p.pitcher_name;
         var parts = playParts(p, names, short);
-        var style = parts.cls === "hit" ? ' style="background:var(--' + bat + ')"' : "";
+        var style = parts.cls === "hit" ? ' style="background:var(--' + bat + '-b)"' : "";
         var seq = pitchText(p), zone = p.official ? zoneGraphic(p) : "";
         var seqHtml = seq ? (zone ? '<span class="seq">' + zone + '<span class="pitches">' + esc(seq) + "</span></span>" : '<span class="pitches">' + esc(seq) + "</span>") : "";
         var steal = p.box_outcome === "stolen_base" || p.box_outcome === "caught_stealing" || !!RUN_PLAY[p.box_outcome];
@@ -5652,6 +5765,10 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   /* ---------- how it works ---------- */
   function renderHow() {
     var fx = latestForecasts(), any = Object.keys(fx).map(function (k) { return fx[k]; }).reduce(function (a, b) { return !a || String(b.history_through || "") > String(a.history_through || "") ? b : a; }, null) || {}, h = '<div class="wrap"><div class="page-head"><h1>How it works</h1><p>Where the numbers come from and how to read them. Tap any gray line for more.</p></div><div class="prose">';
+    h += '<ol class="steps"><li><b>Rate every player</b><span>Each hitter and pitcher, on every pitch he has seen up to the day before: what he swings at, how hard he hits it, how he pitches.</span></li>' +
+      "<li><b>Play the game 10,000 times</b><span>One at-bat at a time, with the real lineups, the starters, the bullpens, the ballpark and the weather.</span></li>" +
+      "<li><b>Count what happened</b><span>Who won and by how much, who homered, how long each starter lasted, what decided it.</span></li>" +
+      '<li><b>Check it against the real game</b><span>Every number goes up before first pitch and is never changed. The Record page grades it after the final.</span></li></ol>';
     h += "<h2>One game, ten thousand times</h2><p>Before every game we play it ten thousand times on the computer, one at-bat at a time, with the real lineups and the real pitchers. Until a team posts its lineup we use the last one it ran out against a starter who throws with the same hand. Every hitter and pitcher is rated on everything he has done up to the day before. If the Cubs win 5,800 of the 10,000, the simulator says Cubs 58%.</p>";
     var physicsModel = Object.keys(fx).some(function (k) { return /physics/i.test(String(fx[k].model || "")); });
     if (physicsModel) {
@@ -5660,7 +5777,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var hw = D.record && D.record.headline_now, wt = hw && hw.market != null ? Math.round(hw.market * 100) + "% the betting line and " + Math.round(hw.ours * 100) + "% ours" : "60% the betting line and 40% ours";
     h += "<h2>Our number</h2><p>Our own number mixes the simulator with a team model: runs scored and allowed, home field, how the team has been playing, and the starters. Once Vegas posts a line, the game card shows a blend of " + wt + ". Our own number never looks at the line for that game. The Odds tab shows each piece, and the Record page keeps score on all of them.</p>";
     h += '<details class="more"><summary>Why blend with Vegas</summary><p>The closing line is the hardest number in baseball to beat, so we use it. We set our model\'s weights on closing lines from 4,140 games in 2025 and 2026, because lines are steadier than wins and losses, then checked it against real results from a season it never saw. When we disagreed with the opening line, the line moved our way by first pitch about 7 times in 10. That is not a betting system. Any change to how we figure the number starts at a stated time and never touches a game that has started. Through October 7, 2026 our number was a straight average of the simulator and the team model.</p></details>';
-    h += "<h2>What to expect and what decides it</h2><p>A game page opens with the game in plain words: a typical final score, how many runs, a picture of 100 games, and the few things that swing it most. Because we play the game ten thousand times, we can count how often each thing happens (the home team scores first in 46 games out of 100, say) and how often a team wins when it does and when it does not. We pick the ones that move the win chance most: scoring first, each starter getting through six innings, and the hitters whose home run or two-hit night matters most. The two chances are moved together so that, mixed, they give our pick. They are counts from the simulated games and have not been checked against real games yet.</p>";
+    h += "<h2>What to expect and what decides it</h2><p>A game page opens with the game in plain words: a typical final score, how many runs, a picture of 100 games, and the few things that swing it most. Because we play the game ten thousand times, we can count how often each thing happens (the home team scores first in 46 games out of 100, say) and how often a team wins when it does and when it does not. We pick the ones that move the win chance most: scoring first, each starter getting through six innings, and the hitters whose home run or two-hit night matters most. The two chances are moved together so that, mixed, they give our pick. They are counts from the simulated games and have not been checked against real games yet.</p><p>Below that, one of the simulated games plays out like a live game tracker: tap Watch it to see every play, the runners, where the ball went and the win chance after each play.</p>";
     h += "<h2>Game plan</h2><p>Every game has a Game plan tab. For each hitter it says where to pitch him and where not to, against each pitcher he is likely to see, using only pitches thrown before that day. A hitter decides whether to swing about a quarter second before the ball gets there, so we map where the pitch looks like it is going at that moment, not just where it ends up. That calls his swings and takes better than a regular heat map, and it shows where he will chase against a certain pitcher's stuff. After the game, the same tab grades it: did the pitches go where we said, and did the hitters chase where we said they would.</p>" +
       "<p>Each hitter also has the standard hot-zone chart: MLB's 13 zones from the catcher's view, nine in the strike zone and four around it, with his batting average, slugging, swing rate or miss rate in each, red above the league average and blue below. These are plain counts from the last two seasons, split by the pitcher's hand; the plan's spots come from the swing map, so the two can differ. The Expected view pulls thin numbers toward what predicted the next season best: a hitter's batting average and slugging against lefties or righties, beyond the usual split for his side, did not carry over from one season to the next (we checked 317 hitters), so his expected line against a hand is his level against everyone with that usual split. Pitcher cards show where he throws each pitch on the same zones, hitter cards show where he hits the ball (ground balls and balls in the air, pulled, up the middle or the other way), and each plan has a bullpen card with every arm's pitches on the days before the game.</p>" +
       "<p>The tags on each hitter (chases a lot, takes the first pitch, expands or holds his zone with two strikes, misses breaking balls, misses up in the zone, hits the low strike hard, pulls grounders and the rest) were each checked the same way: tag hitters from two seasons, then watch the next season. Every one of them held up, smaller than in the seasons we tagged from (about half to nine-tenths of the size), since the most extreme hitters drift back toward the middle. Pitcher tags (throws first-pitch strikes, lives in the zone, fastballs or spin when behind, elevates fastballs, buries breaking balls, ground-ball pitcher and the rest) went through the same check. A read that did not hold up, extra misses on hard fastballs, is left off. Each plan sheet starts with what these tags say about the lineup: who to get ahead of, who to start off the plate, how to finish each one, whom to shade the infield for and which runners to hold. Player pages open with percentile rankings like the ones on Baseball Savant.</p>";
