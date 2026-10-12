@@ -101,7 +101,9 @@ queue behind the shards (seen October 11 at 16:50 UTC). Check-only replays (n_si
   whether the arm is the team's top one or two by 14-day share, and compare with real entries; then try a temperature on
   the choice model (per entry it is a little over-confident from 40% to 70% chosen) gated on the per-game chances. The
   simulator's games are slightly closer than real ones (final margin within 3 runs 62% against 59% to 61%), which
-  explains only a little of it.
+  explains only a little of it. Per entry the choice model is calibrated on held-out seasons (a temperature of 1.0 is
+  best in both), so the fix is in the situations. BULLPEN-05's replays v2-prod4-entries-1000-<season> run 38186824402
+  and 38186847009 (the first pair failed on a usage tuple; use these run ids). Score with tools/brl_bullpen_entries.py.
 - October 11, 6:34 p.m.: BULLPEN-03 registered (the chance-to-pitch table, scored per reliever for the first time).
   Replays v2-prod4-pen-1000-<season> started 22:34 UTC (runs 38180906147 and 38180930219), RELIEF-04's settings plus the
   new recording, so their games must equal RELIEF-04's (check home_wins per game). Score with tools/brl_bullpen_cal.py.
