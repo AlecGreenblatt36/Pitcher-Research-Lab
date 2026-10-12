@@ -988,10 +988,14 @@ far and part of why simulated bullpens struck out fewer batters and allowed more
 
 - (October 11) The bullpen's chance to pitch is over-confident at the top (BULLPEN-03, -04): arms the simulator gives 60%
   to 80% pitch about 53% of the time, 80% and up about 51%, in both seasons; the rest are close. A straight calibration
-  cannot fix it, so the page notes it. Likely the simulator's games stay close more often than real ones (narrow
-  margins, DISP-01), so its late innings call for the top relievers more; or the choice model's role terms are too
-  strong. Also: relievers outside the 14-day candidate list (call-ups, returns, position players) pitch about 0.12 times
-  a team-game, the whole shortfall in pitchers per game.
+  cannot fix it, so the page notes it. BULLPEN-05 found the choice model itself gives the pool's two busiest arms 20% of
+  real entries against 16.6%; BULLPEN-06 (a heavy week, the top-two flag) fixes that entry by entry and halves the
+  top-two excess in replays, but the 60%+ chances stay 12 to 31 points high, so it is off. What is left looks like
+  availability: within a game's worlds the same arms are always available. A toy model on the replay shares (random
+  unavailability of a quarter to a third of the pool per world) brings the top bins near real; the 0-10% bin's excess is
+  the relievers outside the candidate list (call-ups), which no draw fixes. Also: relievers outside the 14-day candidate
+  list (call-ups, returns, position players) pitch about 0.12 times a team-game, the whole shortfall in pitchers per
+  game.
 - (October 11) Outcome levels drift by season and the simulator carries them from its tables: in replays with tables from
   other seasons, 2025's walk-or-HBP chances ran 2 points high and 2026's hit chances 1 point high (PLAYER-03); live, the
   context table includes the current season through late September, so October is closer. Tested October 11: in-season
