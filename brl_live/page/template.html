@@ -72,6 +72,7 @@ button { font: inherit; color: inherit; }
 .page-head { padding: 22px 0 6px; }
 .page-head h1 { font-family: var(--display); font-weight: 700; font-size: 34px; line-height: 1.05; margin: 0; }
 .page-head p { margin: 4px 0 0; color: var(--muted); }
+.page-head p.tagline { color: var(--ink); font-size: 17px; }
 .dstrip { display: grid; grid-template-columns: 36px minmax(0, 1fr) 36px 44px; align-items: center; gap: 4px; margin: 14px 0 2px; }
 .dstrip-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
 .dstrip-day { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 54px; border-radius: 12px; text-decoration: none; color: var(--muted); }
@@ -1686,9 +1687,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       .sort(function (a, b) { return a.scheduled_start < b.scheduled_start ? -1 : 1; });
     var series = games.length ? (SERIES[games[0].game_type] || "") : "";
     var stale = document.body.getAttribute("data-refresh-blocked") === "true";
-    var html = '<div class="wrap"><div class="page-head"><h1>' + esc(dateLabel(day)) + "</h1><p>" +
+    var html = '<div class="wrap"><div class="page-head"><h1>' + esc(dateLabel(day)) + '</h1><p class="tagline">We play every game 10,000 times before it starts. Tap a game to see how it plays out.</p><p>' +
       esc(series ? series + ". " : "") + (D.view_scope === "historical_replay" ? "Historical replay. " : "") + (stale ? "Showing the last saved numbers. " : "") + "Times are Eastern." +
-      (D.generated_at ? " Updated " + esc(timeET(D.generated_at)) + " ET." : "") + "</p></div>" + dayNav(day) + scorebar();
+      (D.generated_at ? " Updated " + esc(timeET(D.generated_at)) + " ET." : "") + "</p></div>" + dayNav(day);
     if (!games.length) {
       /* no numbers saved for this day yet: show the schedule (today before the morning run, or an off day) */
       if (SCHED[day] === undefined) { app.innerHTML = html + '<p class="empty">Loading the schedule\u2026</p></div>'; withSchedule(day, function () { renderSlate(day); }); return; }
@@ -1733,7 +1734,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var have = {}; games.forEach(function (f) { have[String(f.game_pk)] = 1; });
     var rest = (SCHED[day] || []).filter(function (s) { return "RFDLW".indexOf(s.gameType) >= 0 && !have[String(s.gamePk)]; });
     if (rest.length) html += '<h2 class="divide">No number yet</h2><p class="note">Our number comes once both starters are announced.</p><ol class="cards">' + scheduleItems(day, rest) + "</ol>";
-    html += seriesBoard(day) + edgesBoard(games) + "</div>";
+    html += seriesBoard(day) + edgesBoard(games) + '<h2 class="divide">How we have done</h2>' + scorebar() + "</div>";
     app.innerHTML = html;
     wireDayNav();
     fillSpLines();
@@ -4870,7 +4871,9 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   function oddsTab(f, box) {
     var h = "", pa = winProb(f, "away"), ph = winProb(f, "home");
     var taught = taughtRecipe(f), rc = recipeOf(f), withLine = !!(rc && /market/.test(rc.headline || ""));
-    h += '<section class="sec"><h2>Win chance</h2><p class="lede">' + (taught ?
+    var mkt0 = D.market && D.market[f.game_pk], pmk0 = marketProb(mkt0), gap0 = taught && pmk0 != null ? oursProb(f) - pmk0 : null;
+    var verdict = gap0 == null ? "" : Math.round(Math.abs(gap0) * 100) < 2 ? "We and Vegas see this game the same way." : "We like the " + nickname(f[gap0 >= 0 ? "home" : "away"].name) + " " + Math.round(Math.abs(gap0) * 100) + " points more than Vegas does.";
+    h += '<section class="sec"><h2>Win chance</h2>' + (verdict ? '<p class="story-p">' + esc(verdict) + "</p>" : "") + '<p class="lede">' + (taught ?
       "Our pick is our best number before first pitch: our model mixed with the Vegas line once one is posted. Our model never sees the line for this game, so the two can disagree. The Record page keeps score on each." :
       "Our pick averages the simulator with the team ratings; over a full season re-run, the average beat either one alone.") + "</p>";
     h += '<div class="winbar" role="img" aria-label="' + esc(f.away.abbr + " " + pct(pa) + ", " + f.home.abbr + " " + pct(ph)) + '"><div class="a" style="width:' + (pa * 100).toFixed(1) + '%">' + esc(f.away.abbr) + " " + pct(pa) + '</div><div class="h" style="width:' + (ph * 100).toFixed(1) + '%">' + pct(ph) + " " + esc(f.home.abbr) + "</div></div>";
@@ -4892,8 +4895,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     h += lineBoard(f, mkt, box);
     if (taught && pmk != null) {
       var gap = po - pmk, side = gap >= 0 ? "home" : "away", pts = Math.round(Math.abs(gap) * 100), wt = weightsText();
-      h += '<p class="note">' + (pts < 2 ? "We and Vegas agree on this game." + (wt ? " Our pick is " + wt + "." : "") :
-        "We like the " + esc(nickname(f[side].name)) + " " + pts + " points more than Vegas does. Over the two seasons we re-ran, when we differed from the opening line it moved our way about 7 times in 10." +
+      h += '<p class="note">' + (pts < 2 ? (wt ? "Our pick is " + wt + "." : "") :
+        "Over the two seasons we re-ran, when we differed from the opening line it moved our way about 7 times in 10." +
         (wt ? " By first pitch Vegas is a touch sharper, so our pick is " + wt + "." : "")) + "</p>";
     }
     h += "</section>";
