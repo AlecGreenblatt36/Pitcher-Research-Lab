@@ -3,7 +3,8 @@
 At each pitching change the candidates are the bullpen's arms not yet used in the game. Each candidate's utility is a
 linear function of his recent use (share of the team's relief batters over 14 and 30 days, appearances yesterday and
 over the last two and three days, days since his last outing), his role over the last year (share of entries in the
-ninth and in the eighth or later, median batters per outing), his strikeout record relative to the other candidates,
+ninth and in the eighth or later, median batters per outing), his workload over the last week and whether he is one of
+the pool's two most used arms (BULLPEN-06; only in fits that name them), his strikeout record relative to the other candidates,
 the platoon matchup with the next batter, and the game situation (save spot, tied late, close late, early, blowout,
 extra innings, entering with runners on or outs made). The reliever is drawn from the softmax of the utilities.
 
@@ -20,7 +21,8 @@ import numpy as np
 LEAGUE_K = 0.235
 K_PRIOR_BF = 100.0
 DEFAULT = {"share14": 0.0, "share30": 0.0, "pitched_d1": 0.0, "apps_d2": 0.0, "apps_d3": 0.0, "days_since": 99.0,
-           "ninth": 0.0, "late": 0.0, "med_bf": 4.0, "k365": 0.0, "bf365": 0.0, "apps21": 0.0, "ninth21": 0.0, "late21": 0.0}
+           "ninth": 0.0, "late": 0.0, "med_bf": 4.0, "k365": 0.0, "bf365": 0.0, "apps21": 0.0, "ninth21": 0.0, "late21": 0.0,
+           "bf7": 0.0, "apps7": 0.0, "rank14": 99.0}
 
 
 def situation(inning: int, lead: int, outs: int, runners: int) -> dict:
@@ -63,6 +65,9 @@ def features(facts: list[dict], same_hand: list[bool], sit: dict, same3=None) ->
         "quality_x_blowout": q_rel * s["blowout"], "ninth_x_extra": f["ninth"] * s["extra"],
         "same3": s3, "same3_x_late": s3 * float(s["before8"] == 0.0), "same3_x_mid": s3 * s["mid_inning"],
         "ninth21_x_save": f["ninth21"] * s["save"], "late21_x_late_close": f["late21"] * s["late_close"],
+        # BULLPEN-06: a heavy week (relief batters over 7 days, per 10, capped at 30; appearances over 7 days) and the
+        # pool's two most used arms by 14-day share
+        "work7": np.minimum(f["bf7"], 30.0) / 10.0, "apps7": f["apps7"], "top2_14": (f["rank14"] < 2).astype(float),
     }
 
 

@@ -61,8 +61,9 @@ def bullpen_usage(app: pd.DataFrame, team: str | None, cutoff: str, pids) -> dic
     from the appearance table: his share of the team's relief batters faced over 14 and 30 days, appearances yesterday
     and over the last two and three days, days since his last relief outing, his share of relief entries in the ninth
     and in the eighth or later over 365 days and over the last 21 days (roles move with injuries and trades), his median
-    batters per relief outing, and his relief strikeouts and batters faced over 365 days. Outings for other teams do
-    not count. Returns {pid: {name: value}}."""
+    batters per relief outing, his relief strikeouts and batters faced over 365 days, his relief batters and appearances
+    over the last 7 days and his place in this pool by 14-day share (BULLPEN-06). Outings for other teams do not count.
+    Returns {pid: {name: value}}."""
     cutoff = str(cutoff)[:10]
     day = pd.Timestamp(cutoff)
     rel = app[(app['date'] < cutoff) & (app['team'] == team) & (~app['start'].astype(bool))] if team is not None else app.iloc[0:0]
@@ -82,8 +83,22 @@ def bullpen_usage(app: pd.DataFrame, team: str | None, cutoff: str, pids) -> dic
                     'ninth': float((inn[m] >= 9).mean()) if m.any() else 0.0, 'late': float((inn[m] >= 8).mean()) if m.any() else 0.0,
                     'med_bf': float(np.median(b)) if m.any() else 4.0, 'k365': float(k[m].sum()), 'bf365': float(b.sum()),
                     'apps21': float((a <= 21).sum()), 'ninth21': float((inn[m][a <= 21] >= 9).mean()) if (a <= 21).any() else 0.0,
-                    'late21': float((inn[m][a <= 21] >= 8).mean()) if (a <= 21).any() else 0.0}
+                    'late21': float((inn[m][a <= 21] >= 8).mean()) if (a <= 21).any() else 0.0,
+                    'bf7': float(b[a <= 7].sum()), 'apps7': float((a <= 7).sum())}
+    # BULLPEN-06: each arm's place in this pool by 14-day share (0 the most used); a pool of one ranks 0
+    for j, pid in enumerate(sorted(out, key=lambda q: -out[q]['share14'])):
+        out[pid]['rank14'] = float(j)
     return out
+
+
+def rank_bullpen(pen):
+    """The bullpen's profiles with each arm's place in the pool by 14-day share (usage 'rank14', 0 the most used;
+    BULLPEN-06), for pools whose usage was read one arm at a time."""
+    from dataclasses import replace
+    us = [dict(getattr(p, 'usage', None) or ()) for p in pen]
+    order = sorted(range(len(pen)), key=lambda i: -us[i].get('share14', 0.0))
+    rank = {i: float(j) for j, i in enumerate(order)}
+    return tuple(replace(p, usage={**us[i], 'rank14': rank[i]}) if us[i] else p for i, p in enumerate(pen))
 
 
 def reliever_usage(app: pd.DataFrame, pid: int, cutoff: str, team: str | None = None) -> dict:
@@ -232,7 +247,7 @@ def live_matchup(feed: dict, history: pd.DataFrame, date: str, app: pd.DataFrame
         sp = used[0]
         starter = starter_profile(app, int(sp), _throws(feed, sp), _name(feed, sp), date)
         pen_ids = [p for p in used[1:]] + [p for p in state['bullpen_available'][s] if p not in used]
-        pen = tuple(reliever_profile(app, int(p), _throws(feed, p), _name(feed, p), date) for p in dict.fromkeys(pen_ids))
+        pen = rank_bullpen(tuple(reliever_profile(app, int(p), _throws(feed, p), _name(feed, p), date) for p in dict.fromkeys(pen_ids)))
         t = gd['teams'][s]
         teams[s] = TeamProfile(str(t.get('id')), t.get('name') or t.get('abbreviation') or s, lineup, starter, pen)
     matchup = GameMatchup(away=teams['away'], home=teams['home'], venue=gd['teams']['home'].get('abbreviation') or 'Unknown Park',

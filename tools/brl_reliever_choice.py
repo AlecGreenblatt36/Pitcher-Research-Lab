@@ -29,6 +29,7 @@ NAMES = ['log_share14', 'log_share30', 'pitched_d1', 'back_to_back', 'apps_d3', 
          'share_x_late_close', 'share_x_blowout', 'medbf_x_early', 'medbf_x_blowout', 'medbf_x_mid', 'same_hand_x_mid',
          'quality', 'quality_x_late_close', 'quality_x_save', 'quality_x_blowout', 'ninth_x_extra',
          'same3', 'same3_x_late', 'same3_x_mid', 'ninth21_x_save', 'late21_x_late_close']
+NAMES6 = NAMES + ['work7', 'apps7', 'top2_14']           # BULLPEN-06: --features 6
 
 
 def choice_rows(h: pd.DataFrame, seasons: set) -> tuple[list, dict]:
@@ -133,7 +134,11 @@ def score(entries: list, beta: np.ndarray) -> dict:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('history'); ap.add_argument('out'); ap.add_argument('--fit', required=True); ap.add_argument('--test', default='')
+    ap.add_argument('--features', default='5', help="5: BULLPEN-01's set; 6: with BULLPEN-06's workload and top-two terms")
     a = ap.parse_args()
+    global NAMES
+    if a.features == '6':
+        NAMES = NAMES6
     fit_s = {int(x) for x in a.fit.split(',')}; test_s = {int(x) for x in a.test.split(',') if x}
     t0 = time.time()
     cols = ['game_pk', 'date_key', 'at_bat_number', 'inning', 'inning_topbot', 'outs_when_up', 'on_1b', 'on_2b', 'on_3b', 'bat_score',

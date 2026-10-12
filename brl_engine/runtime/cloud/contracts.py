@@ -14,7 +14,7 @@ import pandas as pd
 from app.common import content_hash, timestamp
 from app.safety import Blocked
 from research_lab.game_sim.models import GameMatchup, PlayerProfile, PitcherProfile, TeamProfile
-from brl_live.live_feed import appearances, reliever_profile, starter_profile
+from brl_live.live_feed import appearances, rank_bullpen, reliever_profile, starter_profile
 
 N = 10000
 SEED = 20261006
@@ -188,7 +188,7 @@ def live_inputs(feed: dict, receipt: dict, history: pd.DataFrame, names: dict | 
             notes['bullpen_source'][side] = 'relievers used in the prior 14 days (history)'
         if not pen_ids:
             raise Blocked(f'No bullpen available for the {side} team')
-        pen = tuple(reliever_profile(app, pid, _throws(feed, pid, throws_hist.get(pid, 'R')), _name(feed, pid, names), date) for pid in dict.fromkeys(pen_ids))
+        pen = rank_bullpen(tuple(reliever_profile(app, pid, _throws(feed, pid, throws_hist.get(pid, 'R')), _name(feed, pid, names), date) for pid in dict.fromkeys(pen_ids)))
         team_defense = float(defense.value(str(t.get('abbreviation') or '').upper())) if defense is not None else 0.0
         teams[side] = TeamProfile(str(t['id']), str(t.get('name') or t.get('abbreviation')), lineup, starter, pen, defense=team_defense)
         if defense is not None:

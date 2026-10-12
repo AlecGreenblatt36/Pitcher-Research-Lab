@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 332,
- "rows": 335,
+ "experiments": 333,
+ "rows": 336,
  "records": {
   "ACC-01": [
    {
@@ -5462,6 +5462,25 @@
     ],
     "frozen_commits": [],
     "status": "diagnostic done; fix is BULLPEN-06"
+   }
+  ],
+  "BULLPEN-06": [
+   {
+    "id": "BULLPEN-06",
+    "columns": {
+     "ID": "BULLPEN-06",
+     "Attempt": "The choice model's fix from BULLPEN-05: a heavy week and the pool's most used arms. Each candidate's usage now also carries his relief batters and appearances over the last 7 days and his place in the pool by 14-day share (brl_live.live_feed.bullpen_usage; rank_bullpen for the live bullpens read one arm at a time), and research_lab.game_sim.reliever_choice adds work7 (7-day relief batters per 10, capped at 30), apps7 and top2_14 (one of the pool's two most used arms), read only by fits that name them (tools/brl_reliever_choice.py --features 6). Explored before this row on the same choice sets (so these are not predictions): held-out log-likelihood per entry -1.7229 against -1.7651 (fit 2023 to 2025, test 2026) and -1.6960 against -1.7333 (fit 2023, 2024, 2026, test 2025); top-1 hit 35.3% against 32.9% and 36.0% against 33.8% (tools' own scores); the top two arms' share of real held-out entries 16.0% predicted against 16.6% chosen (2026) and 16.9% against 16.6% (2025), from 19.5% and 20.0%; coefficients work7 -0.95 and -0.94, apps7 +0.46 and +0.48, top2_14 -0.19 and -0.17 (a heavy week of batters means rest; frequent short outings mark an active late arm). Fits: brl_replay/reliever_choice6_fit_2023_2025.json (for 2026) and reliever_choice6_fit_2023_2024_2026.json (for 2025). Replays: BULLPEN-05's settings with these fits, paired streams and the same seeds (tags v2-prod4-choice6-1000-<season>), compared with BULLPEN-05's replays (38186824402, 38186847009)",
+     "Disposition and evidence": "**Registered in the commit that added this row, before its replays.** Predictions, in both seasons: (1) the top two arms' relief entries per team-game within 10% of real (BULLPEN-05's tool; now 24% high); (2) the chance to pitch for arms shown 60% or more within 5 points of how often they pitched (tools/brl_bullpen_cal.py, BULLPEN-03's bins; now about 60% to 80% shown against 53%); (3) against BULLPEN-05's replays by game (tools/replay_compare.py): the pooled win Brier difference's 95% upper end below +0.0002, the pooled Brier of the chance of the over on the closing total no worse than +0.0003 at its upper end, the mean total within 0.03 runs a game. Decision rule: if (1), (2) and (3) hold, the live choice model is refitted on 2023 to 2026 with these features and switched on (it serves every game; this is not a postseason-only change); if (3) holds but (1) or (2) does not, the fit's better log-likelihood alone does not switch it on and it stays off; if (3) fails, it stays off",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [
+     "38186824402",
+     "38186847009"
+    ],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "TOTALS-05": [

@@ -148,7 +148,15 @@ def test_usage_comes_from_the_team_and_window():
     assert u['pitched_d1'] == 1 and u['apps_d2'] == 2 and u['apps_d3'] == 2 and u['days_since'] == 1
     assert u['ninth'] == 2 / 5 and u['late'] == 3 / 5 and u['med_bf'] == 4 and u['k365'] == 7 and u['bf365'] == 26
     assert u['apps21'] == 4 and u['ninth21'] == 2 / 4 and u['late21'] == 3 / 4
-    assert reliever_usage(app, 1, '2026-06-30') == u          # his latest team is AAA (the BBB outing is older)
+    # BULLPEN-06: relief batters and appearances over 7 days, and his place in the pool by 14-day share (arm 2 has 16 of 30)
+    assert u['bf7'] == 4 + 4 + 6 and u['apps7'] == 3 and u['rank14'] == 1.0
+    assert bullpen_usage(app, 'AAA', '2026-06-30', [1, 2])[2]['rank14'] == 0.0
+    one = reliever_usage(app, 1, '2026-06-30')                # his latest team is AAA (the BBB outing is older)
+    assert one['rank14'] == 0.0 and {k: v for k, v in one.items() if k != 'rank14'} == {k: v for k, v in u.items() if k != 'rank14'}
+    from brl_live.live_feed import rank_bullpen
+    from research_lab.game_sim.models import PitcherProfile
+    pen = rank_bullpen((PitcherProfile('1', 'a', 'R', usage=one), PitcherProfile('2', 'b', 'R', usage=reliever_usage(app, 2, '2026-06-30')), PitcherProfile('3', 'c', 'R')))
+    assert [dict(p.usage).get('rank14') for p in pen] == [1.0, 0.0, None]
     assert bullpen_usage(app, 'AAA', '2026-06-30', [99])[99]['days_since'] == 99.0
 
 
@@ -157,3 +165,18 @@ def test_usage_survives_the_bridge():
     back = decode_matchup(json.loads(json.dumps(asdict(m))))
     assert back.home.bullpen[0].usage == m.home.bullpen[0].usage and dict(back.home.bullpen[0].usage)['ninth'] == 0.9
     assert decode_matchup(asdict(m)) == m
+
+
+def test_workload_and_top_two_terms():
+    """BULLPEN-06: a heavy week and the pool's two most used arms, read only by fits that name them."""
+    from research_lab.game_sim.reliever_choice import features, situation, RelieverChoice
+    facts = [{'bf7': 45, 'apps7': 4, 'rank14': 0}, {'bf7': 6, 'apps7': 2, 'rank14': 1}, {'bf7': 0, 'apps7': 0, 'rank14': 5}, {}]
+    c = features(facts, [True] * 4, situation(7, 1, 0, 0))
+    assert list(c['work7']) == [3.0, 0.6, 0.0, 0.0] and list(c['apps7']) == [4, 2, 0, 0] and list(c['top2_14']) == [1, 1, 0, 0]
+    from research_lab.game_sim.models import PitcherProfile
+    pen = [PitcherProfile(str(i), str(i), 'R', usage={**f, 'share14': 0.1}) for i, f in enumerate(facts[:3])]
+    old = RelieverChoice({'names': ['log_share14'], 'beta': [0.0]})
+    assert np.allclose(old.probabilities(pen, 7, 1, 0, 0, 'R'), 1 / 3)            # an older fit ignores the new facts
+    new = RelieverChoice({'names': ['work7', 'top2_14'], 'beta': [-1.0, -0.2]})
+    p = new.probabilities(pen, 7, 1, 0, 0, 'R')
+    assert p[2] > p[1] > p[0]
