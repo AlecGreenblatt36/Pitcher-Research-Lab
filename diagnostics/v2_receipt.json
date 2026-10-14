@@ -1,10 +1,10 @@
 {
- "created_at": "2026-10-14T08:13:35.237159+00:00",
+ "created_at": "2026-10-14T08:27:29.957295+00:00",
  "status": "iteration_completed",
  "runtime": "brl_engine (public code, sealed data)",
  "ledger_branch": "brl-live-data",
  "shadow": false,
- "live_forecasts_created": 0,
+ "live_forecasts_created": 1,
  "raw_data_published": false,
  "stage": "complete",
  "secret_present": true,
@@ -24,16 +24,16 @@
   "fitted_at": "2026-10-07T09:43:32.959674+00:00",
   "physics_features": 30
  },
- "forecasts": 56,
- "box_forecasts_created": 0,
- "box_forecasts": 51,
+ "forecasts": 57,
+ "box_forecasts_created": 1,
+ "box_forecasts": 52,
  "player_scored_games": 11,
  "scored_games": 11,
  "skill_scored_games": 10,
- "skill_baseline_prior_games": 42,
- "history_coverage_through": "2026-10-12",
- "history_added_PA": 2046,
- "history_refresh_note": "Statcast empty on a date with completed games",
+ "skill_baseline_prior_games": 43,
+ "history_coverage_through": "2026-10-13",
+ "history_added_PA": 2115,
+ "history_refresh_note": null,
  "history_day_notes": {},
  "pa_model": {
   "name": "pa-2026-v2-physics",
@@ -49,14 +49,16 @@
      "through": "2026-10-12"
     }
    },
-   "day_cache_days": 0,
+   "day_cache_days": 1,
    "day_cache_rows": 0,
+   "day_cache_errors": 1,
+   "day_cache_error": "KeyError: 'body'",
    "rows": 372457,
    "through": "2026-10-12",
    "seasons_mode": "live"
   }
  },
- "pitch_bookkeeping_prior_PA": 209698,
+ "pitch_bookkeeping_prior_PA": 209767,
  "pitch_bookkeeping_season_games": 4934,
  "engine_rules_changed": false,
  "model_parameters_changed": false,
@@ -207,10 +209,10 @@
   "skipped": 0
  },
  "storage_read_audit": {
-  "contents_verified": 32,
+  "contents_verified": 35,
   "blob_fallbacks": 23,
-  "bytes_verified": 63576168,
-  "requests": 105,
-  "rate_limit_remaining": 4582
+  "bytes_verified": 64623706,
+  "requests": 123,
+  "rate_limit_remaining": 4965
  }
 }
