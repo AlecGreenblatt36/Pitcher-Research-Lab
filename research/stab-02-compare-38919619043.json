@@ -1,0 +1,198 @@
+{
+ "schema": "brl.fit-arms-compare.v1",
+ "experiment": "STAB-02",
+ "run_id": "38919619043",
+ "control": "stab02-s0",
+ "arms": {
+  "stab02-s0": {
+   "role": "control",
+   "status": "completed",
+   "tune_2025": 1.4526898860931396,
+   "test_2026": {
+    "talent_only": 1.4592232339198161,
+    "talent_plus_context": 1.4574932210939464,
+    "blended_candidate": 1.4574142673386308
+   },
+   "train_years": [
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024
+   ],
+   "history_half_life_days": 365.0,
+   "pa_rows_by_season": {
+    "2015": 183602,
+    "2016": 184548,
+    "2017": 185259,
+    "2018": 185111,
+    "2019": 186517,
+    "2020": 66506,
+    "2021": 181818,
+    "2022": 182051,
+    "2023": 184104,
+    "2024": 182449,
+    "2025": 182926,
+    "2026": 183849
+   },
+   "seconds": 2041.1,
+   "error": null
+  },
+  "stab02-s1": {
+   "role": "candidate",
+   "status": "completed",
+   "tune_2025": 1.4526612758636475,
+   "test_2026": {
+    "talent_only": 1.4592308432867809,
+    "talent_plus_context": 1.4574958528619977,
+    "blended_candidate": 1.4573950073133721
+   },
+   "train_years": [
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024
+   ],
+   "history_half_life_days": 365.0,
+   "pa_rows_by_season": {
+    "2015": 183602,
+    "2016": 184548,
+    "2017": 185259,
+    "2018": 185111,
+    "2019": 186517,
+    "2020": 66506,
+    "2021": 181818,
+    "2022": 182051,
+    "2023": 184104,
+    "2024": 182449,
+    "2025": 182926,
+    "2026": 183849
+   },
+   "seconds": 2077.6,
+   "error": null,
+   "vs_control_2026": {
+    "difference_nats_per_pa": -1.926002524897925e-05,
+    "ci_95_low": -5.631548388400665e-05,
+    "ci_95_high": 1.8988954104251522e-05,
+    "games": 2429,
+    "plate_appearances": 183849,
+    "arm_log_loss": 1.457395007313393,
+    "control_log_loss": 1.457414267338642
+   }
+  },
+  "stab02-s2": {
+   "role": "candidate",
+   "status": "completed",
+   "tune_2025": 1.4526950120925903,
+   "test_2026": {
+    "talent_only": 1.4592061760345103,
+    "talent_plus_context": 1.4574773592076178,
+    "blended_candidate": 1.4574038196885282
+   },
+   "train_years": [
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024
+   ],
+   "history_half_life_days": 365.0,
+   "pa_rows_by_season": {
+    "2015": 183602,
+    "2016": 184548,
+    "2017": 185259,
+    "2018": 185111,
+    "2019": 186517,
+    "2020": 66506,
+    "2021": 181818,
+    "2022": 182051,
+    "2023": 184104,
+    "2024": 182449,
+    "2025": 182926,
+    "2026": 183849
+   },
+   "seconds": 2031.6,
+   "error": null,
+   "vs_control_2026": {
+    "difference_nats_per_pa": -1.0447650082403182e-05,
+    "ci_95_low": -4.135008318520987e-05,
+    "ci_95_high": 2.1388088188752575e-05,
+    "games": 2429,
+    "plate_appearances": 183849,
+    "arm_log_loss": 1.4574038196885595,
+    "control_log_loss": 1.457414267338642
+   }
+  },
+  "stab02-s3": {
+   "role": "candidate",
+   "status": "completed",
+   "tune_2025": 1.4526772499084473,
+   "test_2026": {
+    "talent_only": 1.4592266283019666,
+    "talent_plus_context": 1.4574917549118183,
+    "blended_candidate": 1.4573990519336708
+   },
+   "train_years": [
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024
+   ],
+   "history_half_life_days": 365.0,
+   "pa_rows_by_season": {
+    "2015": 183602,
+    "2016": 184548,
+    "2017": 185259,
+    "2018": 185111,
+    "2019": 186517,
+    "2020": 66506,
+    "2021": 181818,
+    "2022": 182051,
+    "2023": 184104,
+    "2024": 182449,
+    "2025": 182926,
+    "2026": 183849
+   },
+   "seconds": 2016.3,
+   "error": null,
+   "vs_control_2026": {
+    "difference_nats_per_pa": -1.5215405115068164e-05,
+    "ci_95_low": -6.430911424106853e-05,
+    "ci_95_high": 3.905565869505896e-05,
+    "games": 2429,
+    "plate_appearances": 183849,
+    "arm_log_loss": 1.4573990519335271,
+    "control_log_loss": 1.457414267338642
+   }
+  }
+ },
+ "selection_rule": "lowest 2025 tuning-block log loss (talent_plus_context) among candidate arms",
+ "selected": "stab02-s1",
+ "gate": {
+  "rule": "the selected arm beats the control on 2026 log loss with the 95% game-bootstrap interval below zero, and its largest class calibration gap on 2026 stays below 0.015",
+  "difference_nats_per_pa": -1.926002524897925e-05,
+  "ci_95_high": 1.8988954104251522e-05,
+  "max_absolute_class_calibration_gap": 0.00870367869956451,
+  "passed": false
+ },
+ "verdict": "failed",
+ "compared_at": "2026-10-16T15:37:13.130582+00:00"
+}
