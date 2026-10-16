@@ -1,4 +1,4 @@
-"""PITCH-01: one row per pitch from the sealed pitch-physics study of a season (research_lab.pa_model.pitch_chain reads it).
+"""CHAIN-01: one row per pitch from the sealed pitch-physics study of a season (research_lab.pa_model.pitch_chain reads it).
 
 Runs in GitHub Actions, one season per run (BRL_SEASON). The study (private/statcast/season-<year>.enc, the official
 play-by-play's pitch list per plate appearance) is unsealed, flattened to one row per pitch with the count before the
@@ -72,9 +72,9 @@ def main():
     frame = frame.sort_values(['date_key', 'game_pk', 'at_bat_number', 'pitch_number'], kind='mergesort').reset_index(drop=True)
     plain_csv = frame.to_csv(index=False).encode()
     cipher = seal(gzip.compress(plain_csv, mtime=0), key, pitches_purpose(year))
-    put_bytes(repo, token, pitches_path(year), cipher, branch, f'BRL: pitch table {year} (PITCH-01)')
+    put_bytes(repo, token, pitches_path(year), cipher, branch, f'BRL: pitch table {year} (CHAIN-01)')
     codes = frame['code'].value_counts().to_dict()
-    receipt = {'schema': 'brl.pitch-table-receipt.v1', 'experiment': 'PITCH-01', 'year': year, 'games': int(frame['game_pk'].nunique()),
+    receipt = {'schema': 'brl.pitch-table-receipt.v1', 'experiment': 'CHAIN-01', 'year': year, 'games': int(frame['game_pk'].nunique()),
                'plate_appearances': int(frame[['game_pk', 'at_bat_number']].drop_duplicates().shape[0]), 'pitches': int(len(frame)),
                'result_codes': {str(k): int(v) for k, v in sorted(codes.items(), key=lambda kv: -kv[1])},
                'with_zone_pct': round(float(frame['zone'].notna().mean()) * 100, 2), 'with_speed_pct': round(float(frame['speed'].notna().mean()) * 100, 2),

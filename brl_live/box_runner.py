@@ -325,7 +325,7 @@ def main(public_dir):
             sim.physics_table,dropped=join_history(sim.physics_table,sim.history)
             physics_receipt['rows_not_in_history']=dropped;physics_receipt['rows']=int(len(sim.physics_table))
         if manifest.get('chain_features'):
-            # PITCH-02: the chain's per-pitch tables, the fit's seasons through yesterday
+            # CHAIN-02: the chain's per-pitch tables, the fit's seasons through yesterday
             from .physics_inputs import assemble_pitch_table
             pitch_years=tuple(int(y) for y in (manifest.get('pitch_seasons') or range(2021,year+1)) if int(y)<=year)
             sim.pitch_table,physics_receipt['pitch_table']=assemble_pitch_table(cache,index,utcnow(),years=pitch_years)

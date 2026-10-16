@@ -1,4 +1,4 @@
-"""The pitch-level chain (PITCH-01, PITCH-02): a plate appearance built one pitch at a time.
+"""The pitch-level chain (CHAIN-01, CHAIN-02): a plate appearance built one pitch at a time.
 
 Instead of reading a hitter's and a pitcher's past outcomes, the chain reads what each one does on a pitch and lets the
 seven-outcome probabilities of a plate appearance fall out of the count. Every pitch is placed in one of 15 cells
@@ -24,7 +24,7 @@ player is the league and a seen one moves away from it by his own evidence.
 Two uses, one code path: ``build_features`` walks the history date by date (features for a date come from pitches
 before it, then the date's pitches are absorbed) and returns one row per plate appearance in the benchmark's order;
 ``ChainState`` is the same state built to a cutoff date for the live provider. The per-pitch log loss of the chain's own
-predictions against league-only tables is accumulated as it goes (PITCH-01's check).
+predictions against league-only tables is accumulated as it goes (CHAIN-01's check).
 """
 from __future__ import annotations
 
@@ -54,7 +54,7 @@ FEATURES = [f'ch_{l}' for l in LABELS] + ['ch_pitches']
 DEFAULT_PARAMS = {'k_b_swing': 200.0, 'k_b_whiff': 140.0, 'k_b_foul': 150.0, 'k_b_out': 220.0, 'k_p_swing': 800.0, 'k_p_whiff': 360.0,
                   'k_p_called': 1000.0, 'k_p_out': 650.0, 'k_park_out': 1500.0, 'k_mix': 40.0, 'k_league': 50.0,
                   'half_life': 400.0, 'park_half_life': 2000.0,
-                  # PITCH-02B: hitters' swing and whiff deviations split by two strikes or not; pitchers' by family in or out
+                  # CHAIN-02B: hitters' swing and whiff deviations split by two strikes or not; pitchers' by family in or out
                   # of the zone (instead of family alone); the matchup's own per-count rates as further features
                   'two_strike_groups': False, 'pitcher_cells': False, 'extra_features': False}
 EXTRA_FEATURES = ['ch_sw00', 'ch_wh00', 'ch_fo00', 'ch_ip00', 'ch_ball00', 'ch_sw02', 'ch_wh02', 'ch_sw30']
@@ -246,7 +246,7 @@ class ChainState:
         self.names = feature_names(self.p)
         self.pitches_seen = 0
         self.through_day: int | None = None
-        # PITCH-01 check: summed log loss of the chain's own per-pitch predictions against league-only tables
+        # CHAIN-01 check: summed log loss of the chain's own per-pitch predictions against league-only tables
         self.check = {k: [0.0, 0.0, 0] for k in ('swing', 'whiff', 'outcome')}
 
     def _bcol(self, cell, count):
@@ -350,7 +350,7 @@ class ChainState:
         br = self.bat.rows([int(b) for b in batters], day); pr = self.pit.rows([int(x) for x in pitchers], day)
         kr = self.park.rows([str(x) for x in q['park'].to_numpy()], day)
         B, Pi, K = self.bat.a, self.pit.a, self.park.a
-        # PITCH-01 check: the chain's own per-pitch prediction (league + the two deviations) against league-only
+        # CHAIN-01 check: the chain's own per-pitch prediction (league + the two deviations) against league-only
         db_sw = _dev(B['sw_y'][br, grp], B['sw_e'][br, grp], B['sw_n'][br, grp], P['k_b_swing'])
         dp_sw = _dev(Pi['sw_y'][pr, fam], Pi['sw_e'][pr, fam], Pi['sw_n'][pr, fam], P['k_p_swing'])
         pred_sw = _expit(_logit(e_sw) + db_sw + dp_sw)

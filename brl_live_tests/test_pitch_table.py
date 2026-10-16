@@ -1,4 +1,4 @@
-"""PITCH-01: the sealed study flattens to one row per pitch with the count before it and the plate appearance's outcome."""
+"""CHAIN-01: the sealed study flattens to one row per pitch with the count before it and the plate appearance's outcome."""
 import importlib.util
 from pathlib import Path
 

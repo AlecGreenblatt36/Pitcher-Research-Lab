@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 339,
- "rows": 343,
+ "experiments": 341,
+ "rows": 344,
  "records": {
   "ACC-01": [
    {
@@ -260,20 +260,6 @@
     "runs": [],
     "frozen_commits": [],
     "status": "product"
-   },
-   {
-    "id": "PITCH-01",
-    "columns": {
-     "ID": "PITCH-01",
-     "Attempt": "The pitch-level chain, part one: the data and the per-pitch models (Alec, October 16: a model that trusts a player in weeks, not half a season; the plan is the Pitch Model Plan doc). Data: one row per pitch from the sealed pitch-physics study of each season 2021 to 2026 (tools/brl_pitch_table.py, workflow BRL pitch table; private/statcast/pitches-<year>.enc; receipts pitches/<year>.json: 4.33 million pitches, 99.95% with MLB's zone number). Model: research_lab.pa_model.pitch_chain. Every pitch sits in one of 15 cells (family fastball, breaking, offspeed x location top, middle, bottom of the zone, above it, below it). League tables by platoon, count and cell (swing, whiff per swing, foul per contact, called strike per take, hit by pitch, the ball-in-play outcome mix per cell) are cumulative; a hitter's deviations (swing and whiff per family in or out of the zone, fouls, ball-in-play outcomes), a pitcher's (his pitch mix by count situation, swings and whiffs induced per family, called strikes, outcomes allowed) and a park's (outcomes) are log-odds of observed against league-expected on the same pitches, shrunk with STAB-01's next-season constants and decayed with a 400-day half-life. Chosen over boosting on purpose: a structural model whose every number can be read, that runs as table lookups in the live simulator, and whose per-pitch tables are the same thing the game plans already show. Check: as the chain walks the history, its own per-pitch predictions (league plus the two deviations) are scored against league-only tables on every pitch before it is absorbed",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the chain ran on real pitches.** Gate: on 2021-2026, the chain's per-pitch log loss below league-only for swings, whiffs per swing and ball-in-play outcomes (gain per 1,000 pitches above zero for all three); on made-up seasons with planted tendencies the chain reads them (chasers strike out more, Coors homers more) and the live provider's chain equals the chronological builder's (tested). What it decides: the chain's inputs for PITCH-02",
-     "Delta corrected Brier, 2026": "registered"
-    },
-    "registered_before_run": true,
-    "diagnostic": false,
-    "runs": [],
-    "frozen_commits": [],
-    "status": "registered"
    }
   ],
   "RT-01": [
@@ -5600,18 +5586,56 @@
     "status": "failed; not adopted"
    }
   ],
-  "PITCH-02": [
+  "CHAIN-01": [
    {
-    "id": "PITCH-02",
+    "id": "CHAIN-01",
     "columns": {
-     "ID": "PITCH-02",
+     "ID": "CHAIN-01",
+     "Attempt": "The pitch-level chain, part one: the data and the per-pitch models (Alec, October 16: a model that trusts a player in weeks, not half a season; the plan is the Pitch Model Plan doc). Data: one row per pitch from the sealed pitch-physics study of each season 2021 to 2026 (tools/brl_pitch_table.py, workflow BRL pitch table; private/statcast/pitches-<year>.enc; receipts pitches/<year>.json: 4.33 million pitches, 99.95% with MLB's zone number). Model: research_lab.pa_model.pitch_chain. Every pitch sits in one of 15 cells (family fastball, breaking, offspeed x location top, middle, bottom of the zone, above it, below it). League tables by platoon, count and cell (swing, whiff per swing, foul per contact, called strike per take, hit by pitch, the ball-in-play outcome mix per cell) are cumulative; a hitter's deviations (swing and whiff per family in or out of the zone, fouls, ball-in-play outcomes), a pitcher's (his pitch mix by count situation, swings and whiffs induced per family, called strikes, outcomes allowed) and a park's (outcomes) are log-odds of observed against league-expected on the same pitches, shrunk with STAB-01's next-season constants and decayed with a 400-day half-life. Chosen over boosting on purpose: a structural model whose every number can be read, that runs as table lookups in the live simulator, and whose per-pitch tables are the same thing the game plans already show. Check: as the chain walks the history, its own per-pitch predictions (league plus the two deviations) are scored against league-only tables on every pitch before it is absorbed",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the chain ran on real pitches.** Gate: on 2021-2026, the chain's per-pitch log loss below league-only for swings, whiffs per swing and ball-in-play outcomes (gain per 1,000 pitches above zero for all three); on made-up seasons with planted tendencies the chain reads them (chasers strike out more, Coors homers more) and the live provider's chain equals the chronological builder's (tested). What it decides: the chain's inputs for CHAIN-02 **Result (run 38937456206, arms p400 and p200; 4,334,696 pitches, 1,668 hitters, 1,921 pitchers, 31 parks): passed.** Per-pitch log loss, league-only against the chain: swings 0.5547 to 0.5468 (+7.9 nats per 1,000 pitches), whiffs per swing 0.4844 to 0.4733 (+11.1 per 1,000 swings), ball-in-play outcomes 0.9683 to 0.9638 (+4.4 per 1,000); with a 200-day half-life +7.4, +10.0 and +4.1. All three gates met. The chain walks six seasons in about two minutes. (The row was first written under the id PITCH-01, which an older bookkeeping row already carried; renamed CHAIN-01 the same afternoon, the receipts still say PITCH-01)",
+     "Delta corrected Brier, 2026": "passed"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [
+     "38937456206"
+    ],
+    "frozen_commits": [],
+    "status": "passed"
+   }
+  ],
+  "CHAIN-02": [
+   {
+    "id": "CHAIN-02",
+    "columns": {
+     "ID": "CHAIN-02",
      "Attempt": "The chain in the plate-appearance model (stacking): the chain's seven log-probabilities and expected pitches per plate appearance, date blocked, as features of the locked benchmark next to the physics features; the logistic layer learns how much to trust them. Arms (workflow BRL fit arms, tools/fit_arms.json): c0 = the live settings (control), p400 = physics + chain (half-life 400 days), p200 = half-life 200 days, each trained 2023-2024, validated 2025, tested 2026",
-     "Disposition and evidence": "**Registered in the commit that added this row, before any arm was fit.** Same selection as LONG-01: the candidate with the lowest 2025 tuning-block log loss is the one tested. Passes if its blended 2026 log loss beats c0's by at least 0.002 nats per plate appearance (the Pitch Model Plan's bar, twice the physics gain) with the 95% game-bootstrap interval below zero, and its largest class calibration gap stays below 0.015. Prediction: 0.002 to 0.004, most of it on strikeouts and walks. If it passes, PITCH-03 (full replays of 2025 and 2026 with the chain in the live provider, the LONG-01 stage 2 rule) decides whether it goes live; if it fails, the chain stays in research and the ledger says what the interval was",
+     "Disposition and evidence": "**Registered in the commit that added this row, before any arm was fit.** Same selection as LONG-01: the candidate with the lowest 2025 tuning-block log loss is the one tested. Passes if its blended 2026 log loss beats c0's by at least 0.002 nats per plate appearance (the Pitch Model Plan's bar, twice the physics gain) with the 95% game-bootstrap interval below zero, and its largest class calibration gap stays below 0.015. Prediction: 0.002 to 0.004, most of it on strikeouts and walks. If it passes, CHAIN-03 (full replays of 2025 and 2026 with the chain in the live provider, the LONG-01 stage 2 rule) decides whether it goes live; if it fails, the chain stays in research and the ledger says what the interval was **Result (run 38937456206; comparison research/pitch-02-compare-38937456206.json): a real gain, short of the registered bar.** The control reproduced the live model (1.458396). 2025 tuning-block log loss: c0 1.45347, p400 1.45313, p200 1.45297, so p200 (half-life 200 days) is the selected arm. On 2026 against c0: **p200 -0.00068 [-0.00087, -0.00050]** (largest class calibration gap 0.0031); p400 -0.00058 [-0.00074, -0.00043]. The interval is clear of zero by a wide margin and the gain is the largest of any at-bat change since the physics features (0.00154), but a third of the 0.002 bar, so the gate is not met and the chain does not go to CHAIN-03 as it stands. The structure carries signal (CHAIN-01's per-pitch gains are large); the first version is deliberately coarse. CHAIN-02B registers the second version",
+     "Delta corrected Brier, 2026": "gate not met (-0.00068, interval clear of zero)"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [
+     "38937456206"
+    ],
+    "frozen_commits": [],
+    "status": "gate not met (-0.00068, interval clear of zero)"
+   }
+  ],
+  "CHAIN-02B": [
+   {
+    "id": "CHAIN-02B",
+    "columns": {
+     "ID": "CHAIN-02B",
+     "Attempt": "The chain's second version, three additions that the first version's coarseness left out, each off by default and switched on by parameter: (1) two_strike_groups: a hitter's swing and whiff deviations split by two strikes or not (hitters expand and shorten up with two strikes at different rates); (2) pitcher_cells: a pitcher's swing and whiff deviations by family in or out of the zone instead of family alone (the high fastball that misses bats, the slider that gets chased); (3) extra_features: the matchup's own per-count rates as eight further features (swing, whiff, foul, in-play and ball rates at 0-0, swing and whiff at 0-2, swing at 3-0), since the seven outcome log-probabilities compress what the chain knows. Arms (tools/fit_arms.json, experiment PITCH-02B in the file, so the comparison is research/pitch-02b-compare-<run>.json): c0 (control), v2 = all three with a 200-day half-life, v2h120 = the same at 120 days, v2x = (1) and (2) without the extra features (what the features alone are worth)",
+     "Disposition and evidence": "**Registered in the commit that added this row; the arms (run 38941277563) were queued eleven minutes before this commit because the ledger edit that should have carried the row failed on a duplicate id and the push went ahead without it; no result had been produced or seen when the row was written.** Same selection and gate as CHAIN-02 (lowest 2025 tuning-block log loss; passes at -0.002 on 2026 against c0 with the interval below zero and calibration within 0.015). Prediction: the selected arm between -0.0010 and -0.0020; the extra features worth at least a third of the gain",
      "Delta corrected Brier, 2026": "registered"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38941277563"
+    ],
     "frozen_commits": [],
     "status": "registered"
    }

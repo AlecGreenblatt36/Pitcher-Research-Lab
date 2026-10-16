@@ -222,7 +222,7 @@ def main():
             receipt['physics_rows'] = int(len(physics_table))
             model_manifest = json.loads((ROOT / 'brl_engine' / 'models' / f'{model}.json').read_text())
             if model_manifest.get('chain_features'):
-                # PITCH-02: a model with pitch-chain features reads the sealed per-pitch tables of its fit's seasons
+                # CHAIN-02: a model with pitch-chain features reads the sealed per-pitch tables of its fit's seasons
                 stage('load pitch tables')
                 sys.path.insert(0, str(ROOT / 'tools'))
                 from brl_fit_model import pitches_path, pitches_purpose

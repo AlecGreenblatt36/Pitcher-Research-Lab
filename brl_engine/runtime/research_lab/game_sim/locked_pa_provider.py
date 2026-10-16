@@ -270,7 +270,7 @@ class LockedPAModelProvider:
     # Per-PA pitch physics table (research_lab.pa_model.physics.TABLE_COLUMNS plus run_value), required
     # when the model bundle declares physics features; ignored by a bundle without them.
     physics_table: pd.DataFrame | None = None
-    # Per-pitch table (tools/brl_pitch_table.py columns), required when the bundle declares pitch-chain features (PITCH-02).
+    # Per-pitch table (tools/brl_pitch_table.py columns), required when the bundle declares pitch-chain features (CHAIN-02).
     pitch_table: pd.DataFrame | None = None
     model_sha256: str = field(init=False, default="")
     history_sha256: str = field(init=False, default="")

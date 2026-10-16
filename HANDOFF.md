@@ -34,7 +34,7 @@ discovery page stays private.
   and the replay lane to include 2015-2022 (brl_live/history_refresh.py; tools/brl_replay.py) and three seasons of
   physics tables (window_days 1095).
 
-## October 16, afternoon: the pitch-level chain (PITCH-01 to PITCH-03)
+## October 16, afternoon: the pitch-level chain (CHAIN-01 to CHAIN-03; the PITCH- ids were taken)
 
 Alec's direction after the long-history tests: stop refitting the same model; build the structural change (the Pitch
 Model Plan doc). Built the same afternoon:

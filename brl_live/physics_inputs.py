@@ -110,7 +110,7 @@ def load_pitch_table(store, key: bytes, year: int):
 
 
 def assemble_pitch_table(cache, index: dict, origin: datetime, years: tuple) -> tuple[pd.DataFrame, dict]:
-    """PITCH-02: season pitch tables plus the day-cache feeds after their coverage, through yesterday; (table, receipt)."""
+    """CHAIN-02: season pitch tables plus the day-cache feeds after their coverage, through yesterday; (table, receipt)."""
     from research_lab.pa_model.pitch_chain import pitches_from_feed, PITCH_COLUMNS
     today = origin.astimezone(ZoneInfo('America/New_York')).date()
     parts, receipt = [], {'seasons': {}, 'day_cache_days': 0, 'day_cache_rows': 0}

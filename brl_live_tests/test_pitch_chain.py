@@ -1,4 +1,4 @@
-"""PITCH-01/02: the pitch-level chain. Sanity of the count chain, date blocking, and parity between the chronological
+"""CHAIN-01/02: the pitch-level chain. Sanity of the count chain, date blocking, and parity between the chronological
 builder and the state built to a cutoff."""
 import json
 import numpy as np
@@ -80,7 +80,7 @@ def test_chain_probabilities_sum_to_one_and_read_the_tendencies():
     # Coors gives more home runs than the Bronx for the same matchup
     hr_col = np.exp(state.features(4, 101, 'COL', 'R', 'R', day)[5]); hr_nyy = np.exp(state.features(4, 101, 'NYY', 'R', 'R', day)[5])
     assert hr_col > hr_nyy * 1.2
-    # the chain beats league-only tables on its own pitches (PITCH-01's check)
+    # the chain beats league-only tables on its own pitches (CHAIN-01's check)
     rep = audit['per_pitch_check']
     assert rep['swing']['gain_per_1000'] > 5 and rep['whiff']['gain_per_1000'] > 0 and rep['outcome']['n'] > 1000
 
@@ -179,7 +179,7 @@ def test_provider_appends_chain_features_and_matches_the_builder(tmp_path):
 
 
 def test_live_pitch_table_assembles_seasons_then_the_day_cache():
-    """PITCH-02 at forecast time: the sealed season tables, then every final feed in the day cache after their coverage,
+    """CHAIN-02 at forecast time: the sealed season tables, then every final feed in the day cache after their coverage,
     nothing from today; the feed rows carry the count before each pitch."""
     import gzip
     from datetime import datetime, timezone

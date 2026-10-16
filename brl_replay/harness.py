@@ -189,7 +189,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
     pitch_counts: optional research_lab.game_sim.pitch_counts.PitchCounts: each plate appearance's pitches drawn by outcome
         (LEASH-03), for the hazard correction's pitch terms.
     state_history: optional plate-appearance rows (HISTORY_COLUMNS) the model's history state is built from instead of h.
-    pitch_table: the per-pitch table (tools/brl_pitch_table.py) a model with pitch-chain features needs (PITCH-02).
+    pitch_table: the per-pitch table (tools/brl_pitch_table.py) a model with pitch-chain features needs (CHAIN-02).
     hazard_correction: optional {'terms', 'coef'}: LEASH-02's correction on the starter-exit hazard's log-odds by inning, its end
         and the score (research_lab.game_sim.starter_hazard.CORRECTION_TERMS).
     paired_streams: tie every random draw to a team's plate appearance number (engine paired streams), so replays of two
@@ -390,7 +390,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
             if 'f_def' in base.physics_features:
                 defense = DefenseState.build(h, date, params)
         if base.chain is not None:
-            # PITCH-02: the chain's tables advance to the start of this date (pitches of earlier dates only)
+            # CHAIN-02: the chain's tables advance to the start of this date (pitches of earlier dates only)
             from research_lab.pa_model.pitch_chain import day_ordinal
             base.chain.absorb_through(chain_q, int(day_ordinal([date])[0]))
             base._chain_cache = {}

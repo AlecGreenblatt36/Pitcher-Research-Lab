@@ -205,8 +205,8 @@ def main():
         receipt['physics_join'] = audit
         chain_extra = {}
         if settings.get('pitch_chain') is not None:
-            # PITCH-02: the pitch-level chain's seven log-probabilities and expected pitches per plate appearance, date blocked,
-            # from the sealed per-pitch tables (PITCH-01) of pitch_seasons (default: 2021 to the last season in the history)
+            # CHAIN-02: the pitch-level chain's seven log-probabilities and expected pitches per plate appearance, date blocked,
+            # from the sealed per-pitch tables (CHAIN-01) of pitch_seasons (default: 2021 to the last season in the history)
             from research_lab.pa_model import pitch_chain as pc
             chain_params = dict(settings.get('pitch_chain') or {})
             pitch_seasons = [int(y) for y in (settings.get('pitch_seasons') or range(2021, max(receipt['seasons']) + 1))]
