@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 334,
- "rows": 337,
+ "experiments": 335,
+ "rows": 338,
  "records": {
   "ACC-01": [
    {
@@ -5495,6 +5495,22 @@
      "ID": "HIST-01",
      "Attempt": "Alec, October 16: the four seasons of history (2023 to 2026) are too few for how we predict. The plate-appearance history is extended back to 2015, the first Statcast season: for each season 2015 to 2022, tools/brl_history_backfill.py (workflow BRL history backfill, one job per season) reads the official schedule, downloads Baseball Savant's pitch-by-pitch export for the regular season and the postseason in three-day spans, and builds one row per plate appearance with the same builder as the 2023-2026 history (research_lab.pa_model.data.build_plate_appearances; postseason rows keep their game type). Each season is sealed to private/history/pa-<year>.enc with a counts-only receipt (history/pa-<year>.json). The pitch physics study and per-PA physics tables for the same seasons come from the existing backfill (tools/brl_bookkeeping_backfill.py, the official feeds), which now ends a past season with its year. What more seasons are for: more seasons to test changes on (most gates here rest on two replay seasons), longer histories for each player (multi-year weighting, aging), year-to-year stability checks with many pairs of seasons, and many more postseason games; era differences (the 2019 ball, the 60-game 2020, the 2021-2022 ball changes, the 2023 rules, Trackman before 2020 and Hawk-Eye after) have to be handled in any use",
      "Disposition and evidence": "**Registered in the commit that added this row, before any season was built.** Acceptance, per season: (1) regular-season games in the history at least 99% of the schedule's completed games; (2) 70 to 82 plate appearances a regular-season game; (3) strikeouts 18% to 25%, walks and hit batters 7.5% to 11%, home runs 2.3% to 4.0% of regular-season plate appearances; (4) the physics table's plate appearances within 2% of the history's. A season that passes is usable for research and fits; one that fails is fixed before any use. Nothing on the site changes from this row alone: any model or simulator change that uses the older seasons is its own registered test",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
+   }
+  ],
+  "STAB-01": [
+   {
+    "id": "STAB-01",
+    "columns": {
+     "ID": "STAB-01",
+     "Attempt": "First use of the longer history (diagnostic): how much sample a player's rate needs before it means something, and how much carries into the next season, from every regular season 2015 to 2026 (tools/brl_stability.py in the research lane, experiment stability; the physics tables carry each plate appearance's outcome and pitch sums, the histories give the game type). For 20 batter and pitcher rates (strikeouts, walks, home runs and singles per PA; whiff per swing, chase, swing, zone contact; exit velocity, hard-hit, launch angle; fastball speed; and the pitcher versions), a shrinkage constant k (league-average sample added, so an estimate is (total + k x league rate) / (sample + k)) from two measures: split half within a season (first 2N units split alternately; k = N (1 - r) / r) and next season (players with at least M units in consecutive seasons; k = n (1 - r) / r at their mean sample), for 2015-2019 and 2021-2026 separately. On made-up seasons with a known k of 68.6 the estimator gives 69.6 (split half) and 67.3 (next season)",
+     "Disposition and evidence": "**Registered in the commit that added this row, before its run.** Diagnostic; no prediction about the values. What it decides: the plate-appearance model's shrinkage settings (player_prior_pa 180 for the per-PA rates; physics k_rate 150 for whiff, chase, swing and zone contact; k_bip 60 for exit velocity, launch angle and hard-hit; k_velo 100 fastballs) are checked against the next-season k. Where a setting is off by more than a factor of 2 from the next-season k in both eras, a refit with settings from these estimates is registered next (gated on held-out log-likelihood and full replays); otherwise the settings stand and How it works can cite the measured numbers",
      "Delta corrected Brier, 2026": "registered"
     },
     "registered_before_run": true,

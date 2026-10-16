@@ -841,6 +841,52 @@ def main():
         put_text(repo, token, f'research/{experiment}-{run_id}.json', json.dumps(receipt, indent=1, default=float), branch, 'BRL: research ' + experiment)
         print(json.dumps({k: receipt.get(k) for k in ('status', 'error')}))
         return
+    if experiment == 'stability':
+        # STAB-01: shrinkage constants from every regular season 2015-2026 (the physics tables carry the outcome; the
+        # game types come from the plate-appearance histories, HIST-01's sealed seasons and the data package)
+        run_id = os.environ.get('GITHUB_RUN_ID', 'local')
+        receipt = {'schema': 'brl.research-receipt.v1', 'experiment': experiment, 'run_id': run_id, 'started_at': datetime.now(timezone.utc).isoformat()}
+        try:
+            import io
+            sys.path.insert(0, str(ROOT / 'tools'))
+            import brl_stability
+            work = Path(os.environ.get('RUNNER_TEMP', '/tmp')) / 'brl-research'
+            ep = entrypoint_module()
+            manifest = json.loads((ROOT / 'brl_engine' / 'data_package.json').read_text())
+            data_root = work / 'data'
+            if data_root.exists():
+                import shutil; shutil.rmtree(data_root)
+            data_root.mkdir(parents=True)
+            ep.restore_package(repo, token, key_hex, manifest, data_root)
+            recent = pd.read_csv(next(data_root.rglob('plate_appearances.csv.gz')), usecols=['game_pk', 'game_type'], low_memory=False)
+            regular = set(int(x) for x in recent.loc[recent['game_type'] == 'R', 'game_pk'])
+            seasons_loaded, frames = [], []
+            for year in range(2015, 2027):
+                if year <= 2022:
+                    raw = read_blob(repo, token, f'private/history/pa-{year}.enc', branch)
+                    if raw is None:
+                        continue
+                    h = pd.read_csv(io.BytesIO(gzip.decompress(unseal(raw, key, f'pa-history-season-{year}'))), usecols=['game_pk', 'game_type'])
+                    regular |= set(int(x) for x in h.loc[h['game_type'] == 'R', 'game_pk'])
+                raw = read_blob(repo, token, physics_path(year), branch)
+                if raw is None:
+                    continue
+                t = pd.read_csv(io.BytesIO(gzip.decompress(unseal(raw, key, physics_purpose(year)))))
+                t = t[t['game_pk'].astype(int).isin(regular)].sort_values(['date_key', 'game_pk', 'at_bat_number'], kind='mergesort')
+                t['season'] = year
+                frames.append(t[['season', 'batter', 'pitcher', 'outcome', 'n', 'sw', 'wh', 'oz', 'ch', 'izs', 'izc', 'fb', 'velo', 'ev', 'la']])
+                seasons_loaded.append(year)
+            receipt['seasons'] = seasons_loaded
+            receipt['results'] = brl_stability.run(pd.concat(frames, ignore_index=True))
+            receipt['model_priors'] = {'player_prior_pa': 180.0, 'physics': {k: DEFAULT_PARAMS[k] for k in ('k_rate', 'k_bip', 'k_velo')},
+                                       'note': 'k_rate: swings, out-of-zone pitches, pitches and zone swings for whiff, chase, swing and zone contact; k_bip: balls in play; k_velo: fastballs'}
+            receipt['status'] = 'completed'
+        except Exception as exc:
+            receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:300]
+            receipt['where'] = [{'file': Path(f.filename).name, 'function': f.name, 'line': f.lineno} for f in traceback.extract_tb(exc.__traceback__)[-5:]]
+        put_text(repo, token, f'research/{experiment}-{run_id}.json', json.dumps(receipt, indent=1, default=float), branch, 'BRL: research ' + experiment)
+        print(json.dumps({k: receipt.get(k) for k in ('status', 'error')}))
+        return
     if experiment in ('postseason_usage', 'postseason_tiers'):
         run_id = os.environ.get('GITHUB_RUN_ID', 'local')
         receipt = {'schema': 'brl.research-receipt.v1', 'experiment': experiment, 'run_id': run_id, 'started_at': datetime.now(timezone.utc).isoformat()}
