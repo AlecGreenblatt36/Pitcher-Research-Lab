@@ -33,6 +33,10 @@ class PAConfig:
     # LONG-01: half-life in days for the cumulative league, player, split and park counters
     # (0 = off, every prior plate appearance counts fully).
     history_half_life_days: float = 0.0
+    # STAB-02: a prior sample size per outcome class (outcome_labels order) for batters and for pitchers;
+    # None keeps player_prior_pa for every class.
+    batter_class_prior_pa: tuple[float, ...] | None = None
+    pitcher_class_prior_pa: tuple[float, ...] | None = None
     batter_recent_window: int = 100
     pitcher_recent_window: int = 150
     regularization_grid: tuple[float, ...] = (1e-5, 1e-4, 1e-3, 1e-2, 0.1, 1.0)
@@ -79,6 +83,10 @@ class PAConfig:
             raise ValueError(
                 "validation fractions must leave a final ensemble-selection block"
             )
+        for name in ("batter_class_prior_pa", "pitcher_class_prior_pa"):
+            values = getattr(self, name)
+            if values is not None and (len(values) != len(self.outcome_labels) or min(values) <= 0):
+                raise ValueError(f"{name} needs one positive value per outcome class")
         if self.history_half_life_days < 0:
             raise ValueError("history_half_life_days must be zero (off) or positive")
         if not self.regularization_grid or any(

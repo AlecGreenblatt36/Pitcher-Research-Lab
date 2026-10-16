@@ -69,7 +69,7 @@ ENV_CLASSES = {'env_hr': ('HR',), 'env_k': ('K',), 'env_bb': ('BB_HBP',), 'env_o
 DEFAULT_PARAMS = {'k_rate': 150.0, 'k_bip': 60.0, 'k_velo': 100.0, 'xvalue': False, 'recent_days': 0,
                   'k_recent_pitch': 100.0, 'k_recent_bip': 40.0, 'k_cell': 40.0, 'pitch_types': False, 'k_type': 60.0,
                   'defense': False, 'k_def': 400.0, 'defense_days': 365, 'environment': False, 'env_days': 30, 'k_env': 2000.0,
-                  'matchup': False, 'workload': False, 'aging': False, 'decay_days': 0, 'k_dec': 60.0, 'window_days': 0}
+                  'matchup': False, 'workload': False, 'aging': False, 'decay_days': 0, 'k_dec': 60.0, 'window_days': 0, 'k_overrides': None}
 FIELDABLE = {'BIP_OUT', '1B', '2B_3B', 'OTHER_REACH'}
 ENV_LABELS = ['BIP_OUT', 'K', 'BB_HBP', '1B', '2B_3B', 'HR', 'OTHER_REACH']
 ENV_INDEX = {l: i for i, l in enumerate(ENV_LABELS)}
@@ -383,35 +383,39 @@ class _Sums:
     def features(self, batter: int, pitcher: int, today: int, team_defense=None, aging_values=None) -> np.ndarray:
         P, X = self.p, self.X
         k_rate, k_bip, k_velo = float(P['k_rate']), float(P['k_bip']), float(P['k_velo'])
+        # STAB-02: a measured prior size for any single base feature ({feature name: k}); the rest keep k_rate, k_bip, k_velo
+        ko = P.get('k_overrides') or {}
+        K = (lambda name, default: float(ko[name]) if name in ko else default) if ko else (lambda name, default: default)
         Lp, Lb = self.Lp, self.Lb
         sb = self.bp.get(batter, self.zero_p); sp = self.pp.get(pitcher, self.zero_p)
         cb = self.bb.get(batter, self.zero_b); cp = self.pb.get(pitcher, self.zero_b)
         out = np.empty(len(self.names))
-        out[X['b_ev']] = shrunk(cb, BS['ev'], BS['bip'], Lb, k_bip)
-        out[X['b_la']] = shrunk(cb, BS['la'], BS['bip'], Lb, k_bip)
-        out[X['b_hard']] = shrunk(cb, BS['hard'], BS['bip'], Lb, k_bip)
-        out[X['b_barrel']] = shrunk(cb, BS['barrel'], BS['bip'], Lb, k_bip)
-        out[X['b_whiff']] = shrunk(sb, PS['wh'], PS['sw'], Lp, k_rate)
-        out[X['b_chase']] = shrunk(sb, PS['ch'], PS['oz'], Lp, k_rate)
-        out[X['b_swing']] = shrunk(sb, PS['sw'], PS['n'], Lp, k_rate)
-        out[X['b_zcontact']] = shrunk(sb, PS['izc'], PS['izs'], Lp, k_rate)
+        out[X['b_ev']] = shrunk(cb, BS['ev'], BS['bip'], Lb, K('b_ev', k_bip))
+        out[X['b_la']] = shrunk(cb, BS['la'], BS['bip'], Lb, K('b_la', k_bip))
+        out[X['b_hard']] = shrunk(cb, BS['hard'], BS['bip'], Lb, K('b_hard', k_bip))
+        out[X['b_barrel']] = shrunk(cb, BS['barrel'], BS['bip'], Lb, K('b_barrel', k_bip))
+        out[X['b_whiff']] = shrunk(sb, PS['wh'], PS['sw'], Lp, K('b_whiff', k_rate))
+        out[X['b_chase']] = shrunk(sb, PS['ch'], PS['oz'], Lp, K('b_chase', k_rate))
+        out[X['b_swing']] = shrunk(sb, PS['sw'], PS['n'], Lp, K('b_swing', k_rate))
+        out[X['b_zcontact']] = shrunk(sb, PS['izc'], PS['izs'], Lp, K('b_zcontact', k_rate))
         out[X['b_bip_n']] = cb[BS['bip']]
-        own_velo = shrunk(sp, PS['velo'], PS['fb'], Lp, k_velo)
+        own_velo = shrunk(sp, PS['velo'], PS['fb'], Lp, K('p_velo', k_velo))
         out[X['p_velo']] = own_velo
-        out[X['p_spin']] = shrunk(sp, PS['spin'], PS['fb'], Lp, k_velo)
-        out[X['p_ivb']] = shrunk(sp, PS['ivb'], PS['fb'], Lp, k_velo)
-        out[X['p_hb']] = shrunk(sp, PS['hb'], PS['fb'], Lp, k_velo)
+        out[X['p_spin']] = shrunk(sp, PS['spin'], PS['fb'], Lp, K('p_spin', k_velo))
+        out[X['p_ivb']] = shrunk(sp, PS['ivb'], PS['fb'], Lp, K('p_ivb', k_velo))
+        out[X['p_hb']] = shrunk(sp, PS['hb'], PS['fb'], Lp, K('p_hb', k_velo))
         lv = self.last_velo.get(pitcher)
         out[X['p_velo_delta']] = (lv[1] / lv[0] - own_velo) if (lv is not None and lv[0] >= 5 and sp[PS['fb']] >= 100) else 0.0
-        own_whiff = shrunk(sp, PS['wh'], PS['sw'], Lp, k_rate)
-        own_csw = (sp[PS['cs']] + sp[PS['wh']] + k_rate * ((Lp[PS['cs']] + Lp[PS['wh']]) / max(Lp[PS['n']], 1e-9))) / (sp[PS['n']] + k_rate)
+        own_whiff = shrunk(sp, PS['wh'], PS['sw'], Lp, K('p_whiff', k_rate))
+        k_csw = K('p_csw', k_rate)
+        own_csw = (sp[PS['cs']] + sp[PS['wh']] + k_csw * ((Lp[PS['cs']] + Lp[PS['wh']]) / max(Lp[PS['n']], 1e-9))) / (sp[PS['n']] + k_csw)
         out[X['p_whiff']] = own_whiff
-        out[X['p_chase']] = shrunk(sp, PS['ch'], PS['oz'], Lp, k_rate)
-        out[X['p_zone']] = shrunk(sp, PS['iz'], PS['n'], Lp, k_rate)
+        out[X['p_chase']] = shrunk(sp, PS['ch'], PS['oz'], Lp, K('p_chase', k_rate))
+        out[X['p_zone']] = shrunk(sp, PS['iz'], PS['n'], Lp, K('p_zone', k_rate))
         out[X['p_csw']] = own_csw
-        out[X['p_ev']] = shrunk(cp, BS['ev'], BS['bip'], Lb, k_bip)
-        out[X['p_hard']] = shrunk(cp, BS['hard'], BS['bip'], Lb, k_bip)
-        out[X['p_gb']] = shrunk(cp, BS['gb'], BS['bip'], Lb, k_bip)
+        out[X['p_ev']] = shrunk(cp, BS['ev'], BS['bip'], Lb, K('p_ev', k_bip))
+        out[X['p_hard']] = shrunk(cp, BS['hard'], BS['bip'], Lb, K('p_hard', k_bip))
+        out[X['p_gb']] = shrunk(cp, BS['gb'], BS['bip'], Lb, K('p_gb', k_bip))
         out[X['p_pitch_n']] = sp[PS['n']]
         if P.get('xvalue'):
             values = self.cell_values()

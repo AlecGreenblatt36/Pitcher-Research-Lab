@@ -76,8 +76,8 @@ def expected_feature_columns(physics_features=()) -> list[str]:
     return columns
 
 
-def _posterior(counts: np.ndarray, total: float, prior: np.ndarray, strength: float, eps: float) -> np.ndarray:
-    result = (counts + strength * prior) / max(total + strength, eps)
+def _posterior(counts: np.ndarray, total: float, prior: np.ndarray, strength, eps: float) -> np.ndarray:
+    result = (counts + strength * prior) / np.maximum(total + strength, eps)
     result = np.clip(result, eps, 1.0)
     return result / result.sum()
 
@@ -319,6 +319,13 @@ class LockedPAModelProvider:
                 self.physics.with_history(history)
 
     # ----- feature construction -------------------------------------------------
+    def _class_strength(self, name: str):
+        """STAB-02: per-class prior sizes from the bundle's config, else player_prior_pa for every class."""
+        values = self._config.get(name)
+        if values is None:
+            return float(self._config["player_prior_pa"])
+        return np.asarray(values, dtype=float)
+
     def _get(self, table: dict, key) -> tuple[np.ndarray, float]:
         counts = table.get(key)
         if counts is None:
@@ -339,8 +346,8 @@ class LockedPAModelProvider:
         pk_counts, pk_total = self._get(s.park, self.park)
         br_counts, br_total = self._get(s.batter_recent, batter_id)
         pr_counts, pr_total = self._get(s.pitcher_recent, pitcher_id)
-        b = _posterior(b_counts, b_total, league, c["player_prior_pa"], eps)
-        p = _posterior(p_counts, p_total, league, c["player_prior_pa"], eps)
+        b = _posterior(b_counts, b_total, league, self._class_strength("batter_class_prior_pa"), eps)
+        p = _posterior(p_counts, p_total, league, self._class_strength("pitcher_class_prior_pa"), eps)
         groups = {
             "league": league,
             "batter": b,

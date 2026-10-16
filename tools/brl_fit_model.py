@@ -154,6 +154,9 @@ def main():
         priors = {k: float(settings[k]) for k in ('park_prior_pa', 'player_prior_pa', 'split_prior_pa', 'recent_prior_pa', 'history_half_life_days') if settings.get(k) is not None}
         if settings.get('regularization_grid'):
             priors['regularization_grid'] = tuple(float(c) for c in settings['regularization_grid'])
+        for name in ('batter_class_prior_pa', 'pitcher_class_prior_pa'):      # STAB-02
+            if settings.get(name):
+                priors[name] = tuple(float(v) for v in settings[name])
         config = PAConfig(train_years=tuple(settings.get('train_years') or (2023, 2024)), validation_years=tuple(settings.get('validation_years') or (2025,)),
                           test_years=tuple(settings.get('test_years') or (2026,)), evaluation_mode='locked_final', **priors)
         receipt['config'] = {'train_years': list(config.train_years), 'validation_years': list(config.validation_years), 'test_years': list(config.test_years),

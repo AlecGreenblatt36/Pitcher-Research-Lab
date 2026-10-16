@@ -79,13 +79,23 @@ class _RollingCounter:
             counts[queue.popleft()] -= 1.0
 
 
+def _class_strength(values, default: float, n_classes: int):
+    if values is None:
+        return float(default)
+    values = np.asarray(values, dtype=float)
+    if values.shape != (n_classes,) or (values <= 0).any():
+        raise ValueError("class prior sizes need one positive value per outcome class")
+    return values
+
+
 def _day_ordinal(value) -> int:
     from datetime import date
     return date.fromisoformat(str(value)[:10]).toordinal()
 
 
-def _posterior(state: _CounterState, prior: np.ndarray, strength: float, eps: float) -> np.ndarray:
-    result = (state.counts + strength * prior) / max(state.total + strength, eps)
+def _posterior(state: _CounterState, prior: np.ndarray, strength, eps: float) -> np.ndarray:
+    # strength: one prior sample size, or one per outcome class (STAB-02), each class shrunk by its own amount
+    result = (state.counts + strength * prior) / np.maximum(state.total + strength, eps)
     result = np.clip(result, eps, 1.0)
     return result / result.sum()
 
@@ -165,6 +175,9 @@ def build_time_valid_features(pa: pd.DataFrame, config: PAConfig | None = None) 
     park = _OnlineCounter(n_classes, half_life)
     batter_recent = _RollingCounter(n_classes, config.batter_recent_window)
     pitcher_recent = _RollingCounter(n_classes, config.pitcher_recent_window)
+    # STAB-02: batter and pitcher outcome rates shrunk by class (None: player_prior_pa for every class, the frozen setting)
+    b_strength = _class_strength(getattr(config, "batter_class_prior_pa", None), config.player_prior_pa, n_classes)
+    p_strength = _class_strength(getattr(config, "pitcher_class_prior_pa", None), config.player_prior_pa, n_classes)
     fixed_prior = np.array([0.49, 0.22, 0.09, 0.10, 0.035, 0.03, 0.035])
     fixed_prior /= fixed_prior.sum()
 
@@ -189,8 +202,8 @@ def build_time_valid_features(pa: pd.DataFrame, config: PAConfig | None = None) 
             ps_state = pitcher_split.get(p_split_key, today)
             park_key = str(getattr(row, "park", "UNK"))
 
-            b_prob = _posterior(b_state, league_prob, config.player_prior_pa, eps)
-            p_prob = _posterior(p_state, league_prob, config.player_prior_pa, eps)
+            b_prob = _posterior(b_state, league_prob, b_strength, eps)
+            p_prob = _posterior(p_state, league_prob, p_strength, eps)
             groups = {
                 "league": league_prob,
                 "batter": b_prob,
