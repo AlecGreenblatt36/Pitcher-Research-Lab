@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 347,
- "rows": 350,
+ "experiments": 348,
+ "rows": 351,
  "records": {
   "ACC-01": [
    {
@@ -5747,6 +5747,22 @@
      "ID": "CHAIN-04",
      "Attempt": "Two-level shrinkage in the chain (the Bayesian player layer, stage one). Today each of a hitter's twelve swing and whiff columns (pitch family in or out of the zone, two strikes or not) and each of a pitcher's six shrinks straight toward the league, so a column with few pitches says nothing even when the player's other columns all say he chases, and with the 120-day half-life most columns are thin for most of the season (a regular's columns carry about 70 to 360 effective pitches against k of 200). Now a column shrinks toward the player's own pooled deviation over all his columns (pooled observed against league-expected on the same pitches, itself shrunk toward the league with k_b_pool or k_p_pool), chain parameters k_b_pool and k_p_pool (0 = the one-level chain, every live model unchanged; pitch_chain._dev_h, _dev_col; the per-pitch check reads the same deviations). Arms (tools/fit_arms.json) on the live model's settings (spring02-w10): c0 = refit control; pool-s = 100/400, pool-m = 200/800, pool-l = 400/1,600 (hitters/pitchers)",
      "Disposition and evidence": "**Registered in the commit that added this row, before any arm was fit.** Same selection as CHAIN-02 (the candidate with the lowest 2025 tuning-block log loss is the one tested). Passes if (1) its blended 2026 log loss beats c0's with the 95% game-bootstrap interval below zero and calibration within 0.015, and (2) its per-pitch swing and whiff log loss (the fit receipt's chain.per_pitch_check, 2021-2026) are both no worse than c0's. Prediction: (2) holds with swing and whiff gains of 0.5 to 2 per 1,000 pitches; (1) holds with a season gain of 0.0002 to 0.0006 nats per plate appearance, larger in March and April. If it passes: check-only replays of the selected model for 2025 and 2026 refresh the context tables (tools/brl_context_table.py), then it goes live like SPRING-02 (model.json, manifest from the ledger branch); CHAIN-03B's game-level rule is not re-run for the same reason",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
+   }
+  ],
+  "BOOST-01": [
+   {
+    "id": "BOOST-01",
+    "columns": {
+     "ID": "BOOST-01",
+     "Attempt": "Machine learning in the at-bat model: a gradient-boosted matchup model stacked into the logistic model (Alec: \"Bayesian models? Machine learning? What is there?\"). The logistic model moves every log-odds by a fixed amount per feature; the tracking, the chain and the counters are views of the same two players whose weight should depend on each other (a chain strikeout rate means more behind a pitcher whose whiff physics agree; a thin history should lean on the physics). research_lab/pa_model/boost.py: sklearn histogram gradient boosting, seven classes, on the matchup-level features only (talent counters, handedness, ages, rest, history sizes, physics, chain; never inning, outs, runners, score or times through the order, so one evaluation per matchup per game serves every plate appearance and the simulator's cost is unchanged). Its seven log probabilities join the logistic model's features (gb_<class>) as the chain's do, so the logistic fit and its calibration decide how much to believe the trees. Leakage: fit on 2023-2024 only; training rows predicted out of fold (4 groups of games); 2025 and 2026 by the model fit on every training row, the one in the bundle; rounds picked on the 2025 tuning block from one long fit's staged predictions. Provider: BoostPath appends the columns from the row's own inputs, cached per matchup; the replay and live lanes need nothing else. Arms (tools/fit_arms.json) on the live settings (spring02-w10): c0 = refit control; a = 15 leaves, 300 per leaf, rate 0.05, up to 400 rounds; b = 7 leaves, 1,000 per leaf, L2 5; c = 31 leaves, 100 per leaf, rate 0.03, up to 600 rounds",
+     "Disposition and evidence": "**Registered in the commit that added this row, before any arm was fit.** Same selection as CHAIN-02 (lowest 2025 tuning-block log loss among candidates). Passes if the selected arm's blended 2026 log loss beats c0's with the 95% game-bootstrap interval below zero and calibration within 0.015; recorded alongside: its talent-only family's 2026 loss against c0's (the gain should show without the in-game state too) and the trees' own rounds and tuning loss. Prediction: a gain of 0.0003 to 0.0010 nats per plate appearance; 0.001 or more would be the largest single step since the physics features. If it passes: full 1,000-world replays of 2025 and 2026 under CHAIN-03B's four game-level gates (the whole prediction surface changes, so the game lane is re-run), context tables from its own check-only replays, then live",
      "Delta corrected Brier, 2026": "registered"
     },
     "registered_before_run": true,

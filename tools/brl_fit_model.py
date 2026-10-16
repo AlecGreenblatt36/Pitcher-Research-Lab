@@ -270,7 +270,11 @@ def main():
         out = work / 'model'
         physics_columns = [c for c in extras.columns if c not in chain_extra.get('chain_features', [])]
         bundle_extra = {'physics_params': dict(phys.DEFAULT_PARAMS, **params), 'physics_features': physics_columns, 'name': name, **chain_extra}
-        report = run_benchmark(pa, out, config, extra_features=extras, bundle_extra=bundle_extra, blend_as_test=bool(settings.get('blend_as_test')))
+        boost = settings.get('boost')                     # BOOST-01: a boosted matchup model stacked into the logistic model
+        report = run_benchmark(pa, out, config, extra_features=extras, bundle_extra=bundle_extra, blend_as_test=bool(settings.get('blend_as_test')),
+                               boost=(dict(boost) if isinstance(boost, dict) else None))
+        if report.get('boost'):
+            receipt['boost'] = report['boost']
         stage('seal the model')
         raw_model = (out / 'pa_model.joblib').read_bytes()
         cipher = seal(raw_model, key, model_purpose(name))
@@ -282,7 +286,9 @@ def main():
                         'history_sha256': receipt['history_sha256'], 'physics_params': bundle_extra['physics_params'], 'physics_features': bundle_extra['physics_features'],
                         'physics_seasons': receipt['seasons'], 'physics_rows': receipt['physics_rows'], 'physics_join': audit,
                         'history_seasons': history_seasons, **{k: v for k, v in chain_extra.items()},
-                        'pitch_seasons': receipt.get('pitch_seasons'), 'spring_seasons': receipt.get('spring_seasons'), 'config': config.to_dict(), 'benchmark': json.loads(json.dumps(public_report, default=float)), 'fitted_at': datetime.now(timezone.utc).isoformat(), 'run_id': run_id}
+                        'pitch_seasons': receipt.get('pitch_seasons'), 'spring_seasons': receipt.get('spring_seasons'),
+                        'boost_params': (report.get('boost') or {}).get('params'), 'boost_rounds': (report.get('boost') or {}).get('rounds'),
+                        'boost_features': ([f'gb_{l}' for l in config.outcome_labels] if report.get('boost') else []), 'config': config.to_dict(), 'benchmark': json.loads(json.dumps(public_report, default=float)), 'fitted_at': datetime.now(timezone.utc).isoformat(), 'run_id': run_id}
         text = json.dumps(manifest_doc, indent=1, default=float)
         for secret in (key_hex, token):
             text = text.replace(secret, '[redacted]')

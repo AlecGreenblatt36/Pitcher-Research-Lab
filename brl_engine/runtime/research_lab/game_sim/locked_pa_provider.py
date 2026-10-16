@@ -68,12 +68,13 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def expected_feature_columns(physics_features=(), chain_features=()) -> list[str]:
+def expected_feature_columns(physics_features=(), chain_features=(), boost_features=()) -> list[str]:
     columns = [f"p_{g}_{label}" for g in GROUPS for label in MODEL_LABELS]
     columns += [f"lr_{g}_{label}" for g in RATIO_GROUPS for label in MODEL_LABELS]
     columns += list(CONTEXT_COLUMNS)
     columns += [str(c) for c in physics_features]
     columns += [str(c) for c in chain_features]
+    columns += [str(c) for c in boost_features]
     return columns
 
 
@@ -279,6 +280,7 @@ class LockedPAModelProvider:
     physics_features: tuple = field(init=False, default=())
     chain: object = field(init=False, default=None)
     chain_features: tuple = field(init=False, default=())
+    boost_features: tuple = field(init=False, default=())
 
     def __post_init__(self) -> None:
         self.artifact_path = Path(self.artifact_path)
@@ -306,8 +308,19 @@ class LockedPAModelProvider:
             raise LockedModelError(f"label order mismatch: {bundle.get('labels')}")
         self.physics_features = tuple(str(c) for c in (bundle.get("physics_features") or ()))
         self.chain_features = tuple(str(c) for c in (bundle.get("chain_features") or ()))
-        if list(fitted.feature_columns) != expected_feature_columns(self.physics_features, self.chain_features):
+        self.boost_features = tuple(str(c) for c in (bundle.get("boost_features") or ()))
+        if list(fitted.feature_columns) != expected_feature_columns(self.physics_features, self.chain_features, self.boost_features):
             raise LockedModelError("feature schema mismatch between artifact and provider")
+        self._boost = None
+        if self.boost_features:
+            # BOOST-01: the boosted matchup model reads the row without its own columns; one evaluation per matchup
+            from research_lab.pa_model.boost import BoostPath, boost_feature_names
+            spec = bundle.get("boost") or {}
+            if list(boost_feature_names(MODEL_LABELS)) != list(self.boost_features) or "model" not in spec:
+                raise LockedModelError("boosted model missing or its feature list does not match")
+            self._boost = BoostPath(spec["model"], list(spec["input_columns"]),
+                                    expected_feature_columns(self.physics_features, self.chain_features), len(MODEL_LABELS),
+                                    float(dict(bundle.get("config") or {}).get("min_probability", 1e-7)))
         if bundle.get("name"):
             self.name = str(bundle["name"])
         if self.physics_features:
@@ -471,6 +484,8 @@ class LockedPAModelProvider:
             parts.append(cvec)
         # Training stored features as float32; replicate exactly.
         row = np.concatenate(parts).astype(np.float32).astype(float)
+        if self._boost is not None:
+            row = np.concatenate([row, self._boost.features(row).astype(np.float32).astype(float)])
         return row, meta
 
     def _eb_probs(self, row: np.ndarray) -> np.ndarray:
@@ -559,5 +574,6 @@ class LockedPAModelProvider:
             "blend": {"model": self._model_weight, "empirical_bayes": 1.0 - self._model_weight},
             "fallback_used": False,
             "physics_features": list(self.physics_features),
+            "boost_features": list(self.boost_features),
             "physics_rows_used": None if self.physics is None else int(self.physics.n_rows),
         }

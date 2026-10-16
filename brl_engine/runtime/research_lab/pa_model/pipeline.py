@@ -119,13 +119,16 @@ def run_benchmark(
     extra_features: pd.DataFrame | None = None,
     bundle_extra: dict | None = None,
     blend_as_test: bool = False,
+    boost: dict | None = None,
 ) -> dict:
     """The locked benchmark. ``extra_features`` (one row per PA in the builder's chronological
     order, e.g. the pitch-physics features) are appended to every feature family; ``bundle_extra``
     is merged into the saved model bundle (physics parameters and feature list, a model name).
     ``blend_as_test``: when the test years have no rows yet (a model retrained on the latest season),
     the metrics are reported on the validation season's final block, the one used only for the
-    ensemble weight."""
+    ensemble weight. ``boost`` (BOOST-01): parameters of a gradient-boosted matchup model fit on the
+    training seasons whose out-of-fold log probabilities are appended to every feature family
+    (``gb_<label>``) and whose fitted model goes in the bundle (research_lab.pa_model.boost)."""
     config = config or PAConfig()
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
@@ -140,6 +143,19 @@ def run_benchmark(
             features[column] = extra_features[column].to_numpy()
         all_feature_columns = list(all_feature_columns) + [str(c) for c in extra_features.columns]
     partitions, partition_audit = validation_partitions(features, config)
+    boost_audit = None
+    if boost is not None:
+        from .boost import boost_feature_names, boost_input_columns, fit_boost
+        boost_inputs = boost_input_columns(all_feature_columns)
+        boost_model, stacked, boost_audit = fit_boost(features, boost_inputs, partitions["tune"], config, boost)
+        boost_names = boost_feature_names(labels)
+        for j, column in enumerate(boost_names):
+            features[column] = stacked[:, j]
+        all_feature_columns = list(all_feature_columns) + boost_names
+        bundle_extra = dict(bundle_extra or {})
+        bundle_extra["boost"] = {"model": boost_model, "input_columns": boost_inputs, "params": boost_audit["params"],
+                                 "rounds": boost_audit["rounds"]}
+        bundle_extra["boost_features"] = boost_names
     test_mask = features["season"].isin(config.test_years).to_numpy()
     if not test_mask.any() and blend_as_test:
         test_mask = partitions["blend"]
@@ -419,6 +435,8 @@ def run_benchmark(
         "promotion": promotion,
         "interpretation_boundary": interpretation_boundary,
     }
+    if boost_audit is not None:
+        result["boost"] = boost_audit
 
     result_path = output / "PA_BENCHMARK_RESULT.json"
     result_path.write_text(

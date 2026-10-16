@@ -1,11 +1,11 @@
 {
- "experiment": "CHAIN-04",
+ "experiment": "BOOST-01",
  "arms": [
   {
-   "name": "chain04-c0",
+   "name": "boost01-c0",
    "role": "control",
    "settings": {
-    "name": "chain04-c0",
+    "name": "boost01-c0",
     "manifest_branch": "ledger",
     "physics_params": {
      "xvalue": true,
@@ -29,10 +29,10 @@
    }
   },
   {
-   "name": "chain04-pool-s",
+   "name": "boost01-a",
    "role": "candidate",
    "settings": {
-    "name": "chain04-pool-s",
+    "name": "boost01-a",
     "manifest_branch": "ledger",
     "physics_params": {
      "xvalue": true,
@@ -43,9 +43,7 @@
      "two_strike_groups": true,
      "pitcher_cells": true,
      "extra_features": true,
-     "spring_weight": 1.0,
-     "k_b_pool": 100.0,
-     "k_p_pool": 400.0
+     "spring_weight": 1.0
     },
     "spring_seasons": [
      2021,
@@ -54,14 +52,28 @@
      2024,
      2025,
      2026
-    ]
+    ],
+    "boost": {
+     "learning_rate": 0.05,
+     "max_leaf_nodes": 15,
+     "min_samples_leaf": 300,
+     "l2_regularization": 1.0,
+     "max_iter": 400,
+     "round_grid": [
+      100,
+      200,
+      300,
+      400
+     ],
+     "folds": 4
+    }
    }
   },
   {
-   "name": "chain04-pool-m",
+   "name": "boost01-b",
    "role": "candidate",
    "settings": {
-    "name": "chain04-pool-m",
+    "name": "boost01-b",
     "manifest_branch": "ledger",
     "physics_params": {
      "xvalue": true,
@@ -72,9 +84,7 @@
      "two_strike_groups": true,
      "pitcher_cells": true,
      "extra_features": true,
-     "spring_weight": 1.0,
-     "k_b_pool": 200.0,
-     "k_p_pool": 800.0
+     "spring_weight": 1.0
     },
     "spring_seasons": [
      2021,
@@ -83,14 +93,28 @@
      2024,
      2025,
      2026
-    ]
+    ],
+    "boost": {
+     "learning_rate": 0.05,
+     "max_leaf_nodes": 7,
+     "min_samples_leaf": 1000,
+     "l2_regularization": 5.0,
+     "max_iter": 400,
+     "round_grid": [
+      100,
+      200,
+      300,
+      400
+     ],
+     "folds": 4
+    }
    }
   },
   {
-   "name": "chain04-pool-l",
+   "name": "boost01-c",
    "role": "candidate",
    "settings": {
-    "name": "chain04-pool-l",
+    "name": "boost01-c",
     "manifest_branch": "ledger",
     "physics_params": {
      "xvalue": true,
@@ -101,9 +125,7 @@
      "two_strike_groups": true,
      "pitcher_cells": true,
      "extra_features": true,
-     "spring_weight": 1.0,
-     "k_b_pool": 400.0,
-     "k_p_pool": 1600.0
+     "spring_weight": 1.0
     },
     "spring_seasons": [
      2021,
@@ -112,7 +134,21 @@
      2024,
      2025,
      2026
-    ]
+    ],
+    "boost": {
+     "learning_rate": 0.03,
+     "max_leaf_nodes": 31,
+     "min_samples_leaf": 100,
+     "l2_regularization": 1.0,
+     "max_iter": 600,
+     "round_grid": [
+      150,
+      300,
+      450,
+      600
+     ],
+     "folds": 4
+    }
    }
   }
  ]
