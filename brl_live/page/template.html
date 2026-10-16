@@ -881,6 +881,18 @@ details.more.proj-fold > summary { font-family: var(--display); font-size: 21px;
 .empty-state h2 { margin-top: 0; }
 .prose { max-width: 66ch; }
 .prose h2 { font-family: var(--display); font-weight: 700; font-size: 24px; margin: 26px 0 6px; }
+.luck { margin: 12px 0 8px; display: grid; gap: 14px; max-width: 560px; }
+.luck h3 { font-family: var(--display); font-weight: 700; font-size: 19px; margin: 4px 0 -4px; }
+.luck-row { display: grid; gap: 5px; }
+.luck-top { display: flex; flex-wrap: wrap; justify-content: space-between; column-gap: 12px; row-gap: 0; }
+.luck-top span { color: var(--muted); font-variant-numeric: tabular-nums; }
+.luck-track { position: relative; height: 10px; border-radius: 5px; background: var(--rule-soft); overflow: hidden; }
+.luck-fill { position: absolute; left: 0; top: 0; bottom: 0; min-width: 4px; border-radius: 5px; background: var(--ink); }
+.luck-axis { position: relative; height: 18px; font-size: 12px; color: var(--muted); }
+.luck-axis span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
+.luck-axis span:first-child { transform: translateX(-30%); }
+.luck-axis span:last-child { transform: translateX(-100%); }
+.luck-track i { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--surface); opacity: .8; }
 .prose p, .prose li { margin: 0 0 8px; }
 details.ver-hist { margin-top: 10px; }
 details.ver-hist summary { cursor: pointer; font-weight: 700; min-height: 44px; display: flex; align-items: center; }
@@ -5861,6 +5873,36 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   }
 
   /* ---------- how it works ---------- */
+  // STAB-01 (every regular season 2015-2026, the 2021-2026 measures): the sample at which each number is half skill and
+  // half luck for predicting the next season. Bars are in seasons: a regular's 650 trips to the plate, a starter's 32 starts.
+  var LUCK = [
+    ["Hitters", [["How often he strikes out", 113 / 650, "about a month (110 trips to the plate)"],
+                 ["How hard he hits the ball", 27 / 162, "about a month (75 balls in play)"],
+                 ["How often he walks", 232 / 650, "about two months (230 trips)"],
+                 ["How often he homers", 317 / 650, "about half a season (320 trips)"]]],
+    ["Pitchers", [["How hard he throws", 1 / 32, "one start (about 50 fastballs)"],
+                  ["How often he strikes hitters out", 223 / 736, "about 10 starts (220 batters)"],
+                  ["How often he walks hitters", 489 / 736, "about 20 starts (490 batters)"],
+                  ["How often he gives up home runs", 1040 / 736, "about a season and a half (1,040 batters)"]]]
+  ];
+
+  function luckChart() {
+    var max = 1.5, at = function (v) { return (Math.min(v, max) / max * 100).toFixed(1) + "%"; };
+    var ticks = [[1 / 6, "1 month"], [0.5, "\u00bd season"], [1, "1 season"], [1.5, "1\u00bd seasons"]];
+    var h = "<h2>Skill or luck?</h2><p>Every player's numbers are part skill and part luck. A hitter can hit .400 for a week by luck alone. To know how much to trust a number, we measured on every season since 2015 how long each one takes before it is half skill and half luck. Until then it says more about luck than about the player, so the model pulls it toward the league average.</p>";
+    h += '<div class="luck" role="img" aria-label="How long each number takes to become half skill and half luck">';
+    LUCK.forEach(function (grp) {
+      h += "<h3>" + esc(grp[0]) + "</h3>";
+      grp[1].forEach(function (r) {
+        h += '<div class="luck-row"><div class="luck-top"><b>' + esc(r[0]) + "</b><span>" + esc(r[2]) + '</span></div><div class="luck-track">' +
+          ticks.slice(0, 3).map(function (t) { return '<i style="left:' + at(t[0]) + '"></i>'; }).join("") + '<div class="luck-fill" style="width:' + at(r[1]) + '"></div></div></div>';
+      });
+    });
+    h += '<div class="luck-axis" aria-hidden="true">' + ticks.map(function (t) { return '<span style="left:' + at(t[0]) + '">' + esc(t[1]) + "</span>"; }).join("") + "</div></div>";
+    h += "<p>So a pitcher who has given up almost no home runs for two months has mostly been lucky, while a hitter who strikes out a lot in April will probably keep doing it in May. Pitchers control their strikeouts far more than the hits and home runs they give up.</p>";
+    return h;
+  }
+
   function renderHow() {
     var fx = latestForecasts(), any = Object.keys(fx).map(function (k) { return fx[k]; }).reduce(function (a, b) { return !a || String(b.history_through || "") > String(a.history_through || "") ? b : a; }, null) || {}, h = '<div class="wrap"><div class="page-head"><h1>How it works</h1><p>Where the numbers come from and how to read them. Tap any gray line for more.</p></div><div class="prose">';
     h += '<ol class="steps"><li><b>Rate every player</b><span>Each hitter and pitcher, on every pitch he has seen up to the day before: what he swings at, how hard he hits it, how he pitches.</span></li>' +
@@ -5872,6 +5914,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     if (physicsModel) {
       h += '<details class="more"><summary>What it knows about each player</summary><p>His results, splits, recent form, the park and his age, plus the pitch tracking from every earlier game. For hitters: exit velo, launch angle, hard-hit and barrel rates, what his contact should be worth, and how often he swings, misses, chases and makes contact in the zone, with his last 30 days next to his norm. For pitchers: velo and how his last outing compared, spin and movement, whiffs, chases, strikes, the contact he gives up, ground balls, and the same 30-day form. The at-bat model was fit on 2023 and 2024, tuned on 2025 and tested on all of 2026 before we used it.</p></details>';
     }
+    h += luckChart();
     var hw = D.record && D.record.headline_now, wt = hw && hw.market != null ? Math.round(hw.market * 100) + "% the betting line and " + Math.round(hw.ours * 100) + "% ours" : "60% the betting line and 40% ours";
     h += "<h2>Our number</h2><p>Our own number mixes the simulator with a team model: runs scored and allowed, home field, how the team has been playing, and the starters. Once Vegas posts a line, the game card shows a blend of " + wt + ". Our own number never looks at the line for that game. The Odds tab shows each piece, and the Record page keeps score on all of them.</p>";
     h += '<details class="more"><summary>Why blend with Vegas</summary><p>The closing line is the hardest number in baseball to beat, so we use it. We set our model\'s weights on closing lines from 4,140 games in 2025 and 2026, because lines are steadier than wins and losses, then checked it against real results from a season it never saw. When we disagreed with the opening line, the line moved our way by first pitch about 7 times in 10. That is not a betting system. Any change to how we figure the number starts at a stated time and never touches a game that has started. Through October 7, 2026 our number was a straight average of the simulator and the team model.</p></details>';
