@@ -1,0 +1,138 @@
+{
+ "schema": "brl.fit-arms-compare.v1",
+ "experiment": "PITCH-02B",
+ "run_id": "38941277563",
+ "control": "pitch02b-c0",
+ "arms": {
+  "pitch02b-c0": {
+   "role": "control",
+   "status": "completed",
+   "tune_2025": 1.4534682035446167,
+   "test_2026": {
+    "talent_only": 1.4604864289103539,
+    "talent_plus_context": 1.4585827450940725,
+    "blended_candidate": 1.4583964758414056
+   },
+   "train_years": [
+    2023,
+    2024
+   ],
+   "history_half_life_days": 0.0,
+   "pa_rows_by_season": {
+    "2023": 184104,
+    "2024": 182449,
+    "2025": 182926,
+    "2026": 183849
+   },
+   "seconds": 725.7,
+   "error": null
+  },
+  "pitch02b-v2": {
+   "role": "candidate",
+   "status": "completed",
+   "tune_2025": 1.4529136419296265,
+   "test_2026": {
+    "talent_only": 1.4596510791246684,
+    "talent_plus_context": 1.457778282460665,
+    "blended_candidate": 1.4576373120878332
+   },
+   "train_years": [
+    2023,
+    2024
+   ],
+   "history_half_life_days": 0.0,
+   "pa_rows_by_season": {
+    "2023": 184104,
+    "2024": 182449,
+    "2025": 182926,
+    "2026": 183849
+   },
+   "seconds": 802.3,
+   "error": null,
+   "vs_control_2026": {
+    "difference_nats_per_pa": -0.0007591637535368695,
+    "ci_95_low": -0.0009534110950237619,
+    "ci_95_high": -0.0005698921786384153,
+    "games": 2429,
+    "plate_appearances": 183849,
+    "arm_log_loss": 1.4576373120878274,
+    "control_log_loss": 1.4583964758413646
+   }
+  },
+  "pitch02b-v2h120": {
+   "role": "candidate",
+   "status": "completed",
+   "tune_2025": 1.4528648853302002,
+   "test_2026": {
+    "talent_only": 1.4596320513526706,
+    "talent_plus_context": 1.4577901085108267,
+    "blended_candidate": 1.4576380156994528
+   },
+   "train_years": [
+    2023,
+    2024
+   ],
+   "history_half_life_days": 0.0,
+   "pa_rows_by_season": {
+    "2023": 184104,
+    "2024": 182449,
+    "2025": 182926,
+    "2026": 183849
+   },
+   "seconds": 825.1,
+   "error": null,
+   "vs_control_2026": {
+    "difference_nats_per_pa": -0.0007584601419806454,
+    "ci_95_low": -0.0009518980684228308,
+    "ci_95_high": -0.0005753652199458893,
+    "games": 2429,
+    "plate_appearances": 183849,
+    "arm_log_loss": 1.4576380156993838,
+    "control_log_loss": 1.4583964758413646
+   }
+  },
+  "pitch02b-v2x": {
+   "role": "candidate",
+   "status": "completed",
+   "tune_2025": 1.452973484992981,
+   "test_2026": {
+    "talent_only": 1.4597649706908766,
+    "talent_plus_context": 1.4578894596254008,
+    "blended_candidate": 1.4577429294471957
+   },
+   "train_years": [
+    2023,
+    2024
+   ],
+   "history_half_life_days": 0.0,
+   "pa_rows_by_season": {
+    "2023": 184104,
+    "2024": 182449,
+    "2025": 182926,
+    "2026": 183849
+   },
+   "seconds": 775.0,
+   "error": null,
+   "vs_control_2026": {
+    "difference_nats_per_pa": -0.0006535463941549891,
+    "ci_95_low": -0.0008401227002269693,
+    "ci_95_high": -0.00047849766778716013,
+    "games": 2429,
+    "plate_appearances": 183849,
+    "arm_log_loss": 1.4577429294472093,
+    "control_log_loss": 1.4583964758413646
+   }
+  }
+ },
+ "selection_rule": "lowest 2025 tuning-block log loss (talent_plus_context) among candidate arms",
+ "selected": "pitch02b-v2h120",
+ "gate": {
+  "rule": "the selected arm beats the control on 2026 log loss with the 95% game-bootstrap interval below zero, and its largest class calibration gap on 2026 stays below 0.015",
+  "difference_nats_per_pa": -0.0007584601419806454,
+  "ci_95_high": -0.0005753652199458893,
+  "max_absolute_class_calibration_gap": 0.0019296404839895254,
+  "passed": true
+ },
+ "verdict": "passed",
+ "compared_at": "2026-10-16T17:53:37.739666+00:00"
+}
