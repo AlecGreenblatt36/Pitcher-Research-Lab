@@ -67,7 +67,11 @@ DEFAULT_PARAMS = {'k_b_swing': 200.0, 'k_b_whiff': 140.0, 'k_b_foul': 150.0, 'k_
                   # CHAIN-05: the pitcher's mix by the hitter's side. The league mix and each pitcher's mix are kept per platoon;
                   # a pitcher's platoon mix shrinks (k_mix_platoon pitches) toward his pooled mix moved by the league's platoon
                   # ratio, and the pooled mix toward the league (k_mix). Off: one mix per pitcher whatever the hitter's side
-                  'platoon_mix': False, 'k_mix_platoon': 40.0}
+                  'platoon_mix': False, 'k_mix_platoon': 40.0,
+                  # CHAIN-06: opponent-adjusted expectations. A hitter's swing and whiff counters measure him against what the
+                  # league does on the same pitches moved by the pitcher's own deviation (and the pitcher's against the hitter's),
+                  # so a month of tough opponents does not read as a bad month; off, both measure against the league alone
+                  'opp_adjust': False}
 EXTRA_FEATURES = ['ch_sw00', 'ch_wh00', 'ch_fo00', 'ch_ip00', 'ch_ball00', 'ch_sw02', 'ch_wh02', 'ch_sw30']
 TWO_STRIKES = (np.arange(N_COUNT) % 3 == 2).astype(int)                # count index -> two strikes
 PRIOR = {'swing': 0.47, 'whiff': 0.24, 'foul': 0.50, 'called': 0.32, 'hbp': 0.004}
@@ -479,16 +483,22 @@ class ChainState:
         if ok_reg.any():
             np.add.at(self.Lout, (pl[ok_reg], cell[ok_reg], out_idx[ok_reg]), 1.0)
         # hitters (unknown batter -1 rows are kept but never asked for); spring pitches count at their weight
-        np.add.at(B['sw_y'], (br, grp), swing * w); np.add.at(B['sw_e'], (br, grp), e_sw * w); np.add.at(B['sw_n'], (br, grp), w)
-        np.add.at(B['wh_y'], (br[swing], grp[swing]), (whiff * w)[swing]); np.add.at(B['wh_e'], (br[swing], grp[swing]), (e_wh * w)[swing]); np.add.at(B['wh_n'], (br[swing], grp[swing]), w[swing])
+        if P.get('opp_adjust'):
+            # CHAIN-06: each side's expectation carries the other side's deviation (the chain's own prediction without the player)
+            eb_sw, ep_sw = _expit(_logit(e_sw) + dp_sw), _expit(_logit(e_sw) + db_sw)
+            eb_wh, ep_wh = _expit(_logit(e_wh) + dp_wh), _expit(_logit(e_wh) + db_wh)
+        else:
+            eb_sw = ep_sw = e_sw; eb_wh = ep_wh = e_wh
+        np.add.at(B['sw_y'], (br, grp), swing * w); np.add.at(B['sw_e'], (br, grp), eb_sw * w); np.add.at(B['sw_n'], (br, grp), w)
+        np.add.at(B['wh_y'], (br[swing], grp[swing]), (whiff * w)[swing]); np.add.at(B['wh_e'], (br[swing], grp[swing]), (eb_wh * w)[swing]); np.add.at(B['wh_n'], (br[swing], grp[swing]), w[swing])
         np.add.at(B['fo_y'], br[contact], (foul * w)[contact]); np.add.at(B['fo_e'], br[contact], (e_fo * w)[contact]); np.add.at(B['fo_n'], br[contact], w[contact])
         # pitchers
         if P.get('platoon_mix'):
             np.add.at(Pi['mix'], (pr, pl, bucket, cell), w)
         else:
             np.add.at(Pi['mix'], (pr, bucket, cell), w)
-        np.add.at(Pi['sw_y'], (pr, fam), swing * w); np.add.at(Pi['sw_e'], (pr, fam), e_sw * w); np.add.at(Pi['sw_n'], (pr, fam), w)
-        np.add.at(Pi['wh_y'], (pr[swing], fam[swing]), (whiff * w)[swing]); np.add.at(Pi['wh_e'], (pr[swing], fam[swing]), (e_wh * w)[swing]); np.add.at(Pi['wh_n'], (pr[swing], fam[swing]), w[swing])
+        np.add.at(Pi['sw_y'], (pr, fam), swing * w); np.add.at(Pi['sw_e'], (pr, fam), ep_sw * w); np.add.at(Pi['sw_n'], (pr, fam), w)
+        np.add.at(Pi['wh_y'], (pr[swing], fam[swing]), (whiff * w)[swing]); np.add.at(Pi['wh_e'], (pr[swing], fam[swing]), (ep_wh * w)[swing]); np.add.at(Pi['wh_n'], (pr[swing], fam[swing]), w[swing])
         np.add.at(Pi['cs_y'], pr[take], (called * w)[take]); np.add.at(Pi['cs_e'], pr[take], (e_cs * w)[take]); np.add.at(Pi['cs_n'], pr[take], w[take])
         if ok_out.any():
             wo = w[ok_out]

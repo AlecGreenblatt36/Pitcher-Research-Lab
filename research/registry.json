@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 352,
- "rows": 355,
+ "experiments": 353,
+ "rows": 356,
  "records": {
   "ACC-01": [
    {
@@ -5844,6 +5844,22 @@
      "ID": "BULLPEN-07",
      "Attempt": "The day's unseen availability as a per-game shock on the reliever choice. BULLPEN-03/04 measured the miss and it stands on today's settings (LEASH-04's replays): relievers shown at 60 to 80% to pitch pitched 52.3% (2025) and 52.2% (2026); shown at 80% or more, 52.1% and 52.5%; the mean chance is right (30.2% against 31.1%, 29.5% against 30.3%) and the 25-40% bin runs 1.3 to 1.7 points low. The per-entry conditional logit (BULLPEN-01) is fit on real entries and calibrated per entry, but the simulator re-draws it at every entry of every world as if nothing persisted within a game; in real games what keeps the closer in the dugout (a sore arm, a warm-up the night before, a plan) holds for the whole game, so no arm pitches in more than about half of the games the simulator is 85% sure of. Built: research_lab.game_sim.reliever_choice.RelieverChoice(doc, game_sigma): a standard-normal shock times game_sigma added to each candidate's utility, drawn once per reliever and simulated game from the world's seed and his id (GameState.seed, GameState.reliever_shocks; it moves no other random number, so paired comparisons stay paired); replay option reliever_game_sigma; live ADJUST reliever_game_sigma (0.0, off). Test: LEASH-04's replay settings (pitch02b-v2h120, the chain pitch draws, starter lines, paired streams) with sigma 0.75, 1.25 and 2.0, both seasons, scored by tools/brl_bullpen_cal.py and against LEASH-04's replays (sigma 0) by game",
      "Disposition and evidence": "**Registered in the commit that added this row, before the replays.** Gates, in both seasons: (1) every chance-to-pitch bin from 10% up with 200 or more rows within 5 points of the share who pitched (the under-10% bin holds the call-ups and returns the simulator cannot name, 13 points short either way, and is not gated); (2) the mean chance within 2 points; (3) Brier against the season's constant share better than LEASH-04's by at least 0.0005; (4) no harm: starters' outs half lines move by no more than 0.5 point, the win Brier pooled not worse than +0.0002, the mean total within 0.10 runs a game. Decision rule: the smallest sigma meeting (1) to (4) goes live (ADJUST reliever_game_sigma) and the bullpen note's hedge comes off. Prediction: 0.75 leaves the 60-80% bin 6 to 9 points high, 1.25 brings it within 5, 2.0 overshoots (the top bins fall below the actual share and the 10-25% bin runs high); the mean total rises by 0.02 to 0.08 runs (lesser arms pitch more)",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
+   }
+  ],
+  "CHAIN-06": [
+   {
+    "id": "CHAIN-06",
+    "columns": {
+     "ID": "CHAIN-06",
+     "Attempt": "Opponent-adjusted expectations in the chain. A hitter's swing and whiff counters hold observed against league-expected on the same pitches (platoon, count, cell); the pitcher who threw them is not in the expectation, so a hitter who faced the league's best whiff arms for a month reads as a whiffer, and a pitcher who faced free swingers reads as a whiff pitcher. With chain parameter opp_adjust each side's expectation carries the other side's current deviation (the chain's own prediction without the player: the hitter's counters take league moved by the pitcher's deviation, the pitcher's take league moved by the hitter's), the standard strength-of-schedule adjustment (pitch_chain.py absorb_date; test_opponent_adjusted_...: a planted hitter who saw only the whiff machine is no longer read as a whiffer). The league tables, the per-pitch check and the ball-in-play counters are unchanged. Arms (tools/fit_arms.json) on the live model's settings (chain04b-xs-tight): c0 = refit control; opp = opp_adjust",
+     "Disposition and evidence": "**Registered in the commit that added this row, before any arm was fit.** Same selection and gates as CHAIN-04: (1) the candidate beats c0 on blended 2026 log loss with the 95% game-bootstrap interval below zero and calibration within 0.015; (2) per-pitch swing and whiff log loss both no worse than c0's. Prediction: a gain of 0.00005 to 0.0002 nats per plate appearance, concentrated in April and May (by midseason opponents average out); per-pitch whiffs 0.5 to 2 per 1,000 better. If it passes: check-only replays refresh the context tables, then live, as CHAIN-04",
      "Delta corrected Brier, 2026": "registered"
     },
     "registered_before_run": true,

@@ -418,3 +418,41 @@ def test_platoon_mix_reads_what_a_pitcher_throws_to_each_side_and_is_off_by_defa
                                         np.where(late['pl'].to_numpy() == 1, 'R', 'L'), ['R'] * len(late), day)
         thrown[id(st)] = float(np.log(M[np.arange(len(late)), late['c'].to_numpy(), late['cell'].to_numpy()]).mean())
     assert thrown[id(state1)] > thrown[id(state0)]
+
+
+def test_opponent_adjusted_expectations_are_off_by_default_and_keep_builder_and_state_in_step():
+    """CHAIN-06: opp_adjust False reproduces the chain exactly; on, a hitter who faced only the whiff pitcher is not read
+    as a whiffer (his expectation carried the pitcher's deviation), and the builder and the state agree."""
+    pa, pitches = synthetic(seed=21, days=12)
+    base = {'two_strike_groups': True, 'pitcher_cells': True, 'extra_features': True, 'half_life': 60.0, 'k_b_pool': 50.0, 'k_p_pool': 200.0}
+    f0, _ = pc.build_features(pa, pitches, base); f0b, _ = pc.build_features(pa, pitches, dict(base, opp_adjust=False))
+    assert np.allclose(f0.to_numpy(float), f0b.to_numpy(float))
+    on = dict(base, opp_adjust=True)
+    f1, audit = pc.build_features(pa, pitches, on)
+    assert not np.allclose(f0.to_numpy(float), f1.to_numpy(float)) and audit['per_pitch_check']['swing']['n'] == len(pitches)
+    probs = np.exp(f1[[f'ch_{l}' for l in pc.LABELS]].to_numpy()); assert np.allclose(probs.sum(1), 1.0, atol=2e-3)
+    ordered = pa.sort_values(['date_key', 'game_pk', 'at_bat_number']).reset_index(drop=True)
+    parks = {int(g): str(k) for g, k in zip(ordered['game_pk'], ordered['park'])}
+    state = pc.ChainState.build(pitches, '2026-04-10', on, parks); day = int(pc.day_ordinal(['2026-04-10'])[0])
+    for r in np.where(ordered['date_key'].to_numpy() == '2026-04-10')[0][:20]:
+        got = state.features(int(ordered.batter[r]), int(ordered.pitcher[r]), str(ordered.park[r]), str(ordered.stand[r]), str(ordered.p_throws[r]), day)
+        assert np.allclose(got, f1.iloc[r].to_numpy(float), atol=1e-5)
+    # planted: hitter 50 faces only the whiff machine (pitcher 200) and whiffs at the league rate against him
+    rng = np.random.default_rng(3)
+    rows = []
+    start = pd.Timestamp('2026-05-01')
+    for d in range(30):
+        day_s = (start + pd.Timedelta(days=d)).strftime('%Y-%m-%d')
+        for pk in range(2):
+            for i, (b, p) in enumerate([(50, 200)] * 6 + [(b_, 201) for b_ in range(60, 66)] + [(b_, 200) for b_ in range(60, 66)]):
+                code = 'S' if rng.random() < (0.55 if p == 200 else 0.22) else ('F' if rng.random() < 0.5 else 'X')
+                rows.append([day_s, 5000 + d * 10 + pk, i + 1, 1, p, b, 'R', 'R', 0, 0, 'FF', code, 93.0, 2300, -4.0, 10.0, 0.0, 2.6, 5, 6.3, 'K' if code == 'S' else 'BIP_OUT'])
+    q = pd.DataFrame(rows, columns=[c for c in pitches.columns if c != 'last']); q['last'] = 1
+    st_off = pc.ChainState.build(q, '2026-06-01', dict(base, k_b_whiff=20.0, k_p_whiff=20.0), {})
+    st_on = pc.ChainState.build(q, '2026-06-01', dict(on, k_b_whiff=20.0, k_p_whiff=20.0), {})
+    day2 = int(pc.day_ordinal(['2026-06-01'])[0])
+    # against a league-average pitcher (999, unseen), hitter 50's whiff chance: the plain chain calls him a whiffer, the adjusted one does not
+    _, _, _, _, wh_off = st_off._transitions([50], [999], ['UNK'], ['R'], ['R'], day2)
+    _, _, _, _, wh_on = st_on._transitions([50], [999], ['UNK'], ['R'], ['R'], day2)
+    _, _, _, _, wh_ref = st_on._transitions([60], [999], ['UNK'], ['R'], ['R'], day2)       # hitter 60 saw both pitchers
+    assert wh_off[0, 0, 5] > wh_on[0, 0, 5] and abs(wh_on[0, 0, 5] - wh_ref[0, 0, 5]) < abs(wh_off[0, 0, 5] - wh_ref[0, 0, 5])
