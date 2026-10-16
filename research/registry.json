@@ -5787,14 +5787,16 @@
     "columns": {
      "ID": "CHAIN-04B",
      "Attempt": "The pool constants one step further (CHAIN-04's gain rose as they fell: 400/1,600 -0.00017, 200/800 -0.00023, 100/400 -0.00028). Arms (tools/fit_arms.json) on the live model's settings (chain04-pool-s): c0 = refit control; xs = k_b_pool 50, k_p_pool 200 with the cell constants as they are (swing 200/800, whiff 140/360); xs-wide = the same pool constants with the cell constants x1.5 (300/1,200, 210/540: trust the pooled prior more); xs-tight = x0.67 (133/533, 93/240: trust the column's own pitches more)",
-     "Disposition and evidence": "**Registered in the commit that added this row, before any arm was fit.** Same selection and gates as CHAIN-04: lowest 2025 tuning-block log loss among candidates; passes if (1) its blended 2026 log loss beats c0's with the 95% game-bootstrap interval below zero and calibration within 0.015, and (2) per-pitch swing and whiff log loss both no worse than c0's. Prediction: xs beats c0 by 0.00005 to 0.00015 (diminishing); the cell constants matter less than the pool constants (wide and tight within 0.0001 of xs either way). If it passes: check-only replays refresh the context tables, then live, as CHAIN-04",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before any arm was fit.** Same selection and gates as CHAIN-04: lowest 2025 tuning-block log loss among candidates; passes if (1) its blended 2026 log loss beats c0's with the 95% game-bootstrap interval below zero and calibration within 0.015, and (2) per-pitch swing and whiff log loss both no worse than c0's. Prediction: xs beats c0 by 0.00005 to 0.00015 (diminishing); the cell constants matter less than the pool constants (wide and tight within 0.0001 of xs either way). If it passes: check-only replays refresh the context tables, then live, as CHAIN-04 **Result (run 38971833484): passed, barely; xs-tight selected.** Tuning-block log loss: xs-tight 1.452393, xs 1.452398, xs-wide 1.452404, c0 1.452456. (1) 2026 blended: xs-tight 1.457046 against c0 1.457092, difference -0.000047 nats per plate appearance, interval -0.000081 to -0.000012 (xs -0.000037, -0.000067 to -0.000008; xs-wide -0.000021, -0.000053 to +0.000009, not clear of zero); calibration 0.0041. (2) per pitch: swings 0.54462 to 0.54376, whiffs 0.47138 to 0.47029, both better (xs-wide worse on both: 0.54517, 0.47145). Prediction held: the step is a sixth of CHAIN-04's and the cell constants matter little, with the direction consistent (trusting the column's own pitches a bit more, now that its prior is the player's own level, helps a little; trusting the prior more hurts). March carries most of it (0.00026). Pool constants below 50/200 are not worth a run. Adoption as registered: check-only replays chain04b-check-2025/2026 for the context tables, then live as chain04b-xs-tight",
+     "Delta corrected Brier, 2026": "passed (small)"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38971833484"
+    ],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "passed (small)"
    }
   ],
   "CHAIN-05": [
