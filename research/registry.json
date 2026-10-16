@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 337,
- "rows": 340,
+ "experiments": 338,
+ "rows": 341,
  "records": {
   "ACC-01": [
    {
@@ -5531,16 +5531,19 @@
     "columns": {
      "ID": "LONG-01",
      "Attempt": "Refit the plate-appearance model on the longer history (HIST-01). Two findings make this more than adding rows: (a) the feature builder's player, split, park and league counters add every prior plate appearance at full weight, which is harmless over 2023-2026 but wrong over twelve seasons (a 2015 at-bat would count as much as last week's), so the counters get an optional half-life (PAConfig.history_half_life_days; each prior plate appearance counts 0.5 ** (days ago / half-life); 0 keeps the frozen counts; the chronological builder decays lazily and the live provider weights each row directly, and a test checks they give the same features); the physics sums use their existing window (window_days 1095, three years); (b) today's model learned from 2023-2024 games whose players had little or no history behind them (the history starts on Opening Day 2023), while every game it now predicts has three-plus years behind each player; with history from 2015 every training game has a full history too. Five arms in one run (workflow BRL fit arms, tools/fit_arms.json; each arm is the locked benchmark of tools/brl_fit_model.py, validated on 2025 and tested on 2026, manifests kept on the ledger branch): c0 = the live model's settings (control: train 2023-2024, no history, no half-life; it should reproduce pa-2026-v2-physics's 1.45840); a365 = history from 2015 with a 365-day half-life, still trained on 2023-2024 (better features alone); b365, b730, b1460 = history from 2015, trained on 2016-2024 (about 1.5 million plate appearances instead of 370 thousand), half-lives 365, 730 and 1,460 days. Each fit's receipt carries, per 2026 test game, the plate appearances and summed log loss, so tools/brl_fit_compare.py compares arms game by game",
-     "Disposition and evidence": "**Registered in the commit that added this row, before any arm was fit.** Stage 1 (plate appearances): the selected arm is the candidate with the lowest 2025 tuning-block log loss (talent_plus_context, the benchmark's own model-selection score; the 2026 test plays no part in the choice). It passes if its blended 2026 log loss is lower than c0's with the 95% interval from resampling games below zero, and its largest class calibration gap on 2026 stays below 0.015. The other arms are reported for what they show (a365 against c0 = better features; the b arms against a365 = more training rows), not tested. Prediction: the selected arm improves 2026 log loss by at least 0.0005 nats per plate appearance. Stage 2 (games), only if stage 1 passes: full-season replays of 2025 and 2026 with the selected model and pa-2026-v2-physics on the same games, worlds and settings, paired by date, with the 2015-2022 history in the replay's history file. It goes live (brl_engine/model.json; the live runtime then reads the longer history) if the simulator's game Brier is lower in both seasons and the pooled blend's 95% upper bound is below +0.0005 (the REPLAY-02 / TEAM-02 rule). Failing either stage, the live model stays **Stage 1 result (run 38908076997; comparison research/long-01-compare-38908076997.json, computed with tools/brl_fit_compare.decide from the five receipts after the run's own compare job failed to start: requests was missing from its install, fixed): passed.** The control c0 reproduced the live model (blended 2026 log loss 1.458396 against 1.458396). 2025 tuning-block log loss (talent_plus_context): c0 1.45347, a365 1.45360, b365 1.45269, b730 1.45276, b1460 1.45296, so b365 is the selected arm. 2026 against c0, nats per plate appearance with the 95% game-bootstrap interval: **b365 -0.00098 [-0.00128, -0.00068]** (largest class calibration gap 0.0088); for what they show, a365 -0.00091 [-0.00119, -0.00063] (better features alone carry most of it), b730 -0.00107, b1460 -0.00110 (the longer half-lives were a little better on 2026, not on 2025, and were not chosen). The prediction (at least 0.0005) held. For scale, the physics features of RESEARCH-02 were worth 0.00154. Fits took 10 minutes (c0) to 36 minutes (b arms, 1.55 million training rows). Stage 2 (replays of 2025 and 2026 with long01-b365 against v2-prod4-pen-1000, the live regular-season settings) started",
-     "Delta corrected Brier, 2026": "stage 1 passed; stage 2 running"
+     "Disposition and evidence": "**Registered in the commit that added this row, before any arm was fit.** Stage 1 (plate appearances): the selected arm is the candidate with the lowest 2025 tuning-block log loss (talent_plus_context, the benchmark's own model-selection score; the 2026 test plays no part in the choice). It passes if its blended 2026 log loss is lower than c0's with the 95% interval from resampling games below zero, and its largest class calibration gap on 2026 stays below 0.015. The other arms are reported for what they show (a365 against c0 = better features; the b arms against a365 = more training rows), not tested. Prediction: the selected arm improves 2026 log loss by at least 0.0005 nats per plate appearance. Stage 2 (games), only if stage 1 passes: full-season replays of 2025 and 2026 with the selected model and pa-2026-v2-physics on the same games, worlds and settings, paired by date, with the 2015-2022 history in the replay's history file. It goes live (brl_engine/model.json; the live runtime then reads the longer history) if the simulator's game Brier is lower in both seasons and the pooled blend's 95% upper bound is below +0.0005 (the REPLAY-02 / TEAM-02 rule). Failing either stage, the live model stays **Stage 1 result (run 38908076997; comparison research/long-01-compare-38908076997.json, computed with tools/brl_fit_compare.decide from the five receipts after the run's own compare job failed to start: requests was missing from its install, fixed): passed.** The control c0 reproduced the live model (blended 2026 log loss 1.458396 against 1.458396). 2025 tuning-block log loss (talent_plus_context): c0 1.45347, a365 1.45360, b365 1.45269, b730 1.45276, b1460 1.45296, so b365 is the selected arm. 2026 against c0, nats per plate appearance with the 95% game-bootstrap interval: **b365 -0.00098 [-0.00128, -0.00068]** (largest class calibration gap 0.0088); for what they show, a365 -0.00091 [-0.00119, -0.00063] (better features alone carry most of it), b730 -0.00107, b1460 -0.00110 (the longer half-lives were a little better on 2026, not on 2025, and were not chosen). The prediction (at least 0.0005) held. For scale, the physics features of RESEARCH-02 were worth 0.00154. Fits took 10 minutes (c0) to 36 minutes (b arms, 1.55 million training rows). Stage 2 (replays of 2025 and 2026 with long01-b365 against v2-prod4-pen-1000, the live regular-season settings) started. **Stage 2 result (replays long01-b365-pen-1000, runs 38914345691 for 2025 and 38914383629 for 2026, against v2-prod4-pen-1000, every setting the same; paired by game with tools/replay_blend_compare.py, the team chances from research run 38916747347, which reproduce the reference's recorded blend Brier exactly): failed.** Simulator Brier 0.242754 against 0.242692 in 2025 (+0.00006 [-0.00075, +0.00087]) and 0.243516 against 0.242937 in 2026 (+0.00058 [-0.00035, +0.00157]); pooled +0.00032 [-0.00028, +0.00094]; blend -0.00011 (2025), +0.00023 (2026), pooled +0.00006 [-0.00025, +0.00037]. The rule needed the simulator better in both seasons, so the live model stays pa-2026-v2-physics. What went wrong is visible in the runs: the new model's games score fewer runs, 8.78 against 8.90 actual in 2025 and 8.60 against 8.96 in 2026 (the live model: 8.86 and 8.93), squared error of the mean total +0.10 [+0.01, +0.20] pooled. The simulator's context offsets, which set each class's league level, were estimated on the live model's own predictions (CTX-02), so they correct the live model's level, not this one's. LONG-02 re-estimates them on the new model's own stack before judging it again",
+     "Delta corrected Brier, 2026": "stage 1 passed; stage 2 failed (not adopted)"
     },
     "registered_before_run": true,
     "diagnostic": false,
     "runs": [
-     "38908076997"
+     "38908076997",
+     "38914345691",
+     "38914383629",
+     "38916747347"
     ],
     "frozen_commits": [],
-    "status": "stage 1 passed; stage 2 running"
+    "status": "stage 1 passed; stage 2 failed (not adopted)"
    }
   ],
   "STAB-02": [
@@ -5557,6 +5560,22 @@
     "runs": [
      "38908755674"
     ],
+    "frozen_commits": [],
+    "status": "registered"
+   }
+  ],
+  "LONG-02": [
+   {
+    "id": "LONG-02",
+    "columns": {
+     "ID": "LONG-02",
+     "Attempt": "LONG-01's model judged on its own stack. LONG-01 stage 2 failed with the new model's simulated games short of runs (8.78 and 8.60 against 8.90 and 8.96 actual) because the simulator's context offsets (each class's level by batting side and inning) were estimated on the live model's predictions (CTX-02). Here they are re-estimated for long01-b365 exactly as CTX-02 did (check-only replays, n_sims 0 with real_pa_check, of every 2025 and 2026 regular-season plate appearance; the bare model's predictions summed in the six side-by-inning buckets; offset log((observed + 200 x share) / (predicted + 200 x share)); the formula reproduces the live tables to four decimals from their own check runs), cross-season as before (the 2026 replay uses the table from 2025, the 2025 replay the table from 2026). Then the same full replays as LONG-01 stage 2 with only the context tables changed. The team offsets still come from the live model's residuals (research/team-resid-v2), a known limit",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the check-only replays.** Same rule as LONG-01 stage 2 against v2-prod4-pen-1000: goes live only if the simulator's game Brier is lower in both 2025 and 2026 and the pooled blend's 95% upper bound is below +0.0005. Predictions: mean simulated totals within 0.15 runs of actual in both seasons; the pooled simulator Brier difference at or below zero",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
     "frozen_commits": [],
     "status": "registered"
    }
