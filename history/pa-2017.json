@@ -1,0 +1,110 @@
+{
+ "schema": "brl.history-season-receipt.v1",
+ "experiment": "HIST-01",
+ "year": 2017,
+ "by_game_type": {
+  "R": {
+   "schedule_games": 2430,
+   "games": 2430,
+   "missing_games": 0,
+   "plate_appearances": 185259
+  },
+  "F": {
+   "schedule_games": 2,
+   "games": 2,
+   "missing_games": 0,
+   "plate_appearances": 162
+  },
+  "D": {
+   "schedule_games": 17,
+   "games": 17,
+   "missing_games": 0,
+   "plate_appearances": 1291
+  },
+  "L": {
+   "schedule_games": 12,
+   "games": 12,
+   "missing_games": 0,
+   "plate_appearances": 839
+  },
+  "W": {
+   "schedule_games": 7,
+   "games": 7,
+   "missing_games": 0,
+   "plate_appearances": 530
+  }
+ },
+ "outcome_mix_pct_regular_season": {
+  "BIP_OUT": 45.16,
+  "K": 21.65,
+  "1B": 14.53,
+  "BB_HBP": 9.5,
+  "2B_3B": 4.96,
+  "HR": 3.3,
+  "OTHER_REACH": 0.91
+ },
+ "batters": 959,
+ "pitchers": 755,
+ "date_min": "2017-04-02",
+ "date_max": "2017-11-01",
+ "not_in_schedule_games": 0,
+ "plate_appearances": 188081,
+ "columns": [
+  "game_date",
+  "game_year",
+  "game_pk",
+  "at_bat_number",
+  "pitch_number",
+  "batter",
+  "pitcher",
+  "stand",
+  "p_throws",
+  "home_team",
+  "away_team",
+  "inning",
+  "inning_topbot",
+  "outs_when_up",
+  "on_1b",
+  "on_2b",
+  "on_3b",
+  "home_score",
+  "away_score",
+  "bat_score",
+  "fld_score",
+  "bat_score_diff",
+  "n_thruorder_pitcher",
+  "batter_days_since_prev_game",
+  "pitcher_days_since_prev_game",
+  "age_bat",
+  "age_pit",
+  "fielder_2",
+  "game_type",
+  "terminal_event",
+  "outcome",
+  "season",
+  "date_key",
+  "platoon",
+  "is_home_batter",
+  "runner_1b",
+  "runner_2b",
+  "runner_3b",
+  "park",
+  "matchup_key"
+ ],
+ "build": {
+  "raw_pitch_rows": 735954,
+  "pitch_rows": 735954,
+  "terminal_pa_rows": 188371,
+  "eligible_pa_rows": 188081,
+  "excluded_terminal_rows": 290,
+  "duplicate_pa_rows_removed": 0
+ },
+ "plaintext_csv_sha256": "fa3e59c6de133f380e0d952e120ab9cee62082c91f60b06a64f161bc9b889283",
+ "cipher_sha256": "1821a60af4939dd4dd768a0e1e878ed98dc49ec7ecdfe796874a7bef45100182",
+ "cipher_bytes": 3864989,
+ "path": "private/history/pa-2017.enc",
+ "format": "AES-256-GCM; BRLAESG1 header; 12-byte nonce; AAD BRL:pa-history-season-2017; gzip CSV inside",
+ "sealed_at": "2026-10-16T13:22:07.704031+00:00",
+ "seconds": 448,
+ "run_id": "38905328029"
+}
