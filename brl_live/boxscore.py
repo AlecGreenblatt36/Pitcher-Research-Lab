@@ -427,6 +427,9 @@ ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         # stalled): 'chain' draws each plate appearance's pitches from the matchup's own count chain (needs a model with
         # chain features) and the starter's exit reads LEASH-03's correction with pitch terms (regular season)
         'pitch_counts':'chain',
+        # BULLPEN-07 (off until its replays are read): a shock on each reliever's utility drawn once per simulated game,
+        # the day's unseen availability; spreads the bullpen's chances to pitch (BULLPEN-03's miss at the top)
+        'reliever_game_sigma':0.0,
         # LEASH-02 (on from October 11, 2026; its gates held on both seasons): the inning correction on the starter-exit
         # hazard's log-odds, regular season only (brl_live/hazard_correction.json); the postseason keeps its measured usage
         # on the plain hazard
@@ -507,12 +510,15 @@ def leash_pexp(leash,history,pexp,starters,date,league):
     return out
 
 def reliever_choice_for(settings):
-    """The fitted reliever choice (brl_live/reliever_choice.json, BULLPEN-01) when switched on, else None."""
+    """The fitted reliever choice (brl_live/reliever_choice.json, BULLPEN-01) when switched on, else None; with
+    reliever_game_sigma (BULLPEN-07) each reliever's utility carries a shock drawn once per simulated game."""
     if not settings.get('reliever_choice'):return None
-    if 'c' not in _KERNEL:
+    sigma=float(settings.get('reliever_game_sigma') or 0.0)
+    key=('c',sigma)
+    if key not in _KERNEL:
         from research_lab.game_sim.reliever_choice import RelieverChoice
-        _KERNEL['c']=RelieverChoice(json.loads(RELIEVER_CHOICE_PATH.read_text()))
-    return _KERNEL['c']
+        _KERNEL[key]=RelieverChoice(json.loads(RELIEVER_CHOICE_PATH.read_text()),game_sigma=sigma)
+    return _KERNEL[key]
 
 def relief_corrected(settings,game_type='R'):
     """True when RELIEF-04's entry-inning correction applies: switched on with the fitted exits, regular season only."""

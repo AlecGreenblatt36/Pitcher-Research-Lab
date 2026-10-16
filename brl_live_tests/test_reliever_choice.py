@@ -67,9 +67,9 @@ def test_production_table_follows_roles_rest_and_platoon():
 
 
 class Capture(RelieverChoice):
-    def probabilities(self, candidates, inning, lead, outs, runners, batter_hand, upcoming_hands=None):
+    def probabilities(self, candidates, inning, lead, outs, runners, batter_hand, upcoming_hands=None, shocks=None):
         self.seen = (inning, lead, outs, runners, batter_hand, upcoming_hands)
-        return super().probabilities(candidates, inning, lead, outs, runners, batter_hand, upcoming_hands)
+        return super().probabilities(candidates, inning, lead, outs, runners, batter_hand, upcoming_hands, shocks=shocks)
 
 
 def test_a_change_at_the_inning_end_is_scored_for_the_next_inning():
@@ -180,3 +180,32 @@ def test_workload_and_top_two_terms():
     new = RelieverChoice({'names': ['work7', 'top2_14'], 'beta': [-1.0, -0.2]})
     p = new.probabilities(pen, 7, 1, 0, 0, 'R')
     assert p[2] > p[1] > p[0]
+
+
+def test_game_shock_is_off_by_default_fixed_within_a_game_and_spreads_the_bullpen():
+    """BULLPEN-07: sigma 0 draws exactly the games of before; with a shock each reliever's term is drawn once per game
+    (the same at every entry of that game, different across games), the closer is picked in fewer worlds of a save spot,
+    and the live kernel keys the choice by sigma."""
+    config = SimulationConfig(max_innings=100, max_plate_appearances=4000)
+    plain = RelieverChoice(DOC); shocked = RelieverChoice(DOC, game_sigma=1.25)
+    assert plain.game_sigma == 0.0 and 'game shock' in shocked.name and 'game shock' not in plain.name
+    for seed in range(5):
+        a = GameSimulator(Provider(), config, manager_policy=ManagerPolicy(reliever_choice=plain)).simulate(matchup(), seed, record_events=True)
+        b = GameSimulator(Provider(), config, manager_policy=ManagerPolicy(reliever_choice=RelieverChoice(DOC, game_sigma=0.0))).simulate(matchup(), seed, record_events=True)
+        assert a.to_dict() == b.to_dict()
+    p = pen(); state = GameState(seed=11)
+    z1 = shocked.shocks(p, state); z2 = shocked.shocks(p, state); z3 = shocked.shocks(p, GameState(seed=12))
+    assert z1 is not None and np.array_equal(z1, z2) and not np.array_equal(z1, z3) and set(state.reliever_shocks) == {x.player_id for x in p}
+    assert plain.shocks(p, state) is None
+    # over many games, the closer's share of save spots falls and the spread of picks rises
+    picks = {0.0: Counter(), 1.25: Counter()}
+    for sigma in picks:
+        ch = RelieverChoice(DOC, game_sigma=sigma)
+        for seed in range(400):
+            st = GameState(seed=seed, inning=9, outs=0); st.home_score = 3; st.away_score = 1
+            rng = np.random.default_rng(seed)
+            picks[sigma][ch.select(list(p), st, 'home', PlayerProfile('b', 'B', 'R'), rng, [PlayerProfile('b', 'B', 'R')] * 3).player_id] += 1
+    assert picks[1.25]['CL'] < picks[0.0]['CL'] and len(picks[1.25]) >= len(picks[0.0])
+    from brl_live.boxscore import reliever_choice_for, ADJUST
+    assert reliever_choice_for(dict(ADJUST, reliever_choice=True)).game_sigma == 0.0
+    assert reliever_choice_for(dict(ADJUST, reliever_choice=True, reliever_game_sigma=1.25)).game_sigma == 1.25

@@ -72,17 +72,51 @@ def features(facts: list[dict], same_hand: list[bool], sit: dict, same3=None) ->
 
 
 class RelieverChoice:
-    def __init__(self, doc: dict):
+    """game_sigma (BULLPEN-07): the standard deviation of a shock on each reliever's utility drawn once per simulated
+    game (from the world's seed and his id, so it moves no other number), the day's unseen availability: a sore arm, a
+    warm-up the night before, a plan. The per-entry fit says the closer is the pick in a save spot; without the shock
+    every entry of every world re-rolls that, so the likeliest arms pitch in far more worlds than they pitch in real
+    games (BULLPEN-03: arms shown at 60 to 80% pitched 52%). 0 = off."""
+
+    def __init__(self, doc: dict, game_sigma: float = 0.0):
         self.name = str(doc.get("name") or "reliever choice")
         self.names = [str(n) for n in doc["names"]]
         self.beta = np.asarray(doc["beta"], float)
+        self.game_sigma = float(game_sigma or 0.0)
         if len(self.names) != len(self.beta):
             raise ValueError("reliever choice: names and coefficients differ in length")
+        if self.game_sigma:
+            self.name += f" (game shock {self.game_sigma:g})"
+
+    def shocks(self, candidates, state) -> np.ndarray | None:
+        """The game's shock per candidate (standard normal times game_sigma), drawn once per reliever and game."""
+        if not self.game_sigma or state is None:
+            return None
+        bank = getattr(state, "reliever_shocks", None)
+        if bank is None:
+            bank = {}
+            try:
+                state.reliever_shocks = bank
+            except AttributeError:
+                pass
+        out = np.empty(len(candidates))
+        for i, p in enumerate(candidates):
+            pid = str(p.player_id)
+            z = bank.get(pid)
+            if z is None:
+                try:
+                    key = int(pid)
+                except ValueError:
+                    key = abs(hash(pid)) % (2 ** 31)
+                z = float(np.random.default_rng([int(getattr(state, "seed", 0)), key, 7919]).standard_normal()) * self.game_sigma
+                bank[pid] = z
+            out[i] = z
+        return out
 
     def probabilities(self, candidates, inning: int, lead: int, outs: int, runners: int, batter_hand: str,
-                      upcoming_hands=None) -> np.ndarray:
+                      upcoming_hands=None, shocks=None) -> np.ndarray:
         """Choice probabilities over `candidates`; upcoming_hands lists how the next three hitters bat ('L', 'R', 'S'),
-        the first being the next batter."""
+        the first being the next batter; shocks adds a per-candidate term to the utilities (BULLPEN-07)."""
         facts = [dict(getattr(p, "usage", ()) or ()) for p in candidates]
         hand = (batter_hand or "R").upper()[:1]
         same = [hand != "S" and p.throws == hand for p in candidates]
@@ -93,6 +127,8 @@ class RelieverChoice:
         for name, b in zip(self.names, self.beta):
             if name in cols:
                 u += b * cols[name]
+        if shocks is not None:
+            u += np.asarray(shocks, float)
         u -= u.max()
         e = np.exp(u)
         return e / e.sum()
@@ -106,5 +142,6 @@ class RelieverChoice:
         else:
             inning, outs, runners = state.inning, state.outs, sum(r is not None for r in state.bases)
         hands = [getattr(b, "bats", "R") for b in upcoming] if upcoming else None
-        p = self.probabilities(candidates, inning, lead, outs, runners, getattr(next_batter, "bats", "R"), hands)
+        p = self.probabilities(candidates, inning, lead, outs, runners, getattr(next_batter, "bats", "R"), hands,
+                               shocks=self.shocks(candidates, state))
         return candidates[int(rng.choice(len(candidates), p=p))]

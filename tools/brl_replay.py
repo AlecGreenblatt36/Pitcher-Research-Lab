@@ -378,8 +378,8 @@ def main():
         reliever_choice = None
         if params.get('reliever_choice'):
             from research_lab.game_sim.reliever_choice import RelieverChoice
-            reliever_choice = RelieverChoice(json.loads((ROOT / str(params['reliever_choice'])).read_text()))
-            receipt['reliever_choice'] = {'path': params['reliever_choice'], 'name': reliever_choice.name}
+            reliever_choice = RelieverChoice(json.loads((ROOT / str(params['reliever_choice'])).read_text()), game_sigma=float(params.get('reliever_game_sigma') or 0.0))
+            receipt['reliever_choice'] = {'path': params['reliever_choice'], 'name': reliever_choice.name, 'game_sigma': float(params.get('reliever_game_sigma') or 0.0)}
         relief_exit = None
         relief_correction = None
         if params.get('relief_exit'):

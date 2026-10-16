@@ -210,7 +210,7 @@ class GameSimulator:
         should_record = self.config.record_events if record_events is None else record_events
         if self.steals is not None:
             matchup = self.steals.with_speeds(matchup)
-        state = GameState()
+        state = GameState(seed=int(seed))
         runtimes: dict[TeamSide, _TeamRuntime] = {
             "away": _TeamRuntime(matchup.away, matchup.away.starter),
             "home": _TeamRuntime(matchup.home, matchup.home.starter),
