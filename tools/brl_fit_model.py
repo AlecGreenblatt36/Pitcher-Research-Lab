@@ -82,13 +82,52 @@ def model_purpose(name: str) -> str:
     return f'model:{name}'
 
 
+def game_losses(path) -> dict:
+    """Per test game: plate appearances and the summed log loss of the blended candidate and of the full model alone.
+    Aggregates only (no player rows); arms fit in separate jobs are compared game by game from these (LONG-01)."""
+    import numpy as np
+    pred = pd.read_csv(path, low_memory=False)
+    labels = ['BIP_OUT', 'K', 'BB_HBP', '1B', '2B_3B', 'HR', 'OTHER_REACH']
+    y = pred['outcome'].map({l: i for i, l in enumerate(labels)}).to_numpy(int)
+    rows = np.arange(len(pred))
+    out = pd.DataFrame({'game': pred['game_pk'].astype(int),
+                        'ens': -np.log(np.clip(pred[[f'p_ensemble_{l}' for l in labels]].to_numpy(float)[rows, y], 1e-12, 1)),
+                        'model': -np.log(np.clip(pred[[f'p_model_{l}' for l in labels]].to_numpy(float)[rows, y], 1e-12, 1))})
+    g = out.groupby('game', sort=True).agg(n=('ens', 'size'), ens=('ens', 'sum'), model=('model', 'sum'))
+    return {str(k): [int(r.n), round(float(r.ens), 9), round(float(r.model), 9)] for k, r in g.iterrows()}
+
+
+def history_purpose(year: int) -> str:
+    return f'pa-history-season-{int(year)}'
+
+
+def load_history(repo, token, key, branch, years, columns) -> pd.DataFrame:
+    """The sealed HIST-01 seasons, regular season only, in the data package's columns."""
+    frames = []
+    for year in years:
+        raw = read_blob(repo, token, f'private/history/pa-{int(year)}.enc', branch)
+        if raw is None:
+            raise ValueError(f'plate-appearance history for {year} is not sealed yet')
+        frame = pd.read_csv(io.BytesIO(gzip.decompress(unseal(raw, key, history_purpose(year)))), low_memory=False)
+        frame = frame[frame['game_type'].astype(str) == 'R']
+        missing = [c for c in columns if c not in frame.columns]
+        if missing:
+            raise ValueError(f'history {year} lacks columns {missing}')
+        frame = frame.loc[:, columns]
+        frame['date_key'] = frame['date_key'].astype(str)
+        frames.append(frame)
+    return pd.concat(frames, ignore_index=True)
+
+
 def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']; key_hex = os.environ['BRL_PA_PACKAGE_KEY']; key = key_bytes(key_hex)
     branch = os.environ.get('BRL_LEDGER_BRANCH', 'brl-live-data')
     run_id = os.environ.get('GITHUB_RUN_ID', 'local')
     settings = {}
     settings_file = ROOT / 'tools' / 'fit_model_params.json'
-    if settings_file.exists():
+    if os.environ.get('BRL_FIT_SETTINGS'):            # one arm of a matrix run (workflow brl-fit-arms)
+        settings = json.loads(os.environ['BRL_FIT_SETTINGS'])
+    elif settings_file.exists():
         settings = json.loads(settings_file.read_text())
     name = str(settings.get('name') or DEFAULT_NAME)
     params = dict(settings.get('physics_params') or {})
@@ -112,13 +151,25 @@ def main():
         # Training window from tools/fit_model_params.json (default: the frozen 2023-2024 protocol). A retrained model
         # (train 2023-2025, validate on 2026, no test season yet) reports its metrics on 2026's final block (RETRAIN-01).
         # TOTALS-07: the park counter's prior (plate appearances) can be set from the settings; the default is the frozen 1,000.
-        priors = {k: float(settings[k]) for k in ('park_prior_pa', 'player_prior_pa', 'split_prior_pa', 'recent_prior_pa') if settings.get(k) is not None}
+        priors = {k: float(settings[k]) for k in ('park_prior_pa', 'player_prior_pa', 'split_prior_pa', 'recent_prior_pa', 'history_half_life_days') if settings.get(k) is not None}
+        if settings.get('regularization_grid'):
+            priors['regularization_grid'] = tuple(float(c) for c in settings['regularization_grid'])
         config = PAConfig(train_years=tuple(settings.get('train_years') or (2023, 2024)), validation_years=tuple(settings.get('validation_years') or (2025,)),
                           test_years=tuple(settings.get('test_years') or (2026,)), evaluation_mode='locked_final', **priors)
-        receipt['config'] = {'train_years': list(config.train_years), 'validation_years': list(config.validation_years), 'test_years': list(config.test_years), **priors}
+        receipt['config'] = {'train_years': list(config.train_years), 'validation_years': list(config.validation_years), 'test_years': list(config.test_years),
+                             **{k: (list(v) if isinstance(v, tuple) else v) for k, v in priors.items()}}
         stage('load plate appearances')
         pa = pd.read_csv(pa_path, low_memory=False)
         pa['date_key'] = pa['date_key'].astype(str)
+        # LONG-01: the sealed regular seasons before 2023 (HIST-01) go in front of the data package's history.
+        history_seasons = [int(y) for y in settings.get('history_seasons') or []]
+        if history_seasons:
+            pa = pd.concat([load_history(repo, token, key, branch, history_seasons, list(pa.columns)), pa], ignore_index=True)
+            pa['date_key'] = pd.to_datetime(pa['date_key'].str[:10]).dt.strftime('%Y-%m-%d')
+            receipt['history_seasons'] = history_seasons
+        receipt['pa_rows_by_season'] = {int(k): int(v) for k, v in pa['season'].value_counts().sort_index().items()}
+        receipt['missing_pct_by_season'] = {c: {int(k): round(float(v) * 100, 2) for k, v in pa[c].isna().groupby(pa['season']).mean().items()}
+                                            for c in ('age_bat', 'age_pit', 'batter_days_since_prev_game', 'park') if c in pa.columns}
         receipt['pa_rows'] = int(len(pa)); receipt['seasons'] = sorted(int(s) for s in pa['season'].unique())
         receipt['history_sha256'] = hashlib.sha256(pa_path.read_bytes()).hexdigest()
         stage('load physics tables')
@@ -151,9 +202,19 @@ def main():
         text = json.dumps(manifest_doc, indent=1, default=float)
         for secret in (key_hex, token):
             text = text.replace(secret, '[redacted]')
-        put_bytes(repo, token, f'brl_engine/models/{name}.json', text.encode(), 'main', f'BRL: model manifest {name}')
-        receipt['manifest'] = f'brl_engine/models/{name}.json'; receipt['model_sha256'] = manifest_doc['model_sha256']
+        if settings.get('manifest_branch') == 'ledger':   # a research arm: the manifest stays off main until the model is adopted
+            put_bytes(repo, token, f'models/{name}.json', text.encode(), branch, f'BRL: model manifest {name}')
+            receipt['manifest'] = f'{branch}:models/{name}.json'
+        else:
+            put_bytes(repo, token, f'brl_engine/models/{name}.json', text.encode(), 'main', f'BRL: model manifest {name}')
+            receipt['manifest'] = f'brl_engine/models/{name}.json'
+        receipt['model_sha256'] = manifest_doc['model_sha256']
         receipt['test_2026'] = json.loads(json.dumps({k: v.get('metrics', {}).get('log_loss') for k, v in report.get('models', {}).items()}, default=float))
+        receipt['test_game_losses'] = game_losses(out / 'test_predictions.csv.gz')
+        receipt['promotion'] = json.loads(json.dumps({k: v for k, v in (report.get('promotion') or {}).items()
+                                                      if k.startswith(('beat_', 'context_', 'max_absolute'))}, default=float))
+        receipt['tune_2025'] = json.loads(json.dumps({k: v.get('tuning', {}).get('best_tune_log_loss') for k, v in report.get('models', {}).items()
+                                                      if v.get('tuning', {}).get('best_tune_log_loss') is not None}, default=float))
         receipt['status'] = 'completed'
     except Exception as exc:
         receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:300]

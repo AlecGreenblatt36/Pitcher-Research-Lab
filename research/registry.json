@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 335,
- "rows": 338,
+ "experiments": 336,
+ "rows": 339,
  "records": {
   "ACC-01": [
    {
@@ -5511,6 +5511,22 @@
      "ID": "STAB-01",
      "Attempt": "First use of the longer history (diagnostic): how much sample a player's rate needs before it means something, and how much carries into the next season, from every regular season 2015 to 2026 (tools/brl_stability.py in the research lane, experiment stability; the physics tables carry each plate appearance's outcome and pitch sums, the histories give the game type). For 20 batter and pitcher rates (strikeouts, walks, home runs and singles per PA; whiff per swing, chase, swing, zone contact; exit velocity, hard-hit, launch angle; fastball speed; and the pitcher versions), a shrinkage constant k (league-average sample added, so an estimate is (total + k x league rate) / (sample + k)) from two measures: split half within a season (first 2N units split alternately; k = N (1 - r) / r) and next season (players with at least M units in consecutive seasons; k = n (1 - r) / r at their mean sample), for 2015-2019 and 2021-2026 separately. On made-up seasons with a known k of 68.6 the estimator gives 69.6 (split half) and 67.3 (next season)",
      "Disposition and evidence": "**Registered in the commit that added this row, before its run.** Diagnostic; no prediction about the values. What it decides: the plate-appearance model's shrinkage settings (player_prior_pa 180 for the per-PA rates; physics k_rate 150 for whiff, chase, swing and zone contact; k_bip 60 for exit velocity, launch angle and hard-hit; k_velo 100 fastballs) are checked against the next-season k. Where a setting is off by more than a factor of 2 from the next-season k in both eras, a refit with settings from these estimates is registered next (gated on held-out log-likelihood and full replays); otherwise the settings stand and How it works can cite the measured numbers",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
+   }
+  ],
+  "LONG-01": [
+   {
+    "id": "LONG-01",
+    "columns": {
+     "ID": "LONG-01",
+     "Attempt": "Refit the plate-appearance model on the longer history (HIST-01). Two findings make this more than adding rows: (a) the feature builder's player, split, park and league counters add every prior plate appearance at full weight, which is harmless over 2023-2026 but wrong over twelve seasons (a 2015 at-bat would count as much as last week's), so the counters get an optional half-life (PAConfig.history_half_life_days; each prior plate appearance counts 0.5 ** (days ago / half-life); 0 keeps the frozen counts; the chronological builder decays lazily and the live provider weights each row directly, and a test checks they give the same features); the physics sums use their existing window (window_days 1095, three years); (b) today's model learned from 2023-2024 games whose players had little or no history behind them (the history starts on Opening Day 2023), while every game it now predicts has three-plus years behind each player; with history from 2015 every training game has a full history too. Five arms in one run (workflow BRL fit arms, tools/fit_arms.json; each arm is the locked benchmark of tools/brl_fit_model.py, validated on 2025 and tested on 2026, manifests kept on the ledger branch): c0 = the live model's settings (control: train 2023-2024, no history, no half-life; it should reproduce pa-2026-v2-physics's 1.45840); a365 = history from 2015 with a 365-day half-life, still trained on 2023-2024 (better features alone); b365, b730, b1460 = history from 2015, trained on 2016-2024 (about 1.5 million plate appearances instead of 370 thousand), half-lives 365, 730 and 1,460 days. Each fit's receipt carries, per 2026 test game, the plate appearances and summed log loss, so tools/brl_fit_compare.py compares arms game by game",
+     "Disposition and evidence": "**Registered in the commit that added this row, before any arm was fit.** Stage 1 (plate appearances): the selected arm is the candidate with the lowest 2025 tuning-block log loss (talent_plus_context, the benchmark's own model-selection score; the 2026 test plays no part in the choice). It passes if its blended 2026 log loss is lower than c0's with the 95% interval from resampling games below zero, and its largest class calibration gap on 2026 stays below 0.015. The other arms are reported for what they show (a365 against c0 = better features; the b arms against a365 = more training rows), not tested. Prediction: the selected arm improves 2026 log loss by at least 0.0005 nats per plate appearance. Stage 2 (games), only if stage 1 passes: full-season replays of 2025 and 2026 with the selected model and pa-2026-v2-physics on the same games, worlds and settings, paired by date, with the 2015-2022 history in the replay's history file. It goes live (brl_engine/model.json; the live runtime then reads the longer history) if the simulator's game Brier is lower in both seasons and the pooled blend's 95% upper bound is below +0.0005 (the REPLAY-02 / TEAM-02 rule). Failing either stage, the live model stays",
      "Delta corrected Brier, 2026": "registered"
     },
     "registered_before_run": true,

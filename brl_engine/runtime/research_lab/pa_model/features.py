@@ -14,22 +14,45 @@ from .config import PAConfig
 @dataclass
 class _CounterState:
     counts: np.ndarray
-    total: int = 0
+    total: float = 0
+    day: int | None = None          # day ordinal the counts are decayed to (half-life counters only)
 
 
 class _OnlineCounter:
-    def __init__(self, n_classes: int):
+    """Class counts per key. With ``half_life_days`` > 0 (LONG-01) every plate appearance counts
+    0.5 ** (days before today / half_life_days): the counts are decayed lazily to the day asked for,
+    which equals weighting each prior row directly (``HistoryState.build`` does it that way)."""
+
+    def __init__(self, n_classes: int, half_life_days: float = 0.0):
         self.n_classes = n_classes
+        self.half_life = float(half_life_days or 0.0)
         self._states: dict[Hashable, _CounterState] = {}
 
-    def get(self, key: Hashable) -> _CounterState:
-        return self._states.get(key, _CounterState(np.zeros(self.n_classes, dtype=float), 0))
+    def _factor(self, state: _CounterState, day: int | None) -> float:
+        if not self.half_life or day is None or state.day is None or state.day == day:
+            return 1.0
+        return 0.5 ** ((day - state.day) / self.half_life)
 
-    def update(self, key: Hashable, class_index: int) -> None:
+    def get(self, key: Hashable, day: int | None = None) -> _CounterState:
+        state = self._states.get(key)
+        if state is None:
+            return _CounterState(np.zeros(self.n_classes, dtype=float), 0)
+        f = self._factor(state, day)
+        if f == 1.0:
+            return state
+        return _CounterState(state.counts * f, state.total * f, day)
+
+    def update(self, key: Hashable, class_index: int, day: int | None = None) -> None:
         state = self._states.get(key)
         if state is None:
             state = _CounterState(np.zeros(self.n_classes, dtype=float), 0)
             self._states[key] = state
+        f = self._factor(state, day)
+        if f != 1.0:
+            state.counts *= f
+            state.total *= f
+        if self.half_life:
+            state.day = day
         state.counts[class_index] += 1.0
         state.total += 1
 
@@ -54,6 +77,11 @@ class _RollingCounter:
         counts[class_index] += 1.0
         if len(queue) > self.window:
             counts[queue.popleft()] -= 1.0
+
+
+def _day_ordinal(value) -> int:
+    from datetime import date
+    return date.fromisoformat(str(value)[:10]).toordinal()
 
 
 def _posterior(state: _CounterState, prior: np.ndarray, strength: float, eps: float) -> np.ndarray:
@@ -126,21 +154,25 @@ def build_time_valid_features(pa: pd.DataFrame, config: PAConfig | None = None) 
     feature_columns.extend(context_columns)
     matrix = np.empty((len(ordered), len(feature_columns)), dtype=np.float32)
 
-    league = _OnlineCounter(n_classes)
-    batter = _OnlineCounter(n_classes)
-    pitcher = _OnlineCounter(n_classes)
-    batter_split = _OnlineCounter(n_classes)
-    pitcher_split = _OnlineCounter(n_classes)
-    park = _OnlineCounter(n_classes)
+    # LONG-01: with a history back to 2015 the cumulative counters weight old seasons by a half-life
+    # (0 = off: every prior plate appearance counts fully, the frozen behaviour).
+    half_life = float(getattr(config, "history_half_life_days", 0.0) or 0.0)
+    league = _OnlineCounter(n_classes, half_life)
+    batter = _OnlineCounter(n_classes, half_life)
+    pitcher = _OnlineCounter(n_classes, half_life)
+    batter_split = _OnlineCounter(n_classes, half_life)
+    pitcher_split = _OnlineCounter(n_classes, half_life)
+    park = _OnlineCounter(n_classes, half_life)
     batter_recent = _RollingCounter(n_classes, config.batter_recent_window)
     pitcher_recent = _RollingCounter(n_classes, config.pitcher_recent_window)
     fixed_prior = np.array([0.49, 0.22, 0.09, 0.10, 0.035, 0.03, 0.035])
     fixed_prior /= fixed_prior.sum()
 
-    for _, date_rows in ordered.groupby("date_key", sort=True):
+    for date_value, date_rows in ordered.groupby("date_key", sort=True):
+        today = _day_ordinal(date_value) if half_life else None
         # Freeze the league prior once for the whole date. No result from date D
         # can influence another PA on date D, including doubleheaders.
-        league_prob = _posterior(league.get("league"), fixed_prior, 500.0, eps)
+        league_prob = _posterior(league.get("league", today), fixed_prior, 500.0, eps)
 
         for row in date_rows.itertuples(index=True):
             position = int(row.Index)
@@ -151,10 +183,10 @@ def build_time_valid_features(pa: pd.DataFrame, config: PAConfig | None = None) 
             b_split_key = (batter_id, throws)
             p_split_key = (pitcher_id, stand)
 
-            b_state = batter.get(batter_id)
-            p_state = pitcher.get(pitcher_id)
-            bs_state = batter_split.get(b_split_key)
-            ps_state = pitcher_split.get(p_split_key)
+            b_state = batter.get(batter_id, today)
+            p_state = pitcher.get(pitcher_id, today)
+            bs_state = batter_split.get(b_split_key, today)
+            ps_state = pitcher_split.get(p_split_key, today)
             park_key = str(getattr(row, "park", "UNK"))
 
             b_prob = _posterior(b_state, league_prob, config.player_prior_pa, eps)
@@ -166,7 +198,7 @@ def build_time_valid_features(pa: pd.DataFrame, config: PAConfig | None = None) 
                 "batter_split": _posterior(bs_state, b_prob, config.split_prior_pa, eps),
                 "pitcher_split": _posterior(ps_state, p_prob, config.split_prior_pa, eps),
                 "park": _posterior(
-                    park.get(park_key), league_prob, config.park_prior_pa, eps
+                    park.get(park_key, today), league_prob, config.park_prior_pa, eps
                 ),
                 "batter_recent": _posterior(
                     batter_recent.get(batter_id), b_prob, config.recent_prior_pa, eps
@@ -215,12 +247,12 @@ def build_time_valid_features(pa: pd.DataFrame, config: PAConfig | None = None) 
             stand = str(getattr(row, "stand", "U"))
             throws = str(getattr(row, "p_throws", "U"))
             park_key = str(getattr(row, "park", "UNK"))
-            league.update("league", class_index)
-            batter.update(batter_id, class_index)
-            pitcher.update(pitcher_id, class_index)
-            batter_split.update((batter_id, throws), class_index)
-            pitcher_split.update((pitcher_id, stand), class_index)
-            park.update(park_key, class_index)
+            league.update("league", class_index, today)
+            batter.update(batter_id, class_index, today)
+            pitcher.update(pitcher_id, class_index, today)
+            batter_split.update((batter_id, throws), class_index, today)
+            pitcher_split.update((pitcher_id, stand), class_index, today)
+            park.update(park_key, class_index, today)
             batter_recent.update(batter_id, class_index)
             pitcher_recent.update(pitcher_id, class_index)
 

@@ -30,6 +30,9 @@ class PAConfig:
     split_prior_pa: float = 260.0
     park_prior_pa: float = 1000.0
     recent_prior_pa: float = 120.0
+    # LONG-01: half-life in days for the cumulative league, player, split and park counters
+    # (0 = off, every prior plate appearance counts fully).
+    history_half_life_days: float = 0.0
     batter_recent_window: int = 100
     pitcher_recent_window: int = 150
     regularization_grid: tuple[float, ...] = (1e-5, 1e-4, 1e-3, 1e-2, 0.1, 1.0)
@@ -76,6 +79,8 @@ class PAConfig:
             raise ValueError(
                 "validation fractions must leave a final ensemble-selection block"
             )
+        if self.history_half_life_days < 0:
+            raise ValueError("history_half_life_days must be zero (off) or positive")
         if not self.regularization_grid or any(
             value <= 0 for value in self.regularization_grid
         ):

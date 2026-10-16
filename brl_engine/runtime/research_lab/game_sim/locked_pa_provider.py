@@ -86,8 +86,11 @@ def _log_ratio(prob: np.ndarray, league: np.ndarray, eps: float) -> np.ndarray:
     return np.log(np.clip(prob, eps, 1.0)) - np.log(np.clip(league, eps, 1.0))
 
 
-def _count_table(frame: pd.DataFrame, keys: list[str], n_classes: int) -> dict:
-    grouped = frame.groupby(keys + ["_y"], sort=False).size().unstack("_y", fill_value=0)
+def _count_table(frame: pd.DataFrame, keys: list[str], n_classes: int, weight: str | None = None) -> dict:
+    if weight is None:
+        grouped = frame.groupby(keys + ["_y"], sort=False).size().unstack("_y", fill_value=0)
+    else:
+        grouped = frame.groupby(keys + ["_y"], sort=False)[weight].sum().unstack("_y", fill_value=0.0)
     grouped = grouped.reindex(columns=range(n_classes), fill_value=0)
     values = grouped.to_numpy(float)
     index = grouped.index
@@ -132,6 +135,14 @@ class HistoryState:
         frame["p_throws"] = frame["p_throws"].astype(str)
         frame["park"] = frame["park"].astype(str)
         n = len(MODEL_LABELS)
+        # LONG-01: with a half-life each prior plate appearance counts 0.5 ** (days before the cutoff / half-life),
+        # exactly what the chronological builder's lazily decayed counters hold at the start of the cutoff date.
+        half_life = float(config.get("history_half_life_days", 0.0) or 0.0)
+        weight = None
+        if half_life:
+            days = (pd.Timestamp(str(cutoff_date)[:10]) - pd.to_datetime(frame["date_key"].astype(str).str[:10])).dt.days.to_numpy(float)
+            frame["_w"] = 0.5 ** (days / half_life)
+            weight = "_w"
 
         def rolling(key: str, window: int) -> dict:
             tail = frame.groupby(key, sort=False).tail(window)
@@ -144,12 +155,12 @@ class HistoryState:
         return cls(
             cutoff_date=cutoff_date,
             n_rows=int(len(frame)),
-            league_counts=np.bincount(frame["_y"].to_numpy(), minlength=n).astype(float),
-            batter=_count_table(frame, ["batter"], n),
-            pitcher=_count_table(frame, ["pitcher"], n),
-            batter_split=_count_table(frame, ["batter", "p_throws"], n),
-            pitcher_split=_count_table(frame, ["pitcher", "stand"], n),
-            park=_count_table(frame, ["park"], n),
+            league_counts=np.bincount(frame["_y"].to_numpy(), weights=None if weight is None else frame[weight].to_numpy(), minlength=n).astype(float),
+            batter=_count_table(frame, ["batter"], n, weight),
+            pitcher=_count_table(frame, ["pitcher"], n, weight),
+            batter_split=_count_table(frame, ["batter", "p_throws"], n, weight),
+            pitcher_split=_count_table(frame, ["pitcher", "stand"], n, weight),
+            park=_count_table(frame, ["park"], n, weight),
             batter_recent=rolling("batter", int(config["batter_recent_window"])),
             pitcher_recent=rolling("pitcher", int(config["pitcher_recent_window"])),
             batter_last_date=last_b,

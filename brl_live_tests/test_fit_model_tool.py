@@ -28,3 +28,38 @@ def test_benchmark_with_extra_features_saves_a_physics_bundle(tmp_path):
     assert bundle['talent_plus_context'].feature_columns[-len(phys.BASE_FEATURES):] == phys.BASE_FEATURES
     assert set(bundle['feature_columns']['talent_only']) >= set(phys.BASE_FEATURES)
     assert 'models' in report and 'blended_candidate' in report['models']
+
+
+def test_history_seasons_load_regular_season_rows_in_the_package_columns(monkeypatch):
+    """LONG-01: the sealed HIST-01 seasons join the data package's history with its columns, regular season only."""
+    import gzip, os
+    spec2 = importlib.util.spec_from_file_location('brl_fit_tool', Path(__file__).parents[1] / 'tools' / 'brl_fit_model.py')
+    tool = importlib.util.module_from_spec(spec2); spec2.loader.exec_module(tool)
+    from cloud.security import seal
+    key = os.urandom(32)
+    frame = pd.DataFrame({'date_key': ['2019-04-01', '2019-10-05'], 'season': [2019, 2019], 'game_pk': [1, 2], 'game_type': ['R', 'D'],
+                          'outcome': ['K', 'HR'], 'extra': [0, 0]})
+    blob = seal(gzip.compress(frame.to_csv(index=False).encode()), key, tool.history_purpose(2019))
+    monkeypatch.setattr(tool, 'read_blob', lambda repo, token, path, branch: blob if path == 'private/history/pa-2019.enc' else None)
+    out = tool.load_history('r', 't', key, 'b', [2019], ['date_key', 'season', 'game_pk', 'outcome'])
+    assert list(out.columns) == ['date_key', 'season', 'game_pk', 'outcome'] and out['game_pk'].tolist() == [1]
+    import pytest
+    with pytest.raises(ValueError):
+        tool.load_history('r', 't', key, 'b', [2018], ['date_key'])
+
+
+def test_game_losses_sum_the_log_loss_of_each_test_game(tmp_path):
+    import numpy as np
+    spec2 = importlib.util.spec_from_file_location('brl_fit_tool2', Path(__file__).parents[1] / 'tools' / 'brl_fit_model.py')
+    tool = importlib.util.module_from_spec(spec2); spec2.loader.exec_module(tool)
+    labels = ['BIP_OUT', 'K', 'BB_HBP', '1B', '2B_3B', 'HR', 'OTHER_REACH']
+    rows = []
+    for g, outcome in ((7, 'K'), (7, 'HR'), (9, 'BIP_OUT')):
+        row = {'game_pk': g, 'outcome': outcome}
+        for l in labels:
+            row[f'p_ensemble_{l}'] = 0.5 if l == outcome else 0.5 / 6
+            row[f'p_model_{l}'] = 0.25 if l == outcome else 0.75 / 6
+        rows.append(row)
+    path = tmp_path / 'p.csv.gz'; pd.DataFrame(rows).to_csv(path, index=False)
+    out = tool.game_losses(path)
+    assert out['7'][0] == 2 and abs(out['7'][1] - 2 * np.log(2)) < 1e-8 and abs(out['9'][2] - np.log(4)) < 1e-8

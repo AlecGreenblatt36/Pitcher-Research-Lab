@@ -1,0 +1,168 @@
+{
+ "experiment": "LONG-01",
+ "arms": [
+  {
+   "name": "long01-c0",
+   "role": "control",
+   "settings": {
+    "name": "long01-c0",
+    "manifest_branch": "ledger",
+    "physics_params": {
+     "xvalue": true,
+     "recent_days": 30
+    }
+   }
+  },
+  {
+   "name": "long01-a365",
+   "role": "candidate",
+   "settings": {
+    "name": "long01-a365",
+    "manifest_branch": "ledger",
+    "physics_params": {
+     "xvalue": true,
+     "recent_days": 30,
+     "window_days": 1095
+    },
+    "history_seasons": [
+     2015,
+     2016,
+     2017,
+     2018,
+     2019,
+     2020,
+     2021,
+     2022
+    ],
+    "history_half_life_days": 365.0,
+    "train_years": [
+     2023,
+     2024
+    ]
+   }
+  },
+  {
+   "name": "long01-b365",
+   "role": "candidate",
+   "settings": {
+    "name": "long01-b365",
+    "manifest_branch": "ledger",
+    "physics_params": {
+     "xvalue": true,
+     "recent_days": 30,
+     "window_days": 1095
+    },
+    "history_seasons": [
+     2015,
+     2016,
+     2017,
+     2018,
+     2019,
+     2020,
+     2021,
+     2022
+    ],
+    "history_half_life_days": 365.0,
+    "train_years": [
+     2016,
+     2017,
+     2018,
+     2019,
+     2020,
+     2021,
+     2022,
+     2023,
+     2024
+    ],
+    "regularization_grid": [
+     0.0001,
+     0.001,
+     0.01,
+     0.1
+    ]
+   }
+  },
+  {
+   "name": "long01-b730",
+   "role": "candidate",
+   "settings": {
+    "name": "long01-b730",
+    "manifest_branch": "ledger",
+    "physics_params": {
+     "xvalue": true,
+     "recent_days": 30,
+     "window_days": 1095
+    },
+    "history_seasons": [
+     2015,
+     2016,
+     2017,
+     2018,
+     2019,
+     2020,
+     2021,
+     2022
+    ],
+    "history_half_life_days": 730.0,
+    "train_years": [
+     2016,
+     2017,
+     2018,
+     2019,
+     2020,
+     2021,
+     2022,
+     2023,
+     2024
+    ],
+    "regularization_grid": [
+     0.0001,
+     0.001,
+     0.01,
+     0.1
+    ]
+   }
+  },
+  {
+   "name": "long01-b1460",
+   "role": "candidate",
+   "settings": {
+    "name": "long01-b1460",
+    "manifest_branch": "ledger",
+    "physics_params": {
+     "xvalue": true,
+     "recent_days": 30,
+     "window_days": 1095
+    },
+    "history_seasons": [
+     2015,
+     2016,
+     2017,
+     2018,
+     2019,
+     2020,
+     2021,
+     2022
+    ],
+    "history_half_life_days": 1460.0,
+    "train_years": [
+     2016,
+     2017,
+     2018,
+     2019,
+     2020,
+     2021,
+     2022,
+     2023,
+     2024
+    ],
+    "regularization_grid": [
+     0.0001,
+     0.001,
+     0.01,
+     0.1
+    ]
+   }
+  }
+ ]
+}
