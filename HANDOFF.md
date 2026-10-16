@@ -107,7 +107,8 @@ Model Plan doc). Built the same afternoon:
 - CHAIN-04B passed by a small margin (pool constants 50/200 with the cell constants x0.67; -0.00005) and is live as
   chain04b-xs-tight (7:00 pm Eastern) with its own context tables. CHAIN-05 (the pitcher's mix by the hitter's side)
   failed at every constant; platoon_mix stays off (a clean negative, see the row). BOOST-02 (the trees on this base)
-  is the next arms run; if it passes, full replays under CHAIN-03B's gates before it goes live.
+  ran and failed: on the xs-tight base the trees add nothing (BOOST-01's gain was the early-season part CHAIN-04 took).
+  Boosting stays off; the code stays inert (pipeline boost option, provider BoostPath).
 - Totals, looked at again on LEASH-04's replays (described after looking, no experiment): our chance of the over at
   the closing line is worse than a constant (Brier 0.2509 in 2025 and 0.2531 in 2026 against 0.2491 and 0.2500; the
   market's 0.2497 and 0.2498), with a calibration slope of 0.16 to 0.29: when we say 36% it happens 46 to 51%, when

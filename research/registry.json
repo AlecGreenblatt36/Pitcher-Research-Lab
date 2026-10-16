@@ -5825,14 +5825,16 @@
     "columns": {
      "ID": "BOOST-02",
      "Attempt": "The boosted matchup model on the live base. BOOST-01's trees (config a: 15 leaves, 300 per leaf, rate 0.05, rounds picked on the tuning block) were fit on spring02-w10's settings; the live model is now chain04-pool-s (and CHAIN-04B's or CHAIN-05's winner if either passes before this runs). Arms: c0 = the live settings refit (control); boost = the same settings with boost config a; boost-b = with config b (7 leaves, 1,000 per leaf, L2 5), which scored best on the 2026 season in BOOST-01",
-     "Disposition and evidence": "**Registered in the commit that added this row, before any arm was fit.** Same selection and at-bat gate as BOOST-01. If it passes: full 1,000-world replays of 2025 and 2026 with the candidate (reference replays: the live settings' chain03b-v2h120-pen-1000 pair, or a fresh pair of the live base if the base has changed) under CHAIN-03B's four gates (pooled simulator Brier upper bound under +0.0005 with the point at or below zero; pooled blend upper under +0.0005; totals within 0.15 runs; strikeouts per plate appearance within 1.5% from check-only replays), context tables from its own check-only replays, then live. Prediction: the at-bat gain carries over (-0.00015 to -0.00025) and the game gates hold. Arms as run (plan in the commit): base chain04b-xs-tight; a = BOOST-01's config a with the round grid 50 to 300 (BOOST-01 picked 100 of 100 to 400); b = config b, grid 100 to 300",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before any arm was fit.** Same selection and at-bat gate as BOOST-01. If it passes: full 1,000-world replays of 2025 and 2026 with the candidate (reference replays: the live settings' chain03b-v2h120-pen-1000 pair, or a fresh pair of the live base if the base has changed) under CHAIN-03B's four gates (pooled simulator Brier upper bound under +0.0005 with the point at or below zero; pooled blend upper under +0.0005; totals within 0.15 runs; strikeouts per plate appearance within 1.5% from check-only replays), context tables from its own check-only replays, then live. Prediction: the at-bat gain carries over (-0.00015 to -0.00025) and the game gates hold. Arms as run (plan in the commit): base chain04b-xs-tight; a = BOOST-01's config a with the round grid 50 to 300 (BOOST-01 picked 100 of 100 to 400); b = config b, grid 100 to 300 **Result (run 38978520917): failed; the trees add nothing on the live base.** Tuning-block log loss: b 1.452355, a 1.452388, c0 1.452393 (b selected). 2026: the full-context family is unchanged (c0 1.457215, a 1.457211, b 1.457218) and the blended candidate is a touch worse (c0 1.457046; a +0.000107, interval -0.000027 to +0.000246; b +0.000119, -0.000018 to +0.000261); calibration gaps 0.0055 to 0.0056 (up from 0.0041). By month the trees still help in August and September (0.0002 to 0.0003) and cost that much in March to July. Reading: BOOST-01's gain (-0.00018 on the spring02-w10 base) was mostly the early-season part, and CHAIN-04's two-level prior took exactly that; what is left for the trees to find is inside the noise. The prediction failed. Boosting stays off (the code stays: pipeline option boost, provider BoostPath, bundle keys boost and boost_features, all inert without the setting). No replays were run",
+     "Delta corrected Brier, 2026": "failed"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38978520917"
+    ],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "failed"
    }
   ],
   "BULLPEN-07": [
