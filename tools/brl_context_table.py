@@ -3,7 +3,7 @@
 summed in the six batting-side x inning buckets, offset = log((observed + k x share) / (predicted + k x share)) per class,
 share = the bucket's predicted shares, k = 200 pseudo plate appearances (CTX-02's estimator; it reproduces the live
 tables from their own check runs to four decimals).
-Usage: python tools/brl_context_table.py <check replay tag> <out.json> [model name]"""
+Usage: python tools/brl_context_table.py <check replay tag[,tag2,...]> <out.json> [model name]   (several tags pool their pitches)"""
 from __future__ import annotations
 
 import gzip
@@ -45,8 +45,9 @@ def offsets(obs: dict, pred: dict, k: float = 200.0) -> dict:
 def main():
     tag, target = sys.argv[1], sys.argv[2]
     model = sys.argv[3] if len(sys.argv) > 3 else ''
+    tags = [t for t in tag.split(',') if t]
     files = sorted(f for f in _git('ls-tree', '-r', '--name-only', 'origin/brl-live-data', 'research').split()
-                   if f.startswith(f'research/replay-{tag}-') and f.endswith('.jsonl.gz'))
+                   if any(f.startswith(f'research/replay-{t}-') for t in tags) and f.endswith('.jsonl.gz'))
     rows = [json.loads(l) for f in files for l in gzip.decompress(_git('show', 'origin/brl-live-data:' + f, binary=True)).decode().splitlines() if l.strip()]
     obs, pred, last = bucket_sums(rows)
     doc = {'schema': 'brl.context-offsets.v1', 'labels': LABELS, 'pseudo_pa': 200.0, 'estimated_through': last,
