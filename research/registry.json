@@ -5668,17 +5668,21 @@
     "columns": {
      "ID": "CHAIN-03B",
      "Attempt": "CHAIN-03 with the chain model's own context tables, the step the live model had (CTX-02) and LONG-02 took: tables estimated from the check-only replays 38950936177 (2025) and 38950981875 (2026) with tools/brl_context_table.py (brl_replay/context_chain_fit2025.json and context_chain_fit2026.json), cross-season as always (the 2026 replay uses the table from 2025, the 2025 replay the table from 2026); the park of 2021-2022 games now carried; nothing else changed",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the replays.** The same four gates as CHAIN-03, now fairly posed: (1) pooled simulator Brier upper bound below +0.0005 and point at or below zero; (2) the pooled blend's upper bound below +0.0005; (3) mean totals within 0.15 runs of actual in both seasons; (4) strikeouts per plate appearance within 1.5% of actual in both seasons (the check-only run with these tables). All four hold: live, with brl_live/context_offsets.json replaced by the chain's table estimated on both seasons' check runs (the same recipe as the production table) and the live runtime reading the pitch tables. Prediction: all four hold",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before the replays.** The same four gates as CHAIN-03, now fairly posed: (1) pooled simulator Brier upper bound below +0.0005 and point at or below zero; (2) the pooled blend's upper bound below +0.0005; (3) mean totals within 0.15 runs of actual in both seasons; (4) strikeouts per plate appearance within 1.5% of actual in both seasons (the check-only run with these tables). All four hold: live, with brl_live/context_offsets.json replaced by the chain's table estimated on both seasons' check runs (the same recipe as the production table) and the live runtime reading the pitch tables. Prediction: all four hold **Result (replays chain03b-v2h120-pen-1000, runs 38951815762 for 2025 and 38951860587 for 2026; check-only runs 38951905985 and 38951952843): all four gates hold; live.** (1) Simulator Brier 0.243052 against 0.242692 in 2025 (+0.00036 [-0.00023, +0.00093]) and 0.242367 against 0.242937 in 2026 (-0.00057 [-0.00126, +0.00013]), pooled **-0.00011 [-0.00057, +0.00035]**; (2) blend +0.00014 and -0.00031, pooled -0.00008 [-0.00032, +0.00015]; (3) mean totals 8.839 and 8.967 against 8.898 and 8.962 actual (within 0.06); (4) strikeouts per plate appearance, full stack, observed over predicted 1.003 (2025) and 0.999 (2026); walks 0.997 and 1.003, home runs 1.008 and 0.969. P(over) Brier -0.00040 and +0.00023, pooled -0.00003. **Switched the live model to pitch02b-v2h120 at the time stamped in brl_engine/model.json (October 16, about 5 p.m. Eastern): brl_engine/models/pitch02b-v2h120.json, brl_live/context_offsets.json = the chain's table estimated on both seasons' check runs (the production recipe), the live runtime reading the six sealed pitch tables plus the day cache; every pending game gets a new saved version because the snapshot hash carries the model.** What went live: the first at-bat model built pitch by pitch; its gain is largest in the season's first weeks (March +1.1 to +1.4 nats per 1,000 plate appearances, the rest of the season +0.3 to +1.0), as the Pitch Model Plan predicted",
+     "Delta corrected Brier, 2026": "live (all four gates held)"
     },
     "registered_before_run": true,
     "diagnostic": false,
     "runs": [
      "38950936177",
-     "38950981875"
+     "38950981875",
+     "38951815762",
+     "38951860587",
+     "38951905985",
+     "38951952843"
     ],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "live (all four gates held)"
    }
   ],
   "LEASH-04": [

@@ -1,12 +1,16 @@
 {
  "schema": "brl.model-selection.v1",
- "model": "pa-2026-v2-physics",
- "manifest": "brl_engine/models/pa-2026-v2-physics.json",
+ "model": "pitch02b-v2h120",
+ "manifest": "brl_engine/models/pitch02b-v2h120.json",
  "note": "The plate-appearance model the live runtime uses. 'locked-pa-2026-v1' is the locked model inside the data package; any other name must have a manifest at brl_engine/models/<name>.json written by the fit job (workflow brl-fit-model) and its sealed bundle on the ledger branch.",
- "switched_at": "2026-10-07T11:35:00+00:00",
+ "switched_at": "2026-10-16T19:55:19+00:00",
+ "previous": "pa-2026-v2-physics",
  "evidence": [
-  "research/physics2-37597386690.json",
-  "research/fit-pa-2026-v2-physics-37601223809.json",
-  "research/replay-v2-physics-37603238324.json"
+  "research/pitch-02b-compare-38941277563.json",
+  "research/fit-pitch02b-v2h120-38941277563.json",
+  "research/replay-chain03b-v2h120-pen-1000-2025-38951815762-s0of8.json",
+  "research/replay-chain03b-v2h120-pen-1000-2026-38951860587-s0of8.json",
+  "research/replay-chain03b-check-2025-38951905985-s0of8.json",
+  "research/replay-chain03b-check-2026-38951952843-s0of8.json"
  ]
 }
