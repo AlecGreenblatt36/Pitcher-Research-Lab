@@ -5494,14 +5494,17 @@
     "columns": {
      "ID": "HIST-01",
      "Attempt": "Alec, October 16: the four seasons of history (2023 to 2026) are too few for how we predict. The plate-appearance history is extended back to 2015, the first Statcast season: for each season 2015 to 2022, tools/brl_history_backfill.py (workflow BRL history backfill, one job per season) reads the official schedule, downloads Baseball Savant's pitch-by-pitch export for the regular season and the postseason in three-day spans, and builds one row per plate appearance with the same builder as the 2023-2026 history (research_lab.pa_model.data.build_plate_appearances; postseason rows keep their game type). Each season is sealed to private/history/pa-<year>.enc with a counts-only receipt (history/pa-<year>.json). The pitch physics study and per-PA physics tables for the same seasons come from the existing backfill (tools/brl_bookkeeping_backfill.py, the official feeds), which now ends a past season with its year. What more seasons are for: more seasons to test changes on (most gates here rest on two replay seasons), longer histories for each player (multi-year weighting, aging), year-to-year stability checks with many pairs of seasons, and many more postseason games; era differences (the 2019 ball, the 60-game 2020, the 2021-2022 ball changes, the 2023 rules, Trackman before 2020 and Hawk-Eye after) have to be handled in any use",
-     "Disposition and evidence": "**Registered in the commit that added this row, before any season was built.** Acceptance, per season: (1) regular-season games in the history at least 99% of the schedule's completed games; (2) 70 to 82 plate appearances a regular-season game; (3) strikeouts 18% to 25%, walks and hit batters 7.5% to 11%, home runs 2.3% to 4.0% of regular-season plate appearances; (4) the physics table's plate appearances within 2% of the history's. A season that passes is usable for research and fits; one that fails is fixed before any use. Nothing on the site changes from this row alone: any model or simulator change that uses the older seasons is its own registered test",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before any season was built.** Acceptance, per season: (1) regular-season games in the history at least 99% of the schedule's completed games; (2) 70 to 82 plate appearances a regular-season game; (3) strikeouts 18% to 25%, walks and hit batters 7.5% to 11%, home runs 2.3% to 4.0% of regular-season plate appearances; (4) the physics table's plate appearances within 2% of the history's. A season that passes is usable for research and fits; one that fails is fixed before any use. Nothing on the site changes from this row alone: any model or simulator change that uses the older seasons is its own registered test. **Result (runs 38903965323 for 2022, 38905328029 for 2015-2021): all eight seasons pass all four checks.** Regular-season games / schedule, PA per game, K, BB+HBP, HR: 2015 2,429/2,430, 75.6, 20.4%, 8.5%, 2.7%; 2016 2,428/2,430, 76.0, 21.1%, 9.1%, 3.0%; 2017 2,430/2,430, 76.2, 21.7%, 9.5%, 3.3%; 2018 2,431/2,432, 76.1, 22.3%, 9.5%, 3.0%; 2019 2,429/2,430, 76.8, 23.0%, 9.6%, 3.6%; 2020 898/900, 74.1, 23.4%, 10.4%, 3.5%; 2021 2,429/2,430, 74.9, 23.2%, 9.9%, 3.3%; 2022 2,430/2,430, 74.9, 22.4%, 9.3%, 2.9%. Every postseason game of every season is in (309 games, 23,249 plate appearances). Physics tables against the histories: within 0.03% every season (2015 186,326 vs 186,300; 2022 185,048 vs 185,047). In all: 1,355,412 regular-season plate appearances added to the 733,328 of 2023-2026 (2.09 million, 2.8 times as many), and the league's own drift is visible (strikeouts 20.4% in 2015 to 23.4% in 2020; home runs peaking at 3.6% with the 2019 ball)",
+     "Delta corrected Brier, 2026": "passed"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38903965323",
+     "38905328029"
+    ],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "passed"
    }
   ],
   "STAB-01": [
