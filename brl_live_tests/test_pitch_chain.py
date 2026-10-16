@@ -309,3 +309,29 @@ def test_matchup_pitch_counts_draws_from_the_chain_and_falls_back(tmp_path):
     # an unknown id falls back to the league table
     ctx2 = ctx.__class__(**{**ctx.__dict__, 'batter': PlayerProfile('x', 'b', 'L')})
     assert mpc.draw('strikeout', 0.5, ctx2) == fallback.draw('strikeout', 0.5)
+
+
+def test_spring_pitches_move_the_player_and_never_the_league():
+    """SPRING-02: a spring pitch (prepare's 'spring' flag) updates the hitter's and pitcher's counters at spring_weight and
+    leaves the league tables, the parks and the per-pitch check untouched; at weight 0 it is ignored."""
+    pa, pitches = synthetic(seed=11, days=6)
+    ordered = pa.sort_values(['date_key', 'game_pk', 'at_bat_number']).reset_index(drop=True)
+    parks = {int(g): str(k) for g, k in zip(ordered['game_pk'], ordered['park'])}
+    spring = pitches[pitches['date_key'] < '2026-04-03'].copy(); spring['spring'] = 1
+    regular = pitches[pitches['date_key'] >= '2026-04-03'].copy(); regular['spring'] = 0
+    both = pd.concat([spring, regular], ignore_index=True)
+    day = int(pc.day_ordinal(['2026-04-07'])[0])
+    plain = pc.ChainState.build(regular, '2026-04-07', {}, parks)
+    with_spring = pc.ChainState.build(both, '2026-04-07', {'spring_weight': 0.5}, parks)
+    ignored = pc.ChainState.build(both, '2026-04-07', {'spring_weight': 0.0}, parks)
+    for k in plain.L:
+        assert np.array_equal(plain.L[k], with_spring.L[k]) and np.array_equal(plain.L[k], ignored.L[k])
+    assert np.array_equal(plain.Lout, with_spring.Lout)
+    assert all(plain.check[k][0] == with_spring.check[k][0] and plain.check[k][2] == with_spring.check[k][2] for k in plain.check)   # league term and counts: real pitches only
+    r1 = with_spring.bat.index[1]; r0 = plain.bat.index[1]
+    assert with_spring.bat.a['sw_n'][r1].sum() > plain.bat.a['sw_n'][r0].sum()
+    assert np.allclose(ignored.bat.a['sw_n'][ignored.bat.index[1]], plain.bat.a['sw_n'][r0])
+    f_plain = plain.features(1, 101, 'NYY', 'L', 'R', day); f_spring = with_spring.features(1, 101, 'NYY', 'L', 'R', day)
+    assert not np.allclose(f_plain, f_spring) and np.allclose(ignored.features(1, 101, 'NYY', 'L', 'R', day), f_plain)
+    # a park never learns from spring
+    assert with_spring.park.a['out_n'][with_spring.park.index['NYY']] == plain.park.a['out_n'][plain.park.index['NYY']]

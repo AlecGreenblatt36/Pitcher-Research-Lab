@@ -91,3 +91,20 @@ def test_history_loader_takes_a_column_subset_without_dates(monkeypatch):
     monkeypatch.setattr(tool, 'read_blob', lambda repo, token, path, branch: blob)
     out = tool.load_history('r', 't', key, 'b', [2021], ['game_pk', 'park'])
     assert list(out.columns) == ['game_pk', 'park'] and len(out) == 2
+
+
+def test_monthly_losses_split_the_test_season_by_month(tmp_path):
+    import numpy as np
+    spec2 = importlib.util.spec_from_file_location('brl_fit_tool5', Path(__file__).parents[1] / 'tools' / 'brl_fit_model.py')
+    tool = importlib.util.module_from_spec(spec2); spec2.loader.exec_module(tool)
+    labels = ['BIP_OUT', 'K', 'BB_HBP', '1B', '2B_3B', 'HR', 'OTHER_REACH']
+    rows = []
+    for date, outcome, p in (('2026-03-28', 'K', 0.5), ('2026-03-30', 'HR', 0.25), ('2026-04-02', 'BIP_OUT', 0.5)):
+        row = {'game_pk': 1, 'date_key': date, 'outcome': outcome}
+        for l in labels:
+            row[f'p_ensemble_{l}'] = p if l == outcome else (1 - p) / 6
+            row[f'p_model_{l}'] = row[f'p_ensemble_{l}']
+        rows.append(row)
+    path = tmp_path / 'p.csv.gz'; pd.DataFrame(rows).to_csv(path, index=False)
+    out = tool.monthly_losses(path)
+    assert out['03'][0] == 2 and abs(out['03'][1] - (np.log(2) + np.log(4)) / 2) < 1e-6 and out['04'] == [1, round(float(np.log(2)), 6)]

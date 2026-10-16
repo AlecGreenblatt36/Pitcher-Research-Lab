@@ -234,7 +234,18 @@ def main():
                         raise ValueError(f'pitch table for {year} is not sealed')
                     parts.append(pd.read_csv(io.BytesIO(gzip.decompress(unseal(raw, key_bytes(key_hex), pitches_purpose(year)))), low_memory=False,
                                              dtype={'ptype': 'category', 'code': 'category', 'stand': 'category', 'p_throws': 'category', 'outcome': 'category'}))
+                for year in [int(y) for y in (model_manifest.get('spring_seasons') or []) if int(y) <= season]:
+                    from brl_fit_model import spring_path, spring_purpose
+                    raw = read_blob(repo, token, spring_path(year), branch)
+                    if raw is None:
+                        raise ValueError(f'spring pitch table for {year} is not sealed')
+                    sp = pd.read_csv(io.BytesIO(gzip.decompress(unseal(raw, key_bytes(key_hex), spring_purpose(year)))), low_memory=False,
+                                     dtype={'ptype': 'category', 'code': 'category', 'stand': 'category', 'p_throws': 'category', 'outcome': 'category'})
+                    sp = sp[sp['zone'].notna() | (sp['plate_x'].notna() & sp['plate_z'].notna())].copy(); sp['spring'] = 1
+                    parts.append(sp)
                 pitch_table = pd.concat(parts, ignore_index=True); del parts
+                if 'spring' in pitch_table.columns:
+                    pitch_table['spring'] = pitch_table['spring'].fillna(0).astype(int)
                 older = [y for y in pitch_years if y <= 2022]
                 if older:
                     # the park of 2021-2022 games from the sealed histories, as the fit had it (the replayed history starts in 2023)

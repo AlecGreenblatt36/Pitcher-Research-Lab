@@ -330,7 +330,8 @@ def main(public_dir):
             # CHAIN-02: the chain's per-pitch tables, the fit's seasons through yesterday
             from .physics_inputs import assemble_pitch_table
             pitch_years=tuple(int(y) for y in (manifest.get('pitch_seasons') or range(2021,year+1)) if int(y)<=year)
-            sim.pitch_table,physics_receipt['pitch_table']=assemble_pitch_table(cache,index,utcnow(),years=pitch_years)
+            spring_years=tuple(int(y) for y in (manifest.get('spring_seasons') or ()) if int(y)<=year)
+            sim.pitch_table,physics_receipt['pitch_table']=assemble_pitch_table(cache,index,utcnow(),years=pitch_years,spring_years=spring_years)
             older=[y for y in pitch_years if y<=2022]
             if older:
                 from .talent_history import game_parks

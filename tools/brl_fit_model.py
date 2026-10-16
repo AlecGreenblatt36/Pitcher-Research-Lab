@@ -109,6 +109,18 @@ def game_losses(path) -> dict:
     return {str(k): [int(r.n), round(float(r.ens), 9), round(float(r.model), 9)] for k, r in g.iterrows()}
 
 
+def monthly_losses(path) -> dict:
+    """Per month of the test season: plate appearances and the blended candidate's mean log loss (the early-season check)."""
+    import numpy as np
+    pred = pd.read_csv(path, low_memory=False)
+    labels = ['BIP_OUT', 'K', 'BB_HBP', '1B', '2B_3B', 'HR', 'OTHER_REACH']
+    y = pred['outcome'].map({l: i for i, l in enumerate(labels)}).to_numpy(int)
+    ll = -np.log(np.clip(pred[[f'p_ensemble_{l}' for l in labels]].to_numpy(float)[np.arange(len(pred)), y], 1e-12, 1))
+    month = pred['date_key'].astype(str).str[5:7]
+    g = pd.DataFrame({'m': month, 'll': ll}).groupby('m')['ll'].agg(['size', 'mean'])
+    return {str(k): [int(r['size']), round(float(r['mean']), 6)] for k, r in g.iterrows()}
+
+
 def history_purpose(year: int) -> str:
     return f'pa-history-season-{int(year)}'
 
@@ -119,6 +131,14 @@ def pitches_path(year: int) -> str:
 
 def pitches_purpose(year: int) -> str:
     return f'pitch-table-season-{int(year)}'
+
+
+def spring_path(year: int) -> str:
+    return f'private/statcast/spring-{int(year)}.enc'
+
+
+def spring_purpose(year: int) -> str:
+    return f'spring-pitches-season-{int(year)}'
 
 
 def load_history(repo, token, key, branch, years, columns) -> pd.DataFrame:
@@ -225,8 +245,20 @@ def main():
                 frame = pd.read_csv(io.BytesIO(gzip.decompress(unseal(raw, key, pitches_purpose(year)))), low_memory=False,
                                     dtype={'ptype': 'category', 'code': 'category', 'stand': 'category', 'p_throws': 'category', 'outcome': 'category'})
                 prepared.append(pc.prepare(frame, parks)); del frame
+            spring_seasons = [int(y) for y in (settings.get('spring_seasons') or [])]
+            for year in spring_seasons:
+                # SPRING-02: spring-training pitches with a tracked location, flagged; the chain weighs them by spring_weight
+                raw = read_blob(repo, token, spring_path(year), branch)
+                if raw is None:
+                    raise ValueError(f'spring pitch table for {year} is not sealed yet')
+                frame = pd.read_csv(io.BytesIO(gzip.decompress(unseal(raw, key, spring_purpose(year)))), low_memory=False,
+                                    dtype={'ptype': 'category', 'code': 'category', 'stand': 'category', 'p_throws': 'category', 'outcome': 'category'})
+                frame = frame[frame['zone'].notna() | (frame['plate_x'].notna() & frame['plate_z'].notna())].copy()
+                frame['spring'] = 1
+                prepared.append(pc.prepare(frame, {})); del frame
             prepared = pd.concat(prepared, ignore_index=True)
-            receipt['pitch_rows'] = int(len(prepared)); receipt['pitch_seasons'] = pitch_seasons
+            receipt['pitch_rows'] = int(len(prepared)); receipt['pitch_seasons'] = pitch_seasons; receipt['spring_seasons'] = spring_seasons
+            receipt['spring_rows'] = int(prepared['spring'].sum()) if 'spring' in prepared.columns else 0
             stage('build chain features')
             chain_feats, chain_audit = pc.build_features(pa, prepared, chain_params, parks, prepared=True)
             del prepared
@@ -250,7 +282,7 @@ def main():
                         'history_sha256': receipt['history_sha256'], 'physics_params': bundle_extra['physics_params'], 'physics_features': bundle_extra['physics_features'],
                         'physics_seasons': receipt['seasons'], 'physics_rows': receipt['physics_rows'], 'physics_join': audit,
                         'history_seasons': history_seasons, **{k: v for k, v in chain_extra.items()},
-                        'pitch_seasons': receipt.get('pitch_seasons'), 'config': config.to_dict(), 'benchmark': json.loads(json.dumps(public_report, default=float)), 'fitted_at': datetime.now(timezone.utc).isoformat(), 'run_id': run_id}
+                        'pitch_seasons': receipt.get('pitch_seasons'), 'spring_seasons': receipt.get('spring_seasons'), 'config': config.to_dict(), 'benchmark': json.loads(json.dumps(public_report, default=float)), 'fitted_at': datetime.now(timezone.utc).isoformat(), 'run_id': run_id}
         text = json.dumps(manifest_doc, indent=1, default=float)
         for secret in (key_hex, token):
             text = text.replace(secret, '[redacted]')
@@ -263,6 +295,7 @@ def main():
         receipt['model_sha256'] = manifest_doc['model_sha256']
         receipt['test_2026'] = json.loads(json.dumps({k: v.get('metrics', {}).get('log_loss') for k, v in report.get('models', {}).items()}, default=float))
         receipt['test_game_losses'] = game_losses(out / 'test_predictions.csv.gz')
+        receipt['test_by_month'] = monthly_losses(out / 'test_predictions.csv.gz')
         receipt['promotion'] = json.loads(json.dumps({k: v for k, v in (report.get('promotion') or {}).items()
                                                       if k.startswith(('beat_', 'context_', 'max_absolute'))}, default=float))
         receipt['tune_2025'] = json.loads(json.dumps({k: v.get('tuning', {}).get('best_tune_log_loss') for k, v in report.get('models', {}).items()

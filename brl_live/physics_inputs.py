@@ -109,11 +109,25 @@ def load_pitch_table(store, key: bytes, year: int):
     return frame
 
 
-def assemble_pitch_table(cache, index: dict, origin: datetime, years: tuple) -> tuple[pd.DataFrame, dict]:
-    """CHAIN-02: season pitch tables plus the day-cache feeds after their coverage, through yesterday; (table, receipt)."""
+def load_spring_table(store, key: bytes, year: int):
+    """SPRING-02: the sealed spring-training pitches of a season with a tracked location, flagged spring, or None."""
+    import gzip, io
+    saved = store.read(f'private/statcast/spring-{int(year)}.enc')
+    if saved is None:
+        return None
+    raw = gzip.decompress(unseal(saved[0], key, f'spring-pitches-season-{int(year)}'))
+    frame = pd.read_csv(io.BytesIO(raw), low_memory=False, dtype={'ptype': 'category', 'code': 'category', 'stand': 'category', 'p_throws': 'category', 'outcome': 'category'})
+    frame = frame[frame['zone'].notna() | (frame['plate_x'].notna() & frame['plate_z'].notna())].copy()
+    frame['date_key'] = frame['date_key'].astype(str).str[:10]; frame['spring'] = 1
+    return frame
+
+
+def assemble_pitch_table(cache, index: dict, origin: datetime, years: tuple, spring_years: tuple = ()) -> tuple[pd.DataFrame, dict]:
+    """CHAIN-02: season pitch tables (plus the spring tables of spring_years, SPRING-02) and the day-cache feeds after
+    their coverage, through yesterday; (table, receipt)."""
     from research_lab.pa_model.pitch_chain import pitches_from_feed, PITCH_COLUMNS
     today = origin.astimezone(ZoneInfo('America/New_York')).date()
-    parts, receipt = [], {'seasons': {}, 'day_cache_days': 0, 'day_cache_rows': 0}
+    parts, receipt = [], {'seasons': {}, 'spring': {}, 'day_cache_days': 0, 'day_cache_rows': 0}
     latest = ''
     for year in years:
         table = load_pitch_table(cache.store, cache.key, year)
@@ -121,6 +135,12 @@ def assemble_pitch_table(cache, index: dict, origin: datetime, years: tuple) -> 
             continue
         receipt['seasons'][str(year)] = {'rows': int(len(table)), 'through': str(table['date_key'].max())}
         latest = max(latest, str(table['date_key'].max()))
+        parts.append(table)
+    for year in spring_years:
+        table = load_spring_table(cache.store, cache.key, year)
+        if table is None:
+            continue
+        receipt['spring'][str(year)] = {'rows': int(len(table)), 'through': str(table['date_key'].max())}
         parts.append(table)
     if not parts:
         raise Blocked('No sealed pitch table for the selected model')
@@ -146,6 +166,7 @@ def assemble_pitch_table(cache, index: dict, origin: datetime, years: tuple) -> 
     table = pd.concat(parts, ignore_index=True)
     for c in ('ptype', 'code', 'stand', 'p_throws', 'outcome'):
         table[c] = table[c].astype(str)
+    table['spring'] = table['spring'].fillna(0).astype(int) if 'spring' in table.columns else 0
     table = table.drop_duplicates(['game_pk', 'at_bat_number', 'pitch_number'], keep='first')
     table = table.loc[table['date_key'].astype(str) < today.isoformat()].reset_index(drop=True)
     missing = [c for c in PITCH_COLUMNS if c not in table.columns]

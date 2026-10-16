@@ -56,7 +56,10 @@ DEFAULT_PARAMS = {'k_b_swing': 200.0, 'k_b_whiff': 140.0, 'k_b_foul': 150.0, 'k_
                   'half_life': 400.0, 'park_half_life': 2000.0,
                   # CHAIN-02B: hitters' swing and whiff deviations split by two strikes or not; pitchers' by family in or out
                   # of the zone (instead of family alone); the matchup's own per-count rates as further features
-                  'two_strike_groups': False, 'pitcher_cells': False, 'extra_features': False}
+                  'two_strike_groups': False, 'pitcher_cells': False, 'extra_features': False,
+                  # SPRING-02: spring-training pitches (prepare's 'spring' flag) update the players' counters at this weight
+                  # and never the league tables; 0 ignores them
+                  'spring_weight': 0.0}
 EXTRA_FEATURES = ['ch_sw00', 'ch_wh00', 'ch_fo00', 'ch_ip00', 'ch_ball00', 'ch_sw02', 'ch_wh02', 'ch_sw30']
 TWO_STRIKES = (np.arange(N_COUNT) % 3 == 2).astype(int)                # count index -> two strikes
 PRIOR = {'swing': 0.47, 'whiff': 0.24, 'foul': 0.50, 'called': 0.32, 'hbp': 0.004}
@@ -189,6 +192,7 @@ def prepare(pitches: pd.DataFrame, park_of_game: dict | None = None) -> pd.DataF
         has = pd.notna(own) & (own != '') & (own != 'UNK')
         parks[has] = own[has].astype(str)
     out['park'] = parks
+    out['spring'] = pd.to_numeric(p['spring'], errors='coerce').fillna(0).to_numpy(np.int64) if 'spring' in p.columns else 0
     return out.sort_values('day', kind='mergesort').reset_index(drop=True)
 
 
@@ -376,7 +380,16 @@ class ChainState:
         """Add one day's pitches (a ``prepare`` frame) after the day's features were read."""
         if len(q) == 0:
             self.through_day = day; return
-        P = self.p; Lg = self._league()
+        P = self.p
+        spring = q['spring'].to_numpy().astype(bool) if 'spring' in q.columns else np.zeros(len(q), bool)
+        if spring.any():
+            if not float(P.get('spring_weight') or 0.0):
+                q = q[~spring]; spring = np.zeros(len(q), bool)
+                if len(q) == 0:
+                    self.through_day = day; return
+        w = np.where(spring, float(P.get('spring_weight') or 0.0), 1.0)                 # player-bank weight per pitch
+        reg = ~spring                                                                   # league tables and the check: real games only
+        Lg = self._league()
         pl = q['pl'].to_numpy(); c = q['c'].to_numpy(); cell = q['cell'].to_numpy(); cls = q['cls'].to_numpy()
         fam = self._pcol(cell); grp = self._bcol(cell, c); bucket = BUCKET[c]
         swing = np.isin(cls, [CLS_WHIFF, CLS_FOUL, CLS_INPLAY]); take = ~swing
@@ -391,42 +404,48 @@ class ChainState:
         db_sw = _dev(B['sw_y'][br, grp], B['sw_e'][br, grp], B['sw_n'][br, grp], P['k_b_swing'])
         dp_sw = _dev(Pi['sw_y'][pr, fam], Pi['sw_e'][pr, fam], Pi['sw_n'][pr, fam], P['k_p_swing'])
         pred_sw = _expit(_logit(e_sw) + db_sw + dp_sw)
-        self._tally('swing', swing.astype(float), e_sw, pred_sw, np.ones(len(q), bool))
+        self._tally('swing', swing.astype(float), e_sw, pred_sw, reg)
         db_wh = _dev(B['wh_y'][br, grp], B['wh_e'][br, grp], B['wh_n'][br, grp], P['k_b_whiff'])
         dp_wh = _dev(Pi['wh_y'][pr, fam], Pi['wh_e'][pr, fam], Pi['wh_n'][pr, fam], P['k_p_whiff'])
         pred_wh = _expit(_logit(e_wh) + db_wh + dp_wh)
-        self._tally('whiff', whiff.astype(float), e_wh, pred_wh, swing)
+        self._tally('whiff', whiff.astype(float), e_wh, pred_wh, swing & reg)
         out_idx = q['out'].to_numpy()
         ok_out = inplay & (out_idx >= 0)
+        ok_reg = ok_out & reg
         if ok_out.any():
             e_out = Lg['out'][pl[ok_out], cell[ok_out]]                                                              # (m, 5)
             W = np.exp(_dev_multi(B['out_y'][br[ok_out]], B['out_e'][br[ok_out]], B['out_n'][br[ok_out]], P['k_b_out'])
                        + _dev_multi(Pi['out_y'][pr[ok_out]], Pi['out_e'][pr[ok_out]], Pi['out_n'][pr[ok_out]], P['k_p_out'])
                        + _dev_multi(K['out_y'][kr[ok_out]], K['out_e'][kr[ok_out]], K['out_n'][kr[ok_out]], P['k_park_out']))
             pred_out = e_out * W; pred_out /= pred_out.sum(axis=1, keepdims=True)
-            rows = np.arange(ok_out.sum()); y = out_idx[ok_out]
-            t = self.check['outcome']
-            t[0] += float(-np.log(np.clip(e_out[rows, y], 1e-9, 1)).sum()); t[1] += float(-np.log(np.clip(pred_out[rows, y], 1e-9, 1)).sum()); t[2] += int(ok_out.sum())
-        # league
-        L = self.L
-        np.add.at(L['n'], (pl, c, cell), 1.0); np.add.at(L['sw'], (pl, c, cell), swing.astype(float)); np.add.at(L['wh'], (pl, c, cell), whiff.astype(float))
-        np.add.at(L['fo'], (pl, c, cell), foul.astype(float)); np.add.at(L['ip'], (pl, c, cell), inplay.astype(float))
-        np.add.at(L['cs'], (pl, c, cell), called.astype(float)); np.add.at(L['hb'], (pl, c, cell), hbp.astype(float))
-        np.add.at(self.Lmix, (bucket, cell), 1.0)
-        if ok_out.any():
-            np.add.at(self.Lout, (pl[ok_out], cell[ok_out], out_idx[ok_out]), 1.0)
-        # hitters (unknown batter -1 rows are kept but never asked for)
-        np.add.at(B['sw_y'], (br, grp), swing.astype(float)); np.add.at(B['sw_e'], (br, grp), e_sw); np.add.at(B['sw_n'], (br, grp), 1.0)
-        np.add.at(B['wh_y'], (br[swing], grp[swing]), whiff[swing].astype(float)); np.add.at(B['wh_e'], (br[swing], grp[swing]), e_wh[swing]); np.add.at(B['wh_n'], (br[swing], grp[swing]), 1.0)
-        np.add.at(B['fo_y'], br[contact], foul[contact].astype(float)); np.add.at(B['fo_e'], br[contact], e_fo[contact]); np.add.at(B['fo_n'], br[contact], 1.0)
+            if ok_reg.any():
+                sel = reg[ok_out]; rows = np.arange(ok_out.sum())[sel]; y = out_idx[ok_out][sel]
+                t = self.check['outcome']
+                t[0] += float(-np.log(np.clip(e_out[rows, y], 1e-9, 1)).sum()); t[1] += float(-np.log(np.clip(pred_out[rows, y], 1e-9, 1)).sum()); t[2] += int(sel.sum())
+        # league (real games only)
+        L = self.L; r = reg
+        np.add.at(L['n'], (pl[r], c[r], cell[r]), 1.0); np.add.at(L['sw'], (pl[r], c[r], cell[r]), swing[r].astype(float)); np.add.at(L['wh'], (pl[r], c[r], cell[r]), whiff[r].astype(float))
+        np.add.at(L['fo'], (pl[r], c[r], cell[r]), foul[r].astype(float)); np.add.at(L['ip'], (pl[r], c[r], cell[r]), inplay[r].astype(float))
+        np.add.at(L['cs'], (pl[r], c[r], cell[r]), called[r].astype(float)); np.add.at(L['hb'], (pl[r], c[r], cell[r]), hbp[r].astype(float))
+        np.add.at(self.Lmix, (bucket[r], cell[r]), 1.0)
+        if ok_reg.any():
+            np.add.at(self.Lout, (pl[ok_reg], cell[ok_reg], out_idx[ok_reg]), 1.0)
+        # hitters (unknown batter -1 rows are kept but never asked for); spring pitches count at their weight
+        np.add.at(B['sw_y'], (br, grp), swing * w); np.add.at(B['sw_e'], (br, grp), e_sw * w); np.add.at(B['sw_n'], (br, grp), w)
+        np.add.at(B['wh_y'], (br[swing], grp[swing]), (whiff * w)[swing]); np.add.at(B['wh_e'], (br[swing], grp[swing]), (e_wh * w)[swing]); np.add.at(B['wh_n'], (br[swing], grp[swing]), w[swing])
+        np.add.at(B['fo_y'], br[contact], (foul * w)[contact]); np.add.at(B['fo_e'], br[contact], (e_fo * w)[contact]); np.add.at(B['fo_n'], br[contact], w[contact])
         # pitchers
-        np.add.at(Pi['mix'], (pr, bucket, cell), 1.0)
-        np.add.at(Pi['sw_y'], (pr, fam), swing.astype(float)); np.add.at(Pi['sw_e'], (pr, fam), e_sw); np.add.at(Pi['sw_n'], (pr, fam), 1.0)
-        np.add.at(Pi['wh_y'], (pr[swing], fam[swing]), whiff[swing].astype(float)); np.add.at(Pi['wh_e'], (pr[swing], fam[swing]), e_wh[swing]); np.add.at(Pi['wh_n'], (pr[swing], fam[swing]), 1.0)
-        np.add.at(Pi['cs_y'], pr[take], called[take].astype(float)); np.add.at(Pi['cs_e'], pr[take], e_cs[take]); np.add.at(Pi['cs_n'], pr[take], 1.0)
+        np.add.at(Pi['mix'], (pr, bucket, cell), w)
+        np.add.at(Pi['sw_y'], (pr, fam), swing * w); np.add.at(Pi['sw_e'], (pr, fam), e_sw * w); np.add.at(Pi['sw_n'], (pr, fam), w)
+        np.add.at(Pi['wh_y'], (pr[swing], fam[swing]), (whiff * w)[swing]); np.add.at(Pi['wh_e'], (pr[swing], fam[swing]), (e_wh * w)[swing]); np.add.at(Pi['wh_n'], (pr[swing], fam[swing]), w[swing])
+        np.add.at(Pi['cs_y'], pr[take], (called * w)[take]); np.add.at(Pi['cs_e'], pr[take], (e_cs * w)[take]); np.add.at(Pi['cs_n'], pr[take], w[take])
         if ok_out.any():
-            for bank, rows in ((B, br[ok_out]), (Pi, pr[ok_out]), (K, kr[ok_out])):
-                np.add.at(bank['out_y'], (rows, out_idx[ok_out]), 1.0); np.add.at(bank['out_e'], rows, e_out); np.add.at(bank['out_n'], rows, 1.0)
+            wo = w[ok_out]
+            for bank, rows, mask in ((B, br[ok_out], None), (Pi, pr[ok_out], None), (K, kr[ok_out], reg[ok_out])):
+                if mask is None:
+                    np.add.at(bank['out_y'], (rows, out_idx[ok_out]), wo); np.add.at(bank['out_e'], rows, e_out * wo[:, None]); np.add.at(bank['out_n'], rows, wo)
+                elif mask.any():                                             # parks: real games only
+                    np.add.at(bank['out_y'], (rows[mask], out_idx[ok_out][mask]), 1.0); np.add.at(bank['out_e'], rows[mask], e_out[mask]); np.add.at(bank['out_n'], rows[mask], 1.0)
         self.pitches_seen += int(len(q)); self.through_day = day
 
     def _tally(self, key: str, y, p_league, p_chain, mask):

@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 345,
- "rows": 348,
+ "experiments": 346,
+ "rows": 349,
  "records": {
   "ACC-01": [
    {
@@ -5710,7 +5710,25 @@
     "columns": {
      "ID": "SPRING-01",
      "Attempt": "Spring-training pitches as the chain's early-season prior: the data. The chain's gain is largest in the season's first weeks (CHAIN-03B: March +1.1 to +1.4 nats per 1,000 against +0.3 to +1.0 later), the weeks when a new or changed player has no current-season pitches at all. Spring games are tracked at most parks and give a few hundred pitches per regular and a few starts per pitcher before Opening Day, pitch-level facts (velocity, movement, swings and misses by cell) that the chain can read at a discount without caring that the opposition is weaker. tools/brl_spring_table.py (workflow BRL spring table, one job per season 2021-2026) fetches every final spring game (type S, February 15 to April 5) play by play like the bookkeeping backfill, flattens it to the pitch table's columns and seals it at private/statcast/spring-<year>.enc; the receipt (spring/<year>.json) carries counts and the share of pitches with a tracked location and speed",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the fetch.** Data only, nothing changes on the site. A season is usable for SPRING-02 (the chain absorbing spring pitches at a reduced weight before Opening Day, players' counters only, to be registered with its own gate on March-April log loss) if at least half its spring pitches are tracked",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the fetch.** Data only, nothing changes on the site. A season is usable for SPRING-02 (the chain absorbing spring pitches at a reduced weight before Opening Day, players' counters only, to be registered with its own gate on March-April log loss) if at least half its spring pitches are tracked **Result (run 38963791363): every season usable.** Spring games, pitches, share tracked: 2021 415 games, 79,026, 55.6%; 2022 267 (the lockout spring), 53,024, 54.1%; 2023 459, 96,469, 59.4%; 2024 454, 97,753, 55.5%; 2025 458, 136,998, 65.0%; 2026 448, 133,410, 99.7% (every park tracked). No fetch failures",
+     "Delta corrected Brier, 2026": "passed"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [
+     "38963791363"
+    ],
+    "frozen_commits": [],
+    "status": "passed"
+   }
+  ],
+  "SPRING-02": [
+   {
+    "id": "SPRING-02",
+    "columns": {
+     "ID": "SPRING-02",
+     "Attempt": "Spring pitches in the chain. The chain absorbs each season's tracked spring pitches (SPRING-01) before Opening Day at a weight (chain parameter spring_weight), into the hitters' and pitchers' counters only (never the league tables, the parks or CHAIN-01's per-pitch check), so a player's own spring swings, misses, velocity and mix shape his early-season deviations and nothing else changes. Arms (tools/fit_arms.json) on the live model's settings (pitch02b-v2h120: two-strike groups, pitcher cells, extra features, 120-day half-life): c0 = no spring (the live model refit, control), w05 = spring at half weight, w10 = full weight; spring seasons 2021-2026",
+     "Disposition and evidence": "**Registered in the commit that added this row, before any arm was fit.** Same selection as CHAIN-02 (the candidate with the lowest 2025 tuning-block log loss is the one tested). Passes if (1) its blended 2026 log loss beats c0's with the 95% game-bootstrap interval below zero and (2) its March plus April 2026 log loss (the fit receipt's test_by_month) beats c0's by at least 0.0005 nats per plate appearance, with calibration within 0.015. Prediction: (2) holds with a March-April gain of 0.001 to 0.003 (the chain's gain was already largest there); (1) holds with a season gain of 0.0002 to 0.0005. If it passes, the chain's live settings take the spring weight and the live runtime loads the spring tables (CHAIN-03B's game-level rule is not re-run: the change touches only the first weeks' player deviations, and the Record page scores every day)",
      "Delta corrected Brier, 2026": "registered"
     },
     "registered_before_run": true,
