@@ -53,6 +53,19 @@ Model Plan doc). Built the same afternoon:
   assemble_pitch_table: season tables plus the day cache; box_runner passes it when the manifest has chain_features).
 - The long-history model (LONG-01/02) stays sealed; STAB-02 found the measured shrinkage adds nothing to the at-bat
   model. The at-bat model is not refit again on the old feature set.
+- Results so far: CHAIN-01 passed (per pitch +8, +11, +4 nats per 1,000 over league-only); CHAIN-02/02B gain -0.00076
+  nats per plate appearance on 2026 (interval clear of zero, short of the 0.002 bar); CHAIN-03 wins, blend and totals
+  held, strikeouts over by 2% because the context tables were the live model's; CHAIN-03B (the chain's own tables,
+  brl_replay/context_chain_fit2025/2026.json, tools/brl_context_table.py) running. The chain's gain is largest in the
+  season's first weeks (March +1.1 to +1.4 per 1,000) as the plan predicted.
+- LEASH-04 registered: pitches per plate appearance from the matchup's count chain (ChainState.pitch_count_table,
+  game_sim.pitch_counts.MatchupPitchCounts; the engine hands the context to a counter that wants it) with LEASH-03's
+  pitch-term hazard correction; replay option pitch_counts {chain, fallback}; live ADJUST pitch_counts 'chain' (off)
+  wires it into the engine, the box worlds and the market worlds (brl_live/hazard_correction_v2.json,
+  brl_live/pitch_counts_by_outcome.json).
+- Adoption, if CHAIN-03B's four gates hold: brl_engine/models/pitch02b-v2h120.json (from the ledger branch's
+  models/), brl_engine/model.json, brl_live/context_offsets.json = the chain's pooled table (staged copies in the
+  scratch folder adopt/); How it works already carries the chain paragraph, shown when the live model is a chain model.
 
 ## Current checkpoint, October 8, 2026, 5 p.m. Eastern (Claude in charge; additions through October 11 below)
 
