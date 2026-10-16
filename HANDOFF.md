@@ -67,6 +67,34 @@ Model Plan doc). Built the same afternoon:
   models/), brl_engine/model.json, brl_live/context_offsets.json = the chain's pooled table (staged copies in the
   scratch folder adopt/); How it works already carries the chain paragraph, shown when the live model is a chain model.
 
+## October 16, evening: the chain is live, then spring training joined it (CHAIN-03B, SPRING-01/02, LEASH-04)
+
+- CHAIN-03B passed all four gates (wins, blend, totals, strikeouts 1.003/0.999 with the chain's own context tables) and
+  pitch02b-v2h120 went live at 3:55 p.m. Eastern. The first run after the switch blocked one game: box_runner read the
+  manifest from the work folder (BRL_WORK_ROOT) instead of the repository; fixed in 294175da7 (test added). The next
+  run built the first chain forecast (game 849817 version 4, 4,334,696 pitches assembled).
+- SPRING-01 (data): tools/brl_spring_table.py, workflow BRL spring table, one job per season. Final spring games (type S,
+  February 15 to April 5) fetched play by play, flattened to the pitch table's columns, sealed at
+  private/statcast/spring-<year>.enc, receipts spring/<year>.json. Every season 2021-2026 usable (54-65% of pitches
+  tracked; 2026 99.7%).
+- SPRING-02 (model): chain parameter spring_weight; the chain absorbs a season's tracked spring pitches before Opening
+  Day into the players' counters only (never league tables, parks or the per-pitch check). Arms c0/w05/w10 on the live
+  settings; w10 selected on 2025 tuning loss and passed both gates (2026 season -0.000267 nats per plate appearance,
+  interval -0.000341 to -0.000184; March plus April gain 0.000588 against the 0.0005 bar). Live as spring02-w10 at
+  5:01 p.m. Eastern (brl_engine/model.json, manifest brl_engine/models/spring02-w10.json with spring_seasons
+  2021-2026). The live runtime loads the spring tables through physics_inputs.assemble_pitch_table (spring_years from
+  the manifest); the bookkeeping backfill now also seals the season's per-pitch table so the chain's current season
+  stays fresh with the physics table. Context offsets, hazard correction and pitch-count tables stay CHAIN-03B's.
+- The gain from spring pitches rose with the weight (half 0.00017, full 0.00027) and faded through the season without
+  reversing: spring pitches read as ordinary evidence. Not tried: weight above one.
+- LEASH-04 (pitch counts from the matchup's chain): replays leash04-chain-pen-1000-2025 (run 38958506391) and -2026
+  (run 38958545975) with starter lines; scored with tools/brl_outs_cal.py, tools/replay_blend_compare.py,
+  tools/replay_compare.py against chain03b-v2h120-pen-1000. Result in the LEDGER row.
+- The at-bat model's own log loss (2026 blended): locked features 1.4601, physics 1.4584, chain 1.4576, chain with
+  spring 1.4574. Each step is small on this scale; the game-level replays cannot see steps under 0.001 (paired Brier
+  SE 0.0004 over 4,850 games), which is why CHAIN-03B adopted REPLAY-02's rule (proven at the at-bat level, no harm at
+  the game level) and SPRING-02 did not re-run the game lane.
+
 ## Current checkpoint, October 8, 2026, 5 p.m. Eastern (Claude in charge; additions through October 11 below)
 
 Read this section first, then LEDGER.md (every experiment with its registered prediction, result and decision). The
