@@ -19,6 +19,21 @@ discovery page stays private.
 - LEASH-02's exit correction in postseason games too; it would need the postseason factor x0.91 re-measured on the
   corrected hazard first. Regular-season games have it from October 11.
 
+## October 16: the longer history (Alec: "2023-2026 is not valid enough for how we are predicting things")
+
+- HIST-01 passed: every regular season and postseason 2015-2022 is sealed at private/history/pa-<year>.enc (one row per
+  plate appearance, the same builder as 2023-2026; receipts at history/pa-<year>.json on the ledger branch). With the
+  physics tables of the same seasons (private/statcast/physics-<year>.enc, the bookkeeping backfill) the lab now holds
+  2.09 million regular-season plate appearances (2.8 times as many) and 309 more postseason games.
+- STAB-01 (research lane, experiment stability): how much sample each player rate needs, from every season; it checks
+  the model's shrinkage settings.
+- LONG-01 (workflow BRL fit arms, tools/fit_arms.json, comparison tools/brl_fit_compare.py): refits on the long history.
+  The counters now take an optional half-life (PAConfig.history_half_life_days, off by default, so the live model is
+  unchanged). Stage 1 picks the arm by its 2025 tuning score and tests it once on 2026 against a control refit of the live
+  settings; stage 2 (only if stage 1 passes) is a 2025 and 2026 replay. Adopting it would also need the live history file
+  and the replay lane to include 2015-2022 (brl_live/history_refresh.py; tools/brl_replay.py) and three seasons of
+  physics tables (window_days 1095).
+
 ## Current checkpoint, October 8, 2026, 5 p.m. Eastern (Claude in charge; additions through October 11 below)
 
 Read this section first, then LEDGER.md (every experiment with its registered prediction, result and decision). The
