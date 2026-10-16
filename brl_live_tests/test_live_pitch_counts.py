@@ -25,3 +25,14 @@ def test_chain_pitch_counts_need_a_chain_model():
         chain = object(); park = 'NYY'; game_date = '2026-05-01'
     pc = boxscore.pitch_counts_for(on, WithChain())
     assert pc.wants_context and pc.fallback.mean('strikeout') > 4
+
+
+def test_live_manifest_is_read_from_the_repository_not_the_work_folder():
+    """The live run resolved the model manifest under the work folder, so a chain model's pitch tables were never
+    assembled (October 16, first run after the switch); the manifest lives in the repository."""
+    import re
+    from pathlib import Path
+    src = (Path(__file__).parents[1] / 'brl_live' / 'box_runner.py').read_text()
+    assert "manifest_path=Path(__file__).resolve().parents[1]/'brl_engine'/'models'" in src
+    assert "ROOT/'brl_engine'/'models'" not in src
+    assert (Path(__file__).parents[1] / 'brl_engine' / 'models' / 'pitch02b-v2h120.json').exists()

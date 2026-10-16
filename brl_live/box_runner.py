@@ -312,8 +312,10 @@ def main(public_dir):
         # A selected model with physics features needs the per-PA physics table through yesterday.
         from .physics_inputs import assemble_physics_table,seasons_for,join_history,SEASONS
         from zoneinfo import ZoneInfo
-        manifest_path=ROOT/'brl_engine'/'models'/(bridge.MODEL_NAME+'.json')
+        # the manifest lives in the repository (ROOT is the work folder); without it a chain model cannot be served
+        manifest_path=Path(__file__).resolve().parents[1]/'brl_engine'/'models'/(bridge.MODEL_NAME+'.json')
         manifest=json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
+        if not manifest:raise Blocked('Model manifest missing: '+str(manifest_path))
         year=utcnow().astimezone(ZoneInfo('America/New_York')).year
         # A model fitted with a physics window (physics_params window_days) reads exactly that window, so it gets every
         # fitted season joined to the history and the window does the trimming, as in its fit.
