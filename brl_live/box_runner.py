@@ -324,6 +324,13 @@ def main(public_dir):
             # As the fit's builder: only plate appearances that are in the history the talent features read.
             sim.physics_table,dropped=join_history(sim.physics_table,sim.history)
             physics_receipt['rows_not_in_history']=dropped;physics_receipt['rows']=int(len(sim.physics_table))
+        if manifest.get('history_seasons'):
+            # LONG-01: the model's counters read the sealed seasons before the live history, as in its fit.
+            from . import live_extension as _lx
+            from .talent_history import write as write_talent_history
+            target=ROOT/'private_work/talent_history.csv.gz'
+            physics_receipt['talent_history']=write_talent_history(store,key,manifest['history_seasons'],sim.history,target)
+            _lx.TALENT_HISTORY_PATH=target
         if 'f_def' in (manifest.get('physics_features') or []):
             # The model reads each fielding team's defense: out rate on fieldable balls in play above the
             # league over the prior window, from the same history the forecasts use, through yesterday.

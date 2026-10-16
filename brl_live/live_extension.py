@@ -72,6 +72,11 @@ def starter_tier_scale(tiers: dict, kbb):
     return float(scale[0] if kbb < cuts[0] else scale[1] if kbb < cuts[1] else scale[2])
 
 
+# LONG-01: when the selected model reads the history back to 2015, box_runner writes the long history the provider's
+# counters are built from (brl_live/talent_history.py) and points this at it; None keeps the live history.
+TALENT_HISTORY_PATH = None
+
+
 def make_history_engine(parameters: dict, history_path: Path, physics_table=None):
     """Same coefficients, preprocessing and policies; explicit history dependency.
 
@@ -82,7 +87,7 @@ def make_history_engine(parameters: dict, history_path: Path, physics_table=None
         raise Blocked('Selected PA model artifact changed')
     if parameters['date'] < '2026-01-01':
         raise Blocked('Live lock used 2025 calibration; cannot forecast earlier dates')
-    provider = PortableLockedProvider(bridge.MODEL, history_path, parameters['date'],
+    provider = PortableLockedProvider(bridge.MODEL, TALENT_HISTORY_PATH or history_path, parameters['date'],
                                      parameters['date'], parameters['park'], expected_sha256=bridge.MODEL_SHA256,
                                      birthdates=births, physics_table=physics_table)
     history = pd.read_csv(history_path, low_memory=False)

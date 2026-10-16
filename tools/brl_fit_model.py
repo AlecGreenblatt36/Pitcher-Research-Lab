@@ -201,7 +201,7 @@ def main():
                         'model_sha256': hashlib.sha256(raw_model).hexdigest(), 'cipher_sha256': hashlib.sha256(cipher).hexdigest(), 'model_bytes': len(raw_model),
                         'history_sha256': receipt['history_sha256'], 'physics_params': bundle_extra['physics_params'], 'physics_features': bundle_extra['physics_features'],
                         'physics_seasons': receipt['seasons'], 'physics_rows': receipt['physics_rows'], 'physics_join': audit,
-                        'config': config.to_dict(), 'benchmark': json.loads(json.dumps(public_report, default=float)), 'fitted_at': datetime.now(timezone.utc).isoformat(), 'run_id': run_id}
+                        'history_seasons': history_seasons, 'config': config.to_dict(), 'benchmark': json.loads(json.dumps(public_report, default=float)), 'fitted_at': datetime.now(timezone.utc).isoformat(), 'run_id': run_id}
         text = json.dumps(manifest_doc, indent=1, default=float)
         for secret in (key_hex, token):
             text = text.replace(secret, '[redacted]')
