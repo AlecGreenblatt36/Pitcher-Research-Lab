@@ -411,8 +411,15 @@ def main():
         pitch_counts = None
         if params.get('pitch_counts'):
             from research_lab.game_sim.pitch_counts import PitchCounts
-            pitch_counts = PitchCounts(json.loads((ROOT / str(params['pitch_counts'])).read_text()))
-            receipt['pitch_counts'] = {'path': params['pitch_counts']}
+            spec = params['pitch_counts']
+            if isinstance(spec, dict) and spec.get('chain'):
+                # LEASH-04: each plate appearance's pitches from the matchup's own count chain (the model must carry chain
+                # features); the league table by outcome is the fallback for a matchup the chain cannot price
+                pitch_counts = {'chain': True, 'fallback': PitchCounts(json.loads((ROOT / str(spec['fallback'])).read_text()))}
+                receipt['pitch_counts'] = {'chain': True, 'fallback': spec['fallback']}
+            else:
+                pitch_counts = PitchCounts(json.loads((ROOT / str(spec)).read_text()))
+                receipt['pitch_counts'] = {'path': spec}
         hazard_correction = None
         if params.get('hazard_correction'):
             hdoc = json.loads((ROOT / str(params['hazard_correction'])).read_text())

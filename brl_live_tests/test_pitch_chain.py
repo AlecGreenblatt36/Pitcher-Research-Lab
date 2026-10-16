@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 
 from research_lab.pa_model import pitch_chain as pc
+from research_lab.game_sim.pitch_counts import MODEL_LABELS
 
 
 def synthetic(seed=0, days=40, games_per_day=4, pa_per_game=30):
@@ -250,3 +251,61 @@ def test_prepare_prefers_the_tables_own_park_column():
     q = pc.prepare(pitches, {int(pitches['game_pk'].iloc[0]): 'NYY', int(pitches['game_pk'].iloc[-1]): 'SEA'})
     first = q[q['game_pk'] == int(pitches['game_pk'].iloc[0])]['park'].unique().tolist(); last = q[q['game_pk'] == int(pitches['game_pk'].iloc[-1])]['park'].unique().tolist()
     assert first == ['COL'] and last == ['SEA']
+
+
+def test_pitch_count_table_is_consistent_with_the_features():
+    """LEASH-04: the joint walk over pitches gives the same outcome mix and expected pitches as the features, and real shapes:
+    a strikeout takes at least three pitches, a walk at least four, nothing ends on pitch zero."""
+    pa, pitches = synthetic(seed=4, days=20)
+    ordered = pa.sort_values(['date_key', 'game_pk', 'at_bat_number']).reset_index(drop=True)
+    parks = {int(g): str(k) for g, k in zip(ordered['game_pk'], ordered['park'])}
+    state = pc.ChainState.build(pitches, '2026-04-20', {}, parks)
+    day = int(pc.day_ordinal(['2026-04-20'])[0])
+    f = state.features(1, 101, 'NYY', 'L', 'R', day)
+    T, D, _, _, _ = state._transitions([1], [101], ['NYY'], ['L'], ['R'], day)
+    table = state.pitch_count_table(1, 101, 'NYY', 'L', 'R', day, nmax=24)
+    assert table.shape == (7, 25) and np.allclose(table.sum(axis=1), 1.0, atol=1e-9) and (table[:, 0] == 0).all()
+    assert table[1, :3].sum() == 0 and table[2, :4].sum() < 0.1 and table[0, 1] > 0        # K needs 3 pitches, a walk 4 (a hit batter any), an out can take 1
+    # the outcome mix and expected pitches from the joint walk equal the features' (up to the truncated tail)
+    n = np.arange(25)
+    joint = pc.ChainState.build(pitches, '2026-04-20', {}, parks)
+    F_mass = np.exp(f[:7])
+    # rebuild the unnormalized joint to compare the mix: P(outcome) = sum over n
+    F = np.zeros((pc.N_COUNT, 7, 25)); eK = np.zeros(7); eK[1] = 1; eBB = np.zeros(7); eBB[2] = 1
+    D7 = np.zeros((pc.N_COUNT, 7)); D7[:, pc.OUT_TO_LABEL] = D[0]
+    for m in range(1, 25):
+        first = 1.0 if m == 1 else 0.0
+        for c in range(pc.N_COUNT):
+            b, s_ = divmod(c, 3)
+            pb, pcs, phb, pwh, pfo, pip = (float(T[k][0, c]) for k in ('ball', 'cs', 'hb', 'wh', 'fo', 'ip'))
+            nb = F[(b + 1) * 3 + s_, :, m - 1] if b < 3 else first * eBB
+            ns = F[b * 3 + s_ + 1, :, m - 1] if s_ < 2 else first * eK
+            stay = F[b * 3 + s_ + 1, :, m - 1] if s_ < 2 else F[c, :, m - 1]
+            F[c, :, m] = pb * nb + (pcs + pwh) * ns + pfo * stay + first * (pip * D7[c] + phb * eBB)
+    mix = F[0].sum(axis=1); assert np.allclose(mix, F_mass, atol=2e-3)
+    expected = (F[0] * n).sum() / F[0].sum(); assert abs(expected - f[7]) < 0.05
+
+
+def test_matchup_pitch_counts_draws_from_the_chain_and_falls_back(tmp_path):
+    from research_lab.game_sim.pitch_counts import PitchCounts, MatchupPitchCounts
+    from research_lab.game_sim.models import PAContext, PlayerProfile, PitcherProfile
+    pa, pitches = synthetic(seed=6, days=20)
+    ordered = pa.sort_values(['date_key', 'game_pk', 'at_bat_number']).reset_index(drop=True)
+    parks = {int(g): str(k) for g, k in zip(ordered['game_pk'], ordered['park'])}
+    state = pc.ChainState.build(pitches, '2026-04-20', {}, parks)
+
+    class Provider:
+        chain = state; park = 'NYY'; game_date = '2026-04-20'
+        def _stand(self, bats, throws): return 'L' if bats == 'S' and throws == 'R' else bats
+    counts = {l: [0, 0, 0, 1, 2, 2, 1, 0, 0, 0] for l in MODEL_LABELS}
+    fallback = PitchCounts({'counts': counts})
+    mpc = MatchupPitchCounts(Provider(), fallback)
+    ctx = PAContext(batter=PlayerProfile('1', 'b', 'L'), pitcher=PitcherProfile('101', 'p', 'R', 'starter'), batting_side='away', inning=1, half='top', outs=0,
+                    bases=(None, None, None), batting_score=0, fielding_score=0, lineup_position=1, times_through_order=1, pitcher_batters_faced=0,
+                    pitcher_runs_allowed=0, pitcher_fatigue=0.0, park_factor=1.0, weather_run_factor=1.0, batting_team_baserunning=0.0, fielding_team_defense=0.0)
+    draws = [mpc.draw('strikeout', u, ctx) for u in np.linspace(0.001, 0.999, 200)]
+    assert min(draws) >= 3 and max(draws) <= 20 and 4 <= np.mean(draws) <= 7
+    assert mpc.draw('single', 0.0, ctx) >= 1 and mpc.draw('bb_hbp', 0.5, ctx) >= 4 and mpc.draw('bb_hbp', 0.0, ctx) >= 1
+    # an unknown id falls back to the league table
+    ctx2 = ctx.__class__(**{**ctx.__dict__, 'batter': PlayerProfile('x', 'b', 'L')})
+    assert mpc.draw('strikeout', 0.5, ctx2) == fallback.draw('strikeout', 0.5)

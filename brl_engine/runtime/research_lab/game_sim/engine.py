@@ -295,7 +295,11 @@ class GameSimulator:
                 draw_manager = streams.slot("manager", batting_side, pa_number)
             outcome_counts[outcome] += 1
             if self.pitch_counts is not None:
-                line.pitches += self.pitch_counts.draw(outcome, rng.random() if streams is None else streams.pitch_uniform(batting_side, pa_number))
+                u_pitch = rng.random() if streams is None else streams.pitch_uniform(batting_side, pa_number)
+                if getattr(self.pitch_counts, "wants_context", False):
+                    line.pitches += self.pitch_counts.draw(outcome, u_pitch, context)      # LEASH-04: the matchup's own count chain
+                else:
+                    line.pitches += self.pitch_counts.draw(outcome, u_pitch)
 
             outs_before = state.outs
             bases_before = state.base_ids()

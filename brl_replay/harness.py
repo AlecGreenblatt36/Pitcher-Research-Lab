@@ -209,6 +209,11 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
     first = dates[0]
     base = LockedPAModelProvider(model_path, history_path, cutoff_date=first, game_date=first, park="NYY",
                                  expected_sha256=model_sha256, physics_table=physics_table, pitch_table=pitch_table)
+    if isinstance(pitch_counts, dict) and pitch_counts.get('chain'):
+        from research_lab.game_sim.pitch_counts import MatchupPitchCounts
+        if base.chain is None:
+            raise ValueError('pitch counts from the chain need a model with chain features')
+        pitch_counts = MatchupPitchCounts(base, pitch_counts['fallback'])
     chain_q = None
     if base.chain is not None:
         from research_lab.pa_model.pitch_chain import prepare
@@ -394,6 +399,8 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
             from research_lab.pa_model.pitch_chain import day_ordinal
             base.chain.absorb_through(chain_q, int(day_ordinal([date])[0]))
             base._chain_cache = {}
+            if getattr(pitch_counts, 'wants_context', False):
+                pitch_counts._cache = {}
         pexp, texp = tendencies_at(h, date, float(hazard["league_mean_bf"]))
         hands = bats_lookup(h, date)
         first_stand = h[h["date_key"] == date].groupby("batter")["stand"].first().to_dict()

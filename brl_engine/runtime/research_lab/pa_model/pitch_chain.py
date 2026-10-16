@@ -275,11 +275,10 @@ class ChainState:
                 'mix': (self.Lmix + 1.0) / (self.Lmix.sum(axis=1, keepdims=True) + N_CELL)}
 
     # ----- features for matchups --------------------------------------------------------------------------------------
-    def features_for(self, batters, pitchers, parks, stands, throws, day: int) -> np.ndarray:
-        """One row per matchup: log of the seven outcome probabilities and the expected pitches."""
+    def _transitions(self, batters, pitchers, parks, stands, throws, day: int):
+        """Per matchup and count: the pitch result probabilities (ball, called strike, hit by pitch, whiff, foul, in play),
+        the ball-in-play outcome mix D (n, count, 5), and the per-cell swing and whiff probabilities with the mix."""
         n = len(batters)
-        if n == 0:
-            return np.zeros((0, len(self.names)))
         P = self.p
         pl = (np.asarray(stands).astype(str) == np.asarray(throws).astype(str)).astype(int)
         br = self.bat.rows([int(b) for b in batters], day); pr = self.pit.rows([int(x) for x in pitchers], day)
@@ -313,6 +312,15 @@ class ChainState:
         O = Lg['out'][pl] * W[:, None, :]                                                                               # (n, cell, 5)
         O /= O.sum(axis=2, keepdims=True)
         D = np.einsum('ncj,njo->nco', w_ip, O) / np.maximum(T['ip'][:, :, None], 1e-12)                                 # (n, count, 5)
+        return T, D, M, p_sw, p_wh
+
+    def features_for(self, batters, pitchers, parks, stands, throws, day: int) -> np.ndarray:
+        """One row per matchup: log of the seven outcome probabilities and the expected pitches."""
+        n = len(batters)
+        if n == 0:
+            return np.zeros((0, len(self.names)))
+        P = self.p
+        T, D, M, p_sw, p_wh = self._transitions(batters, pitchers, parks, stands, throws, day)
         V = np.zeros((n, N_COUNT, 7)); Npitch = np.zeros((n, N_COUNT))
         eK = np.zeros(7); eK[1] = 1.0; eBB = np.zeros(7); eBB[2] = 1.0
         for c in _ORDER:
@@ -340,6 +348,28 @@ class ChainState:
 
     def features(self, batter: int, pitcher: int, park: str, stand: str, throws: str, day: int) -> np.ndarray:
         return self.features_for([batter], [pitcher], [park], [stand], [throws], day)[0]
+
+    def pitch_count_table(self, batter: int, pitcher: int, park: str, stand: str, throws: str, day: int, nmax: int = 20) -> np.ndarray:
+        """P(pitches = n | outcome) for one matchup from 0-0: a (7, nmax + 1) table in LABELS order, column n the
+        pitches of the plate appearance (column 0 unused, column nmax holds nmax or more). The same count chain as the
+        features, walked pitch by pitch (LEASH-04)."""
+        T, D, _, _, _ = self._transitions([batter], [pitcher], [park], [stand], [throws], day)
+        F = np.zeros((N_COUNT, 7, nmax + 1))
+        eK = np.zeros(7); eK[1] = 1.0; eBB = np.zeros(7); eBB[2] = 1.0
+        D7 = np.zeros((N_COUNT, 7)); D7[:, OUT_TO_LABEL] = D[0]
+        for m in range(1, nmax + 1):
+            first = 1.0 if m == 1 else 0.0
+            for c in range(N_COUNT):
+                b, s_ = divmod(c, 3)
+                pb, pcs, phb, pwh, pfo, pip = (float(T[k][0, c]) for k in ('ball', 'cs', 'hb', 'wh', 'fo', 'ip'))
+                nb = F[(b + 1) * 3 + s_, :, m - 1] if b < 3 else first * eBB
+                ns = F[b * 3 + s_ + 1, :, m - 1] if s_ < 2 else first * eK
+                stay = F[b * 3 + s_ + 1, :, m - 1] if s_ < 2 else F[c, :, m - 1]
+                F[c, :, m] = pb * nb + (pcs + pwh) * ns + pfo * stay + first * (pip * D7[c] + phb * eBB)
+        table = F[0]                                               # (7, nmax + 1) from 0-0
+        table[:, nmax] += np.maximum(0.0, 1.0 - table.sum()) * (table[:, nmax] / max(float(table[:, nmax].sum()), 1e-12))   # the truncated tail
+        tot = table.sum(axis=1, keepdims=True)
+        return np.where(tot > 1e-12, table / np.maximum(tot, 1e-12), 0.0)
 
     # ----- learning from a day ----------------------------------------------------------------------------------------
     def absorb_date(self, day: int, q: pd.DataFrame) -> None:

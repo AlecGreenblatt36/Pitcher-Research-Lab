@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 343,
- "rows": 346,
+ "experiments": 344,
+ "rows": 347,
  "records": {
   "ACC-01": [
    {
@@ -5677,6 +5677,23 @@
      "38950936177",
      "38950981875"
     ],
+    "frozen_commits": [],
+    "status": "registered"
+   }
+  ],
+  "LEASH-04": [
+   {
+    "id": "LEASH-04",
+    "columns": {
+     "ID": "LEASH-04",
+     "Attempt": "Pitches per plate appearance from the matchup's own count chain, in the starter's exit. LEASH-03 found that with real pitch counts the exit hazard fits real removals far better, but pitches drawn by outcome alone left the simulated starts too long in the middle lines and the 7th inning too common, and named the cause: pitches drawn one plate appearance at a time by outcome miss what drives real high-pitch days (long at-bats in bunches, a pitcher's command, hitters who foul and take). The chain (CHAIN-01) has exactly that per matchup: ChainState.pitch_count_table walks the count pitch by pitch and gives P(pitches",
+     "Disposition and evidence": "outcome) for the hitter and pitcher at hand (a nibbler against a hitter who fouls everything runs long; a zone pounder against a free swinger runs short); research_lab.game_sim.pitch_counts.MatchupPitchCounts draws from it given the outcome the engine drew, with the league table by outcome as the fallback for a matchup the chain cannot price; the engine hands it the plate appearance's context. Checked on made-up seasons: the joint walk's outcome mix and expected pitches equal the chain's features; strikeouts take three pitches or more, walks four. Test: full replays of 2025 and 2026 with pitch02b-v2h120 and CHAIN-03B's settings (the chain's own context tables, paired streams) plus the chain pitch draws and LEASH-03's refitted correction with pitch terms (brl_replay/hazard_correction_v2.json), starter lines recorded, against CHAIN-03B's replays (same model, no pitch draws, LEASH-02's correction)",
+     "Delta corrected Brier, 2026": "**Registered in the commit that added this row, before the replays.** LEASH-03's stage 2 gates: (1) every half line from 12.5 to 20.5 outs within 2.5 points of actual in both seasons and the ladder lines within 1.0 point in both (tools/brl_outs_cal.py; LEASH-03 missed at +1.38 in 2026); (2) the win Brier pooled not worse than +0.0002 against CHAIN-03B's replays (point estimate); (3) the mean total's squared error pooled paired interval's upper end below +0.03. Decision rule: if (1) to (3) hold, the chain pitch draws and the pitch-term correction replace LEASH-02's for regular-season games in the live runtime (ADJUST pitch_counts 'chain', hazard correction v2) at the same time as the chain model, or after it if the chain is already live. Prediction: (1) holds, the ladder lines within 0.8 in both seasons; (2) and (3) hold",
+     "col4": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
     "frozen_commits": [],
     "status": "registered"
    }
