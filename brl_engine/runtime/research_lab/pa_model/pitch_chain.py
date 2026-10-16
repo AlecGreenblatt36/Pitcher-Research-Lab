@@ -231,7 +231,7 @@ def prepare(pitches: pd.DataFrame, park_of_game: dict | None = None) -> pd.DataF
         'batter': pd.to_numeric(p['batter'], errors='coerce').fillna(-1).to_numpy(np.int64),
         'pitcher': pd.to_numeric(p['pitcher'], errors='coerce').fillna(-1).to_numpy(np.int64),
         'pl': (stand == throws).astype(np.int64), 'c': balls * 3 + strikes, 'cell': fam * N_REG + reg, 'cls': cls,
-        'fam': fam, 'reg': reg, 'vt': fb_tier(p['speed'].to_numpy() if 'speed' in p.columns else np.full(len(p), np.nan)),
+        'fam': fam.astype(np.int8), 'reg': reg.astype(np.int8), 'vt': fb_tier(p['speed'].to_numpy() if 'speed' in p.columns else np.full(len(p), np.nan)).astype(np.int8),
         'out': p['outcome'].astype(str).map(OUT_INDEX).fillna(-1).astype(np.int64).to_numpy() if 'outcome' in p.columns else -1,
     })
     # the park: the table's own column when it has one (replays and the live runtime fill it from the histories),
