@@ -85,8 +85,9 @@ def test_live_correction_file_must_be_leash02s(tmp_path, monkeypatch):
     monkeypatch.setattr(bx, 'HAZARD_CORRECTION_PATH', f)
     monkeypatch.delitem(bx._KERNEL, 'hc', raising=False)
     import pytest
+    plain = dict(bx.ADJUST, pitch_counts=None)                                  # LEASH-04 off: the simulators draw no pitches
     with pytest.raises(ValueError, match='32 terms'):
-        bx.hazard_correction_for(bx.ADJUST, 'R')
-    assert bx.hazard_correction_for(bx.ADJUST, 'F') is None                    # postseason games never read the file
+        bx.hazard_correction_for(plain, 'R')
+    assert bx.hazard_correction_for(plain, 'F') is None                        # postseason games never read the file
     monkeypatch.delitem(bx._KERNEL, 'hc', raising=False)
     assert len(json.loads((ROOT / 'brl_live/hazard_correction.json').read_text())['terms']) == 32

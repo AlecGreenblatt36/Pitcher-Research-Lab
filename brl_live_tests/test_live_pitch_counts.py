@@ -5,10 +5,13 @@ import pytest
 from brl_live import boxscore
 
 
-def test_off_by_default_and_the_correction_follows_the_setting():
-    assert boxscore.ADJUST['pitch_counts'] is None
-    assert boxscore.pitch_counts_for(boxscore.ADJUST, object()) is None
-    base = boxscore.hazard_correction_for(dict(boxscore.ADJUST, hazard_correction=True), 'R')
+def test_on_since_leash04_and_the_correction_follows_the_setting():
+    """LEASH-04 (October 16, 2026): the live simulators draw pitches from the chain; with the setting off the plain
+    league table and LEASH-02's 32-term correction come back."""
+    assert boxscore.ADJUST['pitch_counts'] == 'chain'
+    off = dict(boxscore.ADJUST, pitch_counts=None)
+    assert boxscore.pitch_counts_for(off, object()) is None
+    base = boxscore.hazard_correction_for(dict(off, hazard_correction=True), 'R')
     assert base is None or len(base['terms']) == 32
     on = dict(boxscore.ADJUST, hazard_correction=True, pitch_counts='chain')
     v2 = boxscore.hazard_correction_for(on, 'R')

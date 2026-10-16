@@ -114,12 +114,18 @@ def test_live_correction_is_regular_season_only():
     assert bx.ADJUST['hazard_correction'] is True
     assert bx.hazard_correction_for(dict(bx.ADJUST, hazard_correction=False), 'R') is None
     on = bx.ADJUST
+    # LEASH-04 (on from October 16, 2026): with the chain pitch draws the correction is LEASH-03's refit with pitch terms
+    assert on['pitch_counts'] == 'chain'
     c = bx.hazard_correction_for(on, 'R')
-    assert tuple(c['terms']) == sh.CORRECTION_TERMS and len(c['coef']) == 32
+    assert tuple(c['terms']) == sh.CORRECTION_TERMS_V2 and len(c['coef']) == len(sh.CORRECTION_TERMS_V2) == 44
     assert bx.hazard_correction_for(on, 'L') is None and bx.hazard_correction_for(on, 'W') is None
+    plain = bx.hazard_correction_for(dict(on, pitch_counts=None), 'R')
+    assert tuple(plain['terms']) == sh.CORRECTION_TERMS and len(plain['coef']) == 32
     import json
     live = json.loads((ROOT / 'brl_live/hazard_correction.json').read_text()); rep = json.loads((ROOT / 'brl_replay/hazard_correction.json').read_text())
-    assert live['coef'] == rep['coef']                                       # the live table is the one the replays test
+    assert live['coef'] == rep['coef']                                       # the live tables are the ones the replays test
+    live2 = json.loads((ROOT / 'brl_live/hazard_correction_v2.json').read_text()); rep2 = json.loads((ROOT / 'brl_replay/hazard_correction_v2.json').read_text())
+    assert live2['coef'] == rep2['coef']
 
 
 def test_hazard_pitches_sums_each_starters_pitches_and_scores_both_hazards(tmp_path):
