@@ -1,11 +1,11 @@
 {
- "experiment": "CHAIN-04B",
+ "experiment": "CHAIN-05",
  "arms": [
   {
-   "name": "chain04b-c0",
+   "name": "chain05-c0",
    "role": "control",
    "settings": {
-    "name": "chain04b-c0",
+    "name": "chain05-c0",
     "manifest_branch": "ledger",
     "physics_params": {
      "xvalue": true,
@@ -31,10 +31,10 @@
    }
   },
   {
-   "name": "chain04b-xs",
+   "name": "chain05-pm20",
    "role": "candidate",
    "settings": {
-    "name": "chain04b-xs",
+    "name": "chain05-pm20",
     "manifest_branch": "ledger",
     "physics_params": {
      "xvalue": true,
@@ -46,8 +46,10 @@
      "pitcher_cells": true,
      "extra_features": true,
      "spring_weight": 1.0,
-     "k_b_pool": 50.0,
-     "k_p_pool": 200.0
+     "k_b_pool": 100.0,
+     "k_p_pool": 400.0,
+     "platoon_mix": true,
+     "k_mix_platoon": 20.0
     },
     "spring_seasons": [
      2021,
@@ -60,10 +62,10 @@
    }
   },
   {
-   "name": "chain04b-xs-wide",
+   "name": "chain05-pm40",
    "role": "candidate",
    "settings": {
-    "name": "chain04b-xs-wide",
+    "name": "chain05-pm40",
     "manifest_branch": "ledger",
     "physics_params": {
      "xvalue": true,
@@ -75,12 +77,10 @@
      "pitcher_cells": true,
      "extra_features": true,
      "spring_weight": 1.0,
-     "k_b_pool": 50.0,
-     "k_p_pool": 200.0,
-     "k_b_swing": 300.0,
-     "k_b_whiff": 210.0,
-     "k_p_swing": 1200.0,
-     "k_p_whiff": 540.0
+     "k_b_pool": 100.0,
+     "k_p_pool": 400.0,
+     "platoon_mix": true,
+     "k_mix_platoon": 40.0
     },
     "spring_seasons": [
      2021,
@@ -93,10 +93,10 @@
    }
   },
   {
-   "name": "chain04b-xs-tight",
+   "name": "chain05-pm80",
    "role": "candidate",
    "settings": {
-    "name": "chain04b-xs-tight",
+    "name": "chain05-pm80",
     "manifest_branch": "ledger",
     "physics_params": {
      "xvalue": true,
@@ -108,12 +108,10 @@
      "pitcher_cells": true,
      "extra_features": true,
      "spring_weight": 1.0,
-     "k_b_pool": 50.0,
-     "k_p_pool": 200.0,
-     "k_b_swing": 133.0,
-     "k_b_whiff": 93.0,
-     "k_p_swing": 533.0,
-     "k_p_whiff": 240.0
+     "k_b_pool": 100.0,
+     "k_p_pool": 400.0,
+     "platoon_mix": true,
+     "k_mix_platoon": 80.0
     },
     "spring_seasons": [
      2021,
