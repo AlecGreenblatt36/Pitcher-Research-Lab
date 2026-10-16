@@ -134,7 +134,8 @@ def load_history(repo, token, key, branch, years, columns) -> pd.DataFrame:
         if missing:
             raise ValueError(f'history {year} lacks columns {missing}')
         frame = frame.loc[:, columns]
-        frame['date_key'] = frame['date_key'].astype(str)
+        if 'date_key' in frame.columns:
+            frame['date_key'] = frame['date_key'].astype(str)
         frames.append(frame)
     return pd.concat(frames, ignore_index=True)
 
@@ -213,7 +214,8 @@ def main():
             parks = {int(g): str(k) for g, k in zip(pa['game_pk'], pa['park'])}
             older = [y for y in pitch_seasons if y not in set(receipt['seasons']) and y <= 2022]
             if older:
-                for g, k in zip(*(load_history(repo, token, key, branch, older, ['game_pk', 'park'])[c] for c in ('game_pk', 'park'))):
+                old_games = load_history(repo, token, key, branch, older, ['game_pk', 'park']).drop_duplicates('game_pk')
+                for g, k in zip(old_games['game_pk'], old_games['park']):
                     parks.setdefault(int(g), str(k))
             prepared = []
             for year in pitch_seasons:

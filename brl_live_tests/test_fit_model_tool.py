@@ -78,3 +78,16 @@ def test_settings_overrides_keep_the_model_name():
     assert config.batter_class_prior_pa[1] == 113.0
     src = (Path(__file__).parents[1] / 'tools' / 'brl_fit_model.py').read_text()
     assert 'for name in' not in src
+
+
+def test_history_loader_takes_a_column_subset_without_dates(monkeypatch):
+    import gzip, os
+    spec2 = importlib.util.spec_from_file_location('brl_fit_tool4', Path(__file__).parents[1] / 'tools' / 'brl_fit_model.py')
+    tool = importlib.util.module_from_spec(spec2); spec2.loader.exec_module(tool)
+    from cloud.security import seal
+    key = os.urandom(32)
+    frame = pd.DataFrame({'date_key': ['2021-04-01', '2021-04-01'], 'game_pk': [1, 1], 'game_type': ['R', 'R'], 'park': ['NYY', 'NYY'], 'outcome': ['K', 'HR']})
+    blob = seal(gzip.compress(frame.to_csv(index=False).encode()), key, tool.history_purpose(2021))
+    monkeypatch.setattr(tool, 'read_blob', lambda repo, token, path, branch: blob)
+    out = tool.load_history('r', 't', key, 'b', [2021], ['game_pk', 'park'])
+    assert list(out.columns) == ['game_pk', 'park'] and len(out) == 2
