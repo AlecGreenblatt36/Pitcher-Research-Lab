@@ -237,6 +237,14 @@ def main():
     table_plain = gzip.compress(table.to_csv(index=False).encode(), mtime=0)
     table_cipher = seal(table_plain, key, physics_purpose(year))
     put(repo, token, physics_path(year), table_cipher, branch, f'BRL: season {year} physics table through {through}')
+    # The per-pitch table the chain model reads (CHAIN-01; tools/brl_pitch_table.py built the first ones), kept current here.
+    sys.path.append(str(ROOT / 'tools'))
+    from brl_pitch_table import rows_from_study, PITCH_COLUMNS, pitches_path, pitches_purpose
+    import pandas as pd
+    pitch_frame = pd.DataFrame(rows_from_study(study), columns=PITCH_COLUMNS)
+    pitch_frame = pitch_frame.sort_values(['date_key', 'game_pk', 'at_bat_number', 'pitch_number'], kind='mergesort').reset_index(drop=True)
+    pitch_cipher = seal(gzip.compress(pitch_frame.to_csv(index=False).encode(), mtime=0), key, pitches_purpose(year))
+    put(repo, token, pitches_path(year), pitch_cipher, branch, f'BRL: season {year} pitch table through {through}')
     n_rows = sum(len(g['rows']) for g in doc['games'].values())
     with_pitches = sum(1 for g in doc['games'].values() for r in g['rows'] if r['pt'])
     with_contact = sum(1 for g in doc['games'].values() for r in g['rows'] if r['c'])
@@ -249,7 +257,8 @@ def main():
                          'with_hit_measurement': sum(1 for g in study['games'].values() for r in g['rows'] if r['hit']),
                          'cipher_sha256': sha(study_cipher), 'cipher_bytes': len(study_cipher), 'pitch_fields': list(PITCH_FIELDS), 'hit_fields': list(HIT_FIELDS)},
                'physics_table': {'path': physics_path(year), 'purpose': physics_purpose(year), 'rows': int(len(table)), 'columns': list(table.columns),
-                                 'cipher_sha256': sha(table_cipher), 'cipher_bytes': len(table_cipher)}}
+                                 'cipher_sha256': sha(table_cipher), 'cipher_bytes': len(table_cipher)},
+               'pitch_table': {'path': pitches_path(year), 'purpose': pitches_purpose(year), 'rows': int(len(pitch_frame)), 'cipher_sha256': sha(pitch_cipher), 'cipher_bytes': len(pitch_cipher)}}
     put(repo, token, receipt_path(year), json.dumps(receipt, indent=1).encode(), branch, f'BRL: season {year} bookkeeping receipt')
     print(json.dumps({k: receipt[k] for k in ('games', 'plate_appearances', 'with_pitch_list', 'with_contact', 'fetched_this_run', 'cipher_bytes')} | {'failures': len(failures)}))
 
