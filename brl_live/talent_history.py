@@ -52,3 +52,16 @@ def write(store, key: bytes, years, history: pd.DataFrame, target: Path) -> dict
     target = Path(target); target.parent.mkdir(parents=True, exist_ok=True)
     combined.to_csv(target, index=False, compression='gzip')
     return {'seasons': sorted(int(y) for y in years), 'older_rows': int(len(older)), 'rows': int(len(combined)), 'through': str(combined['date_key'].max())}
+
+
+def game_parks(store, key: bytes, years) -> dict:
+    """game_pk -> park for the sealed seasons (the chain's park counters for games before the live history)."""
+    out = {}
+    for year in sorted(int(y) for y in years):
+        saved = store.read(history_path(year))
+        if saved is None:
+            raise Blocked(f'Sealed history for {year} is missing')
+        frame = pd.read_csv(io.BytesIO(gzip.decompress(unseal(saved[0], key, history_purpose(year)))), usecols=['game_pk', 'park'], low_memory=False)
+        for g, k in zip(frame['game_pk'], frame['park']):
+            out.setdefault(int(g), str(k))
+    return out

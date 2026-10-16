@@ -235,6 +235,13 @@ def main():
                     parts.append(pd.read_csv(io.BytesIO(gzip.decompress(unseal(raw, key_bytes(key_hex), pitches_purpose(year)))), low_memory=False,
                                              dtype={'ptype': 'category', 'code': 'category', 'stand': 'category', 'p_throws': 'category', 'outcome': 'category'}))
                 pitch_table = pd.concat(parts, ignore_index=True); del parts
+                older = [y for y in pitch_years if y <= 2022]
+                if older:
+                    # the park of 2021-2022 games from the sealed histories, as the fit had it (the replayed history starts in 2023)
+                    from brl_fit_model import load_history as load_sealed_history
+                    old_games = load_sealed_history(repo, token, key_bytes(key_hex), branch, older, ['game_pk', 'park']).drop_duplicates('game_pk')
+                    park_of = {int(g): str(k) for g, k in zip(old_games['game_pk'], old_games['park'])}
+                    pitch_table['park'] = pitch_table['game_pk'].map(park_of)
                 receipt['pitch_years'] = pitch_years; receipt['pitch_rows'] = int(len(pitch_table))
         stage('load history and reconstruct games')
         from brl_replay.games import load_history, reconstruct

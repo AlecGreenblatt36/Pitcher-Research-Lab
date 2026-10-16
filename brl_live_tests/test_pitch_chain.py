@@ -241,3 +241,12 @@ def test_v2_options_keep_parity_and_add_the_extra_features():
     for r in np.where(ordered['date_key'].to_numpy() == '2026-04-08')[0][:20]:
         got = state.features(int(ordered.batter[r]), int(ordered.pitcher[r]), str(ordered.park[r]), str(ordered.stand[r]), str(ordered.p_throws[r]), day)
         assert np.allclose(got, feats.iloc[r].to_numpy(float), atol=1e-5)
+
+
+def test_prepare_prefers_the_tables_own_park_column():
+    _, pitches = synthetic(seed=2, days=2)
+    pitches['park'] = None
+    pitches.loc[pitches['game_pk'] == pitches['game_pk'].iloc[0], 'park'] = 'COL'
+    q = pc.prepare(pitches, {int(pitches['game_pk'].iloc[0]): 'NYY', int(pitches['game_pk'].iloc[-1]): 'SEA'})
+    first = q[q['game_pk'] == int(pitches['game_pk'].iloc[0])]['park'].unique().tolist(); last = q[q['game_pk'] == int(pitches['game_pk'].iloc[-1])]['park'].unique().tolist()
+    assert first == ['COL'] and last == ['SEA']

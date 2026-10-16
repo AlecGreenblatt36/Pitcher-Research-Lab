@@ -181,7 +181,14 @@ def prepare(pitches: pd.DataFrame, park_of_game: dict | None = None) -> pd.DataF
         'pl': (stand == throws).astype(np.int64), 'c': balls * 3 + strikes, 'cell': fam * N_REG + reg, 'cls': cls,
         'out': p['outcome'].astype(str).map(OUT_INDEX).fillna(-1).astype(np.int64).to_numpy() if 'outcome' in p.columns else -1,
     })
-    out['park'] = [park_of_game.get(int(g), 'UNK') for g in out['game_pk']] if park_of_game else 'UNK'
+    # the park: the table's own column when it has one (replays and the live runtime fill it from the histories),
+    # else the game -> park map, else UNK (a row that gets no park deviation)
+    parks = np.array([park_of_game.get(int(g), 'UNK') for g in out['game_pk']] if park_of_game else ['UNK'] * len(out), dtype=object)
+    if 'park' in p.columns:
+        own = p['park'].astype(object).to_numpy()
+        has = pd.notna(own) & (own != '') & (own != 'UNK')
+        parks[has] = own[has].astype(str)
+    out['park'] = parks
     return out.sort_values('day', kind='mergesort').reset_index(drop=True)
 
 

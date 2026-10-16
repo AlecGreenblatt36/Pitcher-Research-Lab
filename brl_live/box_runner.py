@@ -329,6 +329,10 @@ def main(public_dir):
             from .physics_inputs import assemble_pitch_table
             pitch_years=tuple(int(y) for y in (manifest.get('pitch_seasons') or range(2021,year+1)) if int(y)<=year)
             sim.pitch_table,physics_receipt['pitch_table']=assemble_pitch_table(cache,index,utcnow(),years=pitch_years)
+            older=[y for y in pitch_years if y<=2022]
+            if older:
+                from .talent_history import game_parks
+                sim.pitch_table['park']=sim.pitch_table['game_pk'].map(game_parks(store,key,older))
         if manifest.get('history_seasons'):
             # LONG-01: the model's counters read the sealed seasons before the live history, as in its fit.
             from . import live_extension as _lx
