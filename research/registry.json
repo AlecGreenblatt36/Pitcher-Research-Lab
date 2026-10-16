@@ -5571,14 +5571,19 @@
     "columns": {
      "ID": "LONG-02",
      "Attempt": "LONG-01's model judged on its own stack. LONG-01 stage 2 failed with the new model's simulated games short of runs (8.78 and 8.60 against 8.90 and 8.96 actual) because the simulator's context offsets (each class's level by batting side and inning) were estimated on the live model's predictions (CTX-02). Here they are re-estimated for long01-b365 exactly as CTX-02 did (check-only replays, n_sims 0 with real_pa_check, of every 2025 and 2026 regular-season plate appearance; the bare model's predictions summed in the six side-by-inning buckets; offset log((observed + 200 x share) / (predicted + 200 x share)); the formula reproduces the live tables to four decimals from their own check runs), cross-season as before (the 2026 replay uses the table from 2025, the 2025 replay the table from 2026). Then the same full replays as LONG-01 stage 2 with only the context tables changed. The team offsets still come from the live model's residuals (research/team-resid-v2), a known limit",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the check-only replays.** Same rule as LONG-01 stage 2 against v2-prod4-pen-1000: goes live only if the simulator's game Brier is lower in both 2025 and 2026 and the pooled blend's 95% upper bound is below +0.0005. Predictions: mean simulated totals within 0.15 runs of actual in both seasons; the pooled simulator Brier difference at or below zero",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before the check-only replays.** Same rule as LONG-01 stage 2 against v2-prod4-pen-1000: goes live only if the simulator's game Brier is lower in both 2025 and 2026 and the pooled blend's 95% upper bound is below +0.0005. Predictions: mean simulated totals within 0.15 runs of actual in both seasons; the pooled simulator Brier difference at or below zero **Result (check-only replays 38922694416 and 38922742256; full replays long02-b365-pen-1000, runs 38924228908 for 2025 and 38924277603 for 2026; scored with tools/replay_blend_compare.py and tools/replay_compare.py): failed, worse than LONG-01 stage 2.** Simulator Brier +0.00043 [-0.00036, +0.00126] (2025) and +0.00063 [-0.00022, +0.00155] (2026), pooled +0.00053; blend +0.00009 and +0.00029, pooled +0.00019 [-0.00011, +0.00049]. The totals prediction failed in the other direction: with the cross-season tables the 2025 games now score 9.14 runs (actual 8.90) and 2026 8.69 (actual 8.96). Reading: this model's league level moves from season to season (its league and park counters decay with the same half-life, so its baseline follows the last year or two), and a context table estimated on one season does not carry to the next; the live model's level is steadier because its counters never forget. Fixing that would mean a level correction estimated in-season from earlier dates (LEVEL-02's machinery), a third round of replays for a model whose at-bat gain is 0.001 nats. **Stopped here: the long-history model stays sealed and the at-bat model is not refit again on this feature set.** What the longer history is for now: the stability measurements (STAB-01), more test seasons, and the pitch-level program (PITCH-00)",
+     "Delta corrected Brier, 2026": "failed; not adopted"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38922694416",
+     "38922742256",
+     "38924228908",
+     "38924277603"
+    ],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "failed; not adopted"
    }
   ],
   "TOTALS-05": [
