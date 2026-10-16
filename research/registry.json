@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 346,
- "rows": 349,
+ "experiments": 347,
+ "rows": 350,
  "records": {
   "ACC-01": [
    {
@@ -5738,6 +5738,22 @@
     ],
     "frozen_commits": [],
     "status": "live"
+   }
+  ],
+  "CHAIN-04": [
+   {
+    "id": "CHAIN-04",
+    "columns": {
+     "ID": "CHAIN-04",
+     "Attempt": "Two-level shrinkage in the chain (the Bayesian player layer, stage one). Today each of a hitter's twelve swing and whiff columns (pitch family in or out of the zone, two strikes or not) and each of a pitcher's six shrinks straight toward the league, so a column with few pitches says nothing even when the player's other columns all say he chases, and with the 120-day half-life most columns are thin for most of the season (a regular's columns carry about 70 to 360 effective pitches against k of 200). Now a column shrinks toward the player's own pooled deviation over all his columns (pooled observed against league-expected on the same pitches, itself shrunk toward the league with k_b_pool or k_p_pool), chain parameters k_b_pool and k_p_pool (0 = the one-level chain, every live model unchanged; pitch_chain._dev_h, _dev_col; the per-pitch check reads the same deviations). Arms (tools/fit_arms.json) on the live model's settings (spring02-w10): c0 = refit control; pool-s = 100/400, pool-m = 200/800, pool-l = 400/1,600 (hitters/pitchers)",
+     "Disposition and evidence": "**Registered in the commit that added this row, before any arm was fit.** Same selection as CHAIN-02 (the candidate with the lowest 2025 tuning-block log loss is the one tested). Passes if (1) its blended 2026 log loss beats c0's with the 95% game-bootstrap interval below zero and calibration within 0.015, and (2) its per-pitch swing and whiff log loss (the fit receipt's chain.per_pitch_check, 2021-2026) are both no worse than c0's. Prediction: (2) holds with swing and whiff gains of 0.5 to 2 per 1,000 pitches; (1) holds with a season gain of 0.0002 to 0.0006 nats per plate appearance, larger in March and April. If it passes: check-only replays of the selected model for 2025 and 2026 refresh the context tables (tools/brl_context_table.py), then it goes live like SPRING-02 (model.json, manifest from the ledger branch); CHAIN-03B's game-level rule is not re-run for the same reason",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "TOTALS-05": [

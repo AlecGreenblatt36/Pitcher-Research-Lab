@@ -1,29 +1,11 @@
 {
- "experiment": "SPRING-02",
+ "experiment": "CHAIN-04",
  "arms": [
   {
-   "name": "spring02-c0",
+   "name": "chain04-c0",
    "role": "control",
    "settings": {
-    "name": "spring02-c0",
-    "manifest_branch": "ledger",
-    "physics_params": {
-     "xvalue": true,
-     "recent_days": 30
-    },
-    "pitch_chain": {
-     "half_life": 120.0,
-     "two_strike_groups": true,
-     "pitcher_cells": true,
-     "extra_features": true
-    }
-   }
-  },
-  {
-   "name": "spring02-w05",
-   "role": "candidate",
-   "settings": {
-    "name": "spring02-w05",
+    "name": "chain04-c0",
     "manifest_branch": "ledger",
     "physics_params": {
      "xvalue": true,
@@ -34,7 +16,7 @@
      "two_strike_groups": true,
      "pitcher_cells": true,
      "extra_features": true,
-     "spring_weight": 0.5
+     "spring_weight": 1.0
     },
     "spring_seasons": [
      2021,
@@ -47,10 +29,10 @@
    }
   },
   {
-   "name": "spring02-w10",
+   "name": "chain04-pool-s",
    "role": "candidate",
    "settings": {
-    "name": "spring02-w10",
+    "name": "chain04-pool-s",
     "manifest_branch": "ledger",
     "physics_params": {
      "xvalue": true,
@@ -61,7 +43,67 @@
      "two_strike_groups": true,
      "pitcher_cells": true,
      "extra_features": true,
-     "spring_weight": 1.0
+     "spring_weight": 1.0,
+     "k_b_pool": 100.0,
+     "k_p_pool": 400.0
+    },
+    "spring_seasons": [
+     2021,
+     2022,
+     2023,
+     2024,
+     2025,
+     2026
+    ]
+   }
+  },
+  {
+   "name": "chain04-pool-m",
+   "role": "candidate",
+   "settings": {
+    "name": "chain04-pool-m",
+    "manifest_branch": "ledger",
+    "physics_params": {
+     "xvalue": true,
+     "recent_days": 30
+    },
+    "pitch_chain": {
+     "half_life": 120.0,
+     "two_strike_groups": true,
+     "pitcher_cells": true,
+     "extra_features": true,
+     "spring_weight": 1.0,
+     "k_b_pool": 200.0,
+     "k_p_pool": 800.0
+    },
+    "spring_seasons": [
+     2021,
+     2022,
+     2023,
+     2024,
+     2025,
+     2026
+    ]
+   }
+  },
+  {
+   "name": "chain04-pool-l",
+   "role": "candidate",
+   "settings": {
+    "name": "chain04-pool-l",
+    "manifest_branch": "ledger",
+    "physics_params": {
+     "xvalue": true,
+     "recent_days": 30
+    },
+    "pitch_chain": {
+     "half_life": 120.0,
+     "two_strike_groups": true,
+     "pitcher_cells": true,
+     "extra_features": true,
+     "spring_weight": 1.0,
+     "k_b_pool": 400.0,
+     "k_p_pool": 1600.0
     },
     "spring_seasons": [
      2021,

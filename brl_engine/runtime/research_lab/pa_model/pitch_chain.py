@@ -59,7 +59,11 @@ DEFAULT_PARAMS = {'k_b_swing': 200.0, 'k_b_whiff': 140.0, 'k_b_foul': 150.0, 'k_
                   'two_strike_groups': False, 'pitcher_cells': False, 'extra_features': False,
                   # SPRING-02: spring-training pitches (prepare's 'spring' flag) update the players' counters at this weight
                   # and never the league tables; 0 ignores them
-                  'spring_weight': 0.0}
+                  'spring_weight': 0.0,
+                  # CHAIN-04: two-level shrinkage of the swing and whiff columns. A hitter's (pitcher's) column shrinks toward
+                  # his own pooled deviation over all his columns (itself shrunk toward the league with k_b_pool / k_p_pool
+                  # pitches) instead of straight toward the league, so a thin column borrows from his other pitches; 0 = off
+                  'k_b_pool': 0.0, 'k_p_pool': 0.0}
 EXTRA_FEATURES = ['ch_sw00', 'ch_wh00', 'ch_fo00', 'ch_ip00', 'ch_ball00', 'ch_sw02', 'ch_wh02', 'ch_sw30']
 TWO_STRIKES = (np.arange(N_COUNT) % 3 == 2).astype(int)                # count index -> two strikes
 PRIOR = {'swing': 0.47, 'whiff': 0.24, 'foul': 0.50, 'called': 0.32, 'hbp': 0.004}
@@ -92,6 +96,29 @@ def _dev(y, e, n, k):
     base = np.clip(base, EPS, 1 - EPS)
     est = (y + k * base) / (n + k)
     return _logit(est) - _logit(base)
+
+
+def _dev_h(y, e, n, k, k_pool):
+    """CHAIN-04: ``_dev`` by column with a two-level prior. The player's pooled deviation over all his columns (the last
+    axis), shrunk toward the league with k_pool, moves each column's expected rate on the log-odds scale; the column's own
+    pitches then shrink toward that moved rate with k. k_pool 0 is the one-level ``_dev`` (every column shrinks toward the
+    league). Deviations are against league-expected rates on the same pitches, so columns pool on one scale."""
+    if not k_pool:
+        return _dev(y, e, n, k)
+    y = np.asarray(y, float); e = np.asarray(e, float); n = np.asarray(n, float)
+    d_pool = _dev(y.sum(-1, keepdims=True), e.sum(-1, keepdims=True), n.sum(-1, keepdims=True), k_pool)
+    base = np.clip(np.where(n > 0, e / np.maximum(n, 1e-9), 0.5), EPS, 1 - EPS)
+    prior = _expit(_logit(base) + d_pool)
+    est = (y + k * prior) / (n + k)
+    return _logit(est) - _logit(base)
+
+
+def _dev_col(y_rows, e_rows, n_rows, col, k, k_pool):
+    """``_dev_h`` over whole player rows (m, columns), returning one value per row at its column ``col`` (m,)."""
+    if not k_pool:
+        m = np.arange(len(col))
+        return _dev(y_rows[m, col], e_rows[m, col], n_rows[m, col], k)
+    return _dev_h(y_rows, e_rows, n_rows, k, k_pool)[np.arange(len(col)), col]
 
 
 def _dev_multi(y, e, n, k):
@@ -291,11 +318,12 @@ class ChainState:
         cells = np.arange(N_CELL); counts = np.arange(N_COUNT)
         bcol = self._bcol(cells[None, :], counts[:, None])                                                            # (count, cell)
         pcol = self._pcol(cells)                                                                                      # (cell,)
-        db_sw = _dev(B['sw_y'][br], B['sw_e'][br], B['sw_n'][br], P['k_b_swing'])[:, bcol]                           # (n, count, cell)
-        db_wh = _dev(B['wh_y'][br], B['wh_e'][br], B['wh_n'][br], P['k_b_whiff'])[:, bcol]
+        kb, kp = P.get('k_b_pool') or 0.0, P.get('k_p_pool') or 0.0
+        db_sw = _dev_h(B['sw_y'][br], B['sw_e'][br], B['sw_n'][br], P['k_b_swing'], kb)[:, bcol]                     # (n, count, cell)
+        db_wh = _dev_h(B['wh_y'][br], B['wh_e'][br], B['wh_n'][br], P['k_b_whiff'], kb)[:, bcol]
         db_fo = _dev(B['fo_y'][br], B['fo_e'][br], B['fo_n'][br], P['k_b_foul'])
-        dp_sw = _dev(Pi['sw_y'][pr], Pi['sw_e'][pr], Pi['sw_n'][pr], P['k_p_swing'])[:, pcol]                        # (n, cell)
-        dp_wh = _dev(Pi['wh_y'][pr], Pi['wh_e'][pr], Pi['wh_n'][pr], P['k_p_whiff'])[:, pcol]
+        dp_sw = _dev_h(Pi['sw_y'][pr], Pi['sw_e'][pr], Pi['sw_n'][pr], P['k_p_swing'], kp)[:, pcol]                  # (n, cell)
+        dp_wh = _dev_h(Pi['wh_y'][pr], Pi['wh_e'][pr], Pi['wh_n'][pr], P['k_p_whiff'], kp)[:, pcol]
         dp_cs = _dev(Pi['cs_y'][pr], Pi['cs_e'][pr], Pi['cs_n'][pr], P['k_p_called'])
         W = np.exp(_dev_multi(B['out_y'][br], B['out_e'][br], B['out_n'][br], P['k_b_out'])
                    + _dev_multi(Pi['out_y'][pr], Pi['out_e'][pr], Pi['out_n'][pr], P['k_p_out'])
@@ -401,12 +429,13 @@ class ChainState:
         kr = self.park.rows([str(x) for x in q['park'].to_numpy()], day)
         B, Pi, K = self.bat.a, self.pit.a, self.park.a
         # CHAIN-01 check: the chain's own per-pitch prediction (league + the two deviations) against league-only
-        db_sw = _dev(B['sw_y'][br, grp], B['sw_e'][br, grp], B['sw_n'][br, grp], P['k_b_swing'])
-        dp_sw = _dev(Pi['sw_y'][pr, fam], Pi['sw_e'][pr, fam], Pi['sw_n'][pr, fam], P['k_p_swing'])
+        kb, kp = P.get('k_b_pool') or 0.0, P.get('k_p_pool') or 0.0
+        db_sw = _dev_col(B['sw_y'][br], B['sw_e'][br], B['sw_n'][br], grp, P['k_b_swing'], kb)
+        dp_sw = _dev_col(Pi['sw_y'][pr], Pi['sw_e'][pr], Pi['sw_n'][pr], fam, P['k_p_swing'], kp)
         pred_sw = _expit(_logit(e_sw) + db_sw + dp_sw)
         self._tally('swing', swing.astype(float), e_sw, pred_sw, reg)
-        db_wh = _dev(B['wh_y'][br, grp], B['wh_e'][br, grp], B['wh_n'][br, grp], P['k_b_whiff'])
-        dp_wh = _dev(Pi['wh_y'][pr, fam], Pi['wh_e'][pr, fam], Pi['wh_n'][pr, fam], P['k_p_whiff'])
+        db_wh = _dev_col(B['wh_y'][br], B['wh_e'][br], B['wh_n'][br], grp, P['k_b_whiff'], kb)
+        dp_wh = _dev_col(Pi['wh_y'][pr], Pi['wh_e'][pr], Pi['wh_n'][pr], fam, P['k_p_whiff'], kp)
         pred_wh = _expit(_logit(e_wh) + db_wh + dp_wh)
         self._tally('whiff', whiff.astype(float), e_wh, pred_wh, swing & reg)
         out_idx = q['out'].to_numpy()

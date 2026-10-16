@@ -335,3 +335,43 @@ def test_spring_pitches_move_the_player_and_never_the_league():
     assert not np.allclose(f_plain, f_spring) and np.allclose(ignored.features(1, 101, 'NYY', 'L', 'R', day), f_plain)
     # a park never learns from spring
     assert with_spring.park.a['out_n'][with_spring.park.index['NYY']] == plain.park.a['out_n'][plain.park.index['NYY']]
+
+
+def test_two_level_shrinkage_is_off_by_default_and_lets_a_thin_column_borrow_from_the_player():
+    """CHAIN-04: k_b_pool / k_p_pool 0 reproduce the one-level deviations exactly; with pooling, a hitter who chases
+    everywhere else is expected to chase in a column the chain has never seen him in, and the builder and the state
+    still agree."""
+    # unit: one hitter, three columns; league-expected 0.3 on every pitch
+    y = np.array([[60.0, 60.0, 0.0]]); e = np.array([[30.0, 30.0, 0.0]]); n = np.array([[100.0, 100.0, 0.0]])
+    one = pc._dev(y, e, n, 200.0); two = pc._dev_h(y, e, n, 200.0, 0.0)
+    assert np.allclose(one, two)
+    assert one[0, 2] == 0.0                                             # unseen column: the league
+    pooled = pc._dev_h(y, e, n, 200.0, 100.0)
+    assert pooled[0, 2] > 0.3                                           # ... unless his other columns say he chases
+    assert pooled[0, 0] > one[0, 0]                                     # here the pooled level is above the one-level estimate
+    # _dev_col agrees with _dev_h at the chosen column
+    col = np.array([2, 0])
+    rows = np.vstack([y, y]); er = np.vstack([e, e]); nr = np.vstack([n, n])
+    assert np.allclose(pc._dev_col(rows, er, nr, col, 200.0, 100.0), pc._dev_h(rows, er, nr, 200.0, 100.0)[[0, 1], col])
+    assert np.allclose(pc._dev_col(rows, er, nr, col, 200.0, 0.0), pc._dev(rows, er, nr, 200.0)[[0, 1], col])
+    # whole chain: parity when off, a different (still proper) chain when on, builder and state agree when on
+    pa, pitches = synthetic(seed=11, days=10)
+    base = {'two_strike_groups': True, 'pitcher_cells': True, 'extra_features': True, 'half_life': 60.0}
+    f0, _ = pc.build_features(pa, pitches, base)
+    f0b, _ = pc.build_features(pa, pitches, dict(base, k_b_pool=0.0, k_p_pool=0.0))
+    assert np.allclose(f0.to_numpy(float), f0b.to_numpy(float))
+    on = dict(base, k_b_pool=150.0, k_p_pool=500.0)
+    f1, audit = pc.build_features(pa, pitches, on)
+    assert not np.allclose(f0.to_numpy(float), f1.to_numpy(float))
+    probs = np.exp(f1[[f'ch_{l}' for l in pc.LABELS]].to_numpy()); assert np.allclose(probs.sum(1), 1.0, atol=2e-3)
+    assert audit['per_pitch_check']['swing']['n'] == len(pitches)
+    ordered = pa.sort_values(['date_key', 'game_pk', 'at_bat_number']).reset_index(drop=True)
+    parks = {int(g): str(k) for g, k in zip(ordered['game_pk'], ordered['park'])}
+    state = pc.ChainState.build(pitches, '2026-04-08', on, parks)
+    day = int(pc.day_ordinal(['2026-04-08'])[0])
+    for r in np.where(ordered['date_key'].to_numpy() == '2026-04-08')[0][:20]:
+        got = state.features(int(ordered.batter[r]), int(ordered.pitcher[r]), str(ordered.park[r]), str(ordered.stand[r]), str(ordered.p_throws[r]), day)
+        assert np.allclose(got, f1.iloc[r].to_numpy(float), atol=1e-5)
+    # the chaser (batter 1) is read as a chaser in both versions, and more strongly early with pooling
+    early = ordered.index[(ordered['batter'] == 1) & (ordered['date_key'] == '2026-04-03')]
+    assert (f1.loc[early, 'ch_K'] > f0.loc[early, 'ch_K']).mean() >= 0.5
