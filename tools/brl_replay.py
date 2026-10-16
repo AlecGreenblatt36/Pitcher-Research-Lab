@@ -119,7 +119,7 @@ def _worker(dates: list) -> list:
                         transitions=s.get('transitions'), hitter_lines=bool(s.get('hitter_lines')), running_events=s.get('running_events'),
                         reliever_choice=s.get('reliever_choice'), leash=s.get('leash'), base_state=s.get('base_state'), relief_exit=s.get('relief_exit'), relief_hooks=s.get('relief_hooks'), day_form=s.get('day_form') or 0.0,
                         paired_streams=bool(s.get('paired_streams')), matchup=s.get('matchup'), level_offsets=s.get('level_offsets'),
-                        hazard_correction=s.get('hazard_correction'), pitch_counts=s.get('pitch_counts'), log=lambda m: print(m, flush=True))
+                        hazard_correction=s.get('hazard_correction'), pitch_counts=s.get('pitch_counts'), state_history=s.get('state_history'), log=lambda m: print(m, flush=True))
 
 
 def logit(p):
@@ -192,6 +192,14 @@ def main():
             physics_table = None
         else:
             os.environ['BRL_DATA_ROOT'] = str(data_root)
+            local_manifest = ROOT / 'brl_engine' / 'models' / f'{model}.json'
+            if not local_manifest.exists():
+                # a research arm (LONG-01) keeps its manifest on the ledger branch until it is adopted
+                raw_manifest = read_blob(repo, token, f'models/{model}.json', branch)
+                if raw_manifest is None:
+                    raise ValueError(f'no manifest for model {model}')
+                local_manifest.write_bytes(raw_manifest)
+                receipt['manifest_source'] = f'{branch}:models/{model}.json'
             (ROOT / 'brl_engine' / 'model.json').write_text(json.dumps({'model': model, 'manifest': f'brl_engine/models/{model}.json'}))
             selected = ep.select_model(repo, token, key_hex, data_root)
             model_path = Path(os.environ['BRL_MODEL_PATH']); model_sha256 = os.environ['BRL_MODEL_SHA256']
@@ -215,6 +223,19 @@ def main():
         from brl_replay.games import load_history, reconstruct
         from brl_replay.harness import appearances
         h = load_history(history_path)
+        state_history = None
+        if params.get('history_seasons'):
+            # LONG-01: the model's counters read the sealed 2015-2022 seasons too, as they did in its fit
+            from brl_replay.harness import HISTORY_COLUMNS
+            sys.path.insert(0, str(ROOT / 'tools'))
+            from brl_fit_model import load_history as load_sealed_history
+            from cloud.security import key_bytes as _kb
+            older = load_sealed_history(repo, token, _kb(key_hex), branch, [int(y) for y in params['history_seasons']], HISTORY_COLUMNS)
+            recent = h[HISTORY_COLUMNS].copy()
+            recent['date_key'] = recent['date_key'].astype(str).str[:10]
+            state_history = pd.concat([older, recent], ignore_index=True)
+            state_history = state_history.astype({'game_pk': 'int64', 'at_bat_number': 'int64', 'batter': 'int64', 'pitcher': 'int64'})
+            receipt['history_seasons'] = [int(y) for y in params['history_seasons']]; receipt['state_history_rows'] = int(len(state_history))
         if physics_table is not None and params.get('physics_join'):
             keys = h[['game_pk', 'at_bat_number', 'batter', 'pitcher']].drop_duplicates(['game_pk', 'at_bat_number']).astype('int64')
             before = int(len(physics_table))
@@ -387,7 +408,7 @@ def main():
                        age_layer=age_layer, steals=steals, win_states=(params.get('win_states') if params.get('win_states') == 'split' else bool(params.get('win_states'))), starter_lines=bool(params.get('starter_lines')), role_offsets=role_offsets, real_pa_check=bool(params.get('real_pa_check')), transitions=transitions,
                        hitter_lines=bool(params.get('hitter_lines')), running_events=running_events, reliever_choice=reliever_choice, leash=leash, base_state=base_state, relief_exit=relief_exit, relief_hooks=relief_hooks,
                        day_form=(params['day_form'] if isinstance(params.get('day_form'), dict) else float(params.get('day_form') or 0.0)), paired_streams=bool(params.get('streams')), matchup=matchup,
-                       level_offsets=level_offsets, hazard_correction=hazard_correction, pitch_counts=pitch_counts)
+                       level_offsets=level_offsets, hazard_correction=hazard_correction, pitch_counts=pitch_counts, state_history=state_history)
         if params.get('streams'):
             receipt['paired_streams'] = True
         if params.get('day_form'):

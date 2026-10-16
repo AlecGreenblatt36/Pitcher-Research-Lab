@@ -140,7 +140,7 @@ class HistoryState:
         half_life = float(config.get("history_half_life_days", 0.0) or 0.0)
         weight = None
         if half_life:
-            days = (pd.Timestamp(str(cutoff_date)[:10]) - pd.to_datetime(frame["date_key"].astype(str).str[:10])).dt.days.to_numpy(float)
+            days = (pd.Timestamp(str(cutoff_date)[:10]) - pd.to_datetime(frame["date_key"].astype(str).str[:10], format="%Y-%m-%d")).dt.days.to_numpy(float)
             frame["_w"] = 0.5 ** (days / half_life)
             weight = "_w"
 
