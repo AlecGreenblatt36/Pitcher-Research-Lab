@@ -34,6 +34,26 @@ discovery page stays private.
   and the replay lane to include 2015-2022 (brl_live/history_refresh.py; tools/brl_replay.py) and three seasons of
   physics tables (window_days 1095).
 
+## October 16, afternoon: the pitch-level chain (PITCH-01 to PITCH-03)
+
+Alec's direction after the long-history tests: stop refitting the same model; build the structural change (the Pitch
+Model Plan doc). Built the same afternoon:
+
+- tools/brl_pitch_table.py (workflow BRL pitch table, one job per season): one row per pitch from the sealed study,
+  sealed at private/statcast/pitches-<year>.enc, receipts pitches/<year>.json (2021-2026, 4.33 million pitches).
+- research_lab/pa_model/pitch_chain.py: the chain. 15 cells (family x location), league tables by platoon, count and
+  cell, player and park deviations (log-odds of observed over league-expected, shrunk with STAB-01's constants,
+  400-day half-life), the pitcher's mix by count situation, a Markov chain over the twelve counts per matchup.
+  build_features (date blocked, the benchmark's order) and ChainState (the live provider's state at a cutoff) share
+  one code path; brl_live_tests/test_pitch_chain.py checks the chain reads planted tendencies, leaks nothing from
+  the same day, and that builder and provider agree.
+- Wiring: tools/brl_fit_model.py (settings pitch_chain {params}, pitch_seasons), the provider (bundle keys chain_params
+  and chain_features; pitch_table=), the replay lane (loads the pitch tables when the model's manifest has
+  chain_features; the harness advances the chain date by date), the live runtime (brl_live/physics_inputs.py
+  assemble_pitch_table: season tables plus the day cache; box_runner passes it when the manifest has chain_features).
+- The long-history model (LONG-01/02) stays sealed; STAB-02 found the measured shrinkage adds nothing to the at-bat
+  model. The at-bat model is not refit again on the old feature set.
+
 ## Current checkpoint, October 8, 2026, 5 p.m. Eastern (Claude in charge; additions through October 11 below)
 
 Read this section first, then LEDGER.md (every experiment with its registered prediction, result and decision). The
