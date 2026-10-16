@@ -1,11 +1,11 @@
 {
- "experiment": "BOOST-01",
+ "experiment": "CHAIN-04B",
  "arms": [
   {
-   "name": "boost01-c0",
+   "name": "chain04b-c0",
    "role": "control",
    "settings": {
-    "name": "boost01-c0",
+    "name": "chain04b-c0",
     "manifest_branch": "ledger",
     "physics_params": {
      "xvalue": true,
@@ -16,7 +16,9 @@
      "two_strike_groups": true,
      "pitcher_cells": true,
      "extra_features": true,
-     "spring_weight": 1.0
+     "spring_weight": 1.0,
+     "k_b_pool": 100.0,
+     "k_p_pool": 400.0
     },
     "spring_seasons": [
      2021,
@@ -29,10 +31,10 @@
    }
   },
   {
-   "name": "boost01-a",
+   "name": "chain04b-xs",
    "role": "candidate",
    "settings": {
-    "name": "boost01-a",
+    "name": "chain04b-xs",
     "manifest_branch": "ledger",
     "physics_params": {
      "xvalue": true,
@@ -43,7 +45,9 @@
      "two_strike_groups": true,
      "pitcher_cells": true,
      "extra_features": true,
-     "spring_weight": 1.0
+     "spring_weight": 1.0,
+     "k_b_pool": 50.0,
+     "k_p_pool": 200.0
     },
     "spring_seasons": [
      2021,
@@ -52,28 +56,14 @@
      2024,
      2025,
      2026
-    ],
-    "boost": {
-     "learning_rate": 0.05,
-     "max_leaf_nodes": 15,
-     "min_samples_leaf": 300,
-     "l2_regularization": 1.0,
-     "max_iter": 400,
-     "round_grid": [
-      100,
-      200,
-      300,
-      400
-     ],
-     "folds": 4
-    }
+    ]
    }
   },
   {
-   "name": "boost01-b",
+   "name": "chain04b-xs-wide",
    "role": "candidate",
    "settings": {
-    "name": "boost01-b",
+    "name": "chain04b-xs-wide",
     "manifest_branch": "ledger",
     "physics_params": {
      "xvalue": true,
@@ -84,7 +74,13 @@
      "two_strike_groups": true,
      "pitcher_cells": true,
      "extra_features": true,
-     "spring_weight": 1.0
+     "spring_weight": 1.0,
+     "k_b_pool": 50.0,
+     "k_p_pool": 200.0,
+     "k_b_swing": 300.0,
+     "k_b_whiff": 210.0,
+     "k_p_swing": 1200.0,
+     "k_p_whiff": 540.0
     },
     "spring_seasons": [
      2021,
@@ -93,28 +89,14 @@
      2024,
      2025,
      2026
-    ],
-    "boost": {
-     "learning_rate": 0.05,
-     "max_leaf_nodes": 7,
-     "min_samples_leaf": 1000,
-     "l2_regularization": 5.0,
-     "max_iter": 400,
-     "round_grid": [
-      100,
-      200,
-      300,
-      400
-     ],
-     "folds": 4
-    }
+    ]
    }
   },
   {
-   "name": "boost01-c",
+   "name": "chain04b-xs-tight",
    "role": "candidate",
    "settings": {
-    "name": "boost01-c",
+    "name": "chain04b-xs-tight",
     "manifest_branch": "ledger",
     "physics_params": {
      "xvalue": true,
@@ -125,7 +107,13 @@
      "two_strike_groups": true,
      "pitcher_cells": true,
      "extra_features": true,
-     "spring_weight": 1.0
+     "spring_weight": 1.0,
+     "k_b_pool": 50.0,
+     "k_p_pool": 200.0,
+     "k_b_swing": 133.0,
+     "k_b_whiff": 93.0,
+     "k_p_swing": 533.0,
+     "k_p_whiff": 240.0
     },
     "spring_seasons": [
      2021,
@@ -134,21 +122,7 @@
      2024,
      2025,
      2026
-    ],
-    "boost": {
-     "learning_rate": 0.03,
-     "max_leaf_nodes": 31,
-     "min_samples_leaf": 100,
-     "l2_regularization": 1.0,
-     "max_iter": 600,
-     "round_grid": [
-      150,
-      300,
-      450,
-      600
-     ],
-     "folds": 4
-    }
+    ]
    }
   }
  ]

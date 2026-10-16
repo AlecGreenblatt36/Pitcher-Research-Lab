@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 348,
- "rows": 351,
+ "experiments": 350,
+ "rows": 353,
  "records": {
   "ACC-01": [
    {
@@ -5767,6 +5767,38 @@
      "ID": "BOOST-01",
      "Attempt": "Machine learning in the at-bat model: a gradient-boosted matchup model stacked into the logistic model (Alec: \"Bayesian models? Machine learning? What is there?\"). The logistic model moves every log-odds by a fixed amount per feature; the tracking, the chain and the counters are views of the same two players whose weight should depend on each other (a chain strikeout rate means more behind a pitcher whose whiff physics agree; a thin history should lean on the physics). research_lab/pa_model/boost.py: sklearn histogram gradient boosting, seven classes, on the matchup-level features only (talent counters, handedness, ages, rest, history sizes, physics, chain; never inning, outs, runners, score or times through the order, so one evaluation per matchup per game serves every plate appearance and the simulator's cost is unchanged). Its seven log probabilities join the logistic model's features (gb_<class>) as the chain's do, so the logistic fit and its calibration decide how much to believe the trees. Leakage: fit on 2023-2024 only; training rows predicted out of fold (4 groups of games); 2025 and 2026 by the model fit on every training row, the one in the bundle; rounds picked on the 2025 tuning block from one long fit's staged predictions. Provider: BoostPath appends the columns from the row's own inputs, cached per matchup; the replay and live lanes need nothing else. Arms (tools/fit_arms.json) on the live settings (spring02-w10): c0 = refit control; a = 15 leaves, 300 per leaf, rate 0.05, up to 400 rounds; b = 7 leaves, 1,000 per leaf, L2 5; c = 31 leaves, 100 per leaf, rate 0.03, up to 600 rounds",
      "Disposition and evidence": "**Registered in the commit that added this row, before any arm was fit.** Same selection as CHAIN-02 (lowest 2025 tuning-block log loss among candidates). Passes if the selected arm's blended 2026 log loss beats c0's with the 95% game-bootstrap interval below zero and calibration within 0.015; recorded alongside: its talent-only family's 2026 loss against c0's (the gain should show without the in-game state too) and the trees' own rounds and tuning loss. Prediction: a gain of 0.0003 to 0.0010 nats per plate appearance; 0.001 or more would be the largest single step since the physics features. If it passes: full 1,000-world replays of 2025 and 2026 under CHAIN-03B's four game-level gates (the whole prediction surface changes, so the game lane is re-run), context tables from its own check-only replays, then live",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
+   }
+  ],
+  "CHAIN-04B": [
+   {
+    "id": "CHAIN-04B",
+    "columns": {
+     "ID": "CHAIN-04B",
+     "Attempt": "The pool constants one step further (CHAIN-04's gain rose as they fell: 400/1,600 -0.00017, 200/800 -0.00023, 100/400 -0.00028). Arms (tools/fit_arms.json) on the live model's settings (chain04-pool-s): c0 = refit control; xs = k_b_pool 50, k_p_pool 200 with the cell constants as they are (swing 200/800, whiff 140/360); xs-wide = the same pool constants with the cell constants x1.5 (300/1,200, 210/540: trust the pooled prior more); xs-tight = x0.67 (133/533, 93/240: trust the column's own pitches more)",
+     "Disposition and evidence": "**Registered in the commit that added this row, before any arm was fit.** Same selection and gates as CHAIN-04: lowest 2025 tuning-block log loss among candidates; passes if (1) its blended 2026 log loss beats c0's with the 95% game-bootstrap interval below zero and calibration within 0.015, and (2) per-pitch swing and whiff log loss both no worse than c0's. Prediction: xs beats c0 by 0.00005 to 0.00015 (diminishing); the cell constants matter less than the pool constants (wide and tight within 0.0001 of xs either way). If it passes: check-only replays refresh the context tables, then live, as CHAIN-04",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
+   }
+  ],
+  "CHAIN-05": [
+   {
+    "id": "CHAIN-05",
+    "columns": {
+     "ID": "CHAIN-05",
+     "Attempt": "The pitcher's mix by the hitter's side. The chain's pitch mix (which of the 15 cells a pitcher throws in each count situation) is one table per pitcher and one league table, whatever the hitter's handedness; real mixes differ a lot by side (changeups to the opposite side, sliders to the same side), so every hitter is assumed to see a pitcher's average mix. Chain parameter platoon_mix: the league mix and each pitcher's mix are kept per platoon; a pitcher's mix against a side shrinks (k_mix_platoon pitches) toward his pooled mix moved by the league's platoon ratio, and the pooled mix toward the league (k_mix); pitch_chain.py, tested on planted platoon mixes (test_platoon_mix_...). Arms on the live model's settings: c0 = refit control; pm20, pm40, pm80 = platoon_mix with k_mix_platoon 20, 40, 80",
+     "Disposition and evidence": "**Registered in the commit that added this row, before any arm was fit.** Same selection and gate (1) as CHAIN-04; (2) here is the chain's per-pitch swing log loss no worse than c0's (the mix enters every per-pitch prediction through the cell weights; whiffs and the ball-in-play mix are conditional on the cell and should not move). Prediction: a gain of 0.0001 to 0.0004 nats per plate appearance, largest for hitters who face few pitchers of one hand. If it passes: check-only replays refresh the context tables, then live, as CHAIN-04",
      "Delta corrected Brier, 2026": "registered"
     },
     "registered_before_run": true,
