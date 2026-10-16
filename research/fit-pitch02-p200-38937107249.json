@@ -1,0 +1,152 @@
+{
+ "schema": "brl.model-fit-receipt.v1",
+ "name": "pitch02-p200",
+ "run_id": "38937107249",
+ "started_at": "2026-10-16T17:06:46.185025+00:00",
+ "stages": [
+  {
+   "stage": "restore data package",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load plate appearances",
+   "at_seconds": 2.5
+  },
+  {
+   "stage": "load physics tables",
+   "at_seconds": 3.7
+  },
+  {
+   "stage": "build physics features",
+   "at_seconds": 10.1
+  },
+  {
+   "stage": "load pitch tables",
+   "at_seconds": 56.6
+  }
+ ],
+ "physics_params": {
+  "xvalue": true,
+  "recent_days": 30
+ },
+ "config": {
+  "train_years": [
+   2023,
+   2024
+  ],
+  "validation_years": [
+   2025
+  ],
+  "test_years": [
+   2026
+  ]
+ },
+ "pa_rows_by_season": {
+  "2023": 184104,
+  "2024": 182449,
+  "2025": 182926,
+  "2026": 183849
+ },
+ "missing_pct_by_season": {
+  "age_bat": {
+   "2023": 0.0,
+   "2024": 0.0,
+   "2025": 0.0,
+   "2026": 0.0
+  },
+  "age_pit": {
+   "2023": 0.0,
+   "2024": 0.0,
+   "2025": 0.0,
+   "2026": 0.0
+  },
+  "batter_days_since_prev_game": {
+   "2023": 1.22,
+   "2024": 1.18,
+   "2025": 1.23,
+   "2026": 1.18
+  },
+  "park": {
+   "2023": 0.0,
+   "2024": 0.0,
+   "2025": 0.0,
+   "2026": 0.0
+  }
+ },
+ "pa_rows": 733328,
+ "seasons": [
+  2023,
+  2024,
+  2025,
+  2026
+ ],
+ "history_sha256": "e503e223eb4d6a2222ed35abe0439a0e6eea7fe85bf9061bcac96d0065a8a197",
+ "physics_rows": 745639,
+ "physics_join": {
+  "pa_rows": 733328,
+  "physics_rows": 745639,
+  "joined": 733328,
+  "ids_match": 733027,
+  "params": {
+   "k_rate": 150.0,
+   "k_bip": 60.0,
+   "k_velo": 100.0,
+   "xvalue": true,
+   "recent_days": 30,
+   "k_recent_pitch": 100.0,
+   "k_recent_bip": 40.0,
+   "k_cell": 40.0,
+   "pitch_types": false,
+   "k_type": 60.0,
+   "defense": false,
+   "k_def": 400.0,
+   "defense_days": 365,
+   "environment": false,
+   "env_days": 30,
+   "k_env": 2000.0,
+   "matchup": false,
+   "workload": false,
+   "aging": false,
+   "decay_days": 0,
+   "k_dec": 60.0,
+   "window_days": 0,
+   "k_overrides": null
+  },
+  "league_fastball_velocity": 94.10527696108461,
+  "league_exit_velocity": 88.41879062041012,
+  "league_hard_hit_rate": 0.3956972599867757,
+  "league_whiff_per_swing": 0.23186054567102798,
+  "league_ground_ball_share": 0.4400732981760124
+ },
+ "status": "failed",
+ "error": "KeyError: 'date_key'",
+ "where": [
+  {
+   "file": "brl_fit_model.py",
+   "function": "main",
+   "line": 216
+  },
+  {
+   "file": "brl_fit_model.py",
+   "function": "<genexpr>",
+   "line": 216
+  },
+  {
+   "file": "brl_fit_model.py",
+   "function": "load_history",
+   "line": 137
+  },
+  {
+   "file": "frame.py",
+   "function": "__getitem__",
+   "line": 4378
+  },
+  {
+   "file": "base.py",
+   "function": "get_loc",
+   "line": 3648
+  }
+ ],
+ "finished_at": "2026-10-16T17:07:44.624214+00:00",
+ "seconds": 58.4
+}
