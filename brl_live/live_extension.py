@@ -130,7 +130,8 @@ def make_history_engine(parameters: dict, history_path: Path, physics_table=None
         manager.adjust_label = 'postseason starter usage (expected batters x%.2f)' % scale
     elif leash_label:
         manager.adjust_label = leash_label
-    return GameSimulator(provider, manager_policy=manager,
+    from .boxscore import pitch_counts_for
+    return GameSimulator(provider, manager_policy=manager, pitch_counts=pitch_counts_for(_ADJ, provider),
                          config=SimulationConfig(**parameters.get('config', {}))), matchup
 
 

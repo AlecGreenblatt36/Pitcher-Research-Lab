@@ -423,6 +423,9 @@ ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         # POST-03 (queued for Alec, off): {'cuts': [0.1518, 0.1876], 'scale': [0.81, 0.89, 0.94]} by the starter's
         # strikeouts minus walks this season (postseason starts 2023-2026: 0.772, 0.846 and 0.900 of his regular length)
         'postseason_starter_tiers':None,
+        # LEASH-04 (off until its replays pass): 'chain' draws each plate appearance's pitches from the matchup's own count
+        # chain (needs a model with chain features) and the starter's exit reads LEASH-03's correction with pitch terms
+        'pitch_counts':None,
         # LEASH-02 (on from October 11, 2026; its gates held on both seasons): the inning correction on the starter-exit
         # hazard's log-odds, regular season only (brl_live/hazard_correction.json); the postseason keeps its measured usage
         # on the plain hazard
@@ -452,18 +455,41 @@ def leash_for(settings):
     return _KERNEL['l']
 
 HAZARD_CORRECTION_PATH=Path(__file__).resolve().parent/'hazard_correction.json'
+HAZARD_CORRECTION_V2_PATH=Path(__file__).resolve().parent/'hazard_correction_v2.json'
+
 def hazard_correction_for(settings,game_type):
-    """LEASH-02's correction ({'terms','coef'}) for a regular-season game when switched on, else None. The live file must
-    hold LEASH-02's 32 terms in order: LEASH-03's pitch terms read pitch counts that only the engine's pitch draws give,
-    and the box worlds, the market worlds and live updates build their own simulators without them."""
+    """LEASH-02's correction ({'terms','coef'}) for a regular-season game when switched on, else None. With LEASH-04's pitch
+    draws on (settings pitch_counts 'chain') the correction is LEASH-03's refit with pitch terms (44 terms), which every
+    live simulator can read because each one draws pitches (pitch_counts_for); otherwise the live file must hold LEASH-02's
+    32 terms in order."""
     if not settings.get('hazard_correction') or str(game_type)!='R':return None
+    from research_lab.game_sim.starter_hazard import CORRECTION_TERMS,CORRECTION_TERMS_V2
+    if settings.get('pitch_counts')=='chain':
+        if 'hc2' not in _KERNEL:
+            doc=json.loads(HAZARD_CORRECTION_V2_PATH.read_text())
+            if list(doc['terms'])!=list(CORRECTION_TERMS_V2) or len(doc['coef'])!=len(CORRECTION_TERMS_V2):
+                raise ValueError('brl_live/hazard_correction_v2.json must hold LEASH-03\'s %d terms in order'%len(CORRECTION_TERMS_V2))
+            _KERNEL['hc2']={'terms':doc['terms'],'coef':doc['coef']}
+        return _KERNEL['hc2']
     if 'hc' not in _KERNEL:
-        from research_lab.game_sim.starter_hazard import CORRECTION_TERMS
         doc=json.loads(HAZARD_CORRECTION_PATH.read_text())
         if list(doc['terms'])!=list(CORRECTION_TERMS) or len(doc['coef'])!=len(CORRECTION_TERMS):
             raise ValueError('brl_live/hazard_correction.json must hold LEASH-02\'s %d terms in order; pitch terms (LEASH-03) are not wired into every simulator'%len(CORRECTION_TERMS))
         _KERNEL['hc']={'terms':doc['terms'],'coef':doc['coef']}
     return _KERNEL['hc']
+
+PITCH_COUNTS_FALLBACK_PATH=Path(__file__).resolve().parent/'pitch_counts_by_outcome.json'
+
+def pitch_counts_for(settings,provider):
+    """LEASH-04: the matchup pitch-count draws for a provider that carries the chain when switched on, else None. Every
+    live simulator (the engine, the box worlds, the market worlds) is built through this so the starter's exit reads the
+    same pitch counts everywhere."""
+    if settings.get('pitch_counts')!='chain':return None
+    if getattr(provider,'chain',None) is None:
+        raise ValueError('pitch counts from the chain need a model with chain features')
+    from research_lab.game_sim.pitch_counts import PitchCounts,MatchupPitchCounts
+    if 'pc_fallback' not in _KERNEL:_KERNEL['pc_fallback']=PitchCounts(json.loads(PITCH_COUNTS_FALLBACK_PATH.read_text()))
+    return MatchupPitchCounts(provider,_KERNEL['pc_fallback'])
 
 def leash_pexp(leash,history,pexp,starters,date,league):
     """pexp with each of the game's starters moved by the leash table, from his regular-season appearances before the
@@ -642,7 +668,9 @@ def run_box_worlds(engine,matchup,history,date,seeds,full_history=None,settings=
     if running is not None:adjust_label=list(adjust_label)+[running.name]
     manager,choice_label=manager_for(engine.manager,settings,teams,getattr(matchup,'game_type','R'))
     if choice_label:adjust_label=list(adjust_label)+[choice_label]
-    sim=ObservedSimulator(provider,config=engine.config,manager_policy=manager,steals=steals,transitions=kernel,running_events=running)
+    pitches=pitch_counts_for(settings,provider)
+    if pitches is not None:adjust_label=list(adjust_label)+[pitches.name]
+    sim=ObservedSimulator(provider,config=engine.config,manager_policy=manager,steals=steals,transitions=kernel,running_events=running,pitch_counts=pitches)
     accumulator=BoxAccumulator(matchup);results=[]
     for seed in seeds:
         if world_hook:world_hook(int(seed))
@@ -657,7 +685,7 @@ def run_box_worlds(engine,matchup,history,date,seeds,full_history=None,settings=
         # never stacked on a day-form shock already in the provider; a failure here costs the market numbers only, never
         # the forecast (the page falls back to the plain worlds)
         try:
-            payload['market_worlds']=market_worlds(lambda pv:ObservedSimulator(pv,config=engine.config,manager_policy=manager,steals=steals,transitions=kernel,running_events=running),
+            payload['market_worlds']=market_worlds(lambda pv:ObservedSimulator(pv,config=engine.config,manager_policy=manager,steals=steals,transitions=kernel,running_events=running,pitch_counts=pitch_counts_for(settings,pv)),
                                                    matchup,provider,seeds,settings['market_day_form'],world_hook)
         except Exception as exc:
             payload['market_worlds']={'error':type(exc).__name__+': '+str(exc)[:160]}
