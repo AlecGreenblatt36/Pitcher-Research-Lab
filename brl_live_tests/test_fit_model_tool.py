@@ -63,3 +63,18 @@ def test_game_losses_sum_the_log_loss_of_each_test_game(tmp_path):
     path = tmp_path / 'p.csv.gz'; pd.DataFrame(rows).to_csv(path, index=False)
     out = tool.game_losses(path)
     assert out['7'][0] == 2 and abs(out['7'][1] - 2 * np.log(2)) < 1e-8 and abs(out['9'][2] - np.log(4)) < 1e-8
+
+
+def test_settings_overrides_keep_the_model_name():
+    """An arm's settings set config fields without touching anything else (a loop once reused the model's name)."""
+    spec2 = importlib.util.spec_from_file_location('brl_fit_tool3', Path(__file__).parents[1] / 'tools' / 'brl_fit_model.py')
+    tool = importlib.util.module_from_spec(spec2); spec2.loader.exec_module(tool)
+    settings = {'name': 'stab02-s1', 'history_half_life_days': 365, 'regularization_grid': [1e-3, 1e-2],
+                'batter_class_prior_pa': [160, 113, 232, 299, 1390, 317, 1756], 'pitcher_class_prior_pa': [401, 223, 489, 695, 2152, 1040, 5877]}
+    out = tool.config_overrides(settings)
+    assert out['history_half_life_days'] == 365.0 and out['regularization_grid'] == (1e-3, 1e-2) and out['pitcher_class_prior_pa'][-1] == 5877.0
+    assert settings['name'] == 'stab02-s1' and 'name' not in out
+    config = PAConfig(train_years=(2016, 2024), validation_years=(2025,), test_years=(2026,), **out)
+    assert config.batter_class_prior_pa[1] == 113.0
+    src = (Path(__file__).parents[1] / 'tools' / 'brl_fit_model.py').read_text()
+    assert 'for name in' not in src

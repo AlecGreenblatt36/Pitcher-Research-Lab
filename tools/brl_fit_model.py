@@ -82,6 +82,18 @@ def model_purpose(name: str) -> str:
     return f'model:{name}'
 
 
+def config_overrides(settings: dict) -> dict:
+    """PAConfig fields a fit's settings may set (priors, the half-life, the regularization grid, STAB-02's class priors)."""
+    out = {k: float(settings[k]) for k in ('park_prior_pa', 'player_prior_pa', 'split_prior_pa', 'recent_prior_pa', 'history_half_life_days')
+           if settings.get(k) is not None}
+    if settings.get('regularization_grid'):
+        out['regularization_grid'] = tuple(float(c) for c in settings['regularization_grid'])
+    for field in ('batter_class_prior_pa', 'pitcher_class_prior_pa'):
+        if settings.get(field):
+            out[field] = tuple(float(v) for v in settings[field])
+    return out
+
+
 def game_losses(path) -> dict:
     """Per test game: plate appearances and the summed log loss of the blended candidate and of the full model alone.
     Aggregates only (no player rows); arms fit in separate jobs are compared game by game from these (LONG-01)."""
@@ -151,12 +163,7 @@ def main():
         # Training window from tools/fit_model_params.json (default: the frozen 2023-2024 protocol). A retrained model
         # (train 2023-2025, validate on 2026, no test season yet) reports its metrics on 2026's final block (RETRAIN-01).
         # TOTALS-07: the park counter's prior (plate appearances) can be set from the settings; the default is the frozen 1,000.
-        priors = {k: float(settings[k]) for k in ('park_prior_pa', 'player_prior_pa', 'split_prior_pa', 'recent_prior_pa', 'history_half_life_days') if settings.get(k) is not None}
-        if settings.get('regularization_grid'):
-            priors['regularization_grid'] = tuple(float(c) for c in settings['regularization_grid'])
-        for name in ('batter_class_prior_pa', 'pitcher_class_prior_pa'):      # STAB-02
-            if settings.get(name):
-                priors[name] = tuple(float(v) for v in settings[name])
+        priors = config_overrides(settings)
         config = PAConfig(train_years=tuple(settings.get('train_years') or (2023, 2024)), validation_years=tuple(settings.get('validation_years') or (2025,)),
                           test_years=tuple(settings.get('test_years') or (2026,)), evaluation_mode='locked_final', **priors)
         receipt['config'] = {'train_years': list(config.train_years), 'validation_years': list(config.validation_years), 'test_years': list(config.test_years),
