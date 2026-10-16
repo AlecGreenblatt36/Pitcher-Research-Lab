@@ -1,10 +1,10 @@
 {
- "created_at": "2026-10-16T20:59:09.118183+00:00",
+ "created_at": "2026-10-16T21:14:07.518583+00:00",
  "status": "iteration_completed",
  "runtime": "brl_engine (public code, sealed data)",
  "ledger_branch": "brl-live-data",
  "shadow": false,
- "live_forecasts_created": 0,
+ "live_forecasts_created": 1,
  "raw_data_published": false,
  "stage": "complete",
  "secret_present": true,
@@ -18,15 +18,15 @@
  ],
  "data_source": "brl-data-202610070629",
  "pa_model_selected": {
-  "name": "pitch02b-v2h120",
-  "source": "private/models/pitch02b-v2h120.enc",
-  "sha256": "ae193be86a20f137b4452e1ff13504b1cdf83002b05536cc4576408a646995fc",
-  "fitted_at": "2026-10-16T17:53:03.295581+00:00",
+  "name": "spring02-w10",
+  "source": "private/models/spring02-w10.enc",
+  "sha256": "677848986bea69c485621a4275d6c8eaee88d8a41bae93abfb37d0a0be47247d",
+  "fitted_at": "2026-10-16T20:57:25.461382+00:00",
   "physics_features": 30
  },
- "forecasts": 72,
- "box_forecasts_created": 0,
- "box_forecasts": 67,
+ "forecasts": 73,
+ "box_forecasts_created": 1,
+ "box_forecasts": 68,
  "player_scored_games": 14,
  "scored_games": 14,
  "skill_scored_games": 13,
@@ -36,8 +36,8 @@
  "history_refresh_note": null,
  "history_day_notes": {},
  "pa_model": {
-  "name": "pitch02b-v2h120",
-  "sha256": "ae193be86a20f137b4452e1ff13504b1cdf83002b05536cc4576408a646995fc",
+  "name": "spring02-w10",
+  "sha256": "677848986bea69c485621a4275d6c8eaee88d8a41bae93abfb37d0a0be47247d",
   "physics": {
    "seasons": {
     "2025": {
@@ -81,10 +81,35 @@
       "through": "2026-10-15"
      }
     },
-    "spring": {},
+    "spring": {
+     "2021": {
+      "rows": 43961,
+      "through": "2021-03-30"
+     },
+     "2022": {
+      "rows": 28674,
+      "through": "2022-04-05"
+     },
+     "2023": {
+      "rows": 57298,
+      "through": "2023-03-28"
+     },
+     "2024": {
+      "rows": 54243,
+      "through": "2024-03-26"
+     },
+     "2025": {
+      "rows": 88987,
+      "through": "2025-03-25"
+     },
+     "2026": {
+      "rows": 132967,
+      "through": "2026-03-24"
+     }
+    },
     "day_cache_days": 0,
     "day_cache_rows": 0,
-    "rows": 4334696,
+    "rows": 4740826,
     "through": "2026-10-15"
    }
   }
@@ -240,10 +265,10 @@
   "skipped": 0
  },
  "storage_read_audit": {
-  "contents_verified": 40,
-  "blob_fallbacks": 31,
-  "bytes_verified": 184035061,
-  "requests": 125,
-  "rate_limit_remaining": 4215
+  "contents_verified": 41,
+  "blob_fallbacks": 36,
+  "bytes_verified": 195689480,
+  "requests": 144,
+  "rate_limit_remaining": 4718
  }
 }
