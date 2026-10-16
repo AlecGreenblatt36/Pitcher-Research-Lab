@@ -68,11 +68,12 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def expected_feature_columns(physics_features=()) -> list[str]:
+def expected_feature_columns(physics_features=(), chain_features=()) -> list[str]:
     columns = [f"p_{g}_{label}" for g in GROUPS for label in MODEL_LABELS]
     columns += [f"lr_{g}_{label}" for g in RATIO_GROUPS for label in MODEL_LABELS]
     columns += list(CONTEXT_COLUMNS)
     columns += [str(c) for c in physics_features]
+    columns += [str(c) for c in chain_features]
     return columns
 
 
@@ -221,6 +222,20 @@ class _LinearPath:
 
 
 _PHYSICS_STATES: dict = {}
+_CHAIN_STATES: dict = {}
+
+
+def _cached_chain_state(table, cutoff_date: str, params: dict, parks: dict):
+    """One ChainState per (pitch table object, cutoff, parameters): a live run builds several engines for the same date."""
+    from research_lab.pa_model.pitch_chain import ChainState
+    key = (id(table), len(table), str(cutoff_date)[:10], tuple(sorted((k, str(v)) for k, v in params.items())))
+    state = _CHAIN_STATES.get(key)
+    if state is None:
+        if len(_CHAIN_STATES) > 4:
+            _CHAIN_STATES.clear()
+        state = ChainState.build(table, cutoff_date, params, parks)
+        _CHAIN_STATES[key] = state
+    return state
 
 
 def _cached_physics_state(table, cutoff_date: str, params: dict):
@@ -255,11 +270,15 @@ class LockedPAModelProvider:
     # Per-PA pitch physics table (research_lab.pa_model.physics.TABLE_COLUMNS plus run_value), required
     # when the model bundle declares physics features; ignored by a bundle without them.
     physics_table: pd.DataFrame | None = None
+    # Per-pitch table (tools/brl_pitch_table.py columns), required when the bundle declares pitch-chain features (PITCH-02).
+    pitch_table: pd.DataFrame | None = None
     model_sha256: str = field(init=False, default="")
     history_sha256: str = field(init=False, default="")
     calls: int = field(init=False, default=0)
     physics: object = field(init=False, default=None)
     physics_features: tuple = field(init=False, default=())
+    chain: object = field(init=False, default=None)
+    chain_features: tuple = field(init=False, default=())
 
     def __post_init__(self) -> None:
         self.artifact_path = Path(self.artifact_path)
@@ -286,7 +305,8 @@ class LockedPAModelProvider:
         if tuple(bundle.get("labels", ())) != MODEL_LABELS:
             raise LockedModelError(f"label order mismatch: {bundle.get('labels')}")
         self.physics_features = tuple(str(c) for c in (bundle.get("physics_features") or ()))
-        if list(fitted.feature_columns) != expected_feature_columns(self.physics_features):
+        self.chain_features = tuple(str(c) for c in (bundle.get("chain_features") or ()))
+        if list(fitted.feature_columns) != expected_feature_columns(self.physics_features, self.chain_features):
             raise LockedModelError("feature schema mismatch between artifact and provider")
         if bundle.get("name"):
             self.name = str(bundle["name"])
@@ -301,6 +321,8 @@ class LockedPAModelProvider:
             if list(self.physics.names) != list(self.physics_features):
                 raise LockedModelError("physics state schema mismatch")
         self._physics_cache: dict = {}
+        self._chain_cache: dict = {}
+        self._chain_params = dict(bundle.get("chain_params") or {})
         self._fitted = fitted
         self._linear = _LinearPath.from_fitted(fitted)
         self._eps = float(self._config.get("min_probability", 1e-7))
@@ -312,6 +334,14 @@ class LockedPAModelProvider:
         )
         self.state = HistoryState.build(history, self.cutoff_date, self._config)
         self._talent_cache: dict = {}
+        if self.chain_features:
+            from research_lab.pa_model.pitch_chain import feature_names as chain_feature_names
+            if list(chain_feature_names(self._chain_params)) != list(self.chain_features):
+                raise LockedModelError("pitch-chain feature list does not match its parameters")
+            if self.pitch_table is None:
+                raise LockedModelError("model uses pitch-chain features but no pitch table was supplied")
+            parks = {int(g): str(k) for g, k in zip(history["game_pk"], history["park"].astype(str))}
+            self.chain = _cached_chain_state(self.pitch_table, self.cutoff_date, self._chain_params, parks)
         if self.physics is not None and getattr(self.physics, 'aging', None) is None:
             from research_lab.pa_model.physics import uses_history
             if uses_history(self.physics.sums.p):
@@ -431,6 +461,14 @@ class LockedPAModelProvider:
                 vector = self.physics.features(batter_id, pitcher_id, team_defense=(key[2] if uses_defense else None), age_bat=age_bat, age_pit=age_pit)
                 self._physics_cache[key] = vector
             parts.append(vector)
+        if self.chain is not None:
+            ckey = (batter_id, pitcher_id, stand, throws, self.park)
+            cvec = self._chain_cache.get(ckey)
+            if cvec is None:
+                from research_lab.pa_model.pitch_chain import day_ordinal
+                cvec = self.chain.features(batter_id, pitcher_id, str(self.park), str(stand), str(throws), int(day_ordinal([self.game_date])[0]))
+                self._chain_cache[ckey] = cvec
+            parts.append(cvec)
         # Training stored features as float32; replicate exactly.
         row = np.concatenate(parts).astype(np.float32).astype(float)
         return row, meta

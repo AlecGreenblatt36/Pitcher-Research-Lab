@@ -20,7 +20,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / 'brl_engine' / 'runtime'))
-sys.path.insert(0, str(ROOT / 'tools'))
 
 PITCH_COLUMNS = ['date_key', 'game_pk', 'at_bat_number', 'pitch_number', 'pitcher', 'batter', 'stand', 'p_throws', 'balls', 'strikes',
                  'ptype', 'code', 'speed', 'spin', 'pfx_x', 'pfx_z', 'plate_x', 'plate_z', 'zone', 'ext', 'outcome', 'last']
@@ -59,6 +58,7 @@ def main():
     import pandas as pd
     from cloud.security import seal, unseal, key_bytes, sha
     from brl_live.bookkeeping_season import study_path, study_purpose
+    sys.path.append(str(ROOT / 'tools'))          # after the packages: tools/brl_replay.py must not shadow the brl_replay package
     from brl_fit_model import read_blob, put_bytes
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']; key = key_bytes(os.environ['BRL_PA_PACKAGE_KEY'])
     branch = os.environ.get('BRL_LEDGER_BRANCH', 'brl-live-data')

@@ -1,247 +1,46 @@
 {
- "experiment": "STAB-02",
- "base": "long01-b365",
+ "experiment": "PITCH-02",
  "arms": [
   {
-   "name": "stab02-s0",
+   "name": "pitch02-c0",
    "role": "control",
    "settings": {
-    "name": "stab02-s0",
+    "name": "pitch02-c0",
     "manifest_branch": "ledger",
     "physics_params": {
      "xvalue": true,
-     "recent_days": 30,
-     "window_days": 1095
-    },
-    "history_seasons": [
-     2015,
-     2016,
-     2017,
-     2018,
-     2019,
-     2020,
-     2021,
-     2022
-    ],
-    "history_half_life_days": 365.0,
-    "train_years": [
-     2016,
-     2017,
-     2018,
-     2019,
-     2020,
-     2021,
-     2022,
-     2023,
-     2024
-    ],
-    "regularization_grid": [
-     0.0001,
-     0.001,
-     0.01,
-     0.1
-    ]
+     "recent_days": 30
+    }
    }
   },
   {
-   "name": "stab02-s1",
+   "name": "pitch02-p400",
    "role": "candidate",
    "settings": {
-    "name": "stab02-s1",
+    "name": "pitch02-p400",
     "manifest_branch": "ledger",
     "physics_params": {
      "xvalue": true,
-     "recent_days": 30,
-     "window_days": 1095
+     "recent_days": 30
     },
-    "history_seasons": [
-     2015,
-     2016,
-     2017,
-     2018,
-     2019,
-     2020,
-     2021,
-     2022
-    ],
-    "history_half_life_days": 365.0,
-    "train_years": [
-     2016,
-     2017,
-     2018,
-     2019,
-     2020,
-     2021,
-     2022,
-     2023,
-     2024
-    ],
-    "regularization_grid": [
-     0.0001,
-     0.001,
-     0.01,
-     0.1
-    ],
-    "batter_class_prior_pa": [
-     160,
-     113,
-     232,
-     299,
-     1390,
-     317,
-     1756
-    ],
-    "pitcher_class_prior_pa": [
-     401,
-     223,
-     489,
-     695,
-     2152,
-     1040,
-     5877
-    ]
+    "pitch_chain": {
+     "half_life": 400.0
+    }
    }
   },
   {
-   "name": "stab02-s2",
+   "name": "pitch02-p200",
    "role": "candidate",
    "settings": {
-    "name": "stab02-s2",
+    "name": "pitch02-p200",
     "manifest_branch": "ledger",
     "physics_params": {
      "xvalue": true,
-     "recent_days": 30,
-     "window_days": 1095,
-     "k_overrides": {
-      "b_ev": 74,
-      "b_la": 103,
-      "b_hard": 79,
-      "b_barrel": 101,
-      "b_whiff": 137,
-      "b_chase": 198,
-      "b_swing": 412,
-      "b_zcontact": 143,
-      "p_velo": 52,
-      "p_spin": 64,
-      "p_ivb": 29,
-      "p_hb": 61,
-      "p_whiff": 366,
-      "p_chase": 1013,
-      "p_zone": 961,
-      "p_csw": 1157,
-      "p_ev": 263,
-      "p_hard": 454,
-      "p_gb": 112
-     }
+     "recent_days": 30
     },
-    "history_seasons": [
-     2015,
-     2016,
-     2017,
-     2018,
-     2019,
-     2020,
-     2021,
-     2022
-    ],
-    "history_half_life_days": 365.0,
-    "train_years": [
-     2016,
-     2017,
-     2018,
-     2019,
-     2020,
-     2021,
-     2022,
-     2023,
-     2024
-    ],
-    "regularization_grid": [
-     0.0001,
-     0.001,
-     0.01,
-     0.1
-    ]
-   }
-  },
-  {
-   "name": "stab02-s3",
-   "role": "candidate",
-   "settings": {
-    "name": "stab02-s3",
-    "manifest_branch": "ledger",
-    "physics_params": {
-     "xvalue": true,
-     "recent_days": 30,
-     "window_days": 1095,
-     "k_overrides": {
-      "b_ev": 74,
-      "b_la": 103,
-      "b_hard": 79,
-      "b_barrel": 101,
-      "b_whiff": 137,
-      "b_chase": 198,
-      "b_swing": 412,
-      "b_zcontact": 143,
-      "p_velo": 52,
-      "p_spin": 64,
-      "p_ivb": 29,
-      "p_hb": 61,
-      "p_whiff": 366,
-      "p_chase": 1013,
-      "p_zone": 961,
-      "p_csw": 1157,
-      "p_ev": 263,
-      "p_hard": 454,
-      "p_gb": 112
-     }
-    },
-    "history_seasons": [
-     2015,
-     2016,
-     2017,
-     2018,
-     2019,
-     2020,
-     2021,
-     2022
-    ],
-    "history_half_life_days": 365.0,
-    "train_years": [
-     2016,
-     2017,
-     2018,
-     2019,
-     2020,
-     2021,
-     2022,
-     2023,
-     2024
-    ],
-    "regularization_grid": [
-     0.0001,
-     0.001,
-     0.01,
-     0.1
-    ],
-    "batter_class_prior_pa": [
-     160,
-     113,
-     232,
-     299,
-     1390,
-     317,
-     1756
-    ],
-    "pitcher_class_prior_pa": [
-     401,
-     223,
-     489,
-     695,
-     2152,
-     1040,
-     5877
-    ]
+    "pitch_chain": {
+     "half_life": 200.0
+    }
    }
   }
  ]

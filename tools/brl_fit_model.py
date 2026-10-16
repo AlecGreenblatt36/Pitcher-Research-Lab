@@ -113,6 +113,14 @@ def history_purpose(year: int) -> str:
     return f'pa-history-season-{int(year)}'
 
 
+def pitches_path(year: int) -> str:
+    return f'private/statcast/pitches-{int(year)}.enc'
+
+
+def pitches_purpose(year: int) -> str:
+    return f'pitch-table-season-{int(year)}'
+
+
 def load_history(repo, token, key, branch, years, columns) -> pd.DataFrame:
     """The sealed HIST-01 seasons, regular season only, in the data package's columns."""
     frames = []
@@ -194,9 +202,40 @@ def main():
         stage('build physics features')
         extras, audit = phys.build_features(pa, table, params)
         receipt['physics_join'] = audit
+        chain_extra = {}
+        if settings.get('pitch_chain') is not None:
+            # PITCH-02: the pitch-level chain's seven log-probabilities and expected pitches per plate appearance, date blocked,
+            # from the sealed per-pitch tables (PITCH-01) of pitch_seasons (default: 2021 to the last season in the history)
+            from research_lab.pa_model import pitch_chain as pc
+            chain_params = dict(settings.get('pitch_chain') or {})
+            pitch_seasons = [int(y) for y in (settings.get('pitch_seasons') or range(2021, max(receipt['seasons']) + 1))]
+            stage('load pitch tables')
+            parks = {int(g): str(k) for g, k in zip(pa['game_pk'], pa['park'])}
+            older = [y for y in pitch_seasons if y not in set(receipt['seasons']) and y <= 2022]
+            if older:
+                for g, k in zip(*(load_history(repo, token, key, branch, older, ['game_pk', 'park'])[c] for c in ('game_pk', 'park'))):
+                    parks.setdefault(int(g), str(k))
+            prepared = []
+            for year in pitch_seasons:
+                raw = read_blob(repo, token, pitches_path(year), branch)
+                if raw is None:
+                    raise ValueError(f'pitch table for {year} is not sealed yet')
+                frame = pd.read_csv(io.BytesIO(gzip.decompress(unseal(raw, key, pitches_purpose(year)))), low_memory=False,
+                                    dtype={'ptype': 'category', 'code': 'category', 'stand': 'category', 'p_throws': 'category', 'outcome': 'category'})
+                prepared.append(pc.prepare(frame, parks)); del frame
+            prepared = pd.concat(prepared, ignore_index=True)
+            receipt['pitch_rows'] = int(len(prepared)); receipt['pitch_seasons'] = pitch_seasons
+            stage('build chain features')
+            chain_feats, chain_audit = pc.build_features(pa, prepared, chain_params, parks, prepared=True)
+            del prepared
+            receipt['chain'] = chain_audit
+            for column in chain_feats.columns:
+                extras[column] = chain_feats[column].to_numpy()
+            chain_extra = {'chain_params': dict(pc.DEFAULT_PARAMS, **chain_params), 'chain_features': list(chain_feats.columns)}
         stage('run the locked benchmark with physics features')
         out = work / 'model'
-        bundle_extra = {'physics_params': dict(phys.DEFAULT_PARAMS, **params), 'physics_features': list(extras.columns), 'name': name}
+        physics_columns = [c for c in extras.columns if c not in chain_extra.get('chain_features', [])]
+        bundle_extra = {'physics_params': dict(phys.DEFAULT_PARAMS, **params), 'physics_features': physics_columns, 'name': name, **chain_extra}
         report = run_benchmark(pa, out, config, extra_features=extras, bundle_extra=bundle_extra, blend_as_test=bool(settings.get('blend_as_test')))
         stage('seal the model')
         raw_model = (out / 'pa_model.joblib').read_bytes()
@@ -208,7 +247,8 @@ def main():
                         'model_sha256': hashlib.sha256(raw_model).hexdigest(), 'cipher_sha256': hashlib.sha256(cipher).hexdigest(), 'model_bytes': len(raw_model),
                         'history_sha256': receipt['history_sha256'], 'physics_params': bundle_extra['physics_params'], 'physics_features': bundle_extra['physics_features'],
                         'physics_seasons': receipt['seasons'], 'physics_rows': receipt['physics_rows'], 'physics_join': audit,
-                        'history_seasons': history_seasons, 'config': config.to_dict(), 'benchmark': json.loads(json.dumps(public_report, default=float)), 'fitted_at': datetime.now(timezone.utc).isoformat(), 'run_id': run_id}
+                        'history_seasons': history_seasons, **{k: v for k, v in chain_extra.items()},
+                        'pitch_seasons': receipt.get('pitch_seasons'), 'config': config.to_dict(), 'benchmark': json.loads(json.dumps(public_report, default=float)), 'fitted_at': datetime.now(timezone.utc).isoformat(), 'run_id': run_id}
         text = json.dumps(manifest_doc, indent=1, default=float)
         for secret in (key_hex, token):
             text = text.replace(secret, '[redacted]')

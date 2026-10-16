@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 338,
- "rows": 341,
+ "experiments": 339,
+ "rows": 343,
  "records": {
   "ACC-01": [
    {
@@ -260,6 +260,20 @@
     "runs": [],
     "frozen_commits": [],
     "status": "product"
+   },
+   {
+    "id": "PITCH-01",
+    "columns": {
+     "ID": "PITCH-01",
+     "Attempt": "The pitch-level chain, part one: the data and the per-pitch models (Alec, October 16: a model that trusts a player in weeks, not half a season; the plan is the Pitch Model Plan doc). Data: one row per pitch from the sealed pitch-physics study of each season 2021 to 2026 (tools/brl_pitch_table.py, workflow BRL pitch table; private/statcast/pitches-<year>.enc; receipts pitches/<year>.json: 4.33 million pitches, 99.95% with MLB's zone number). Model: research_lab.pa_model.pitch_chain. Every pitch sits in one of 15 cells (family fastball, breaking, offspeed x location top, middle, bottom of the zone, above it, below it). League tables by platoon, count and cell (swing, whiff per swing, foul per contact, called strike per take, hit by pitch, the ball-in-play outcome mix per cell) are cumulative; a hitter's deviations (swing and whiff per family in or out of the zone, fouls, ball-in-play outcomes), a pitcher's (his pitch mix by count situation, swings and whiffs induced per family, called strikes, outcomes allowed) and a park's (outcomes) are log-odds of observed against league-expected on the same pitches, shrunk with STAB-01's next-season constants and decayed with a 400-day half-life. Chosen over boosting on purpose: a structural model whose every number can be read, that runs as table lookups in the live simulator, and whose per-pitch tables are the same thing the game plans already show. Check: as the chain walks the history, its own per-pitch predictions (league plus the two deviations) are scored against league-only tables on every pitch before it is absorbed",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the chain ran on real pitches.** Gate: on 2021-2026, the chain's per-pitch log loss below league-only for swings, whiffs per swing and ball-in-play outcomes (gain per 1,000 pitches above zero for all three); on made-up seasons with planted tendencies the chain reads them (chasers strike out more, Coors homers more) and the live provider's chain equals the chronological builder's (tested). What it decides: the chain's inputs for PITCH-02",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "RT-01": [
@@ -5584,6 +5598,22 @@
     ],
     "frozen_commits": [],
     "status": "failed; not adopted"
+   }
+  ],
+  "PITCH-02": [
+   {
+    "id": "PITCH-02",
+    "columns": {
+     "ID": "PITCH-02",
+     "Attempt": "The chain in the plate-appearance model (stacking): the chain's seven log-probabilities and expected pitches per plate appearance, date blocked, as features of the locked benchmark next to the physics features; the logistic layer learns how much to trust them. Arms (workflow BRL fit arms, tools/fit_arms.json): c0 = the live settings (control), p400 = physics + chain (half-life 400 days), p200 = half-life 200 days, each trained 2023-2024, validated 2025, tested 2026",
+     "Disposition and evidence": "**Registered in the commit that added this row, before any arm was fit.** Same selection as LONG-01: the candidate with the lowest 2025 tuning-block log loss is the one tested. Passes if its blended 2026 log loss beats c0's by at least 0.002 nats per plate appearance (the Pitch Model Plan's bar, twice the physics gain) with the 95% game-bootstrap interval below zero, and its largest class calibration gap stays below 0.015. Prediction: 0.002 to 0.004, most of it on strikeouts and walks. If it passes, PITCH-03 (full replays of 2025 and 2026 with the chain in the live provider, the LONG-01 stage 2 rule) decides whether it goes live; if it fails, the chain stays in research and the ledger says what the interval was",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "TOTALS-05": [

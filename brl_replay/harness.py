@@ -157,7 +157,7 @@ def bats_lookup(h: pd.DataFrame, cutoff: str) -> dict:
 
 def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates: list, *, model_path: Path, model_sha256: str,
                  history_path: Path, hazard_path: Path, n_sims: int, physics_table=None, offsets=None, rest=False, environment=None,
-                 team_offsets=None, age_layer=None, steals=None, win_states=False, starter_lines=False, role_offsets=None, real_pa_check=False, transitions=None, hitter_lines=False, running_events=None, reliever_choice=None, leash=None, base_state=None, relief_exit=None, relief_hooks=None, day_form=0.0, paired_streams=False, matchup=None, level_offsets=None, hazard_correction=None, pitch_counts=None, state_history=None, log=print) -> list[dict]:
+                 team_offsets=None, age_layer=None, steals=None, win_states=False, starter_lines=False, role_offsets=None, real_pa_check=False, transitions=None, hitter_lines=False, running_events=None, reliever_choice=None, leash=None, base_state=None, relief_exit=None, relief_hooks=None, day_form=0.0, paired_streams=False, matchup=None, level_offsets=None, hazard_correction=None, pitch_counts=None, state_history=None, pitch_table=None, log=print) -> list[dict]:
     """Simulate every game on the given dates; one record per game (win counts, run histograms, starter outs).
 
     environment: optional {game_pk: seven log-multipliers} (brl_live/environment.py); games without an entry are unadjusted.
@@ -189,6 +189,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
     pitch_counts: optional research_lab.game_sim.pitch_counts.PitchCounts: each plate appearance's pitches drawn by outcome
         (LEASH-03), for the hazard correction's pitch terms.
     state_history: optional plate-appearance rows (HISTORY_COLUMNS) the model's history state is built from instead of h.
+    pitch_table: the per-pitch table (tools/brl_pitch_table.py) a model with pitch-chain features needs (PITCH-02).
     hazard_correction: optional {'terms', 'coef'}: LEASH-02's correction on the starter-exit hazard's log-odds by inning, its end
         and the score (research_lab.game_sim.starter_hazard.CORRECTION_TERMS).
     paired_streams: tie every random draw to a team's plate appearance number (engine paired streams), so replays of two
@@ -207,7 +208,11 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
     hcols = (state_history if state_history is not None else h)[HISTORY_COLUMNS]
     first = dates[0]
     base = LockedPAModelProvider(model_path, history_path, cutoff_date=first, game_date=first, park="NYY",
-                                 expected_sha256=model_sha256, physics_table=physics_table)
+                                 expected_sha256=model_sha256, physics_table=physics_table, pitch_table=pitch_table)
+    chain_q = None
+    if base.chain is not None:
+        from research_lab.pa_model.pitch_chain import prepare
+        chain_q = prepare(pitch_table, {int(g): str(k) for g, k in zip(hcols["game_pk"], hcols["park"].astype(str))})
     cached = CachedProvider(base)
     provider = ContextAdjust(cached, offsets) if offsets else cached
     chain = [('bare', cached)] + ([('context', provider)] if offsets else [])      # each layer, for the real plate appearance check
@@ -384,6 +389,11 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
             base._physics_cache = {}
             if 'f_def' in base.physics_features:
                 defense = DefenseState.build(h, date, params)
+        if base.chain is not None:
+            # PITCH-02: the chain's tables advance to the start of this date (pitches of earlier dates only)
+            from research_lab.pa_model.pitch_chain import day_ordinal
+            base.chain.absorb_through(chain_q, int(day_ordinal([date])[0]))
+            base._chain_cache = {}
         pexp, texp = tendencies_at(h, date, float(hazard["league_mean_bf"]))
         hands = bats_lookup(h, date)
         first_stand = h[h["date_key"] == date].groupby("batter")["stand"].first().to_dict()

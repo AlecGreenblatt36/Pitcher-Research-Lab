@@ -119,7 +119,7 @@ def _worker(dates: list) -> list:
                         transitions=s.get('transitions'), hitter_lines=bool(s.get('hitter_lines')), running_events=s.get('running_events'),
                         reliever_choice=s.get('reliever_choice'), leash=s.get('leash'), base_state=s.get('base_state'), relief_exit=s.get('relief_exit'), relief_hooks=s.get('relief_hooks'), day_form=s.get('day_form') or 0.0,
                         paired_streams=bool(s.get('paired_streams')), matchup=s.get('matchup'), level_offsets=s.get('level_offsets'),
-                        hazard_correction=s.get('hazard_correction'), pitch_counts=s.get('pitch_counts'), state_history=s.get('state_history'), log=lambda m: print(m, flush=True))
+                        hazard_correction=s.get('hazard_correction'), pitch_counts=s.get('pitch_counts'), state_history=s.get('state_history'), pitch_table=s.get('pitch_table'), log=lambda m: print(m, flush=True))
 
 
 def logit(p):
@@ -186,6 +186,7 @@ def main():
         ep.restore_package(repo, token, key_hex, manifest, data_root)
         history_path = next(data_root.rglob('plate_appearances.csv.gz'))
         hazard_path = next(data_root.rglob('starter_hazard.joblib'))
+        pitch_table = None
         if model == 'locked-pa-2026-v1':
             model_path = next(data_root.rglob('pa_model.joblib'))
             from research_lab.game_sim.locked_pa_provider import EXPECTED_MODEL_SHA256 as model_sha256
@@ -219,6 +220,22 @@ def main():
             physics_table = pd.concat(tables, ignore_index=True)
             physics_table['date_key'] = physics_table['date_key'].astype(str).str[:10]
             receipt['physics_rows'] = int(len(physics_table))
+            model_manifest = json.loads((ROOT / 'brl_engine' / 'models' / f'{model}.json').read_text())
+            if model_manifest.get('chain_features'):
+                # PITCH-02: a model with pitch-chain features reads the sealed per-pitch tables of its fit's seasons
+                stage('load pitch tables')
+                sys.path.insert(0, str(ROOT / 'tools'))
+                from brl_fit_model import pitches_path, pitches_purpose
+                pitch_years = [int(y) for y in (params.get('pitch_years') or model_manifest.get('pitch_seasons') or range(2021, season + 1)) if int(y) <= season]
+                parts = []
+                for year in pitch_years:
+                    raw = read_blob(repo, token, pitches_path(year), branch)
+                    if raw is None:
+                        raise ValueError(f'pitch table for {year} is not sealed')
+                    parts.append(pd.read_csv(io.BytesIO(gzip.decompress(unseal(raw, key_bytes(key_hex), pitches_purpose(year)))), low_memory=False,
+                                             dtype={'ptype': 'category', 'code': 'category', 'stand': 'category', 'p_throws': 'category', 'outcome': 'category'}))
+                pitch_table = pd.concat(parts, ignore_index=True); del parts
+                receipt['pitch_years'] = pitch_years; receipt['pitch_rows'] = int(len(pitch_table))
         stage('load history and reconstruct games')
         from brl_replay.games import load_history, reconstruct
         from brl_replay.harness import appearances
@@ -408,7 +425,7 @@ def main():
                        age_layer=age_layer, steals=steals, win_states=(params.get('win_states') if params.get('win_states') == 'split' else bool(params.get('win_states'))), starter_lines=bool(params.get('starter_lines')), role_offsets=role_offsets, real_pa_check=bool(params.get('real_pa_check')), transitions=transitions,
                        hitter_lines=bool(params.get('hitter_lines')), running_events=running_events, reliever_choice=reliever_choice, leash=leash, base_state=base_state, relief_exit=relief_exit, relief_hooks=relief_hooks,
                        day_form=(params['day_form'] if isinstance(params.get('day_form'), dict) else float(params.get('day_form') or 0.0)), paired_streams=bool(params.get('streams')), matchup=matchup,
-                       level_offsets=level_offsets, hazard_correction=hazard_correction, pitch_counts=pitch_counts, state_history=state_history)
+                       level_offsets=level_offsets, hazard_correction=hazard_correction, pitch_counts=pitch_counts, state_history=state_history, pitch_table=pitch_table)
         if params.get('streams'):
             receipt['paired_streams'] = True
         if params.get('day_form'):
