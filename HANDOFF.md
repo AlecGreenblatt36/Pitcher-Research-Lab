@@ -116,8 +116,10 @@ Model Plan doc). Built the same afternoon:
   blends our mean with the line). The mean total itself is right on average and by bins of our mean, so the miss is
   noise in our mean relative to the market's line, not a bias; when we sit more than a run above the line the truth is
   0.5 to 0.75 runs below us, and the reverse. One lead: in 2026 the 228 games whose shorter starter was expected to
-  get 10 outs or fewer (openers and bullpen games) scored 8.17 runs against our 8.93 (the line 8.50); 2025's 64 such
-  games went the other way. Park residuals do not repeat across seasons (0.07), so parks are not the cause.
+  get 10 outs or fewer (openers and bullpen games) scored 8.17 runs against our 8.93 (the line 8.50); 2025's 109 such
+  games went the other way (9.51 against 8.83), and the 2026 gap sits on the side with the regular starter (allowed
+  3.89 against 4.40 simulated), not the opener's, so it reads as noise, closed. Park residuals do not repeat across
+  seasons (0.07), so parks are not the cause either.
 - Runner lesson (October 16, 7:20 pm): six replay runs (48 shard jobs) launched at 7:08 pm filled the account's
   concurrent job slots, and the live run's publish job (a one-minute job) sat queued behind them from 7:16 pm with the
   forecast already computed. Do not launch a replay batch inside the hour before a live window; two runs at a time
