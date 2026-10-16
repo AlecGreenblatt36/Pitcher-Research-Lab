@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 336,
- "rows": 339,
+ "experiments": 337,
+ "rows": 340,
  "records": {
   "ACC-01": [
    {
@@ -5537,6 +5537,24 @@
     "registered_before_run": true,
     "diagnostic": false,
     "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
+   }
+  ],
+  "STAB-02": [
+   {
+    "id": "STAB-02",
+    "columns": {
+     "ID": "STAB-02",
+     "Attempt": "STAB-01's follow-up under its rule: shrink each rate by what STAB-01 measured instead of one setting for everything. Settings are the 2021-2026 next-season k (the Hawk-Eye era the model predicts in; STAB-01's run 38908755674 added the remaining outcome classes and physics rates). Outcome classes in the order BIP out, K, BB+HBP, 1B, 2B+3B, HR, other reach: batters 160, 113, 232, 299, 1390, 317, 1756 plate appearances (now 180 for all); pitchers 401, 223, 489, 695, 2152, 1040, 5877 (now 180) (PAConfig.batter_class_prior_pa and pitcher_class_prior_pa; each class shrunk by its own amount, then renormalized; builder and live provider agree, tested). Physics features (physics k_overrides): batter exit velocity 74, launch angle 103, hard-hit 79, barrel 101 balls in play; whiff 137 swings, chase 198 out-of-zone pitches, swing rate 412 pitches, zone contact 143 zone swings; pitcher fastball speed 52, spin 64, rise 29, run 61 fastballs; whiff 366 swings, chase 1013, zone rate 961 and called-strike-plus-whiff 1157 pitches; exit velocity 263, hard-hit 454 and ground balls 112 allowed balls in play. Base: LONG-01's selected arm if it passes its stage 1, otherwise the control c0 (the live model's settings). Four arms in one fit-arms run: s0 = the base unchanged (control), s1 = base + class priors, s2 = base + physics settings, s3 = base + both",
+     "Disposition and evidence": "**Registered in the commit that added this row, before any STAB-02 arm was fit (LONG-01's arms were running, results unseen).** Same rules as LONG-01: the selected arm is the one of s1-s3 with the lowest 2025 tuning-block log loss; it passes stage 1 if its blended 2026 log loss beats s0's with the 95% game-bootstrap interval below zero and its largest class calibration gap stays below 0.015. Prediction: a small gain, 0.0002 to 0.001 nats per plate appearance (the logistic layer already discounts noisy features in part, so the shrinkage mostly fixes what it cannot: one weight for players with very different samples). Stage 2 as LONG-01's: 2025 and 2026 replays against pa-2026-v2-physics; live only if the simulator's Brier is lower in both seasons and the pooled blend's 95% upper bound is below +0.0005",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [
+     "38908755674"
+    ],
     "frozen_commits": [],
     "status": "registered"
    }
