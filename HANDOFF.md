@@ -108,6 +108,21 @@ Model Plan doc). Built the same afternoon:
   chain04b-xs-tight (7:00 pm Eastern) with its own context tables. CHAIN-05 (the pitcher's mix by the hitter's side)
   failed at every constant; platoon_mix stays off (a clean negative, see the row). BOOST-02 (the trees on this base)
   is the next arms run; if it passes, full replays under CHAIN-03B's gates before it goes live.
+- Totals, looked at again on LEASH-04's replays (described after looking, no experiment): our chance of the over at
+  the closing line is worse than a constant (Brier 0.2509 in 2025 and 0.2531 in 2026 against 0.2491 and 0.2500; the
+  market's 0.2497 and 0.2498), with a calibration slope of 0.16 to 0.29: when we say 36% it happens 46 to 51%, when
+  we say 62 to 70% it happens 50 to 61%. The page already shows no over/under price for this reason (the taught total
+  blends our mean with the line). The mean total itself is right on average and by bins of our mean, so the miss is
+  noise in our mean relative to the market's line, not a bias; when we sit more than a run above the line the truth is
+  0.5 to 0.75 runs below us, and the reverse. One lead: in 2026 the 228 games whose shorter starter was expected to
+  get 10 outs or fewer (openers and bullpen games) scored 8.17 runs against our 8.93 (the line 8.50); 2025's 64 such
+  games went the other way. Park residuals do not repeat across seasons (0.07), so parks are not the cause.
+- BULLPEN-07 registered and its six replays launched (sigma 0.75, 1.25, 2.0, both seasons, LEASH-04's settings): a
+  per-game shock on each reliever's utility in the fitted choice, the day's unseen availability. On today's settings
+  relievers shown at 60% or more pitch 52% of the time; the mean is right. Smallest sigma meeting the gates goes live.
+- Tonight's scorer: tonight/score_sheet.py (scratch) reads the day file's actual box after the game and scores every
+  statement of the confidence sheet (said vs happened, Brier). Yesterday's game as a dry run: the reliever chances
+  were the misses (Booser 91%, Sulser 73%, Seymour 71% did not pitch in a 3-2 game), the rest as expected.
 - LEASH-04 passed on both seasons (full scoring in the row) and is live: ADJUST pitch_counts 'chain'; the v2 hazard
   correction follows for regular-season games.
 - LEASH-04 (pitch counts from the matchup's chain): replays leash04-chain-pen-1000-2025 (run 38958506391) and -2026
