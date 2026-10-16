@@ -456,3 +456,47 @@ def test_opponent_adjusted_expectations_are_off_by_default_and_keep_builder_and_
     _, _, _, _, wh_on = st_on._transitions([50], [999], ['UNK'], ['R'], ['R'], day2)
     _, _, _, _, wh_ref = st_on._transitions([60], [999], ['UNK'], ['R'], ['R'], day2)       # hitter 60 saw both pitchers
     assert wh_off[0, 0, 5] > wh_on[0, 0, 5] and abs(wh_on[0, 0, 5] - wh_ref[0, 0, 5]) < abs(wh_off[0, 0, 5] - wh_ref[0, 0, 5])
+
+
+def test_fastball_tiers_are_off_by_default_and_let_velocity_speak_through_the_league_table():
+    """CHAIN-07: fb_tiers False keeps the 15-cell chain exactly; on, fastballs sit in three speed cells per location, the
+    league learns that 96+ fastballs get more whiffs, and a pitcher whose mix shows hard fastballs is expected to get
+    whiffs before his own whiff deviation has data. Builder and state agree."""
+    pa, pitches = synthetic(seed=31, days=12)
+    base = {'two_strike_groups': True, 'pitcher_cells': True, 'extra_features': True, 'half_life': 60.0, 'k_b_pool': 50.0, 'k_p_pool': 200.0}
+    f0, _ = pc.build_features(pa, pitches, base); f0b, _ = pc.build_features(pa, pitches, dict(base, fb_tiers=False))
+    assert np.allclose(f0.to_numpy(float), f0b.to_numpy(float))
+    assert pc.fb_tier([91.0, 93.0, 95.9, 96.0, np.nan]).tolist() == [0, 1, 1, 2, 1]
+    on = dict(base, fb_tiers=True)
+    f1, audit = pc.build_features(pa, pitches, on)
+    assert audit['per_pitch_check']['swing']['n'] == len(pitches)
+    probs = np.exp(f1[[f'ch_{l}' for l in pc.LABELS]].to_numpy()); assert np.allclose(probs.sum(1), 1.0, atol=2e-3)
+    ordered = pa.sort_values(['date_key', 'game_pk', 'at_bat_number']).reset_index(drop=True)
+    parks = {int(g): str(k) for g, k in zip(ordered['game_pk'], ordered['park'])}
+    state = pc.ChainState.build(pitches, '2026-04-10', on, parks); day = int(pc.day_ordinal(['2026-04-10'])[0])
+    assert state.ncell == 25 and state.L['n'].shape == (2, pc.N_COUNT, 25) and state.cell_group.max() == 5 and state.nb == 12
+    for r in np.where(ordered['date_key'].to_numpy() == '2026-04-10')[0][:20]:
+        got = state.features(int(ordered.batter[r]), int(ordered.pitcher[r]), str(ordered.park[r]), str(ordered.stand[r]), str(ordered.p_throws[r]), day)
+        assert np.allclose(got, f1.iloc[r].to_numpy(float), atol=1e-5)
+    # planted: the league whiffs far more on 98-mph fastballs than on 90-mph ones (many pitchers, so no single arm learns it);
+    # then two new pitchers show one game of fastballs each, one at 98 and one at 90, with identical results
+    rng = np.random.default_rng(5); rows = []; start = pd.Timestamp('2026-05-01')
+    for d in range(30):
+        day_s = (start + pd.Timedelta(days=d)).strftime('%Y-%m-%d')
+        for i in range(60):
+            p_ = 400 + (i % 20); b_ = 100 + (i % 9); speed = 98.0 if p_ % 2 else 90.0
+            code = 'S' if rng.random() < (0.45 if speed > 95 else 0.15) else ('F' if rng.random() < 0.5 else 'X')
+            rows.append([day_s, 7000 + d, i + 1, 1, p_, b_, 'R', 'R', 0, 0, 'FF', code, speed, 2300, -4.0, 10.0, 0.0, 2.6, 5, 6.3, 'K' if code == 'S' else 'BIP_OUT'])
+    for i in range(40):                                                                   # the two new arms, one game, same results
+        for p_, speed in ((900, 98.0), (901, 90.0)):
+            code = 'F' if i % 2 else 'X'
+            rows.append(['2026-05-31', 7100 + p_, i + 1, 1, p_, 100 + (i % 9), 'R', 'R', 0, 0, 'FF', code, speed, 2300, -4.0, 10.0, 0.0, 2.6, 5, 6.3, 'BIP_OUT'])
+    q = pd.DataFrame(rows, columns=[c for c in pitches.columns if c != 'last']); q['last'] = 1
+    day2 = int(pc.day_ordinal(['2026-06-01'])[0])
+    st_on = pc.ChainState.build(q, '2026-06-01', on, {}); st_off = pc.ChainState.build(q, '2026-06-01', base, {})
+    _, _, _, _, wh_hard = st_on._transitions([555], [900], ['UNK'], ['R'], ['R'], day2)
+    _, _, _, _, wh_soft = st_on._transitions([555], [901], ['UNK'], ['R'], ['R'], day2)
+    T_hard, _, M_hard, _, _ = st_on._transitions([555], [900], ['UNK'], ['R'], ['R'], day2); T_soft, _, _, _, _ = st_on._transitions([555], [901], ['UNK'], ['R'], ['R'], day2)
+    assert T_hard["wh"][0, 0] > T_soft["wh"][0, 0] * 1.3                                   # whiffs per pitch at 0-0: velocity speaks
+    T_hard0, _, _, _, _ = st_off._transitions([555], [900], ['UNK'], ['R'], ['R'], day2); T_soft0, _, _, _, _ = st_off._transitions([555], [901], ['UNK'], ['R'], ['R'], day2)
+    assert abs(T_hard0['wh'][0, 0] - T_soft0['wh'][0, 0]) < 1e-9                             # off: the two arms look the same

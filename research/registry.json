@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 353,
- "rows": 356,
+ "experiments": 354,
+ "rows": 357,
  "records": {
   "ACC-01": [
    {
@@ -5858,8 +5858,24 @@
     "id": "CHAIN-06",
     "columns": {
      "ID": "CHAIN-06",
-     "Attempt": "Opponent-adjusted expectations in the chain. A hitter's swing and whiff counters hold observed against league-expected on the same pitches (platoon, count, cell); the pitcher who threw them is not in the expectation, so a hitter who faced the league's best whiff arms for a month reads as a whiffer, and a pitcher who faced free swingers reads as a whiff pitcher. With chain parameter opp_adjust each side's expectation carries the other side's current deviation (the chain's own prediction without the player: the hitter's counters take league moved by the pitcher's deviation, the pitcher's take league moved by the hitter's), the standard strength-of-schedule adjustment (pitch_chain.py absorb_date; test_opponent_adjusted_...: a planted hitter who saw only the whiff machine is no longer read as a whiffer). The league tables, the per-pitch check and the ball-in-play counters are unchanged. Arms (tools/fit_arms.json) on the live model's settings (chain04b-xs-tight): c0 = refit control; opp = opp_adjust",
+     "Attempt": "Opponent-adjusted expectations in the chain. A hitter's swing and whiff counters hold observed against league-expected on the same pitches (platoon, count, cell); the pitcher who threw them is not in the expectation, so a hitter who faced the league's best whiff arms for a month reads as a whiffer, and a pitcher who faced free swingers reads as a whiff pitcher. With chain parameter opp_adjust each side's expectation carries the other side's current deviation (the chain's own prediction without the player: the hitter's counters take league moved by the pitcher's deviation, the pitcher's take league moved by the hitter's), the standard strength-of-schedule adjustment (pitch_chain.py absorb_date; test_opponent_adjusted_...: a planted hitter who saw only the whiff machine is no longer read as a whiffer). The league tables, the per-pitch check and the ball-in-play counters are unchanged. Arms (tools/fit_arms.json) on the live model's settings (chain04b-xs-tight): c0 = refit control; opp = opp_adjust (the run is shared with CHAIN-07: its arms tiers and both ride along; this row's gate is judged on the opp arm against c0, the run's selection rule picks the arm to adopt)",
      "Disposition and evidence": "**Registered in the commit that added this row, before any arm was fit.** Same selection and gates as CHAIN-04: (1) the candidate beats c0 on blended 2026 log loss with the 95% game-bootstrap interval below zero and calibration within 0.015; (2) per-pitch swing and whiff log loss both no worse than c0's. Prediction: a gain of 0.00005 to 0.0002 nats per plate appearance, concentrated in April and May (by midseason opponents average out); per-pitch whiffs 0.5 to 2 per 1,000 better. If it passes: check-only replays refresh the context tables, then live, as CHAIN-04",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
+   }
+  ],
+  "CHAIN-07": [
+   {
+    "id": "CHAIN-07",
+    "columns": {
+     "ID": "CHAIN-07",
+     "Attempt": "Fastball speed in the chain's cells. The 15 cells are pitch family by location; a 91-mph fastball and a 99-mph fastball in the same spot share a cell, so the league table cannot know that the hard one gets more whiffs, and a pitcher's velocity reaches the chain only through his own whiff deviation (240 swings to stabilize). With chain parameter fb_tiers the fastball family splits by speed (under 93, 93 to 95.9, 96 and up mph; an unknown speed is the middle tier; FB_TIER_EDGES) into 25 cells for the league tables, the pitcher's mix and the ball-in-play mix; the hitters' and pitchers' deviation columns keep the three families (12 and 6 columns), so no player counter gets thinner. A new arm's mix shows his velocity after about 40 pitches (k_mix), and the league table for those cells gives him the whiffs that go with it (pitch_chain.py cell_index, fb_tier; prepare now carries fam, reg and vt; test_fastball_tiers_...: planted, a one-game arm at 98 is expected to miss 1.5 times the bats of the same arm at 90 and the two are identical with tiers off; builder and state agree; 15-cell parity exact). Arms, sharing CHAIN-06's run: c0 = refit control; tiers = fb_tiers; both = fb_tiers with opp_adjust (additivity)",
+     "Disposition and evidence": "**Registered in the commit that added this row, before any arm was fit.** Gates as CHAIN-04, judged on the tiers arm against c0: (1) blended 2026 log loss better with the 95% game-bootstrap interval below zero and calibration within 0.015; (2) per-pitch swing and whiff log loss both no worse than c0's. The run's selection rule (lowest 2025 tuning-block log loss among opp, tiers, both) picks the arm adopted if its own gate (1) holds. Prediction: tiers gains 0.0001 to 0.0004 nats per plate appearance, largest for pitchers with few pitches in the banks (April, call-ups), and per-pitch whiffs 2 to 5 per 1,000 better; both adds the two gains. If it passes: check-only replays refresh the context tables, then live, as CHAIN-04",
      "Delta corrected Brier, 2026": "registered"
     },
     "registered_before_run": true,

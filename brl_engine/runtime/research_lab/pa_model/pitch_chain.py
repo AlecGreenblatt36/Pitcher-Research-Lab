@@ -71,7 +71,12 @@ DEFAULT_PARAMS = {'k_b_swing': 200.0, 'k_b_whiff': 140.0, 'k_b_foul': 150.0, 'k_
                   # CHAIN-06: opponent-adjusted expectations. A hitter's swing and whiff counters measure him against what the
                   # league does on the same pitches moved by the pitcher's own deviation (and the pitcher's against the hitter's),
                   # so a month of tough opponents does not read as a bad month; off, both measure against the league alone
-                  'opp_adjust': False}
+                  'opp_adjust': False,
+                  # CHAIN-07: fastballs split by speed into three cells per location (under 93, 93 to 95.9, 96 and up mph) for the
+                  # league tables, the mix and the ball-in-play mix, so a pitcher's velocity speaks before his own deviations
+                  # accumulate; hitters' and pitchers' deviation columns keep the three families. Off: 15 cells
+                  'fb_tiers': False}
+FB_TIER_EDGES = (93.0, 96.0)
 EXTRA_FEATURES = ['ch_sw00', 'ch_wh00', 'ch_fo00', 'ch_ip00', 'ch_ball00', 'ch_sw02', 'ch_wh02', 'ch_sw30']
 TWO_STRIKES = (np.arange(N_COUNT) % 3 == 2).astype(int)                # count index -> two strikes
 PRIOR = {'swing': 0.47, 'whiff': 0.24, 'foul': 0.50, 'called': 0.32, 'hbp': 0.004}
@@ -160,6 +165,15 @@ def region_of(zone, plate_x, plate_z) -> np.ndarray:
     return reg
 
 
+def fb_tier(speed) -> np.ndarray:
+    """CHAIN-07: a fastball's speed tier, 0 under 93 mph, 1 from 93 to 95.9, 2 from 96 up; an unknown speed is the middle tier."""
+    v = pd.to_numeric(pd.Series(np.asarray(speed)), errors='coerce').to_numpy(float)
+    tier = np.ones(len(v), dtype=np.int64)
+    tier[v < FB_TIER_EDGES[0]] = 0
+    tier[v >= FB_TIER_EDGES[1]] = 2
+    return tier
+
+
 def result_class(codes) -> np.ndarray:
     c = pd.Series(codes).astype(str).to_numpy()
     out = np.zeros(len(c), dtype=np.int64)
@@ -217,6 +231,7 @@ def prepare(pitches: pd.DataFrame, park_of_game: dict | None = None) -> pd.DataF
         'batter': pd.to_numeric(p['batter'], errors='coerce').fillna(-1).to_numpy(np.int64),
         'pitcher': pd.to_numeric(p['pitcher'], errors='coerce').fillna(-1).to_numpy(np.int64),
         'pl': (stand == throws).astype(np.int64), 'c': balls * 3 + strikes, 'cell': fam * N_REG + reg, 'cls': cls,
+        'fam': fam, 'reg': reg, 'vt': fb_tier(p['speed'].to_numpy() if 'speed' in p.columns else np.full(len(p), np.nan)),
         'out': p['outcome'].astype(str).map(OUT_INDEX).fillna(-1).astype(np.int64).to_numpy() if 'outcome' in p.columns else -1,
     })
     # the park: the table's own column when it has one (replays and the live runtime fill it from the histories),
@@ -277,6 +292,15 @@ class ChainState:
 
     def __init__(self, params: dict | None = None):
         self.p = dict(DEFAULT_PARAMS, **(params or {}))
+        # the cell layout (CHAIN-07): with fastball tiers the fastball family becomes three sub-families
+        self.tiers = bool(self.p.get('fb_tiers'))
+        self.nsub = N_FAM + 2 if self.tiers else N_FAM
+        self.ncell = self.nsub * N_REG
+        sub_fam = np.array(([0, 0, 0, 1, 2] if self.tiers else [0, 1, 2]))                     # sub-family -> family
+        self.cell_fam = np.repeat(sub_fam, N_REG)                                                # cell -> family
+        self.cell_out = np.tile((np.arange(N_REG) >= 3).astype(int), self.nsub)                # cell -> out of the zone
+        self.cell_group = self.cell_fam * 2 + self.cell_out                                     # cell -> hitter group
+        N_CELL = self.ncell
         shape = (2, N_COUNT, N_CELL)
         self.L = {k: np.zeros(shape) for k in ('n', 'sw', 'wh', 'fo', 'ip', 'cs', 'hb')}
         self.Lout = np.zeros((2, N_CELL, len(OUT_CLASSES)))
@@ -298,11 +322,21 @@ class ChainState:
 
     def _bcol(self, cell, count):
         """Hitter deviation column for a cell and count (group, or group x two strikes)."""
-        g = CELL_GROUP[cell]
+        g = self.cell_group[cell]
         return g + N_GROUP * TWO_STRIKES[count] if self.p.get('two_strike_groups') else g
 
     def _pcol(self, cell):
-        return CELL_GROUP[cell] if self.p.get('pitcher_cells') else CELL_FAM[cell]
+        return self.cell_group[cell] if self.p.get('pitcher_cells') else self.cell_fam[cell]
+
+    def cell_index(self, q: pd.DataFrame) -> np.ndarray:
+        """The cell of each prepared pitch in this state's layout (CHAIN-07: fastball tiers when on)."""
+        if not self.tiers:
+            return q['cell'].to_numpy()
+        fam = q['fam'].to_numpy() if 'fam' in q.columns else q['cell'].to_numpy() // N_REG
+        reg = q['reg'].to_numpy() if 'reg' in q.columns else q['cell'].to_numpy() % N_REG
+        vt = q['vt'].to_numpy() if 'vt' in q.columns else np.ones(len(q), int)
+        sub = np.where(fam == 0, vt, fam + 2)                                                     # FB tiers 0-2, BR 3, OS 4
+        return sub * N_REG + reg
 
     # ----- league tables as rates ------------------------------------------------------------------------------------
     def _league(self):
@@ -312,7 +346,7 @@ class ChainState:
                 'fo': _rate(L['fo'], n_contact, PRIOR['foul'], k), 'cs': _rate(L['cs'], n_take, PRIOR['called'], k),
                 'hb': _rate(L['hb'], n_take, PRIOR['hbp'], k),
                 'out': (self.Lout + k * OUT_PRIOR) / (self.Lout.sum(axis=2, keepdims=True) + k),
-                'mix': (self.Lmix + 1.0) / (self.Lmix.sum(axis=-1, keepdims=True) + N_CELL)}
+                'mix': (self.Lmix + 1.0) / (self.Lmix.sum(axis=-1, keepdims=True) + self.ncell)}
 
     # ----- features for matchups --------------------------------------------------------------------------------------
     def _transitions(self, batters, pitchers, parks, stands, throws, day: int):
@@ -324,7 +358,7 @@ class ChainState:
         br = self.bat.rows([int(b) for b in batters], day); pr = self.pit.rows([int(x) for x in pitchers], day)
         kr = self.park.rows([str(x) for x in parks], day)
         B, Pi, K = self.bat.a, self.pit.a, self.park.a
-        cells = np.arange(N_CELL); counts = np.arange(N_COUNT)
+        cells = np.arange(self.ncell); counts = np.arange(N_COUNT)
         bcol = self._bcol(cells[None, :], counts[:, None])                                                            # (count, cell)
         pcol = self._pcol(cells)                                                                                      # (cell,)
         kb, kp = P.get('k_b_pool') or 0.0, P.get('k_p_pool') or 0.0
@@ -342,7 +376,7 @@ class ChainState:
             # CHAIN-05: his pooled mix (both sides) shrunk to the league's pooled mix, moved by the league's platoon ratio, is
             # the prior for his mix against this side
             raw = Pi['mix'][pr]                                                                                       # (n, 2, bucket, cell)
-            league_all = self.Lmix.sum(axis=0); league_all = (league_all + 1.0) / (league_all.sum(axis=-1, keepdims=True) + N_CELL)
+            league_all = self.Lmix.sum(axis=0); league_all = (league_all + 1.0) / (league_all.sum(axis=-1, keepdims=True) + self.ncell)
             pooled = raw.sum(axis=1)
             m_pool = (pooled + P['k_mix'] * league_all[None]) / (pooled.sum(axis=2, keepdims=True) + P['k_mix'])
             prior = m_pool * (Lg['mix'][pl] / league_all[None]); prior /= prior.sum(axis=2, keepdims=True)
@@ -438,7 +472,7 @@ class ChainState:
         w = np.where(spring, float(P.get('spring_weight') or 0.0), 1.0)                 # player-bank weight per pitch
         reg = ~spring                                                                   # league tables and the check: real games only
         Lg = self._league()
-        pl = q['pl'].to_numpy(); c = q['c'].to_numpy(); cell = q['cell'].to_numpy(); cls = q['cls'].to_numpy()
+        pl = q['pl'].to_numpy(); c = q['c'].to_numpy(); cell = self.cell_index(q); cls = q['cls'].to_numpy()
         fam = self._pcol(cell); grp = self._bcol(cell, c); bucket = BUCKET[c]
         swing = np.isin(cls, [CLS_WHIFF, CLS_FOUL, CLS_INPLAY]); take = ~swing
         whiff = cls == CLS_WHIFF; contact = np.isin(cls, [CLS_FOUL, CLS_INPLAY]); foul = cls == CLS_FOUL; inplay = cls == CLS_INPLAY
