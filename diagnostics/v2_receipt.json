@@ -1,5 +1,5 @@
 {
- "created_at": "2026-10-16T17:49:53.482053+00:00",
+ "created_at": "2026-10-16T18:04:41.368266+00:00",
  "status": "iteration_completed",
  "runtime": "brl_engine (public code, sealed data)",
  "ledger_branch": "brl-live-data",
@@ -209,8 +209,13 @@
  "storage_read_audit": {
   "contents_verified": 40,
   "blob_fallbacks": 23,
-  "bytes_verified": 70816431,
-  "requests": 109,
-  "rate_limit_remaining": 4766
+  "bytes_verified": 70816429,
+  "requests": 110,
+  "rate_limit_remaining": 4986,
+  "failures": {
+   "RemoteDisconnected": 1
+  },
+  "retries": 1,
+  "waited_seconds": 2.0
  }
 }
