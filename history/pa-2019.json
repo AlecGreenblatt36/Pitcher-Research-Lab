@@ -1,0 +1,110 @@
+{
+ "schema": "brl.history-season-receipt.v1",
+ "experiment": "HIST-01",
+ "year": 2019,
+ "by_game_type": {
+  "R": {
+   "schedule_games": 2430,
+   "games": 2429,
+   "missing_games": 1,
+   "plate_appearances": 186517
+  },
+  "F": {
+   "schedule_games": 2,
+   "games": 2,
+   "missing_games": 0,
+   "plate_appearances": 140
+  },
+  "D": {
+   "schedule_games": 18,
+   "games": 18,
+   "missing_games": 0,
+   "plate_appearances": 1359
+  },
+  "L": {
+   "schedule_games": 10,
+   "games": 10,
+   "missing_games": 0,
+   "plate_appearances": 742
+  },
+  "W": {
+   "schedule_games": 7,
+   "games": 7,
+   "missing_games": 0,
+   "plate_appearances": 551
+  }
+ },
+ "outcome_mix_pct_regular_season": {
+  "BIP_OUT": 43.94,
+  "K": 22.96,
+  "1B": 13.91,
+  "BB_HBP": 9.59,
+  "2B_3B": 4.99,
+  "HR": 3.63,
+  "OTHER_REACH": 0.97
+ },
+ "batters": 990,
+ "pitchers": 830,
+ "date_min": "2019-03-20",
+ "date_max": "2019-10-30",
+ "not_in_schedule_games": 0,
+ "plate_appearances": 189309,
+ "columns": [
+  "game_date",
+  "game_year",
+  "game_pk",
+  "at_bat_number",
+  "pitch_number",
+  "batter",
+  "pitcher",
+  "stand",
+  "p_throws",
+  "home_team",
+  "away_team",
+  "inning",
+  "inning_topbot",
+  "outs_when_up",
+  "on_1b",
+  "on_2b",
+  "on_3b",
+  "home_score",
+  "away_score",
+  "bat_score",
+  "fld_score",
+  "bat_score_diff",
+  "n_thruorder_pitcher",
+  "batter_days_since_prev_game",
+  "pitcher_days_since_prev_game",
+  "age_bat",
+  "age_pit",
+  "fielder_2",
+  "game_type",
+  "terminal_event",
+  "outcome",
+  "season",
+  "date_key",
+  "platoon",
+  "is_home_batter",
+  "runner_1b",
+  "runner_2b",
+  "runner_3b",
+  "park",
+  "matchup_key"
+ ],
+ "build": {
+  "raw_pitch_rows": 746272,
+  "pitch_rows": 746272,
+  "terminal_pa_rows": 189570,
+  "eligible_pa_rows": 189309,
+  "excluded_terminal_rows": 261,
+  "duplicate_pa_rows_removed": 0
+ },
+ "plaintext_csv_sha256": "5e6fff8882c4246343503b2b4334d16b177ba2380a11933b7e8e3a444dca555f",
+ "cipher_sha256": "09a851124d77a0b3158584423722fa3e864ca1402c439a8fa1774ab71902b645",
+ "cipher_bytes": 3903729,
+ "path": "private/history/pa-2019.enc",
+ "format": "AES-256-GCM; BRLAESG1 header; 12-byte nonce; AAD BRL:pa-history-season-2019; gzip CSV inside",
+ "sealed_at": "2026-10-16T13:14:10.735974+00:00",
+ "seconds": 437,
+ "run_id": "38905328029"
+}
