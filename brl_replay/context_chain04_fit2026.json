@@ -1,0 +1,71 @@
+{
+ "schema": "brl.context-offsets.v1",
+ "labels": [
+  "BIP_OUT",
+  "K",
+  "BB_HBP",
+  "1B",
+  "2B_3B",
+  "HR",
+  "OTHER_REACH"
+ ],
+ "pseudo_pa": 200.0,
+ "estimated_through": "2026-09-27",
+ "source": "log(observed/predicted) per class from chain04-pool-s's own bare predictions on every regular-season plate appearance of the check-only replay chain04-check-2026 (8 shards, 2427 games); buckets are batting side (0 away, 1 home) x inning (1st, 2nd-8th as mid, 9th and later as late); 200 pseudo plate appearances per bucket at the bucket's predicted shares pull offsets toward zero (tools/brl_context_table.py)",
+ "offsets": {
+  "0_1st": {
+   "BIP_OUT": -0.0383,
+   "K": 0.1487,
+   "BB_HBP": -0.0083,
+   "1B": -0.0627,
+   "2B_3B": -0.1763,
+   "HR": -0.0883,
+   "OTHER_REACH": 0.1096
+  },
+  "0_late": {
+   "BIP_OUT": -0.0108,
+   "K": 0.0189,
+   "BB_HBP": 0.0062,
+   "1B": 0.0248,
+   "2B_3B": -0.0783,
+   "HR": -0.0531,
+   "OTHER_REACH": 0.1394
+  },
+  "0_mid": {
+   "BIP_OUT": -0.0033,
+   "K": 0.0033,
+   "BB_HBP": 0.0309,
+   "1B": 0.0214,
+   "2B_3B": -0.0607,
+   "HR": -0.0866,
+   "OTHER_REACH": 0.0354
+  },
+  "1_1st": {
+   "BIP_OUT": -0.0371,
+   "K": 0.022,
+   "BB_HBP": 0.0496,
+   "1B": 0.0402,
+   "2B_3B": -0.0035,
+   "HR": 0.0363,
+   "OTHER_REACH": -0.0828
+  },
+  "1_late": {
+   "BIP_OUT": -0.0356,
+   "K": 0.0626,
+   "BB_HBP": 0.0252,
+   "1B": 0.0077,
+   "2B_3B": -0.0895,
+   "HR": -0.0791,
+   "OTHER_REACH": 0.2621
+  },
+  "1_mid": {
+   "BIP_OUT": 0.0013,
+   "K": 0.0014,
+   "BB_HBP": 0.014,
+   "1B": 0.0253,
+   "2B_3B": -0.0735,
+   "HR": -0.1052,
+   "OTHER_REACH": 0.1077
+  }
+ }
+}

@@ -87,6 +87,23 @@ Model Plan doc). Built the same afternoon:
   stays fresh with the physics table. Context offsets, hazard correction and pitch-count tables stay CHAIN-03B's.
 - The gain from spring pitches rose with the weight (half 0.00017, full 0.00027) and faded through the season without
   reversing: spring pitches read as ordinary evidence. Not tried: weight above one.
+- CHAIN-04 (two-level shrinkage, the Bayesian player layer's first stage): a hitter's or pitcher's thin swing/whiff column
+  shrinks toward his own pooled deviation (k_b_pool, k_p_pool) instead of straight toward the league. Arms on the live
+  settings; pool-s (100/400) selected and passed (2026 -0.000279 nats per plate appearance, interval -0.000403 to
+  -0.000165; per pitch swings -3.3 and whiffs -5.9 per 1,000). Live as chain04-pool-s at 5:50 pm Eastern with its own
+  context tables from check-only replays (chain04-check-2025/2026; tools/brl_context_table.py). Smaller constants did
+  better at every step, so CHAIN-04B (50/200, and the cell constants re-tuned around the pooled prior) is the next arm.
+- BOOST-01 (machine learning): research_lab/pa_model/boost.py, a histogram gradient-boosted matchup model (sklearn) on
+  the matchup-level features only, fit on 2023-2024 with out-of-fold predictions for the training rows (4 groups of
+  games), rounds picked on the 2025 tuning block from staged predictions; its seven log probabilities (gb_<class>) join
+  the logistic model's features; the bundle carries the model (bundle keys boost, boost_features), the provider's
+  BoostPath evaluates once per matchup (cached on the inputs' bytes), the replay and live lanes need nothing else.
+  Arms a/b/c (leaves 15/7/31) against c0 on the live settings, run 38969079000. If it passes, the registered path is
+  full 1,000-world replays under CHAIN-03B's four gates before anything goes live (the whole prediction surface changes).
+- Alec's confidence sheet for ALCS Game 4 (Rays at Guardians, October 16): a private artifact built from the published
+  day file (public/days/2026-10-16.json on the ledger branch, forecast version 6) by the scratch script
+  tonight/build_sheet.py: every statement with its chance, a plain label, the market's number and the measured
+  accuracy of that statement type from the ledger (PLAYER-03/06/07/08, NRFI-01, RUNLINE-01, BULLPEN-03, ENV-03).
 - LEASH-04 (pitch counts from the matchup's chain): replays leash04-chain-pen-1000-2025 (run 38958506391) and -2026
   (run 38958545975) with starter lines; scored with tools/brl_outs_cal.py, tools/replay_blend_compare.py,
   tools/replay_compare.py against chain03b-v2h120-pen-1000. Result in the LEDGER row.

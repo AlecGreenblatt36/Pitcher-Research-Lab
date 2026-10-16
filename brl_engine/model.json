@@ -1,18 +1,19 @@
 {
  "schema": "brl.model-selection.v1",
- "model": "spring02-w10",
- "manifest": "brl_engine/models/spring02-w10.json",
+ "model": "chain04-pool-s",
+ "manifest": "brl_engine/models/chain04-pool-s.json",
  "note": "The plate-appearance model the live runtime uses. 'locked-pa-2026-v1' is the locked model inside the data package; any other name must have a manifest at brl_engine/models/<name>.json written by the fit job (workflow brl-fit-model) and its sealed bundle on the ledger branch.",
- "switched_at": "2026-10-16T21:01:01+00:00",
- "previous": "pitch02b-v2h120",
+ "switched_at": "2026-10-16T21:44:13+00:00",
+ "previous": "spring02-w10",
  "evidence": [
+  "research/chain-04-compare-38967824290.json",
+  "research/fit-chain04-pool-s-38967824290.json",
+  "research/fit-chain04-c0-38967824290.json",
+  "research/replay-chain04-check-2025-38970197690-s0of8.json",
+  "research/replay-chain04-check-2026-38970215062-s0of8.json",
   "research/spring-02-compare-38964284005.json",
-  "research/fit-spring02-w10-38964284005.json",
-  "research/fit-spring02-c0-38964284005.json",
   "research/pitch-02b-compare-38941277563.json",
   "research/replay-chain03b-v2h120-pen-1000-2025-38951815762-s0of8.json",
-  "research/replay-chain03b-v2h120-pen-1000-2026-38951860587-s0of8.json",
-  "research/replay-chain03b-check-2025-38951905985-s0of8.json",
-  "research/replay-chain03b-check-2026-38951952843-s0of8.json"
+  "research/replay-chain03b-v2h120-pen-1000-2026-38951860587-s0of8.json"
  ]
 }

@@ -63,7 +63,11 @@ DEFAULT_PARAMS = {'k_b_swing': 200.0, 'k_b_whiff': 140.0, 'k_b_foul': 150.0, 'k_
                   # CHAIN-04: two-level shrinkage of the swing and whiff columns. A hitter's (pitcher's) column shrinks toward
                   # his own pooled deviation over all his columns (itself shrunk toward the league with k_b_pool / k_p_pool
                   # pitches) instead of straight toward the league, so a thin column borrows from his other pitches; 0 = off
-                  'k_b_pool': 0.0, 'k_p_pool': 0.0}
+                  'k_b_pool': 0.0, 'k_p_pool': 0.0,
+                  # CHAIN-05: the pitcher's mix by the hitter's side. The league mix and each pitcher's mix are kept per platoon;
+                  # a pitcher's platoon mix shrinks (k_mix_platoon pitches) toward his pooled mix moved by the league's platoon
+                  # ratio, and the pooled mix toward the league (k_mix). Off: one mix per pitcher whatever the hitter's side
+                  'platoon_mix': False, 'k_mix_platoon': 40.0}
 EXTRA_FEATURES = ['ch_sw00', 'ch_wh00', 'ch_fo00', 'ch_ip00', 'ch_ball00', 'ch_sw02', 'ch_wh02', 'ch_sw30']
 TWO_STRIKES = (np.arange(N_COUNT) % 3 == 2).astype(int)                # count index -> two strikes
 PRIOR = {'swing': 0.47, 'whiff': 0.24, 'foul': 0.50, 'called': 0.32, 'hbp': 0.004}
@@ -272,13 +276,14 @@ class ChainState:
         shape = (2, N_COUNT, N_CELL)
         self.L = {k: np.zeros(shape) for k in ('n', 'sw', 'wh', 'fo', 'ip', 'cs', 'hb')}
         self.Lout = np.zeros((2, N_CELL, len(OUT_CLASSES)))
-        self.Lmix = np.zeros((N_BUCKET, N_CELL))
+        self.Lmix = np.zeros((2, N_BUCKET, N_CELL)) if self.p.get('platoon_mix') else np.zeros((N_BUCKET, N_CELL))
         h = float(self.p['half_life'])
         self.nb = N_GROUP * (2 if self.p.get('two_strike_groups') else 1)      # hitter deviation columns
         self.npc = N_GROUP if self.p.get('pitcher_cells') else N_FAM            # pitcher deviation columns
         self.bat = _Bank({'sw_y': (self.nb,), 'sw_e': (self.nb,), 'sw_n': (self.nb,), 'wh_y': (self.nb,), 'wh_e': (self.nb,), 'wh_n': (self.nb,),
                           'fo_y': (), 'fo_e': (), 'fo_n': (), 'out_y': (5,), 'out_e': (5,), 'out_n': ()}, h)
-        self.pit = _Bank({'mix': (N_BUCKET, N_CELL), 'sw_y': (self.npc,), 'sw_e': (self.npc,), 'sw_n': (self.npc,), 'wh_y': (self.npc,), 'wh_e': (self.npc,), 'wh_n': (self.npc,),
+        mix_shape = (2, N_BUCKET, N_CELL) if self.p.get('platoon_mix') else (N_BUCKET, N_CELL)
+        self.pit = _Bank({'mix': mix_shape, 'sw_y': (self.npc,), 'sw_e': (self.npc,), 'sw_n': (self.npc,), 'wh_y': (self.npc,), 'wh_e': (self.npc,), 'wh_n': (self.npc,),
                           'cs_y': (), 'cs_e': (), 'cs_n': (), 'out_y': (5,), 'out_e': (5,), 'out_n': ()}, h)
         self.park = _Bank({'out_y': (5,), 'out_e': (5,), 'out_n': ()}, float(self.p['park_half_life']))
         self.names = feature_names(self.p)
@@ -303,7 +308,7 @@ class ChainState:
                 'fo': _rate(L['fo'], n_contact, PRIOR['foul'], k), 'cs': _rate(L['cs'], n_take, PRIOR['called'], k),
                 'hb': _rate(L['hb'], n_take, PRIOR['hbp'], k),
                 'out': (self.Lout + k * OUT_PRIOR) / (self.Lout.sum(axis=2, keepdims=True) + k),
-                'mix': (self.Lmix + 1.0) / (self.Lmix.sum(axis=1, keepdims=True) + N_CELL)}
+                'mix': (self.Lmix + 1.0) / (self.Lmix.sum(axis=-1, keepdims=True) + N_CELL)}
 
     # ----- features for matchups --------------------------------------------------------------------------------------
     def _transitions(self, batters, pitchers, parks, stands, throws, day: int):
@@ -329,7 +334,18 @@ class ChainState:
                    + _dev_multi(Pi['out_y'][pr], Pi['out_e'][pr], Pi['out_n'][pr], P['k_p_out'])
                    + _dev_multi(K['out_y'][kr], K['out_e'][kr], K['out_n'][kr], P['k_park_out']))
         Lg = self._league()
-        mix = (Pi['mix'][pr] + P['k_mix'] * Lg['mix'][None]) / (Pi['mix'][pr].sum(axis=2, keepdims=True) + P['k_mix'])   # (n, bucket, cell)
+        if P.get('platoon_mix'):
+            # CHAIN-05: his pooled mix (both sides) shrunk to the league's pooled mix, moved by the league's platoon ratio, is
+            # the prior for his mix against this side
+            raw = Pi['mix'][pr]                                                                                       # (n, 2, bucket, cell)
+            league_all = self.Lmix.sum(axis=0); league_all = (league_all + 1.0) / (league_all.sum(axis=-1, keepdims=True) + N_CELL)
+            pooled = raw.sum(axis=1)
+            m_pool = (pooled + P['k_mix'] * league_all[None]) / (pooled.sum(axis=2, keepdims=True) + P['k_mix'])
+            prior = m_pool * (Lg['mix'][pl] / league_all[None]); prior /= prior.sum(axis=2, keepdims=True)
+            own = raw[np.arange(n), pl]
+            mix = (own + P['k_mix_platoon'] * prior) / (own.sum(axis=2, keepdims=True) + P['k_mix_platoon'])            # (n, bucket, cell)
+        else:
+            mix = (Pi['mix'][pr] + P['k_mix'] * Lg['mix'][None]) / (Pi['mix'][pr].sum(axis=2, keepdims=True) + P['k_mix'])   # (n, bucket, cell)
         M = mix[:, BUCKET, :]                                                                                           # (n, count, cell)
         p_sw = _expit(_logit(Lg['sw'][pl]) + db_sw + dp_sw[:, None, :])
         p_wh = _expit(_logit(Lg['wh'][pl]) + db_wh + dp_wh[:, None, :])
@@ -456,7 +472,10 @@ class ChainState:
         np.add.at(L['n'], (pl[r], c[r], cell[r]), 1.0); np.add.at(L['sw'], (pl[r], c[r], cell[r]), swing[r].astype(float)); np.add.at(L['wh'], (pl[r], c[r], cell[r]), whiff[r].astype(float))
         np.add.at(L['fo'], (pl[r], c[r], cell[r]), foul[r].astype(float)); np.add.at(L['ip'], (pl[r], c[r], cell[r]), inplay[r].astype(float))
         np.add.at(L['cs'], (pl[r], c[r], cell[r]), called[r].astype(float)); np.add.at(L['hb'], (pl[r], c[r], cell[r]), hbp[r].astype(float))
-        np.add.at(self.Lmix, (bucket[r], cell[r]), 1.0)
+        if P.get('platoon_mix'):
+            np.add.at(self.Lmix, (pl[r], bucket[r], cell[r]), 1.0)
+        else:
+            np.add.at(self.Lmix, (bucket[r], cell[r]), 1.0)
         if ok_reg.any():
             np.add.at(self.Lout, (pl[ok_reg], cell[ok_reg], out_idx[ok_reg]), 1.0)
         # hitters (unknown batter -1 rows are kept but never asked for); spring pitches count at their weight
@@ -464,7 +483,10 @@ class ChainState:
         np.add.at(B['wh_y'], (br[swing], grp[swing]), (whiff * w)[swing]); np.add.at(B['wh_e'], (br[swing], grp[swing]), (e_wh * w)[swing]); np.add.at(B['wh_n'], (br[swing], grp[swing]), w[swing])
         np.add.at(B['fo_y'], br[contact], (foul * w)[contact]); np.add.at(B['fo_e'], br[contact], (e_fo * w)[contact]); np.add.at(B['fo_n'], br[contact], w[contact])
         # pitchers
-        np.add.at(Pi['mix'], (pr, bucket, cell), w)
+        if P.get('platoon_mix'):
+            np.add.at(Pi['mix'], (pr, pl, bucket, cell), w)
+        else:
+            np.add.at(Pi['mix'], (pr, bucket, cell), w)
         np.add.at(Pi['sw_y'], (pr, fam), swing * w); np.add.at(Pi['sw_e'], (pr, fam), e_sw * w); np.add.at(Pi['sw_n'], (pr, fam), w)
         np.add.at(Pi['wh_y'], (pr[swing], fam[swing]), (whiff * w)[swing]); np.add.at(Pi['wh_e'], (pr[swing], fam[swing]), (e_wh * w)[swing]); np.add.at(Pi['wh_n'], (pr[swing], fam[swing]), w[swing])
         np.add.at(Pi['cs_y'], pr[take], (called * w)[take]); np.add.at(Pi['cs_e'], pr[take], (e_cs * w)[take]); np.add.at(Pi['cs_n'], pr[take], w[take])

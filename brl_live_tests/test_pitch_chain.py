@@ -375,3 +375,46 @@ def test_two_level_shrinkage_is_off_by_default_and_lets_a_thin_column_borrow_fro
     # the chaser (batter 1) is read as a chaser in both versions, and more strongly early with pooling
     early = ordered.index[(ordered['batter'] == 1) & (ordered['date_key'] == '2026-04-03')]
     assert (f1.loc[early, 'ch_K'] > f0.loc[early, 'ch_K']).mean() >= 0.5
+
+
+def test_platoon_mix_reads_what_a_pitcher_throws_to_each_side_and_is_off_by_default():
+    """CHAIN-05: with platoon_mix the matchup's cell weights follow what the pitcher throws to hitters on that side; off, the
+    mix is the pitcher's alone and every existing model is unchanged (parity); builder and state agree either way."""
+    pa, pitches = synthetic(seed=5, days=12)
+    rng = np.random.default_rng(1)
+    same = (pitches['stand'] == pitches['p_throws']).to_numpy()
+    draw = rng.random(len(pitches))
+    pitches.loc[same & (draw < 0.6), 'ptype'] = 'SL'; pitches.loc[same & (draw >= 0.6), 'ptype'] = 'FF'
+    pitches.loc[~same & (draw < 0.6), 'ptype'] = 'CH'; pitches.loc[~same & (draw >= 0.6), 'ptype'] = 'FF'
+    base = {'two_strike_groups': True, 'pitcher_cells': True, 'extra_features': True, 'half_life': 60.0}
+    f0, _ = pc.build_features(pa, pitches, base)
+    f0b, _ = pc.build_features(pa, pitches, dict(base, platoon_mix=False))
+    assert np.allclose(f0.to_numpy(float), f0b.to_numpy(float))
+    on = dict(base, platoon_mix=True, k_mix_platoon=20.0)
+    f1, audit = pc.build_features(pa, pitches, on)
+    assert audit['per_pitch_check']['swing']['n'] == len(pitches)
+    ordered = pa.sort_values(['date_key', 'game_pk', 'at_bat_number']).reset_index(drop=True)
+    parks = {int(g): str(k) for g, k in zip(ordered['game_pk'], ordered['park'])}
+    day = int(pc.day_ordinal(['2026-04-12'])[0])
+    state0 = pc.ChainState.build(pitches, '2026-04-12', base, parks); state1 = pc.ChainState.build(pitches, '2026-04-12', on, parks)
+    assert state1.Lmix.shape == (2, pc.N_BUCKET, pc.N_CELL) and state0.Lmix.shape == (pc.N_BUCKET, pc.N_CELL)
+    fam_mass = lambda M: np.array([M[0, 0, pc.CELL_FAM == f].sum() for f in range(pc.N_FAM)])     # first pitch: FB, BR, OS
+    # pitcher 101 (right-handed) against a left-handed hitter sees changeups, against a right-handed hitter sliders
+    _, _, M_opp, _, _ = state1._transitions([1], [101], ['NYY'], ['L'], ['R'], day)
+    _, _, M_same, _, _ = state1._transitions([2], [101], ['NYY'], ['R'], ['R'], day)
+    assert fam_mass(M_opp)[2] > fam_mass(M_opp)[1] and fam_mass(M_same)[1] > fam_mass(M_same)[2]
+    _, _, M0_opp, _, _ = state0._transitions([1], [101], ['NYY'], ['L'], ['R'], day)
+    _, _, M0_same, _, _ = state0._transitions([2], [101], ['NYY'], ['R'], ['R'], day)
+    assert np.allclose(M0_opp, M0_same)                                                              # off: one mix per pitcher
+    for r in np.where(ordered['date_key'].to_numpy() == '2026-04-12')[0][:20]:
+        got = state1.features(int(ordered.batter[r]), int(ordered.pitcher[r]), str(ordered.park[r]), str(ordered.stand[r]), str(ordered.p_throws[r]), day)
+        assert np.allclose(got, f1.iloc[r].to_numpy(float), atol=1e-5)
+    # the chain's own mix prediction is sharper per pitch with platoon mixes: more mass on the cell actually thrown
+    q = pc.prepare(pitches, parks)
+    late = q[q['day'] == day]
+    thrown = {}
+    for st in (state0, state1):
+        T, D, M, _, _ = st._transitions(late['batter'].to_numpy(), late['pitcher'].to_numpy(), late['park'].to_numpy(),
+                                        np.where(late['pl'].to_numpy() == 1, 'R', 'L'), ['R'] * len(late), day)
+        thrown[id(st)] = float(np.log(M[np.arange(len(late)), late['c'].to_numpy(), late['cell'].to_numpy()]).mean())
+    assert thrown[id(state1)] > thrown[id(state0)]
