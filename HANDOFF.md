@@ -121,6 +121,10 @@ Model Plan doc). Built the same afternoon:
   concurrent job slots, and the live run's publish job (a one-minute job) sat queued behind them from 7:16 pm with the
   forecast already computed. Do not launch a replay batch inside the hour before a live window; two runs at a time
   leave room for the live lane.
+- Runner lesson (October 16, 7:20 pm): six replay runs (48 shard jobs) launched at 7:08 pm filled the account's
+  concurrent job slots, and the live run's publish job (a one-minute job) sat queued behind them from 7:16 pm with the
+  forecast already computed. Do not launch a replay batch inside the hour before a live window; two runs at a time
+  leave room for the live lane.
 - BULLPEN-07 registered and its six replays launched (sigma 0.75, 1.25, 2.0, both seasons, LEASH-04's settings): a
   per-game shock on each reliever's utility in the fitted choice, the day's unseen availability. On today's settings
   relievers shown at 60% or more pitch 52% of the time; the mean is right. Smallest sigma meeting the gates goes live.
