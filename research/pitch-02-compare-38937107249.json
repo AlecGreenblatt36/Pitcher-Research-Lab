@@ -1,0 +1,76 @@
+{
+ "schema": "brl.fit-arms-compare.v1",
+ "experiment": "PITCH-02",
+ "run_id": "38937107249",
+ "control": "pitch02-c0",
+ "arms": {
+  "pitch02-c0": {
+   "role": "control",
+   "status": "completed",
+   "tune_2025": 1.4534682035446167,
+   "test_2026": {
+    "talent_only": 1.4604864377385942,
+    "talent_plus_context": 1.458582741169427,
+    "blended_candidate": 1.4583964841718566
+   },
+   "train_years": [
+    2023,
+    2024
+   ],
+   "history_half_life_days": 0.0,
+   "pa_rows_by_season": {
+    "2023": 184104,
+    "2024": 182449,
+    "2025": 182926,
+    "2026": 183849
+   },
+   "seconds": 682.0,
+   "error": null
+  },
+  "pitch02-p400": {
+   "role": "candidate",
+   "status": "failed",
+   "tune_2025": null,
+   "test_2026": null,
+   "train_years": [
+    2023,
+    2024
+   ],
+   "history_half_life_days": 0.0,
+   "pa_rows_by_season": {
+    "2023": 184104,
+    "2024": 182449,
+    "2025": 182926,
+    "2026": 183849
+   },
+   "seconds": 92.7,
+   "error": "KeyError: 'date_key'"
+  },
+  "pitch02-p200": {
+   "role": "candidate",
+   "status": "failed",
+   "tune_2025": null,
+   "test_2026": null,
+   "train_years": [
+    2023,
+    2024
+   ],
+   "history_half_life_days": 0.0,
+   "pa_rows_by_season": {
+    "2023": 184104,
+    "2024": 182449,
+    "2025": 182926,
+    "2026": 183849
+   },
+   "seconds": 58.4,
+   "error": "KeyError: 'date_key'"
+  }
+ },
+ "selection_rule": "lowest 2025 tuning-block log loss (talent_plus_context) among candidate arms",
+ "missing_candidates": [
+  "pitch02-p400",
+  "pitch02-p200"
+ ],
+ "verdict": "incomplete: no candidate arm finished",
+ "compared_at": "2026-10-16T17:18:40.511008+00:00"
+}
