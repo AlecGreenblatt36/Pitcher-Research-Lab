@@ -43,7 +43,7 @@ class BoxSimulator(RefreshedSimulator):
     def update_live(self,feed,date,updated_at):
         """Continue an in-progress game from its observed state; a snapshot, not a forecast version."""
         matchup,start,state,game=live_matchup(feed,self.history,date,self.appearances())
-        engine,_=make_history_engine(matchup_parameters(game,matchup,config_for(game['game_type'])),self.path,getattr(self,'physics_table',None))
+        engine,_=make_history_engine(matchup_parameters(game,matchup,config_for(game['game_type'])),self.path,getattr(self,'physics_table',None),getattr(self,'pitch_table',None))
         try:
             from .environment import conditions_from_feed
             environment=conditions_from_feed(feed.get('gameData') or {})
@@ -54,7 +54,7 @@ class BoxSimulator(RefreshedSimulator):
     def run(self,game,matchup):
         parameters={'date':game['date'],'park':game['home']['abbr'],'game':game,
                     'matchup':asdict(matchup),'config':config_for(game['game_type'])}
-        engine,decoded=make_history_engine(parameters,self.path,getattr(self,'physics_table',None))
+        engine,decoded=make_history_engine(parameters,self.path,getattr(self,'physics_table',None),getattr(self,'pitch_table',None))
         teams=(game['away'].get('abbr'),game['home'].get('abbr'))
         results,box=run_box_worlds(engine,decoded,self.annotations,game['date'],draw_seeds(game['game_pk']),full_history=self.history,
                                    environment=getattr(self,'environment',None),teams=teams)
@@ -324,6 +324,11 @@ def main(public_dir):
             # As the fit's builder: only plate appearances that are in the history the talent features read.
             sim.physics_table,dropped=join_history(sim.physics_table,sim.history)
             physics_receipt['rows_not_in_history']=dropped;physics_receipt['rows']=int(len(sim.physics_table))
+        if manifest.get('chain_features'):
+            # PITCH-02: the chain's per-pitch tables, the fit's seasons through yesterday
+            from .physics_inputs import assemble_pitch_table
+            pitch_years=tuple(int(y) for y in (manifest.get('pitch_seasons') or range(2021,year+1)) if int(y)<=year)
+            sim.pitch_table,physics_receipt['pitch_table']=assemble_pitch_table(cache,index,utcnow(),years=pitch_years)
         if manifest.get('history_seasons'):
             # LONG-01: the model's counters read the sealed seasons before the live history, as in its fit.
             from . import live_extension as _lx

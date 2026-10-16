@@ -18,6 +18,7 @@ import pandas as pd
 from app.safety import Blocked
 from research_lab.pa_model.physics import table_from_feed, TABLE_COLUMNS, RUN_VALUE
 from research_lab.pa_model.outcomes import map_event
+from cloud.security import unseal
 from .bookkeeping_season import load_physics_table
 
 # Which seasons the physics features are built from. 'live': the previous and the current season (the original
@@ -92,5 +93,63 @@ def assemble_physics_table(cache, index: dict, origin: datetime, years: tuple | 
     missing = [c for c in TABLE_COLUMNS if c not in table.columns]
     if missing:
         raise Blocked('Physics table missing columns: ' + ', '.join(missing))
+    receipt['rows'] = int(len(table)); receipt['through'] = str(table['date_key'].max()) if len(table) else None
+    return table, receipt
+
+
+def load_pitch_table(store, key: bytes, year: int):
+    """The sealed per-pitch table for a season (tools/brl_pitch_table.py), or None when none is sealed."""
+    import gzip, io
+    saved = store.read(f'private/statcast/pitches-{int(year)}.enc')
+    if saved is None:
+        return None
+    raw = gzip.decompress(unseal(saved[0], key, f'pitch-table-season-{int(year)}'))
+    frame = pd.read_csv(io.BytesIO(raw), low_memory=False, dtype={'ptype': 'category', 'code': 'category', 'stand': 'category', 'p_throws': 'category', 'outcome': 'category'})
+    frame['date_key'] = frame['date_key'].astype(str).str[:10]
+    return frame
+
+
+def assemble_pitch_table(cache, index: dict, origin: datetime, years: tuple) -> tuple[pd.DataFrame, dict]:
+    """PITCH-02: season pitch tables plus the day-cache feeds after their coverage, through yesterday; (table, receipt)."""
+    from research_lab.pa_model.pitch_chain import pitches_from_feed, PITCH_COLUMNS
+    today = origin.astimezone(ZoneInfo('America/New_York')).date()
+    parts, receipt = [], {'seasons': {}, 'day_cache_days': 0, 'day_cache_rows': 0}
+    latest = ''
+    for year in years:
+        table = load_pitch_table(cache.store, cache.key, year)
+        if table is None:
+            continue
+        receipt['seasons'][str(year)] = {'rows': int(len(table)), 'through': str(table['date_key'].max())}
+        latest = max(latest, str(table['date_key'].max()))
+        parts.append(table)
+    if not parts:
+        raise Blocked('No sealed pitch table for the selected model')
+    for day, ref in sorted(index.get('days', {}).items()):
+        if day <= latest or day >= today.isoformat():
+            continue
+        doc = cache.load_day(ref['id'])
+        for value in doc['sources']:
+            url = value.get('url', '')
+            if '/feed/live' not in url or '?' in url:
+                continue
+            try:
+                feed = json.loads(value['body'])
+                if feed['gameData']['status']['abstractGameState'] != 'Final':
+                    continue
+                rows = pitches_from_feed(feed, map_event)
+                if len(rows):
+                    parts.append(rows); receipt['day_cache_rows'] += int(len(rows))
+            except Exception as exc:
+                receipt['day_cache_errors'] = receipt.get('day_cache_errors', 0) + 1
+                receipt.setdefault('day_cache_error', type(exc).__name__ + ': ' + str(exc)[:160])
+        receipt['day_cache_days'] += 1
+    table = pd.concat(parts, ignore_index=True)
+    for c in ('ptype', 'code', 'stand', 'p_throws', 'outcome'):
+        table[c] = table[c].astype(str)
+    table = table.drop_duplicates(['game_pk', 'at_bat_number', 'pitch_number'], keep='first')
+    table = table.loc[table['date_key'].astype(str) < today.isoformat()].reset_index(drop=True)
+    missing = [c for c in PITCH_COLUMNS if c not in table.columns]
+    if missing:
+        raise Blocked('Pitch table missing columns: ' + ', '.join(missing))
     receipt['rows'] = int(len(table)); receipt['through'] = str(table['date_key'].max()) if len(table) else None
     return table, receipt

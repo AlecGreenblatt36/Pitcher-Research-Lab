@@ -77,7 +77,7 @@ def starter_tier_scale(tiers: dict, kbb):
 TALENT_HISTORY_PATH = None
 
 
-def make_history_engine(parameters: dict, history_path: Path, physics_table=None):
+def make_history_engine(parameters: dict, history_path: Path, physics_table=None, pitch_table=None):
     """Same coefficients, preprocessing and policies; explicit history dependency.
 
     physics_table: the per-PA pitch physics table (research_lab.pa_model.physics) when the selected
@@ -89,7 +89,7 @@ def make_history_engine(parameters: dict, history_path: Path, physics_table=None
         raise Blocked('Live lock used 2025 calibration; cannot forecast earlier dates')
     provider = PortableLockedProvider(bridge.MODEL, TALENT_HISTORY_PATH or history_path, parameters['date'],
                                      parameters['date'], parameters['park'], expected_sha256=bridge.MODEL_SHA256,
-                                     birthdates=births, physics_table=physics_table)
+                                     birthdates=births, physics_table=physics_table, pitch_table=pitch_table)
     history = pd.read_csv(history_path, low_memory=False)
     manager_doc = pinned_document('manager')
     if manager_doc['source_sha256'] != digest(bridge.HAZARD):
@@ -177,7 +177,7 @@ class RefreshedSimulator:
     def run(self, game, matchup):
         parameters = {'date': game['date'], 'park': game['home']['abbr'], 'game': game,
                       'matchup': asdict(matchup), 'config': config_for(game['game_type'])}
-        sim, decoded = make_history_engine(parameters, self.path, getattr(self, 'physics_table', None))
+        sim, decoded = make_history_engine(parameters, self.path, getattr(self, 'physics_table', None), getattr(self, 'pitch_table', None))
         results = [sim.simulate(decoded, int(seed), record_events=False)
                    for seed in draw_seeds(game['game_pk'])]
         return results, predict(game, self.rows, self.fit)

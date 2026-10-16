@@ -127,6 +127,37 @@ def result_class(codes) -> np.ndarray:
     return out
 
 
+PITCH_COLUMNS = ['date_key', 'game_pk', 'at_bat_number', 'pitch_number', 'pitcher', 'batter', 'stand', 'p_throws', 'balls', 'strikes',
+                 'ptype', 'code', 'speed', 'spin', 'pfx_x', 'pfx_z', 'plate_x', 'plate_z', 'zone', 'ext', 'outcome', 'last']
+
+
+def pitches_from_feed(feed: dict, map_event) -> pd.DataFrame:
+    """One row per pitch from one official live feed (complete plays with a mapped outcome), the sealed tables' columns."""
+    rows = []
+    gd = feed.get('gameData') or {}
+    day = str(((gd.get('datetime') or {}).get('officialDate')) or '')[:10]
+    pk = int(feed.get('gamePk') or 0)
+    for play in (feed.get('liveData', {}).get('plays', {}).get('allPlays') or []):
+        about = play.get('about') or {}
+        outcome = map_event((play.get('result') or {}).get('eventType', ''))
+        if outcome is None or not about.get('isComplete'):
+            continue
+        m = play.get('matchup') or {}
+        batter = (m.get('batter') or {}).get('id')
+        stand = str((m.get('batSide') or {}).get('code') or 'R'); throws = str((m.get('pitchHand') or {}).get('code') or '')
+        events = [e for e in (play.get('playEvents') or []) if e.get('isPitch') is True]
+        balls = strikes = 0
+        for i, e in enumerate(events):
+            d = e.get('details') or {}; pd_ = e.get('pitchData') or {}; co = pd_.get('coordinates') or {}; br = pd_.get('breaks') or {}
+            rows.append((day, pk, int(about['atBatIndex']) + 1, i + 1, int(m['pitcher']['id']), -1 if batter is None else int(batter), stand, throws,
+                         balls, strikes, str(((d.get('type') or {}).get('code')) or '').upper(), str(d.get('code') or ''),
+                         pd_.get('startSpeed'), br.get('spinRate'), co.get('pfxX'), co.get('pfxZ'), co.get('pX'), co.get('pZ'),
+                         pd_.get('zone') if isinstance(pd_.get('zone'), int) else None, pd_.get('extension'), outcome, int(i == len(events) - 1)))
+            c = e.get('count') or {}
+            balls, strikes = int(c.get('balls', balls)), int(c.get('strikes', strikes))
+    return pd.DataFrame(rows, columns=PITCH_COLUMNS)
+
+
 def prepare(pitches: pd.DataFrame, park_of_game: dict | None = None) -> pd.DataFrame:
     """The compact numeric per-pitch frame the state absorbs, sorted by day."""
     p = pitches

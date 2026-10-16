@@ -1,5 +1,6 @@
 """PITCH-01/02: the pitch-level chain. Sanity of the count chain, date blocking, and parity between the chronological
 builder and the state built to a cutoff."""
+import json
 import numpy as np
 import pandas as pd
 import pytest
@@ -175,3 +176,52 @@ def test_provider_appends_chain_features_and_matches_the_builder(tmp_path):
         row, _ = provider.feature_row(b, p, str(ordered['stand'][r]), str(ordered['p_throws'][r]), is_home_batter=0, inning=1, outs=0, runners=(0, 0, 0), bat_score_diff=0, times_through=1)
         assert len(row) == n_base + len(pc.FEATURES)
         assert np.allclose(row[n_base:], chain.iloc[r].to_numpy(float).astype(np.float32), atol=1e-5)
+
+
+def test_live_pitch_table_assembles_seasons_then_the_day_cache():
+    """PITCH-02 at forecast time: the sealed season tables, then every final feed in the day cache after their coverage,
+    nothing from today; the feed rows carry the count before each pitch."""
+    import gzip
+    from datetime import datetime, timezone
+    from cloud.security import seal
+    from brl_live.physics_inputs import assemble_pitch_table
+    key = bytes(range(32))
+
+    class Store:
+        def __init__(self): self.files = {}
+        def read(self, path): return (self.files[path], 'sha') if path in self.files else None
+
+    class Cache:
+        def __init__(self, store, days): self.store, self.key, self.days = store, key, days
+        def load_day(self, ident): return self.days[ident]
+
+    def ev(code, ptype='FF', balls=0, strikes=0):
+        return {'isPitch': True, 'details': {'code': code, 'type': {'code': ptype}}, 'pitchData': {'startSpeed': 94.0, 'zone': 5, 'coordinates': {'pX': 0.1, 'pZ': 2.5}},
+                'count': {'balls': balls, 'strikes': strikes}}
+
+    def play(i, batter, pitcher, event, events):
+        return {'result': {'eventType': event}, 'about': {'isComplete': True, 'atBatIndex': i},
+                'matchup': {'pitcher': {'id': pitcher}, 'batter': {'id': batter}, 'batSide': {'code': 'L'}, 'pitchHand': {'code': 'R'}}, 'playEvents': events}
+
+    def feed(pk, date, state='Final'):
+        return {'gamePk': pk, 'gameData': {'status': {'abstractGameState': state}, 'datetime': {'officialDate': date}},
+                'liveData': {'plays': {'allPlays': [play(0, 11, 21, 'single', [ev('B', balls=1), ev('X', 'SL', 1, 0)]),
+                                                    play(1, 12, 21, 'strikeout', [ev('C', strikes=1), ev('S', strikes=2), ev('S', strikes=3)])]}}}
+    _, pitches = synthetic(seed=5, days=3)
+    pitches['date_key'] = '2026-10-10'
+    store = Store()
+    store.files['private/statcast/pitches-2026.enc'] = seal(gzip.compress(pitches.to_csv(index=False).encode()), key, 'pitch-table-season-2026')
+    days = {'d1': {'sources': [{'url': 'https://statsapi.mlb.com/api/v1.1/game/900/feed/live', 'body': json.dumps(feed(900, '2026-10-12'))}]},
+            'd2': {'sources': [{'url': 'https://statsapi.mlb.com/api/v1.1/game/901/feed/live', 'body': json.dumps(feed(901, '2026-10-13', 'Live'))}]},
+            'd3': {'sources': [{'url': 'https://statsapi.mlb.com/api/v1.1/game/902/feed/live', 'body': json.dumps(feed(902, '2026-10-14'))}]}}
+    index = {'days': {'2026-10-12': {'id': 'd1'}, '2026-10-13': {'id': 'd2'}, '2026-10-14': {'id': 'd3'}}}
+    origin = datetime(2026, 10, 14, 16, 0, tzinfo=timezone.utc)      # noon Eastern on the 14th: the 14th is today
+    table, receipt = assemble_pitch_table(Cache(store, days), index, origin, years=(2025, 2026))
+    assert receipt['seasons'] == {'2026': {'rows': len(pitches), 'through': '2026-10-10'}} and receipt['day_cache_rows'] == 5
+    feed_rows = table[table['game_pk'] == 900].sort_values(['at_bat_number', 'pitch_number'])
+    assert feed_rows['balls'].tolist() == [0, 1, 0, 0, 0] and feed_rows['strikes'].tolist() == [0, 0, 0, 1, 2]
+    assert feed_rows['code'].tolist() == ['B', 'X', 'C', 'S', 'S'] and feed_rows['outcome'].tolist() == ['1B', '1B', 'K', 'K', 'K'] and feed_rows['last'].tolist() == [0, 1, 0, 0, 1]
+    assert 902 not in set(table['game_pk']) and 901 not in set(table['game_pk']) and receipt['through'] == '2026-10-12'
+    # the assembled table prepares like a sealed one
+    q = pc.prepare(table, {900: 'NYY'})
+    assert len(q) == len(table) and set(q['park'].unique()) >= {'NYY', 'UNK'}
