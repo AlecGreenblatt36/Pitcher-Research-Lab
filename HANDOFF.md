@@ -104,6 +104,12 @@ Model Plan doc). Built the same afternoon:
   day file (public/days/2026-10-16.json on the ledger branch, forecast version 6) by the scratch script
   tonight/build_sheet.py: every statement with its chance, a plain label, the market's number and the measured
   accuracy of that statement type from the ledger (PLAYER-03/06/07/08, NRFI-01, RUNLINE-01, BULLPEN-03, ENV-03).
+- CHAIN-04B passed by a small margin (pool constants 50/200 with the cell constants x0.67; -0.00005) and is live as
+  chain04b-xs-tight (7:00 pm Eastern) with its own context tables. CHAIN-05 (the pitcher's mix by the hitter's side)
+  failed at every constant; platoon_mix stays off (a clean negative, see the row). BOOST-02 (the trees on this base)
+  is the next arms run; if it passes, full replays under CHAIN-03B's gates before it goes live.
+- LEASH-04 passed on both seasons (full scoring in the row) and is live: ADJUST pitch_counts 'chain'; the v2 hazard
+  correction follows for regular-season games.
 - LEASH-04 (pitch counts from the matchup's chain): replays leash04-chain-pen-1000-2025 (run 38958506391) and -2026
   (run 38958545975) with starter lines; scored with tools/brl_outs_cal.py, tools/replay_blend_compare.py,
   tools/replay_compare.py against chain03b-v2h120-pen-1000. Result in the LEDGER row.
