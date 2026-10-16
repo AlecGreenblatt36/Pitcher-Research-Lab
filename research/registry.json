@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 341,
- "rows": 344,
+ "experiments": 342,
+ "rows": 345,
  "records": {
   "ACC-01": [
    {
@@ -5628,13 +5628,31 @@
     "columns": {
      "ID": "CHAIN-02B",
      "Attempt": "The chain's second version, three additions that the first version's coarseness left out, each off by default and switched on by parameter: (1) two_strike_groups: a hitter's swing and whiff deviations split by two strikes or not (hitters expand and shorten up with two strikes at different rates); (2) pitcher_cells: a pitcher's swing and whiff deviations by family in or out of the zone instead of family alone (the high fastball that misses bats, the slider that gets chased); (3) extra_features: the matchup's own per-count rates as eight further features (swing, whiff, foul, in-play and ball rates at 0-0, swing and whiff at 0-2, swing at 3-0), since the seven outcome log-probabilities compress what the chain knows. Arms (tools/fit_arms.json, experiment PITCH-02B in the file, so the comparison is research/pitch-02b-compare-<run>.json): c0 (control), v2 = all three with a 200-day half-life, v2h120 = the same at 120 days, v2x = (1) and (2) without the extra features (what the features alone are worth)",
-     "Disposition and evidence": "**Registered in the commit that added this row; the arms (run 38941277563) were queued eleven minutes before this commit because the ledger edit that should have carried the row failed on a duplicate id and the push went ahead without it; no result had been produced or seen when the row was written.** Same selection and gate as CHAIN-02 (lowest 2025 tuning-block log loss; passes at -0.002 on 2026 against c0 with the interval below zero and calibration within 0.015). Prediction: the selected arm between -0.0010 and -0.0020; the extra features worth at least a third of the gain",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row; the arms (run 38941277563) were queued eleven minutes before this commit because the ledger edit that should have carried the row failed on a duplicate id and the push went ahead without it; no result had been produced or seen when the row was written.** Same selection and gate as CHAIN-02 (lowest 2025 tuning-block log loss; passes at -0.002 on 2026 against c0 with the interval below zero and calibration within 0.015). Prediction: the selected arm between -0.0010 and -0.0020; the extra features worth at least a third of the gain **Result (run 38941277563; research/pitch-02b-compare-38941277563.json): the gate is not met again and the prediction was wrong.** 2025 tuning-block log loss: c0 1.45347, v2 1.45291, v2h120 1.45286 (selected), v2x 1.45297. On 2026 against c0: **v2h120 -0.00076 [-0.00095, -0.00058]** (calibration gap 0.0019); v2 -0.00076; v2x -0.00065. So the extra features are worth about 0.0001 and the finer deviations nothing at the plate-appearance level; per pitch the finer deviations were worse (whiff gain 8.1 against 11.1 per 1,000 with family-level pitcher deviations: a pitcher's whiff tendency is better measured per family than per family and zone at these shrinkages). Reading: the chain's information overlaps the physics features the model already carries (the same swing, chase and whiff tendencies, summed); what is new to the model is the pitcher's mix against the hitter's cells and the count dynamics, worth about 0.0007 to 0.0008 nats per plate appearance, and two versions landed on the same number. That is the chain's value at the plate-appearance level with public pre-pitch data",
+     "Delta corrected Brier, 2026": "gate not met (-0.00076, interval clear of zero)"
     },
     "registered_before_run": true,
     "diagnostic": false,
     "runs": [
      "38941277563"
+    ],
+    "frozen_commits": [],
+    "status": "gate not met (-0.00076, interval clear of zero)"
+   }
+  ],
+  "CHAIN-03": [
+   {
+    "id": "CHAIN-03",
+    "columns": {
+     "ID": "CHAIN-03",
+     "Attempt": "The chain at the game level, with a decision rule written after CHAIN-02 and CHAIN-02B were seen (stated plainly: this is a change of rule, not a met gate). The 0.002 bar in CHAIN-02 was a proxy chosen so that replays would not be spent on gains the replays cannot see. The replays' own resolution is the problem: a paired difference in game Brier over 4,850 games has a standard error of about 0.0004, so an at-bat gain of 0.0008 nats, which moves the game Brier by perhaps 0.0002, is below what two seasons can detect, and the month's refits (LONG-01, LONG-02) 'failed' at the game level by a rule that no change of that size could pass. REPLAY-02, the rule that put the current model live, did not require a detectable game-level gain: it required the mechanism's interval clean at the plate-appearance level, the game-level numbers moving the same way, and a small worst case. CHAIN-03 applies that rule to pitch02b-v2h120 (the chain's second version, 120-day half-life): full replays of 2025 and 2026, 1,000 worlds a game, the live regular-season settings, paired by game and date against v2-prod4-pen-1000 (tools/replay_blend_compare.py with the team chances of research run 38916747347; totals with tools/replay_compare.py)",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the replays.** Goes live (brl_engine/model.json, the live runtime reading the pitch tables) if all hold: (1) the pooled simulator Brier difference's 95% upper bound below +0.0005 and its point estimate at or below zero; (2) the pooled blend's upper bound below +0.0005; (3) mean simulated totals within 0.15 runs of actual in both seasons (the chain must not move the run level, which the context offsets were estimated without); (4) strikeouts per plate appearance within 1.5% of actual in both seasons. Failing any one, the chain stays sealed. Prediction: (1) and (2) hold with point estimates between -0.0003 and 0; (3) and (4) hold because the chain enters through features the logistic layer calibrates",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [
+     "38916747347"
     ],
     "frozen_commits": [],
     "status": "registered"
