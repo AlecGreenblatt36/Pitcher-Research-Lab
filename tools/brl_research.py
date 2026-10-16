@@ -841,6 +841,40 @@ def main():
         put_text(repo, token, f'research/{experiment}-{run_id}.json', json.dumps(receipt, indent=1, default=float), branch, 'BRL: research ' + experiment)
         print(json.dumps({k: receipt.get(k) for k in ('status', 'error')}))
         return
+    if experiment == 'team_probs':
+        # The team model's home win chance for every 2025 and 2026 regular-season game, exactly as the replay lane computes
+        # it (brl_live.team_model.TeamModel on every unambiguous prior game of the history), so replays can be paired on the
+        # simulator-plus-team blend outside the runner. Game-level chances only.
+        run_id = os.environ.get('GITHUB_RUN_ID', 'local')
+        receipt = {'schema': 'brl.research-receipt.v1', 'experiment': experiment, 'run_id': run_id, 'started_at': datetime.now(timezone.utc).isoformat()}
+        try:
+            work = Path(os.environ.get('RUNNER_TEMP', '/tmp')) / 'brl-research'
+            ep = entrypoint_module()
+            manifest = json.loads((ROOT / 'brl_engine' / 'data_package.json').read_text())
+            data_root = work / 'data'
+            if data_root.exists():
+                import shutil; shutil.rmtree(data_root)
+            data_root.mkdir(parents=True)
+            ep.restore_package(repo, token, key_hex, manifest, data_root)
+            from brl_replay.games import load_history, reconstruct
+            from brl_live.team_model import TeamModel
+            h = load_history(next(data_root.rglob('plate_appearances.csv.gz')))
+            games = reconstruct(h); games['date'] = games['date'].astype(str)
+            corpus = games[~games['ambiguous']]
+            tm = TeamModel([{'date': r.date, 'home_id': r.home, 'away_id': r.away, 'home_runs': r.home_runs, 'away_runs': r.away_runs} for r in corpus.itertuples()])
+            out = {}
+            for r in games[games['season'].isin([2025, 2026])].itertuples():
+                try:
+                    out[str(int(r.game_pk))] = round(float(tm.probability(r.date, r.home, r.away)['p_home']), 6)
+                except Exception:
+                    out[str(int(r.game_pk))] = 0.5
+            receipt['p_team'] = out; receipt['games'] = len(out); receipt['status'] = 'completed'
+        except Exception as exc:
+            receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:300]
+            receipt['where'] = [{'file': Path(f.filename).name, 'function': f.name, 'line': f.lineno} for f in traceback.extract_tb(exc.__traceback__)[-5:]]
+        put_text(repo, token, f'research/{experiment}-{run_id}.json', json.dumps(receipt, indent=1, default=float), branch, 'BRL: research ' + experiment)
+        print(json.dumps({k: receipt.get(k) for k in ('status', 'error', 'games')}))
+        return
     if experiment == 'stability':
         # STAB-01: shrinkage constants from every regular season 2015-2026 (the physics tables carry the outcome; the
         # game types come from the plate-appearance histories, HIST-01's sealed seasons and the data package)
