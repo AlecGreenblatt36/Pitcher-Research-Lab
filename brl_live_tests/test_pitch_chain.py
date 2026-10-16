@@ -17,7 +17,7 @@ def synthetic(seed=0, days=40, games_per_day=4, pa_per_game=30):
         day = (start + pd.Timedelta(days=d)).strftime('%Y-%m-%d')
         for g in range(games_per_day):
             pk = 1000 + d * 10 + g
-            park = ['NYY', 'BOS', 'COL', 'SEA'][g]
+            park = ['NYY', 'BOS', 'COL', 'SEA', 'LAD', 'CHC', 'HOU', 'ATL', 'SF', 'SD', 'TEX', 'MIA'][g % 12]
             for i in range(pa_per_game):
                 b = batters[(i + g) % len(batters)]; p = pitchers[(d + g + i // 15) % len(pitchers)]
                 stand = 'L' if b % 2 else 'R'; throws = 'L' if p % 3 == 0 else 'R'
