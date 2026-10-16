@@ -186,6 +186,7 @@ def main():
     now = datetime.now(timezone.utc)
     year = int(os.environ.get('BRL_SEASON') or now.astimezone(ZoneInfo('America/New_York')).year)
     through = (now.astimezone(ZoneInfo('America/New_York')).date() - timedelta(days=1)).isoformat()
+    through = min(through, f'{year}-12-31')        # a past season (HIST-01 backfills 2015 to 2022) ends with its year
     existing = read_blob(repo, token, season_path(year), branch)
     doc = {'schema': SCHEMA, 'year': year, 'games': {}}
     if existing is not None:

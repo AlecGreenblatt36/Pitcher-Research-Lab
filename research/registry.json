@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 333,
- "rows": 336,
+ "experiments": 334,
+ "rows": 337,
  "records": {
   "ACC-01": [
    {
@@ -5486,6 +5486,22 @@
     ],
     "frozen_commits": [],
     "status": "(3) held; (1) missed in 2025, (2) failed; stays off"
+   }
+  ],
+  "HIST-01": [
+   {
+    "id": "HIST-01",
+    "columns": {
+     "ID": "HIST-01",
+     "Attempt": "Alec, October 16: the four seasons of history (2023 to 2026) are too few for how we predict. The plate-appearance history is extended back to 2015, the first Statcast season: for each season 2015 to 2022, tools/brl_history_backfill.py (workflow BRL history backfill, one job per season) reads the official schedule, downloads Baseball Savant's pitch-by-pitch export for the regular season and the postseason in three-day spans, and builds one row per plate appearance with the same builder as the 2023-2026 history (research_lab.pa_model.data.build_plate_appearances; postseason rows keep their game type). Each season is sealed to private/history/pa-<year>.enc with a counts-only receipt (history/pa-<year>.json). The pitch physics study and per-PA physics tables for the same seasons come from the existing backfill (tools/brl_bookkeeping_backfill.py, the official feeds), which now ends a past season with its year. What more seasons are for: more seasons to test changes on (most gates here rest on two replay seasons), longer histories for each player (multi-year weighting, aging), year-to-year stability checks with many pairs of seasons, and many more postseason games; era differences (the 2019 ball, the 60-game 2020, the 2021-2022 ball changes, the 2023 rules, Trackman before 2020 and Hawk-Eye after) have to be handled in any use",
+     "Disposition and evidence": "**Registered in the commit that added this row, before any season was built.** Acceptance, per season: (1) regular-season games in the history at least 99% of the schedule's completed games; (2) 70 to 82 plate appearances a regular-season game; (3) strikeouts 18% to 25%, walks and hit batters 7.5% to 11%, home runs 2.3% to 4.0% of regular-season plate appearances; (4) the physics table's plate appearances within 2% of the history's. A season that passes is usable for research and fits; one that fails is fixed before any use. Nothing on the site changes from this row alone: any model or simulator change that uses the older seasons is its own registered test",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "TOTALS-05": [
