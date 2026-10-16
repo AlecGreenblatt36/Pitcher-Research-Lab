@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 344,
- "rows": 347,
+ "experiments": 345,
+ "rows": 348,
  "records": {
   "ACC-01": [
    {
@@ -5696,6 +5696,22 @@
      "Disposition and evidence": "outcome) for the hitter and pitcher at hand (a nibbler against a hitter who fouls everything runs long; a zone pounder against a free swinger runs short); research_lab.game_sim.pitch_counts.MatchupPitchCounts draws from it given the outcome the engine drew, with the league table by outcome as the fallback for a matchup the chain cannot price; the engine hands it the plate appearance's context. Checked on made-up seasons: the joint walk's outcome mix and expected pitches equal the chain's features; strikeouts take three pitches or more, walks four. Test: full replays of 2025 and 2026 with pitch02b-v2h120 and CHAIN-03B's settings (the chain's own context tables, paired streams) plus the chain pitch draws and LEASH-03's refitted correction with pitch terms (brl_replay/hazard_correction_v2.json), starter lines recorded, against CHAIN-03B's replays (same model, no pitch draws, LEASH-02's correction)",
      "Delta corrected Brier, 2026": "**Registered in the commit that added this row, before the replays.** LEASH-03's stage 2 gates: (1) every half line from 12.5 to 20.5 outs within 2.5 points of actual in both seasons and the ladder lines within 1.0 point in both (tools/brl_outs_cal.py; LEASH-03 missed at +1.38 in 2026); (2) the win Brier pooled not worse than +0.0002 against CHAIN-03B's replays (point estimate); (3) the mean total's squared error pooled paired interval's upper end below +0.03. Decision rule: if (1) to (3) hold, the chain pitch draws and the pitch-term correction replace LEASH-02's for regular-season games in the live runtime (ADJUST pitch_counts 'chain', hazard correction v2) at the same time as the chain model, or after it if the chain is already live. Prediction: (1) holds, the ladder lines within 0.8 in both seasons; (2) and (3) hold",
      "col4": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
+   }
+  ],
+  "SPRING-01": [
+   {
+    "id": "SPRING-01",
+    "columns": {
+     "ID": "SPRING-01",
+     "Attempt": "Spring-training pitches as the chain's early-season prior: the data. The chain's gain is largest in the season's first weeks (CHAIN-03B: March +1.1 to +1.4 nats per 1,000 against +0.3 to +1.0 later), the weeks when a new or changed player has no current-season pitches at all. Spring games are tracked at most parks and give a few hundred pitches per regular and a few starts per pitcher before Opening Day, pitch-level facts (velocity, movement, swings and misses by cell) that the chain can read at a discount without caring that the opposition is weaker. tools/brl_spring_table.py (workflow BRL spring table, one job per season 2021-2026) fetches every final spring game (type S, February 15 to April 5) play by play like the bookkeeping backfill, flattens it to the pitch table's columns and seals it at private/statcast/spring-<year>.enc; the receipt (spring/<year>.json) carries counts and the share of pitches with a tracked location and speed",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the fetch.** Data only, nothing changes on the site. A season is usable for SPRING-02 (the chain absorbing spring pitches at a reduced weight before Opening Day, players' counters only, to be registered with its own gate on March-April log loss) if at least half its spring pitches are tracked",
+     "Delta corrected Brier, 2026": "registered"
     },
     "registered_before_run": true,
     "diagnostic": false,
