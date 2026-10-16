@@ -18,7 +18,7 @@ def _seasons(seed=7, players=400, pa=500):
         for i, p in enumerate(true):
             k = rng.random(pa) < p
             rows.append(pd.DataFrame({'season': season, 'batter': i, 'pitcher': 10_000, 'outcome': np.where(k, 'K', 'BIP_OUT'),
-                                      'n': 4, 'sw': 2, 'wh': 0, 'oz': 1, 'ch': 0, 'iz': 3, 'izs': 2, 'izc': 2, 'fb': 2, 'velo': 190.0,
+                                      'n': 4, 'sw': 2, 'wh': 0, 'oz': 1, 'ch': 0, 'iz': 3, 'izs': 2, 'izc': 2, 'cs': 1, 'fb': 2, 'velo': 190.0, 'spin': 4400.0, 'ivb': 30.0, 'hb': -12.0,
                                       'ev': np.nan, 'la': np.nan}))
     return pd.concat(rows, ignore_index=True).sample(frac=1, random_state=1).sort_values('season', kind='stable').reset_index(drop=True)
 

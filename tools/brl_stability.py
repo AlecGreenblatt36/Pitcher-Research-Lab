@@ -44,6 +44,20 @@ STATS = {
     'P: fastball speed':    ('p', 'fastballs', 50, 300, lambda d: d['velo'], lambda d: d['fb']),
     'P: exit velocity allowed': ('p', 'balls in play', 75, 200, lambda d: d['ev'].fillna(0), lambda d: d['ev'].notna().astype(float)),
     'P: hard-hit allowed':  ('p', 'balls in play', 75, 200, lambda d: (d['ev'] >= 95).astype(float), lambda d: d['ev'].notna().astype(float)),
+    # STAB-02's inputs: the remaining outcome classes for both roles and every other shrunk physics rate
+    'BIP out per PA':       ('b', 'PA', 150, 300, lambda d: d['outcome'] == 'BIP_OUT', None),
+    '2B+3B per PA':         ('b', 'PA', 150, 300, lambda d: d['outcome'] == '2B_3B', None),
+    'other reach per PA':   ('b', 'PA', 150, 300, lambda d: d['outcome'] == 'OTHER_REACH', None),
+    'barrel per ball in play': ('b', 'balls in play', 75, 200, lambda d: ((d['ev'] >= 98) & (d['la'] >= 8) & (d['la'] <= 40)).astype(float), lambda d: d['ev'].notna().astype(float)),
+    'P: 1B per PA':         ('p', 'PA', 150, 300, lambda d: d['outcome'] == '1B', None),
+    'P: BIP out per PA':    ('p', 'PA', 150, 300, lambda d: d['outcome'] == 'BIP_OUT', None),
+    'P: 2B+3B per PA':      ('p', 'PA', 150, 300, lambda d: d['outcome'] == '2B_3B', None),
+    'P: other reach per PA': ('p', 'PA', 150, 300, lambda d: d['outcome'] == 'OTHER_REACH', None),
+    'P: called strike or whiff per pitch': ('p', 'pitches', 300, 1000, lambda d: d['cs'] + d['wh'], lambda d: d['n']),
+    'P: ground-ball share allowed': ('p', 'balls in play', 75, 200, lambda d: (d['la'] < 10).astype(float), lambda d: d['ev'].notna().astype(float)),
+    'P: fastball spin':     ('p', 'fastballs', 50, 300, lambda d: d['spin'], lambda d: d['fb']),
+    'P: fastball rise':     ('p', 'fastballs', 50, 300, lambda d: d['ivb'], lambda d: d['fb']),
+    'P: fastball run':      ('p', 'fastballs', 50, 300, lambda d: d['hb'], lambda d: d['fb']),
 }
 ERAS = {'2015-2019': range(2015, 2020), '2021-2026': range(2021, 2027)}
 

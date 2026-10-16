@@ -874,7 +874,7 @@ def main():
                 t = pd.read_csv(io.BytesIO(gzip.decompress(unseal(raw, key, physics_purpose(year)))))
                 t = t[t['game_pk'].astype(int).isin(regular)].sort_values(['date_key', 'game_pk', 'at_bat_number'], kind='mergesort')
                 t['season'] = year
-                frames.append(t[['season', 'batter', 'pitcher', 'outcome', 'n', 'sw', 'wh', 'oz', 'ch', 'izs', 'izc', 'fb', 'velo', 'ev', 'la']])
+                frames.append(t[['season', 'batter', 'pitcher', 'outcome', 'n', 'sw', 'wh', 'oz', 'ch', 'izs', 'izc', 'cs', 'fb', 'velo', 'spin', 'ivb', 'hb', 'ev', 'la']])
                 seasons_loaded.append(year)
             receipt['seasons'] = seasons_loaded
             receipt['results'] = brl_stability.run(pd.concat(frames, ignore_index=True))
