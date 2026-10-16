@@ -225,3 +225,19 @@ def test_live_pitch_table_assembles_seasons_then_the_day_cache():
     # the assembled table prepares like a sealed one
     q = pc.prepare(table, {900: 'NYY'})
     assert len(q) == len(table) and set(q['park'].unique()) >= {'NYY', 'UNK'}
+
+
+def test_v2_options_keep_parity_and_add_the_extra_features():
+    pa, pitches = synthetic(seed=9, days=10)
+    params = {'two_strike_groups': True, 'pitcher_cells': True, 'extra_features': True, 'half_life': 60.0}
+    feats, audit = pc.build_features(pa, pitches, params)
+    assert list(feats.columns) == pc.FEATURES + pc.EXTRA_FEATURES and audit['per_pitch_check']['swing']['n'] == len(pitches)
+    probs = np.exp(feats[[f'ch_{l}' for l in pc.LABELS]].to_numpy()); assert np.allclose(probs.sum(1), 1.0, atol=2e-3)
+    assert ((feats['ch_sw00'] > 0) & (feats['ch_sw00'] < 1) & (feats['ch_wh02'] >= 0) & (feats['ch_ball00'] + feats['ch_ip00'] <= 1.0001)).all()
+    ordered = pa.sort_values(['date_key', 'game_pk', 'at_bat_number']).reset_index(drop=True)
+    parks = {int(g): str(k) for g, k in zip(ordered['game_pk'], ordered['park'])}
+    state = pc.ChainState.build(pitches, '2026-04-08', params, parks)
+    day = int(pc.day_ordinal(['2026-04-08'])[0])
+    for r in np.where(ordered['date_key'].to_numpy() == '2026-04-08')[0][:20]:
+        got = state.features(int(ordered.batter[r]), int(ordered.pitcher[r]), str(ordered.park[r]), str(ordered.stand[r]), str(ordered.p_throws[r]), day)
+        assert np.allclose(got, feats.iloc[r].to_numpy(float), atol=1e-5)

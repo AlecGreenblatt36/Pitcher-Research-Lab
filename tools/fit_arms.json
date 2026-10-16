@@ -1,11 +1,11 @@
 {
- "experiment": "PITCH-02",
+ "experiment": "PITCH-02B",
  "arms": [
   {
-   "name": "pitch02-c0",
+   "name": "pitch02b-c0",
    "role": "control",
    "settings": {
-    "name": "pitch02-c0",
+    "name": "pitch02b-c0",
     "manifest_branch": "ledger",
     "physics_params": {
      "xvalue": true,
@@ -14,32 +14,56 @@
    }
   },
   {
-   "name": "pitch02-p400",
+   "name": "pitch02b-v2",
    "role": "candidate",
    "settings": {
-    "name": "pitch02-p400",
+    "name": "pitch02b-v2",
     "manifest_branch": "ledger",
     "physics_params": {
      "xvalue": true,
      "recent_days": 30
     },
     "pitch_chain": {
-     "half_life": 400.0
+     "half_life": 200.0,
+     "two_strike_groups": true,
+     "pitcher_cells": true,
+     "extra_features": true
     }
    }
   },
   {
-   "name": "pitch02-p200",
+   "name": "pitch02b-v2h120",
    "role": "candidate",
    "settings": {
-    "name": "pitch02-p200",
+    "name": "pitch02b-v2h120",
     "manifest_branch": "ledger",
     "physics_params": {
      "xvalue": true,
      "recent_days": 30
     },
     "pitch_chain": {
-     "half_life": 200.0
+     "half_life": 120.0,
+     "two_strike_groups": true,
+     "pitcher_cells": true,
+     "extra_features": true
+    }
+   }
+  },
+  {
+   "name": "pitch02b-v2x",
+   "role": "candidate",
+   "settings": {
+    "name": "pitch02b-v2x",
+    "manifest_branch": "ledger",
+    "physics_params": {
+     "xvalue": true,
+     "recent_days": 30
+    },
+    "pitch_chain": {
+     "half_life": 200.0,
+     "two_strike_groups": true,
+     "pitcher_cells": true,
+     "extra_features": false
     }
    }
   }

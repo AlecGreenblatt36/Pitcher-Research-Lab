@@ -53,7 +53,12 @@ FEATURES = [f'ch_{l}' for l in LABELS] + ['ch_pitches']
 # 1,000 takes, balls in play about 700 (home runs allowed 1,040 plate appearances).
 DEFAULT_PARAMS = {'k_b_swing': 200.0, 'k_b_whiff': 140.0, 'k_b_foul': 150.0, 'k_b_out': 220.0, 'k_p_swing': 800.0, 'k_p_whiff': 360.0,
                   'k_p_called': 1000.0, 'k_p_out': 650.0, 'k_park_out': 1500.0, 'k_mix': 40.0, 'k_league': 50.0,
-                  'half_life': 400.0, 'park_half_life': 2000.0}
+                  'half_life': 400.0, 'park_half_life': 2000.0,
+                  # PITCH-02B: hitters' swing and whiff deviations split by two strikes or not; pitchers' by family in or out
+                  # of the zone (instead of family alone); the matchup's own per-count rates as further features
+                  'two_strike_groups': False, 'pitcher_cells': False, 'extra_features': False}
+EXTRA_FEATURES = ['ch_sw00', 'ch_wh00', 'ch_fo00', 'ch_ip00', 'ch_ball00', 'ch_sw02', 'ch_wh02', 'ch_sw30']
+TWO_STRIKES = (np.arange(N_COUNT) % 3 == 2).astype(int)                # count index -> two strikes
 PRIOR = {'swing': 0.47, 'whiff': 0.24, 'foul': 0.50, 'called': 0.32, 'hbp': 0.004}
 OUT_PRIOR = np.array([0.67, 0.21, 0.065, 0.045, 0.01])
 EPS = 1e-4
@@ -61,7 +66,8 @@ _ORDER = sorted(range(N_COUNT), key=lambda c: -(c // 3 + c % 3))    # counts wit
 
 
 def feature_names(params: dict | None = None) -> list[str]:
-    return list(FEATURES)
+    p = dict(DEFAULT_PARAMS, **(params or {}))
+    return list(FEATURES) + (list(EXTRA_FEATURES) if p.get('extra_features') else [])
 
 
 def _logit(p):
@@ -230,9 +236,11 @@ class ChainState:
         self.Lout = np.zeros((2, N_CELL, len(OUT_CLASSES)))
         self.Lmix = np.zeros((N_BUCKET, N_CELL))
         h = float(self.p['half_life'])
-        self.bat = _Bank({'sw_y': (N_GROUP,), 'sw_e': (N_GROUP,), 'sw_n': (N_GROUP,), 'wh_y': (N_GROUP,), 'wh_e': (N_GROUP,), 'wh_n': (N_GROUP,),
+        self.nb = N_GROUP * (2 if self.p.get('two_strike_groups') else 1)      # hitter deviation columns
+        self.npc = N_GROUP if self.p.get('pitcher_cells') else N_FAM            # pitcher deviation columns
+        self.bat = _Bank({'sw_y': (self.nb,), 'sw_e': (self.nb,), 'sw_n': (self.nb,), 'wh_y': (self.nb,), 'wh_e': (self.nb,), 'wh_n': (self.nb,),
                           'fo_y': (), 'fo_e': (), 'fo_n': (), 'out_y': (5,), 'out_e': (5,), 'out_n': ()}, h)
-        self.pit = _Bank({'mix': (N_BUCKET, N_CELL), 'sw_y': (N_FAM,), 'sw_e': (N_FAM,), 'sw_n': (N_FAM,), 'wh_y': (N_FAM,), 'wh_e': (N_FAM,), 'wh_n': (N_FAM,),
+        self.pit = _Bank({'mix': (N_BUCKET, N_CELL), 'sw_y': (self.npc,), 'sw_e': (self.npc,), 'sw_n': (self.npc,), 'wh_y': (self.npc,), 'wh_e': (self.npc,), 'wh_n': (self.npc,),
                           'cs_y': (), 'cs_e': (), 'cs_n': (), 'out_y': (5,), 'out_e': (5,), 'out_n': ()}, h)
         self.park = _Bank({'out_y': (5,), 'out_e': (5,), 'out_n': ()}, float(self.p['park_half_life']))
         self.names = feature_names(self.p)
@@ -240,6 +248,14 @@ class ChainState:
         self.through_day: int | None = None
         # PITCH-01 check: summed log loss of the chain's own per-pitch predictions against league-only tables
         self.check = {k: [0.0, 0.0, 0] for k in ('swing', 'whiff', 'outcome')}
+
+    def _bcol(self, cell, count):
+        """Hitter deviation column for a cell and count (group, or group x two strikes)."""
+        g = CELL_GROUP[cell]
+        return g + N_GROUP * TWO_STRIKES[count] if self.p.get('two_strike_groups') else g
+
+    def _pcol(self, cell):
+        return CELL_GROUP[cell] if self.p.get('pitcher_cells') else CELL_FAM[cell]
 
     # ----- league tables as rates ------------------------------------------------------------------------------------
     def _league(self):
@@ -262,11 +278,14 @@ class ChainState:
         br = self.bat.rows([int(b) for b in batters], day); pr = self.pit.rows([int(x) for x in pitchers], day)
         kr = self.park.rows([str(x) for x in parks], day)
         B, Pi, K = self.bat.a, self.pit.a, self.park.a
-        db_sw = _dev(B['sw_y'][br], B['sw_e'][br], B['sw_n'][br], P['k_b_swing'])[:, CELL_GROUP]
-        db_wh = _dev(B['wh_y'][br], B['wh_e'][br], B['wh_n'][br], P['k_b_whiff'])[:, CELL_GROUP]
+        cells = np.arange(N_CELL); counts = np.arange(N_COUNT)
+        bcol = self._bcol(cells[None, :], counts[:, None])                                                            # (count, cell)
+        pcol = self._pcol(cells)                                                                                      # (cell,)
+        db_sw = _dev(B['sw_y'][br], B['sw_e'][br], B['sw_n'][br], P['k_b_swing'])[:, bcol]                           # (n, count, cell)
+        db_wh = _dev(B['wh_y'][br], B['wh_e'][br], B['wh_n'][br], P['k_b_whiff'])[:, bcol]
         db_fo = _dev(B['fo_y'][br], B['fo_e'][br], B['fo_n'][br], P['k_b_foul'])
-        dp_sw = _dev(Pi['sw_y'][pr], Pi['sw_e'][pr], Pi['sw_n'][pr], P['k_p_swing'])[:, CELL_FAM]
-        dp_wh = _dev(Pi['wh_y'][pr], Pi['wh_e'][pr], Pi['wh_n'][pr], P['k_p_whiff'])[:, CELL_FAM]
+        dp_sw = _dev(Pi['sw_y'][pr], Pi['sw_e'][pr], Pi['sw_n'][pr], P['k_p_swing'])[:, pcol]                        # (n, cell)
+        dp_wh = _dev(Pi['wh_y'][pr], Pi['wh_e'][pr], Pi['wh_n'][pr], P['k_p_whiff'])[:, pcol]
         dp_cs = _dev(Pi['cs_y'][pr], Pi['cs_e'][pr], Pi['cs_n'][pr], P['k_p_called'])
         W = np.exp(_dev_multi(B['out_y'][br], B['out_e'][br], B['out_n'][br], P['k_b_out'])
                    + _dev_multi(Pi['out_y'][pr], Pi['out_e'][pr], Pi['out_n'][pr], P['k_p_out'])
@@ -274,8 +293,8 @@ class ChainState:
         Lg = self._league()
         mix = (Pi['mix'][pr] + P['k_mix'] * Lg['mix'][None]) / (Pi['mix'][pr].sum(axis=2, keepdims=True) + P['k_mix'])   # (n, bucket, cell)
         M = mix[:, BUCKET, :]                                                                                           # (n, count, cell)
-        p_sw = _expit(_logit(Lg['sw'][pl]) + db_sw[:, None, :] + dp_sw[:, None, :])
-        p_wh = _expit(_logit(Lg['wh'][pl]) + db_wh[:, None, :] + dp_wh[:, None, :])
+        p_sw = _expit(_logit(Lg['sw'][pl]) + db_sw + dp_sw[:, None, :])
+        p_wh = _expit(_logit(Lg['wh'][pl]) + db_wh + dp_wh[:, None, :])
         p_fo = _expit(_logit(Lg['fo'][pl]) + db_fo[:, None, None])
         p_cs = _expit(_logit(Lg['cs'][pl]) + dp_cs[:, None, None])
         p_hb = np.minimum(Lg['hb'][pl], 1 - p_cs - EPS)
@@ -305,6 +324,11 @@ class ChainState:
         out = np.empty((n, len(self.names)))
         out[:, :7] = np.log(np.clip(V[:, 0, :], 1e-6, 1.0))
         out[:, 7] = Npitch[:, 0]
+        if P.get('extra_features'):
+            # the matchup's own rates at 0-0, 0-2 and 3-0: swing, whiff per swing, foul per contact, in play per pitch, ball per pitch
+            sw = (M * p_sw).sum(2); wh = (M * p_sw * p_wh).sum(2) / np.maximum(sw, 1e-9); fo = T['fo'] / np.maximum(T['fo'] + T['ip'], 1e-9)
+            c00, c02, c30 = 0, 2, 9
+            out[:, 8:] = np.stack([sw[:, c00], wh[:, c00], fo[:, c00], T['ip'][:, c00], T['ball'][:, c00], sw[:, c02], wh[:, c02], sw[:, c30]], axis=1)
         return out
 
     def features(self, batter: int, pitcher: int, park: str, stand: str, throws: str, day: int) -> np.ndarray:
@@ -317,7 +341,7 @@ class ChainState:
             self.through_day = day; return
         P = self.p; Lg = self._league()
         pl = q['pl'].to_numpy(); c = q['c'].to_numpy(); cell = q['cell'].to_numpy(); cls = q['cls'].to_numpy()
-        fam = CELL_FAM[cell]; grp = CELL_GROUP[cell]; bucket = BUCKET[c]
+        fam = self._pcol(cell); grp = self._bcol(cell, c); bucket = BUCKET[c]
         swing = np.isin(cls, [CLS_WHIFF, CLS_FOUL, CLS_INPLAY]); take = ~swing
         whiff = cls == CLS_WHIFF; contact = np.isin(cls, [CLS_FOUL, CLS_INPLAY]); foul = cls == CLS_FOUL; inplay = cls == CLS_INPLAY
         called = cls == CLS_CALLED; hbp = cls == CLS_HBP
