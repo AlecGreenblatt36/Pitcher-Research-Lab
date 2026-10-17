@@ -670,8 +670,9 @@ def choice_fit(data_root: Path, repo=None, token=None, key=None, branch='brl-liv
     active-roster pitchers minus the game's starter; the 14-day rule where a day is missing), the features of
     research_lab.game_sim.reliever_choice with the new starter-in-the-pen and new-arm terms. Four fits: the live
     features (NAMES) and BULLPEN-06's (NAMES6) each with the new terms, on 2023-2025 scored on 2026, on 2023, 2024 and 2026
-    scored on 2025, and on all four seasons for the live table. Also the old pools with the live features, scored the same
-    way, as the reference. Coefficients and aggregate scores only."""
+    scored on 2025, and on all four seasons for the live table. Also, on the same roster pools, the live features alone
+    (what the new terms add), and the old pools with the live features (the reference). Coefficients and aggregate
+    scores only."""
     import importlib.util
     from brl_replay.games import load_history
     spec = importlib.util.spec_from_file_location('brl_reliever_choice', ROOT / 'tools' / 'brl_reliever_choice.py')
@@ -687,7 +688,7 @@ def choice_fit(data_root: Path, repo=None, token=None, key=None, branch='brl-liv
             if raw is not None:
                 rosters.update(json.loads(gzip.decompress(raw))['days'])
     out = {'seasons': list(seasons), 'roster_days': len(rosters or {}), 'variants': {}}
-    sets = {'old_pools': (None, rc.NAMES), 'roster_live_terms': (rosters, rc.NAMES10), 'roster_6_terms': (rosters, rc.NAMES10_6)}
+    sets = {'old_pools': (None, rc.NAMES), 'roster_live_only': (rosters, rc.NAMES), 'roster_live_terms': (rosters, rc.NAMES10), 'roster_6_terms': (rosters, rc.NAMES10_6)}
     cache = {}
     for label, (ros, names) in sets.items():
         rc.NAMES = list(names)

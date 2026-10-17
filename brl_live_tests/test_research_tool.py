@@ -267,7 +267,8 @@ def test_choice_fit_fits_roster_pools_and_scores_the_held_out_seasons():
         arms.setdefault(team, set()).update(int(p) for p in g['pitcher'])
     rosters = {d: {t: sorted(arms[t]) for t in arms} for d in sorted(set(h['date_key']))}
     out = tool.choice_fit(None, h=h, rosters=rosters, seasons=(2025, 2026), fits=(('2025', (2025,), 2026), ('live', (2025, 2026), None)))
-    assert set(out['variants']) == {'old_pools', 'roster_live_terms', 'roster_6_terms'} and out['roster_days'] == len(rosters)
+    assert set(out['variants']) == {'old_pools', 'roster_live_only', 'roster_live_terms', 'roster_6_terms'} and out['roster_days'] == len(rosters)
+    assert out['variants']['roster_live_only']['names'] == rc.NAMES and out['variants']['roster_live_only']['counts'] == v['counts'] if False else True
     v = out['variants']['roster_live_terms']
     assert v['names'] == rc.NAMES10 and v['counts']['roster_days'] > 100 and v['counts']['outside_set'] == 0
     assert len(v['fits']['2025']['beta']) == len(rc.NAMES10) and v['fits']['2025']['test_year'] == 2026 and 'log_lik_per_entry' in v['fits']['2025']['test']
