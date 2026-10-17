@@ -1,0 +1,657 @@
+{
+  "artifacts": {
+    "model_joblib_sha256": "3c87e4deedfb5253ac81252ad7fa2f117b16457f2c383c465670e2c3ee2fa095",
+    "test_predictions_sha256": "fd3708d64f68f804b95e4426817ced6536571f81084c1e82a587567d62474a58",
+    "tuning_audit_sha256": "c2f8aa5b74e0d03e570791e5c62e64c3180ad6d942fa81bab22bb6a412d9186c"
+  },
+  "baselines": {
+    "empirical_bayes_matchup": {
+      "calibration": [
+        {
+          "binary_brier": 0.24459517262163197,
+          "calibration_gap": 0.0014034515044664686,
+          "n": 183849,
+          "observed_rate": 0.453159930160077,
+          "outcome": "BIP_OUT",
+          "predicted_rate": 0.45456338166454346
+        },
+        {
+          "binary_brier": 0.16810942886517052,
+          "calibration_gap": 0.0015195952066790475,
+          "n": 183849,
+          "observed_rate": 0.2213773259577153,
+          "outcome": "K",
+          "predicted_rate": 0.22289692116439436
+        },
+        {
+          "binary_brier": 0.08943609771443489,
+          "calibration_gap": -0.003922909401663469,
+          "n": 183849,
+          "observed_rate": 0.10038129116829572,
+          "outcome": "BB_HBP",
+          "predicted_rate": 0.09645838176663225
+        },
+        {
+          "binary_brier": 0.12146596087967673,
+          "calibration_gap": 0.0006603985917710553,
+          "n": 183849,
+          "observed_rate": 0.14201872188589548,
+          "outcome": "1B",
+          "predicted_rate": 0.14267912047766654
+        },
+        {
+          "binary_brier": 0.04243919406695499,
+          "calibration_gap": 0.0014127216095630862,
+          "n": 183849,
+          "observed_rate": 0.04440600710365572,
+          "outcome": "2B_3B",
+          "predicted_rate": 0.045818728713218806
+        },
+        {
+          "binary_brier": 0.029296594246276095,
+          "calibration_gap": -0.000499350024892365,
+          "n": 183849,
+          "observed_rate": 0.03032379833450277,
+          "outcome": "HR",
+          "predicted_rate": 0.029824448309610407
+        },
+        {
+          "binary_brier": 0.008270466977366437,
+          "calibration_gap": -0.0005739074859237936,
+          "n": 183849,
+          "observed_rate": 0.00833292538985798,
+          "outcome": "OTHER_REACH",
+          "predicted_rate": 0.007759017903934187
+        }
+      ],
+      "classwise_ece": 0.0036534968873722317,
+      "log_loss": 1.4641678865823418,
+      "multiclass_brier": 0.7036129153715116,
+      "top_accuracy": 0.45388334992303464,
+      "top_label_ece": 0.0050894505646015015,
+      "tuning": {
+        "iterations": 24,
+        "message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL",
+        "parameters": {
+          "batter_recent_weight": 0.28763802134840777,
+          "batter_weight": 0.8573149502806882,
+          "park_weight": 0.5137365776338054,
+          "pitcher_recent_weight": 0.13690932435292646,
+          "pitcher_weight": 0.6419993374561787,
+          "temperature": 0.9982575637656641
+        },
+        "success": true,
+        "validation_log_loss": 1.4597003027236928
+      }
+    },
+    "league": {
+      "calibration": [
+        {
+          "binary_brier": 0.24780794616395643,
+          "calibration_gap": -0.0012887117036006757,
+          "n": 183849,
+          "observed_rate": 0.453159930160077,
+          "outcome": "BIP_OUT",
+          "predicted_rate": 0.4518712184564763
+        },
+        {
+          "binary_brier": 0.1723801377292205,
+          "calibration_gap": 0.003189055735719093,
+          "n": 183849,
+          "observed_rate": 0.2213773259577153,
+          "outcome": "K",
+          "predicted_rate": 0.2245663816934344
+        },
+        {
+          "binary_brier": 0.09032704851332235,
+          "calibration_gap": -0.00446633464675765,
+          "n": 183849,
+          "observed_rate": 0.10038129116829572,
+          "outcome": "BB_HBP",
+          "predicted_rate": 0.09591495652153807
+        },
+        {
+          "binary_brier": 0.12184960833847343,
+          "calibration_gap": -0.00015456984166264953,
+          "n": 183849,
+          "observed_rate": 0.14201872188589548,
+          "outcome": "1B",
+          "predicted_rate": 0.14186415204423283
+        },
+        {
+          "binary_brier": 0.042438877110551165,
+          "calibration_gap": 0.002203280991813883,
+          "n": 183849,
+          "observed_rate": 0.04440600710365572,
+          "outcome": "2B_3B",
+          "predicted_rate": 0.0466092880954696
+        },
+        {
+          "binary_brier": 0.02940457254000658,
+          "calibration_gap": 0.00042275648036567415,
+          "n": 183849,
+          "observed_rate": 0.03032379833450277,
+          "outcome": "HR",
+          "predicted_rate": 0.030746554814868446
+        },
+        {
+          "binary_brier": 0.008263505487378298,
+          "calibration_gap": 9.452298412231629e-05,
+          "n": 183849,
+          "observed_rate": 0.00833292538985798,
+          "outcome": "OTHER_REACH",
+          "predicted_rate": 0.008427448373980297
+        }
+      ],
+      "classwise_ece": 0.0016884617691488488,
+      "log_loss": 1.4848355707332679,
+      "multiclass_brier": 0.7124716958829088,
+      "top_accuracy": 0.453159930160077,
+      "top_label_ece": 0.0012887117036006757
+    }
+  },
+  "candidate_fingerprint_sha256": "649b59b91524c8d5f3c058db8ce585e5ac42618bc173a14dba151b0b429f188c",
+  "claim_status": "chronological_locked_final_holdout_executed",
+  "config": {
+    "batter_recent_window": 100,
+    "blend_grid": [
+      0.0,
+      0.01,
+      0.02,
+      0.03,
+      0.04,
+      0.05,
+      0.06,
+      0.07,
+      0.08,
+      0.09,
+      0.1,
+      0.11,
+      0.12,
+      0.13,
+      0.14,
+      0.15,
+      0.16,
+      0.17,
+      0.18,
+      0.19,
+      0.2,
+      0.21,
+      0.22,
+      0.23,
+      0.24,
+      0.25,
+      0.26,
+      0.27,
+      0.28,
+      0.29,
+      0.3,
+      0.31,
+      0.32,
+      0.33,
+      0.34,
+      0.35,
+      0.36,
+      0.37,
+      0.38,
+      0.39,
+      0.4,
+      0.41,
+      0.42,
+      0.43,
+      0.44,
+      0.45,
+      0.46,
+      0.47,
+      0.48,
+      0.49,
+      0.5,
+      0.51,
+      0.52,
+      0.53,
+      0.54,
+      0.55,
+      0.56,
+      0.57,
+      0.58,
+      0.59,
+      0.6,
+      0.61,
+      0.62,
+      0.63,
+      0.64,
+      0.65,
+      0.66,
+      0.67,
+      0.68,
+      0.69,
+      0.7,
+      0.71,
+      0.72,
+      0.73,
+      0.74,
+      0.75,
+      0.76,
+      0.77,
+      0.78,
+      0.79,
+      0.8,
+      0.81,
+      0.82,
+      0.83,
+      0.84,
+      0.85,
+      0.86,
+      0.87,
+      0.88,
+      0.89,
+      0.9,
+      0.91,
+      0.92,
+      0.93,
+      0.94,
+      0.95,
+      0.96,
+      0.97,
+      0.98,
+      0.99,
+      1.0
+    ],
+    "bootstrap_replicates": 1000,
+    "calibration_l2": 0.0001,
+    "chunk_days": 3,
+    "evaluation_mode": "locked_final",
+    "max_iter": 150,
+    "min_probability": 1e-07,
+    "outcome_labels": [
+      "BIP_OUT",
+      "K",
+      "BB_HBP",
+      "1B",
+      "2B_3B",
+      "HR",
+      "OTHER_REACH"
+    ],
+    "park_prior_pa": 1000.0,
+    "pitcher_recent_window": 150,
+    "player_prior_pa": 180.0,
+    "random_seed": 36,
+    "recent_prior_pa": 120.0,
+    "regularization_grid": [
+      1e-05,
+      0.0001,
+      0.001,
+      0.01,
+      0.1,
+      1.0
+    ],
+    "request_retries": 5,
+    "request_timeout_seconds": 180,
+    "request_workers": 6,
+    "split_prior_pa": 260.0,
+    "test_years": [
+      2026
+    ],
+    "train_years": [
+      2023,
+      2024
+    ],
+    "user_agent": "BaseballResearchLab/1.0 (+public research; contact repository owner)",
+    "validation_calibration_fraction": 0.25,
+    "validation_tuning_fraction": 0.5,
+    "validation_years": [
+      2025
+    ]
+  },
+  "data": {
+    "date_max": "2026-09-27 00:00:00",
+    "date_min": "2023-03-30 00:00:00",
+    "feature_receipt_sha256": "ef06eb2e7fbccedf17af963c88a03bc434ca21ac7b0ba4829460365cea7bf80f",
+    "games_test": 2429,
+    "rows_test": 183849,
+    "rows_total": 733328,
+    "rows_train": 366553,
+    "rows_validation": 182926,
+    "test_date_max": "2026-09-27 00:00:00",
+    "test_date_min": "2026-03-25 00:00:00"
+  },
+  "generated_at_utc": "2026-10-03T22:58:12.785176+00:00",
+  "incremental_value": {
+    "candidate_vs_empirical_bayes_clustered_ci": {
+      "ci_95_high": -0.0037558445643031953,
+      "ci_95_low": -0.0047295236682835485,
+      "clusters": 2429,
+      "difference_nats_per_pa": -0.00425947745822869,
+      "replicates": 1000
+    },
+    "context_vs_talent_only_clustered_ci": {
+      "ci_95_high": -0.0016267375598567968,
+      "ci_95_low": -0.0022146911909817733,
+      "clusters": 2429,
+      "difference_nats_per_pa": -0.00191305362136759,
+      "replicates": 1000
+    },
+    "full_vs_empirical_bayes_clustered_ci": {
+      "ci_95_high": -0.0037558445643031953,
+      "ci_95_low": -0.0047295236682835485,
+      "clusters": 2429,
+      "difference_nats_per_pa": -0.00425947745822869,
+      "replicates": 1000
+    },
+    "relative_log_loss_gain_vs_empirical_bayes": 0.0029091455271370616,
+    "relative_log_loss_gain_vs_league": 0.016787826275501263
+  },
+  "interpretation_boundary": "The test seasons in this run are the locked final PA holdout. This result may validate the pre-PA probability layer, but it does not validate runner transitions, bullpen logic, team-run distributions, winner probabilities, exact scores, or the full production application. The same holdout may not be used to retune the architecture and then be described as untouched.",
+  "models": {
+    "blended_candidate": {
+      "feature_count": 122,
+      "metrics": {
+        "calibration": [
+          {
+            "binary_brier": 0.24420513178271028,
+            "calibration_gap": 0.0018842816601764012,
+            "n": 183849,
+            "observed_rate": 0.453159930160077,
+            "outcome": "BIP_OUT",
+            "predicted_rate": 0.4550442118202534
+          },
+          {
+            "binary_brier": 0.16761962622002238,
+            "calibration_gap": -0.001046331497663977,
+            "n": 183849,
+            "observed_rate": 0.2213773259577153,
+            "outcome": "K",
+            "predicted_rate": 0.22033099446005133
+          },
+          {
+            "binary_brier": 0.08929997702068329,
+            "calibration_gap": -0.003954882033576204,
+            "n": 183849,
+            "observed_rate": 0.10038129116829572,
+            "outcome": "BB_HBP",
+            "predicted_rate": 0.09642640913471952
+          },
+          {
+            "binary_brier": 0.12130401309396477,
+            "calibration_gap": -0.0008480081296064201,
+            "n": 183849,
+            "observed_rate": 0.14201872188589548,
+            "outcome": "1B",
+            "predicted_rate": 0.14117071375628906
+          },
+          {
+            "binary_brier": 0.042389286990245446,
+            "calibration_gap": 0.0028603212904728323,
+            "n": 183849,
+            "observed_rate": 0.04440600710365572,
+            "outcome": "2B_3B",
+            "predicted_rate": 0.04726632839412855
+          },
+          {
+            "binary_brier": 0.029294895049659826,
+            "calibration_gap": 0.0017560419082790213,
+            "n": 183849,
+            "observed_rate": 0.03032379833450277,
+            "outcome": "HR",
+            "predicted_rate": 0.03207984024278179
+          },
+          {
+            "binary_brier": 0.008257576476255163,
+            "calibration_gap": -0.0006514231980816604,
+            "n": 183849,
+            "observed_rate": 0.00833292538985798,
+            "outcome": "OTHER_REACH",
+            "predicted_rate": 0.00768150219177632
+          }
+        ],
+        "classwise_ece": 0.0021344177888772274,
+        "log_loss": 1.459908409124113,
+        "multiclass_brier": 0.7023705066335412,
+        "top_accuracy": 0.4550419093930345,
+        "top_label_ece": 0.0023113208581599445
+      },
+      "tuning": {
+        "best_selection_log_loss": 1.4603192082521688,
+        "empirical_bayes_weight": 0.09999999999999998,
+        "model_weight": 0.9
+      }
+    },
+    "talent_only": {
+      "feature_count": 114,
+      "metrics": {
+        "calibration": [
+          {
+            "binary_brier": 0.2443653768547777,
+            "calibration_gap": 0.003310700086245455,
+            "n": 183849,
+            "observed_rate": 0.453159930160077,
+            "outcome": "BIP_OUT",
+            "predicted_rate": 0.45647063024632245
+          },
+          {
+            "binary_brier": 0.16799118634605414,
+            "calibration_gap": -0.002458760771754359,
+            "n": 183849,
+            "observed_rate": 0.2213773259577153,
+            "outcome": "K",
+            "predicted_rate": 0.21891856518596095
+          },
+          {
+            "binary_brier": 0.0894216269153507,
+            "calibration_gap": -0.005102553038836138,
+            "n": 183849,
+            "observed_rate": 0.10038129116829572,
+            "outcome": "BB_HBP",
+            "predicted_rate": 0.09527873812945958
+          },
+          {
+            "binary_brier": 0.12135914027086671,
+            "calibration_gap": -0.0008623034755480263,
+            "n": 183849,
+            "observed_rate": 0.14201872188589548,
+            "outcome": "1B",
+            "predicted_rate": 0.14115641841034746
+          },
+          {
+            "binary_brier": 0.04239749633623884,
+            "calibration_gap": 0.003340703015741339,
+            "n": 183849,
+            "observed_rate": 0.04440600710365572,
+            "outcome": "2B_3B",
+            "predicted_rate": 0.04774671011939706
+          },
+          {
+            "binary_brier": 0.029298898668694506,
+            "calibration_gap": 0.002450037469655053,
+            "n": 183849,
+            "observed_rate": 0.03032379833450277,
+            "outcome": "HR",
+            "predicted_rate": 0.032773835804157825
+          },
+          {
+            "binary_brier": 0.008261849954242123,
+            "calibration_gap": -0.0006778232855033312,
+            "n": 183849,
+            "observed_rate": 0.00833292538985798,
+            "outcome": "OTHER_REACH",
+            "predicted_rate": 0.0076551021043546495
+          }
+        ],
+        "classwise_ece": 0.00268824853390922,
+        "log_loss": 1.462042151041567,
+        "multiclass_brier": 0.7030955753462247,
+        "top_accuracy": 0.45494400295895,
+        "top_label_ece": 0.003044437688801821
+      },
+      "tuning": {
+        "best_regularization_c": 0.001,
+        "best_tune_log_loss": 1.4560459852218628,
+        "calibration": {
+          "class_biases": [
+            0.09220740002667457,
+            0.04842210650984276,
+            0.019200357128255675,
+            0.008793092066938964,
+            -0.003657500534733057,
+            -0.006497031872914959,
+            -0.158468423324064
+          ],
+          "iterations": 13,
+          "message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL",
+          "post_calibration_log_loss": 1.4575928986156876,
+          "pre_calibration_log_loss": 1.4577551930206933,
+          "success": true,
+          "temperature": 1.0564645633778595
+        },
+        "validation_partitions": {
+          "blend_date_max": "2025-09-28 00:00:00",
+          "blend_date_min": "2025-08-14 00:00:00",
+          "calibration_date_max": "2025-08-13 00:00:00",
+          "calibration_date_min": "2025-06-25 00:00:00",
+          "rows": {
+            "blend": 46372,
+            "calibration": 47037,
+            "tune": 89517
+          },
+          "tune_date_max": "2025-06-24 00:00:00",
+          "tune_date_min": "2025-03-18 00:00:00",
+          "validation_unique_dates": 184
+        }
+      }
+    },
+    "talent_plus_context": {
+      "feature_count": 122,
+      "metrics": {
+        "calibration": [
+          {
+            "binary_brier": 0.24421333926813077,
+            "calibration_gap": 0.0019377072330331035,
+            "n": 183849,
+            "observed_rate": 0.453159930160077,
+            "outcome": "BIP_OUT",
+            "predicted_rate": 0.4550976373931101
+          },
+          {
+            "binary_brier": 0.1676496106031436,
+            "calibration_gap": -0.001331434464813236,
+            "n": 183849,
+            "observed_rate": 0.2213773259577153,
+            "outcome": "K",
+            "predicted_rate": 0.22004589149290207
+          },
+          {
+            "binary_brier": 0.08930563522319926,
+            "calibration_gap": -0.003958434548233164,
+            "n": 183849,
+            "observed_rate": 0.10038129116829572,
+            "outcome": "BB_HBP",
+            "predicted_rate": 0.09642285662006256
+          },
+          {
+            "binary_brier": 0.12130614608723003,
+            "calibration_gap": -0.0010156088764261273,
+            "n": 183849,
+            "observed_rate": 0.14201872188589548,
+            "outcome": "1B",
+            "predicted_rate": 0.14100311300946936
+          },
+          {
+            "binary_brier": 0.04239155429296115,
+            "calibration_gap": 0.0030211656994628203,
+            "n": 183849,
+            "observed_rate": 0.04440600710365572,
+            "outcome": "2B_3B",
+            "predicted_rate": 0.04742717280311854
+          },
+          {
+            "binary_brier": 0.029300680806583226,
+            "calibration_gap": 0.0020066410119647243,
+            "n": 183849,
+            "observed_rate": 0.03032379833450277,
+            "outcome": "HR",
+            "predicted_rate": 0.032330439346467496
+          },
+          {
+            "binary_brier": 0.008257688569951911,
+            "calibration_gap": -0.0006600360549880915,
+            "n": 183849,
+            "observed_rate": 0.00833292538985798,
+            "outcome": "OTHER_REACH",
+            "predicted_rate": 0.007672889334869889
+          }
+        ],
+        "classwise_ece": 0.002277037554474206,
+        "log_loss": 1.460129097420199,
+        "multiclass_brier": 0.7024246548512,
+        "top_accuracy": 0.4550745448710627,
+        "top_label_ece": 0.0022151665678988687
+      },
+      "tuning": {
+        "best_regularization_c": 0.001,
+        "best_tune_log_loss": 1.4545528888702393,
+        "calibration": {
+          "class_biases": [
+            0.07140488974214194,
+            0.030888728517320215,
+            0.009280979983030676,
+            0.0017312728668146106,
+            0.007254161454787596,
+            0.012979109960440278,
+            -0.13353914252453533
+          ],
+          "iterations": 12,
+          "message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL",
+          "post_calibration_log_loss": 1.4556214621803996,
+          "pre_calibration_log_loss": 1.4557790656473235,
+          "success": true,
+          "temperature": 1.0427254638216268
+        },
+        "validation_partitions": {
+          "blend_date_max": "2025-09-28 00:00:00",
+          "blend_date_min": "2025-08-14 00:00:00",
+          "calibration_date_max": "2025-08-13 00:00:00",
+          "calibration_date_min": "2025-06-25 00:00:00",
+          "rows": {
+            "blend": 46372,
+            "calibration": 47037,
+            "tune": 89517
+          },
+          "tune_date_max": "2025-06-24 00:00:00",
+          "tune_date_min": "2025-03-18 00:00:00",
+          "validation_unique_dates": 184
+        }
+      }
+    }
+  },
+  "promotion": {
+    "beat_empirical_bayes_with_clustered_ci": true,
+    "context_adds_signal_with_clustered_ci": true,
+    "development_gate_passed": true,
+    "evaluation_mode": "locked_final",
+    "game_model_promoted": false,
+    "locked_final_holdout_passed": true,
+    "max_absolute_class_calibration_gap": 0.003954882033576204,
+    "max_absolute_class_calibration_gap_below_0_015": true,
+    "production_holdout_required": false,
+    "production_pa_layer_promoted": true,
+    "production_promoted": false,
+    "promoted": false,
+    "promoted_to_locked_final_evaluation": false
+  },
+  "schema": "baseball_research_lab.pa_benchmark.v3",
+  "source_commit_sha": "27e207b6e5ae4fdb788f42fae9d66f0021f7f6b6",
+  "validation_partitions": {
+    "blend_date_max": "2025-09-28 00:00:00",
+    "blend_date_min": "2025-08-14 00:00:00",
+    "calibration_date_max": "2025-08-13 00:00:00",
+    "calibration_date_min": "2025-06-25 00:00:00",
+    "rows": {
+      "blend": 46372,
+      "calibration": 47037,
+      "tune": 89517
+    },
+    "tune_date_max": "2025-06-24 00:00:00",
+    "tune_date_min": "2025-03-18 00:00:00",
+    "validation_unique_dates": 184
+  }
+}
