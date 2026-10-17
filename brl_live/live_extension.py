@@ -112,12 +112,12 @@ def make_history_engine(parameters: dict, history_path: Path, physics_table=None
         texp = {k: float(v) * scale for k, v in texp.items()}
         # POST-03 (off unless ADJUST['postseason_starter_tiers'] is set): good starters are kept in longer than weak ones,
         # so each starter's own factor follows his regular-season strikeouts minus walks this season.
-        tiers = postseason_tiers_table()
+        tiers = postseason_tiers_table(); tier_factors = {}
         if tiers:
             for sp in (matchup.away.starter.player_id, matchup.home.starter.player_id):
                 f = starter_tier_scale(tiers, season_kbb(history, sp, parameters['date']))
                 if f is not None and int(sp) in pexp:
-                    pexp[int(sp)] = pexp[int(sp)] / scale * f
+                    pexp[int(sp)] = pexp[int(sp)] / scale * f; tier_factors[int(sp)] = f
     from .boxscore import ADJUST as _ADJ, hazard_correction_for
     correction = hazard_correction_for(_ADJ, matchup.game_type)
     manager = PortableStarterPolicy(manager_doc, pexp, texp,
@@ -128,6 +128,10 @@ def make_history_engine(parameters: dict, history_path: Path, physics_table=None
     if scale is not None:
         manager.league = float(manager.league) * scale
         manager.adjust_label = 'postseason starter usage (expected batters x%.2f)' % scale
+        if tier_factors:
+            # POST-03: the label carries each starter's own factor by his strikeouts-minus-walks tier (away, then home)
+            manager.adjust_label = 'postseason starter usage by tier (expected batters %s; team x%.2f)' % (
+                ', '.join('x%.2f' % tier_factors[int(sp)] for sp in (matchup.away.starter.player_id, matchup.home.starter.player_id) if int(sp) in tier_factors), scale)
     elif leash_label:
         manager.adjust_label = leash_label
     from .boxscore import pitch_counts_for
