@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 357,
- "rows": 360,
+ "experiments": 359,
+ "rows": 362,
  "records": {
   "ACC-01": [
    {
@@ -5947,6 +5947,38 @@
     "runs": [],
     "frozen_commits": [],
     "status": "live"
+   }
+  ],
+  "CHAIN-08": [
+   {
+    "id": "CHAIN-08",
+    "columns": {
+     "ID": "CHAIN-08",
+     "Attempt": "Hitters' columns by count situation. A hitter's swing and whiff columns are pitch family in or out of the zone, split by two strikes or not (CHAIN-02B); the chain parameter hitter_counts 'three' splits them instead by even-or-behind with fewer than two strikes, two strikes, and ahead (COUNT3), 18 columns, so a hitter who chases when ahead but not when even is read as such; the pooled prior (CHAIN-04) keeps thin columns sane. Arms, sharing CHAIN-09's run on the live settings (chain67-both): c0 = refit control; hc3 = hitter_counts 'three'; both = with CHAIN-09's out_by_family",
+     "Disposition and evidence": "**Registered in the commit that added this row, before any arm was fit.** Gates as CHAIN-04, judged on the hc3 arm against c0: (1) blended 2026 log loss better with the 95% game-bootstrap interval below zero and calibration within 0.015; (2) per-pitch swing and whiff log loss both no worse. The run's selection rule (lowest 2025 tuning-block log loss among hc3, obf, both) picks the arm adopted if its own gate (1) holds. Prediction: hc3 gains 0.00003 to 0.00015; the per-pitch swing check improves 0.5 to 2 per 1,000 (counts are where swing decisions differ most)",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
+   }
+  ],
+  "CHAIN-09": [
+   {
+    "id": "CHAIN-09",
+    "columns": {
+     "ID": "CHAIN-09",
+     "Attempt": "The ball-in-play mix by pitch family. A hitter's (and a pitcher's) in-play outcome mix is one five-class vector; with out_by_family it is kept per family (fastball, breaking, offspeed), each shrunk toward the player's pooled mix (k_b_out_pool 60, k_p_out_pool 150 balls in play) and then toward the league (pitch_chain._dev_multi_h), so a hitter who homers off fastballs and rolls over breaking balls is read as such against a fastball pitcher (test: a planted fastball-only homer hitter against an all-fastball arm reads 1.3 times the homer chance of a hitter with the same homers spread over families; identical with the option off). The park's mix stays one vector. Arms, sharing CHAIN-08's run: obf = out_by_family; both = with hitter_counts 'three'",
+     "Disposition and evidence": "**Registered in the commit that added this row, before any arm was fit.** Gates as CHAIN-04, judged on the obf arm against c0; (2) here is the per-pitch outcome log loss no worse than c0's (the chain's own ball-in-play check, unchanged by every option so far at 0.96444). Prediction: obf gains 0.00005 to 0.0002, mostly in home runs and extra bases; the per-pitch outcome check improves 1 to 3 per 1,000 balls in play. If either passes: check-only replays refresh the context tables, then live, as CHAIN-04",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "TOTALS-05": [

@@ -75,8 +75,17 @@ DEFAULT_PARAMS = {'k_b_swing': 200.0, 'k_b_whiff': 140.0, 'k_b_foul': 150.0, 'k_
                   # CHAIN-07: fastballs split by speed into three cells per location (under 93, 93 to 95.9, 96 and up mph) for the
                   # league tables, the mix and the ball-in-play mix, so a pitcher's velocity speaks before his own deviations
                   # accumulate; hitters' and pitchers' deviation columns keep the three families. Off: 15 cells
-                  'fb_tiers': False}
+                  'fb_tiers': False,
+                  # CHAIN-08: hitters' swing and whiff columns by count situation: 'two_strike' (two strikes or not, CHAIN-02B's
+                  # two_strike_groups) or 'three' (even or behind with fewer than two strikes, two strikes, ahead); 'three' implies
+                  # two_strike_groups
+                  'hitter_counts': 'two_strike',
+                  # CHAIN-09: the players' ball-in-play mix by pitch family (three families, pooled toward the player's overall mix
+                  # with k_b_out_pool / k_p_out_pool); off: one mix per player
+                  'out_by_family': False, 'k_b_out_pool': 60.0, 'k_p_out_pool': 150.0}
 FB_TIER_EDGES = (93.0, 96.0)
+# count index -> hitter count situation for hitter_counts 'three': 0 even or behind (fewer than two strikes), 1 two strikes, 2 ahead
+COUNT3 = np.array([0, 0, 1, 2, 0, 1, 2, 2, 1, 2, 2, 1])
 EXTRA_FEATURES = ['ch_sw00', 'ch_wh00', 'ch_fo00', 'ch_ip00', 'ch_ball00', 'ch_sw02', 'ch_wh02', 'ch_sw30']
 TWO_STRIKES = (np.arange(N_COUNT) % 3 == 2).astype(int)                # count index -> two strikes
 PRIOR = {'swing': 0.47, 'whiff': 0.24, 'foul': 0.50, 'called': 0.32, 'hbp': 0.004}
@@ -139,6 +148,23 @@ def _dev_multi(y, e, n, k):
     base = np.where(n[:, None] > 0, e / np.maximum(n[:, None], 1e-9), OUT_PRIOR[None, :])
     base = np.clip(base, 1e-4, 1.0)
     est = (y + k * base) / (n[:, None] + k)
+    return np.log(est) - np.log(base)
+
+
+def _dev_multi_h(y, e, n, k, k_pool):
+    """CHAIN-09: ``_dev_multi`` by family (axis 1 of y and e: (rows, families, classes); n: (rows, families)) with a two-level
+    prior: each family's mix shrinks toward the player's pooled mix (all families, shrunk toward the league with k_pool).
+    Returns (rows, families, classes) log ratios; k_pool 0 applies ``_dev_multi`` to each family alone."""
+    y = np.asarray(y, float); e = np.asarray(e, float); n = np.asarray(n, float)
+    base = np.where(n[..., None] > 0, e / np.maximum(n[..., None], 1e-9), OUT_PRIOR)
+    base = np.clip(base, 1e-4, 1.0)
+    if not k_pool:
+        est = (y + k * base) / (n[..., None] + k)
+        return np.log(est) - np.log(base)
+    d_pool = _dev_multi(y.sum(1), e.sum(1), n.sum(1), k_pool)                                  # (rows, classes)
+    prior = base * np.exp(d_pool)[:, None, :]
+    prior /= prior.sum(axis=2, keepdims=True)
+    est = (y + k * prior) / (n[..., None] + k)
     return np.log(est) - np.log(base)
 
 
@@ -306,13 +332,16 @@ class ChainState:
         self.Lout = np.zeros((2, N_CELL, len(OUT_CLASSES)))
         self.Lmix = np.zeros((2, N_BUCKET, N_CELL)) if self.p.get('platoon_mix') else np.zeros((N_BUCKET, N_CELL))
         h = float(self.p['half_life'])
-        self.nb = N_GROUP * (2 if self.p.get('two_strike_groups') else 1)      # hitter deviation columns
+        self.three = str(self.p.get('hitter_counts') or 'two_strike') == 'three'
+        self.nb = N_GROUP * (3 if self.three else 2 if self.p.get('two_strike_groups') else 1)      # hitter deviation columns
         self.npc = N_GROUP if self.p.get('pitcher_cells') else N_FAM            # pitcher deviation columns
+        self.obf = bool(self.p.get('out_by_family'))
+        out_shape = ((N_FAM, 5), (N_FAM, 5), (N_FAM,)) if self.obf else ((5,), (5,), ())
         self.bat = _Bank({'sw_y': (self.nb,), 'sw_e': (self.nb,), 'sw_n': (self.nb,), 'wh_y': (self.nb,), 'wh_e': (self.nb,), 'wh_n': (self.nb,),
-                          'fo_y': (), 'fo_e': (), 'fo_n': (), 'out_y': (5,), 'out_e': (5,), 'out_n': ()}, h)
+                          'fo_y': (), 'fo_e': (), 'fo_n': (), 'out_y': out_shape[0], 'out_e': out_shape[1], 'out_n': out_shape[2]}, h)
         mix_shape = (2, N_BUCKET, N_CELL) if self.p.get('platoon_mix') else (N_BUCKET, N_CELL)
         self.pit = _Bank({'mix': mix_shape, 'sw_y': (self.npc,), 'sw_e': (self.npc,), 'sw_n': (self.npc,), 'wh_y': (self.npc,), 'wh_e': (self.npc,), 'wh_n': (self.npc,),
-                          'cs_y': (), 'cs_e': (), 'cs_n': (), 'out_y': (5,), 'out_e': (5,), 'out_n': ()}, h)
+                          'cs_y': (), 'cs_e': (), 'cs_n': (), 'out_y': out_shape[0], 'out_e': out_shape[1], 'out_n': out_shape[2]}, h)
         self.park = _Bank({'out_y': (5,), 'out_e': (5,), 'out_n': ()}, float(self.p['park_half_life']))
         self.names = feature_names(self.p)
         self.pitches_seen = 0
@@ -323,6 +352,8 @@ class ChainState:
     def _bcol(self, cell, count):
         """Hitter deviation column for a cell and count (group, or group x two strikes)."""
         g = self.cell_group[cell]
+        if self.three:
+            return g + N_GROUP * COUNT3[count]
         return g + N_GROUP * TWO_STRIKES[count] if self.p.get('two_strike_groups') else g
 
     def _pcol(self, cell):
@@ -368,9 +399,16 @@ class ChainState:
         dp_sw = _dev_h(Pi['sw_y'][pr], Pi['sw_e'][pr], Pi['sw_n'][pr], P['k_p_swing'], kp)[:, pcol]                  # (n, cell)
         dp_wh = _dev_h(Pi['wh_y'][pr], Pi['wh_e'][pr], Pi['wh_n'][pr], P['k_p_whiff'], kp)[:, pcol]
         dp_cs = _dev(Pi['cs_y'][pr], Pi['cs_e'][pr], Pi['cs_n'][pr], P['k_p_called'])
-        W = np.exp(_dev_multi(B['out_y'][br], B['out_e'][br], B['out_n'][br], P['k_b_out'])
-                   + _dev_multi(Pi['out_y'][pr], Pi['out_e'][pr], Pi['out_n'][pr], P['k_p_out'])
-                   + _dev_multi(K['out_y'][kr], K['out_e'][kr], K['out_n'][kr], P['k_park_out']))
+        if self.obf:
+            # CHAIN-09: the hitter's and pitcher's mix for the cell's family, pooled toward their overall mix
+            fam_c = self.cell_fam[cells]
+            W = np.exp(_dev_multi_h(B['out_y'][br], B['out_e'][br], B['out_n'][br], P['k_b_out'], P.get('k_b_out_pool') or 0.0)[:, fam_c, :]
+                       + _dev_multi_h(Pi['out_y'][pr], Pi['out_e'][pr], Pi['out_n'][pr], P['k_p_out'], P.get('k_p_out_pool') or 0.0)[:, fam_c, :]
+                       + _dev_multi(K['out_y'][kr], K['out_e'][kr], K['out_n'][kr], P['k_park_out'])[:, None, :])          # (n, cell, 5)
+        else:
+            W = np.exp(_dev_multi(B['out_y'][br], B['out_e'][br], B['out_n'][br], P['k_b_out'])
+                       + _dev_multi(Pi['out_y'][pr], Pi['out_e'][pr], Pi['out_n'][pr], P['k_p_out'])
+                       + _dev_multi(K['out_y'][kr], K['out_e'][kr], K['out_n'][kr], P['k_park_out']))[:, None, :]           # (n, 1, 5)
         Lg = self._league()
         if P.get('platoon_mix'):
             # CHAIN-05: his pooled mix (both sides) shrunk to the league's pooled mix, moved by the league's platoon ratio, is
@@ -395,7 +433,7 @@ class ChainState:
              'wh': (M * p_sw * p_wh).sum(2), 'fo': (M * p_sw * (1 - p_wh) * p_fo).sum(2)}
         w_ip = M * p_sw * (1 - p_wh) * (1 - p_fo)                                                                      # (n, count, cell)
         T['ip'] = w_ip.sum(2)
-        O = Lg['out'][pl] * W[:, None, :]                                                                               # (n, cell, 5)
+        O = Lg['out'][pl] * W                                                                                           # (n, cell, 5)
         O /= O.sum(axis=2, keepdims=True)
         D = np.einsum('ncj,njo->nco', w_ip, O) / np.maximum(T['ip'][:, :, None], 1e-12)                                 # (n, count, 5)
         return T, D, M, p_sw, p_wh
@@ -497,9 +535,15 @@ class ChainState:
         ok_reg = ok_out & reg
         if ok_out.any():
             e_out = Lg['out'][pl[ok_out], cell[ok_out]]                                                              # (m, 5)
-            W = np.exp(_dev_multi(B['out_y'][br[ok_out]], B['out_e'][br[ok_out]], B['out_n'][br[ok_out]], P['k_b_out'])
-                       + _dev_multi(Pi['out_y'][pr[ok_out]], Pi['out_e'][pr[ok_out]], Pi['out_n'][pr[ok_out]], P['k_p_out'])
-                       + _dev_multi(K['out_y'][kr[ok_out]], K['out_e'][kr[ok_out]], K['out_n'][kr[ok_out]], P['k_park_out']))
+            if self.obf:
+                fo_ = self.cell_fam[cell[ok_out]]; m_ = np.arange(ok_out.sum())
+                W = np.exp(_dev_multi_h(B['out_y'][br[ok_out]], B['out_e'][br[ok_out]], B['out_n'][br[ok_out]], P['k_b_out'], P.get('k_b_out_pool') or 0.0)[m_, fo_, :]
+                           + _dev_multi_h(Pi['out_y'][pr[ok_out]], Pi['out_e'][pr[ok_out]], Pi['out_n'][pr[ok_out]], P['k_p_out'], P.get('k_p_out_pool') or 0.0)[m_, fo_, :]
+                           + _dev_multi(K['out_y'][kr[ok_out]], K['out_e'][kr[ok_out]], K['out_n'][kr[ok_out]], P['k_park_out']))
+            else:
+                W = np.exp(_dev_multi(B['out_y'][br[ok_out]], B['out_e'][br[ok_out]], B['out_n'][br[ok_out]], P['k_b_out'])
+                           + _dev_multi(Pi['out_y'][pr[ok_out]], Pi['out_e'][pr[ok_out]], Pi['out_n'][pr[ok_out]], P['k_p_out'])
+                           + _dev_multi(K['out_y'][kr[ok_out]], K['out_e'][kr[ok_out]], K['out_n'][kr[ok_out]], P['k_park_out']))
             pred_out = e_out * W; pred_out /= pred_out.sum(axis=1, keepdims=True)
             if ok_reg.any():
                 sel = reg[ok_out]; rows = np.arange(ok_out.sum())[sel]; y = out_idx[ok_out][sel]
@@ -536,8 +580,11 @@ class ChainState:
         np.add.at(Pi['cs_y'], pr[take], (called * w)[take]); np.add.at(Pi['cs_e'], pr[take], (e_cs * w)[take]); np.add.at(Pi['cs_n'], pr[take], w[take])
         if ok_out.any():
             wo = w[ok_out]
+            fo_ = self.cell_fam[cell[ok_out]]
             for bank, rows, mask in ((B, br[ok_out], None), (Pi, pr[ok_out], None), (K, kr[ok_out], reg[ok_out])):
-                if mask is None:
+                if mask is None and self.obf:                                # CHAIN-09: the players' banks by the pitch's family
+                    np.add.at(bank['out_y'], (rows, fo_, out_idx[ok_out]), wo); np.add.at(bank['out_e'], (rows, fo_), e_out * wo[:, None]); np.add.at(bank['out_n'], (rows, fo_), wo)
+                elif mask is None:
                     np.add.at(bank['out_y'], (rows, out_idx[ok_out]), wo); np.add.at(bank['out_e'], rows, e_out * wo[:, None]); np.add.at(bank['out_n'], rows, wo)
                 elif mask.any():                                             # parks: real games only
                     np.add.at(bank['out_y'], (rows[mask], out_idx[ok_out][mask]), 1.0); np.add.at(bank['out_e'], rows[mask], e_out[mask]); np.add.at(bank['out_n'], rows[mask], 1.0)

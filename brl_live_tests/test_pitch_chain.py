@@ -500,3 +500,44 @@ def test_fastball_tiers_are_off_by_default_and_let_velocity_speak_through_the_le
     assert T_hard["wh"][0, 0] > T_soft["wh"][0, 0] * 1.3                                   # whiffs per pitch at 0-0: velocity speaks
     T_hard0, _, _, _, _ = st_off._transitions([555], [900], ['UNK'], ['R'], ['R'], day2); T_soft0, _, _, _, _ = st_off._transitions([555], [901], ['UNK'], ['R'], ['R'], day2)
     assert abs(T_hard0['wh'][0, 0] - T_soft0['wh'][0, 0]) < 1e-9                             # off: the two arms look the same
+
+
+def test_hitter_count_situations_and_out_by_family_are_off_by_default_and_read_planted_tendencies():
+    """CHAIN-08/09: the defaults reproduce the chain exactly; hitter_counts 'three' gives 18 hitter columns and reads a
+    hitter who chases only when ahead; out_by_family reads a hitter who homers only off fastballs, against a fastball
+    pitcher, and pools toward his overall mix; builder and state agree with both on."""
+    pa, pitches = synthetic(seed=41, days=12)
+    base = {'two_strike_groups': True, 'pitcher_cells': True, 'extra_features': True, 'half_life': 60.0, 'k_b_pool': 50.0, 'k_p_pool': 200.0, 'opp_adjust': True, 'fb_tiers': True}
+    f0, _ = pc.build_features(pa, pitches, base)
+    f0b, _ = pc.build_features(pa, pitches, dict(base, hitter_counts='two_strike', out_by_family=False))
+    assert np.allclose(f0.to_numpy(float), f0b.to_numpy(float))
+    on = dict(base, hitter_counts='three', out_by_family=True)
+    f1, audit = pc.build_features(pa, pitches, on)
+    assert audit['per_pitch_check']['swing']['n'] == len(pitches) and not np.allclose(f0.to_numpy(float), f1.to_numpy(float))
+    probs = np.exp(f1[[f'ch_{l}' for l in pc.LABELS]].to_numpy()); assert np.allclose(probs.sum(1), 1.0, atol=2e-3)
+    ordered = pa.sort_values(['date_key', 'game_pk', 'at_bat_number']).reset_index(drop=True)
+    parks = {int(g): str(k) for g, k in zip(ordered['game_pk'], ordered['park'])}
+    state = pc.ChainState.build(pitches, '2026-04-10', on, parks); day = int(pc.day_ordinal(['2026-04-10'])[0])
+    assert state.nb == 18 and state.bat.a['out_y'].shape[1:] == (3, 5) and state.pit.a['out_n'].shape[1:] == (3,)
+    for r in np.where(ordered['date_key'].to_numpy() == '2026-04-10')[0][:20]:
+        got = state.features(int(ordered.batter[r]), int(ordered.pitcher[r]), str(ordered.park[r]), str(ordered.stand[r]), str(ordered.p_throws[r]), day)
+        assert np.allclose(got, f1.iloc[r].to_numpy(float), atol=1e-5)
+    # planted in-play mixes: hitter 70 homers only off fastballs; hitter 71 the same number of homers spread over every family
+    rng = np.random.default_rng(9); rows = []; start = pd.Timestamp('2026-05-01'); n_ = 0
+    for d in range(40):
+        day_s = (start + pd.Timedelta(days=d)).strftime('%Y-%m-%d')
+        for i in range(30):
+            b_ = 70 + (i % 2); p_ = 300 + (i % 5); fam = ['FF', 'SL', 'CH'][i % 3]
+            hr = (fam == 'FF' and rng.random() < 0.3) if b_ == 70 else (rng.random() < 0.1)
+            rows.append([day_s, 8000 + d * 10 + (i // 10), i % 10 + 1, 1, p_, b_, 'R', 'R', 0, 0, fam, 'X', 94.0 if fam == 'FF' else 85.0, 2300, -4.0, 10.0, 0.0, 2.6, 5, 6.3, 'HR' if hr else 'BIP_OUT'])
+    q = pd.DataFrame(rows, columns=[c for c in pitches.columns if c != 'last']); q['last'] = 1
+    day2 = int(pc.day_ordinal(['2026-06-15'])[0])
+    st_on = pc.ChainState.build(q, '2026-06-15', dict(on, k_b_out=30.0, k_b_out_pool=30.0), {})
+    st_off = pc.ChainState.build(q, '2026-06-15', dict(base, k_b_out=30.0), {})
+    # against a pitcher who throws only fastballs (pitcher 300 after one day of fastballs is not pure; use the planted mix via a new all-fastball arm)
+    rows2 = [['2026-06-14', 9000, i + 1, 1, 400, 72, 'R', 'R', 0, 0, 'FF', 'X', 95.0, 2300, -4.0, 10.0, 0.0, 2.6, 5, 6.3, 'BIP_OUT'] for i in range(60)]
+    q2 = pd.concat([q, pd.DataFrame(rows2, columns=[c for c in pitches.columns if c != 'last']).assign(last=1)], ignore_index=True)
+    st_on = pc.ChainState.build(q2, '2026-06-15', dict(on, k_b_out=30.0, k_b_out_pool=30.0), {}); st_off = pc.ChainState.build(q2, '2026-06-15', dict(base, k_b_out=30.0), {})
+    hr_on_70 = np.exp(st_on.features(70, 400, 'UNK', 'R', 'R', day2)[pc.LABELS.index('HR')]); hr_on_71 = np.exp(st_on.features(71, 400, 'UNK', 'R', 'R', day2)[pc.LABELS.index('HR')])
+    hr_off_70 = np.exp(st_off.features(70, 400, 'UNK', 'R', 'R', day2)[pc.LABELS.index('HR')]); hr_off_71 = np.exp(st_off.features(71, 400, 'UNK', 'R', 'R', day2)[pc.LABELS.index('HR')])
+    assert hr_on_70 > hr_on_71 * 1.3 and abs(hr_off_70 - hr_off_71) < 0.3 * hr_off_71                  # family mix read only with the option
