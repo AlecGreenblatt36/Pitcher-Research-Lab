@@ -1,0 +1,196 @@
+{
+ "schema": "brl.replay-receipt.v1",
+ "tag": "post06-fdl-post02-2024",
+ "model": "retrain04-rt",
+ "season": 2024,
+ "n_sims": 1000,
+ "date_from": "2024-01-01",
+ "step": 1,
+ "offsets": true,
+ "rest": false,
+ "workers": 4,
+ "run_id": "39036273471",
+ "shard": [
+  1,
+  4
+ ],
+ "started_at": "2026-10-17T13:22:44.643584+00:00",
+ "stages": [
+  {
+   "stage": "restore data package",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load physics tables",
+   "at_seconds": 2.4
+  },
+  {
+   "stage": "load pitch tables",
+   "at_seconds": 5.2
+  },
+  {
+   "stage": "load history and reconstruct games",
+   "at_seconds": 24.5
+  },
+  {
+   "stage": "replay 9 games with 4 workers",
+   "at_seconds": 61.7
+  },
+  {
+   "stage": "score",
+   "at_seconds": 272.3
+  }
+ ],
+ "model_selected": {
+  "name": "retrain04-rt",
+  "source": "private/models/retrain04-rt.enc",
+  "sha256": "ed25de37b326c3938b151abe785a57d566de176a7a38b04d1efd81cdcb11fd75",
+  "fitted_at": "2026-10-17T04:14:31.818883+00:00",
+  "physics_features": 30
+ },
+ "physics_years": [
+  2023,
+  2024
+ ],
+ "physics_rows": 372905,
+ "pitch_years": [
+  2021,
+  2022,
+  2023,
+  2024
+ ],
+ "pitch_rows": 3073269,
+ "postseason": {
+  "types": [
+   "F",
+   "D",
+   "L"
+  ],
+  "rows": 3266,
+  "games": 43,
+  "scale": {
+   "F": 0.91,
+   "D": 0.91,
+   "L": 0.91
+  },
+  "tiers": {
+   "cuts": [
+    0.1518,
+    0.1876
+   ],
+   "scale": [
+    0.81,
+    0.89,
+    0.94
+   ]
+  },
+  "exit_offsets": {
+   "F": 0.4,
+   "D": 0.4,
+   "L": 0.4
+  }
+ },
+ "games": 9,
+ "offsets_table": {
+  "path": "brl_live/context_offsets.json",
+  "estimated_through": "2026-09-27"
+ },
+ "environment": {
+  "table": "env-v2-weather",
+  "conditions": "research/conditions-37697026337.jsonl.gz",
+  "games_with_conditions": 0
+ },
+ "team_offsets": {
+  "rows": "research/team-resid-v2-37712616076.json.gz",
+  "k": 4000,
+  "half_life": 120,
+  "sides": [
+   "bat",
+   "fld"
+  ],
+  "center": true,
+  "dates": 5,
+  "largest_offset": 0.0
+ },
+ "transitions": {
+  "path": "brl_live/transitions.json",
+  "name": "base running from 2023, 2024, 2025, 2026 play-by-play",
+  "cells": 167
+ },
+ "reliever_choice": {
+  "path": "brl_live/reliever_choice.json",
+  "name": "reliever choice from 2023-2026 relief entries",
+  "game_sigma": 0.0,
+  "temperature": 1.0
+ },
+ "relief_exit": {
+  "path": "brl_live/relief_exit.json",
+  "name": "reliever exits from 2023-2026 relief decisions"
+ },
+ "relief_hooks": {
+  "half_life": 90.0,
+  "k": 10.0,
+  "decisions": 290114
+ },
+ "pitch_counts": {
+  "chain": true,
+  "fallback": "brl_live/pitch_counts_by_outcome.json"
+ },
+ "steals": {
+  "per_pa": 0.85
+ },
+ "paired_streams": true,
+ "scores": {
+  "p_sim": {
+   "brier": 0.24926034116843304,
+   "log_loss": 0.6921939134281254,
+   "better_than_coin_pct": 0.29586353262678333
+  },
+  "p_team": {
+   "brier": 0.2486778019674444,
+   "log_loss": 0.6905037759116696,
+   "better_than_coin_pct": 0.5288792130222375
+  },
+  "p_blend": {
+   "brier": 0.24828064199480585,
+   "log_loss": 0.6897708246012373,
+   "better_than_coin_pct": 0.6877432020776619
+  },
+  "p_coin": {
+   "brier": 0.25,
+   "log_loss": 0.6931471805599453,
+   "better_than_coin_pct": 0.0
+  },
+  "n_games": 9
+ },
+ "scores_by_month": {
+  "10": {
+   "p_sim": {
+    "brier": 0.24926034116843304,
+    "log_loss": 0.6921939134281254,
+    "better_than_coin_pct": 0.29586353262678333
+   },
+   "p_team": {
+    "brier": 0.2486778019674444,
+    "log_loss": 0.6905037759116696,
+    "better_than_coin_pct": 0.5288792130222375
+   },
+   "p_blend": {
+    "brier": 0.24828064199480585,
+    "log_loss": 0.6897708246012373,
+    "better_than_coin_pct": 0.6877432020776619
+   },
+   "p_coin": {
+    "brier": 0.25,
+    "log_loss": 0.6931471805599453,
+    "better_than_coin_pct": 0.0
+   },
+   "n_games": 9
+  }
+ },
+ "per_game_file": "research/replay-post06-fdl-post02-2024-39036273471-s1of4.jsonl.gz",
+ "per_game_sha256": "42a8a653107a8fda672b7499ff5028ef6f382d15310a72d6d3927f4aa1a9e770",
+ "status": "completed",
+ "finished_at": "2026-10-17T13:27:43.784533+00:00",
+ "seconds": 299.1
+}
