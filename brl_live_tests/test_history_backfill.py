@@ -44,3 +44,20 @@ def test_postseason_relabel_build_and_receipt(tmp_path):
     r = hb.season_receipt(pa, games, 2019)
     assert r['by_game_type']['R'] == {'schedule_games': 2, 'games': 1, 'missing_games': 1, 'plate_appearances': 2}
     assert r['by_game_type']['L']['plate_appearances'] == 2 and r['date_min'] == '2019-06-01' and r['outcome_mix_pct_regular_season'] == {'1B': 50.0, 'K': 50.0}
+
+
+def test_postseason_only_build_and_receipt(tmp_path):
+    """POST-05: a package season's postseason alone builds and gets its own path, purpose and receipt counts."""
+    from research_lab.pa_model.data import build_plate_appearances
+    post = tmp_path / 'post.csv.gz'
+    _pitches(2, 'D', '2024-10-05').to_csv(post, index=False, compression='gzip')
+    types = hb.relabel_postseason([post])
+    pa, report = build_plate_appearances([post])
+    pa['game_type'] = [types.get(int(pk), 'R') for pk in pa['game_pk']]
+    pa['date_key'] = pd.to_datetime(pa['date_key']).dt.strftime('%Y-%m-%d')
+    pa = pa[pa['game_type'].isin(hb.POST_TYPES)].reset_index(drop=True)
+    assert len(pa) == 2 and set(pa['game_type']) == {'D'}
+    r = hb.season_receipt(pa, [{'game_pk': 2, 'date': '2024-10-05', 'game_type': 'D'}], 2024)
+    assert r['by_game_type'] == {'D': {'schedule_games': 1, 'games': 1, 'missing_games': 0, 'plate_appearances': 2}} and r['outcome_mix_pct_regular_season'] == {}
+    assert hb.postseason_path(2024) == 'private/history/post-2024.enc' and hb.postseason_purpose(2024) == 'pa-history-postseason-2024'
+    assert hb.postseason_receipt_path(2024) == 'history/post-2024.json'

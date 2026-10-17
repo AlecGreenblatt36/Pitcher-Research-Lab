@@ -43,6 +43,20 @@ def receipt_path(year: int) -> str:
     return f'history/pa-{int(year)}.json'
 
 
+# POST-05: the postseasons of the data package's seasons (the package holds their regular seasons only), built the same
+# way from the postseason games alone and sealed apart from the HIST-01 files
+def postseason_path(year: int) -> str:
+    return f'private/history/post-{int(year)}.enc'
+
+
+def postseason_purpose(year: int) -> str:
+    return f'pa-history-postseason-{int(year)}'
+
+
+def postseason_receipt_path(year: int) -> str:
+    return f'history/post-{int(year)}.json'
+
+
 def chunks(start: date, end: date, days: int = 3) -> list[tuple[date, date]]:
     out, cur = [], start
     while cur <= end:
@@ -158,16 +172,20 @@ def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']; key = key_bytes(os.environ['BRL_PA_PACKAGE_KEY'])
     branch = os.environ.get('BRL_LEDGER_BRANCH', 'brl-live-data')
     year = int(os.environ['BRL_SEASON'])
-    if not 2015 <= year <= 2022:
-        raise ValueError('HIST-01 covers 2015 to 2022 (Statcast); 2023 on is in the data package')
+    if not 2015 <= year <= 2026:
+        raise ValueError('HIST-01 covers 2015 to 2022 (Statcast); 2023 on is in the data package, whose postseasons POST-05 seals apart')
+    # 2023 on: the regular season is in the data package, so only the postseason is built (POST-05)
+    post_only = year >= 2023
     work = Path(os.environ.get('RUNNER_TEMP', '/tmp')) / f'brl-history-{year}'
     t0 = time.time()
     games = season_games(get_json, year)
     reg = [g for g in games if g['game_type'] == 'R']; post = [g for g in games if g['game_type'] in POST_TYPES]
-    print(json.dumps({'year': year, 'regular_season_games': len(reg), 'postseason_games': len(post)}), flush=True)
+    print(json.dumps({'year': year, 'regular_season_games': len(reg), 'postseason_games': len(post), 'postseason_only': post_only}), flush=True)
+    if post_only and not post:
+        raise ValueError(f'{year}: no completed postseason games yet')
     cols = list(PA_SOURCE_COLUMNS)
     span = lambda gs: chunks(date.fromisoformat(gs[0]['date']), date.fromisoformat(gs[-1]['date']))
-    reg_files = download(span(reg), 'R|', work / 'reg', cols)
+    reg_files = [] if post_only else download(span(reg), 'R|', work / 'reg', cols)
     post_files = download(span(post), '|'.join(POST_TYPES) + '|', work / 'post', cols) if post else []
     print(json.dumps({'downloaded_files': len(reg_files) + len(post_files), 'seconds': round(time.time() - t0)}), flush=True)
     post_types = relabel_postseason(post_files)
@@ -176,17 +194,22 @@ def main():
     pa['date_key'] = pd.to_datetime(pa['date_key']).dt.strftime('%Y-%m-%d')
     pa['game_date'] = pd.to_datetime(pa['game_date']).dt.strftime('%Y-%m-%d')
     pa = pa[pa['season'] == year].reset_index(drop=True)
+    if post_only:
+        pa = pa[pa['game_type'].isin(POST_TYPES)].reset_index(drop=True)
+        games = post
     plain_csv = pa.to_csv(index=False).encode()
     plain = gzip.compress(plain_csv, mtime=0)
-    cipher = seal(plain, key, history_purpose(year))
-    put(repo, token, history_path(year), cipher, branch, f'BRL: plate-appearance history {year} (HIST-01)')
-    receipt = {'schema': 'brl.history-season-receipt.v1', 'experiment': 'HIST-01', **season_receipt(pa, games, year),
+    path, purpose, rpath, exp = ((postseason_path(year), postseason_purpose(year), postseason_receipt_path(year), 'POST-05') if post_only
+                                 else (history_path(year), history_purpose(year), receipt_path(year), 'HIST-01'))
+    cipher = seal(plain, key, purpose)
+    put(repo, token, path, cipher, branch, f'BRL: plate-appearance history {year} ({exp})')
+    receipt = {'schema': 'brl.history-season-receipt.v1', 'experiment': exp, 'postseason_only': post_only, **season_receipt(pa, games, year),
                'plate_appearances': int(len(pa)), 'columns': list(pa.columns),
                'build': {k: report[k] for k in ('raw_pitch_rows', 'pitch_rows', 'terminal_pa_rows', 'eligible_pa_rows', 'excluded_terminal_rows', 'duplicate_pa_rows_removed') if k in report},
                'plaintext_csv_sha256': hashlib.sha256(plain_csv).hexdigest(), 'cipher_sha256': sha(cipher), 'cipher_bytes': len(cipher),
-               'path': history_path(year), 'format': 'AES-256-GCM; BRLAESG1 header; 12-byte nonce; AAD BRL:' + history_purpose(year) + '; gzip CSV inside',
+               'path': path, 'format': 'AES-256-GCM; BRLAESG1 header; 12-byte nonce; AAD BRL:' + purpose + '; gzip CSV inside',
                'sealed_at': datetime.now(timezone.utc).isoformat(), 'seconds': round(time.time() - t0), 'run_id': os.environ.get('GITHUB_RUN_ID')}
-    put(repo, token, receipt_path(year), json.dumps(receipt, indent=1).encode(), branch, f'BRL: plate-appearance history {year} receipt')
+    put(repo, token, rpath, json.dumps(receipt, indent=1).encode(), branch, f'BRL: plate-appearance history {year} receipt')
     print(json.dumps({k: receipt[k] for k in ('year', 'plate_appearances', 'by_game_type', 'cipher_bytes', 'seconds')}), flush=True)
 
 
