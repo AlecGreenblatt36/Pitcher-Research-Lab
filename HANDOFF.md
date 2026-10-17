@@ -130,9 +130,9 @@ Model Plan doc). Built the same afternoon:
   leave room for the live lane.
 - CHAIN-06 (opponent-adjusted expectations) passed (-0.00016, growing through the season) and CHAIN-07 (fastball speed
   tiers in the cells) passed by a hair (-0.00003; velocity already reaches the model through the physics); the two add,
-  and chain67-both is live from 11:40 pm with its own context tables. Live model path today: pa-2026-v2-physics ->
+  and chain67-both is live from 9:48 pm with its own context tables. Live model path today: pa-2026-v2-physics ->
   pitch02b-v2h120 (3:55 pm) -> spring02-w10 (5:01) -> chain04-pool-s (5:50) -> chain04b-xs-tight (7:00) -> chain67-both
-  (11:40). 2026 blended log loss 1.45840 -> 1.45685.
+  (9:48). 2026 blended log loss 1.45840 -> 1.45685.
 - BULLPEN-07 failed (the per-game shock moves arms between bins, not the miss); BULLPEN-08 found the choice calibrated
   entry by entry (T 1.0) with the favorites 2 to 4 points high at 30 to 60%, and the top two arms entering 25% too often
   in every cell on today's replays; BULLPEN-09 (temperature 1.15 and 1.3, built, inert) is registered with replays
