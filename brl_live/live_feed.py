@@ -260,8 +260,8 @@ def live_matchup(feed: dict, history: pd.DataFrame, date: str, app: pd.DataFrame
         sp = used[0]
         starter = starter_profile(app, int(sp), _throws(feed, sp), _name(feed, sp), date)
         pen_ids = [p for p in used[1:]] + [p for p in state['bullpen_available'][s] if p not in used]
-        pen = rank_bullpen(tuple(reliever_profile(app, int(p), _throws(feed, p), _name(feed, p), date) for p in dict.fromkeys(pen_ids)))
         t = gd['teams'][s]
+        pen = rank_bullpen(tuple(reliever_profile(app, int(p), _throws(feed, p), _name(feed, p), date, team=str(t.get('abbreviation') or '').upper() or None) for p in dict.fromkeys(pen_ids)))
         teams[s] = TeamProfile(str(t.get('id')), t.get('name') or t.get('abbreviation') or s, lineup, starter, pen)
     matchup = GameMatchup(away=teams['away'], home=teams['home'], venue=gd['teams']['home'].get('abbreviation') or 'Unknown Park',
                           game_type=str((gd.get('game') or {}).get('type') or 'R'))

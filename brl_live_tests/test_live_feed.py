@@ -76,6 +76,8 @@ def test_live_matchup_and_start():
     assert roles['303'] == 'closer' and roles['302'] == 'setup'
     assert start.current_pitcher == {'away': '301', 'home': '402'} and start.outs == 1 and start.bases == ('103', None, '102')
     assert start.lines['401'].outs_recorded == 14
+    # BULLPEN-10: each arm's usage is read for the game's team, so the home bullpen's arms are not new to HOM
+    assert all(dict(p.usage).get('new_arm') == 0.0 for p in m.home.bullpen) and all(dict(p.usage).get('starts30') == 0.0 for p in m.home.bullpen)
     assert game['home']['abbr'] == 'HOM' and game['game_type'] == 'D' and game['game_pk'] == 777
     p = matchup_parameters(game, m, {'automatic_runner_in_extras': False})
     assert p['park'] == 'HOM' and p['matchup']['away']['starter']['player_id'] == '301'
