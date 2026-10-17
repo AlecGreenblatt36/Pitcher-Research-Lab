@@ -5859,14 +5859,16 @@
     "columns": {
      "ID": "CHAIN-06",
      "Attempt": "Opponent-adjusted expectations in the chain. A hitter's swing and whiff counters hold observed against league-expected on the same pitches (platoon, count, cell); the pitcher who threw them is not in the expectation, so a hitter who faced the league's best whiff arms for a month reads as a whiffer, and a pitcher who faced free swingers reads as a whiff pitcher. With chain parameter opp_adjust each side's expectation carries the other side's current deviation (the chain's own prediction without the player: the hitter's counters take league moved by the pitcher's deviation, the pitcher's take league moved by the hitter's), the standard strength-of-schedule adjustment (pitch_chain.py absorb_date; test_opponent_adjusted_...: a planted hitter who saw only the whiff machine is no longer read as a whiffer). The league tables, the per-pitch check and the ball-in-play counters are unchanged. Arms (tools/fit_arms.json) on the live model's settings (chain04b-xs-tight): c0 = refit control; opp = opp_adjust (the run is shared with CHAIN-07: its arms tiers and both ride along; this row's gate is judged on the opp arm against c0, the run's selection rule picks the arm to adopt)",
-     "Disposition and evidence": "**Registered in the commit that added this row, before any arm was fit.** Same selection and gates as CHAIN-04: (1) the candidate beats c0 on blended 2026 log loss with the 95% game-bootstrap interval below zero and calibration within 0.015; (2) per-pitch swing and whiff log loss both no worse than c0's. Prediction: a gain of 0.00005 to 0.0002 nats per plate appearance, concentrated in April and May (by midseason opponents average out); per-pitch whiffs 0.5 to 2 per 1,000 better. If it passes: check-only replays refresh the context tables, then live, as CHAIN-04",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before any arm was fit.** Same selection and gates as CHAIN-04: (1) the candidate beats c0 on blended 2026 log loss with the 95% game-bootstrap interval below zero and calibration within 0.015; (2) per-pitch swing and whiff log loss both no worse than c0's. Prediction: a gain of 0.00005 to 0.0002 nats per plate appearance, concentrated in April and May (by midseason opponents average out); per-pitch whiffs 0.5 to 2 per 1,000 better. If it passes: check-only replays refresh the context tables, then live, as CHAIN-04 **Result (run 38982649812, the two-arm run; the shared four-arm run follows): passed.** Tuning-block log loss 1.452253 against c0 1.452393. (1) 2026 blended 1.456882 against 1.457046, difference -0.000164 nats per plate appearance, 95% game-bootstrap interval -0.000203 to -0.000121; calibration gap 0.0037. (2) per pitch: swings 0.54376 to 0.54370, whiffs 0.47029 to 0.47016, both no worse (the per-pitch check itself is barely moved; the gain is in the deviations the plate-appearance model reads). The size held, the timing did not: the gain is smallest in March (-0.00005) and grows through the season (April 0.00016, July 0.00018, August 0.00021, September 0.00028). Reading: with a 120-day half-life the counters hold the recent schedule, and the schedule's bias (divisional runs, September call-ups, who a team happened to face) accumulates rather than averages out; the adjustment removes it. Adoption as registered: check-only replays, context tables, live (after the four-arm run says whether CHAIN-07's tiers add to it)",
+     "Delta corrected Brier, 2026": "passed"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "38982649812"
+    ],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "passed"
    }
   ],
   "CHAIN-07": [
