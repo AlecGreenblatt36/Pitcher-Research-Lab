@@ -22,11 +22,14 @@ def fake_get(url):
 
 def test_build_reads_pitchers_per_team_date_and_counts_the_misses():
     teams, days = rs.team_dates(fake_get, 2025)
-    assert teams == {108: 'A108', 114: 'H114'} and set(days) == {('2025-06-01', 108), ('2025-06-01', 114), ('2025-10-05', 108), ('2025-10-05', 114)}
+    assert teams == {108: 'LAA', 114: 'CLE'} and set(days) == {('2025-06-01', 108), ('2025-06-01', 114), ('2025-10-05', 108), ('2025-10-05', 114)}
     assert days[('2025-10-05', 108)] == 'D'                                       # spring games and unfinished games are left out
     doc = rs.build(fake_get, 2025, workers=2, log=lambda m: None)
-    assert doc['days']['2025-06-01'] == {'A108': [1081, 1083], 'H114': [1141, 1143]}
-    assert doc['days']['2025-10-05'] == {'A108': [1081, 1083]} and doc['missing'] == [['2025-10-05', 'H114']]
+    assert doc['days']['2025-06-01'] == {'LAA': [1081, 1083], 'CLE': [1141, 1143]}
+    assert doc['days']['2025-10-05'] == {'LAA': [1081, 1083]} and doc['missing'] == [['2025-10-05', 'CLE']]
+    # a table written with team ids (the first run) reads back by code; the Athletics' code follows the season
+    assert rs.statcast_days({'season': 2025, 'days': {'2025-06-01': {'114': [1, 2], '133': [3]}}}) == {'2025-06-01': {'CLE': [1, 2], 'ATH': [3]}}
+    assert rs.statcast_days({'season': 2024, 'days': {'2024-06-01': {'133': [3], 'CLE': [4]}}}) == {'2024-06-01': {'OAK': [3], 'CLE': [4]}}
     rec = rs.summary(doc)
     assert rec['team_dates'] == 4 and rec['read'] == 3 and rec['missing'] == 1 and rec['pitchers_per_roster_mean'] == 2.0 and rec['public_data_only']
     assert rs.rosters_path(2025) == 'research/rosters-2025.json.gz' and rec['path'] == 'research/rosters-2025.json.gz'

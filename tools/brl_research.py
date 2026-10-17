@@ -682,11 +682,13 @@ def choice_fit(data_root: Path, repo=None, token=None, key=None, branch='brl-liv
     if 'game_type' not in h.columns:
         h = h.assign(game_type='R')
     if rosters is None and repo:
+        spec_r = importlib.util.spec_from_file_location('brl_rosters', ROOT / 'tools' / 'brl_rosters.py')
+        rs = importlib.util.module_from_spec(spec_r); spec_r.loader.exec_module(rs)
         rosters = {}
         for year in seasons:
             raw = read_blob(repo, token, f'research/rosters-{year}.json.gz', branch)
             if raw is not None:
-                rosters.update(json.loads(gzip.decompress(raw))['days'])
+                rosters.update(rs.statcast_days(json.loads(gzip.decompress(raw))))
     out = {'seasons': list(seasons), 'roster_days': len(rosters or {}), 'variants': {}}
     sets = {'old_pools': (None, rc.NAMES), 'roster_live_only': (rosters, rc.NAMES), 'roster_live_terms': (rosters, rc.NAMES10), 'roster_6_terms': (rosters, rc.NAMES10_6)}
     cache = {}

@@ -24,8 +24,29 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'tools'))
 
 POST_TYPES = ('F', 'D', 'L', 'W')
-# MLB's abbreviations where they differ from the Statcast codes the history carries
-TO_STATCAST = {'CWS': 'CWS', 'KC': 'KC', 'SD': 'SD', 'SF': 'SF', 'TB': 'TB', 'WSH': 'WSH', 'AZ': 'AZ', 'ATH': 'ATH'}
+# MLB team ids to the codes the history carries (Statcast's; the schedule's team objects carry no abbreviation)
+TEAM_CODE = {108: 'LAA', 109: 'AZ', 110: 'BAL', 111: 'BOS', 112: 'CHC', 113: 'CIN', 114: 'CLE', 115: 'COL', 116: 'DET', 117: 'HOU',
+             118: 'KC', 119: 'LAD', 120: 'WSH', 121: 'NYM', 133: 'ATH', 134: 'PIT', 135: 'SD', 136: 'SEA', 137: 'SF', 138: 'STL',
+             139: 'TB', 140: 'TEX', 141: 'TOR', 142: 'MIN', 143: 'PHI', 144: 'ATL', 145: 'CWS', 146: 'MIA', 147: 'NYY', 158: 'MIL'}
+
+
+def team_code(team_id: int, season: int) -> str:
+    code = TEAM_CODE.get(int(team_id), str(team_id))
+    return 'OAK' if code == 'ATH' and int(season) <= 2024 else code
+
+
+def statcast_days(doc: dict) -> dict:
+    """A roster table's days keyed by the history's team codes ({date: {code: [ids]}}), whichever keys it was written with
+    (team ids as strings, MLB abbreviations or the codes themselves)."""
+    season = int(doc.get('season') or 0)
+    out = {}
+    for date, teams in (doc.get('days') or {}).items():
+        day = {}
+        for k, ids in teams.items():
+            code = team_code(int(k), season) if str(k).isdigit() else str(k)
+            day[code] = [int(x) for x in ids]
+        out[str(date)[:10]] = day
+    return out
 
 
 def rosters_path(year: int) -> str:
@@ -50,7 +71,7 @@ def team_dates(get_json, year: int, through: str | None = None) -> tuple[dict, d
             for side in ('away', 'home'):
                 t = ((g.get('teams') or {}).get(side) or {}).get('team') or {}
                 if t.get('id'):
-                    teams[int(t['id'])] = str(t.get('abbreviation') or t['id'])
+                    teams[int(t['id'])] = team_code(int(t['id']), year)
                     days[(date, int(t['id']))] = g['gameType']
     return teams, days
 

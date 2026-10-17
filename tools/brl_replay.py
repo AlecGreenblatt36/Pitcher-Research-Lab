@@ -318,7 +318,9 @@ def main():
             raw_r = read_blob(repo, token, f'research/rosters-{season}.json.gz', branch)
             if raw_r is None:
                 raise ValueError(f'no roster table for {season} (research/rosters-{season}.json.gz; workflow BRL rosters)')
-            rdoc = json.loads(gzip.decompress(raw_r)); rosters = rdoc['days']
+            spec_r = importlib.util.spec_from_file_location('brl_rosters', ROOT / 'tools' / 'brl_rosters.py')
+            rs_ = importlib.util.module_from_spec(spec_r); spec_r.loader.exec_module(rs_)
+            rdoc = json.loads(gzip.decompress(raw_r)); rosters = rs_.statcast_days(rdoc)
             receipt['rosters'] = {'days': len(rosters), 'team_dates': int(sum(len(v) for v in rosters.values())), 'missing': len(rdoc.get('missing') or [])}
         app = appearances(h)
         games = reconstruct(h)
