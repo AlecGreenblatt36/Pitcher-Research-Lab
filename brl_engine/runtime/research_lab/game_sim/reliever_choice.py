@@ -22,7 +22,8 @@ LEAGUE_K = 0.235
 K_PRIOR_BF = 100.0
 DEFAULT = {"share14": 0.0, "share30": 0.0, "pitched_d1": 0.0, "apps_d2": 0.0, "apps_d3": 0.0, "days_since": 99.0,
            "ninth": 0.0, "late": 0.0, "med_bf": 4.0, "k365": 0.0, "bf365": 0.0, "apps21": 0.0, "ninth21": 0.0, "late21": 0.0,
-           "bf7": 0.0, "apps7": 0.0, "rank14": 99.0}
+           "bf7": 0.0, "apps7": 0.0, "rank14": 99.0,
+           "starts30": 0.0, "days_since_start": 99.0, "new_arm": 0.0}
 
 
 def situation(inning: int, lead: int, outs: int, runners: int) -> dict:
@@ -68,6 +69,11 @@ def features(facts: list[dict], same_hand: list[bool], sit: dict, same3=None) ->
         # BULLPEN-06: a heavy week (relief batters over 7 days, per 10, capped at 30; appearances over 7 days) and the
         # pool's two most used arms by 14-day share
         "work7": np.minimum(f["bf7"], 30.0) / 10.0, "apps7": f["apps7"], "top2_14": (f["rank14"] < 2).astype(float),
+        # BULLPEN-10 (roster pools): a starter in the pen (a start in the last 30 days; one within the last five days),
+        # an arm new to the team (no outing for it in a year: a call-up, a trade, a return), and where they are used
+        "starter_recent": (f["starts30"] > 0).astype(float), "started_within5": (f["days_since_start"] <= 5).astype(float),
+        "new_arm": f["new_arm"], "new_x_blowout": f["new_arm"] * s["blowout"], "new_x_early": f["new_arm"] * s["early"],
+        "starter_x_early": (f["starts30"] > 0).astype(float) * s["early"], "starter_x_blowout": (f["starts30"] > 0).astype(float) * s["blowout"],
     }
 
 

@@ -142,3 +142,22 @@ def test_postseason_game_applies_the_live_usage_and_reconstruct_keeps_the_game_t
     g.loc[g['game_pk'] == 100, 'game_type'] = 'L'
     games = reconstruct(g)
     assert set(games.columns) >= {'game_type'} and games.set_index('game_pk').loc[100, 'game_type'] == 'L' and (games[games['game_pk'] != 100]['game_type'] == 'R').all()
+
+
+def test_bullpen_takes_the_day_roster_as_the_pool():
+    """BULLPEN-10: with the day's roster the pool is its pitchers minus the starter, including a starter in the pen and
+    an arm with no outing on record (a right-handed unknown arm); without it the 14-day rule holds."""
+    rows = []
+    for d in range(1, 20):
+        date = '2026-06-%02d' % d
+        rows.append({'game_pk': d, 'pitcher': 1, 'date': date, 'team': 'AAA', 'bf': 4, 'entry_inning': 9, 'throws': 'R', 'start': False, 'finished': True, 'k': 1})
+        rows.append({'game_pk': d, 'pitcher': 2, 'date': date, 'team': 'AAA', 'bf': 4, 'entry_inning': 7, 'throws': 'L', 'start': False, 'finished': False, 'k': 1})
+        rows.append({'game_pk': d, 'pitcher': 10 + d % 5, 'date': date, 'team': 'AAA', 'bf': 22, 'entry_inning': 1, 'throws': 'R', 'start': True, 'finished': False, 'k': 5})
+    app = pd.DataFrame(rows)
+    old = bullpen(app, 'AAA', '2026-06-20', 10)
+    assert sorted(int(p.player_id) for p in old) == [1, 2]
+    pen = bullpen(app, 'AAA', '2026-06-20', 10, roster=[1, 2, 10, 11, 12, 99])
+    assert sorted(int(p.player_id) for p in pen) == [1, 2, 11, 12, 99]
+    by = {int(p.player_id): p for p in pen}
+    assert by[2].throws == 'L' and by[99].throws == 'R' and dict(by[99].usage)['new_arm'] == 1.0 and dict(by[11].usage)['starts30'] >= 1 and dict(by[1].usage)['starts30'] == 0
+    assert by[1].role == 'closer' and by[99].expected_batters == 4

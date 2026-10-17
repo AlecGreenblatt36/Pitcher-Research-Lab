@@ -35,6 +35,8 @@ Settings come from tools/replay_params.json on the trigger branch:
   base_state   path in the repository of base-state offsets (tools/brl_base_state.py): the stack shaped by bases and outs
   leash        path in the repository of a starter-leash table (tools/brl_leash.py): each starter's expected batters
                faced moved for short rest, a relief outing before, a return from a layoff and the month
+  rosters      true: the bullpen pool is each team's active-roster pitchers that day (research/rosters-<season>.json.gz,
+               ROSTER-01) minus the starter, as the live lane reads the game feed (BULLPEN-10); default the 14-day rule
   postseason   {'types': ['F','D','L'] (default) or ['W'], 'tiers': true|false|table, 'scale': {type: factor}, 'exit_offsets': {type: ..}}:
                replay the season's postseason games (private/history/post-<season>.enc, POST-05) with the live lane's
                postseason usage (POST-06); the params still say which hazard and relief corrections to load (none for
@@ -124,7 +126,7 @@ def _worker(dates: list) -> list:
                         reliever_choice=s.get('reliever_choice'), leash=s.get('leash'), base_state=s.get('base_state'), relief_exit=s.get('relief_exit'), relief_hooks=s.get('relief_hooks'), day_form=s.get('day_form') or 0.0,
                         paired_streams=bool(s.get('paired_streams')), matchup=s.get('matchup'), level_offsets=s.get('level_offsets'),
                         hazard_correction=s.get('hazard_correction'), pitch_counts=s.get('pitch_counts'), state_history=s.get('state_history'), pitch_table=s.get('pitch_table'),
-                        postseason=s.get('postseason'), log=lambda m: print(m, flush=True))
+                        postseason=s.get('postseason'), rosters=s.get('rosters'), log=lambda m: print(m, flush=True))
 
 
 def logit(p):
@@ -310,6 +312,14 @@ def main():
                 if isinstance(spec_p.get(k_), dict):
                     postseason_cfg[k_] = spec_p[k_]
             receipt['postseason'] = {'types': list(post_types), 'rows': int(len(post)), 'games': int(post['game_pk'].nunique()), **postseason_cfg}
+        rosters = None
+        if params.get('rosters'):
+            # BULLPEN-10: the bullpen pool is the day's active roster (ROSTER-01, public data on the ledger branch)
+            raw_r = read_blob(repo, token, f'research/rosters-{season}.json.gz', branch)
+            if raw_r is None:
+                raise ValueError(f'no roster table for {season} (research/rosters-{season}.json.gz; workflow BRL rosters)')
+            rdoc = json.loads(gzip.decompress(raw_r)); rosters = rdoc['days']
+            receipt['rosters'] = {'days': len(rosters), 'team_dates': int(sum(len(v) for v in rosters.values())), 'missing': len(rdoc.get('missing') or [])}
         app = appearances(h)
         games = reconstruct(h)
         games['date'] = games['date'].astype(str)
@@ -487,7 +497,7 @@ def main():
                        hitter_lines=bool(params.get('hitter_lines')), running_events=running_events, reliever_choice=reliever_choice, leash=leash, base_state=base_state, relief_exit=relief_exit, relief_hooks=relief_hooks,
                        day_form=(params['day_form'] if isinstance(params.get('day_form'), dict) else float(params.get('day_form') or 0.0)), paired_streams=bool(params.get('streams')), matchup=matchup,
                        level_offsets=level_offsets, hazard_correction=hazard_correction, pitch_counts=pitch_counts, state_history=state_history, pitch_table=pitch_table,
-                       postseason=postseason_cfg)
+                       postseason=postseason_cfg, rosters=rosters)
         if params.get('streams'):
             receipt['paired_streams'] = True
         if params.get('day_form'):

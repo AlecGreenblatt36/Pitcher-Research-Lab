@@ -63,6 +63,8 @@ def bullpen_usage(app: pd.DataFrame, team: str | None, cutoff: str, pids) -> dic
     and in the eighth or later over 365 days and over the last 21 days (roles move with injuries and trades), his median
     batters per relief outing, his relief strikeouts and batters faced over 365 days, his relief batters and appearances
     over the last 7 days and his place in this pool by 14-day share (BULLPEN-06). Outings for other teams do not count.
+    BULLPEN-10 adds, from his outings for any team over 365 days: his starts over the last 30 days, days since his last
+    start and whether he is new to this team (no outing for it in 365 days: a call-up, a trade, a return).
     Returns {pid: {name: value}}."""
     cutoff = str(cutoff)[:10]
     day = pd.Timestamp(cutoff)
@@ -73,11 +75,22 @@ def bullpen_usage(app: pd.DataFrame, team: str | None, cutoff: str, pids) -> dic
     inn = rel['entry_inning'].to_numpy(float)
     k = rel['k'].to_numpy(float) if 'k' in rel.columns else np.zeros(len(rel))
     tot14, tot30 = max(1.0, bf[ago <= 14].sum()), max(1.0, bf[ago <= 30].sum())
+    # BULLPEN-10: his outings for any team (starts and relief) over 365 days
+    pset = set(int(x) for x in pids)
+    mine = app[(app['date'] < cutoff) & app['pitcher'].isin(pset)]
+    mine = mine[mine['date'] >= (day - pd.Timedelta(days=365)).strftime('%Y-%m-%d')]
+    m_ago = (day - pd.to_datetime(mine['date'].astype(str).str[:10])).dt.days.to_numpy() if len(mine) else np.zeros(0, int)
+    m_who = mine['pitcher'].to_numpy(); m_start = mine['start'].astype(bool).to_numpy() if len(mine) else np.zeros(0, bool)
+    m_team = mine['team'].to_numpy() if len(mine) else np.zeros(0, object)
     out = {}
     for pid in pids:
         m = who == pid
         a, b = ago[m], bf[m]
+        mm = m_who == pid
+        st = m_ago[mm & m_start]
         out[pid] = {'share14': float(b[a <= 14].sum() / tot14), 'share30': float(b[a <= 30].sum() / tot30),
+                    'starts30': float((st <= 30).sum()), 'days_since_start': float(st.min()) if len(st) else 99.0,
+                    'new_arm': float(not (mm & (m_team == team)).any()) if team is not None else 1.0,
                     'pitched_d1': float((a == 1).any()), 'apps_d2': float((a <= 2).sum()), 'apps_d3': float((a <= 3).sum()),
                     'days_since': float(a.min()) if len(a) else 99.0,
                     'ninth': float((inn[m] >= 9).mean()) if m.any() else 0.0, 'late': float((inn[m] >= 8).mean()) if m.any() else 0.0,

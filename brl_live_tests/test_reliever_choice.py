@@ -151,6 +151,10 @@ def test_usage_comes_from_the_team_and_window():
     # BULLPEN-06: relief batters and appearances over 7 days, and his place in the pool by 14-day share (arm 2 has 16 of 30)
     assert u['bf7'] == 4 + 4 + 6 and u['apps7'] == 3 and u['rank14'] == 1.0
     assert bullpen_usage(app, 'AAA', '2026-06-30', [1, 2])[2]['rank14'] == 0.0
+    # BULLPEN-10: starts over 30 days and days since a start count any team; new to the team = no outing for it in a year
+    assert u['starts30'] == 1 and u['days_since_start'] == 6 and u['new_arm'] == 0.0
+    u2 = bullpen_usage(app, 'AAA', '2026-06-30', [2])[2]; assert u2['starts30'] == 0 and u2['days_since_start'] == 99.0 and u2['new_arm'] == 0.0
+    assert bullpen_usage(app, 'BBB', '2026-06-30', [2])[2]['new_arm'] == 1.0 and bullpen_usage(app, 'AAA', '2026-06-30', [77])[77]['new_arm'] == 1.0
     one = reliever_usage(app, 1, '2026-06-30')                # his latest team is AAA (the BBB outing is older)
     assert one['rank14'] == 0.0 and {k: v for k, v in one.items() if k != 'rank14'} == {k: v for k, v in u.items() if k != 'rank14'}
     from brl_live.live_feed import rank_bullpen
@@ -239,3 +243,21 @@ def test_postseason_temperature_follows_the_game_type():
     from research_lab.game_sim.manager import ManagerPolicy
     m, label = manager_for(ManagerPolicy(), dict(s, relief_exit=False), ('TB', 'CLE'), 'L')
     assert m.reliever_choice.temperature == 0.8 and 'temperature 0.8' in label
+
+
+def test_roster_pool_terms_are_read_only_by_fits_that_name_them():
+    """BULLPEN-10: a starter in the pen and an arm new to the team get their own terms; older fits ignore them."""
+    from research_lab.game_sim.reliever_choice import features, situation, RelieverChoice
+    facts = [{'starts30': 3, 'days_since_start': 2}, {'starts30': 1, 'days_since_start': 12}, {'new_arm': 1.0}, {}]
+    c = features(facts, [True] * 4, situation(3, -6, 0, 0))           # early, a blowout
+    assert list(c['starter_recent']) == [1, 1, 0, 0] and list(c['started_within5']) == [1, 0, 0, 0] and list(c['new_arm']) == [0, 0, 1, 0]
+    assert list(c['new_x_blowout']) == [0, 0, 1, 0] and list(c['new_x_early']) == [0, 0, 1, 0] and list(c['starter_x_early']) == [1, 1, 0, 0] and list(c['starter_x_blowout']) == [1, 1, 0, 0]
+    c2 = features(facts, [True] * 4, situation(9, 1, 0, 0))
+    assert list(c2['new_x_blowout']) == [0, 0, 0, 0] and list(c2['starter_x_early']) == [0, 0, 0, 0]
+    from research_lab.game_sim.models import PitcherProfile
+    pen = [PitcherProfile(str(i), str(i), 'R', usage={**f, 'share14': 0.1}) for i, f in enumerate(facts)]
+    old = RelieverChoice({'names': ['log_share14'], 'beta': [0.0]})
+    assert np.allclose(old.probabilities(pen, 3, -6, 0, 0, 'R'), 1 / 4)
+    new = RelieverChoice({'names': ['started_within5', 'new_arm'], 'beta': [-3.0, -1.0]})
+    p = new.probabilities(pen, 3, -6, 0, 0, 'R')
+    assert p[0] < p[2] < p[3] and abs(p[1] - p[3]) < 1e-9

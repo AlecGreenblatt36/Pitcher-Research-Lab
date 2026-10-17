@@ -110,9 +110,11 @@ def appearances(h: pd.DataFrame) -> pd.DataFrame:
     ).reset_index()
 
 
-def bullpen(app: pd.DataFrame, team: str, cutoff: str, starter: int, rest: bool = False) -> tuple[PitcherProfile, ...]:
+def bullpen(app: pd.DataFrame, team: str, cutoff: str, starter: int, rest: bool = False, roster=None) -> tuple[PitcherProfile, ...]:
     """Relievers the team used in the last 14 days (its last 10 games early in a season); roles from the prior 365 days;
-    availability from the three days before when rest is on (brl_live.live_feed.reliever_rest)."""
+    availability from the three days before when rest is on (brl_live.live_feed.reliever_rest). BULLPEN-10: given the
+    day's active-roster pitchers (ROSTER-01), the pool is those minus the starter, as the live lane reads the game feed's
+    bullpen; an arm with no outing on record gets a right-handed, unknown-arm profile."""
     from brl_live.live_feed import bullpen_usage, reliever_rest
     prior = app[app["date"] < cutoff]
     team_games = prior[prior["team"] == team].sort_values("date")
@@ -123,15 +125,21 @@ def bullpen(app: pd.DataFrame, team: str, cutoff: str, starter: int, rest: bool 
         recent = team_games[team_games["game_pk"].isin(last_games) & (~team_games["start"]) & (team_games["pitcher"] != starter)]
     year_start = (pd.Timestamp(cutoff) - pd.Timedelta(days=365)).strftime("%Y-%m-%d")
     hist = prior[(prior["date"] >= year_start) & (~prior["start"])]
-    usage = bullpen_usage(app, team, cutoff, list(recent["pitcher"].unique()))
+    if roster is not None:
+        pids = [int(p) for p in roster if int(p) != int(starter)]
+        throws_of = prior[prior["pitcher"].isin(pids)].groupby("pitcher")["throws"].last().to_dict()
+        groups = [(pid, throws_of.get(pid, "R")) for pid in pids]
+    else:
+        groups = [(int(pid), str(g["throws"].iloc[-1])) for pid, g in recent.groupby("pitcher")]
+    usage = bullpen_usage(app, team, cutoff, [pid for pid, _ in groups])
     out = []
-    for pid, g in recent.groupby("pitcher"):
+    for pid, throws in groups:
         sg = hist[hist["pitcher"] == pid]
         late = float((sg["entry_inning"] >= 8).mean()) if len(sg) else 0.0
         ninth = float((sg["entry_inning"] >= 9).mean()) if len(sg) else 0.0
         exp_bf = int(max(3, round(sg["bf"].median()))) if len(sg) else 4
         role = "closer" if ninth >= 0.6 else "setup" if late >= 0.5 else "long" if exp_bf >= 7 else "reliever"
-        out.append(PitcherProfile(str(pid), str(pid), str(g["throws"].iloc[-1]), role=role, leverage=min(1.0, 0.3 + late),
+        out.append(PitcherProfile(str(pid), str(pid), str(throws), role=role, leverage=min(1.0, 0.3 + late),
                                   rest=reliever_rest(app, pid, cutoff) if rest else 1.0, expected_batters=exp_bf, max_batters=max(exp_bf + 3, 6),
                                   usage=usage.get(pid, {})))
     closers = [p for p in out if p.role == "closer"]
@@ -179,7 +187,7 @@ def postseason_game(postseason: dict | None, game_type: str, pexp: dict, texp: d
 
 def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates: list, *, model_path: Path, model_sha256: str,
                  history_path: Path, hazard_path: Path, n_sims: int, physics_table=None, offsets=None, rest=False, environment=None,
-                 team_offsets=None, age_layer=None, steals=None, win_states=False, starter_lines=False, role_offsets=None, real_pa_check=False, transitions=None, hitter_lines=False, running_events=None, reliever_choice=None, leash=None, base_state=None, relief_exit=None, relief_hooks=None, day_form=0.0, paired_streams=False, matchup=None, level_offsets=None, hazard_correction=None, pitch_counts=None, state_history=None, pitch_table=None, postseason=None, log=print) -> list[dict]:
+                 team_offsets=None, age_layer=None, steals=None, win_states=False, starter_lines=False, role_offsets=None, real_pa_check=False, transitions=None, hitter_lines=False, running_events=None, reliever_choice=None, leash=None, base_state=None, relief_exit=None, relief_hooks=None, day_form=0.0, paired_streams=False, matchup=None, level_offsets=None, hazard_correction=None, pitch_counts=None, state_history=None, pitch_table=None, postseason=None, rosters=None, log=print) -> list[dict]:
     """Simulate every game on the given dates; one record per game (win counts, run histograms, starter outs).
 
     environment: optional {game_pk: seven log-multipliers} (brl_live/environment.py); games without an entry are unadjusted.
@@ -446,7 +454,8 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                 sid = int(getattr(g, f"{side}_starter"))
                 team = getattr(g, side)
                 starter = starter_profile(app, sid, getattr(g, f"{side}_starter_throws"), date)
-                pen = tuple(p for p in bullpen(app, team, date, sid, rest=rest) if p.player_id != str(sid))
+                roster_day = ((rosters.get(str(date)) or {}).get(str(team))) if rosters else None       # BULLPEN-10: the day's roster
+                pen = tuple(p for p in bullpen(app, team, date, sid, rest=rest, roster=roster_day) if p.player_id != str(sid))
                 teams[side] = TeamProfile(team, team, lineup, starter, pen, defense=(float(defense.value(team)) if defense is not None else 0.0))
             gtype = str(getattr(g, "game_type", "R") or "R")
             matchup = GameMatchup(away=teams["away"], home=teams["home"], venue=g.park, game_type=gtype)

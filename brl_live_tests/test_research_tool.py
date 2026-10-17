@@ -249,3 +249,28 @@ def test_choice_rows_and_decisions_keep_game_types_apart():
     assert set(d_reg['game_type']) == {'R'} and set(d_post['game_type']) == {'F', 'D', 'L', 'W'}
     d_all = decisions(h, game_types=('R', 'F', 'D', 'L', 'W'))
     assert len(d_all) == len(d_reg) + len(d_post)
+
+
+def test_choice_fit_fits_roster_pools_and_scores_the_held_out_seasons():
+    """BULLPEN-10 on made-up games: with a roster table every team-game gets a roster pool, the new terms are fitted, each
+    variant scores its held-out season and writes a live table over all seasons; without the table the old rule holds."""
+    import importlib.util
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    spec = importlib.util.spec_from_file_location('brl_reliever_choice', root / 'tools' / 'brl_reliever_choice.py')
+    rc = importlib.util.module_from_spec(spec); spec.loader.exec_module(rc)
+    rng = np.random.default_rng(57)
+    h = _pen_games(rng, n_reg=120, n_post=0)
+    # the roster: every arm the team ever used plus one starter who never relieves, on every date
+    arms = {}
+    for (team, date), g in h.groupby([np.where(h['inning_topbot'] == 'Top', h['home_team'], h['away_team']), 'date_key']):
+        arms.setdefault(team, set()).update(int(p) for p in g['pitcher'])
+    rosters = {d: {t: sorted(arms[t]) for t in arms} for d in sorted(set(h['date_key']))}
+    out = tool.choice_fit(None, h=h, rosters=rosters, seasons=(2025, 2026), fits=(('2025', (2025,), 2026), ('live', (2025, 2026), None)))
+    assert set(out['variants']) == {'old_pools', 'roster_live_terms', 'roster_6_terms'} and out['roster_days'] == len(rosters)
+    v = out['variants']['roster_live_terms']
+    assert v['names'] == rc.NAMES10 and v['counts']['roster_days'] > 100 and v['counts']['outside_set'] == 0
+    assert len(v['fits']['2025']['beta']) == len(rc.NAMES10) and v['fits']['2025']['test_year'] == 2026 and 'log_lik_per_entry' in v['fits']['2025']['test']
+    assert len(v['fits']['live']['beta']) == len(rc.NAMES10) and 'test' not in v['fits']['live']
+    o = out['variants']['old_pools']
+    assert o['names'] == rc.NAMES and o['counts']['roster_days'] == 0 and len(o['fits']['live']['beta']) == len(rc.NAMES)

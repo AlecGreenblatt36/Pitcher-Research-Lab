@@ -664,6 +664,55 @@ def choice_temperature(data_root: Path, entries=None, counts=None, min_entries: 
 POST_TYPES = ('F', 'D', 'L', 'W')
 
 
+def choice_fit(data_root: Path, repo=None, token=None, key=None, branch='brl-live-data', h: pd.DataFrame | None = None, rosters: dict | None = None,
+               seasons=(2023, 2024, 2025, 2026), fits=(('2023_2025', (2023, 2024, 2025), 2026), ('2023_2024_2026', (2023, 2024, 2026), 2025), ('live', (2023, 2024, 2025, 2026), None))) -> dict:
+    """BULLPEN-10: the reliever choice refit on roster pools. Candidate sets from ROSTER-01's daily rosters (the team's
+    active-roster pitchers minus the game's starter; the 14-day rule where a day is missing), the features of
+    research_lab.game_sim.reliever_choice with the new starter-in-the-pen and new-arm terms. Four fits: the live
+    features (NAMES) and BULLPEN-06's (NAMES6) each with the new terms, on 2023-2025 scored on 2026, on 2023, 2024 and 2026
+    scored on 2025, and on all four seasons for the live table. Also the old pools with the live features, scored the same
+    way, as the reference. Coefficients and aggregate scores only."""
+    import importlib.util
+    from brl_replay.games import load_history
+    spec = importlib.util.spec_from_file_location('brl_reliever_choice', ROOT / 'tools' / 'brl_reliever_choice.py')
+    rc = importlib.util.module_from_spec(spec); spec.loader.exec_module(rc)
+    if h is None:
+        h = load_history(next(data_root.rglob('plate_appearances.csv.gz')))
+    if 'game_type' not in h.columns:
+        h = h.assign(game_type='R')
+    if rosters is None and repo:
+        rosters = {}
+        for year in seasons:
+            raw = read_blob(repo, token, f'research/rosters-{year}.json.gz', branch)
+            if raw is not None:
+                rosters.update(json.loads(gzip.decompress(raw))['days'])
+    out = {'seasons': list(seasons), 'roster_days': len(rosters or {}), 'variants': {}}
+    sets = {'old_pools': (None, rc.NAMES), 'roster_live_terms': (rosters, rc.NAMES10), 'roster_6_terms': (rosters, rc.NAMES10_6)}
+    cache = {}
+    for label, (ros, names) in sets.items():
+        rc.NAMES = list(names)
+        ckey = 'roster' if ros else 'old'
+        if ckey not in cache:
+            rc.NAMES = list(rc.NAMES10_6)          # build every column once; fits pick their columns by name
+            cache[ckey] = rc.choice_rows(h, set(seasons), rosters=ros)
+        entries, counts = cache[ckey]
+        cols = {n: i for i, n in enumerate(rc.NAMES10_6)}
+        idx = [cols[n] for n in names]
+        sub = [(sn, X[:, idx], c) for sn, X, c in entries]
+        res = {'names': list(names), 'counts': counts, 'fits': {}}
+        for fname, train_years, test_year in fits:
+            train = [e for e in sub if e[0] in train_years]
+            beta = rc.fit(train)
+            fit = {'train_years': list(train_years), 'entries': len(train), 'beta': [round(float(b), 6) for b in beta], 'train': rc.score(train, beta)}
+            if test_year is not None:
+                test = [e for e in sub if e[0] == test_year]
+                fit['test_year'] = test_year; fit['test'] = rc.score(test, beta)
+            res['fits'][fname] = fit
+        out['variants'][label] = res
+    rc.NAMES = list(rc.NAMES10_6)
+    return out
+
+
 POST_COLS = ['game_pk', 'date_key', 'at_bat_number', 'inning', 'inning_topbot', 'outs_when_up', 'on_1b', 'on_2b', 'on_3b', 'runner_1b', 'runner_2b',
              'runner_3b', 'bat_score', 'fld_score', 'batter', 'pitcher', 'stand', 'p_throws', 'home_team', 'away_team', 'game_type', 'outcome']
 
@@ -1032,7 +1081,7 @@ def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']; key_hex = os.environ['BRL_PA_PACKAGE_KEY']; key = key_bytes(key_hex)
     branch = os.environ.get('BRL_LEDGER_BRANCH', 'brl-live-data')
     experiment = (os.environ.get('BRL_EXPERIMENT') or 'physics').strip()
-    if experiment in ('hazard_check', 'hazard_fix', 'hazard_pitches', 'pitch_counts', 'relief_pitches', 'pitch_efficiency', 'relief_entry', 'relief_fix', 'choice_temperature', 'postseason_pen'):
+    if experiment in ('hazard_check', 'hazard_fix', 'hazard_pitches', 'pitch_counts', 'relief_pitches', 'pitch_efficiency', 'relief_entry', 'relief_fix', 'choice_temperature', 'postseason_pen', 'choice_fit'):
         run_id = os.environ.get('GITHUB_RUN_ID', 'local')
         receipt = {'schema': 'brl.research-receipt.v1', 'experiment': experiment, 'run_id': run_id, 'started_at': datetime.now(timezone.utc).isoformat()}
         try:
@@ -1056,6 +1105,8 @@ def main():
                 receipt['results'] = {'pitch_counts': pitch_counts_fit, 'relief_pitches': relief_pitches, 'pitch_efficiency': pitch_efficiency}.get(experiment, hazard_pitches)(data_root, phys_n)
             elif experiment == 'postseason_pen':
                 receipt['results'] = postseason_pen(data_root, repo=repo, token=token, key=key, branch=branch)
+            elif experiment == 'choice_fit':
+                receipt['results'] = choice_fit(data_root, repo=repo, token=token, key=key, branch=branch)
             else:
                 receipt['results'] = {'hazard_fix': hazard_fix, 'relief_entry': relief_entry, 'relief_fix': relief_fix, 'choice_temperature': choice_temperature}.get(experiment, hazard_check)(data_root)
             receipt['status'] = 'completed'

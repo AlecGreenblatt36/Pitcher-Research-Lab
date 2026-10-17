@@ -30,14 +30,27 @@ NAMES = ['log_share14', 'log_share30', 'pitched_d1', 'back_to_back', 'apps_d3', 
          'quality', 'quality_x_late_close', 'quality_x_save', 'quality_x_blowout', 'ninth_x_extra',
          'same3', 'same3_x_late', 'same3_x_mid', 'ninth21_x_save', 'late21_x_late_close']
 NAMES6 = NAMES + ['work7', 'apps7', 'top2_14']           # BULLPEN-06: --features 6
+NAMES10 = NAMES + ['starter_recent', 'started_within5', 'new_arm', 'new_x_blowout', 'new_x_early', 'starter_x_early', 'starter_x_blowout']   # BULLPEN-10: roster pools
+NAMES10_6 = NAMES6 + NAMES10[len(NAMES):]
 
 
-def choice_rows(h: pd.DataFrame, seasons: set, game_types=('R',), keep_types=None, with_meta: bool = False):
+def roster_pool(rosters: dict | None, date: str, team: str):
+    """The team's active-roster pitchers on the date from a ROSTER-01 table ({date: {team: [ids]}}), or None."""
+    if not rosters:
+        return None
+    day = rosters.get(str(date)[:10]) or {}
+    pit = day.get(str(team))
+    return [int(p) for p in pit] if pit else None
+
+
+def choice_rows(h: pd.DataFrame, seasons: set, game_types=('R',), keep_types=None, with_meta: bool = False, rosters: dict | None = None):
     """(entries, counts): each entry is (season, X matrix over its candidates, index of the chosen one). Games of
     `game_types` build the pools and the usage facts (the regular season alone by default); entries come from games of
     `keep_types` (all of game_types by default). POST-05: with_meta adds a third item, one row per relief appearance of
     those games, pool or not: {season, game_type, in_pool, rank14 (the arm's place in his pool by 14-day share, None
-    outside it), avail (candidates left), bf (his batters faced), entry (0 for the first reliever)}."""
+    outside it), avail (candidates left), bf (his batters faced), entry (0 for the first reliever)}. BULLPEN-10: with a
+    ROSTER-01 table ({date: {team: [pitcher ids]}}) the pool is the team's active-roster pitchers that day minus the
+    game's starter (the 14-day rule where the table has no entry); counts['roster_days'] says how many pools it gave."""
     types = tuple(game_types)
     keep = set(keep_types) if keep_types is not None else set(types)
     h = h[h['game_type'].isin(types)].sort_values(['game_pk', 'at_bat_number']).reset_index(drop=True)
@@ -73,7 +86,7 @@ def choice_rows(h: pd.DataFrame, seasons: set, game_types=('R',), keep_types=Non
             if i < len(seq):
                 out.append(bats.get(int(seq[i]), 'R'))
         return out or ['R']
-    entries, counts = [], {'entries': 0, 'outside_set': 0, 'small_set': 0}
+    entries, counts = [], {'entries': 0, 'outside_set': 0, 'small_set': 0, 'roster_days': 0}
     for (gpk, team), ga in app.groupby(['game_pk', 'team']):
         date = str(ga['date'].iloc[0])
         if int(date[:4]) not in seasons or gtype.get(gpk, 'R') not in keep:
@@ -82,11 +95,15 @@ def choice_rows(h: pd.DataFrame, seasons: set, game_types=('R',), keep_types=Non
         window = (pd.Timestamp(date) - pd.Timedelta(days=14)).strftime('%Y-%m-%d')
         starter = ga.loc[ga['start'], 'pitcher']
         starter = int(starter.iloc[0]) if len(starter) else -1
-        recent = team_app[(team_app['date'] >= window) & (~team_app['start']) & (team_app['pitcher'] != starter)]
-        if recent['pitcher'].nunique() < 6:
-            last = team_app.sort_values('date')['game_pk'].drop_duplicates().tail(10)
-            recent = team_app[team_app['game_pk'].isin(last) & (~team_app['start']) & (team_app['pitcher'] != starter)]
-        pool = [int(p) for p in recent['pitcher'].unique()]
+        pool = roster_pool(rosters, date, team)
+        if pool is not None:
+            pool = [p for p in pool if p != starter]; counts['roster_days'] += 1
+        else:
+            recent = team_app[(team_app['date'] >= window) & (~team_app['start']) & (team_app['pitcher'] != starter)]
+            if recent['pitcher'].nunique() < 6:
+                last = team_app.sort_values('date')['game_pk'].drop_duplicates().tail(10)
+                recent = team_app[team_app['game_pk'].isin(last) & (~team_app['start']) & (team_app['pitcher'] != starter)]
+            pool = [int(p) for p in recent['pitcher'].unique()]
         if not pool:
             continue
         facts = bullpen_usage(app, team, date, pool)
