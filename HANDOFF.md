@@ -92,8 +92,12 @@ Model Plan doc). Built the same afternoon:
       candidate set is right in October (the feed's bullpen), so the miss is the choice and the exits reading the
       postseason as the regular season. POST-05 (research lane, experiment postseason_pen) measures it on every sealed
       postseason: entries by pool rank, batters per outing, the choice table's temperature on postseason entries, the
-      exit hazard's matching offset by round. Adoption rule in the row; a postseason temperature would be a new ADJUST
-      key read by game type in reliever_choice_for.
+      exit hazard's matching offset by round. Result: the choice is calibrated in October too (T 1.05-1.1, no change);
+      the exits were the miss: mid-inning removals run twice the hazard, end-of-inning removals 0.86 of it, and POST-02's
+      +0.4 on both had the sign wrong at inning ends. Live from 1:30 am: postseason_exit_offset by decision kind, mid
+      +0.8 / end -0.4 for F, D, L (World Series still 0; measure it against the corrected hazard before the Series).
+      Data: the package's postseasons are now sealed apart (private/history/post-2023/2024/2025.enc, the backfill tool's
+      postseason-only mode for 2023 on; tools/history_seasons.txt lists seasons for the BRL history backfill workflow).
   Everything else on the sheet scored near its number over those 14 games: hitter 1+ hit said 59.4% happened 56.0%
   (252), home run 11.1% vs 8.3%, 2+ total bases 31.5% vs 32.5%, starter 3+ K 79.6% vs 75.0% (28), totals within 4
   points, no run in the 1st 58% vs 57%. Home win said 53% happened 43% (14 games; noise at that count).

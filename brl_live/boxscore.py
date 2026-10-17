@@ -416,7 +416,12 @@ ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         'postseason_exp_scale':{'F':0.91,'D':0.91,'L':0.91,'W':1.0},
         'environment':True,'team_offsets':True,'steals':True,'transitions':True,'running_events':False,
         'reliever_choice':True,'leash':True,'base_state':False,'relief_exit':True,'relief_hooks':True,
-        'postseason_exit_offset':{'F':0.4,'D':0.4,'L':0.4,'W':0.0},'day_form_sigma':0.0,
+        # POST-05 (from October 17, 2026, 1:30 a.m. Eastern): the offsets by decision kind, measured on every postseason relief
+        # decision of 2022-2026 against the plain hazard (3,954 decisions): mid-inning removals run twice the hazard (+0.8 on
+        # the log-odds), removals at an inning's end 0.86 of it (-0.4): October managers pull a reliever in trouble sooner and
+        # let him start the next inning more often. POST-02's +0.4 on both matched the reliever count in a synthetic engine
+        # only. The World Series keeps 0 (its decisions were not measured against the corrected hazard it runs on)
+        'postseason_exit_offset':{'F':{'mid':0.8,'end':-0.4},'D':{'mid':0.8,'end':-0.4},'L':{'mid':0.8,'end':-0.4},'W':0.0},'day_form_sigma':0.0,
         # DISP-03 (off until its replays are read): {'sigma':..,'center':..,'worlds':..}: extra worlds with the centered
         # day-form shock for the market numbers only (the total's over and under, the run line); win chances stay plain
         'market_day_form':None,
@@ -580,10 +585,11 @@ def manager_for(manager,settings,teams=None,game_type='R'):
                 o=t.get(str(team).upper()) or {}
                 offs[side]={'mid':float(o.get('mid',0.0)),'end':float(o.get('end',0.0))}
             labels.append(str(hooks.get('name')))
-        post=float((settings.get('postseason_exit_offset') or {}).get(str(game_type),0.0)) if str(game_type)!='R' else 0.0
-        if post:
-            for side in offs:offs[side]={k:v+post for k,v in offs[side].items()}
-            labels.append('postseason reliever exits (log-odds +%.2f)'%post)
+        post=(settings.get('postseason_exit_offset') or {}).get(str(game_type),0.0) if str(game_type)!='R' else 0.0
+        post={'mid':float(post.get('mid',0.0)),'end':float(post.get('end',0.0))} if isinstance(post,dict) else {'mid':float(post),'end':float(post)}
+        if any(post.values()):
+            for side in offs:offs[side]={k:v+post[k] for k,v in offs[side].items()}
+            labels.append('postseason reliever exits (log-odds mid %+.2f, end %+.2f)'%(post['mid'],post['end']))
         if any(v for o in offs.values() for v in o.values()):m.relief_offsets=offs
     return m,'; '.join(labels)
 

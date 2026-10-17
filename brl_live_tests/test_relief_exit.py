@@ -127,7 +127,9 @@ def test_postseason_exit_offset_adds_to_the_hooks():
     from brl_live.boxscore import ADJUST, manager_for
     s = dict(ADJUST, relief_exit=True, relief_hooks=False)
     m, label = manager_for(ManagerPolicy(), s, ('NYY', 'DET'), 'D')
-    assert m.relief_offsets == {'away': {'mid': 0.4, 'end': 0.4}, 'home': {'mid': 0.4, 'end': 0.4}} and 'postseason' in label
+    assert m.relief_offsets == {'away': {'mid': 0.8, 'end': -0.4}, 'home': {'mid': 0.8, 'end': -0.4}} and 'postseason' in label   # POST-05 by decision kind
+    m, label = manager_for(ManagerPolicy(), dict(s, postseason_exit_offset={'D': 0.4}), ('NYY', 'DET'), 'D')
+    assert m.relief_offsets == {'away': {'mid': 0.4, 'end': 0.4}, 'home': {'mid': 0.4, 'end': 0.4}} and 'mid +0.40, end +0.40' in label   # one number still means both
     m, _ = manager_for(ManagerPolicy(), s, ('NYY', 'DET'), 'R')
     assert m.relief_offsets is None
     m, _ = manager_for(ManagerPolicy(), s, ('NYY', 'DET'), 'W')
@@ -138,7 +140,7 @@ def test_postseason_exit_offset_adds_to_the_hooks():
     m, _ = manager_for(ManagerPolicy(), dict(s, relief_hooks=True), ('NYY', 'DET'), 'L')
     import json as _j
     hooks = _j.loads((ROOT / 'brl_live' / 'relief_hooks.json').read_text())['teams']
-    assert abs(m.relief_offsets['away']['mid'] - (hooks['NYY']['mid'] + 0.4)) < 1e-12
+    assert abs(m.relief_offsets['away']['mid'] - (hooks['NYY']['mid'] + 0.8)) < 1e-12 and abs(m.relief_offsets['away']['end'] - (hooks['NYY']['end'] - 0.4)) < 1e-12
 
 
 def test_entry_inning_correction_maps_cells_and_moves_only_its_cell():
@@ -189,6 +191,6 @@ def test_relief_correction_switch_is_on_and_regular_season_only():
     assert m.relief_offsets['away']['mid'] == hooks['NYY']['mid']
     m, label = bx.manager_for(base, on, ('NYY', 'BOS'), 'L')
     plain = json.loads((ROOT / 'brl_live/relief_hooks.json').read_text())['teams']
-    assert m.relief_exit.gamma is None and abs(m.relief_offsets['away']['mid'] - (plain['NYY']['mid'] + 0.4)) < 1e-12
+    assert m.relief_exit.gamma is None and abs(m.relief_offsets['away']['mid'] - (plain['NYY']['mid'] + 0.8)) < 1e-12 and abs(m.relief_offsets['away']['end'] - (plain['NYY']['end'] - 0.4)) < 1e-12   # POST-05
     doc = json.loads((ROOT / 'brl_live/relief_correction.json').read_text())
     assert doc['terms'] == list(CORRECTION_TERMS) and len(doc['coef']) == 49

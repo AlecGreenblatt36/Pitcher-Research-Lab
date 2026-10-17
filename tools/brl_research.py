@@ -784,7 +784,7 @@ def postseason_pen(data_root: Path, h: pd.DataFrame | None = None, repo=None, to
     d['p'] = fitted(d, edoc)
     d = d[d['p'].notna()].copy()
     from brl_live.boxscore import ADJUST
-    cur = {t: float((ADJUST.get('postseason_exit_offset') or {}).get(t, 0.0)) for t in POST_TYPES}
+    cur = {t: (ADJUST.get('postseason_exit_offset') or {}).get(t, 0.0) for t in POST_TYPES}
 
     def offset(p, y):
         """The log-odds shift that makes the hazard's summed chance equal the removals (bisection)."""
