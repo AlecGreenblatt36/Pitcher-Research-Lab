@@ -39,3 +39,17 @@ def test_live_manifest_is_read_from_the_repository_not_the_work_folder():
     assert "manifest_path=Path(__file__).resolve().parents[1]/'brl_engine'/'models'" in src
     assert "ROOT/'brl_engine'/'models'" not in src
     assert (Path(__file__).parents[1] / 'brl_engine' / 'models' / 'pitch02b-v2h120.json').exists()
+
+
+def test_settings_change_is_a_new_forecast():
+    """A simulator settings change (ADJUST) is part of the forecast fingerprint, so pending games get a new version at
+    the next run instead of waiting for a lineup or history change (POST-05 would otherwise have reached tonight's game
+    only when its lineups posted)."""
+    from pathlib import Path
+    from brl_live.boxscore import ADJUST, settings_fingerprint
+    a = settings_fingerprint(ADJUST)
+    assert a == settings_fingerprint(dict(ADJUST)) and len(a) == 64
+    changed = dict(ADJUST, postseason_exit_offset=dict(ADJUST['postseason_exit_offset'], L=0.4))
+    assert settings_fingerprint(changed) != a
+    src = (Path(__file__).parents[1] / 'brl_live' / 'box_runner.py').read_text()
+    assert "'settings':settings_fingerprint(ADJUST)" in src

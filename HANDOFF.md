@@ -101,6 +101,10 @@ Model Plan doc). Built the same afternoon:
   Everything else on the sheet scored near its number over those 14 games: hitter 1+ hit said 59.4% happened 56.0%
   (252), home run 11.1% vs 8.3%, 2+ total bases 31.5% vs 32.5%, starter 3+ K 79.6% vs 75.0% (28), totals within 4
   points, no run in the 1st 58% vs 57%. Home win said 53% happened 43% (14 games; noise at that count).
+- Settings changes now make new forecast versions (9:15 am): the forecast fingerprint carries a hash of ADJUST
+  (brl_live.boxscore.settings_fingerprint), so a switch like POST-05 reaches every pending game at the next run.
+  Before this, POST-05 (pushed 1:30 am) had not reached tonight's game by 9 am because no lineup or history change
+  had happened (October 16 had no games). One-time effect: every pending game gets a new version once.
 - Public day files: tools and the scratch scorer read public/days/<date>.json; 12 days exist (October 6 to 18); boxes
   before October 11 lack the total and first-inning distributions (older schema), the scorer skips what is missing.
 

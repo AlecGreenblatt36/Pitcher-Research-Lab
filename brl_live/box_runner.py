@@ -14,7 +14,7 @@ from cloud.security import key_bytes
 from .live_extension import RefreshedSimulator,make_history_engine
 from .history_refresh import HistoryCache,Fetcher,previous_day
 from .verified_store import VerifiedGitStore
-from .boxscore import run_box_worlds,parse_actual_box,score_player_boxes,bookkeeping_history_from_cache,validate_box_payload,ADJUST,adjusted_provider
+from .boxscore import run_box_worlds,parse_actual_box,score_player_boxes,bookkeeping_history_from_cache,validate_box_payload,ADJUST,adjusted_provider,settings_fingerprint
 from .box_page import render_page
 from .live_feed import live_matchup,appearances,matchup_parameters
 from .live_update import run_live_update
@@ -193,9 +193,10 @@ class BoxRunner(original.Runner):
         except Exception:
             self.sim.environment=None
         if bridge.MODEL_NAME!='locked-pa-2026-v1':
-            # A different PA model is a different forecast: the snapshot hash carries it, so a model
-            # switch produces a new saved version for every pending game and earlier versions stand.
-            fingerprint=content_hash({'inputs':fingerprint,'pa_model':bridge.MODEL_NAME,'model_sha256':bridge.MODEL_SHA256})
+            # A different PA model, or different simulator settings, is a different forecast: the snapshot hash carries
+            # both, so a model switch or a settings change produces a new saved version for every pending game and
+            # earlier versions stand.
+            fingerprint=content_hash({'inputs':fingerprint,'pa_model':bridge.MODEL_NAME,'model_sha256':bridge.MODEL_SHA256,'settings':settings_fingerprint(ADJUST)})
         previous=original.fingerprint_from_forecasts(self.store,pk)
         same=[ident for ident,f in previous if f['snapshot_hash']==fingerprint and ident in self.store.ledger['box_scores'] and 'skill_baselines' in self.store.ledger['box_scores'][ident]]
         if same:

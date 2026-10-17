@@ -622,6 +622,13 @@ def steal_model_for(settings,matchup,date):
         if not fetched or fetched>=str(date)[:10]:through=season-1
     return steal_model(through)
 
+def settings_fingerprint(settings=ADJUST):
+    """A hash of the simulator settings (ADJUST) for the forecast fingerprint: a settings change is a different forecast,
+    so every pending game gets a new saved version at the next run and earlier versions stand (October 17, 2026; before
+    this a settings change reached a pending game only when its lineups or the history changed)."""
+    from app.common import content_hash
+    return content_hash({'adjust':settings})
+
 def adjusted_provider(provider,full_history,date,settings=ADJUST,environment=None,teams=None):
     """Wrap the engine's provider with the enabled adjustments. Returns (provider, world_hook, label).
 
