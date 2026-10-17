@@ -430,6 +430,8 @@ ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         # BULLPEN-07 (off until its replays are read): a shock on each reliever's utility drawn once per simulated game,
         # the day's unseen availability; spreads the bullpen's chances to pitch (BULLPEN-03's miss at the top)
         'reliever_game_sigma':0.0,
+        # BULLPEN-09 (off until its replays are read): the choice's utilities over a temperature; 1.0 = the fitted choice as is
+        'reliever_choice_temperature':1.0,
         # LEASH-02 (on from October 11, 2026; its gates held on both seasons): the inning correction on the starter-exit
         # hazard's log-odds, regular season only (brl_live/hazard_correction.json); the postseason keeps its measured usage
         # on the plain hazard
@@ -513,11 +515,11 @@ def reliever_choice_for(settings):
     """The fitted reliever choice (brl_live/reliever_choice.json, BULLPEN-01) when switched on, else None; with
     reliever_game_sigma (BULLPEN-07) each reliever's utility carries a shock drawn once per simulated game."""
     if not settings.get('reliever_choice'):return None
-    sigma=float(settings.get('reliever_game_sigma') or 0.0)
-    key=('c',sigma)
+    sigma=float(settings.get('reliever_game_sigma') or 0.0);temp=float(settings.get('reliever_choice_temperature') or 1.0)
+    key=('c',sigma,temp)
     if key not in _KERNEL:
         from research_lab.game_sim.reliever_choice import RelieverChoice
-        _KERNEL[key]=RelieverChoice(json.loads(RELIEVER_CHOICE_PATH.read_text()),game_sigma=sigma)
+        _KERNEL[key]=RelieverChoice(json.loads(RELIEVER_CHOICE_PATH.read_text()),game_sigma=sigma,temperature=temp)
     return _KERNEL[key]
 
 def relief_corrected(settings,game_type='R'):

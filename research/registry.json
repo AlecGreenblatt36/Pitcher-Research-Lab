@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 355,
- "rows": 358,
+ "experiments": 356,
+ "rows": 359,
  "records": {
   "ACC-01": [
    {
@@ -5903,6 +5903,22 @@
     ],
     "frozen_commits": [],
     "status": "per-entry calibrated; T 1.0; no change"
+   }
+  ],
+  "BULLPEN-09": [
+   {
+    "id": "BULLPEN-09",
+    "columns": {
+     "ID": "BULLPEN-09",
+     "Attempt": "The choice's temperature at the game level. BULLPEN-08 found the live choice calibrated entry by entry on the whole (T 1.0 by likelihood), but its favorites run 2 to 4 points high from 30 to 60% (44.4 said, 40.6 chosen) and its second choices a point low (14.3 said, 15.2 chosen), and on today's replays (LEASH-04's) the top two arms by 14-day share enter 0.641 and 0.624 times a team-game against 0.515 and 0.498 real, 25% too often in every inning and score cell, worst when trailing by three or more (+50%) and in the 5th or earlier (+46%); the entries themselves land in the right cells (3.19 a team-game against 3.29). A few points per entry on the same arm compound over the game into the 13-point miss at 60 to 80%. Built: RelieverChoice(doc, temperature): utilities over T (1.0 = as fitted); replay option reliever_choice_temperature; live ADJUST reliever_choice_temperature (1.0). Test: LEASH-04's replay settings with T 1.15 and 1.3, both seasons, scored as BULLPEN-07 (the bullpen bins, the top two arms' entries, the outs ladder, wins and totals against LEASH-04's replays)",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the replays (to be launched when the runner queue is clear; two runs at a time).** Gates as BULLPEN-07's (1) to (4), plus (5) the top two arms' entries per team-game within 10% of real in both seasons. Prediction: at 1.15 the 60 to 80% bin comes within 8 points and the top two within 15%; at 1.3 within 5 points and 10% with the 10 to 25% bin no more than 2 points high; the held-out likelihood cost per entry is under 0.003. Decision rule: the smaller T meeting the gates goes live; if neither does, the per-entry map is the next registration",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "TOTALS-05": [

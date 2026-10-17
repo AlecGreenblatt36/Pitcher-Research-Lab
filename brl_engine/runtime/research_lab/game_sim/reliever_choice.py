@@ -78,15 +78,21 @@ class RelieverChoice:
     every entry of every world re-rolls that, so the likeliest arms pitch in far more worlds than they pitch in real
     games (BULLPEN-03: arms shown at 60 to 80% pitched 52%). 0 = off."""
 
-    def __init__(self, doc: dict, game_sigma: float = 0.0):
+    def __init__(self, doc: dict, game_sigma: float = 0.0, temperature: float = 1.0):
         self.name = str(doc.get("name") or "reliever choice")
         self.names = [str(n) for n in doc["names"]]
         self.beta = np.asarray(doc["beta"], float)
         self.game_sigma = float(game_sigma or 0.0)
+        # BULLPEN-09: utilities over a temperature; above 1 flattens every entry's choice (the favorites a little less often)
+        self.temperature = float(temperature or 1.0)
         if len(self.names) != len(self.beta):
             raise ValueError("reliever choice: names and coefficients differ in length")
+        if self.temperature <= 0:
+            raise ValueError("reliever choice: the temperature must be positive")
         if self.game_sigma:
             self.name += f" (game shock {self.game_sigma:g})"
+        if self.temperature != 1.0:
+            self.name += f" (temperature {self.temperature:g})"
 
     def shocks(self, candidates, state) -> np.ndarray | None:
         """The game's shock per candidate (standard normal times game_sigma), drawn once per reliever and game."""
@@ -129,6 +135,8 @@ class RelieverChoice:
                 u += b * cols[name]
         if shocks is not None:
             u += np.asarray(shocks, float)
+        if self.temperature != 1.0:
+            u = u / self.temperature
         u -= u.max()
         e = np.exp(u)
         return e / e.sum()

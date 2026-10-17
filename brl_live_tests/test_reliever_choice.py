@@ -209,3 +209,20 @@ def test_game_shock_is_off_by_default_fixed_within_a_game_and_spreads_the_bullpe
     from brl_live.boxscore import reliever_choice_for, ADJUST
     assert reliever_choice_for(dict(ADJUST, reliever_choice=True)).game_sigma == 0.0
     assert reliever_choice_for(dict(ADJUST, reliever_choice=True, reliever_game_sigma=1.25)).game_sigma == 1.25
+
+
+def test_temperature_flattens_the_choice_and_is_off_at_one():
+    """BULLPEN-09: at temperature 1 the choice is unchanged; above 1 the favorite's chance falls and the others' rise;
+    the live kernel keys the choice by it."""
+    p = pen()
+    plain = RelieverChoice(DOC); warm = RelieverChoice(DOC, temperature=1.3)
+    assert 'temperature' not in plain.name and 'temperature 1.3' in warm.name
+    a = plain.probabilities(p, 9, 2, 0, 0, 'R', ['R', 'R', 'L']); b = warm.probabilities(p, 9, 2, 0, 0, 'R', ['R', 'R', 'L'])
+    assert np.allclose(RelieverChoice(DOC, temperature=1.0).probabilities(p, 9, 2, 0, 0, 'R', ['R', 'R', 'L']), a)
+    assert b[int(np.argmax(a))] < a.max() and abs(b.sum() - 1) < 1e-9 and (b[a < a.max()] > a[a < a.max()]).all()
+    import pytest
+    with pytest.raises(ValueError):
+        RelieverChoice(DOC, temperature=-1.0)
+    from brl_live.boxscore import reliever_choice_for, ADJUST
+    assert reliever_choice_for(dict(ADJUST, reliever_choice=True)).temperature == 1.0
+    assert reliever_choice_for(dict(ADJUST, reliever_choice=True, reliever_choice_temperature=1.3)).temperature == 1.3
