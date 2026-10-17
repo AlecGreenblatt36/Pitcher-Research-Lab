@@ -1,0 +1,210 @@
+{
+ "schema": "brl.replay-receipt.v1",
+ "tag": "post07-fdl-corr-2025",
+ "model": "retrain04-rt",
+ "season": 2025,
+ "n_sims": 1000,
+ "date_from": "2025-01-01",
+ "step": 1,
+ "offsets": true,
+ "rest": false,
+ "workers": 4,
+ "run_id": "39040439334",
+ "shard": [
+  3,
+  4
+ ],
+ "started_at": "2026-10-17T15:13:49.724798+00:00",
+ "stages": [
+  {
+   "stage": "restore data package",
+   "at_seconds": 0.0
+  },
+  {
+   "stage": "load physics tables",
+   "at_seconds": 3.9
+  },
+  {
+   "stage": "load pitch tables",
+   "at_seconds": 6.9
+  },
+  {
+   "stage": "load history and reconstruct games",
+   "at_seconds": 31.1
+  },
+  {
+   "stage": "replay 11 games with 4 workers",
+   "at_seconds": 67.6
+  },
+  {
+   "stage": "score",
+   "at_seconds": 267.0
+  }
+ ],
+ "model_selected": {
+  "name": "retrain04-rt",
+  "source": "private/models/retrain04-rt.enc",
+  "sha256": "ed25de37b326c3938b151abe785a57d566de176a7a38b04d1efd81cdcb11fd75",
+  "fitted_at": "2026-10-17T04:14:31.818883+00:00",
+  "physics_features": 30
+ },
+ "physics_years": [
+  2024,
+  2025
+ ],
+ "physics_rows": 372277,
+ "pitch_years": [
+  2021,
+  2022,
+  2023,
+  2024,
+  2025
+ ],
+ "pitch_rows": 3885320,
+ "postseason": {
+  "types": [
+   "F",
+   "D",
+   "L"
+  ],
+  "rows": 3636,
+  "games": 47,
+  "scale": {
+   "F": 0.91,
+   "D": 0.91,
+   "L": 0.91
+  },
+  "tiers": {
+   "cuts": [
+    0.1518,
+    0.1876
+   ],
+   "scale": [
+    0.81,
+    0.89,
+    0.94
+   ]
+  },
+  "exit_offsets": {
+   "F": {
+    "mid": 0.8,
+    "end": -0.4
+   },
+   "D": {
+    "mid": 0.8,
+    "end": -0.4
+   },
+   "L": {
+    "mid": 0.8,
+    "end": -0.4
+   }
+  }
+ },
+ "games": 11,
+ "offsets_table": {
+  "path": "brl_live/context_offsets.json",
+  "estimated_through": "2026-09-27"
+ },
+ "environment": {
+  "table": "env-v2-weather",
+  "conditions": "research/conditions-37697026337.jsonl.gz",
+  "games_with_conditions": 0
+ },
+ "team_offsets": {
+  "rows": "research/team-resid-v2-37712616076.json.gz",
+  "k": 4000,
+  "half_life": 120,
+  "sides": [
+   "bat",
+   "fld"
+  ],
+  "center": true,
+  "dates": 4,
+  "largest_offset": 0.283
+ },
+ "transitions": {
+  "path": "brl_live/transitions.json",
+  "name": "base running from 2023, 2024, 2025, 2026 play-by-play",
+  "cells": 167
+ },
+ "reliever_choice": {
+  "path": "brl_live/reliever_choice.json",
+  "name": "reliever choice from 2023-2026 relief entries",
+  "game_sigma": 0.0,
+  "temperature": 1.0
+ },
+ "relief_exit": {
+  "path": "brl_live/relief_exit.json",
+  "name": "reliever exits from 2023-2026 relief decisions"
+ },
+ "relief_hooks": {
+  "half_life": 90.0,
+  "k": 10.0,
+  "decisions": 290114
+ },
+ "pitch_counts": {
+  "chain": true,
+  "fallback": "brl_live/pitch_counts_by_outcome.json"
+ },
+ "hazard_correction": {
+  "path": "brl_replay/hazard_correction_v2.json",
+  "source": "LEASH-03: LEASH-02's correction refitted with the starter's pitches so far in six bands by inning end, on every 2023 and 2024 regular-season removal decision with real pitch counts and the plain hazard as the offset (research run 38165964534); decision log loss against LEASH-02's on 2025 -0.00599 [-0.00658, -0.00539] and on 2026 -0.00645 [-0.00702, -0.00588]"
+ },
+ "steals": {
+  "per_pa": 0.85
+ },
+ "paired_streams": true,
+ "scores": {
+  "p_sim": {
+   "brier": 0.2929736460977947,
+   "log_loss": 0.7815223517407776,
+   "better_than_coin_pct": -17.189458439117878
+  },
+  "p_team": {
+   "brier": 0.2646379680617273,
+   "log_loss": 0.7224525244117483,
+   "better_than_coin_pct": -5.8551872246909165
+  },
+  "p_blend": {
+   "brier": 0.27780752501902944,
+   "log_loss": 0.7492774285194262,
+   "better_than_coin_pct": -11.123010007611779
+  },
+  "p_coin": {
+   "brier": 0.25,
+   "log_loss": 0.6931471805599453,
+   "better_than_coin_pct": 0.0
+  },
+  "n_games": 11
+ },
+ "scores_by_month": {
+  "10": {
+   "p_sim": {
+    "brier": 0.2929736460977947,
+    "log_loss": 0.7815223517407776,
+    "better_than_coin_pct": -17.189458439117878
+   },
+   "p_team": {
+    "brier": 0.2646379680617273,
+    "log_loss": 0.7224525244117483,
+    "better_than_coin_pct": -5.8551872246909165
+   },
+   "p_blend": {
+    "brier": 0.27780752501902944,
+    "log_loss": 0.7492774285194262,
+    "better_than_coin_pct": -11.123010007611779
+   },
+   "p_coin": {
+    "brier": 0.25,
+    "log_loss": 0.6931471805599453,
+    "better_than_coin_pct": 0.0
+   },
+   "n_games": 11
+  }
+ },
+ "per_game_file": "research/replay-post07-fdl-corr-2025-39040439334-s3of4.jsonl.gz",
+ "per_game_sha256": "9e573419b4a5aa3fc9c6faf96e8d39cdd99e7594ec33067dc4fdcddbd6196ed3",
+ "status": "completed",
+ "finished_at": "2026-10-17T15:18:46.129419+00:00",
+ "seconds": 296.4
+}
