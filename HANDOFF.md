@@ -124,6 +124,10 @@ Model Plan doc). Built the same afternoon:
   concurrent job slots, and the live run's publish job (a one-minute job) sat queued behind them from 7:16 pm with the
   forecast already computed. Do not launch a replay batch inside the hour before a live window; two runs at a time
   leave room for the live lane.
+- Headline blend re-checked on LEASH-04's replays (described after looking): the simulator alone now scores 0.24230 on
+  2026 (equal blend 0.24326, team model 0.24576, closing market 0.24326) and 0.24316 on 2025 (equal blend 0.24246,
+  market 0.24235); weights fitted on one season flip on the other (2025 gives about equal, 2026 gives all to the
+  simulator), so ACC-12's equal blend stands. The simulator's calibration slope is 0.87 to 1.08 now (0.645 at ACC-12).
 - CHAIN-06 (opponent-adjusted expectations) passed (-0.00016, growing through the season) and CHAIN-07 (fastball speed
   tiers in the cells) passed by a hair (-0.00003; velocity already reaches the model through the physics); the two add,
   and chain67-both is live from 9:48 pm with its own context tables. Live model path today: pa-2026-v2-physics ->
