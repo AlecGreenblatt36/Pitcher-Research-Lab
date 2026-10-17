@@ -1,11 +1,11 @@
 {
- "experiment": "CHAIN-08/09",
+ "experiment": "RETRAIN-04",
  "arms": [
   {
-   "name": "chain89-c0",
+   "name": "retrain04-c0",
    "role": "control",
    "settings": {
-    "name": "chain89-c0",
+    "name": "retrain04-c0",
     "manifest_branch": "ledger",
     "physics_params": {
      "xvalue": true,
@@ -37,10 +37,10 @@
    }
   },
   {
-   "name": "chain89-hc3",
+   "name": "retrain04-rt",
    "role": "candidate",
    "settings": {
-    "name": "chain89-hc3",
+    "name": "retrain04-rt",
     "manifest_branch": "ledger",
     "physics_params": {
      "xvalue": true,
@@ -59,8 +59,7 @@
      "k_p_swing": 533.0,
      "k_p_whiff": 240.0,
      "opp_adjust": true,
-     "fb_tiers": true,
-     "hitter_counts": "three"
+     "fb_tiers": true
     },
     "spring_seasons": [
      2021,
@@ -69,80 +68,19 @@
      2024,
      2025,
      2026
-    ]
-   }
-  },
-  {
-   "name": "chain89-obf",
-   "role": "candidate",
-   "settings": {
-    "name": "chain89-obf",
-    "manifest_branch": "ledger",
-    "physics_params": {
-     "xvalue": true,
-     "recent_days": 30
-    },
-    "pitch_chain": {
-     "half_life": 120.0,
-     "two_strike_groups": true,
-     "pitcher_cells": true,
-     "extra_features": true,
-     "spring_weight": 1.0,
-     "k_b_pool": 50.0,
-     "k_p_pool": 200.0,
-     "k_b_swing": 133.0,
-     "k_b_whiff": 93.0,
-     "k_p_swing": 533.0,
-     "k_p_whiff": 240.0,
-     "opp_adjust": true,
-     "fb_tiers": true,
-     "out_by_family": true
-    },
-    "spring_seasons": [
-     2021,
-     2022,
+    ],
+    "train_years": [
      2023,
      2024,
-     2025,
+     2025
+    ],
+    "validation_years": [
      2026
-    ]
-   }
-  },
-  {
-   "name": "chain89-both",
-   "role": "candidate",
-   "settings": {
-    "name": "chain89-both",
-    "manifest_branch": "ledger",
-    "physics_params": {
-     "xvalue": true,
-     "recent_days": 30
-    },
-    "pitch_chain": {
-     "half_life": 120.0,
-     "two_strike_groups": true,
-     "pitcher_cells": true,
-     "extra_features": true,
-     "spring_weight": 1.0,
-     "k_b_pool": 50.0,
-     "k_p_pool": 200.0,
-     "k_b_swing": 133.0,
-     "k_b_whiff": 93.0,
-     "k_p_swing": 533.0,
-     "k_p_whiff": 240.0,
-     "opp_adjust": true,
-     "fb_tiers": true,
-     "hitter_counts": "three",
-     "out_by_family": true
-    },
-    "spring_seasons": [
-     2021,
-     2022,
-     2023,
-     2024,
-     2025,
-     2026
-    ]
+    ],
+    "test_years": [
+     2027
+    ],
+    "blend_as_test": true
    }
   }
  ]

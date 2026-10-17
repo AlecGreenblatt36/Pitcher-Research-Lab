@@ -42,6 +42,19 @@ def test_selection_uses_the_tuning_season_not_the_test():
     assert tool.decide(arms, {'x': receipts['x']})['verdict'].startswith('incomplete')
 
 
+def test_an_arm_tested_on_a_block_pairs_on_the_shared_games():
+    """RETRAIN-04: a retrained arm scored on the season's final block (blend_as_test) is compared with the control on the
+    games both hold; an arm with no shared games is left out."""
+    control = games(0.0)
+    block = {g: [v[0], v[1] - 0.002 * v[0], v[2]] for g, v in list(control.items())[200:]}
+    arms = [{'name': 'c', 'role': 'control'}, {'name': 'rt', 'role': 'candidate'}, {'name': 'other', 'role': 'candidate'}]
+    rec = lambda tune, losses: {'status': 'completed', 'tune_2025': {'talent_plus_context': tune}, 'config': {}, 'test_game_losses': losses}
+    out = tool.decide(arms, {'c': rec(1.47, control), 'rt': rec(1.45, block), 'other': rec(1.44, {str(5000 + i): [70, 100.0, 100.0] for i in range(60)})})
+    r = out['arms']['rt']['vs_control_2026']
+    assert r['games'] == 100 and r['paired_on'] == 'the games both arms hold' and abs(r['difference_nats_per_pa'] + 0.002) < 1e-9
+    assert 'error' in out['arms']['other']['vs_control_2026'] and out['selected'] == 'rt' and out['verdict'] == 'passed'
+
+
 def test_the_arms_file_has_one_control_and_unique_names():
     plan = json.loads((Path(__file__).parents[1] / 'tools' / 'fit_arms.json').read_text())
     names = [a['name'] for a in plan['arms']]

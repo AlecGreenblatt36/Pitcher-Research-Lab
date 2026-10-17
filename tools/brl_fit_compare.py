@@ -53,11 +53,25 @@ def decide(arms: list[dict], receipts: dict) -> dict:
           and out['arms'][a['name']]['tune_2025'] is not None]
     missing = [a['name'] for a in arms if a.get('role') == 'candidate' and a['name'] not in ok]
     for name in ok:
-        out['arms'][name]['vs_control_2026'] = paired(receipts[control]['test_game_losses'], receipts[name]['test_game_losses'])
+        try:
+            out['arms'][name]['vs_control_2026'] = paired(receipts[control]['test_game_losses'], receipts[name]['test_game_losses'])
+        except ValueError as exc:
+            # RETRAIN-04: an arm tested on another block (blend_as_test) pairs only on the games both hold
+            c, a = receipts[control]['test_game_losses'], receipts[name]['test_game_losses']
+            common = sorted(set(c) & set(a))
+            if len(common) < 50:
+                out['arms'][name]['vs_control_2026'] = {'error': str(exc)}
+                continue
+            r = paired({g: c[g] for g in common}, {g: a[g] for g in common})
+            r['paired_on'] = 'the games both arms hold'; out['arms'][name]['vs_control_2026'] = r
     if missing:
         out['missing_candidates'] = missing
     if not ok:
         out['verdict'] = 'incomplete: no candidate arm finished'
+        return out
+    ok = [n for n in ok if 'error' not in out['arms'][n]['vs_control_2026']]
+    if not ok:
+        out['verdict'] = 'incomplete: no candidate arm shares test games with the control'
         return out
     selected = min(ok, key=lambda n: out['arms'][n]['tune_2025'])
     test = out['arms'][selected]['vs_control_2026']
