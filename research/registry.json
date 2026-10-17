@@ -6071,14 +6071,16 @@
     "columns": {
      "ID": "ROSTER-01",
      "Attempt": "Daily active rosters (data). The replay's bullpen pool and the reliever-choice fit's candidate sets guess the roster from the relievers used in the last 14 days, so 7 to 9% of real relief appearances (regular season) and 7% (postseason) are by arms the simulator never lists, and in the 2025-2026 replays the whole miss on the top two arms sits in the games where such an arm pitched (team-games with an outside arm: top two shown 1.11 appearances, real 0.68; without one: 1.05 against 1.04). tools/brl_rosters.py (workflow BRL rosters, one job per season from tools/roster_seasons.txt) reads MLB's public active roster for every team on each of its game dates and keeps the pitchers: research/rosters-<year>.json.gz on the ledger branch (public data: team, date, player ids) with a receipt of counts",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the first run.** Expected: about 5,000 team-dates a season, 12 to 14 pitchers a roster, few misses. Used by BULLPEN-10",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before the first run.** Expected: about 5,000 team-dates a season, 12 to 14 pitchers a roster, few misses. Used by BULLPEN-10 **Result (run 39037094363): every team-date read, no misses: 2023 4,872 team-dates (12.9 pitchers a roster), 2024 4,888 (13.1), 2025 4,898 (13.1), 2026 4,876 through October 18 (13.1); 74 to 207 seconds a season.** Tables at research/rosters-<year>.json.gz, receipts beside them",
+     "Delta corrected Brier, 2026": "done"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "39037094363"
+    ],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "done"
    }
   ],
   "BULLPEN-10": [
