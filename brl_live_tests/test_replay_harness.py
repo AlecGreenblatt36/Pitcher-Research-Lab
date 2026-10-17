@@ -113,3 +113,32 @@ def test_reconstruct_and_replay(tmp_path):
             assert sum(ent['real'].values()) == st['team_actual']['pitchers'] - 1
             assert all(len(k.split(':')) == 3 for k in list(ent['sim']) + list(ent['real']))
     assert seen > 0
+
+
+def test_postseason_game_applies_the_live_usage_and_reconstruct_keeps_the_game_type():
+    """POST-06: a postseason game's starters and teams get the round's factor on expected batters (each starter his
+    tier's), the league fallback follows, and the reliever exit offsets come back by decision kind; a regular-season
+    game and a missing table change nothing; reconstructed games carry their game type."""
+    from brl_replay.harness import postseason_game
+    rows = []
+    for i in range(240):          # 240 regular-season plate appearances before the date: pitcher 7 strikes out 30%, walks 5%
+        rows.append({'date_key': '2026-06-%02d' % (1 + i % 28), 'game_pk': 100 + i // 30, 'at_bat_number': i % 30 + 1, 'pitcher': 7, 'batter': 5000 + i % 9,
+                     'outcome': 'K' if i % 10 < 3 else ('BB_HBP' if i % 20 == 3 else 'BIP_OUT'), 'game_type': 'R', 'inning_topbot': 'Top',
+                     'home_team': 'H', 'away_team': 'A', 'inning': 1 + (i % 30) // 4, 'p_throws': 'R', 'stand': 'R', 'park': 'H', 'season': 2026,
+                     'home_score': 0, 'away_score': 0, 'runner_1b': 0, 'runner_2b': 0, 'runner_3b': 0, 'outs_when_up': 0, 'bat_score': 0, 'fld_score': 0})
+    h = pd.DataFrame(rows)
+    post = {'scale': {'L': 0.91}, 'tiers': {'cuts': [0.1518, 0.1876], 'scale': [0.81, 0.89, 0.94]}, 'exit_offsets': {'L': {'mid': 0.8, 'end': -0.4}, 'D': 0.4}}
+    pexp = {7: 24.0, 8: 20.0}; texp = {'A': 22.0, 'H': 23.0}
+    pe, te, lg, offs = postseason_game(post, 'L', pexp, texp, 21.0, h, '2026-10-10', (7, 8))
+    assert abs(pe[7] - 24.0 * 0.94) < 1e-9        # 30% strikeouts minus 5% walks = 0.25, the top tier
+    assert abs(pe[8] - 20.0 * 0.91) < 1e-9        # no record this season: the round's factor
+    assert abs(te['A'] - 22.0 * 0.91) < 1e-9 and abs(lg - 21.0 * 0.91) < 1e-9 and offs == {'mid': 0.8, 'end': -0.4}
+    pe, te, lg, offs = postseason_game(post, 'D', pexp, texp, 21.0, h, '2026-10-10', (7, 8))
+    assert abs(pe[8] - 20.0) < 1e-9 and offs == {'mid': 0.4, 'end': 0.4}    # no scale for D in this table; one number means both kinds
+    assert postseason_game(post, 'R', pexp, texp, 21.0, h, '2026-10-10', (7, 8)) == (pexp, texp, 21.0, None)
+    assert postseason_game(None, 'L', pexp, texp, 21.0, h, '2026-10-10', (7, 8)) == (pexp, texp, 21.0, None)
+    # reconstruct keeps the type
+    g = h.copy(); g['inning_topbot'] = ['Top' if k % 2 == 0 else 'Bot' for k in range(len(g))]
+    g.loc[g['game_pk'] == 100, 'game_type'] = 'L'
+    games = reconstruct(g)
+    assert set(games.columns) >= {'game_type'} and games.set_index('game_pk').loc[100, 'game_type'] == 'L' and (games[games['game_pk'] != 100]['game_type'] == 'R').all()

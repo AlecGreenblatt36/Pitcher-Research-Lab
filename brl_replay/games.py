@@ -109,6 +109,7 @@ def reconstruct(h: pd.DataFrame) -> pd.DataFrame:
             "home_runs": int(f.home_runs), "away_runs": int(f.away_runs),
             "score_source": f.score_source, "ambiguous": bool(f.ambiguous),
             "valid_lineups": len(la) == 9 and len(lh) == 9,
+            "game_type": str(first["game_type"]) if "game_type" in g.columns else "R",     # POST-06: postseason replays
         })
     return pd.DataFrame(games)
 

@@ -155,9 +155,31 @@ def bats_lookup(h: pd.DataFrame, cutoff: str) -> dict:
     return prior.groupby("batter")["stand"].agg(lambda s: "S" if s.nunique() > 1 else s.iloc[0]).to_dict()
 
 
+def postseason_game(postseason: dict | None, game_type: str, pexp: dict, texp: dict, league: float, h: pd.DataFrame, date: str, starters) -> tuple[dict, dict, float, dict | None]:
+    """POST-06: the live lane's postseason usage for one game, as brl_live.live_extension.make_history_engine and
+    brl_live.boxscore.manager_for apply it. postseason = {'scale': {type: factor on expected batters}, 'tiers': POST-03's
+    table or None, 'exit_offsets': {type: number or {'mid', 'end'}}}. Returns the starters' and teams' expected batters,
+    the league fallback and the reliever exit offsets to add (None when nothing applies, as for a regular-season game)."""
+    if postseason is None or str(game_type) == "R":
+        return pexp, texp, league, None
+    scale = float((postseason.get("scale") or {}).get(str(game_type), 1.0))
+    pexp_g = {k: float(v) * scale for k, v in pexp.items()}
+    texp_g = {k: float(v) * scale for k, v in texp.items()}
+    tiers = postseason.get("tiers")
+    if tiers:
+        from brl_live.live_extension import season_kbb, starter_tier_scale
+        for sid in starters:
+            f = starter_tier_scale(tiers, season_kbb(h, int(sid), date))
+            if f is not None and int(sid) in pexp_g:
+                pexp_g[int(sid)] = pexp_g[int(sid)] / scale * f
+    post = (postseason.get("exit_offsets") or {}).get(str(game_type), 0.0)
+    post = {"mid": float(post.get("mid", 0.0)), "end": float(post.get("end", 0.0))} if isinstance(post, dict) else {"mid": float(post), "end": float(post)}
+    return pexp_g, texp_g, league * scale, (post if any(post.values()) else None)
+
+
 def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates: list, *, model_path: Path, model_sha256: str,
                  history_path: Path, hazard_path: Path, n_sims: int, physics_table=None, offsets=None, rest=False, environment=None,
-                 team_offsets=None, age_layer=None, steals=None, win_states=False, starter_lines=False, role_offsets=None, real_pa_check=False, transitions=None, hitter_lines=False, running_events=None, reliever_choice=None, leash=None, base_state=None, relief_exit=None, relief_hooks=None, day_form=0.0, paired_streams=False, matchup=None, level_offsets=None, hazard_correction=None, pitch_counts=None, state_history=None, pitch_table=None, log=print) -> list[dict]:
+                 team_offsets=None, age_layer=None, steals=None, win_states=False, starter_lines=False, role_offsets=None, real_pa_check=False, transitions=None, hitter_lines=False, running_events=None, reliever_choice=None, leash=None, base_state=None, relief_exit=None, relief_hooks=None, day_form=0.0, paired_streams=False, matchup=None, level_offsets=None, hazard_correction=None, pitch_counts=None, state_history=None, pitch_table=None, postseason=None, log=print) -> list[dict]:
     """Simulate every game on the given dates; one record per game (win counts, run histograms, starter outs).
 
     environment: optional {game_pk: seven log-multipliers} (brl_live/environment.py); games without an entry are unadjusted.
@@ -426,16 +448,23 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                 starter = starter_profile(app, sid, getattr(g, f"{side}_starter_throws"), date)
                 pen = tuple(p for p in bullpen(app, team, date, sid, rest=rest) if p.player_id != str(sid))
                 teams[side] = TeamProfile(team, team, lineup, starter, pen, defense=(float(defense.value(team)) if defense is not None else 0.0))
-            matchup = GameMatchup(away=teams["away"], home=teams["home"], venue=g.park, game_type="R")
+            gtype = str(getattr(g, "game_type", "R") or "R")
+            matchup = GameMatchup(away=teams["away"], home=teams["home"], venue=g.park, game_type=gtype)
             pexp_g = pexp
-            if leash is not None:
+            if leash is not None and gtype == "R":                      # the leash reads regular-season games only, as live
                 pexp_g = dict(pexp)
                 for sid_l in (int(g.away_starter), int(g.home_starter)):
                     pexp_g[sid_l] = leash[0].adjust(float(pexp.get(sid_l, hazard["league_mean_bf"])), leash[1].facts(sid_l, date))
-            policy = FittedStarterPolicy(hazard, pexp_g, texp, {int(g.away_starter): g.away, int(g.home_starter): g.home},
+            # POST-06: postseason games get the live lane's usage (expected batters by round and tier, reliever exit offsets)
+            pexp_g, texp_g, league_g, post_offs = postseason_game(postseason, gtype, pexp_g, texp, float(hazard["league_mean_bf"]), h, date, (int(g.away_starter), int(g.home_starter)))
+            offs_g = {'away': relief_hooks.at(g.away, date), 'home': relief_hooks.at(g.home, date)} if relief_hooks is not None else None
+            if post_offs is not None and relief_exit is not None:
+                offs_g = offs_g or {'away': {'mid': 0.0, 'end': 0.0}, 'home': {'mid': 0.0, 'end': 0.0}}
+                offs_g = {side: {k: float(v) + post_offs[k] for k, v in o.items()} for side, o in offs_g.items()}
+            policy = FittedStarterPolicy(hazard, pexp_g, texp_g, {int(g.away_starter): g.away, int(g.home_starter): g.home},
                                          correction=hazard_correction, reliever_choice=reliever_choice, relief_exit=relief_exit,
-                                         relief_offsets=({'away': relief_hooks.at(g.away, date), 'home': relief_hooks.at(g.home, date)}
-                                                         if relief_hooks is not None else None))
+                                         relief_offsets=offs_g)
+            policy.league = league_g
             steal = None
             if steals is not None:
                 from brl_live.running import steal_model
@@ -542,7 +571,7 @@ def replay_dates(h: pd.DataFrame, app: pd.DataFrame, games: pd.DataFrame, dates:
                         if bid_ not in cnt:
                             hl[bid_]["h_hist"][0] += 1; hl[bid_]["hr_hist"][0] += 1; hl[bid_]["bb_hist"][0] += 1; hl[bid_]["k_hist"][0] += 1
                             hl[bid_]["hs_hist"][0, 0] += 1
-            records.append({"game_pk": int(g.game_pk), "date": date, "home": g.home, "away": g.away, "n": n_sims,
+            records.append({"game_pk": int(g.game_pk), "date": date, "home": g.home, "away": g.away, "n": n_sims, "game_type": gtype,
                             "home_wins": hw, "ties": ties, "home_hist": ha.tolist(), "away_hist": aa.tolist(), "margin_hist": mh.tolist(),
                             "f5_margin_hist": f5m.tolist(), "f5_total_hist": f5t.tolist(), "first_inning": first.tolist(),
                             "home_starter_outs": float(np.mean(s_outs["home"])) if s_outs["home"] else 0.0, "away_starter_outs": float(np.mean(s_outs["away"])) if s_outs["away"] else 0.0,

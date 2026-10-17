@@ -35,6 +35,10 @@ Settings come from tools/replay_params.json on the trigger branch:
   base_state   path in the repository of base-state offsets (tools/brl_base_state.py): the stack shaped by bases and outs
   leash        path in the repository of a starter-leash table (tools/brl_leash.py): each starter's expected batters
                faced moved for short rest, a relief outing before, a return from a layoff and the month
+  postseason   {'types': ['F','D','L'] (default) or ['W'], 'tiers': true|false|table, 'scale': {type: factor}, 'exit_offsets': {type: ..}}:
+               replay the season's postseason games (private/history/post-<season>.enc, POST-05) with the live lane's
+               postseason usage (POST-06); the params still say which hazard and relief corrections to load (none for
+               F, D and L as live; the corrected ones for W)
   physics_years 'recent' (default: the previous and the replayed season, as the live runtime loads), 'all' (every sealed
                season from 2023, as the model was fitted) or a list of years
   physics_join  keep only physics rows whose game, plate appearance, batter and pitcher are in the plate-appearance
@@ -119,7 +123,8 @@ def _worker(dates: list) -> list:
                         transitions=s.get('transitions'), hitter_lines=bool(s.get('hitter_lines')), running_events=s.get('running_events'),
                         reliever_choice=s.get('reliever_choice'), leash=s.get('leash'), base_state=s.get('base_state'), relief_exit=s.get('relief_exit'), relief_hooks=s.get('relief_hooks'), day_form=s.get('day_form') or 0.0,
                         paired_streams=bool(s.get('paired_streams')), matchup=s.get('matchup'), level_offsets=s.get('level_offsets'),
-                        hazard_correction=s.get('hazard_correction'), pitch_counts=s.get('pitch_counts'), state_history=s.get('state_history'), pitch_table=s.get('pitch_table'), log=lambda m: print(m, flush=True))
+                        hazard_correction=s.get('hazard_correction'), pitch_counts=s.get('pitch_counts'), state_history=s.get('state_history'), pitch_table=s.get('pitch_table'),
+                        postseason=s.get('postseason'), log=lambda m: print(m, flush=True))
 
 
 def logit(p):
@@ -278,9 +283,38 @@ def main():
             physics_table = physics_table.astype({'game_pk': 'int64', 'at_bat_number': 'int64', 'batter': 'int64', 'pitcher': 'int64'})
             physics_table = physics_table.merge(keys, on=['game_pk', 'at_bat_number', 'batter', 'pitcher'], how='inner').reset_index(drop=True)
             receipt['physics_join'] = {'before': before, 'after': int(len(physics_table))}
+        post_types, postseason_cfg = None, None
+        if params.get('postseason'):
+            # POST-06: replay the season's postseason games (sealed apart at private/history/post-<season>.enc, POST-05) with
+            # the live lane's postseason usage; Wild Card, Division and League games run the plain hazards, the World
+            # Series the corrected ones (POST-04), so the two are replayed apart and the params say which corrections to load
+            from brl_live.boxscore import ADJUST as _ADJ
+            from cloud.security import unseal, key_bytes
+            spec_p = params['postseason'] if isinstance(params['postseason'], dict) else {}
+            post_types = tuple(str(t) for t in (spec_p.get('types') or ('F', 'D', 'L')))
+            if 'W' in post_types and len(post_types) > 1:
+                raise ValueError('postseason replay: World Series games run on the corrected hazards; replay W apart from F, D and L')
+            raw_post = read_blob(repo, token, f'private/history/post-{season}.enc', branch)
+            if raw_post is None:
+                raise ValueError(f'no sealed postseason for {season} (private/history/post-{season}.enc; tools/brl_history_backfill.py)')
+            post = pd.read_csv(io.BytesIO(gzip.decompress(unseal(raw_post, key_bytes(key_hex), f'pa-history-postseason-{season}'))), low_memory=False)
+            post['date_key'] = post['date_key'].astype(str).str[:10]; post['season'] = post['date_key'].str[:4].astype(int)
+            if 'game_type' not in h.columns:
+                h = h.assign(game_type='R')
+            h = pd.concat([h, post[[c for c in h.columns if c in post.columns]]], ignore_index=True)
+            h = h.sort_values(['date_key', 'game_pk', 'at_bat_number'], kind='mergesort').reset_index(drop=True)
+            postseason_cfg = {'scale': {t: float((_ADJ.get('postseason_exp_scale') or {}).get(t, 1.0)) for t in post_types},
+                              'tiers': (_ADJ.get('postseason_starter_tiers') if spec_p.get('tiers', True) is True else spec_p.get('tiers')) or None,
+                              'exit_offsets': {t: (_ADJ.get('postseason_exit_offset') or {}).get(t, 0.0) for t in post_types}}
+            for k_ in ('scale', 'exit_offsets'):
+                if isinstance(spec_p.get(k_), dict):
+                    postseason_cfg[k_] = spec_p[k_]
+            receipt['postseason'] = {'types': list(post_types), 'rows': int(len(post)), 'games': int(post['game_pk'].nunique()), **postseason_cfg}
         app = appearances(h)
         games = reconstruct(h)
         games['date'] = games['date'].astype(str)
+        if 'game_type' in games.columns:
+            games = games[games['game_type'].isin(post_types)] if post_types else games[games['game_type'] == 'R']
         if params.get('lineup_projection') == 'previous_game':
             # CLV-03: only what was known at the open. Each team's lineup is its lineup from its previous game of the season
             # (its actual lineup in its first game); starters stay as they were, since probable starters are usually posted
@@ -452,7 +486,8 @@ def main():
                        age_layer=age_layer, steals=steals, win_states=(params.get('win_states') if params.get('win_states') == 'split' else bool(params.get('win_states'))), starter_lines=bool(params.get('starter_lines')), role_offsets=role_offsets, real_pa_check=bool(params.get('real_pa_check')), transitions=transitions,
                        hitter_lines=bool(params.get('hitter_lines')), running_events=running_events, reliever_choice=reliever_choice, leash=leash, base_state=base_state, relief_exit=relief_exit, relief_hooks=relief_hooks,
                        day_form=(params['day_form'] if isinstance(params.get('day_form'), dict) else float(params.get('day_form') or 0.0)), paired_streams=bool(params.get('streams')), matchup=matchup,
-                       level_offsets=level_offsets, hazard_correction=hazard_correction, pitch_counts=pitch_counts, state_history=state_history, pitch_table=pitch_table)
+                       level_offsets=level_offsets, hazard_correction=hazard_correction, pitch_counts=pitch_counts, state_history=state_history, pitch_table=pitch_table,
+                       postseason=postseason_cfg)
         if params.get('streams'):
             receipt['paired_streams'] = True
         if params.get('day_form'):

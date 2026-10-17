@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 362,
- "rows": 365,
+ "experiments": 363,
+ "rows": 366,
  "records": {
   "ACC-01": [
    {
@@ -6042,6 +6042,22 @@
     ],
     "frozen_commits": [],
     "status": "live"
+   }
+  ],
+  "POST-06": [
+   {
+    "id": "POST-06",
+    "columns": {
+     "ID": "POST-06",
+     "Attempt": "A postseason replay lane. Every postseason setting so far (POST-01 to POST-05) was a realism calibration with no replay to check it against, because the replay lane held regular-season games only. With the postseasons sealed apart (POST-05), tools/brl_replay.py gains a postseason parameter: it loads the season's postseason rows, reconstructs those games, marks each with its round, and the harness applies the live lane's October usage per game (brl_replay.harness.postseason_game: the round's factor on expected batters, POST-03's tier factor per starter, the reliever exit offsets by decision kind added to the team hooks; the leash stays regular-season). Wild Card, Division and League games run the plain hazards as live; the World Series is replayed apart on the corrected ones. First use: the 2024 and 2025 Wild Card, Division and League games (about 38 a season), model retrain04-rt with the live tables (none of which saw a postseason game), 1,000 worlds, two arms each: the live offsets (mid +0.8, end -0.4) and POST-02's (+0.4, +0.4)",
+     "Disposition and evidence": "**Registered in the commit that added this row, before any run.** Descriptive gates, scored with tools/brl_bullpen_cal.py, tools/brl_outs_cal.py and the receipts' pitchers per team-game: (1) relievers a team-game within 0.25 of the real count in both seasons under the live offsets, and closer than under POST-02's; (2) the reliever appearance bin 0.60-0.80 within 10 points of its actual share pooled over the two seasons, and closer than POST-02's; (3) the starter outs ladder (18+ outs share) within 5 points of real. Prediction: live offsets give 4.0 to 4.4 relievers a team-game against about 4.05 real (POST-02's 4.5 to 5.0), and the 0.60-0.80 bin lands at 55 to 70% (it was 48% in this October's live boxes under POST-02's offsets). If a gate fails, the measured offsets are re-tuned on these replays, not the live games",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "TOTALS-05": [
