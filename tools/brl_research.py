@@ -599,7 +599,7 @@ def relief_pitches(data_root: Path, physics) -> dict:
     return out
 
 
-def choice_temperature(data_root: Path, entries=None, counts=None) -> dict:
+def choice_temperature(data_root: Path, entries=None, counts=None, min_entries: int = 500) -> dict:
     """BULLPEN-08: is the live reliever choice too sure of its favorites entry by entry? On every real regular-season relief
     entry with a choice set (tools/brl_reliever_choice.py choice_rows, the live table's features), the live table's
     probabilities per candidate: calibration by bins of the candidate's chance (chosen share against mean chance), the
@@ -647,13 +647,113 @@ def choice_temperature(data_root: Path, entries=None, counts=None) -> dict:
     grid = [round(0.6 + 0.05 * i, 2) for i in range(21)]
     for season in seasons:
         test = [e for e in entries if e[0] == season]; train = [e for e in entries if e[0] != season]
-        if len(test) < 500 or len(train) < 500:
+        if len(test) < min_entries or len(train) < min_entries:
             continue
         ll_train = {T: loglik(train, T) for T in grid}
         T_hat = max(ll_train, key=ll_train.get)
         out['by_season'][str(season)] = {'entries': len(test), 'T_from_other_seasons': T_hat, 'loglik_T1': round(loglik(test, 1.0), 5),
                                          'loglik_T': round(loglik(test, T_hat), 5), 'bins_T1': bins(test, 1.0), 'bins_T': bins(test, T_hat),
                                          'train_loglik_by_T': {str(T): round(v, 5) for T, v in ll_train.items()}}
+    # the one temperature all the entries ask for (in sample; POST-05 reads it beside the held-out ones)
+    ll_all = {T: loglik(entries, T) for T in grid}
+    out['T_all'] = max(ll_all, key=ll_all.get); out['loglik_all_by_T'] = {str(T): round(v, 5) for T, v in ll_all.items()}
+    out['bins_T_all'] = bins(entries, out['T_all'])
+    return out
+
+
+POST_TYPES = ('F', 'D', 'L', 'W')
+
+
+def postseason_pen(data_root: Path, h: pd.DataFrame | None = None) -> dict:
+    """POST-05: how October bullpens differ from the regular season's and how the live tables read them, from the sealed
+    history's postseason games (Wild Card F, Division D, League L and World Series W) against the regular season:
+    relievers per team-game; batters faced per relief outing (mean, share of six or more) by the arm's place in his
+    team's pool (rank by 14-day share of relief batters); the share of relief entries taken by each pool's top one, two
+    and three arms and by arms outside the pool; the live reliever choice (brl_live/reliever_choice.json) on postseason
+    entries (choice_temperature: bins at T = 1, a temperature fitted on the other postseasons and on all of them); the
+    live relief-exit hazard (brl_live/relief_exit.json, plain, as the postseason runs it) on postseason decision points:
+    removals against its summed chance mid-inning and at an inning's end, and the log-odds offset that matches them,
+    by round and by season, next to the +0.4 in use (POST-02). Aggregates only."""
+    import importlib.util
+    from brl_replay.games import load_history
+    from brl_replay.relief_decisions import decisions, fitted
+    spec = importlib.util.spec_from_file_location('brl_reliever_choice', ROOT / 'tools' / 'brl_reliever_choice.py')
+    rc = importlib.util.module_from_spec(spec); spec.loader.exec_module(rc)
+    cdoc = json.loads((ROOT / 'brl_live' / 'reliever_choice.json').read_text())
+    rc.NAMES = [str(n) for n in cdoc['names']]
+    if h is None:
+        h = load_history(next(data_root.rglob('plate_appearances.csv.gz')))
+    if 'game_type' not in h.columns:
+        h = h.assign(game_type='R')
+    h = h[h['game_type'].isin(('R',) + POST_TYPES)]
+    seasons = sorted(set(h['date_key'].astype(str).str[:4].astype(int)))
+    out = {'seasons': seasons, 'games_by_type': {str(k): int(v) for k, v in h.groupby('game_type')['game_pk'].nunique().items()}}
+    types = ('R',) + POST_TYPES
+    # entries and their meta rows: postseason games, pools from every game; the regular season's last six weeks as the reference
+    post_entries, post_counts, post_meta = rc.choice_rows(h, set(seasons), game_types=types, keep_types=POST_TYPES, with_meta=True)
+    late = h[(h['game_type'] == 'R') & (h['date_key'].astype(str).str[5:7].isin(['08', '09']))]
+    ref_entries, ref_counts, ref_meta = rc.choice_rows(late, set(seasons), game_types=('R',), with_meta=True)
+
+    def usage(meta, label):
+        m = pd.DataFrame(meta)
+        if m.empty:
+            return {'label': label, 'entries': 0}
+        r = m['rank14']
+        res = {'label': label, 'entries': int(len(m)), 'outside_pool': round(float((~m['in_pool']).mean()), 4),
+               'share_rank': {'0': round(float((r == 0).mean()), 4), '1': round(float((r == 1).mean()), 4), '2': round(float((r == 2).mean()), 4),
+                              '3+': round(float((r >= 3).mean()), 4)},
+               'bf_mean': round(float(m['bf'].mean()), 3), 'bf_6plus': round(float((m['bf'] >= 6).mean()), 4), 'bf_9plus': round(float((m['bf'] >= 9).mean()), 4),
+               'bf_by_rank': {k: [int(len(g)), round(float(g['bf'].mean()), 3), round(float((g['bf'] >= 6).mean()), 4)]
+                              for k, g in m.groupby(np.where(r.isna(), 'out', np.minimum(r.fillna(9), 3).astype(int).astype(str)))},
+               'by_season': {str(int(sn)): {'entries': int(len(g)), 'outside_pool': round(float((~g['in_pool']).mean()), 4),
+                                            'top2_share': round(float((g['rank14'] <= 1).mean()), 4), 'bf_mean': round(float(g['bf'].mean()), 3)}
+                             for sn, g in m.groupby('season')}}
+        if m['game_type'].nunique() > 1:
+            res['by_type'] = {str(t): {'entries': int(len(g)), 'outside_pool': round(float((~g['in_pool']).mean()), 4),
+                                       'top2_share': round(float((g['rank14'] <= 1).mean()), 4), 'bf_mean': round(float(g['bf'].mean()), 3)}
+                              for t, g in m.groupby('game_type')}
+        return res
+    out['usage'] = {'postseason': usage(post_meta, 'postseason entries (F, D, L, W)'), 'regular_aug_sep': usage(ref_meta, 'regular season, August and September')}
+    # relievers per team-game by game type and season (the starter not counted)
+    top = h['inning_topbot'].astype(str).str.lower().str.startswith('top')
+    tg = h.assign(team=np.where(top, h['home_team'], h['away_team']), season=h['date_key'].astype(str).str[:4].astype(int))
+    per = tg.groupby(['game_pk', 'team']).agg(n=('pitcher', 'nunique'), game_type=('game_type', 'first'), season=('season', 'first')).reset_index()
+    out['relievers_per_team_game'] = {str(t): {'team_games': int(len(g)), 'relievers': round(float(g['n'].mean() - 1), 3),
+                                               'by_season': {str(int(sn)): [int(len(x)), round(float(x['n'].mean() - 1), 3)] for sn, x in g.groupby('season')}}
+                                      for t, g in per.groupby('game_type')}
+    # the live choice table on postseason entries
+    out['choice'] = {'counts': post_counts, 'temperature': choice_temperature(None, entries=post_entries, counts=post_counts, min_entries=100) if post_entries else None}
+    # the live relief-exit hazard on postseason decision points
+    edoc = json.loads((ROOT / 'brl_live' / 'relief_exit.json').read_text())
+    d = decisions(h, game_types=types, keep_types=POST_TYPES)
+    d['p'] = fitted(d, edoc)
+    d = d[d['p'].notna()].copy()
+    from brl_live.boxscore import ADJUST
+    cur = {t: float((ADJUST.get('postseason_exit_offset') or {}).get(t, 0.0)) for t in POST_TYPES}
+
+    def offset(p, y):
+        """The log-odds shift that makes the hazard's summed chance equal the removals (bisection)."""
+        p = np.clip(np.asarray(p, float), 1e-6, 1 - 1e-6); z = np.log(p / (1 - p)); target = float(np.sum(y))
+        lo, hi = -6.0, 6.0
+        for _ in range(60):
+            mid = 0.5 * (lo + hi)
+            if float((1 / (1 + np.exp(-(z + mid)))).sum()) < target:
+                lo = mid
+            else:
+                hi = mid
+        return round(0.5 * (lo + hi), 3)
+
+    def cell(g):
+        res = {'decisions': int(len(g)), 'removed': int(g['removed'].sum()), 'hazard_sum': round(float(g['p'].sum()), 1), 'offset': offset(g['p'], g['removed'])}
+        for ended, name in ((0, 'mid'), (1, 'end')):
+            x = g[g['ended'] == ended]
+            if len(x):
+                res[name] = {'decisions': int(len(x)), 'removed': int(x['removed'].sum()), 'hazard_sum': round(float(x['p'].sum()), 1), 'offset': offset(x['p'], x['removed'])}
+        return res
+    groups = {'FDL': d[d['game_type'].isin(('F', 'D', 'L'))], 'W': d[d['game_type'] == 'W'], 'all': d}
+    out['exit'] = {'current_offsets': cur, 'by_round': {k: cell(g) for k, g in groups.items() if len(g)},
+                   'by_type': {str(t): cell(g) for t, g in d.groupby('game_type')},
+                   'by_season_FDL': {str(int(sn)): cell(g) for sn, g in groups['FDL'].groupby('season')}}
     return out
 
 
@@ -868,7 +968,7 @@ def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']; key_hex = os.environ['BRL_PA_PACKAGE_KEY']; key = key_bytes(key_hex)
     branch = os.environ.get('BRL_LEDGER_BRANCH', 'brl-live-data')
     experiment = (os.environ.get('BRL_EXPERIMENT') or 'physics').strip()
-    if experiment in ('hazard_check', 'hazard_fix', 'hazard_pitches', 'pitch_counts', 'relief_pitches', 'pitch_efficiency', 'relief_entry', 'relief_fix', 'choice_temperature'):
+    if experiment in ('hazard_check', 'hazard_fix', 'hazard_pitches', 'pitch_counts', 'relief_pitches', 'pitch_efficiency', 'relief_entry', 'relief_fix', 'choice_temperature', 'postseason_pen'):
         run_id = os.environ.get('GITHUB_RUN_ID', 'local')
         receipt = {'schema': 'brl.research-receipt.v1', 'experiment': experiment, 'run_id': run_id, 'started_at': datetime.now(timezone.utc).isoformat()}
         try:
@@ -891,7 +991,7 @@ def main():
                 phys_n = pd.concat(tables, ignore_index=True) if tables else None
                 receipt['results'] = {'pitch_counts': pitch_counts_fit, 'relief_pitches': relief_pitches, 'pitch_efficiency': pitch_efficiency}.get(experiment, hazard_pitches)(data_root, phys_n)
             else:
-                receipt['results'] = {'hazard_fix': hazard_fix, 'relief_entry': relief_entry, 'relief_fix': relief_fix, 'choice_temperature': choice_temperature}.get(experiment, hazard_check)(data_root)
+                receipt['results'] = {'hazard_fix': hazard_fix, 'relief_entry': relief_entry, 'relief_fix': relief_fix, 'choice_temperature': choice_temperature, 'postseason_pen': postseason_pen}.get(experiment, hazard_check)(data_root)
             receipt['status'] = 'completed'
         except Exception as exc:
             receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:300]

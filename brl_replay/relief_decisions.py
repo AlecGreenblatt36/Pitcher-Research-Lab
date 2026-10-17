@@ -23,8 +23,12 @@ COLS = ['game_pk', 'date_key', 'at_bat_number', 'pitcher', 'inning', 'inning_top
         'runner_3b', 'bat_score', 'fld_score', 'home_team', 'away_team', 'game_type']
 
 
-def decisions(h: pd.DataFrame) -> pd.DataFrame:
-    h = h[h['game_type'] == 'R'].sort_values(['game_pk', 'at_bat_number']).reset_index(drop=True)
+def decisions(h: pd.DataFrame, game_types=('R',), keep_types=None) -> pd.DataFrame:
+    """Every relief decision point of the games of `game_types` (the regular season alone by default), with each
+    reliever's usual length and role from his outings in those games over the previous 365 days; POST-05's keep_types
+    returns the decisions of those game types only (the usual lengths still read every game of game_types)."""
+    h = h[h['game_type'].isin(tuple(game_types))].sort_values(['game_pk', 'at_bat_number']).reset_index(drop=True)
+    gtype = h.groupby('game_pk')['game_type'].first()
     h['date'] = h['date_key'].astype(str).str[:10]
     h['season'] = h['date'].str[:4].astype(int)
     top = h['inning_topbot'].astype(str).str.lower().str.startswith('top')
@@ -62,6 +66,9 @@ def decisions(h: pd.DataFrame) -> pd.DataFrame:
     key = list(zip(rel['game_pk'], rel['pitcher']))
     rel['exp'] = [exp[x] for x in key]; rel['ninth'] = [ninth[x] for x in key]; rel['late'] = [late[x] for x in key]
     rel['n_on'] = rel['n_on'].fillna(0); rel['n_outs_when_up'] = rel['n_outs_when_up'].fillna(0)
+    rel['game_type'] = rel['game_pk'].map(gtype)
+    if keep_types is not None:
+        rel = rel[rel['game_type'].isin(set(keep_types))].copy()
     return rel
 
 

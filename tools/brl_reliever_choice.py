@@ -32,9 +32,17 @@ NAMES = ['log_share14', 'log_share30', 'pitched_d1', 'back_to_back', 'apps_d3', 
 NAMES6 = NAMES + ['work7', 'apps7', 'top2_14']           # BULLPEN-06: --features 6
 
 
-def choice_rows(h: pd.DataFrame, seasons: set) -> tuple[list, dict]:
-    """(entries, counts): each entry is (season, X matrix over its candidates, index of the chosen one)."""
-    h = h[h['game_type'] == 'R'].sort_values(['game_pk', 'at_bat_number']).reset_index(drop=True)
+def choice_rows(h: pd.DataFrame, seasons: set, game_types=('R',), keep_types=None, with_meta: bool = False):
+    """(entries, counts): each entry is (season, X matrix over its candidates, index of the chosen one). Games of
+    `game_types` build the pools and the usage facts (the regular season alone by default); entries come from games of
+    `keep_types` (all of game_types by default). POST-05: with_meta adds a third item, one row per relief appearance of
+    those games, pool or not: {season, game_type, in_pool, rank14 (the arm's place in his pool by 14-day share, None
+    outside it), avail (candidates left), bf (his batters faced), entry (0 for the first reliever)}."""
+    types = tuple(game_types)
+    keep = set(keep_types) if keep_types is not None else set(types)
+    h = h[h['game_type'].isin(types)].sort_values(['game_pk', 'at_bat_number']).reset_index(drop=True)
+    gtype = h.groupby('game_pk')['game_type'].first().to_dict()
+    meta = []
     app = appearances(h)
     app['date'] = app['date'].astype(str).str[:10]
     first_ab = h.groupby(['game_pk', 'pitcher'])['at_bat_number'].min().rename('first_ab').reset_index()
@@ -68,7 +76,7 @@ def choice_rows(h: pd.DataFrame, seasons: set) -> tuple[list, dict]:
     entries, counts = [], {'entries': 0, 'outside_set': 0, 'small_set': 0}
     for (gpk, team), ga in app.groupby(['game_pk', 'team']):
         date = str(ga['date'].iloc[0])
-        if int(date[:4]) not in seasons:
+        if int(date[:4]) not in seasons or gtype.get(gpk, 'R') not in keep:
             continue
         team_app = app[(app['team'] == team) & (app['date'] < date)]
         window = (pd.Timestamp(date) - pd.Timedelta(days=14)).strftime('%Y-%m-%d')
@@ -83,10 +91,13 @@ def choice_rows(h: pd.DataFrame, seasons: set) -> tuple[list, dict]:
             continue
         facts = bullpen_usage(app, team, date, pool)
         used = set()
-        for _, e in ga[~ga['start']].sort_values('first_ab').iterrows():
+        for j, (_, e) in enumerate(ga[~ga['start']].sort_values('first_ab').iterrows()):
             chosen = int(e['pitcher'])
             counts['entries'] += 1
             avail = [p for p in pool if p not in used]
+            if with_meta:
+                meta.append({'season': int(date[:4]), 'game_type': gtype.get(gpk, 'R'), 'in_pool': chosen in pool,
+                             'rank14': (facts[chosen].get('rank14') if chosen in pool else None), 'avail': len(avail), 'bf': int(e['bf']), 'entry': j})
             if chosen not in avail:
                 counts['outside_set'] += 1
             elif len(avail) < 2:
@@ -101,7 +112,7 @@ def choice_rows(h: pd.DataFrame, seasons: set) -> tuple[list, dict]:
                 X = np.column_stack([cols[n] for n in NAMES])
                 entries.append((int(date[:4]), X, avail.index(chosen)))
             used.add(chosen)
-    return entries, counts
+    return (entries, counts, meta) if with_meta else (entries, counts)
 
 
 def fit(entries: list) -> np.ndarray:

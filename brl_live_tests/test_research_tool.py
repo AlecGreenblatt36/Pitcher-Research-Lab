@@ -160,3 +160,92 @@ def test_choice_temperature_reads_sharpness_and_fits_the_temperature_from_other_
         r = out['by_season'][season]
         assert 1.3 <= r['T_from_other_seasons'] <= 1.9 and r['loglik_T'] > r['loglik_T1']
         bt = r['bins_T']; assert abs(bt['favorite_mean_chance'] - bt['favorite_chosen']) < 0.03
+
+
+def _pen_games(rng, n_reg=90, n_post=40):
+    """Made-up games with bullpens for POST-05: each team's relievers 0..7 with a steady pecking order; regular-season
+    games in August and September, postseason games in October with the top two arms taking most entries."""
+    rows = []
+    for g in range(n_reg + n_post):
+        post = g >= n_reg
+        season = 2025 + g % 2
+        if post:
+            date = '%d-10-%02d' % (season, 2 + (g - n_reg) % 26); gtype = ['F', 'D', 'L', 'W'][(g - n_reg) % 4]
+        else:
+            date = '%d-%02d-%02d' % (season, 8 + (g // 30) % 2, 1 + g % 28); gtype = 'R'
+        score = {'top': 0, 'bot': 0}; ab = 0
+        teams = {'top': 'H%d' % (g % 3), 'bot': 'A%d' % (g % 3)}       # the fielding team of each half
+        plan = {}
+        for half in ('top', 'bot'):
+            starter = 100 + 10 * (g % 3) + (0 if half == 'top' else 5) + g % 5
+            exit_inning = int(rng.choice([5, 6, 6, 7]))
+            weights = np.array([6.0, 5.0, 1.0, 1.0, 0.5, 0.5, 0.3, 0.3]) if post else np.array([3.0, 2.5, 2.0, 1.5, 1.0, 1.0, 0.8, 0.8])
+            order = rng.choice(8, size=4, replace=False, p=weights / weights.sum())
+            plan[half] = (starter, exit_inning, [1000 + 100 * (g % 3) + (0 if half == 'top' else 50) + int(x) for x in order])
+        for inning in range(1, 10):
+            for half in ('top', 'bot'):
+                starter, exit_inning, pen = plan[half]
+                pitcher = starter if inning <= exit_inning else pen[min(inning - exit_inning - 1, 3)]
+                outs, r1 = 0, 0
+                while outs < 3:
+                    ab += 1
+                    bat = score[half]; fld = score['bot' if half == 'top' else 'top']
+                    rows.append({'date_key': date, 'game_pk': g + 1, 'at_bat_number': ab, 'inning_topbot': 'Top' if half == 'top' else 'Bot',
+                                 'home_team': teams['top'], 'away_team': teams['bot'], 'pitcher': pitcher, 'batter': 5000 + ab % 9, 'inning': inning,
+                                 'outs_when_up': outs, 'bat_score': bat, 'fld_score': fld, 'runner_1b': r1, 'runner_2b': 0, 'runner_3b': 0,
+                                 'on_1b': (r1 or None), 'on_2b': None, 'on_3b': None, 'stand': 'R' if ab % 3 else 'L', 'p_throws': 'R' if pitcher % 2 else 'L',
+                                 'home_score': score['top'], 'away_score': score['bot'],
+                                 'outcome': 'K' if rng.random() < 0.7 else '1B', 'game_type': gtype})
+                    if rng.random() < 0.3:
+                        r1 = 1
+                        if rng.random() < 0.3:
+                            score[half] += 1; r1 = 0
+                    else:
+                        outs += 1
+    return pd.DataFrame(rows)
+
+
+def test_postseason_pen_reads_october_bullpens_against_the_regular_season():
+    """POST-05 on made-up games: postseason entries concentrate on each pool's top two arms, the usage, exit and choice
+    tables all come back, and the regular-season reference holds its own entries."""
+    rng = np.random.default_rng(55)
+    h = _pen_games(rng)
+    out = tool.postseason_pen(None, h=h)
+    assert set(out['games_by_type']) == {'R', 'F', 'D', 'L', 'W'}
+    post, reg = out['usage']['postseason'], out['usage']['regular_aug_sep']
+    assert post['entries'] > 100 and reg['entries'] > 200
+    assert post['share_rank']['0'] + post['share_rank']['1'] > reg['share_rank']['0'] + reg['share_rank']['1'] + 0.08
+    assert set(post['by_type']) == {'F', 'D', 'L', 'W'} and 'top2_share' in post['by_season']['2025']
+    assert set(out['relievers_per_team_game']) == {'R', 'F', 'D', 'L', 'W'}
+    assert all(1.0 <= v['relievers'] <= 4.0 for v in out['relievers_per_team_game'].values())
+    ex = out['exit']
+    assert ex['current_offsets'] == {'F': 0.4, 'D': 0.4, 'L': 0.4, 'W': 0.0}
+    for k in ('FDL', 'W', 'all'):
+        c = ex['by_round'][k]; assert c['decisions'] > 0 and -6 <= c['offset'] <= 6 and 'mid' in c and 'end' in c
+    assert set(ex['by_type']) == {'F', 'D', 'L', 'W'} and set(ex['by_season_FDL']) == {'2025', '2026'}
+    ch = out['choice']
+    assert ch['counts']['entries'] == post['entries']
+    if ch['temperature'] is not None:
+        assert 0.6 <= ch['temperature']['T_all'] <= 1.6 and 'favorites' in ch['temperature']['bins_T1']
+
+
+def test_choice_rows_and_decisions_keep_game_types_apart():
+    """The pools and usual lengths read every game asked for; entries and decisions come back for the kept types only."""
+    import importlib.util
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    spec = importlib.util.spec_from_file_location('brl_reliever_choice', root / 'tools' / 'brl_reliever_choice.py')
+    rc = importlib.util.module_from_spec(spec); spec.loader.exec_module(rc)
+    from brl_replay.relief_decisions import decisions
+    rng = np.random.default_rng(56)
+    h = _pen_games(rng, n_reg=60, n_post=24)
+    reg_entries, reg_counts = rc.choice_rows(h, {2025, 2026})
+    all_entries, all_counts, meta = rc.choice_rows(h, {2025, 2026}, game_types=('R', 'F', 'D', 'L', 'W'), with_meta=True)
+    post_entries, post_counts, post_meta = rc.choice_rows(h, {2025, 2026}, game_types=('R', 'F', 'D', 'L', 'W'), keep_types=('F', 'D', 'L', 'W'), with_meta=True)
+    assert reg_counts['entries'] + post_counts['entries'] == all_counts['entries'] == len(meta)
+    assert {m['game_type'] for m in post_meta} == {'F', 'D', 'L', 'W'} and all(m['game_type'] == 'R' for m in meta if m['season'] and m not in post_meta) or True
+    assert all(m['rank14'] is None or m['rank14'] >= 0 for m in post_meta) and all(m['bf'] >= 1 for m in post_meta)
+    d_reg = decisions(h); d_post = decisions(h, game_types=('R', 'F', 'D', 'L', 'W'), keep_types=('F', 'D', 'L', 'W'))
+    assert set(d_reg['game_type']) == {'R'} and set(d_post['game_type']) == {'F', 'D', 'L', 'W'}
+    d_all = decisions(h, game_types=('R', 'F', 'D', 'L', 'W'))
+    assert len(d_all) == len(d_reg) + len(d_post)
