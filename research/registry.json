@@ -6108,14 +6108,17 @@
     "columns": {
      "ID": "POST-07",
      "Attempt": "The starter-exit correction in Wild Card, Division and League games (the open item from POST-03/04). Those rounds run the plain starter hazard with POST-03's tier factors on expected batters; regular-season and World Series games run LEASH-04's inning and pitch-count correction (brl_replay/hazard_correction_v2.json). POST-06's lane replays the 2024 and 2025 Wild Card, Division and League games with the correction on and the tier factors unchanged (tags post07-fdl-corr-2024/2025; the control is post06-fdl-live-2024/2025, same model, tables and seeds)",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the runs.** Gates on the 156 team-games pooled: (1) starters' expected outs within 0.3 of the real mean and closer than the plain hazard's (13.22 against 12.92 real, +0.30); (2) the share of starts with 18 or more outs within 3 points of real (plain 23.5% against 24.4%); (3) the outs ladder's largest half-line gap no worse than the plain hazard's by more than 2 points; relievers a team-game not worse than the plain hazard's by more than 0.1. Prediction: the correction shortens the mean by 0.2 to 0.4 outs (its pitch terms pull starters near 100 pitches), landing within 0.1 of real; if it overshoots, the tier scales are re-measured on this lane (not the live games). Decision rule: live for F, D and L (brl_live.boxscore.hazard_correction_for) if (1) to (3) hold",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before the runs.** Gates on the 156 team-games pooled: (1) starters' expected outs within 0.3 of the real mean and closer than the plain hazard's (13.22 against 12.92 real, +0.30); (2) the share of starts with 18 or more outs within 3 points of real (plain 23.5% against 24.4%); (3) the outs ladder's largest half-line gap no worse than the plain hazard's by more than 2 points; relievers a team-game not worse than the plain hazard's by more than 0.1. Prediction: the correction shortens the mean by 0.2 to 0.4 outs (its pitch terms pull starters near 100 pitches), landing within 0.1 of real; if it overshoots, the tier scales are re-measured on this lane (not the live games). Decision rule: live for F, D and L (brl_live.boxscore.hazard_correction_for) if (1) to (3) hold **Failed (runs 39040439334, 39040456009; 78 games, 156 starts).** With the correction on, starters' expected outs 13.57 against 12.92 real (+0.65; 2024 +0.51, 2025 +0.80) where the plain hazard gives 13.22 (+0.30): the regular-season correction lengthens October starts, the opposite of the prediction (its terms say regular-season managers keep a starter in longer by inning than the plain hazard does at a given pitch count, and the tier factors were measured against the plain hazard). 18 or more outs 26.2% against 24.4% real (plain 23.5%); the outs ladder's half lines move up 4 to 14 points at 12.5 to 14.5; relievers a team-game 3.88 (plain 3.96, real 4.08). The standard error of the mean over 156 starts is about 0.45 outs, so the plain hazard's +0.30 is within noise and re-measuring the tier factors on this sample would be fitting noise. Wild Card, Division and League games keep the plain hazard with POST-03's tiers; the item is closed",
+     "Delta corrected Brier, 2026": "failed"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "39040439334",
+     "39040456009"
+    ],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "failed"
    }
   ],
   "TOTALS-05": [
