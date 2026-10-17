@@ -95,7 +95,7 @@ Model Plan doc). Built the same afternoon:
       exit hazard's matching offset by round. Result: the choice is calibrated in October too (T 1.05-1.1, no change);
       the exits were the miss: mid-inning removals run twice the hazard, end-of-inning removals 0.86 of it, and POST-02's
       +0.4 on both had the sign wrong at inning ends. Live from 1:30 am: postseason_exit_offset by decision kind, mid
-      +0.8 / end -0.4 for F, D, L (World Series still 0; measure it against the corrected hazard before the Series).
+      +0.8 / end -0.4 for F, D, L and W (the Series measured against the corrected hazard it runs on: same pattern).
       Data: the package's postseasons are now sealed apart (private/history/post-2023/2024/2025.enc, the backfill tool's
       postseason-only mode for 2023 on; tools/history_seasons.txt lists seasons for the BRL history backfill workflow).
   Everything else on the sheet scored near its number over those 14 games: hitter 1+ hit said 59.4% happened 56.0%

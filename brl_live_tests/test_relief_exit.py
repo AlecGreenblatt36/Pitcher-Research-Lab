@@ -133,7 +133,9 @@ def test_postseason_exit_offset_adds_to_the_hooks():
     m, _ = manager_for(ManagerPolicy(), s, ('NYY', 'DET'), 'R')
     assert m.relief_offsets is None
     m, _ = manager_for(ManagerPolicy(), s, ('NYY', 'DET'), 'W')
-    assert m.relief_offsets is None                                           # the World Series exit offset is 0 (POST-02)
+    assert m.relief_offsets == {'away': {'mid': 0.8, 'end': -0.4}, 'home': {'mid': 0.8, 'end': -0.4}}   # POST-05: the Series too (measured on its corrected hazard)
+    m, _ = manager_for(ManagerPolicy(), dict(s, postseason_exit_offset={'W': 0.0}), ('NYY', 'DET'), 'W')
+    assert m.relief_offsets is None                                           # a zero offset attaches nothing
     from brl_live.boxscore import relief_corrected
     assert relief_corrected(dict(s, relief_correction=True), 'W') and relief_corrected(dict(s, relief_correction=True), 'R')
     assert not relief_corrected(dict(s, relief_correction=True), 'L')         # POST-04: the correction reaches World Series games only

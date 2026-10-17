@@ -420,8 +420,9 @@ ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         # decision of 2022-2026 against the plain hazard (3,954 decisions): mid-inning removals run twice the hazard (+0.8 on
         # the log-odds), removals at an inning's end 0.86 of it (-0.4): October managers pull a reliever in trouble sooner and
         # let him start the next inning more often. POST-02's +0.4 on both matched the reliever count in a synthetic engine
-        # only. The World Series keeps 0 (its decisions were not measured against the corrected hazard it runs on)
-        'postseason_exit_offset':{'F':{'mid':0.8,'end':-0.4},'D':{'mid':0.8,'end':-0.4},'L':{'mid':0.8,'end':-0.4},'W':0.0},'day_form_sigma':0.0,
+        # only. World Series decisions measured against the corrected hazard they run on (POST-04) show the same pattern
+        # (2022-2025 mid +0.89, end -0.29; all eleven Series +0.66, -0.42), so the Series gets the same offsets
+        'postseason_exit_offset':{'F':{'mid':0.8,'end':-0.4},'D':{'mid':0.8,'end':-0.4},'L':{'mid':0.8,'end':-0.4},'W':{'mid':0.8,'end':-0.4}},'day_form_sigma':0.0,
         # DISP-03 (off until its replays are read): {'sigma':..,'center':..,'worlds':..}: extra worlds with the centered
         # day-form shock for the market numbers only (the total's over and under, the run line); win chances stay plain
         'market_day_form':None,
