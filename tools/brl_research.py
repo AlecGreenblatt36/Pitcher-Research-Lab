@@ -664,7 +664,58 @@ def choice_temperature(data_root: Path, entries=None, counts=None, min_entries: 
 POST_TYPES = ('F', 'D', 'L', 'W')
 
 
-def postseason_pen(data_root: Path, h: pd.DataFrame | None = None) -> dict:
+POST_COLS = ['game_pk', 'date_key', 'at_bat_number', 'inning', 'inning_topbot', 'outs_when_up', 'on_1b', 'on_2b', 'on_3b', 'runner_1b', 'runner_2b',
+             'runner_3b', 'bat_score', 'fld_score', 'batter', 'pitcher', 'stand', 'p_throws', 'home_team', 'away_team', 'game_type', 'outcome']
+
+
+def postseason_history(data_root: Path, repo=None, token=None, key=None, branch='brl-live-data') -> tuple[pd.DataFrame, dict]:
+    """Every postseason the lab holds, with the regular-season rows the pools and the reference need: the data package
+    (2023 on, regular season), HIST-01's sealed seasons 2015-2022 (their postseasons and their regular seasons from
+    August), POST-05's sealed postseasons of the package seasons (private/history/post-<year>.enc) and the live
+    history's days (the current postseason). Rows stay on the runner; the receipt gets counts."""
+    from brl_replay.games import load_history
+    frames, sources = [], {}
+    h = load_history(next(data_root.rglob('plate_appearances.csv.gz')))
+    if 'game_type' not in h.columns:
+        h = h.assign(game_type='R')
+    frames.append(h[POST_COLS]); sources['package'] = {'games': int(h['game_pk'].nunique()), 'types': sorted(set(h['game_type'].astype(str)))}
+    if repo and token and key is not None:
+        import io
+        for year in range(2015, 2027):
+            for path, purpose, label in ((f'private/history/pa-{year}.enc', f'pa-history-season-{year}', 'hist'),
+                                         (f'private/history/post-{year}.enc', f'pa-history-postseason-{year}', 'post')):
+                raw = read_blob(repo, token, path, branch)
+                if raw is None:
+                    continue
+                f = pd.read_csv(io.BytesIO(gzip.decompress(unseal(raw, key, purpose))), usecols=POST_COLS, low_memory=False)
+                f['date_key'] = f['date_key'].astype(str).str[:10]
+                f = f[(f['game_type'].astype(str) != 'R') | (f['date_key'] >= f'{year}-08-01')]
+                frames.append(f); sources[f'{label}-{year}'] = {'games': int(f['game_pk'].nunique()), 'types': sorted(set(f['game_type'].astype(str)))}
+        try:
+            from brl_live.verified_store import VerifiedGitStore
+            from brl_live.history_refresh import HistoryCache
+            cache = HistoryCache(VerifiedGitStore(repo, token, key), key)
+            index = cache.index(); rows = []
+            for day, ref in sorted((index.get('days') or {}).items()):
+                if day < '2026-09-01':
+                    continue
+                rows.extend(cache.load_day(ref['id'])['rows'])
+            if rows:
+                f = pd.DataFrame(rows)
+                f['date_key'] = f['date_key'].astype(str).str[:10]
+                for c in ('game_pk', 'at_bat_number', 'inning', 'outs_when_up', 'batter', 'pitcher', 'bat_score', 'fld_score'):
+                    f[c] = pd.to_numeric(f[c], errors='coerce')
+                frames.append(f[POST_COLS]); sources['live-days'] = {'games': int(f['game_pk'].nunique()), 'types': sorted(set(f['game_type'].astype(str))), 'from': min(f['date_key']), 'through': max(f['date_key'])}
+        except Exception as exc:
+            sources['live-days'] = {'error': type(exc).__name__ + ': ' + str(exc)[:200]}
+    out = pd.concat(frames, ignore_index=True)
+    out['date_key'] = out['date_key'].astype(str).str[:10]
+    out = out.drop_duplicates(['game_pk', 'at_bat_number']).sort_values(['date_key', 'game_pk', 'at_bat_number'], kind='mergesort').reset_index(drop=True)
+    out['season'] = out['date_key'].str[:4].astype(int)
+    return out, sources
+
+
+def postseason_pen(data_root: Path, h: pd.DataFrame | None = None, repo=None, token=None, key=None, branch='brl-live-data') -> dict:
     """POST-05: how October bullpens differ from the regular season's and how the live tables read them, from the sealed
     history's postseason games (Wild Card F, Division D, League L and World Series W) against the regular season:
     relievers per team-game; batters faced per relief outing (mean, share of six or more) by the arm's place in his
@@ -681,13 +732,15 @@ def postseason_pen(data_root: Path, h: pd.DataFrame | None = None) -> dict:
     rc = importlib.util.module_from_spec(spec); spec.loader.exec_module(rc)
     cdoc = json.loads((ROOT / 'brl_live' / 'reliever_choice.json').read_text())
     rc.NAMES = [str(n) for n in cdoc['names']]
+    sources = None
     if h is None:
-        h = load_history(next(data_root.rglob('plate_appearances.csv.gz')))
+        h, sources = postseason_history(data_root, repo, token, key, branch)
     if 'game_type' not in h.columns:
         h = h.assign(game_type='R')
     h = h[h['game_type'].isin(('R',) + POST_TYPES)]
     seasons = sorted(set(h['date_key'].astype(str).str[:4].astype(int)))
-    out = {'seasons': seasons, 'games_by_type': {str(k): int(v) for k, v in h.groupby('game_type')['game_pk'].nunique().items()}}
+    out = {'seasons': seasons, 'sources': sources, 'games_by_type': {str(k): int(v) for k, v in h.groupby('game_type')['game_pk'].nunique().items()},
+           'postseason_games_by_season': {str(int(k)): int(v) for k, v in h[h['game_type'] != 'R'].assign(sn=h['date_key'].astype(str).str[:4].astype(int)).groupby('sn')['game_pk'].nunique().items()}}
     types = ('R',) + POST_TYPES
     # entries and their meta rows: postseason games, pools from every game; the regular season's last six weeks as the reference
     post_entries, post_counts, post_meta = rc.choice_rows(h, set(seasons), game_types=types, keep_types=POST_TYPES, with_meta=True)
@@ -722,7 +775,9 @@ def postseason_pen(data_root: Path, h: pd.DataFrame | None = None) -> dict:
                                                'by_season': {str(int(sn)): [int(len(x)), round(float(x['n'].mean() - 1), 3)] for sn, x in g.groupby('season')}}
                                       for t, g in per.groupby('game_type')}
     # the live choice table on postseason entries
-    out['choice'] = {'counts': post_counts, 'temperature': choice_temperature(None, entries=post_entries, counts=post_counts, min_entries=100) if post_entries else None}
+    recent = [e for e in post_entries if e[0] >= 2021]
+    out['choice'] = {'counts': post_counts, 'temperature': choice_temperature(None, entries=post_entries, counts=post_counts, min_entries=100) if post_entries else None,
+                     'temperature_2021_on': choice_temperature(None, entries=recent, counts={'entries': len(recent)}, min_entries=100) if recent else None}
     # the live relief-exit hazard on postseason decision points
     edoc = json.loads((ROOT / 'brl_live' / 'relief_exit.json').read_text())
     d = decisions(h, game_types=types, keep_types=POST_TYPES)
@@ -990,8 +1045,10 @@ def main():
                 receipt['physics_seasons'] = len(tables)
                 phys_n = pd.concat(tables, ignore_index=True) if tables else None
                 receipt['results'] = {'pitch_counts': pitch_counts_fit, 'relief_pitches': relief_pitches, 'pitch_efficiency': pitch_efficiency}.get(experiment, hazard_pitches)(data_root, phys_n)
+            elif experiment == 'postseason_pen':
+                receipt['results'] = postseason_pen(data_root, repo=repo, token=token, key=key, branch=branch)
             else:
-                receipt['results'] = {'hazard_fix': hazard_fix, 'relief_entry': relief_entry, 'relief_fix': relief_fix, 'choice_temperature': choice_temperature, 'postseason_pen': postseason_pen}.get(experiment, hazard_check)(data_root)
+                receipt['results'] = {'hazard_fix': hazard_fix, 'relief_entry': relief_entry, 'relief_fix': relief_fix, 'choice_temperature': choice_temperature}.get(experiment, hazard_check)(data_root)
             receipt['status'] = 'completed'
         except Exception as exc:
             receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:300]
