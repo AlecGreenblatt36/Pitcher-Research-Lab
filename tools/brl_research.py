@@ -809,6 +809,15 @@ def postseason_pen(data_root: Path, h: pd.DataFrame | None = None, repo=None, to
     out['exit'] = {'current_offsets': cur, 'by_round': {k: cell(g) for k, g in groups.items() if len(g)},
                    'by_type': {str(t): cell(g) for t, g in d.groupby('game_type')},
                    'by_season_FDL': {str(int(sn)): cell(g) for sn, g in groups['FDL'].groupby('season')}}
+    # World Series games run the corrected hazard (POST-04), so their offsets are measured against it as well
+    cpath = ROOT / 'brl_live' / 'relief_correction.json'
+    if cpath.exists():
+        c = json.loads(cpath.read_text())
+        dw = decisions(h, game_types=types, keep_types=('W',))
+        dw['p'] = fitted(dw, edoc, {'terms': c['terms'], 'coef': c['coef']})
+        dw = dw[dw['p'].notna()].copy()
+        out['exit']['W_corrected'] = {'all': cell(dw), 'by_season': {str(int(sn)): cell(g) for sn, g in dw.groupby('season')},
+                                      'from_2022': cell(dw[dw['season'] >= 2022]) if (dw['season'] >= 2022).any() else None}
     return out
 
 
