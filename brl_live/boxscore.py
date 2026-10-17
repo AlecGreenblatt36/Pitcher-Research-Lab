@@ -439,6 +439,10 @@ ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         'reliever_game_sigma':0.0,
         # BULLPEN-09 (off until its replays are read): the choice's utilities over a temperature; 1.0 = the fitted choice as is
         'reliever_choice_temperature':1.0,
+        # BULLPEN-10: the fitted choice table in this folder; 'reliever_choice.json' is BULLPEN-01's (14-day pools, 29 terms),
+        # 'reliever_choice10.json' the fit on each day's actual roster with the starter-in-the-pen and new-arm terms (off
+        # until its replays are read). The name is in the forecast fingerprint, so a switch re-forecasts every pending game
+        'reliever_choice_table':'reliever_choice.json',
         # POST-05 (registered October 17; inert until its research receipt is read): the temperature by postseason game type,
         # Wild Card F, Division D, League L, World Series W; a value under 1 concentrates the entries on the pool's top arms
         # as October managers do. Missing or 1.0 = the regular season's temperature
@@ -536,10 +540,11 @@ def reliever_choice_for(settings,game_type='R'):
     temperature follows the game type (choice_temperature_for)."""
     if not settings.get('reliever_choice'):return None
     sigma=float(settings.get('reliever_game_sigma') or 0.0);temp=choice_temperature_for(settings,game_type)
-    key=('c',sigma,temp)
+    table=str(settings.get('reliever_choice_table') or RELIEVER_CHOICE_PATH.name)      # BULLPEN-10: the table by name, in the fingerprint
+    key=('c',sigma,temp,table)
     if key not in _KERNEL:
         from research_lab.game_sim.reliever_choice import RelieverChoice
-        _KERNEL[key]=RelieverChoice(json.loads(RELIEVER_CHOICE_PATH.read_text()),game_sigma=sigma,temperature=temp)
+        _KERNEL[key]=RelieverChoice(json.loads((RELIEVER_CHOICE_PATH.parent/table).read_text()),game_sigma=sigma,temperature=temp)
     return _KERNEL[key]
 
 def relief_corrected(settings,game_type='R'):

@@ -261,3 +261,11 @@ def test_roster_pool_terms_are_read_only_by_fits_that_name_them():
     new = RelieverChoice({'names': ['started_within5', 'new_arm'], 'beta': [-3.0, -1.0]})
     p = new.probabilities(pen, 3, -6, 0, 0, 'R')
     assert p[0] < p[2] < p[3] and abs(p[1] - p[3]) < 1e-9
+
+
+def test_the_choice_table_is_chosen_by_name_in_the_settings():
+    """BULLPEN-10: ADJUST names the table; the default is BULLPEN-01's, reliever_choice10.json loads the roster fit."""
+    from brl_live.boxscore import ADJUST, reliever_choice_for
+    a = reliever_choice_for(dict(ADJUST, reliever_choice=True))
+    b = reliever_choice_for(dict(ADJUST, reliever_choice=True, reliever_choice_table='reliever_choice10.json'))
+    assert ADJUST['reliever_choice_table'] == 'reliever_choice.json' and len(a.names) == 29 and len(b.names) == 39 and 'new_arm' in b.names and 'roster' in b.name
