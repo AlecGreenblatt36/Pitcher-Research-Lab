@@ -128,6 +128,15 @@ Model Plan doc). Built the same afternoon:
   concurrent job slots, and the live run's publish job (a one-minute job) sat queued behind them from 7:16 pm with the
   forecast already computed. Do not launch a replay batch inside the hour before a live window; two runs at a time
   leave room for the live lane.
+- CHAIN-06 (opponent-adjusted expectations) passed (-0.00016, growing through the season) and CHAIN-07 (fastball speed
+  tiers in the cells) passed by a hair (-0.00003; velocity already reaches the model through the physics); the two add,
+  and chain67-both is live from 11:40 pm with its own context tables. Live model path today: pa-2026-v2-physics ->
+  pitch02b-v2h120 (3:55 pm) -> spring02-w10 (5:01) -> chain04-pool-s (5:50) -> chain04b-xs-tight (7:00) -> chain67-both
+  (11:40). 2026 blended log loss 1.45840 -> 1.45685.
+- BULLPEN-07 failed (the per-game shock moves arms between bins, not the miss); BULLPEN-08 found the choice calibrated
+  entry by entry (T 1.0) with the favorites 2 to 4 points high at 30 to 60%, and the top two arms entering 25% too often
+  in every cell on today's replays; BULLPEN-09 (temperature 1.15 and 1.3, built, inert) is registered with replays
+  to launch when the queue is clear.
 - BULLPEN-07 registered and its six replays launched (sigma 0.75, 1.25, 2.0, both seasons, LEASH-04's settings): a
   per-game shock on each reliever's utility in the fitted choice, the day's unseen availability. On today's settings
   relievers shown at 60% or more pitch 52% of the time; the mean is right. Smallest sigma meeting the gates goes live.
