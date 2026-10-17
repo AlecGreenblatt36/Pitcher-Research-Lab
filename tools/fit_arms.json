@@ -1,11 +1,11 @@
 {
- "experiment": "RETRAIN-04",
+ "experiment": "RETRAIN-05",
  "arms": [
   {
-   "name": "retrain04-c0",
+   "name": "retrain05-c0",
    "role": "control",
    "settings": {
-    "name": "retrain04-c0",
+    "name": "retrain05-c0",
     "manifest_branch": "ledger",
     "physics_params": {
      "xvalue": true,
@@ -33,18 +33,31 @@
      2024,
      2025,
      2026
-    ]
+    ],
+    "train_years": [
+     2023,
+     2024,
+     2025
+    ],
+    "validation_years": [
+     2026
+    ],
+    "test_years": [
+     2027
+    ],
+    "blend_as_test": true
    }
   },
   {
-   "name": "retrain04-rt",
+   "name": "retrain05-w548",
    "role": "candidate",
    "settings": {
-    "name": "retrain04-rt",
+    "name": "retrain05-w548",
     "manifest_branch": "ledger",
     "physics_params": {
      "xvalue": true,
-     "recent_days": 30
+     "recent_days": 30,
+     "window_days": 548
     },
     "pitch_chain": {
      "half_life": 120.0,
