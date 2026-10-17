@@ -439,10 +439,13 @@ ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         'reliever_game_sigma':0.0,
         # BULLPEN-09 (off until its replays are read): the choice's utilities over a temperature; 1.0 = the fitted choice as is
         'reliever_choice_temperature':1.0,
-        # BULLPEN-10: the fitted choice table in this folder; 'reliever_choice.json' is BULLPEN-01's (14-day pools, 29 terms),
-        # 'reliever_choice10.json' the fit on each day's actual roster with the starter-in-the-pen and new-arm terms (off
-        # until its replays are read). The name is in the forecast fingerprint, so a switch re-forecasts every pending game
-        'reliever_choice_table':'reliever_choice.json',
+        # BULLPEN-10 (live from October 17, 2026, 12:30 p.m. Eastern): the fitted choice table in this folder.
+        # 'reliever_choice.json' is BULLPEN-01's (14-day pools, 29 terms); 'reliever_choice10.json' is the fit on each day's
+        # actual roster (ROSTER-01) with the starter-in-the-pen and new-arm terms and BULLPEN-06's workload terms. Full 2025
+        # and 2026 replays against the old table on the same seeds: chance-to-pitch Brier 0.203 to 0.151 in both seasons, the
+        # arms shown at 60 to 80% pitched 62% (52% before), wins and totals unchanged. The name is in the forecast
+        # fingerprint, so a switch re-forecasts every pending game
+        'reliever_choice_table':'reliever_choice10.json',
         # POST-05 (registered October 17; inert until its research receipt is read): the temperature by postseason game type,
         # Wild Card F, Division D, League L, World Series W; a value under 1 concentrates the entries on the pool's top arms
         # as October managers do. Missing or 1.0 = the regular season's temperature

@@ -268,4 +268,6 @@ def test_the_choice_table_is_chosen_by_name_in_the_settings():
     from brl_live.boxscore import ADJUST, reliever_choice_for
     a = reliever_choice_for(dict(ADJUST, reliever_choice=True))
     b = reliever_choice_for(dict(ADJUST, reliever_choice=True, reliever_choice_table='reliever_choice10.json'))
-    assert ADJUST['reliever_choice_table'] == 'reliever_choice.json' and len(a.names) == 29 and len(b.names) == 39 and 'new_arm' in b.names and 'roster' in b.name
+    assert ADJUST['reliever_choice_table'] == 'reliever_choice10.json' and len(a.names) == 39 and len(b.names) == 39 and 'new_arm' in b.names and 'roster' in b.name
+    c = reliever_choice_for(dict(ADJUST, reliever_choice=True, reliever_choice_table='reliever_choice.json'))
+    assert len(c.names) == 29 and 'roster' not in c.name                      # BULLPEN-01's table is still there by name

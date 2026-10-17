@@ -118,9 +118,16 @@ Model Plan doc). Built the same afternoon:
   and the choice fit (tools/brl_reliever_choice.py choice_rows rosters=; replay param rosters: true), new choice terms
   for a starter in the pen and an arm new to the team (bullpen_usage starts30, days_since_start, new_arm; features
   starter_recent, started_within5, new_arm and their early/blowout terms; NAMES10 and NAMES10_6 in the fit tool),
-  research experiment choice_fit (four variants, held-out 2026 and 2025, a live table). Next: run choice_fit when the
-  rosters are in, write the winning table to brl_live/reliever_choice10.json, replay 2025 and 2026 with rosters: true
-  and the new table (and the postseason pairs), score with tools/brl_bullpen_cal.py, adopt under the row's rule.
+  research experiment choice_fit (four variants, held-out 2026 and 2025, a live table). Done by 12:30 pm: the fit
+  (coverage 92.5% to 98.2% of real entries; held-out log-likelihood -1.76/-1.73 to -1.61/-1.58, top-1 33% to 38-40%),
+  the 2025 and 2026 replays against the old table on the same seeds (chance-to-pitch Brier 0.203 to 0.151 in both;
+  the 60-80% bin from 52% pitched to 62% against 67% shown; wins and totals unchanged), the postseason pairs (Brier
+  better in both, the top bin noisy). Live from 12:30 pm as ADJUST reliever_choice_table 'reliever_choice10.json'
+  (gate 2 missed by 0.2 to 0.4 points; stated in the row). Replays should now carry rosters: true. The first run's
+  roster tables were keyed by team id (the schedule carries no abbreviations); tools/brl_rosters.statcast_days maps
+  them, and new tables are written by code.
+- POST-07 failed: LEASH-04's starter-exit correction lengthens October starts (+0.65 outs against +0.30 plain), so
+  Wild Card, Division and League games keep the plain hazard with POST-03's tiers; the item is closed.
 - Settings changes now make new forecast versions (9:15 am): the forecast fingerprint carries a hash of ADJUST
   (brl_live.boxscore.settings_fingerprint), so a switch like POST-05 reaches every pending game at the next run.
   Before this, POST-05 (pushed 1:30 am) had not reached tonight's game by 9 am because no lineup or history change
