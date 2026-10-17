@@ -1,12 +1,12 @@
-"""POST-03's switch (off): a starter's postseason factor by his strikeouts minus walks this season, when turned on."""
+"""POST-03's switch (on from October 16, 2026): a starter's postseason factor by his strikeouts minus walks this season."""
 import pandas as pd
 
 from brl_live import live_extension as LE
 from brl_live.boxscore import ADJUST
 
 
-def test_switch_is_off_and_the_tier_reads_this_regular_season():
-    assert ADJUST.get('postseason_starter_tiers') is None and LE.postseason_tiers_table() is None
+def test_switch_is_on_and_the_tier_reads_this_regular_season():
+    assert ADJUST.get('postseason_starter_tiers') == {'cuts': [0.1518, 0.1876], 'scale': [0.81, 0.89, 0.94]} and LE.postseason_tiers_table() == ADJUST['postseason_starter_tiers']
     rows = ([{'pitcher': 7, 'date_key': '2026-06-01', 'game_type': 'R', 'outcome': 'K'}] * 60 +
             [{'pitcher': 7, 'date_key': '2026-06-01', 'game_type': 'R', 'outcome': 'BB_HBP'}] * 10 +
             [{'pitcher': 7, 'date_key': '2026-06-01', 'game_type': 'R', 'outcome': 'BIP_OUT'}] * 180 +

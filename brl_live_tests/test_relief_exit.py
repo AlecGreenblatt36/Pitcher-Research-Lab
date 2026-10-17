@@ -131,7 +131,10 @@ def test_postseason_exit_offset_adds_to_the_hooks():
     m, _ = manager_for(ManagerPolicy(), s, ('NYY', 'DET'), 'R')
     assert m.relief_offsets is None
     m, _ = manager_for(ManagerPolicy(), s, ('NYY', 'DET'), 'W')
-    assert m.relief_offsets is None
+    assert m.relief_offsets is None                                           # the World Series exit offset is 0 (POST-02)
+    from brl_live.boxscore import relief_corrected
+    assert relief_corrected(dict(s, relief_correction=True), 'W') and relief_corrected(dict(s, relief_correction=True), 'R')
+    assert not relief_corrected(dict(s, relief_correction=True), 'L')         # POST-04: the correction reaches World Series games only
     m, _ = manager_for(ManagerPolicy(), dict(s, relief_hooks=True), ('NYY', 'DET'), 'L')
     import json as _j
     hooks = _j.loads((ROOT / 'brl_live' / 'relief_hooks.json').read_text())['teams']

@@ -118,7 +118,8 @@ def test_live_correction_is_regular_season_only():
     assert on['pitch_counts'] == 'chain'
     c = bx.hazard_correction_for(on, 'R')
     assert tuple(c['terms']) == sh.CORRECTION_TERMS_V2 and len(c['coef']) == len(sh.CORRECTION_TERMS_V2) == 44
-    assert bx.hazard_correction_for(on, 'L') is None and bx.hazard_correction_for(on, 'W') is None
+    assert bx.hazard_correction_for(on, 'L') is None and bx.hazard_correction_for(on, 'D') is None
+    assert bx.hazard_correction_for(on, 'W') is c                                   # POST-04: the World Series as the regular season
     plain = bx.hazard_correction_for(dict(on, pitch_counts=None), 'R')
     assert tuple(plain['terms']) == sh.CORRECTION_TERMS and len(plain['coef']) == 32
     import json

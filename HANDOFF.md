@@ -8,16 +8,12 @@ across seasons), and the ledger row says which gate it passed. Below-floor effec
 see) are not covered and stay queued. Publishing new pages, outside contact and costs still need his approval; the
 discovery page stays private.
 
-## Waiting on Alec (postseason-only changes cannot be replay-gated)
+## Postseason items (Alec, October 16, 11:32 pm: "You don't need my yes or no for anything if it improves the model")
 
-- The World Series: POST-01 and POST-02 found its starter and reliever usage like the regular season (scale 1.0, exit
-  offset 0.0), but LEASH-02's and RELIEF-04's corrections are on for regular-season games only, so World Series games run
-  the plain hazards. Giving them the corrected regular-season hazards is a postseason change, so it waits for Alec.
-
-- POST-03: postseason starters kept in by tier (good starters longer); built in brl_live/live_extension.py, off
-  (ADJUST postseason_starter_tiers None).
-- LEASH-02's exit correction in postseason games too; it would need the postseason factor x0.91 re-measured on the
-  corrected hazard first. Regular-season games have it from October 11.
+- Done that night: POST-03 (starter tiers) on; POST-04 (World Series games get the regular season's starter-exit and
+  reliever-entry corrections) on.
+- Still open: LEASH-02's exit correction in Wild Card, Division and League series games; it would need the postseason
+  factor x0.91 (now by tier) re-measured on the corrected hazard first.
 
 ## October 16: the longer history (Alec: "2023-2026 is not valid enough for how we are predicting things")
 

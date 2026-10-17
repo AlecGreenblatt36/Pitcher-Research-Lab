@@ -420,9 +420,10 @@ ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         # DISP-03 (off until its replays are read): {'sigma':..,'center':..,'worlds':..}: extra worlds with the centered
         # day-form shock for the market numbers only (the total's over and under, the run line); win chances stay plain
         'market_day_form':None,
-        # POST-03 (queued for Alec, off): {'cuts': [0.1518, 0.1876], 'scale': [0.81, 0.89, 0.94]} by the starter's
-        # strikeouts minus walks this season (postseason starts 2023-2026: 0.772, 0.846 and 0.900 of his regular length)
-        'postseason_starter_tiers':None,
+        # POST-03 (on from October 16, 2026, 11:50 p.m. Eastern, under Alec's standing approval of model improvements): the
+        # starter's postseason factor by his tier of strikeouts minus walks this season (postseason starts 2023-2026: the
+        # bottom third kept 0.772 of its regular length, the middle 0.846, the top 0.900; x0.91 treated everyone alike)
+        'postseason_starter_tiers':{'cuts':[0.1518,0.1876],'scale':[0.81,0.89,0.94]},
         # LEASH-04 (on from October 16, 2026, 6:20 p.m. Eastern; gates held on 2025 and on 7 of 2026's 8 shards, the eighth
         # stalled): 'chain' draws each plate appearance's pitches from the matchup's own count chain (needs a model with
         # chain features) and the starter's exit reads LEASH-03's correction with pitch terms (regular season)
@@ -468,7 +469,7 @@ def hazard_correction_for(settings,game_type):
     draws on (settings pitch_counts 'chain') the correction is LEASH-03's refit with pitch terms (44 terms), which every
     live simulator can read because each one draws pitches (pitch_counts_for); otherwise the live file must hold LEASH-02's
     32 terms in order."""
-    if not settings.get('hazard_correction') or str(game_type)!='R':return None
+    if not settings.get('hazard_correction') or str(game_type) not in ('R','W'):return None   # POST-04: the World Series as the regular season
     from research_lab.game_sim.starter_hazard import CORRECTION_TERMS,CORRECTION_TERMS_V2
     if settings.get('pitch_counts')=='chain':
         if 'hc2' not in _KERNEL:
@@ -523,8 +524,9 @@ def reliever_choice_for(settings):
     return _KERNEL[key]
 
 def relief_corrected(settings,game_type='R'):
-    """True when RELIEF-04's entry-inning correction applies: switched on with the fitted exits, regular season only."""
-    return bool(settings.get('relief_exit') and settings.get('relief_correction')) and str(game_type)=='R'
+    """True when RELIEF-04's entry-inning correction applies: switched on with the fitted exits, in regular-season games and
+    (POST-04) World Series games, whose starter and reliever usage measured like the regular season's (POST-01, POST-02)."""
+    return bool(settings.get('relief_exit') and settings.get('relief_correction')) and str(game_type) in ('R','W')
 
 def relief_exit_for(settings,game_type='R'):
     """The fitted reliever exits (brl_live/relief_exit.json, RELIEF-02) when switched on, else None; with RELIEF-04's
