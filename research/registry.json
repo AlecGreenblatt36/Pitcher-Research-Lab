@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 364,
- "rows": 367,
+ "experiments": 365,
+ "rows": 368,
  "records": {
   "ACC-01": [
    {
@@ -6050,14 +6050,19 @@
     "columns": {
      "ID": "POST-06",
      "Attempt": "A postseason replay lane. Every postseason setting so far (POST-01 to POST-05) was a realism calibration with no replay to check it against, because the replay lane held regular-season games only. With the postseasons sealed apart (POST-05), tools/brl_replay.py gains a postseason parameter: it loads the season's postseason rows, reconstructs those games, marks each with its round, and the harness applies the live lane's October usage per game (brl_replay.harness.postseason_game: the round's factor on expected batters, POST-03's tier factor per starter, the reliever exit offsets by decision kind added to the team hooks; the leash stays regular-season). Wild Card, Division and League games run the plain hazards as live; the World Series is replayed apart on the corrected ones. First use: the 2024 and 2025 Wild Card, Division and League games (about 38 a season), model retrain04-rt with the live tables (none of which saw a postseason game), 1,000 worlds, two arms each: the live offsets (mid +0.8, end -0.4) and POST-02's (+0.4, +0.4)",
-     "Disposition and evidence": "**Registered in the commit that added this row, before any run.** Descriptive gates, scored with tools/brl_bullpen_cal.py, tools/brl_outs_cal.py and the receipts' pitchers per team-game: (1) relievers a team-game within 0.25 of the real count in both seasons under the live offsets, and closer than under POST-02's; (2) the reliever appearance bin 0.60-0.80 within 10 points of its actual share pooled over the two seasons, and closer than POST-02's; (3) the starter outs ladder (18+ outs share) within 5 points of real. Prediction: live offsets give 4.0 to 4.4 relievers a team-game against about 4.05 real (POST-02's 4.5 to 5.0), and the 0.60-0.80 bin lands at 55 to 70% (it was 48% in this October's live boxes under POST-02's offsets). If a gate fails, the measured offsets are re-tuned on these replays, not the live games",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before any run.** Descriptive gates, scored with tools/brl_bullpen_cal.py, tools/brl_outs_cal.py and the receipts' pitchers per team-game: (1) relievers a team-game within 0.25 of the real count in both seasons under the live offsets, and closer than under POST-02's; (2) the reliever appearance bin 0.60-0.80 within 10 points of its actual share pooled over the two seasons, and closer than POST-02's; (3) the starter outs ladder (18+ outs share) within 5 points of real. Prediction: live offsets give 4.0 to 4.4 relievers a team-game against about 4.05 real (POST-02's 4.5 to 5.0), and the 0.60-0.80 bin lands at 55 to 70% (it was 48% in this October's live boxes under POST-02's offsets). If a gate fails, the measured offsets are re-tuned on these replays, not the live games **Result (runs 39035562121, 39035578647, 39036257097, 39036273471; 78 games, 156 team-games; scratch score_post06.py).** The lane works: starters' expected outs 13.22 against 12.92 real, 18 or more outs 23.5% against 24.4% (gate 3 holds). Relievers a team-game: live offsets 3.96 against 4.08 real (2024 -0.10, 2025 -0.15), POST-02's 4.08 (-0.01); like for like, against the appearances by arms the pool holds (41 of 637 real relief appearances, 6.4%, were by arms outside the 14-day pool, which no offset can reproduce): real 3.82, live +0.14, POST-02 +0.26, so gate 1 holds on the like-for-like count and fails on the raw one. Chance-to-pitch bins pooled: 0.60-0.80 shown 67.1%, pitched 58.7% (+8.4) under the live offsets and 67.3% / 58.9% (+8.4) under POST-02's (gate 2: within 10, not closer: a tie); 0.80 and up 83.9% / 73.5% (+10.4, 34 rows) against 84.7% / 66.7% (+18.0, 39 rows); Brier 0.2238 and 0.2283 against 0.2275 and 0.2305 (better in both seasons). Reading: the exit offsets are kept (the Brier and the top bin favor them; the count is low by the arms the pool lacks), and the exits were not the cause of the top-arm miss. The miss is the pool: the 2025-2026 regular-season receipts show the top two arms shown 1.11 appearances against 0.68 real in team-games where an outside arm pitched and 1.05 against 1.04 in the rest, so the simulator hands the outside arms' work to its top arms. That is ROSTER-01 and BULLPEN-10. Prediction scored: the count landed under the predicted 4.0 to 4.4 (3.96), the 60-80 bin inside 55 to 70 (58.7)",
+     "Delta corrected Brier, 2026": "held (one gate like for like)"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "39035562121",
+     "39035578647",
+     "39036257097",
+     "39036273471"
+    ],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "held (one gate like for like)"
    }
   ],
   "ROSTER-01": [
@@ -6067,6 +6072,22 @@
      "ID": "ROSTER-01",
      "Attempt": "Daily active rosters (data). The replay's bullpen pool and the reliever-choice fit's candidate sets guess the roster from the relievers used in the last 14 days, so 7 to 9% of real relief appearances (regular season) and 7% (postseason) are by arms the simulator never lists, and in the 2025-2026 replays the whole miss on the top two arms sits in the games where such an arm pitched (team-games with an outside arm: top two shown 1.11 appearances, real 0.68; without one: 1.05 against 1.04). tools/brl_rosters.py (workflow BRL rosters, one job per season from tools/roster_seasons.txt) reads MLB's public active roster for every team on each of its game dates and keeps the pitchers: research/rosters-<year>.json.gz on the ledger branch (public data: team, date, player ids) with a receipt of counts",
      "Disposition and evidence": "**Registered in the commit that added this row, before the first run.** Expected: about 5,000 team-dates a season, 12 to 14 pitchers a roster, few misses. Used by BULLPEN-10",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
+   }
+  ],
+  "BULLPEN-10": [
+   {
+    "id": "BULLPEN-10",
+    "columns": {
+     "ID": "BULLPEN-10",
+     "Attempt": "Roster pools for the bullpen. The replay's pool and the choice fit's candidate sets become each team's active-roster pitchers that day (ROSTER-01) minus the game's starter, as the live lane reads the game feed; the 14-day rule stays where a day's roster is missing. The choice features gain a starter in the pen (a start in the last 30 days; one within five days), an arm new to the team (no outing for it in a year: call-ups, trades, returns) and their situation terms (early, blowout), from brl_live.live_feed.bullpen_usage (starts30, days_since_start, new_arm; outings for any team). Research experiment choice_fit refits the conditional logit on 2023-2025 (scored on 2026) and on 2023, 2024 and 2026 (scored on 2025), for the live features and for BULLPEN-06's, both with the new terms, next to the old pools with the live features; a live table on all four seasons. Then full 2025 and 2026 replays with roster pools and the new table (tools/brl_replay.py rosters: true), scored with tools/brl_bullpen_cal.py against LEASH-04's replays (leash04-chain-pen-1000-<season>), and the 2024 and 2025 postseason replays (POST-06) the same way",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the fit and the replays.** Gates: (1) the held-out log-likelihood per entry of the roster fit beats the old-pool fit's on the same entries in both held-out seasons (entries whose arm is outside the old pool count as misses for the old fit at the pool's share, so the comparison is on all entries); (2) in the full replays the chance-to-pitch bin 0.60-0.80 lands within 5 points of its actual share in both seasons (LEASH-04's: 66.6 against 51.7 and 66.7 against 52.2), the under-0.10 bin within 8, the mean within 2; (3) no harm: the pooled win Brier against LEASH-04's replays not worse than +0.0002, starters' outs half lines within 0.5 point, the mean total within 0.10; (4) the postseason replays' 0.60-0.80 bin within 6 points. Prediction: outside-pool appearances fall from 7-9% to under 1%; the 0.60-0.80 bin falls from 66 to about 58-62 said against 54-57 pitched; held-out log-likelihood improves by 0.02 to 0.05 nats per entry. Decision rule: live (brl_live/reliever_choice.json replaced; the live lane needs no pool change) if (1) to (3) hold; (4) is reported",
      "Delta corrected Brier, 2026": "registered"
     },
     "registered_before_run": true,
