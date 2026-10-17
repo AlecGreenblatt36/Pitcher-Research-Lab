@@ -5991,16 +5991,18 @@
     "columns": {
      "ID": "RETRAIN-04",
      "Attempt": "The live model's coefficients are two years old. Every model today is fit on 2023-2024 with 2025 for tuning, calibration and the blend, and 2026 held out as the test; the features are current (the counters, physics and chain read through yesterday) but the weights on them are from a league two seasons gone. RETRAIN-01 measured that cost on the physics model at -0.0015 to -0.0017 nats per plate appearance on 2026's final block (the largest single at-bat gain in the project's record) and RETRAIN-02 did not switch because the gain could not be seen at the game level on 619 games (the replay lane's noise floor is about 0.001 nats, REPLAY-02), the rule CHAIN-03B replaced with: proven at the plate-appearance level, no harm at the game level. Arms (tools/fit_arms.json): c0 = the live model (chain67-both) refit as is; rt = the same settings trained on 2023-2025 with 2026 as the validation season (tune and calibration blocks through about August 12, the final block from August 13 to September 27 as the test, blend_as_test)",
-     "Disposition and evidence": "**Registered in the commit that added this row, before any arm was fit.** Gates: (1) on the games both arms hold (the final block, about 619 games), rt's blended log loss beats c0's with the 95% game-bootstrap interval below zero (tools/brl_fit_compare.py now pairs on the shared games); (2) rt's largest class calibration gap on that block within 0.015. Prediction: a gain of 0.0010 to 0.0018 nats per plate appearance on the block, with calibration no worse. If it passes: check-only replays of rt (2025 and 2026 are in its training and tuning data, so the context tables are read with that in mind: structural side-and-inning corrections the features cannot carry), then live for the rest of the postseason; and a standing process: the production model is refit each spring on the three latest seasons with the current one as the validation season, which this run establishes **Result (run 39001175133): passed.** On the 613 shared games of the final block (August 13 to September 27, 2026; 46,428 plate appearances): rt 1.453561 against c0 1.454636, difference -0.001075 nats per plate appearance, 95% game-bootstrap interval -0.001390 to -0.000731; rt's largest class calibration gap 0.0030 (c0 0.0037). The prediction held at its low end. rt's tuning block (2026 through about mid-June) scored 1.45971, its calibration block and test as above; c0's whole-2026 test 1.456848 for reference. The coefficient drift is worth four times CHAIN-04 and seven times CHAIN-06 on the same at-bats. Adoption: check-only replays retrain04-check-2025/2026 for the context tables (in-sample for rt, noted), then live as retrain04-rt",
-     "Delta corrected Brier, 2026": "passed"
+     "Disposition and evidence": "**Registered in the commit that added this row, before any arm was fit.** Gates: (1) on the games both arms hold (the final block, about 619 games), rt's blended log loss beats c0's with the 95% game-bootstrap interval below zero (tools/brl_fit_compare.py now pairs on the shared games); (2) rt's largest class calibration gap on that block within 0.015. Prediction: a gain of 0.0010 to 0.0018 nats per plate appearance on the block, with calibration no worse. If it passes: check-only replays of rt (2025 and 2026 are in its training and tuning data, so the context tables are read with that in mind: structural side-and-inning corrections the features cannot carry), then live for the rest of the postseason; and a standing process: the production model is refit each spring on the three latest seasons with the current one as the validation season, which this run establishes **Result (run 39001175133): passed.** On the 613 shared games of the final block (August 13 to September 27, 2026; 46,428 plate appearances): rt 1.453561 against c0 1.454636, difference -0.001075 nats per plate appearance, 95% game-bootstrap interval -0.001390 to -0.000731; rt's largest class calibration gap 0.0030 (c0 0.0037). The prediction held at its low end. rt's tuning block (2026 through about mid-June) scored 1.45971, its calibration block and test as above; c0's whole-2026 test 1.456848 for reference. The coefficient drift is worth four times CHAIN-04 and seven times CHAIN-06 on the same at-bats. Adoption: check-only replays retrain04-check-2025/2026 for the context tables (in-sample for rt, noted), then live as retrain04-rt. **Live from October 17, 2026, 12:41 a.m. Eastern** (brl_engine/model.json; context tables from runs 39002123075 and 39002131831, 4,850 games, brl_live/context_offsets.json pooled and brl_replay/context_retrain04_fit2025/2026.json; the 2026 table is in sample for a model whose validation season is 2026). Against chain67's tables the new offsets move strikeouts down about 0.03, doubles and triples up about 0.08 and the other-reach class down 0.06 to 0.08 in every bucket: the retrained coefficients sit on a different in-play mix and the tables carry the level, as they are meant to. RETRAIN-05 (the 548-day physics window on this base) failed, so the live model keeps the full physics history",
+     "Delta corrected Brier, 2026": "live"
     },
     "registered_before_run": true,
     "diagnostic": false,
     "runs": [
-     "39001175133"
+     "39001175133",
+     "39002123075",
+     "39002131831"
     ],
     "frozen_commits": [],
-    "status": "passed"
+    "status": "live"
    }
   ],
   "RETRAIN-05": [
@@ -6010,13 +6012,16 @@
      "ID": "RETRAIN-05",
      "Attempt": "The physics window on the retrained model. RETRAIN-03 found the pitch-physics features limited to the last 548 days worth -0.00065 nats per plate appearance on 2026 (served level reproduced exactly) and left it unswitched under the old rule (the gain could not be seen at the game level; win chances within noise, totals a shade worse in both seasons). Under CHAIN-03B's rule it qualifies if it still helps now that the chain carries recent form with a 120-day half-life. Arms on RETRAIN-04's configuration (train 2023-2025, 2026 the validation season, the final block the test): c0 = retrain04-rt refit; w548 = physics_params window_days 548",
      "Disposition and evidence": "**Registered in the commit that added this row, before any arm was fit.** Gates: (1) on the shared final-block games, w548 beats c0 with the 95% game-bootstrap interval below zero; (2) calibration gap within 0.015. Prediction: a gain of 0.0002 to 0.0006 (smaller than RETRAIN-03's: the chain now holds part of what the window gave). If it passes: live with the retrained model's context tables (the window changes only the physics inputs; the live loader serves a fitted window automatically)",
-     "Delta corrected Brier, 2026": "registered"
+     "Delta corrected Brier, 2026": "**Failed** (run 39002185993, research/retrain-05-compare-39002185993.json): on the 613 shared final-block games the window arm scored 1.453639 against the control's 1.453561 (the control reproduces retrain04-rt exactly), difference +0.000078 nats per plate appearance, 95% interval top +0.000259; calibration gap 0.0025. The window's gain is gone once the chain carries recent form: RETRAIN-03's -0.00065 came from the physics features standing in for form the old model lacked. Not adopted; the retrained model keeps the full physics history",
+     "col4": "failed"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "39002185993"
+    ],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "failed"
    }
   ],
   "POST-05": [

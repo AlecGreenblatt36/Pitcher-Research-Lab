@@ -63,6 +63,43 @@ Model Plan doc). Built the same afternoon:
   models/), brl_engine/model.json, brl_live/context_offsets.json = the chain's pooled table (staged copies in the
   scratch folder adopt/); How it works already carries the chain paragraph, shown when the live model is a chain model.
 
+## October 17, overnight (Alec, 11:32 pm: no yes or no needed for anything that improves the model; Game 4 moved to October 17)
+
+- RETRAIN-04 passed and is live as retrain04-rt from 12:41 a.m. Eastern: the chain67 settings refit on 2023-2025 with
+  2026 as the validation season and the final 2026 block (August 13 to September 27) as the test, -0.001075 nats per
+  plate appearance on the 613 shared games (interval -0.00139 to -0.00073). The coefficient drift was worth four CHAIN-04s.
+  Context tables from check-only replays retrain04-check-2025/2026 (the 2026 table is in sample for this model and says
+  so in the row); against chain67's tables they move strikeouts down 0.03 and doubles/triples up 0.08 in every bucket.
+  tools/brl_fit_compare.py now pairs arms on the games both hold when they were tested on different blocks.
+  Live model path: ... -> chain67-both (Oct 16, 9:48 pm) -> retrain04-rt (Oct 17, 12:41 am). Standing lesson for the
+  spring: refit on the three latest seasons with the current one as the validation season.
+- RETRAIN-05 failed: the 548-day physics window on the retrained base is +0.00008 (RETRAIN-03's -0.00065 was the physics
+  standing in for recent form the old model lacked; the chain carries it now). The full physics history stays.
+- Totals, checked against reality rather than the market (LEASH-04's replays, no experiment): the simulated total is
+  calibrated on its own terms. Actual on simulated mean: 2025 slope 0.98, 2026 0.72 (the 2026 means spread a little too
+  wide); team runs: PIT deciles flat at 0.09 to 0.11, tail chances within a point (P(team > 3) 0.566 vs 0.552). So a
+  sheet statement like "over 6.5: 58%" is honest on average; where it disagrees with the market, the market knows more.
+- Bullpen miss, two mechanisms found (receipts only, no experiment yet):
+  (1) Regular-season replays: 7.4% (2025) and 8.0% (2026) of real relief appearances are by arms the replay's 14-day pool
+      never lists (call-ups, swingmen, returns); the simulator hands those to the known arms, mostly the top two (rank 1
+      shown 0.565, real 0.493; rank 2 0.500 vs 0.464; ranks 3-6 within 0.02). The live lane reads the day's bullpen from
+      the game feed, so this part is a replay artifact, except that fresh arms get near-zero chances from the choice
+      features (share14 0, rank last). A roster-aware replay pool would need daily rosters (statsapi
+      teams/{id}/roster?date=); not built.
+  (2) This postseason (14 games with boxes in the day files): arms shown at 60-80% pitched 48% (58 statements), at 80%+
+      50% (6); the simulator used 5.38 pitchers a team-game against 5.04 real; starters expected 13.4 outs, real 12.7.
+      Real October managers ride two or three arms for longer outings (May 9 outs, Romero 6, Ashby 6, Cantillo 5). The
+      candidate set is right in October (the feed's bullpen), so the miss is the choice and the exits reading the
+      postseason as the regular season. POST-05 (research lane, experiment postseason_pen) measures it on every sealed
+      postseason: entries by pool rank, batters per outing, the choice table's temperature on postseason entries, the
+      exit hazard's matching offset by round. Adoption rule in the row; a postseason temperature would be a new ADJUST
+      key read by game type in reliever_choice_for.
+  Everything else on the sheet scored near its number over those 14 games: hitter 1+ hit said 59.4% happened 56.0%
+  (252), home run 11.1% vs 8.3%, 2+ total bases 31.5% vs 32.5%, starter 3+ K 79.6% vs 75.0% (28), totals within 4
+  points, no run in the 1st 58% vs 57%. Home win said 53% happened 43% (14 games; noise at that count).
+- Public day files: tools and the scratch scorer read public/days/<date>.json; 12 days exist (October 6 to 18); boxes
+  before October 11 lack the total and first-inning distributions (older schema), the scorer skips what is missing.
+
 ## October 16, evening: the chain is live, then spring training joined it (CHAIN-03B, SPRING-01/02, LEASH-04)
 
 - CHAIN-03B passed all four gates (wins, blend, totals, strikeouts 1.003/0.999 with the chain's own context tables) and

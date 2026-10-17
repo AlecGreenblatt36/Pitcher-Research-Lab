@@ -11,61 +11,61 @@
  ],
  "pseudo_pa": 200.0,
  "estimated_through": "2026-09-27",
- "source": "log(observed/predicted) per class from chain67-both's own bare predictions on every regular-season plate appearance of the check-only replay chain67-check-2025,chain67-check-2026 (16 shards, 4850 games); buckets are batting side (0 away, 1 home) x inning (1st, 2nd-8th as mid, 9th and later as late); 200 pseudo plate appearances per bucket at the bucket's predicted shares pull offsets toward zero (tools/brl_context_table.py)",
+ "source": "log(observed/predicted) per class from retrain04-rt's own bare predictions on every regular-season plate appearance of the check-only replay retrain04-check-2025,retrain04-check-2026 (16 shards, 4850 games); buckets are batting side (0 away, 1 home) x inning (1st, 2nd-8th as mid, 9th and later as late); 200 pseudo plate appearances per bucket at the bucket's predicted shares pull offsets toward zero (tools/brl_context_table.py)",
  "offsets": {
   "0_1st": {
-   "BIP_OUT": -0.0347,
-   "K": 0.1192,
-   "BB_HBP": 0.0029,
-   "1B": -0.0388,
-   "2B_3B": -0.1419,
-   "HR": -0.0589,
-   "OTHER_REACH": 0.0249
+   "BIP_OUT": -0.0244,
+   "K": 0.0876,
+   "BB_HBP": 0.0064,
+   "1B": -0.0458,
+   "2B_3B": -0.064,
+   "HR": -0.0573,
+   "OTHER_REACH": -0.0302
   },
   "0_late": {
-   "BIP_OUT": -0.0008,
-   "K": 0.0026,
-   "BB_HBP": -0.0204,
-   "1B": 0.0246,
-   "2B_3B": -0.0217,
-   "HR": -0.063,
-   "OTHER_REACH": 0.1439
+   "BIP_OUT": 0.0092,
+   "K": -0.0293,
+   "BB_HBP": -0.017,
+   "1B": 0.0181,
+   "2B_3B": 0.0533,
+   "HR": -0.0338,
+   "OTHER_REACH": 0.0886
   },
   "0_mid": {
-   "BIP_OUT": -0.0002,
-   "K": 0.0029,
-   "BB_HBP": 0.0125,
-   "1B": 0.019,
-   "2B_3B": -0.0522,
-   "HR": -0.065,
-   "OTHER_REACH": -0.0003
+   "BIP_OUT": 0.0065,
+   "K": -0.0221,
+   "BB_HBP": 0.0169,
+   "1B": 0.0111,
+   "2B_3B": 0.0186,
+   "HR": -0.0482,
+   "OTHER_REACH": -0.0574
   },
   "1_1st": {
-   "BIP_OUT": -0.0251,
-   "K": 0.0074,
-   "BB_HBP": 0.0021,
-   "1B": 0.0632,
-   "2B_3B": -0.015,
-   "HR": 0.0268,
-   "OTHER_REACH": 0.0009
+   "BIP_OUT": -0.0161,
+   "K": -0.0196,
+   "BB_HBP": 0.0024,
+   "1B": 0.0521,
+   "2B_3B": 0.0732,
+   "HR": 0.0228,
+   "OTHER_REACH": -0.0801
   },
   "1_late": {
-   "BIP_OUT": -0.013,
-   "K": 0.0176,
-   "BB_HBP": 0.0573,
-   "1B": 0.0123,
-   "2B_3B": -0.1065,
-   "HR": -0.1226,
-   "OTHER_REACH": 0.1379
+   "BIP_OUT": -0.0035,
+   "K": -0.0122,
+   "BB_HBP": 0.0564,
+   "1B": 0.007,
+   "2B_3B": -0.0189,
+   "HR": -0.0949,
+   "OTHER_REACH": 0.057
   },
   "1_mid": {
-   "BIP_OUT": 0.0011,
-   "K": 0.0022,
-   "BB_HBP": 0.0057,
-   "1B": 0.0229,
-   "2B_3B": -0.0587,
-   "HR": -0.0882,
-   "OTHER_REACH": 0.099
+   "BIP_OUT": 0.0065,
+   "K": -0.0188,
+   "BB_HBP": 0.0078,
+   "1B": 0.0108,
+   "2B_3B": 0.0229,
+   "HR": -0.0771,
+   "OTHER_REACH": 0.0163
   }
  }
 }

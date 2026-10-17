@@ -226,3 +226,16 @@ def test_temperature_flattens_the_choice_and_is_off_at_one():
     from brl_live.boxscore import reliever_choice_for, ADJUST
     assert reliever_choice_for(dict(ADJUST, reliever_choice=True)).temperature == 1.0
     assert reliever_choice_for(dict(ADJUST, reliever_choice=True, reliever_choice_temperature=1.3)).temperature == 1.3
+
+
+def test_postseason_temperature_follows_the_game_type():
+    """POST-05: reliever_choice_temperature_postseason sets the temperature for F, D, L and W games only; regular-season
+    games and missing types keep the base temperature; manager_for hands the game type through."""
+    from brl_live.boxscore import ADJUST, reliever_choice_for, choice_temperature_for, manager_for
+    s = dict(ADJUST, reliever_choice=True, reliever_choice_temperature=1.0, reliever_choice_temperature_postseason={'F': 0.7, 'D': 0.7, 'L': 0.8})
+    assert choice_temperature_for(s, 'R') == 1.0 and choice_temperature_for(s, 'L') == 0.8 and choice_temperature_for(s, 'W') == 1.0
+    assert reliever_choice_for(s, 'D').temperature == 0.7 and reliever_choice_for(s, 'R').temperature == 1.0 and reliever_choice_for(s).temperature == 1.0
+    assert reliever_choice_for(dict(ADJUST, reliever_choice=True), 'L').temperature == 1.0          # the live setting is inert
+    from research_lab.game_sim.manager import ManagerPolicy
+    m, label = manager_for(ManagerPolicy(), dict(s, relief_exit=False), ('TB', 'CLE'), 'L')
+    assert m.reliever_choice.temperature == 0.8 and 'temperature 0.8' in label

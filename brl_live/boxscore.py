@@ -433,6 +433,10 @@ ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         'reliever_game_sigma':0.0,
         # BULLPEN-09 (off until its replays are read): the choice's utilities over a temperature; 1.0 = the fitted choice as is
         'reliever_choice_temperature':1.0,
+        # POST-05 (registered October 17; inert until its research receipt is read): the temperature by postseason game type,
+        # Wild Card F, Division D, League L, World Series W; a value under 1 concentrates the entries on the pool's top arms
+        # as October managers do. Missing or 1.0 = the regular season's temperature
+        'reliever_choice_temperature_postseason':{'F':1.0,'D':1.0,'L':1.0,'W':1.0},
         # LEASH-02 (on from October 11, 2026; its gates held on both seasons): the inning correction on the starter-exit
         # hazard's log-odds, regular season only (brl_live/hazard_correction.json); the postseason keeps its measured usage
         # on the plain hazard
@@ -512,11 +516,20 @@ def leash_pexp(leash,history,pexp,starters,date,league):
     for pid in ids:out[pid]=leash.adjust(float(pexp.get(pid,league)),index.facts(pid,date))
     return out
 
-def reliever_choice_for(settings):
+def choice_temperature_for(settings,game_type='R'):
+    """The temperature on the reliever choice's utilities for a game type: reliever_choice_temperature_postseason[type]
+    for postseason games when set (POST-05), else reliever_choice_temperature (1.0 = the fitted choice as is)."""
+    base=float(settings.get('reliever_choice_temperature') or 1.0)
+    if str(game_type)=='R':return base
+    post=settings.get('reliever_choice_temperature_postseason') or {}
+    return float(post.get(str(game_type)) or base)
+
+def reliever_choice_for(settings,game_type='R'):
     """The fitted reliever choice (brl_live/reliever_choice.json, BULLPEN-01) when switched on, else None; with
-    reliever_game_sigma (BULLPEN-07) each reliever's utility carries a shock drawn once per simulated game."""
+    reliever_game_sigma (BULLPEN-07) each reliever's utility carries a shock drawn once per simulated game; the
+    temperature follows the game type (choice_temperature_for)."""
     if not settings.get('reliever_choice'):return None
-    sigma=float(settings.get('reliever_game_sigma') or 0.0);temp=float(settings.get('reliever_choice_temperature') or 1.0)
+    sigma=float(settings.get('reliever_game_sigma') or 0.0);temp=choice_temperature_for(settings,game_type)
     key=('c',sigma,temp)
     if key not in _KERNEL:
         from research_lab.game_sim.reliever_choice import RelieverChoice
@@ -553,7 +566,7 @@ def manager_for(manager,settings,teams=None,game_type='R'):
     """(manager, label): the engine's manager with the fitted reliever choice and exits (and, given the game's teams as
     (away, home) abbreviations, their hook offsets; in postseason games the postseason exit offset) attached when
     switched on (a copy, so the engine's own manager is unchanged), else the manager itself and None."""
-    choice=reliever_choice_for(settings);exits=relief_exit_for(settings,game_type);hooks=relief_hooks_for(settings,game_type)
+    choice=reliever_choice_for(settings,game_type);exits=relief_exit_for(settings,game_type);hooks=relief_hooks_for(settings,game_type)
     if choice is None and exits is None:return manager,None
     import copy
     m=copy.copy(manager);labels=[]
