@@ -599,6 +599,64 @@ def relief_pitches(data_root: Path, physics) -> dict:
     return out
 
 
+def choice_temperature(data_root: Path, entries=None, counts=None) -> dict:
+    """BULLPEN-08: is the live reliever choice too sure of its favorites entry by entry? On every real regular-season relief
+    entry with a choice set (tools/brl_reliever_choice.py choice_rows, the live table's features), the live table's
+    probabilities per candidate: calibration by bins of the candidate's chance (chosen share against mean chance), the
+    same for each entry's favorite, and a temperature T on the utilities (softmax of u / T) fitted by maximum likelihood
+    on each season from the other seasons, with the log-likelihood per entry and the bins at the fitted T. Aggregates only."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('brl_reliever_choice', ROOT / 'tools' / 'brl_reliever_choice.py')
+    rc = importlib.util.module_from_spec(spec); spec.loader.exec_module(rc)
+    doc = json.loads((ROOT / 'brl_live' / 'reliever_choice.json').read_text())
+    rc.NAMES = [str(n) for n in doc['names']]
+    beta = np.asarray(doc['beta'], float)
+    if entries is None:
+        cols = ['game_pk', 'date_key', 'at_bat_number', 'inning', 'inning_topbot', 'outs_when_up', 'on_1b', 'on_2b', 'on_3b', 'bat_score',
+                'fld_score', 'batter', 'pitcher', 'stand', 'p_throws', 'home_team', 'away_team', 'game_type', 'outcome']
+        h = pd.read_csv(next(data_root.rglob('plate_appearances.csv.gz')), usecols=cols, low_memory=False)
+        seasons = sorted(set(h['date_key'].astype(str).str[:4].astype(int)))
+        entries, counts = rc.choice_rows(h, set(seasons))
+    seasons = sorted(set(e[0] for e in entries))
+    edges = [0.0, 0.05, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.80, 1.0001]
+
+    def probs(X, T):
+        u = (X @ beta) / T; u = u - u.max(); e = np.exp(u); return e / e.sum()
+
+    def bins(ents, T):
+        allp, ally, favp, favy = [], [], [], []
+        for _, X, c in ents:
+            p = probs(X, T); y = np.zeros(len(p)); y[c] = 1.0
+            allp.append(p); ally.append(y); j = int(np.argmax(p)); favp.append(p[j]); favy.append(y[j])
+        allp = np.concatenate(allp); ally = np.concatenate(ally); favp = np.asarray(favp); favy = np.asarray(favy)
+        out = {'candidates': [], 'favorites': []}
+        for lo, hi in zip(edges[:-1], edges[1:]):
+            m = (allp >= lo) & (allp < hi)
+            if m.sum() >= 100:
+                out['candidates'].append([lo, hi, int(m.sum()), round(float(allp[m].mean()), 4), round(float(ally[m].mean()), 4)])
+            m = (favp >= lo) & (favp < hi)
+            if m.sum() >= 100:
+                out['favorites'].append([lo, hi, int(m.sum()), round(float(favp[m].mean()), 4), round(float(favy[m].mean()), 4)])
+        out['favorite_mean_chance'] = round(float(favp.mean()), 4); out['favorite_chosen'] = round(float(favy.mean()), 4)
+        return out
+
+    def loglik(ents, T):
+        return float(np.mean([np.log(max(probs(X, T)[c], 1e-12)) for _, X, c in ents]))
+
+    out = {'seasons': seasons, 'counts': counts, 'table': doc.get('name'), 'bins_T1': bins(entries, 1.0), 'by_season': {}}
+    grid = [round(0.6 + 0.05 * i, 2) for i in range(21)]
+    for season in seasons:
+        test = [e for e in entries if e[0] == season]; train = [e for e in entries if e[0] != season]
+        if len(test) < 500 or len(train) < 500:
+            continue
+        ll_train = {T: loglik(train, T) for T in grid}
+        T_hat = max(ll_train, key=ll_train.get)
+        out['by_season'][str(season)] = {'entries': len(test), 'T_from_other_seasons': T_hat, 'loglik_T1': round(loglik(test, 1.0), 5),
+                                         'loglik_T': round(loglik(test, T_hat), 5), 'bins_T1': bins(test, 1.0), 'bins_T': bins(test, T_hat),
+                                         'train_loglik_by_T': {str(T): round(v, 5) for T, v in ll_train.items()}}
+    return out
+
+
 def relief_entry(data_root: Path) -> dict:
     """Where the simulator's extra relievers come from (the per-starter-out gap in HANDOFF's known gaps): the live
     relief-exit hazard (brl_live/relief_exit.json, RELIEF-02) on every real relief decision of the regular seasons, by the
@@ -810,7 +868,7 @@ def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']; key_hex = os.environ['BRL_PA_PACKAGE_KEY']; key = key_bytes(key_hex)
     branch = os.environ.get('BRL_LEDGER_BRANCH', 'brl-live-data')
     experiment = (os.environ.get('BRL_EXPERIMENT') or 'physics').strip()
-    if experiment in ('hazard_check', 'hazard_fix', 'hazard_pitches', 'pitch_counts', 'relief_pitches', 'pitch_efficiency', 'relief_entry', 'relief_fix'):
+    if experiment in ('hazard_check', 'hazard_fix', 'hazard_pitches', 'pitch_counts', 'relief_pitches', 'pitch_efficiency', 'relief_entry', 'relief_fix', 'choice_temperature'):
         run_id = os.environ.get('GITHUB_RUN_ID', 'local')
         receipt = {'schema': 'brl.research-receipt.v1', 'experiment': experiment, 'run_id': run_id, 'started_at': datetime.now(timezone.utc).isoformat()}
         try:
@@ -833,7 +891,7 @@ def main():
                 phys_n = pd.concat(tables, ignore_index=True) if tables else None
                 receipt['results'] = {'pitch_counts': pitch_counts_fit, 'relief_pitches': relief_pitches, 'pitch_efficiency': pitch_efficiency}.get(experiment, hazard_pitches)(data_root, phys_n)
             else:
-                receipt['results'] = {'hazard_fix': hazard_fix, 'relief_entry': relief_entry, 'relief_fix': relief_fix}.get(experiment, hazard_check)(data_root)
+                receipt['results'] = {'hazard_fix': hazard_fix, 'relief_entry': relief_entry, 'relief_fix': relief_fix, 'choice_temperature': choice_temperature}.get(experiment, hazard_check)(data_root)
             receipt['status'] = 'completed'
         except Exception as exc:
             receipt['status'] = 'failed'; receipt['error'] = type(exc).__name__ + ': ' + str(exc)[:300]

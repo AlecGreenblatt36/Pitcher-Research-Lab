@@ -135,3 +135,28 @@ def test_gbm_experiment_runs_on_synthetic_data():
     out = tool.gbm_experiment(features, list(cols), extras, y, partitions, parts, config, probs_locked,
                               configs={'tiny': dict(max_depth=3, learning_rate=0.1, l2_regularization=1.0, checkpoints=(5, 10))})
     assert out['tiny']['iterations'] in (5, 10) and 'test_2026_minus_locked' in out['tiny'] and out['tiny']['test_2026']['log_loss'] > 0
+
+
+def test_choice_temperature_reads_sharpness_and_fits_the_temperature_from_other_seasons():
+    """BULLPEN-08: on planted choice sets whose true chances are the live table's softmax at T = 1.6, the favorites' bins
+    show the table too sure at T = 1 and about right at the fitted T, and the fitted T (from the other seasons) is near 1.6."""
+    import json
+    import importlib.util
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    spec = importlib.util.spec_from_file_location('brl_research_tool', root / 'tools' / 'brl_research.py')
+    tool = importlib.util.module_from_spec(spec); spec.loader.exec_module(tool)
+    doc = json.loads((root / 'brl_live' / 'reliever_choice.json').read_text()); beta = np.asarray(doc['beta'], float)
+    rng = np.random.default_rng(4); entries = []
+    for season in (2024, 2025, 2026):
+        for _ in range(1500):
+            k = int(rng.integers(4, 9)); X = rng.normal(size=(k, len(beta))) * 0.3
+            u = (X @ beta) / 1.6; p = np.exp(u - u.max()); p /= p.sum()
+            entries.append((season, X, int(rng.choice(k, p=p))))
+    out = tool.choice_temperature(None, entries=entries, counts={'entries': len(entries)})
+    assert out['seasons'] == [2024, 2025, 2026]
+    b1 = out['bins_T1']; assert b1['favorite_mean_chance'] > b1['favorite_chosen'] + 0.03          # too sure at T = 1
+    for season in ('2024', '2025', '2026'):
+        r = out['by_season'][season]
+        assert 1.3 <= r['T_from_other_seasons'] <= 1.9 and r['loglik_T'] > r['loglik_T1']
+        bt = r['bins_T']; assert abs(bt['favorite_mean_chance'] - bt['favorite_chosen']) < 0.03
