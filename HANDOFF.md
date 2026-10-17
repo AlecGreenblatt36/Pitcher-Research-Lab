@@ -101,6 +101,26 @@ Model Plan doc). Built the same afternoon:
   Everything else on the sheet scored near its number over those 14 games: hitter 1+ hit said 59.4% happened 56.0%
   (252), home run 11.1% vs 8.3%, 2+ total bases 31.5% vs 32.5%, starter 3+ K 79.6% vs 75.0% (28), totals within 4
   points, no run in the 1st 58% vs 57%. Home win said 53% happened 43% (14 games; noise at that count).
+- Morning, October 17 (9 am to noon): POST-05 reached tonight's game at version 4 (9:17 am) once the settings hash
+  joined the fingerprint: Rays' expected pitchers 5.26 to 5.05, Matz 79 to 77%, Seymour 60 to 57%; Cleveland's
+  bullpen game unchanged (6.97). Small, as the postseason replays then showed.
+- POST-06, a postseason replay lane (tools/brl_replay.py postseason: {...}; brl_replay.harness.postseason_game applies
+  the live October usage per game; reconstruct keeps the game type): 2024 and 2025 Wild Card, Division and League games
+  replayed with retrain04-rt and the live tables, 1,000 worlds, two arms (POST-05's offsets and POST-02's). The exits
+  held (Brier better, the top bin better, the count 0.12 low because of arms outside the pool), and they were not the
+  cause of the top-arm miss: in the regular-season receipts the top two arms are shown 1.11 appearances against 0.68
+  real only in team-games where an arm outside the 14-day pool pitched (1.05 against 1.04 elsewhere). The simulator
+  hands the outside arms' work (call-ups, trades, returns from the list, starters in the pen: 7-9% of real relief
+  appearances) to its top arms.
+- ROSTER-01 (tools/brl_rosters.py, workflow BRL rosters from tools/roster_seasons.txt): daily active rosters, pitchers
+  only, from MLB's public API for every team-date 2023-2026, public data at research/rosters-<year>.json.gz.
+- BULLPEN-10 (registered, gates in the row): roster pools for the replay bullpen (brl_replay.harness.bullpen roster=)
+  and the choice fit (tools/brl_reliever_choice.py choice_rows rosters=; replay param rosters: true), new choice terms
+  for a starter in the pen and an arm new to the team (bullpen_usage starts30, days_since_start, new_arm; features
+  starter_recent, started_within5, new_arm and their early/blowout terms; NAMES10 and NAMES10_6 in the fit tool),
+  research experiment choice_fit (four variants, held-out 2026 and 2025, a live table). Next: run choice_fit when the
+  rosters are in, write the winning table to brl_live/reliever_choice10.json, replay 2025 and 2026 with rosters: true
+  and the new table (and the postseason pairs), score with tools/brl_bullpen_cal.py, adopt under the row's rule.
 - Settings changes now make new forecast versions (9:15 am): the forecast fingerprint carries a hash of ADJUST
   (brl_live.boxscore.settings_fingerprint), so a switch like POST-05 reaches every pending game at the next run.
   Before this, POST-05 (pushed 1:30 am) had not reached tonight's game by 9 am because no lineup or history change
