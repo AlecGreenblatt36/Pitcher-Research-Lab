@@ -84,21 +84,55 @@ class RelieverChoice:
     every entry of every world re-rolls that, so the likeliest arms pitch in far more worlds than they pitch in real
     games (BULLPEN-03: arms shown at 60 to 80% pitched 52%). 0 = off."""
 
-    def __init__(self, doc: dict, game_sigma: float = 0.0, temperature: float = 1.0):
+    def __init__(self, doc: dict, game_sigma: float = 0.0, temperature: float = 1.0, dropout: float = 0.0):
         self.name = str(doc.get("name") or "reliever choice")
         self.names = [str(n) for n in doc["names"]]
         self.beta = np.asarray(doc["beta"], float)
         self.game_sigma = float(game_sigma or 0.0)
         # BULLPEN-09: utilities over a temperature; above 1 flattens every entry's choice (the favorites a little less often)
         self.temperature = float(temperature or 1.0)
+        # BULLPEN-11: each arm is out for the whole simulated game with this chance (drawn once per reliever and game, as
+        # the shock is): the day's unseen unavailability. Unlike a shock on the utility, an arm that is out takes no
+        # entry at all, so the likeliest arms pitch in fewer worlds and their entries go to the middle of the pen
+        self.dropout = float(dropout or 0.0)
         if len(self.names) != len(self.beta):
             raise ValueError("reliever choice: names and coefficients differ in length")
         if self.temperature <= 0:
             raise ValueError("reliever choice: the temperature must be positive")
+        if not 0.0 <= self.dropout < 1.0:
+            raise ValueError("reliever choice: the dropout must be in [0, 1)")
         if self.game_sigma:
             self.name += f" (game shock {self.game_sigma:g})"
         if self.temperature != 1.0:
             self.name += f" (temperature {self.temperature:g})"
+        if self.dropout:
+            self.name += f" (day out {self.dropout:g})"
+
+    def out_today(self, candidates, state) -> np.ndarray | None:
+        """Which candidates are out for this simulated game (BULLPEN-11), drawn once per reliever and game from the
+        world's seed and his id; None when the dropout is 0 or every candidate would be out."""
+        if not self.dropout or state is None:
+            return None
+        bank = getattr(state, "reliever_out", None)
+        if bank is None:
+            bank = {}
+            try:
+                state.reliever_out = bank
+            except AttributeError:
+                pass
+        out = np.zeros(len(candidates), bool)
+        for i, p in enumerate(candidates):
+            pid = str(p.player_id)
+            z = bank.get(pid)
+            if z is None:
+                try:
+                    key = int(pid)
+                except ValueError:
+                    key = abs(hash(pid)) % (2 ** 31)
+                z = bool(np.random.default_rng([int(getattr(state, "seed", 0)), key, 6131]).random() < self.dropout)
+                bank[pid] = z
+            out[i] = z
+        return None if out.all() else out
 
     def shocks(self, candidates, state) -> np.ndarray | None:
         """The game's shock per candidate (standard normal times game_sigma), drawn once per reliever and game."""
@@ -126,9 +160,10 @@ class RelieverChoice:
         return out
 
     def probabilities(self, candidates, inning: int, lead: int, outs: int, runners: int, batter_hand: str,
-                      upcoming_hands=None, shocks=None) -> np.ndarray:
+                      upcoming_hands=None, shocks=None, out=None) -> np.ndarray:
         """Choice probabilities over `candidates`; upcoming_hands lists how the next three hitters bat ('L', 'R', 'S'),
-        the first being the next batter; shocks adds a per-candidate term to the utilities (BULLPEN-07)."""
+        the first being the next batter; shocks adds a per-candidate term to the utilities (BULLPEN-07); out marks the
+        candidates who are out for the day (BULLPEN-11), who get no probability."""
         facts = [dict(getattr(p, "usage", ()) or ()) for p in candidates]
         hand = (batter_hand or "R").upper()[:1]
         same = [hand != "S" and p.throws == hand for p in candidates]
@@ -143,6 +178,10 @@ class RelieverChoice:
             u += np.asarray(shocks, float)
         if self.temperature != 1.0:
             u = u / self.temperature
+        if out is not None:
+            mask = np.asarray(out, bool)
+            if not mask.all():
+                u = np.where(mask, -np.inf, u)
         u -= u.max()
         e = np.exp(u)
         return e / e.sum()
@@ -157,5 +196,5 @@ class RelieverChoice:
             inning, outs, runners = state.inning, state.outs, sum(r is not None for r in state.bases)
         hands = [getattr(b, "bats", "R") for b in upcoming] if upcoming else None
         p = self.probabilities(candidates, inning, lead, outs, runners, getattr(next_batter, "bats", "R"), hands,
-                               shocks=self.shocks(candidates, state))
+                               shocks=self.shocks(candidates, state), out=self.out_today(candidates, state))
         return candidates[int(rng.choice(len(candidates), p=p))]

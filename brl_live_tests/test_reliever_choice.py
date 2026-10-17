@@ -67,9 +67,9 @@ def test_production_table_follows_roles_rest_and_platoon():
 
 
 class Capture(RelieverChoice):
-    def probabilities(self, candidates, inning, lead, outs, runners, batter_hand, upcoming_hands=None, shocks=None):
+    def probabilities(self, candidates, inning, lead, outs, runners, batter_hand, upcoming_hands=None, shocks=None, out=None):
         self.seen = (inning, lead, outs, runners, batter_hand, upcoming_hands)
-        return super().probabilities(candidates, inning, lead, outs, runners, batter_hand, upcoming_hands, shocks=shocks)
+        return super().probabilities(candidates, inning, lead, outs, runners, batter_hand, upcoming_hands, shocks=shocks, out=out)
 
 
 def test_a_change_at_the_inning_end_is_scored_for_the_next_inning():
@@ -271,3 +271,39 @@ def test_the_choice_table_is_chosen_by_name_in_the_settings():
     assert ADJUST['reliever_choice_table'] == 'reliever_choice10.json' and len(a.names) == 39 and len(b.names) == 39 and 'new_arm' in b.names and 'roster' in b.name
     c = reliever_choice_for(dict(ADJUST, reliever_choice=True, reliever_choice_table='reliever_choice.json'))
     assert len(c.names) == 29 and 'roster' not in c.name                      # BULLPEN-01's table is still there by name
+
+
+def test_day_out_dropout_is_off_by_default_fixed_within_a_game_and_takes_the_arm_out():
+    """BULLPEN-11: dropout 0 draws exactly the games of before; with it each arm is out for a whole game or not (the same
+    at every entry of that game, different across games), an arm that is out gets no probability, a pool with every
+    arm out keeps the plain choice, and the live kernel keys the choice by the dropout."""
+    from research_lab.game_sim.models import GameState, PitcherProfile
+    from research_lab.game_sim.reliever_choice import RelieverChoice
+    import json as _j
+    doc = _j.loads((ROOT / 'brl_live' / 'reliever_choice.json').read_text())
+    pen = [PitcherProfile(str(600 + i), str(i), 'R', usage={'share14': 0.3 - 0.03 * i, 'ninth': 0.9 if i == 0 else 0.0, 'late': 0.8 if i < 3 else 0.2}) for i in range(6)]
+    plain = RelieverChoice(doc); drop = RelieverChoice(doc, dropout=0.3)
+    assert drop.name.endswith('(day out 0.3)') and plain.out_today(pen, GameState(seed=1)) is None
+    st = GameState(seed=11, inning=9, home_score=3, away_score=2)
+    o1 = drop.out_today(pen, st); o2 = drop.out_today(pen, st)
+    assert o1 is not None and list(o1) == list(o2) and o1.dtype == bool          # fixed within a game
+    outs_by_seed = [drop.out_today(pen, GameState(seed=s_)) for s_ in range(40)]
+    assert any(o is not None and o.any() for o in outs_by_seed) and len({tuple(o) if o is not None else () for o in outs_by_seed}) > 3
+    p = drop.probabilities(pen, 9, 1, 0, 0, 'R', out=o1)
+    assert all(p[i] == 0.0 for i in range(6) if o1[i]) and abs(p.sum() - 1) < 1e-9
+    assert np.allclose(drop.probabilities(pen, 9, 1, 0, 0, 'R', out=np.ones(6, bool)), plain.probabilities(pen, 9, 1, 0, 0, 'R'))
+    # the closer's share of worlds in a save spot falls with the dropout
+    rng = np.random.default_rng(3)
+    def closer_share(choice, n=600):
+        hits = 0
+        for s_ in range(n):
+            st_ = GameState(seed=s_, inning=9, home_score=3, away_score=2)
+            hits += choice.select(pen, st_, 'home', PitcherProfile('b', 'b', 'R'), rng).player_id == '600'
+        return hits / n
+    assert closer_share(drop) < closer_share(plain) - 0.05              # out three games in ten, back some when others are out
+    from brl_live.boxscore import ADJUST, reliever_choice_for
+    assert ADJUST['reliever_dropout'] == 0.0 and reliever_choice_for(dict(ADJUST, reliever_choice=True)).dropout == 0.0
+    assert reliever_choice_for(dict(ADJUST, reliever_choice=True, reliever_dropout=0.1)).dropout == 0.1
+    import pytest
+    with pytest.raises(ValueError):
+        RelieverChoice(doc, dropout=1.0)

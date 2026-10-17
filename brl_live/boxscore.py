@@ -446,6 +446,9 @@ ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         # arms shown at 60 to 80% pitched 62% (52% before), wins and totals unchanged. The name is in the forecast
         # fingerprint, so a switch re-forecasts every pending game
         'reliever_choice_table':'reliever_choice10.json',
+        # BULLPEN-11 (registered October 17; off until its replays are read): each arm out for the whole simulated game with
+        # this chance, the day's unseen unavailability; the likeliest arms then pitch in fewer worlds. 0 = off
+        'reliever_dropout':0.0,
         # POST-05 (registered October 17; inert until its research receipt is read): the temperature by postseason game type,
         # Wild Card F, Division D, League L, World Series W; a value under 1 concentrates the entries on the pool's top arms
         # as October managers do. Missing or 1.0 = the regular season's temperature
@@ -544,10 +547,11 @@ def reliever_choice_for(settings,game_type='R'):
     if not settings.get('reliever_choice'):return None
     sigma=float(settings.get('reliever_game_sigma') or 0.0);temp=choice_temperature_for(settings,game_type)
     table=str(settings.get('reliever_choice_table') or RELIEVER_CHOICE_PATH.name)      # BULLPEN-10: the table by name, in the fingerprint
-    key=('c',sigma,temp,table)
+    drop=float(settings.get('reliever_dropout') or 0.0)
+    key=('c',sigma,temp,table,drop)
     if key not in _KERNEL:
         from research_lab.game_sim.reliever_choice import RelieverChoice
-        _KERNEL[key]=RelieverChoice(json.loads((RELIEVER_CHOICE_PATH.parent/table).read_text()),game_sigma=sigma,temperature=temp)
+        _KERNEL[key]=RelieverChoice(json.loads((RELIEVER_CHOICE_PATH.parent/table).read_text()),game_sigma=sigma,temperature=temp,dropout=drop)
     return _KERNEL[key]
 
 def relief_corrected(settings,game_type='R'):

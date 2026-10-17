@@ -212,6 +212,7 @@ class GameState:
     # BULLPEN-07: the world's seed and, per reliever, a shock on his utility drawn once for the game (reliever_choice)
     seed: int = 0
     reliever_shocks: dict | None = None
+    reliever_out: dict | None = None            # BULLPEN-11: arms out for the day, drawn once per game
 
     def score_for(self, side: TeamSide) -> int:
         return self.away_score if side == "away" else self.home_score
