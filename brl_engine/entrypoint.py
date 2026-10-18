@@ -18,11 +18,31 @@ DATA_DIRS = ('pa_model_reference', 'model_runs', 'data')
 DATA_FILES = ('requirements-cloud.txt', 'RUNTIME_MANIFEST.json')
 
 
+SAFE_MESSAGES = ('Data package hash mismatch', 'Data package plaintext hash mismatch', 'Package hash mismatch', 'Unsafe package path',
+                 'Expanded package too large', 'Sealed payload format mismatch', 'Invalid key format')
+
+
+def redact(msg: str, limit: int = 200) -> str:
+    """An error message fit for a public receipt: quoted values and long numbers masked, query strings dropped, so a
+    message that quotes a data value, an id or a URL with parameters says only where it came from."""
+    msg = re.sub(r'\?[^\s]*', '', str(msg))
+    msg = re.sub(r"'[^']*'|\"[^\"]*\"", '<value>', msg)
+    msg = re.sub(r'\d{5,}', '<n>', msg)
+    return msg[:limit]
+
+
+def safe_error(exc) -> str:
+    """An exception for the public receipt: its type, and its message when it is one of this module's own fixed messages,
+    else the message redacted."""
+    msg = str(exc)
+    return type(exc).__name__ + ': ' + (msg if msg in SAFE_MESSAGES else redact(msg, 160))
+
+
 def restore_package(repo, token, key_hex, manifest, destination):
     """Fetch private/data-package.enc from the ledger branch, verify, unseal and unzip into destination."""
     import hashlib, io, zipfile
     sys.path.insert(0, str(REPO_ROOT / 'brl_engine' / 'runtime'))
-    from cloud.security import unseal, key_bytes
+    from cloud.security import unseal, key_bytes, extract_verified
     branch, path = manifest['branch'], manifest['path']
     meta = api(f'https://api.github.com/repos/{repo}/contents/{path}?ref={branch}', token)
     if meta.get('encoding') == 'base64' and isinstance(meta.get('content'), str) and meta.get('content'):
@@ -35,14 +55,8 @@ def restore_package(repo, token, key_hex, manifest, destination):
     plain = unseal(cipher, key_bytes(key_hex), manifest['purpose'])
     if hashlib.sha256(plain).hexdigest() != manifest['plaintext_sha256']:
         raise ValueError('Data package plaintext hash mismatch')
-    destination = Path(destination).resolve()
-    with zipfile.ZipFile(io.BytesIO(plain)) as z:
-        for item in z.infolist():
-            target = (destination / item.filename).resolve()
-            if not target.is_relative_to(destination) or '\\' in item.filename:
-                raise ValueError('Unsafe package path')
-        z.extractall(destination)
-    return destination
+    # the shared extractor: paths stay inside destination, no symbolic links, no repeated names, at most 500 MB expanded
+    return extract_verified(plain, manifest['plaintext_sha256'], destination)
 
 
 def select_model(repo, token, key_hex, data_root):
@@ -58,7 +72,7 @@ def select_model(repo, token, key_hex, data_root):
         return {'name': name, 'source': 'data package'}
     import hashlib
     sys.path.insert(0, str(REPO_ROOT / 'brl_engine' / 'runtime'))
-    from cloud.security import unseal, key_bytes
+    from cloud.security import unseal, key_bytes, extract_verified
     manifest = json.loads((REPO_ROOT / selection['manifest']).read_text())
     if manifest.get('name') != name:
         raise ValueError('Model manifest name mismatch')
@@ -120,7 +134,7 @@ def main():
                 restore_package(repo, token, key, manifest, data_root)
                 receipt['data_source'] = manifest['version']
             except Exception as exc:
-                receipt['data_package_error'] = type(exc).__name__ + ': ' + str(exc)[:160]
+                receipt['data_package_error'] = safe_error(exc)
         if receipt['data_source'] is None:
             config = json.loads(Path(args.config).read_text())
             container = Path(args.runtime) / 'container'
@@ -146,7 +160,7 @@ def main():
         receipt['stage'] = 'history_and_forecast_iteration'
         receipt.update(run_iteration(args.site)); receipt['status'] = 'iteration_completed'; receipt['stage'] = 'complete'
     except Exception as exc:
-        reason = str(exc) if isinstance(exc, ValueError) else type(exc).__name__ + ': ' + str(exc)[:200]
+        reason = redact(str(exc)) if isinstance(exc, ValueError) else type(exc).__name__ + ': ' + redact(str(exc))
         receipt.update(status='blocked', reason=reason, error_type=type(exc).__name__)
         frames = traceback.extract_tb(exc.__traceback__)
         receipt['error_trace'] = [{'file': Path(f.filename).name, 'function': f.name, 'line': f.lineno} for f in frames[-6:]]
