@@ -53,3 +53,15 @@ def test_game_matched_by_teams_not_only_time():
     start, teams = kh.event_start('KXMLBGAME-26MAR291335KCATL')
     assert mlb.game_for(start, teams)['gamePk'] == 2
     assert mlb.game_for(start, 'NYYSF') is None                         # no game with those teams: never a neighbour by time
+
+
+def test_date_only_tickers_of_2025():
+    assert kh.event_day('KXMLBGAME-25APR16ATLTOR') == ('2025-04-16', 'ATLTOR', 1)
+    assert kh.event_day('KXMLBGAME-25APR18AZCHC2') == ('2025-04-18', 'AZCHC', 2)
+    assert kh.event_day('KXMLBGAME-25APR26BALDETG1') == ('2025-04-26', 'BALDET', 1)
+    assert kh.event_start('KXMLBGAME-25APR16ATLTOR') == (None, None)       # the timed parser leaves them to event_day
+    day = [{'gamePk': 7, 'gameDate': '2025-04-18T22:40:00Z', 'teams': {'away': {'team': {'abbreviation': 'AZ'}}, 'home': {'team': {'abbreviation': 'CHC'}}}},
+           {'gamePk': 6, 'gameDate': '2025-04-18T17:20:00Z', 'teams': {'away': {'team': {'abbreviation': 'AZ'}}, 'home': {'team': {'abbreviation': 'CHC'}}}}]
+    mlb = kh.MLB(lambda url: {'dates': [{'games': day}]})
+    assert mlb.game_on('2025-04-18', 'AZCHC', 2)['gamePk'] == 7 and mlb.game_on('2025-04-18', 'AZCHC', 1)['gamePk'] == 6
+    assert mlb.game_on('2025-04-18', 'AZCHC', 3) is None

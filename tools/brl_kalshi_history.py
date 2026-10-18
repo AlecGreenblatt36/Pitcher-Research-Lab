@@ -35,6 +35,9 @@ MONTHS = {m: i for i, m in enumerate(['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 
 # a doubleheader's tickers end in G1 or G2 after the team codes (KXMLBGAME-26AUG171840STLCING2); before October 18 those
 # were left unparsed
 EVENT_RE = re.compile(r'^(?P<series>[A-Z0-9]+)-(?P<yy>\d\d)(?P<mon>[A-Z]{3})(?P<dd>\d\d)(?P<hhmm>\d{4})(?P<teams>[A-Z]+?)(?:G(?P<game>\d))?$')
+# 2025's tickers carry the date only, with a game number after the teams in a doubleheader (KXMLBGAME-25APR18AZCHC2,
+# KXMLBGAME-25APR26BALDETG1); before October 18 those were left unparsed
+DAY_RE = re.compile(r'^(?P<series>[A-Z0-9]+)-(?P<yy>\d\d)(?P<mon>[A-Z]{3})(?P<dd>\d\d)(?P<teams>[A-Z]+?)(?:G?(?P<game>\d))?$')
 PROP_RE = re.compile(r'^(?P<name>.+?):\s*(?P<k>\d+)\+\s*(?P<what>.+?)\?*$')
 RATE = float(os.environ.get('BRL_KALSHI_RATE', '6'))     # requests per second, well under the public limit
 _last = [0.0]
@@ -70,6 +73,14 @@ def event_start(event_ticker: str):
         return None, None
     local = datetime(2000 + int(m['yy']), MONTHS[m['mon']], int(m['dd']), int(m['hhmm'][:2]), int(m['hhmm'][2:]), tzinfo=ET)
     return local.astimezone(timezone.utc), m['teams']
+
+
+def event_day(event_ticker: str):
+    """(Eastern date, team string, game number) from a date-only event ticker; None when it is not one."""
+    m = DAY_RE.match(event_ticker or '')
+    if not m or m['mon'] not in MONTHS:
+        return None
+    return f"{2000 + int(m['yy'])}-{MONTHS[m['mon']]:02d}-{int(m['dd']):02d}", m['teams'], int(m['game'] or 1)
 
 
 def list_markets(series: str):
@@ -142,6 +153,11 @@ class MLB:
                 best, gap = g, d
         return best if gap is not None and gap <= 4 * 3600 else None
 
+    def game_on(self, date: str, teams: str, number: int = 1):
+        """The number-th game of the day between the two teams (a doubleheader's second is 2), by start time."""
+        same = sorted((g for g in self.games(date) if abbr(g, 'away') + abbr(g, 'home') == teams), key=lambda g: g['gameDate'])
+        return same[number - 1] if 0 < number <= len(same) else None
+
     def player(self, game_pk: int, name: str):
         if game_pk not in self._box:
             doc = self.get(f'https://statsapi.mlb.com/api/v1/game/{game_pk}/boxscore') or {}
@@ -210,6 +226,13 @@ def main():
             counts['stopped_at_budget'] = True
             break
         start, teams = event_start(mk.get('event_ticker'))
+        g = None
+        if start is None and event_day(mk.get('event_ticker')):
+            day_, teams, number = event_day(mk.get('event_ticker'))
+            g = mlb.game_on(day_, teams, number)
+            if not g:
+                counts['no_game'] += 1; continue
+            start = datetime.fromisoformat(g['gameDate'].replace('Z', '+00:00'))
         if start is None:
             counts['unparsed'] += 1
             shape = re.sub(r'[A-Z]', 'A', re.sub(r'\d', '9', str(mk.get('event_ticker') or '').partition('-')[2]))
@@ -222,7 +245,7 @@ def main():
         d = describe(mk)
         if d['kind'] == 'prop' and only_lines and d['at_least'] not in only_lines:
             counts['skipped_line'] += 1; continue
-        g = mlb.game_for(start, teams)
+        g = g or mlb.game_for(start, teams)
         if not g:
             counts['no_game'] += 1; continue
         row = {'series': series, 'ticker': mk['ticker'], 'event': mk.get('event_ticker'), 'game_pk': int(g['gamePk']), 'game_type': g.get('gameType'),
