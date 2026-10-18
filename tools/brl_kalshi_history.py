@@ -160,13 +160,28 @@ def describe(mk: dict) -> dict:
             'floor_strike': mk.get('floor_strike'), 'strike_type': mk.get('strike_type')}
 
 
+def prop_lines(spec: str, series: str) -> list[int]:
+    """The prop thresholds to price for this series. Tokens SERIES:a,b apply to that series; bare numbers to any series
+    without its own token; nothing applicable keeps every line. "KXMLBHIT:1,2 KXMLBTB:2" keeps 1+ and 2+ hits, 2+ total
+    bases and every strikeout line."""
+    own, bare = None, []
+    for tok in spec.replace(';', ' ').split():
+        name, colon, rest = tok.partition(':')
+        if colon:
+            if name == series:
+                own = [int(x) for x in rest.split(',') if x]
+        else:
+            bare += [int(x) for x in tok.split(',') if x]
+    return own if own is not None else bare
+
+
 def main():
     from brl_bookkeeping_backfill import get_json, put
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']
     branch = os.environ.get('BRL_LEDGER_BRANCH', 'brl-live-data')
     series, _, window = os.environ['BRL_KALSHI_SERIES'].partition('@')      # SERIES or SERIES@YYYY-MM-DD:YYYY-MM-DD (game dates)
     lo, _, hi = window.partition(':')
-    only_lines = [int(x) for x in (os.environ.get('BRL_KALSHI_PROP_LINES') or '').replace(',', ' ').split()]   # e.g. "1 2" keeps 1+ and 2+
+    only_lines = prop_lines(os.environ.get('BRL_KALSHI_PROP_LINES') or '', series)
     budget = float(os.environ.get('BRL_KALSHI_MINUTES', '320')) * 60
     t0 = time.time()
     markets = list_markets(series)

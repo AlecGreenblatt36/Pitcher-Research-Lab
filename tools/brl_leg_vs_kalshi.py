@@ -1,11 +1,12 @@
 """LEG-01 against KALSHI-01: our chance for each Kalshi market the replays price, against Kalshi's last pregame price, on
 the same player-games and games.
 
-Hitter props (KXMLBHIT: 1+ and 2+ hits) are matched by game id and player id to the replay's hitter lines; game winners
-(KXMLBGAME) by game id and team. For each kind: Brier of ours and of Kalshi's price, the paired difference with a date
+Hitter props (KXMLBHIT 1+ and 2+ hits, KXMLBHR 1+ home run, KXMLBTB 2+ total bases) are matched by game id and player id to
+the replay's hitter lines, starter strikeouts (KXMLBKS, every line) to the replay's starter ladder, game winners (KXMLBGAME)
+by game id and team. For each kind: Brier of ours and of Kalshi's price, the paired difference with a date
 bootstrap, calibration of both by bin, and where we and Kalshi differ by 5 points or more, how often our side was right
 and what buying our side at Kalshi's price would have returned (Kalshi's trading fee, 0.07 x p x (1 - p) per contract,
-taken off). Kalshi prices are the volume-weighted price of the final pregame hour, else the last pregame trade; markets
+taken off; Kalshi lists these series with a fee multiplier of 0.5, so the return at half that fee is shown too). Kalshi prices are the volume-weighted price of the final pregame hour, else the last pregame trade; markets
 with neither are left out and counted.
 
     python3 tools/brl_leg_vs_kalshi.py --replay <glob of leg01 rows> --kalshi <kalshi jsonl.gz> [--kalshi ...] --out <file.json>
@@ -25,7 +26,11 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'tools'))
-from brl_player_cal import own_at_least  # noqa: E402
+from brl_player_cal import own_at_least, own_tb2  # noqa: E402
+from brl_leg_book import pmf, over  # noqa: E402
+
+HIT_STATS = {'hits': 'hits', 'hit': 'hits', 'home runs': 'hr', 'home run': 'hr', 'total bases': 'tb', 'total base': 'tb'}
+K_STATS = ('strikeouts', 'strikeout')
 
 BINS = [(0, .1), (.1, .2), (.2, .3), (.3, .4), (.4, .5), (.5, .6), (.6, .7), (.7, .8), (.8, .9), (.9, 1.01)]
 
@@ -50,7 +55,7 @@ def kalshi_rows(paths):
 
 
 def replay_index(paths):
-    hit, game = {}, {}
+    hit, game, start = {}, {}, {}
     for pat in paths:
         for f in sorted(glob.glob(pat)):
             with gzip.open(f, 'rt') as fh:
@@ -61,7 +66,11 @@ def replay_index(paths):
                     game[pk] = {'date': g['date'], 'p_home': g['home_wins'] / max(n - (g.get('ties') or 0), 1), 'home': g['home'], 'away': g['away']}
                     for x in g.get('hitters') or []:
                         hit[(pk, int(x['batter']))] = x
-    return hit, game
+                    for side in ('away', 'home'):
+                        st = (g.get('starters') or {}).get(side) or {}
+                        if st.get('pitcher'):
+                            start[(pk, int(st['pitcher']))] = st
+    return hit, game, start
 
 
 def compare(pairs, draws=2000, seed=5):
@@ -93,9 +102,11 @@ def compare(pairs, draws=2000, seed=5):
         cost = np.where(buy_yes, pk, 1 - pk)
         win = np.where(buy_yes, y, 1 - y)
         profit = (win - cost - fee(cost))[m]
+        profit_half = (win - cost - fee(cost) / 2)[m]
         out['disagree'][f'{int(gap * 100)}pts'] = {'n': int(m.sum()), 'our_side_right': round(float(win[m].mean()), 4),
                                                    'price_paid_mean': round(float(cost[m].mean()), 4),
-                                                   'return_per_dollar': round(float(profit.sum() / cost[m].sum()), 4)}
+                                                   'return_per_dollar': round(float(profit.sum() / cost[m].sum()), 4),
+                                                   'return_per_dollar_half_fee': round(float(profit_half.sum() / cost[m].sum()), 4)}
     return out
 
 
@@ -105,19 +116,39 @@ def main():
     ap.add_argument('--kalshi', action='append', required=True)
     ap.add_argument('--out', required=True)
     a = ap.parse_args()
-    hit, game = replay_index(a.replay)
+    hit, game, start = replay_index(a.replay)
     rows = kalshi_rows(a.kalshi)
     pairs = defaultdict(list); counts = defaultdict(int)
     for r in rows:
         pk = int(r.get('game_pk') or 0)
-        if r.get('kind') == 'prop' and r.get('stat') == 'hits':
+        stat = str(r.get('stat') or '')
+        if r.get('kind') == 'prop' and stat in HIT_STATS:
+            what, k = HIT_STATS[stat], int(r['at_least'])
             x = hit.get((pk, int(r.get('player_id') or 0)))
             if x is None:
-                counts['hits_no_replay_row'] += 1; continue
-            if not (x.get('actual') or {}).get('pa'):
-                counts['hits_did_not_bat'] += 1; continue
-            ours = own_at_least(x['h_hist'], int(r['at_least']), x.get('spot'))
-            pairs[f"hits{r['at_least']}+"].append((r['date'], ours, r['price'], r['y']))
+                counts[f'{what}_no_replay_row'] += 1; continue
+            if not (x.get('actual') or {}).get('pa'):           # Kalshi settles these at a fair price when he has no plate appearance
+                counts[f'{what}_did_not_bat'] += 1; continue
+            if what == 'hits':
+                ours = own_at_least(x['h_hist'], k, x.get('spot'))
+            elif what == 'hr':
+                ours = own_at_least(x['hr_hist'], k, x.get('spot'))
+            elif k == 2 and 'hs_hist' in x:
+                ours = own_tb2(x['hs_hist'], x.get('spot'))
+            elif k == 1:
+                ours = own_at_least(x['h_hist'], 1, x.get('spot'))
+            else:
+                counts[f'tb{k}_not_priced'] += 1; continue
+            pairs[f"{what}{k}+"].append((r['date'], ours, r['price'], r['y']))
+        elif r.get('kind') == 'prop' and stat in K_STATS:
+            k = int(r['at_least'])
+            st = start.get((pk, int(r.get('player_id') or 0)))
+            if st is None or 'k' not in st:
+                counts['k_not_our_starter'] += 1; continue      # Kalshi settles at a fair price when he does not start
+            ours = over(pmf(st['k']), k - 0.5)
+            band = 'low' if k <= 4 else ('mid' if k <= 6 else 'high')
+            pairs[f'starter_k{band}'].append((r['date'], ours, r['price'], r['y']))
+            pairs['starter_k_all'].append((r['date'], ours, r['price'], r['y']))
         elif r.get('series') == 'KXMLBGAME':
             g = game.get(pk)
             if g is None:

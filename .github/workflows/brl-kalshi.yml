@@ -57,7 +57,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           BRL_KALSHI_SERIES: ${{ matrix.series }}
-          BRL_KALSHI_PROP_LINES: '1 2'
+          BRL_KALSHI_PROP_LINES: 'KXMLBHIT:1,2 KXMLBTB:2 KXMLBHR:1 KXMLBHRR:1,2 KXMLBRBI:1,2'   # strikeouts: every line
           BRL_KALSHI_RATE: '6'
           BRL_KALSHI_MINUTES: '330'
         run: python tools/brl_kalshi_history.py

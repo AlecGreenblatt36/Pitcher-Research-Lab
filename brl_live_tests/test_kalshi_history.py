@@ -35,3 +35,11 @@ def test_describe_reads_props_and_keeps_game_markets_as_given():
 def test_names_match_across_accents_and_suffixes():
     assert kh.norm_name('José Ramírez') == kh.norm_name('Jose Ramirez')
     assert kh.norm_name('Victor Mesa Jr.') == kh.norm_name('Victor Mesa')
+
+
+def test_prop_lines_per_series():
+    spec = 'KXMLBHIT:1,2 KXMLBTB:2'
+    assert kh.prop_lines(spec, 'KXMLBHIT') == [1, 2]
+    assert kh.prop_lines(spec, 'KXMLBTB') == [2]
+    assert kh.prop_lines(spec, 'KXMLBKS') == []                          # every strikeout line
+    assert kh.prop_lines('1 2', 'KXMLBHIT') == [1, 2]                     # the old form still works
