@@ -2717,8 +2717,7 @@ def matchup_family(T: dict, params: dict, stage) -> dict:
     elif final:
         T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | ((T['season'] == 2026) & (T['day'] >= date(2026, 8, 1).toordinal())))
     else:
-        post_seasons = tuple(int(x) for x in params.get('post_seasons', (2023, 2024, 2025)))
-    T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | (post_mode & (T['season'] >= 2023) & (T['season'] <= max(post_seasons))))
+        T = take(T, np.isin(T['season'], (2023, 2024, 2025)))   # restored: this study never took a postseason flag (c5e52f180 broke it)
     F = rebuild(T)
     keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['strikes'] >= 0) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
     T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
@@ -2867,8 +2866,7 @@ def map_stability_study(T: dict, params: dict, stage) -> dict:
     per hitter, the correlation between periods across those 147 points; the split-half correlation within 2025 bounds
     what any map from one season's pitches can repeat; their ratio is the trait share."""
     res = {}
-    post_seasons = tuple(int(x) for x in params.get('post_seasons', (2023, 2024, 2025)))
-    T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | (post_mode & (T['season'] >= 2023) & (T['season'] <= max(post_seasons))))
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))   # restored: this study never took a postseason flag (c5e52f180 broke it)
     F = rebuild(T)
     keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['strikes'] >= 0) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
     T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
@@ -3146,8 +3144,7 @@ def matchup_pa(T: dict, params: dict, stage) -> dict:
     strikeouts and walks beyond both players' earlier strikeout and walk rates? Coefficients and out-of-sample log loss
     by game-parity cross-fitting within 2025."""
     res = {}
-    post_seasons = tuple(int(x) for x in params.get('post_seasons', (2023, 2024, 2025)))
-    T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | (post_mode & (T['season'] >= 2023) & (T['season'] <= max(post_seasons))))
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))   # restored: this study never took a postseason flag (c5e52f180 broke it)
     F = rebuild(T)
     keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['strikes'] >= 0) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
     Tk = take(T, keep); Fk = {k: v[keep] for k, v in F.items()}
@@ -3824,8 +3821,7 @@ def value_study(T: dict, params: dict, stage) -> dict:
     if final:      # VALUE-01F: maps from 2023-2025, scored on the 2026 pitches from August 1 (the untouched set)
         T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | ((T['season'] == 2026) & (T['day'] >= date(2026, 8, 1).toordinal())))
     else:
-        post_seasons = tuple(int(x) for x in params.get('post_seasons', (2023, 2024, 2025)))
-    T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | (post_mode & (T['season'] >= 2023) & (T['season'] <= max(post_seasons))))
+        T = take(T, np.isin(T['season'], (2023, 2024, 2025)))   # restored: this study never took a postseason flag (c5e52f180 broke it)
     F = rebuild(T)
     keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
     T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
@@ -4865,8 +4861,7 @@ def pressure_study(T: dict, H, params: dict, stage) -> dict:
     game-bootstrap intervals."""
     res = {}
     import pandas as pd
-    post_seasons = tuple(int(x) for x in params.get('post_seasons', (2023, 2024, 2025)))
-    T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | (post_mode & (T['season'] >= 2023) & (T['season'] <= max(post_seasons))))
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))   # restored: this study never took a postseason flag (c5e52f180 broke it)
     F = rebuild(T)
     keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
     T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
@@ -5954,8 +5949,7 @@ def value_whiff_study(T: dict, params: dict, stage) -> dict:
     if final:
         T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | ((T['season'] == 2026) & (T['day'] >= date(2026, 8, 1).toordinal())))
     else:
-        post_seasons = tuple(int(x) for x in params.get('post_seasons', (2023, 2024, 2025)))
-    T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | (post_mode & (T['season'] >= 2023) & (T['season'] <= max(post_seasons))))
+        T = take(T, np.isin(T['season'], (2023, 2024, 2025)))   # restored: this study never took a postseason flag (c5e52f180 broke it)
     F = rebuild(T)
     keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
     T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
@@ -6143,8 +6137,7 @@ def value3_study(T: dict, params: dict, stage) -> dict:
     tightening capped at three extra high spots (ADAPT-01's data rarely go beyond). Development data (2025)."""
     res = {}
     sgm = float(params.get('sigma', 0.6)); tighten = float(params.get('tighten', 0.065))
-    post_seasons = tuple(int(x) for x in params.get('post_seasons', (2023, 2024, 2025)))
-    T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | (post_mode & (T['season'] >= 2023) & (T['season'] <= max(post_seasons))))
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))   # restored: this study never took a postseason flag (c5e52f180 broke it)
     F = rebuild(T)
     keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['balls'] <= 3) & (T['strikes'] >= 0) & (T['strikes'] <= 2) & ~((T['bunt_pa'] == 1) & (T['last_in_pa'] == 1))
     T = take(T, keep); F = {k: v[keep] for k, v in F.items()}
@@ -6996,8 +6989,7 @@ def drift_study(T: dict, params: dict, stage) -> dict:
     window, against his earlier windows, predict his strikeouts and walks in the next window beyond his recent and
     earlier strikeout and walk rates, and better than the raw chase rate's change? Train 2023-2024, score 2025."""
     res = {}
-    post_seasons = tuple(int(x) for x in params.get('post_seasons', (2023, 2024, 2025)))
-    T = take(T, np.isin(T['season'], (2023, 2024, 2025)) | (post_mode & (T['season'] >= 2023) & (T['season'] <= max(post_seasons))))
+    T = take(T, np.isin(T['season'], (2023, 2024, 2025)))   # restored: this study never took a postseason flag (c5e52f180 broke it)
     F = rebuild(T)
     keep = F['ok'] & (T['group'] >= 0) & (T['call'] <= 2) & (T['balls'] >= 0) & (T['strikes'] >= 0)
     Tk = take(T, keep); F = {k: v[keep] for k, v in F.items()}

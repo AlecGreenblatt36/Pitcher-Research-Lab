@@ -4,7 +4,7 @@ on:
   push:
     branches: [diag/fit-arms]
 permissions:
-  contents: write
+  contents: read
 concurrency:
   group: brl-fit-arms
   cancel-in-progress: false
@@ -15,11 +15,15 @@ jobs:
       arms: ${{ steps.plan.outputs.arms }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, verified from the action repository on October 9, 2026
+        with:
+          persist-credentials: false
       - id: plan
         run: echo "arms=$(python3 -c 'import json;print(json.dumps(json.load(open("tools/fit_arms.json"))["arms"]))')" >> "$GITHUB_OUTPUT"
   fit:
     needs: plan
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     timeout-minutes: 330
     strategy:
       fail-fast: false
@@ -29,6 +33,8 @@ jobs:
     name: fit (${{ matrix.arm.name }})
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, verified from the action repository on October 9, 2026
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'
@@ -46,9 +52,13 @@ jobs:
     needs: fit
     if: always()
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, verified from the action repository on October 9, 2026
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'

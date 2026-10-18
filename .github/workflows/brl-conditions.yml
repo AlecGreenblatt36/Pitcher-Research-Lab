@@ -4,13 +4,17 @@ on:
   push:
     branches: [diag/conditions]
 permissions:
-  contents: write
+  contents: read
 jobs:
   conditions:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, verified from the action repository on October 9, 2026
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'

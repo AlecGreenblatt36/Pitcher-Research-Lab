@@ -8,7 +8,7 @@ on:
   push:
     branches: [diag/check]
 permissions:
-  contents: write
+  contents: read
 concurrency:
   group: brl-public-phone-check
   cancel-in-progress: false
@@ -16,6 +16,8 @@ jobs:
   check:
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, verified from the action repository on October 9, 2026

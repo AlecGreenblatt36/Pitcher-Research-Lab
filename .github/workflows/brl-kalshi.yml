@@ -4,7 +4,7 @@ on:
   push:
     branches: [diag/kalshi]
 permissions:
-  contents: write
+  contents: read
 concurrency:
   group: brl-kalshi-${{ github.run_id }}
   cancel-in-progress: false
@@ -23,6 +23,8 @@ jobs:
   kalshi:
     needs: plan
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     timeout-minutes: 350
     strategy:
       fail-fast: false
