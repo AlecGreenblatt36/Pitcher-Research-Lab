@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 367,
- "rows": 370,
+ "experiments": 368,
+ "rows": 371,
  "records": {
   "ACC-01": [
    {
@@ -6141,6 +6141,22 @@
     "runs": [],
     "frozen_commits": [],
     "status": "failed (gate 1, 2025 top bin on 21 rows); BULLPEN-11B to confirm on 2024"
+   }
+  ],
+  "LEG-01": [
+   {
+    "id": "LEG-01",
+    "columns": {
+     "ID": "LEG-01",
+     "Attempt": "The leg book: every bet leg the simulator prices, scored on replays where neither the at-bat model nor any fitted table saw the replayed season. Alec's aim (October 18): parlay legs that are confident and verified more accurate than the market. Design: at-bat model chain67-both (fitted on 2023-2024; 2025 tuned its regularization and calibration; 2026 never seen), so 2026 is the clean test season and 2025 a secondary one. Every table fitted on the other season or on 2023-2024, including the starter leash (earlier replays used the replayed season's own leash table, leash_fit_<season>; noted as an in-sample input for starter exits). Live settings otherwise: roster pools, BULLPEN-10 tables, chain pitch counts, dropout 0, 1,000 worlds, hitter and starter lines (tags leg01-<season>). Legs: winner, run line, total over 6.5 to 11.5, team total over 2.5 to 4.5, a run in the 1st, first-five winner and total, hitter 1+ hit, 2+ hits, home run, 2+ total bases, 1+ strikeout, 1+ walk, starter strikeouts over 3.5 to 7.5, outs over 14.5 to 18.5, hits allowed over 4.5 and 5.5. Scoring: tools/brl_leg_book.py (calibration by bin, Brier, a logistic recalibration per leg type fitted on one season and applied to the other, cross-game parlays of verified legs, and win and total against the closing line where we hold it)",
+     "Disposition and evidence": "**Registered in the commit that added this row, before the runs.** A (leg type, side, bin) is verified when, in both seasons, its hit rate is within the larger of 2 points and 1.96 standard errors of the stated chance with 300 or more legs. Confident legs are verified bins at 70% and up. Prediction: hitter 1+ hit, team scores 1+, starter outs under and total-over legs at low lines verify at 70% and up; home-run yes legs never reach 70%; reliever-driven legs are not in the book. A recalibration map is adopted for the sheet's stated chances only where it lowers the 2026 Brier with a date-bootstrap interval excluding zero (fitted on 2025). Parlays: random 2-, 3- and 5-leg parlays of verified legs from different games must hit within 2 standard errors of the product of their chances. Market: win and over chances against the closing line on the same games, Brier difference with a date bootstrap; no claim of beating the market without an interval excluding zero",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "TOTALS-05": [
