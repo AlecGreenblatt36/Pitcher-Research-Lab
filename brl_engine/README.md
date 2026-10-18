@@ -21,8 +21,9 @@ Receipts of live runs: `diagnostics/v2_receipt.json` on the `brl-live-data` bran
 `model.json` names the plate-appearance model the live runtime uses. `locked-pa-2026-v1` is the
 locked model inside the data package. Any other name must have a manifest in `models/<name>.json`
 (hashes, parameters, feature list, benchmark metrics) written by the fit job, with its sealed bundle
-at `private/models/<name>.enc` on the ledger branch. The current live model is `pa-2026-v2-physics`:
-the locked features plus pitch-physics features (`runtime/research_lab/pa_model/physics.py`).
+at `private/models/<name>.enc` on the ledger branch. `model.json` is the source of truth for the live model (on
+October 18, 2026: `retrain04-rt`, the pitch-chain settings refit on 2023-2025, with pitch-physics features from
+`runtime/research_lab/pa_model/physics.py` and the pitch chain from `runtime/research_lab/pa_model/pitch_chain.py`).
 
 ## Lanes (all run inside GitHub Actions, where the key and the sealed data live; only metrics leave)
 

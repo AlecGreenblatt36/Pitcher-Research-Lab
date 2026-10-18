@@ -29,6 +29,7 @@ jobs:
           node-version: "20"
 
       - name: Install Python dependencies
+        working-directory: pitcher_app
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
@@ -40,6 +41,7 @@ jobs:
         run: python -m compileall -q -x '\.venv|case_studies' .
 
       - name: Check JavaScript syntax
+        working-directory: pitcher_app
         shell: bash
         run: |
           for file in static/*.js; do
@@ -47,9 +49,11 @@ jobs:
           done
 
       - name: Run project validator
+        working-directory: pitcher_app
         run: python validate_project.py
 
       - name: Run regression suite
+        working-directory: pitcher_app
         env:
           PRL_SCREENSHOT_DIR: outputs/browser-screenshots
         run: pytest -q
@@ -59,6 +63,25 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: browser-screenshots
-          path: outputs/browser-screenshots
+          path: pitcher_app/outputs/browser-screenshots
           retention-days: 7
           if-no-files-found: ignore
+
+  model:
+    # The model's own tests (brl_engine/tests, brl_live_tests) on every push; the public check runs them again after
+    # each live run. No secrets and no data files: the tests use made-up inputs.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, verified from the action repository on October 9, 2026
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Install the model's dependencies
+        run: python -m pip install --disable-pip-version-check "numpy>=2,<3" "pandas>=2,<4" "scikit-learn>=1.5,<2" "scipy>=1.12,<2" joblib requests cryptography==46.0.4 pytest==9.0.2
+      - name: Run the model's tests
+        run: cd /tmp && PYTHONPATH="$GITHUB_WORKSPACE/brl_engine/runtime:$GITHUB_WORKSPACE" python -m pytest -c /dev/null --rootdir="$GITHUB_WORKSPACE" --import-mode=importlib "$GITHUB_WORKSPACE/brl_engine/tests" "$GITHUB_WORKSPACE/brl_live_tests" -q -p no:cacheprovider

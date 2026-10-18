@@ -371,7 +371,7 @@ Training-independent does not mean untouched: earlier project choices already us
 
 ## Reference contracts
 
-Public implementation: brl_live/entrypoint.py, box_runner.py, boxscore.py, box_page.py, history_refresh.py and verified_store.py. The encrypted runtime contains the unchanged provider/manager/game engine, cloud contracts and baseline. Tests and milestone evidence are recorded in LEDGER.md; recovery instructions are in HANDOFF.md.
+Public implementation (as of October 6; brl_engine/entrypoint.py has launched the live runs since October 7): box_runner.py, boxscore.py, box_page.py, history_refresh.py and verified_store.py. The encrypted runtime contains the unchanged provider/manager/game engine, cloud contracts and baseline. Tests and milestone evidence are recorded in LEDGER.md; recovery instructions are in HANDOFF.md.
 
 Public Statcast field documentation: https://baseballsavant.mlb.com/csv-docs
 

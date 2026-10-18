@@ -83,6 +83,18 @@ detector list, Hallmark's audit tells and Humanizer's writing patterns).
   system generator for new apps). None of the ten touches forecast accuracy; the model is measured only by replays.
 - Ponytail's audit checklist was run over the forecast path by a separate reviewer; its findings are recorded below once read.
 
+Layout cleanup the same afternoon (Alec: the files mixed the model with the old app and might hide duplicates):
+- The old Pitcher Research Lab app (Flask, SQLite, its tests and Windows launchers) moved to `pitcher_app/` with its own
+  README; CI runs its tests there (42 pass, validator passes). The repository root now holds only the model.
+- Removed four modules nothing imports or runs: brl_live/entrypoint.py (the pre-October 7 launcher),
+  brl_engine/runtime/cloud/page.py, pa_model/cli.py and pa_model/synthetic.py. brl_live/bootstrap.py stays (the live
+  entrypoint restores the data package with it).
+- CI gained a `model` job: the model's 576 tests on every push (the public check still runs them after each live run).
+- Duplicate files: four brl_replay tables are byte copies of brl_live tables (environment, hazard_correction v1 and v2,
+  pitch counts by outcome). They are kept on purpose: replays read frozen copies so a later live refit cannot change a
+  past replay. The per-model context tables in brl_replay/ are inputs of recorded replays and stay for the same reason.
+- brl_engine/README named an old live model; it now points at model.json (retrain04-rt).
+
 ## October 17, overnight (Alec, 11:32 pm: no yes or no needed for anything that improves the model; Game 4 moved to October 17)
 
 - RETRAIN-04 passed and is live as retrain04-rt from 12:41 a.m. Eastern: the chain67 settings refit on 2023-2025 with

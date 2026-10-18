@@ -129,7 +129,8 @@ def check_repository_hygiene() -> list[str]:
         if path.suffix.lower() in {".exe", ".dll"}:
             failures.append(f"Binary file should not be committed: {relative}")
 
-    gitignore = ROOT / ".gitignore"
+    # the app lives in pitcher_app/ inside the repository; the ignore file is the repository's
+    gitignore = next((p for p in (ROOT / ".gitignore", ROOT.parent / ".gitignore") if p.exists()), ROOT / ".gitignore")
     if not gitignore.exists():
         failures.append(".gitignore is missing.")
     else:
