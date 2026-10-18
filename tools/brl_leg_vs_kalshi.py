@@ -55,7 +55,7 @@ def kalshi_rows(paths):
 
 
 def replay_index(paths):
-    hit, game, start = {}, {}, {}
+    hit, game, start, by_teams = {}, {}, {}, defaultdict(list)
     for pat in paths:
         for f in sorted(glob.glob(pat)):
             with gzip.open(f, 'rt') as fh:
@@ -64,13 +64,14 @@ def replay_index(paths):
                     pk = int(g['game_pk'])
                     n = g.get('n') or 1
                     game[pk] = {'date': g['date'], 'p_home': g['home_wins'] / max(n - (g.get('ties') or 0), 1), 'home': g['home'], 'away': g['away']}
+                    by_teams[(g['date'], str(g['away']) + str(g['home']))].append(pk)
                     for x in g.get('hitters') or []:
                         hit[(pk, int(x['batter']))] = x
                     for side in ('away', 'home'):
                         st = (g.get('starters') or {}).get(side) or {}
                         if st.get('pitcher'):
                             start[(pk, int(st['pitcher']))] = st
-    return hit, game, start
+    return hit, game, start, by_teams
 
 
 def compare(pairs, draws=2000, seed=5):
@@ -94,7 +95,7 @@ def compare(pairs, draws=2000, seed=5):
     out = {'n': int(len(y)), 'dates': int(len(keys)), 'brier_ours': round(float(((po - y) ** 2).mean()), 5), 'brier_kalshi': round(float(((pk - y) ** 2).mean()), 5),
            'difference': round(float(diff.mean()), 6), 'ci': [round(float(np.quantile(boot, .025)), 6), round(float(np.quantile(boot, .975)), 6)],
            'calibration': cal, 'disagree': {}}
-    for gap in (0.05, 0.10):
+    for gap in (0.03, 0.05, 0.10):
         m = np.abs(po - pk) >= gap
         if not m.any():
             continue
@@ -103,9 +104,14 @@ def compare(pairs, draws=2000, seed=5):
         win = np.where(buy_yes, y, 1 - y)
         profit = (win - cost - fee(cost))[m]
         profit_half = (win - cost - fee(cost) / 2)[m]
+        km, im = np.unique(d[m], return_inverse=True)
+        sp = np.bincount(im, weights=profit, minlength=len(km)); sc = np.bincount(im, weights=cost[m], minlength=len(km))
+        bidx = rng.integers(0, len(km), size=(draws, len(km)))
+        bret = sp[bidx].sum(1) / sc[bidx].sum(1)
         out['disagree'][f'{int(gap * 100)}pts'] = {'n': int(m.sum()), 'our_side_right': round(float(win[m].mean()), 4),
                                                    'price_paid_mean': round(float(cost[m].mean()), 4),
                                                    'return_per_dollar': round(float(profit.sum() / cost[m].sum()), 4),
+                                                   'return_ci': [round(float(np.quantile(bret, .025)), 4), round(float(np.quantile(bret, .975)), 4)],
                                                    'return_per_dollar_half_fee': round(float(profit_half.sum() / cost[m].sum()), 4)}
     return out
 
@@ -116,7 +122,7 @@ def main():
     ap.add_argument('--kalshi', action='append', required=True)
     ap.add_argument('--out', required=True)
     a = ap.parse_args()
-    hit, game, start = replay_index(a.replay)
+    hit, game, start, by_teams = replay_index(a.replay)
     rows = kalshi_rows(a.kalshi)
     pairs = defaultdict(list); counts = defaultdict(int)
     for r in rows:
@@ -151,6 +157,13 @@ def main():
             pairs['starter_k_all'].append((r['date'], ours, r['price'], r['y']))
         elif r.get('series') == 'KXMLBGAME':
             g = game.get(pk)
+            if g is not None and str(g['away']) + str(g['home']) != r.get('teams'):
+                # rows fetched before October 18 matched a game by start time alone and could name a neighbour that
+                # started the same minute; the date and the two team codes find the right one (one game that day)
+                twins = by_teams.get((r['date'], r.get('teams')), [])
+                if len(twins) != 1:
+                    counts['game_teams_unmatched'] += 1; continue
+                pk = twins[0]; g = game[pk]; counts['game_rematched_by_teams'] += 1
             if g is None:
                 counts['game_no_replay_row'] += 1; continue
             team = str(r['ticker']).rsplit('-', 1)[-1]
@@ -160,6 +173,8 @@ def main():
             is_away = teams.startswith(team) and not teams.endswith(team)
             if not (is_home or is_away):
                 counts['game_side_unknown'] += 1; continue
+            if is_away:
+                counts['game_away_market_skipped'] += 1; continue   # each game once: its home team's market (yes or no)
             ours = g['p_home'] if is_home else 1 - g['p_home']
             pairs['winner'].append((r['date'], ours, r['price'], r['y']))
         else:

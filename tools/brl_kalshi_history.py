@@ -124,13 +124,18 @@ class MLB:
 
     def games(self, date: str):
         if date not in self._days:
-            doc = self.get(f'https://statsapi.mlb.com/api/v1/schedule?sportId=1&date={date}&fields=dates,games,gamePk,gameDate,gameType,teams,away,home,team,id,name') or {}
+            doc = self.get(f'https://statsapi.mlb.com/api/v1/schedule?sportId=1&date={date}&hydrate=team&fields=dates,games,gamePk,gameDate,gameType,teams,away,home,team,id,name,abbreviation') or {}
             self._days[date] = [g for d in doc.get('dates') or [] for g in d.get('games') or []]
         return self._days[date]
 
-    def game_for(self, start: datetime):
+    def game_for(self, start: datetime, teams: str | None = None):
+        """The game whose two team codes, away then home, spell the ticker's team string, nearest the ticker's start time.
+        Several games often start at the same minute, so the time alone picks the wrong one (before October 18 it did, for
+        about one game in seven); a game whose teams do not match is never used."""
         best, gap = None, None
         for g in self.games(start.astimezone(ET).date().isoformat()):
+            if teams is not None and abbr(g, 'away') + abbr(g, 'home') != teams:
+                continue
             t = datetime.fromisoformat(g['gameDate'].replace('Z', '+00:00'))
             d = abs((t - start).total_seconds())
             if gap is None or d < gap:
@@ -148,6 +153,16 @@ class MLB:
                         names[norm_name(person.get('fullName'))] = (int(person['id']), side)
             self._box[game_pk] = names
         return self._box[game_pk].get(norm_name(name))
+
+
+# Kalshi's team codes where MLB's abbreviation differs (none known as of October 18, 2026; MLB uses AZ, ATH, CWS, WSH too)
+KALSHI_CODE = {}
+
+
+def abbr(game: dict, side: str) -> str:
+    team = ((game.get('teams') or {}).get(side) or {}).get('team') or {}
+    a = str(team.get('abbreviation') or '')
+    return KALSHI_CODE.get(a, a)
 
 
 def describe(mk: dict) -> dict:
@@ -207,7 +222,7 @@ def main():
         d = describe(mk)
         if d['kind'] == 'prop' and only_lines and d['at_least'] not in only_lines:
             counts['skipped_line'] += 1; continue
-        g = mlb.game_for(start)
+        g = mlb.game_for(start, teams)
         if not g:
             counts['no_game'] += 1; continue
         row = {'series': series, 'ticker': mk['ticker'], 'event': mk.get('event_ticker'), 'game_pk': int(g['gamePk']), 'game_type': g.get('gameType'),

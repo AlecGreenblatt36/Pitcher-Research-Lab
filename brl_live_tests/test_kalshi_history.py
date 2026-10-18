@@ -43,3 +43,13 @@ def test_prop_lines_per_series():
     assert kh.prop_lines(spec, 'KXMLBTB') == [2]
     assert kh.prop_lines(spec, 'KXMLBKS') == []                          # every strikeout line
     assert kh.prop_lines('1 2', 'KXMLBHIT') == [1, 2]                     # the old form still works
+
+
+def test_game_matched_by_teams_not_only_time():
+    day = [{'gamePk': 1, 'gameDate': '2026-03-29T17:35:00Z', 'teams': {'away': {'team': {'abbreviation': 'BAL'}}, 'home': {'team': {'abbreviation': 'MIN'}}}},
+           {'gamePk': 2, 'gameDate': '2026-03-29T17:35:00Z', 'teams': {'away': {'team': {'abbreviation': 'KC'}}, 'home': {'team': {'abbreviation': 'ATL'}}}},
+           {'gamePk': 3, 'gameDate': '2026-03-29T17:35:00Z', 'teams': {'away': {'team': {'abbreviation': 'TEX'}}, 'home': {'team': {'abbreviation': 'PHI'}}}}]
+    mlb = kh.MLB(lambda url: {'dates': [{'games': day}]})
+    start, teams = kh.event_start('KXMLBGAME-26MAR291335KCATL')
+    assert mlb.game_for(start, teams)['gamePk'] == 2
+    assert mlb.game_for(start, 'NYYSF') is None                         # no game with those teams: never a neighbour by time
