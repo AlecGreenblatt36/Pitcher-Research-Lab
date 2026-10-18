@@ -151,11 +151,16 @@
         )?.dataset?.viewPanel;
 
 
-      if(controls){
+      if(
+        controls &&
+        controls.classList.contains("context-hidden")
+      ){
 
-        controls.classList.toggle(
-          "context-hidden",
-          active!=="arsenal" && active!=="release"
+        // Guard the mutation. The observer watches class attributes, so
+        // repeatedly removing an absent class can create a self-sustaining
+        // MutationObserver loop in Chromium and freeze every navigation click.
+        controls.classList.remove(
+          "context-hidden"
         );
 
       }
