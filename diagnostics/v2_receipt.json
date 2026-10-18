@@ -1,12 +1,12 @@
 {
- "created_at": "2026-10-18T13:36:25.784147+00:00",
- "status": "iteration_completed",
+ "created_at": "2026-10-18T13:50:47.915595+00:00",
+ "status": "blocked",
  "runtime": "brl_engine (public code, sealed data)",
  "ledger_branch": "brl-live-data",
  "shadow": false,
  "live_forecasts_created": 0,
  "raw_data_published": false,
- "stage": "complete",
+ "stage": "history_and_forecast_iteration",
  "secret_present": true,
  "scheduled_games": [
   {
@@ -24,250 +24,39 @@
   "fitted_at": "2026-10-17T04:14:31.818883+00:00",
   "physics_features": 30
  },
- "forecasts": 87,
- "box_forecasts_created": 0,
- "box_forecasts": 82,
- "player_scored_games": 15,
- "scored_games": 15,
- "skill_scored_games": 14,
- "skill_baseline_prior_games": 47,
- "history_coverage_through": "2026-10-17",
- "history_added_PA": 2398,
- "history_refresh_note": null,
- "history_day_notes": {},
- "pa_model": {
-  "name": "retrain04-rt",
-  "sha256": "ed25de37b326c3938b151abe785a57d566de176a7a38b04d1efd81cdcb11fd75",
-  "physics": {
-   "seasons": {
-    "2025": {
-     "rows": 186562,
-     "through": "2025-11-01"
-    },
-    "2026": {
-     "rows": 186247,
-     "through": "2026-10-17"
-    }
-   },
-   "day_cache_days": 0,
-   "day_cache_rows": 0,
-   "rows": 372809,
-   "through": "2026-10-17",
-   "seasons_mode": "live",
-   "pitch_table": {
-    "seasons": {
-     "2021": {
-      "rows": 719796,
-      "through": "2021-11-02"
-     },
-     "2022": {
-      "rows": 719294,
-      "through": "2022-11-05"
-     },
-     "2023": {
-      "rows": 728808,
-      "through": "2023-11-01"
-     },
-     "2024": {
-      "rows": 721195,
-      "through": "2024-10-30"
-     },
-     "2025": {
-      "rows": 723064,
-      "through": "2025-11-01"
-     },
-     "2026": {
-      "rows": 722839,
-      "through": "2026-10-17"
-     }
-    },
-    "spring": {
-     "2021": {
-      "rows": 43961,
-      "through": "2021-03-30"
-     },
-     "2022": {
-      "rows": 28674,
-      "through": "2022-04-05"
-     },
-     "2023": {
-      "rows": 57298,
-      "through": "2023-03-28"
-     },
-     "2024": {
-      "rows": 54243,
-      "through": "2024-03-26"
-     },
-     "2025": {
-      "rows": 88987,
-      "through": "2025-03-25"
-     },
-     "2026": {
-      "rows": 132967,
-      "through": "2026-03-24"
-     }
-    },
-    "day_cache_days": 0,
-    "day_cache_rows": 0,
-    "rows": 4741126,
-    "through": "2026-10-17"
-   }
+ "reason": "HTTPError: HTTP Error 403: Forbidden",
+ "error_type": "HTTPError",
+ "error_trace": [
+  {
+   "file": "request.py",
+   "function": "urlopen",
+   "line": 215
+  },
+  {
+   "file": "request.py",
+   "function": "open",
+   "line": 521
+  },
+  {
+   "file": "request.py",
+   "function": "http_response",
+   "line": 630
+  },
+  {
+   "file": "request.py",
+   "function": "error",
+   "line": 559
+  },
+  {
+   "file": "request.py",
+   "function": "_call_chain",
+   "line": 492
+  },
+  {
+   "file": "request.py",
+   "function": "http_error_default",
+   "line": 639
   }
- },
- "pitch_bookkeeping_prior_PA": 206055,
- "pitch_bookkeeping_season_games": 4939,
- "engine_rules_changed": false,
- "model_parameters_changed": false,
- "simulation_adjustments": "context offsets (brl_live/context_offsets.json)",
- "live_updates": 1,
- "live_update_errors": 0,
- "market_receipt": {
-  "date": "2026-10-18",
-  "schedule_games": 1,
-  "lines_seen": 1,
-  "matched": 1,
-  "captured_pregame": 1,
-  "books": {
-   "games_with_consensus": 1,
-   "mean_books": 8.0
-  },
-  "events": 1,
-  "competition_keys": [
-   "attendance",
-   "broadcast",
-   "broadcasts",
-   "competitors",
-   "conferenceCompetition",
-   "date",
-   "format",
-   "geoBroadcasts",
-   "highlights",
-   "id",
-   "neutralSite",
-   "notes",
-   "odds",
-   "playByPlayAvailable",
-   "recent",
-   "series",
-   "startDate",
-   "status",
-   "tickets",
-   "timeValid",
-   "type",
-   "uid",
-   "venue",
-   "wasSuspended"
-  ],
-  "odds_keys": [
-   "awayTeamOdds",
-   "details",
-   "footer",
-   "header",
-   "homeTeamOdds",
-   "link",
-   "moneyline",
-   "overUnder",
-   "pointSpread",
-   "provider",
-   "spread",
-   "total"
-  ],
-  "odds_subkeys": {
-   "provider": [
-    "displayName",
-    "id",
-    "logos",
-    "name",
-    "priority"
-   ],
-   "awayTeamOdds": [
-    "favorite",
-    "favoriteAtOpen",
-    "team",
-    "underdog"
-   ],
-   "homeTeamOdds": [
-    "favorite",
-    "favoriteAtOpen",
-    "team",
-    "underdog"
-   ],
-   "moneyline": [
-    "away",
-    "displayName",
-    "home",
-    "shortDisplayName"
-   ],
-   "pointSpread": [
-    "away",
-    "displayName",
-    "home",
-    "shortDisplayName"
-   ],
-   "total": [
-    "displayName",
-    "over",
-    "shortDisplayName",
-    "under"
-   ],
-   "link": [
-    "href",
-    "isExternal",
-    "isPremium",
-    "language",
-    "rel",
-    "shortText",
-    "text",
-    "tracking"
-   ],
-   "header": [
-    "logo",
-    "text"
-   ],
-   "footer": [
-    "disclaimer"
-   ]
-  },
-  "moneyline_shape": {
-   "displayName": "str",
-   "shortDisplayName": "str",
-   "home": [
-    "close",
-    "open"
-   ],
-   "away": [
-    "close",
-    "open"
-   ]
-  },
-  "moneyline_home_shape": {
-   "close": [
-    "link",
-    "odds"
-   ],
-   "open": [
-    "odds"
-   ]
-  }
- },
- "team_results_rows": 9718,
- "team_results_meta": {
-  "files": [
-   "team_results_2023.json.gz",
-   "team_results_2024.json.gz",
-   "team_results_2025.json.gz",
-   "team_results_2026.json.gz"
-  ],
-  "row_keys": [
-   "schedule document"
-  ],
-  "skipped": 0
- },
- "storage_read_audit": {
-  "contents_verified": 47,
-  "blob_fallbacks": 36,
-  "bytes_verified": 200642149,
-  "requests": 145,
-  "rate_limit_remaining": 4851
- }
+ ],
+ "preserved_previous_forecasts": false
 }
