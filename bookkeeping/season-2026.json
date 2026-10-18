@@ -1,28 +1,28 @@
 {
  "schema": "brl.bookkeeping-season-receipt.v1",
  "year": 2026,
- "through": "2026-10-15",
- "games": 2461,
- "plate_appearances": 186172,
- "with_pitch_list": 185746,
- "with_contact": 167695,
- "fetched_this_run": 2,
+ "through": "2026-10-17",
+ "games": 2462,
+ "plate_appearances": 186247,
+ "with_pitch_list": 185821,
+ "with_contact": 167765,
+ "fetched_this_run": 1,
  "failures": [],
- "cipher_sha256": "c55adb500d250db9c5e740f613b288f13bdcfb2815dcc6ed6da27dbe843692ac",
- "cipher_bytes": 5518568,
- "plaintext_gzip_bytes": 5518532,
- "sealed_at": "2026-10-16T04:11:38.518239+00:00",
+ "cipher_sha256": "a0c783e08b39cecd02593b1db555869acf5081e987d14a903a24d87e56977103",
+ "cipher_bytes": 5520819,
+ "plaintext_gzip_bytes": 5520783,
+ "sealed_at": "2026-10-18T07:54:45.516631+00:00",
  "path": "private/bookkeeping/season-2026.enc",
  "format": "AES-256-GCM; BRLAESG1 header; 12-byte nonce; AAD BRL:bookkeeping-season-2026; gzip JSON inside",
  "study": {
   "path": "private/statcast/season-2026.enc",
   "purpose": "pitch-physics-season-2026",
-  "games": 2461,
-  "plate_appearances": 186172,
-  "pitches": 722539,
-  "with_hit_measurement": 126118,
-  "cipher_sha256": "8517eb0a43233b818cf94a7c4a912f27335ab89aee07d37c59aa000666ea6493",
-  "cipher_bytes": 21729022,
+  "games": 2462,
+  "plate_appearances": 186247,
+  "pitches": 722839,
+  "with_hit_measurement": 126170,
+  "cipher_sha256": "806416e8639690c6c52f1d813d793834f3ad745d1c089db981a9aae59a1da851",
+  "cipher_bytes": 21738048,
   "pitch_fields": [
    "type",
    "code",
@@ -54,7 +54,7 @@
  "physics_table": {
   "path": "private/statcast/physics-2026.enc",
   "purpose": "physics-table-season-2026",
-  "rows": 186172,
+  "rows": 186247,
   "columns": [
    "date_key",
    "game_pk",
@@ -88,7 +88,14 @@
    "outcome",
    "run_value"
   ],
-  "cipher_sha256": "93ab7ec4dada9fefbd8d54bdc6894e2809c2cd441e31862e82b99ec26ed508b1",
-  "cipher_bytes": 4934658
+  "cipher_sha256": "a1009c43b3202ec434efc75a869b0123bb3fc3fe9cdf018d7025968ea7c9a16a",
+  "cipher_bytes": 4936661
+ },
+ "pitch_table": {
+  "path": "private/statcast/pitches-2026.enc",
+  "purpose": "pitch-table-season-2026",
+  "rows": 722839,
+  "cipher_sha256": "ecd6c19718847a6e69a02028a0d35b6faa489db39ba058ca56a0956a5dfd0ff0",
+  "cipher_bytes": 17488815
  }
 }
