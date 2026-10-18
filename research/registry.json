@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 368,
- "rows": 371,
+ "experiments": 369,
+ "rows": 372,
  "records": {
   "ACC-01": [
    {
@@ -6157,6 +6157,22 @@
     "runs": [],
     "frozen_commits": [],
     "status": "registered"
+   }
+  ],
+  "KALSHI-01": [
+   {
+    "id": "KALSHI-01",
+    "columns": {
+     "ID": "KALSHI-01",
+     "Attempt": "Kalshi's settled MLB markets with their last pregame prices, matched to official game and player ids: the market the leg book is judged against for props (hits 1+ and 2+, hits + runs + RBIs, RBIs) and game markets (winner, run line, total runs, a run in the first inning). tools/brl_kalshi_history.py, workflow BRL Kalshi history (push to diag/kalshi; series in tools/kalshi_series.txt, one job per series or date window): every settled market from Kalshi's public API (historical endpoint before its cutoff, live endpoint after), the last trade before first pitch and the volume-weighted price of the final hour, MLB's game id by date and start time and the player's id from MLB's box score. Public market data only; no account, no key, paced at 6 requests a second per job, two jobs at a time",
+     "Disposition and evidence": "Data lane, no gates. Rows with no trade before first pitch are kept with an empty price and left out of any comparison; the receipt counts them",
+     "Delta corrected Brier, 2026": "running"
+    },
+    "registered_before_run": false,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "running"
    }
   ],
   "TOTALS-05": [
