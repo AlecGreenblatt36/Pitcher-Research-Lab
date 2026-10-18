@@ -51,6 +51,15 @@ from -0.00165 to +0.00072). That interval includes zero; it supports similar dev
 equivalence and not prospective parity. The forward record from October 9, 2026 (FWD-02 in the ledger) is what will
 decide.
 
+The leg book (LEG-01, October 18) scored every leg the simulator prices, about 859,000 a season, on clean replays of
+2025 and 2026 (2026 never seen by the at-bat model; 2025 was its tuning season). A kind of leg at a given chance is
+verified when it hit within 2 points, or 1.96 standard errors, of what we said in both seasons with 300 or more legs each:
+57 cells at 70% and up are, and the page's leg board lists only those. Random slips of verified legs from different games
+landed as often as their multiplied chances said (five legs: 36.7% said, 36.9% hit in 2026). Verified is not underpriced:
+our win chances were level with the closing line and with Kalshi's last pregame trades. One exploratory signal, found after
+looking (buying our side where we differ from the market by 3 points or more), is registered as EDGE-01 and is tested only
+on games after October 18.
+
 Line movement: in those replays, when our model and the opening line differed, the line moved toward our number
 about 7 times in 10 by first pitch, and 68% (2025) and 73% (2026) of the time when the replay used only the previous
 game's lineup and the probable starters (assumed known at the open; the opening line's time is the source's). From

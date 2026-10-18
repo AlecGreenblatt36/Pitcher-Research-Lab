@@ -465,6 +465,20 @@ h2.divide { margin: 26px 0 4px; padding-top: 18px; border-top: 2px solid var(--r
 .edge-list .eg-gap b { font-family: var(--display); font-size: 18px; }
 @media (min-width: 720px) { .edge-list a { grid-template-columns: 1.1fr 1fr 1.4fr 1.2fr; align-items: end; } .edge-list .eg-game, .edge-list .eg-gap { grid-column: auto; } }
 @media (min-width: 1100px) { .edges { max-width: 1120px; } }
+/* LEG-01's leg board: a leg is a button that adds it to the slip line below the list */
+.leg-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.leg-list .leg { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; width: 100%; text-align: left; font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 10px 14px; min-height: 44px; cursor: pointer; }
+.leg-list .leg:hover { background: var(--hover); }
+.leg-list .leg:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
+.leg-list .leg.on { border-color: var(--lamp); box-shadow: inset 0 0 0 1px var(--lamp); }
+.leg-list .lg-text { min-width: 0; overflow-wrap: anywhere; }
+.leg-list .lg-text b { font-family: var(--display); font-weight: 700; font-size: 19px; display: block; }
+.leg-list .lg-text small { color: var(--muted); font-size: 14px; }
+.leg-list .lg-p { font-family: var(--display); font-weight: 700; font-size: 26px; align-self: center; }
+.leg-list .lg-rec, .leg-list .lg-mk { grid-column: 1 / -1; font-size: 14px; color: var(--muted); }
+.slip { margin: 10px 0 0; padding: 9px 12px; border: 1px solid var(--lamp); border-radius: 8px; background: var(--surface); }
+@media (min-width: 720px) { .leg-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1100px) { .legs { max-width: 1120px; } }
 
 /* Postseason series */
 .sr-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
@@ -1826,9 +1840,10 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var have = {}; games.forEach(function (f) { have[String(f.game_pk)] = 1; });
     var rest = (SCHED[day] || []).filter(function (s) { return "RFDLW".indexOf(s.gameType) >= 0 && !have[String(s.gamePk)]; });
     if (rest.length) html += '<h2 class="divide">No number yet</h2><p class="note">Our number comes once both starters are announced.</p><ol class="cards">' + scheduleItems(day, rest) + "</ol>";
-    html += seriesBoard(day) + edgesBoard(games) + '<h2 class="divide">How we have done</h2>' + scorebar() + "</div>";
+    html += seriesBoard(day) + edgesBoard(games) + legBoard(games) + '<h2 class="divide">How we have done</h2>' + scorebar() + "</div>";
     app.innerHTML = html;
     wireDayNav();
+    wireLegBoard(function () { var y = window.scrollY; renderSlate(day); window.scrollTo(0, y); });
     fillSpLines();
   }
   /* ---------- postseason series (brl_live/series.py) ----------
@@ -1955,6 +1970,133 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     /* the live count of line moves shows once there are enough games to mean something */
     h += "</ul>" + (lm && lm.n >= 10 ? '<p class="note">This October: the line moved our way in ' + lm.toward_ours + " of " + lm.n + " games where we differed from the first line we saw.</p>" : "") + "</section>";
     return h;
+  }
+
+  /* ---------- LEG-01: the leg board ----------
+     Every leg the simulator prices for the day's games not yet started, the way the leg book scored them on two seasons
+     re-run with an at-bat model that never saw 2026 (tools/brl_leg_book.py --as-shown). A leg is listed when our chance is
+     LEG_MIN or more and its kind of leg at that chance held up in both seasons (within 2 points or 1.96 standard errors of
+     how often it happened, with 300 or more legs each season). LEG_TABLE is written by tools/brl_leg_table.py:
+     cells["family:side|bin"] = [n, said, hit] for each season, then 1 when verified. null shows nothing. */
+  var LEG_TABLE = {"experiment":"LEG-01","seasons":[2025,2026],"min":0.7,"cells":{"hitter:bb1+:no|0.7":[15525,0.743,0.755,14435,0.742,0.748,1],"hitter:bb1+:no|0.8":[2202,0.821,0.829,2055,0.822,0.807,1],"hitter:hits2+:no|0.7":[21613,0.757,0.753,22095,0.756,0.758,1],"hitter:hits2+:no|0.8":[18224,0.836,0.832,16791,0.836,0.843,1],"hitter:hr:no|0.8":[21140,0.861,0.856,22078,0.86,0.868,1],"hitter:hr:no|0.9":[19554,0.928,0.927,17797,0.927,0.926,1],"hitter:k1+:yes|0.7":[10430,0.742,0.729,9694,0.741,0.734,1],"hitter:k1+:yes|0.8":[1660,0.826,0.824,1724,0.829,0.815,1],"hitter:tb2+:no|0.7":[10570,0.734,0.727,9084,0.733,0.739,1],"runline:away-1.5:no|0.7":[554,0.738,0.722,503,0.733,0.71,1],"runline:home-1.5:no|0.7":[625,0.734,0.702,590,0.734,0.717,1],"starter:bb:over0.5:yes|0.7":[571,0.764,0.762,533,0.765,0.749,1],"starter:bb:over0.5:yes|0.8":[2593,0.859,0.843,2613,0.858,0.869,1],"starter:bb:over0.5:yes|0.9":[1543,0.925,0.91,1451,0.925,0.93,1],"starter:bb:over1.5:yes|0.7":[836,0.739,0.711,755,0.74,0.769,1],"starter:bb:over2.5:no|0.7":[1323,0.745,0.741,1363,0.747,0.741,1],"starter:h:over3.5:yes|0.8":[1205,0.837,0.841,1264,0.835,0.818,1],"starter:h:over4.5:yes|0.7":[446,0.736,0.735,456,0.734,0.697,1],"starter:h:over5.5:no|0.7":[910,0.743,0.752,776,0.74,0.719,1],"starter:h:over6.5:no|0.7":[1820,0.753,0.747,1836,0.752,0.768,1],"starter:h:over6.5:no|0.8":[1621,0.844,0.831,1486,0.841,0.825,1],"starter:h:over6.5:no|0.9":[364,0.936,0.94,455,0.953,0.943,1],"starter:k:over2.5:yes|0.7":[919,0.758,0.748,972,0.757,0.747,1],"starter:k:over2.5:yes|0.9":[1552,0.938,0.934,1378,0.937,0.933,1],"starter:k:over3.5:yes|0.7":[1221,0.749,0.726,1261,0.749,0.739,1],"starter:k:over4.5:yes|0.7":[627,0.745,0.754,523,0.745,0.734,1],"starter:k:over5.5:no|0.7":[1019,0.747,0.769,1038,0.748,0.765,1],"starter:k:over5.5:no|0.8":[634,0.842,0.845,625,0.841,0.85,1],"starter:k:over6.5:no|0.7":[1085,0.754,0.766,1111,0.754,0.757,1],"starter:k:over6.5:no|0.8":[1516,0.85,0.867,1533,0.85,0.864,1],"starter:k:over6.5:no|0.9":[826,0.936,0.932,931,0.942,0.937,1],"starter:k:over7.5:no|0.7":[659,0.756,0.774,589,0.759,0.769,1],"starter:k:over7.5:no|0.8":[1400,0.857,0.846,1407,0.858,0.853,1],"starter:k:over7.5:no|0.9":[2340,0.946,0.945,2446,0.948,0.949,1],"starter:outs:over11.5:yes|0.7":[444,0.761,0.793,454,0.762,0.786,1],"starter:outs:over11.5:yes|0.8":[1688,0.861,0.876,2000,0.86,0.877,1],"starter:outs:over11.5:yes|0.9":[2454,0.934,0.937,2018,0.932,0.929,1],"starter:outs:over12.5:yes|0.7":[1159,0.757,0.77,1375,0.758,0.767,1],"starter:outs:over12.5:yes|0.8":[2237,0.851,0.862,2104,0.848,0.85,1],"starter:outs:over12.5:yes|0.9":[737,0.922,0.921,497,0.921,0.911,1],"starter:outs:over13.5:yes|0.7":[1486,0.755,0.766,1672,0.753,0.751,1],"starter:outs:over13.5:yes|0.8":[1940,0.845,0.849,1638,0.843,0.848,1],"starter:outs:over14.5:yes|0.7":[1783,0.752,0.762,1715,0.748,0.748,1],"starter:outs:over14.5:yes|0.8":[1157,0.84,0.844,920,0.838,0.848,1],"starter:outs:over16.5:no|0.7":[362,0.738,0.776,395,0.737,0.754,1],"starter:outs:over18.5:no|0.8":[2117,0.848,0.866,2382,0.85,0.869,1],"starter:outs:over18.5:no|0.9":[887,0.936,0.945,1077,0.942,0.951,1],"team_total:away:over0.5:yes|0.9":[2111,0.939,0.932,2210,0.943,0.939,1],"team_total:away:over1.5:yes|0.7":[830,0.762,0.776,703,0.765,0.754,1],"team_total:away:over5.5:no|0.7":[1084,0.744,0.725,948,0.742,0.728,1],"team_total:home:over0.5:yes|0.9":[2308,0.945,0.945,2340,0.948,0.943,1],"team_total:home:over1.5:yes|0.7":[571,0.769,0.776,452,0.768,0.779,1],"team_total:home:over1.5:yes|0.8":[1653,0.844,0.848,1726,0.848,0.844,1],"team_total:home:over2.5:yes|0.7":[898,0.741,0.752,1087,0.74,0.749,1],"total:over11.5:no|0.7":[1259,0.755,0.736,1210,0.751,0.758,1],"total:over11.5:no|0.8":[697,0.834,0.825,523,0.83,0.803,1],"total:over6.5:yes|0.7":[611,0.737,0.751,730,0.741,0.752,1]}};
+  var LEG_MIN = 0.7;
+  function legBin(p) { return Math.min(Math.max(Math.floor(p * 10 + 1e-9) / 10, 0.5), 0.9).toFixed(1); }
+  function pmfOf(c) { var t = total(c), p = []; c.counts.forEach(function (x) { p[x[0]] = (p[x[0]] || 0) + x[1] / t; }); for (var i = 0; i < p.length; i++) p[i] = p[i] || 0; return p; }
+  function overArr(p, line) { var s = 0; for (var k = Math.floor(line) + 1; k < p.length; k++) s += p[k]; return s; }
+  function convArr(a, b) { var out = []; for (var i = 0; i < a.length; i++) for (var j = 0; j < b.length; j++) out[i + j] = (out[i + j] || 0) + a[i] * b[j]; return out; }
+  var LEG_LINES = { total: [6.5, 7.5, 8.5, 9.5, 10.5, 11.5], team: [0.5, 1.5, 2.5, 3.5, 4.5, 5.5], k: [2.5, 3.5, 4.5, 5.5, 6.5, 7.5],
+    outs: [11.5, 12.5, 13.5, 14.5, 15.5, 16.5, 17.5, 18.5], h: [3.5, 4.5, 5.5, 6.5], bb: [0.5, 1.5, 2.5], f5: [3.5, 4.5, 5.5] };
+  /* both sides of every leg of one game: {fam, p, text, who, kind, mk (the market's chance of this side, when held)} */
+  function gameLegs(f, box) {
+    var out = [], A = f.away.abbr, H = f.home.abbr;
+    var add = function (fam, p, yes, no, o) {
+      if (p == null || !isFinite(p)) return;
+      o = o || {};
+      out.push({ fam: fam + ":yes", p: p, text: yes, who: o.who || "", kind: o.kind || "game", mk: o.mk != null ? o.mk : null, pk: f.game_pk });
+      if (no) out.push({ fam: fam + ":no", p: 1 - p, text: no, who: o.who || "", kind: o.kind || "game", mk: o.mk != null ? 1 - o.mk : null, pk: f.game_pk });
+    };
+    var mk = D.market && D.market[f.game_pk], mh = marketProb(mk);
+    add("win:home", f.home_win_probability, H + " win", A + " win", { mk: mh });
+    if (!box) return out;
+    var m = dist(box.margin_distribution);
+    if (m) {
+      add("runline:home-1.5", mmShare(m, function (k) { return k >= 2; }), H + " −1.5", A + " +1.5");
+      add("runline:away-1.5", mmShare(m, function (k) { return k <= -2; }), A + " −1.5", H + " +1.5");
+    }
+    var trd = box.team_run_distributions || {}, ra = dist(trd.away), rh = dist(trd.home);
+    if (ra && rh) {
+      var pa = nbRuns(ra), ph = nbRuns(rh), tt = convArr(pa, ph);
+      var ml = mk && mk.over_under != null ? Number(mk.over_under) : null, mo = mk ? (mk.p_over_cons != null ? mk.p_over_cons : mk.p_over) : null;
+      LEG_LINES.total.forEach(function (L) { add("total:over" + L, overArr(tt, L), "Over " + L + " runs", "Under " + L + " runs", { mk: ml === L && mo != null ? mo : null }); });
+      [["away", pa, A], ["home", ph, H]].forEach(function (s) {
+        LEG_LINES.team.forEach(function (L) { add("team_total:" + s[0] + ":over" + L, overArr(s[1], L), s[2] + " over " + L + " runs", s[2] + " under " + L + " runs"); });
+      });
+    }
+    var fi = box.first_inning;
+    if (fi && fi.n) add("first_inning:run_scored", 1 - fi.no_run / fi.n, "A run in the 1st inning", "No run in the 1st inning");
+    var f5t = dist(box.f5_total_distribution);
+    if (f5t) { var q5 = pmfOf(f5t); LEG_LINES.f5.forEach(function (L) { add("f5_total:over" + L, overArr(q5, L), "Over " + L + " runs, first five", "Under " + L + " runs, first five"); }); }
+    ["away", "home"].forEach(function (side) {
+      var bat = (box.teams[side] || {}).batting || [], nm = shortNames(bat);
+      bat.forEach(function (b) {
+        var d = b.distributions || {}, n = nm[String(b.player_id)], o = { who: n, kind: "hitter" };
+        if (d.H) { add("hitter:hits1+", ownAtLeast(d.H, 1, b.spot), n + " 1+ hit", n + " no hit", o); add("hitter:hits2+", ownAtLeast(d.H, 2, b.spot), n + " 2+ hits", n + " under 2 hits", o); }
+        if (d.HR) add("hitter:hr", ownAtLeast(d.HR, 1, b.spot), n + " homers", n + " no home run", o);
+        if (d.K) add("hitter:k1+", ownAtLeast(d.K, 1, b.spot), n + " strikes out", n + " no strikeout", o);
+        if (d.BB) add("hitter:bb1+", ownAtLeast(d.BB, 1, b.spot), n + " walks", n + " no walk", o);
+        if (b.tb2_probability != null) add("hitter:tb2+", b.tb2_probability, n + " 2+ total bases", n + " under 2 total bases", o);
+      });
+      var sp = ((box.teams[side] || {}).pitching || [])[0];
+      if (sp && sp.distributions) {
+        var sd_ = sp.distributions, sn = lastName(sp.name), so = { who: sn, kind: "pitcher" };
+        [["k", sd_.K && pmfOf(kShape(sd_.K)), "strikeouts"], ["outs", sd_.outs && pmfOf(sd_.outs), "outs"], ["h", sd_.H && pmfOf(sd_.H), "hits allowed"], ["bb", sd_.BB && pmfOf(sd_.BB), "walks"]].forEach(function (x) {
+          if (!x[1]) return;
+          LEG_LINES[x[0]].forEach(function (L) { add("starter:" + x[0] + ":over" + L, overArr(x[1], L), sn + " over " + L + " " + x[2], sn + " under " + L + " " + x[2], so); });
+        });
+      }
+    });
+    return out;
+  }
+  /* the listed legs: our chance LEG_MIN or more and the cell verified; each with its two seasons' record */
+  function boardLegs(games) {
+    if (!LEG_TABLE) return [];
+    var rows = [];
+    games.forEach(function (f) {
+      if (gameState(f.game_pk) !== "pregame") return;
+      gameLegs(f, boxFor(f.game_pk)).forEach(function (l) {
+        if (l.p < LEG_MIN) return;
+        var c = LEG_TABLE.cells[l.fam + "|" + legBin(l.p)];
+        if (!c || !c[6]) return;
+        l.rec = c; l.f = f; rows.push(l);
+      });
+    });
+    return rows.sort(function (a, b) { return b.p - a.p; });
+  }
+  /* the rows the board leads with: per player or team and stat, only its likeliest line; then at most two rows of any one
+     kind of leg (two "no home run" rows, not twelve), so the list shows the range of strong legs; the rest fold below */
+  function legKey(l) { return l.pk + "|" + l.fam + "|" + l.who; }
+  function legKind(fam) { return fam.replace(/over[\d.]+/, "").replace(/-1\.5/, ""); }
+  function leadLegs(rows, max) {
+    var seen = {}, kinds = {}, lead = [], rest = [];
+    rows.forEach(function (l) {
+      var k = legKind(l.fam), one = l.pk + "|" + k + "|" + l.who;
+      if (seen[one]) return;
+      seen[one] = 1;
+      if (lead.length < max && (kinds[k] || 0) < 2) { lead.push(l); kinds[k] = (kinds[k] || 0) + 1; } else rest.push(l);
+    });
+    return { lead: lead, rest: rest };
+  }
+  function legRow(l, S, slip) {
+    var c = l.rec, key = legKey(l), on = !!slip[key], gap = l.mk != null ? Math.round((l.p - l.mk) * 100) : null;
+    var said = Math.round((c[0] * c[1] + c[3] * c[4]) / (c[0] + c[3]) * 100);
+    return '<li><button type="button" class="leg' + (on ? " on" : "") + '" data-leg="' + esc(key) + '" aria-pressed="' + on + '"><span class="lg-text"><b>' + esc(l.text) + "</b><small>" + esc(l.f.away.abbr + " at " + l.f.home.abbr) + (l.kind === "hitter" ? ", if he bats" : "") + "</small></span>" +
+      '<span class="lg-p num">' + pct(l.p) + "</span>" +
+      '<span class="lg-rec">Legs like it, which we put at ' + said + "% on average, hit " + pct(c[2]) + " in " + S[0] + " and " + pct(c[5]) + " in " + S[1] + " (" + (c[0] + c[3]).toLocaleString() + " legs)</span>" +
+      (l.mk != null ? '<span class="lg-mk">Vegas ' + pct(l.mk) + (Math.abs(gap) >= 2 ? ", we are " + Math.abs(gap) + (gap > 0 ? " points higher" : " points lower") : ", the same as ours") + "</span>" : "") + "</button></li>";
+  }
+  function legBoard(games) {
+    var rows = boardLegs(games);
+    if (!rows.length) return "";
+    var S = LEG_TABLE.seasons, slip = state.slip || {}, inSlip = rows.filter(function (l) { return slip[legKey(l)]; }), split = leadLegs(rows, 10);
+    var h = '<section class="sec legs"><h2>Strongest legs</h2><p class="lede">Legs we give ' + Math.round(LEG_MIN * 100) + "% or more today, kept only where legs like it, at the same chance, hit as often as we said in both seasons we re-ran with a model that never saw " + S[1] + '. A 90% leg still misses 1 time in 10.</p><ul class="leg-list">';
+    split.lead.forEach(function (l) { h += legRow(l, S, slip); });
+    h += "</ul>";
+    if (split.rest.length) h += '<details class="more" data-keep="legs-rest"' + (state.rpOpen["legs-rest"] ? " open" : "") + "><summary>" + split.rest.length + " more legs that pass the same check</summary>" +
+      '<ul class="leg-list">' + split.rest.map(function (l) { return legRow(l, S, slip); }).join("") + "</ul></details>";
+    if (inSlip.length) {
+      var prod = inSlip.reduce(function (a, l) { return a * l.p; }, 1), games_ = {};
+      inSlip.forEach(function (l) { games_[l.pk] = (games_[l.pk] || 0) + 1; });
+      var same = Object.keys(games_).some(function (k) { return games_[k] > 1; });
+      h += '<p class="slip"><b>' + inSlip.length + (inSlip.length === 1 ? " leg" : " legs") + " together: " + pct(prod) + "</b> " + (same ? "Two of these are from the same game, so they move together; multiplying them is only a rough guide." : "Chances multiply: each leg you add makes the whole slip less likely.") + "</p>";
+    } else h += '<p class="note">Tap legs to see their chance together. Chances multiply: five 80% legs all land about 1 time in 3.</p>';
+    h += '<p class="note">Likely is not the same as underpriced: the market usually prices legs like these about as high as we do. Over two seasons re-run our win chances were level with the closing line, not better.</p>';
+    return h + "</section>";
+  }
+  function wireLegBoard(redraw) {
+    app.querySelectorAll("section.legs details[data-keep]").forEach(function (d) { d.addEventListener("toggle", function () { state.rpOpen[d.getAttribute("data-keep")] = d.open; }); });
+    app.querySelectorAll("button[data-leg]").forEach(function (b) {
+      b.addEventListener("click", function () { state.slip = state.slip || {}; var k = b.getAttribute("data-leg"); if (state.slip[k]) delete state.slip[k]; else state.slip[k] = 1; redraw(); });
+    });
   }
 
   /* ---------- the date strip: a week of days, earlier and later weeks, any date in the archive ---------- */

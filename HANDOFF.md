@@ -63,6 +63,24 @@ Model Plan doc). Built the same afternoon:
   models/), brl_engine/model.json, brl_live/context_offsets.json = the chain's pooled table (staged copies in the
   scratch folder adopt/); How it works already carries the chain paragraph, shown when the live model is a chain model.
 
+## October 18, afternoon: the leg book, Kalshi, security (read this first)
+
+- LEG-01 is scored (LEDGER row; aggregates in research/leg01/). 57 verified cells at 70%+; a hitter's 1+ hit at 70%+ is
+  NOT verified (2026 ran 3 points high); first-five totals are far off. The page's leg board (template legBoard,
+  LEG_TABLE written by tools/brl_leg_table.py from the --as-shown leg book) lists only verified cells. To refresh after new
+  replays: run tools/brl_leg_book.py --as-shown on both seasons' leg01 shards, then tools/brl_leg_table.py on its output.
+- EDGE-01 is registered: the simulator's side where it differs from the market by 3+ points, scored only on games from
+  October 19. Do not quote the backtest returns in LEG-01 as an edge; they were found after looking.
+- KALSHI-01: game matching by start time alone was wrong for about a quarter of games (fixed: team codes). Run
+  39151662276's prop series are not used (could not be cancelled: the session token cannot cancel or dispatch runs; start
+  lanes by pushing to diag/<lane>). Run 39156567358 refetches with the fix: games, strikeouts, hits, home runs, total bases,
+  totals, first inning, run line. tools/brl_leg_vs_kalshi.py compares them with the leg01 replays.
+- Security: every workflow is read-only by default with writes per job; no checkout keeps git credentials; brl-live's wait
+  input is digits only; the data package unpacks through cloud.security.extract_verified; public receipts mask quoted values.
+  The live lane ran clean on all of it (receipt data_source brl-data-202610070629).
+- Still open from the code-health review: normalize_probabilities should refuse unknown keys (check every provider first; do
+  not change it in the hour before a game), the forecast fingerprint should hash table contents, pinned dependencies.
+
 ## October 18: ten agent-skill repos from Instagram, applied as checklists (page only, no model change)
 
 Alec asked to put ten trending GitHub repos for Claude to work on the project and measure how much they help. Their code was

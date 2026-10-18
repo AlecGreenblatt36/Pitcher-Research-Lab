@@ -2,7 +2,7 @@
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
  "experiments": 376,
- "rows": 379,
+ "rows": 380,
  "records": {
   "ACC-01": [
    {
@@ -6149,14 +6149,17 @@
     "columns": {
      "ID": "LEG-01",
      "Attempt": "The leg book: every bet leg the simulator prices, scored on replays where neither the at-bat model nor any fitted table saw the replayed season. Alec's aim (October 18): parlay legs that are confident and verified more accurate than the market. Design: at-bat model chain67-both (fitted on 2023-2024; 2025 tuned its regularization and calibration; 2026 never seen), so 2026 is the clean test season and 2025 a secondary one. Every table fitted on the other season or on 2023-2024, including the starter leash (earlier replays used the replayed season's own leash table, leash_fit_<season>; noted as an in-sample input for starter exits). Live settings otherwise: roster pools, BULLPEN-10 tables, chain pitch counts, dropout 0, 1,000 worlds, hitter and starter lines (tags leg01-<season>). Legs: winner, run line, total over 6.5 to 11.5, team total over 2.5 to 4.5, a run in the 1st, first-five winner and total, hitter 1+ hit, 2+ hits, home run, 2+ total bases, 1+ strikeout, 1+ walk, starter strikeouts over 3.5 to 7.5, outs over 14.5 to 18.5, hits allowed over 4.5 and 5.5. Scoring: tools/brl_leg_book.py (calibration by bin, Brier, a logistic recalibration per leg type fitted on one season and applied to the other, cross-game parlays of verified legs, and win and total against the closing line where we hold it)",
-     "Disposition and evidence": "**Registered in the commit that added this row, before the runs.** A (leg type, side, bin) is verified when, in both seasons, its hit rate is within the larger of 2 points and 1.96 standard errors of the stated chance with 300 or more legs. Confident legs are verified bins at 70% and up. Prediction: hitter 1+ hit, team scores 1+, starter outs under and total-over legs at low lines verify at 70% and up; home-run yes legs never reach 70%; reliever-driven legs are not in the book. A recalibration map is adopted for the sheet's stated chances only where it lowers the 2026 Brier with a date-bootstrap interval excluding zero (fitted on 2025). Parlays: random 2-, 3- and 5-leg parlays of verified legs from different games must hit within 2 standard errors of the product of their chances. Market: win and over chances against the closing line on the same games, Brier difference with a date bootstrap; no claim of beating the market without an interval excluding zero",
-     "Delta corrected Brier, 2026": "registered"
+     "Disposition and evidence": "**Registered in the commit that added this row, before the runs.** A (leg type, side, bin) is verified when, in both seasons, its hit rate is within the larger of 2 points and 1.96 standard errors of the stated chance with 300 or more legs. Confident legs are verified bins at 70% and up. Prediction: hitter 1+ hit, team scores 1+, starter outs under and total-over legs at low lines verify at 70% and up; home-run yes legs never reach 70%; reliever-driven legs are not in the book. A recalibration map is adopted for the sheet's stated chances only where it lowers the 2026 Brier with a date-bootstrap interval excluding zero (fitted on 2025). Parlays: random 2-, 3- and 5-leg parlays of verified legs from different games must hit within 2 standard errors of the product of their chances. Market: win and over chances against the closing line on the same games, Brier difference with a date bootstrap; no claim of beating the market without an interval excluding zero **Result (October 18; replays leg01-2026, run 39151195010, and leg01-2025, run 39151220341: chain67-both, every table fitted on the other season or 2023-2024, the starter hazard correction on 2023-2024; 2,427 and 2,423 games, about 859,000 legs a season; scored with tools/brl_leg_book.py, as run and --as-shown, the page's run and strikeout reshaping, which differ on four of the 57 verified cells: two strikeout cells verify only as run, a strikeout cell and the under 11.5 at 80% only as shown).** Of 233 (leg, side, chance band) cells at 70% and up, 57 are verified (both seasons within the larger of 2 points and 1.96 standard errors, 300 or more legs each); 160 more were never wrong but have fewer than 300 legs in a season; 15 fail on calibration. Verified: a team scores 1+ (90% band: said 94.5, hit 94.5 and 94.3 for the home team), a team scores 2+ and 3+, the total over 6.5 at 70%, under 11.5, the run line's +1.5 side at 70% (said 73.4, hit 70.2 and 71.7, inside the band), a hitter's no home run (90% band: said 92.8, hit 92.7 and 92.6), under 2 hits, under 2 total bases, no walk, a hitter's 1+ strikeout, and the starter ladders: strikeouts over 2.5 to 4.5 and under 5.5 to 7.5, outs over 11.5 to 14.5 and under 16.5 and 18.5, hits allowed, walks. Failed on calibration: a hitter's 1+ hit at 70% and up ran high in 2026 (said 72.6, hit 69.5; 4,689 legs, 3.1 points against a 2-point allowance), the first-five total ran far high (over 3.5 at 70%: 18 and 15 points; FIRST5-01 had kept it off the page), the away team's over 2.5 runs at 70% (4.4 and 3.3 points high), starter strikeouts over 2.5 and 3.5 at 80% (2.8 to 3.8 points high in 2025), outs under 17.5 and 18.5 at 70% (low in 2025). Parlays of verified 70%+ legs from different games, 20,000 random slips: 2 legs said 67.1 hit 67.1 (2025) and 67.1 / 67.7 (2026); 3 legs 55.0 / 54.8 and 54.8 / 54.7; 5 legs 36.8 / 36.8 and 36.7 / 36.9: chances multiply as stated. Each day's likeliest legs (one a game, verified cells; mostly a starter under 7.5 or 6.5 strikeouts, a hitter's no home run, a starter under 18.5 outs, a team scoring a run): 3 a day, each said 98.8 hit 99.1 (2026) and 98.4 / 98.0 (2025), all three together said 96.5 hit 97.3 and 95.3 / 94.0 over about 180 days; 5 a day together 92.2 / 90.0 and 90.6 / 87.2; 8 a day 84.5 / 81.4 and 82.8 / 77.1: the selection's own optimism (choosing the highest numbers) shows from 5 legs and grows with 8. Market (registered test): win Brier against the closing line ours 0.24258 market 0.24326, difference -0.00068 [-0.00226, +0.00098] (2026, 2,264 games), -0.00008 [-0.00209, +0.00196] (2025, 1,686); over the closing total +0.00265 [-0.00021, +0.00554] and +0.00101 [-0.00275, +0.00483]: level with the market, no claim. Against Kalshi's last pregame trades (KALSHI-01, 2,389 games of 2026, each game once): 0.24220 against 0.24213, difference +0.00007 [-0.00174, +0.00192]. Recalibration maps (fitted on one season, applied to the other) lowered the Brier with an interval below zero for the first-five totals, a hitter's home run, a hitter's strikeout, starter strikeouts over 4.5 and the home team over 5.5 runs; the board does not apply them (none of those cells is verified except the hitter's strikeout, whose map moves chances under half a point). Exploratory, designed after a first look at 63 games of partial 2026 results, so registered for a forward test as EDGE-01 and not claimed: buying the simulator's side where it and the market differ by 3 points or more returned, per dollar, +7.6 [+1.1, +13.9] at the books' fair closing price (2026, 1,017 games), +7.5 [+1.0, +13.9] at the fair opening price, +6.5 [+0.7, +12.5] on Kalshi after its full fee (1,138 games), but +0.5 [-6.0, +6.6] at DraftKings' closing prices with its margin and +5.3 [-0.8, +11.7] at the best of seven books; in 2025 +4.2 [-3.1, +12.5] fair close, +7.9 [+0.6, +14.7] fair open, +1.8 [-5.5, +8.6] at DraftKings. Those sides won about half the time at an average price near 46%: the signal sits in close games, not in the likely legs. **Prediction check:** team scores 1+, low total overs and starter outs unders verified as predicted; a hitter's 1+ hit did not (2026 ran 3 points high); home-run yes legs never reached 70%, as predicted. **Decision:** the leg board (brl_live/page/template.html legBoard, LEG_TABLE from tools/brl_leg_table.py on the --as-shown run) lists today's legs at 70% and up whose cell is verified, each with its two seasons' record and the market's chance where the page holds one; it makes no claim of an edge",
+     "Delta corrected Brier, 2026": "done: board live"
     },
     "registered_before_run": true,
     "diagnostic": false,
-    "runs": [],
+    "runs": [
+     "39151195010",
+     "39151220341"
+    ],
     "frozen_commits": [],
-    "status": "registered"
+    "status": "done: board live"
    }
   ],
   "KALSHI-01": [
@@ -6165,14 +6168,54 @@
     "columns": {
      "ID": "KALSHI-01",
      "Attempt": "Kalshi's settled MLB markets with their last pregame prices, matched to official game and player ids: the market the leg book is judged against for props (hits 1+ and 2+, hits + runs + RBIs, RBIs) and game markets (winner, run line, total runs, a run in the first inning). tools/brl_kalshi_history.py, workflow BRL Kalshi history (push to diag/kalshi; series in tools/kalshi_series.txt, one job per series or date window): every settled market from Kalshi's public API (historical endpoint before its cutoff, live endpoint after), the last trade before first pitch and the volume-weighted price of the final hour, MLB's game id by date and start time and the player's id from MLB's box score. Public market data only; no account, no key, paced at 6 requests a second per job, two jobs at a time",
-     "Disposition and evidence": "Data lane, no gates. Rows with no trade before first pitch are kept with an empty price and left out of any comparison; the receipt counts them",
+     "Disposition and evidence": "Data lane, no gates. Rows with no trade before first pitch are kept with an empty price and left out of any comparison; the receipt counts them **October 18: two faults found and fixed.** The game was matched by start time alone, and several games often start the same minute: 657 of 2,458 KXMLBGAME games (27%) landed on a neighbour (fixed: the schedule's team abbreviations must spell the ticker's team string; tools/brl_leg_vs_kalshi.py re-matches older game rows by date and teams); player props matched that way looked the player up in the wrong box score, so run 39151662276's prop series are not used and run 39156567358 fetches them again with the fix. Doubleheader tickers (G1/G2 after the teams) were left unparsed (fixed). Added series: strikeouts (KXMLBKS, every line), home runs (KXMLBHR 1+), total bases (KXMLBTB 2+). Kalshi lists these series with fee multiplier 0.5; returns are shown at the full fee 0.07 x p x (1 - p) and at half",
      "Delta corrected Brier, 2026": "running"
+    },
+    "registered_before_run": false,
+    "diagnostic": false,
+    "runs": [
+     "39151662276",
+     "39156567358"
+    ],
+    "frozen_commits": [],
+    "status": "running"
+   }
+  ],
+  "EDGE-01": [
+   {
+    "id": "EDGE-01",
+    "columns": {
+     "ID": "EDGE-01",
+     "Attempt": "A forward test of the one signal LEG-01's exploratory market test found: the live simulator's home win chance (the forecast's home_win_probability, never the blend with the line) against the market where they differ by 3 points or more, buying the simulator's side. Every game from October 19, 2026 (the rest of this postseason, then the 2027 regular season), at the last forecast saved before first pitch; prices: Kalshi's last pregame trades (KALSHI-01's lane run after the games, the volume-weighted price of the final trades before first pitch, the full fee 0.07 x p x (1 - p) per contract) and the books' closing consensus without margin (BOOKS-01)",
+     "Disposition and evidence": "**Registered in the commit that added this row, before any game it scores.** The backtest numbers in LEG-01 were found after looking and do not count. Gate: after 600 or more qualifying games, the Kalshi return per dollar after the full fee above zero with a date-bootstrap 95% interval excluding zero; the fair-close return reported beside it. Prediction: +3 to +8 cents a dollar, the sides winning about half the time at prices near 46%. Until the gate holds, the page and the reports make no claim that our number beats the market; if the interval sits below zero or straddles it at 600 games, the signal is recorded as not real",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
+   },
+   {
+    "id": "EDGE-01",
+    "columns": {
+     "ID": "EDGE-01",
+     "Idea": "Stuff change signal",
+     "Status": "Registered; not fitted",
+     "Pitcher K": "Not run",
+     "BB": "Not run",
+     "Pitches": "Not run",
+     "Innings": "Not run",
+     "Relievers used": "Not run",
+     "Team runs": "Not run",
+     "High/low runs": "Not run",
+     "Game Brier / log loss": "Not run / not run"
     },
     "registered_before_run": false,
     "diagnostic": false,
     "runs": [],
     "frozen_commits": [],
-    "status": "running"
+    "status": "Not run / not run"
    }
   ],
   "DQ-01": [
@@ -6598,29 +6641,6 @@
     "runs": [],
     "frozen_commits": [],
     "status": "Not run"
-   }
-  ],
-  "EDGE-01": [
-   {
-    "id": "EDGE-01",
-    "columns": {
-     "ID": "EDGE-01",
-     "Idea": "Stuff change signal",
-     "Status": "Registered; not fitted",
-     "Pitcher K": "Not run",
-     "BB": "Not run",
-     "Pitches": "Not run",
-     "Innings": "Not run",
-     "Relievers used": "Not run",
-     "Team runs": "Not run",
-     "High/low runs": "Not run",
-     "Game Brier / log loss": "Not run / not run"
-    },
-    "registered_before_run": false,
-    "diagnostic": false,
-    "runs": [],
-    "frozen_commits": [],
-    "status": "Not run / not run"
    }
   ],
   "EDGE-02": [
