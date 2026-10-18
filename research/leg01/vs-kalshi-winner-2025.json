@@ -1,0 +1,149 @@
+{
+ "schema": "brl.leg-vs-kalshi.v1",
+ "experiment": "LEG-01",
+ "kalshi_rows_priced": 4300,
+ "unmatched": {
+  "game_away_market_skipped": 2106,
+  "game_no_replay_row": 88
+ },
+ "kinds": {
+  "winner": {
+   "n": 2106,
+   "dates": 161,
+   "brier_ours": 0.24343,
+   "brier_kalshi": 0.24303,
+   "difference": 0.000399,
+   "ci": [
+    -0.001631,
+    0.002326
+   ],
+   "calibration": [
+    {
+     "bin": "0.0-0.1",
+     "ours_n": 0,
+     "ours_stated": null,
+     "ours_hit": null,
+     "kalshi_n": 0,
+     "kalshi_stated": null,
+     "kalshi_hit": null
+    },
+    {
+     "bin": "0.1-0.2",
+     "ours_n": 0,
+     "ours_stated": null,
+     "ours_hit": null,
+     "kalshi_n": 0,
+     "kalshi_stated": null,
+     "kalshi_hit": null
+    },
+    {
+     "bin": "0.2-0.3",
+     "ours_n": 13,
+     "ours_stated": 0.2805,
+     "ours_hit": 0.3846,
+     "kalshi_n": 16,
+     "kalshi_stated": 0.2779,
+     "kalshi_hit": 0.375
+    },
+    {
+     "bin": "0.3-0.4",
+     "ours_n": 153,
+     "ours_stated": 0.3654,
+     "ours_hit": 0.3987,
+     "kalshi_n": 146,
+     "kalshi_stated": 0.3659,
+     "kalshi_hit": 0.3767
+    },
+    {
+     "bin": "0.4-0.5",
+     "ours_n": 640,
+     "ours_stated": 0.4589,
+     "ours_hit": 0.4984,
+     "kalshi_n": 560,
+     "kalshi_stated": 0.4574,
+     "kalshi_hit": 0.4964
+    },
+    {
+     "bin": "0.5-0.6",
+     "ours_n": 860,
+     "ours_stated": 0.5449,
+     "ours_hit": 0.536,
+     "kalshi_n": 843,
+     "kalshi_stated": 0.5494,
+     "kalshi_hit": 0.5267
+    },
+    {
+     "bin": "0.6-0.7",
+     "ours_n": 379,
+     "ours_stated": 0.639,
+     "ours_hit": 0.6042,
+     "kalshi_n": 430,
+     "kalshi_stated": 0.6397,
+     "kalshi_hit": 0.5977
+    },
+    {
+     "bin": "0.7-0.8",
+     "ours_n": 60,
+     "ours_stated": 0.7335,
+     "ours_hit": 0.8167,
+     "kalshi_n": 111,
+     "kalshi_stated": 0.7302,
+     "kalshi_hit": 0.7658
+    },
+    {
+     "bin": "0.8-0.9",
+     "ours_n": 1,
+     "ours_stated": 0.804,
+     "ours_hit": 1.0,
+     "kalshi_n": 0,
+     "kalshi_stated": null,
+     "kalshi_hit": null
+    },
+    {
+     "bin": "0.9-1.0",
+     "ours_n": 0,
+     "ours_stated": null,
+     "ours_hit": null,
+     "kalshi_n": 0,
+     "kalshi_stated": null,
+     "kalshi_hit": null
+    }
+   ],
+   "disagree": {
+    "3pts": {
+     "n": 1080,
+     "our_side_right": 0.462,
+     "price_paid_mean": 0.4455,
+     "return_per_dollar": -0.0001,
+     "return_ci": [
+      -0.0672,
+      0.0682
+     ],
+     "return_per_dollar_half_fee": 0.0186
+    },
+    "5pts": {
+     "n": 593,
+     "our_side_right": 0.4739,
+     "price_paid_mean": 0.4303,
+     "return_per_dollar": 0.0627,
+     "return_ci": [
+      -0.0265,
+      0.151
+     ],
+     "return_per_dollar_half_fee": 0.0819
+    },
+    "10pts": {
+     "n": 58,
+     "our_side_right": 0.4828,
+     "price_paid_mean": 0.392,
+     "return_per_dollar": 0.1903,
+     "return_ci": [
+      -0.1379,
+      0.5371
+     ],
+     "return_per_dollar_half_fee": 0.211
+    }
+   }
+  }
+ }
+}
