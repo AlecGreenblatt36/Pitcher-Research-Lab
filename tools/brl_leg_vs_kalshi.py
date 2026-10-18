@@ -27,7 +27,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'tools'))
 from brl_player_cal import own_at_least, own_tb2  # noqa: E402
-from brl_leg_book import pmf, over  # noqa: E402
+from brl_leg_book import pmf, over, k_shape  # noqa: E402
 
 HIT_STATS = {'hits': 'hits', 'hit': 'hits', 'home runs': 'hr', 'home run': 'hr', 'total bases': 'tb', 'total base': 'tb'}
 K_STATS = ('strikeouts', 'strikeout')
@@ -121,6 +121,7 @@ def main():
     ap.add_argument('--replay', action='append', required=True)
     ap.add_argument('--kalshi', action='append', required=True)
     ap.add_argument('--out', required=True)
+    ap.add_argument('--as-shown', action='store_true', help="starter strikeouts through the page's kShape spread")
     a = ap.parse_args()
     hit, game, start, by_teams = replay_index(a.replay)
     rows = kalshi_rows(a.kalshi)
@@ -151,7 +152,7 @@ def main():
             st = start.get((pk, int(r.get('player_id') or 0)))
             if st is None or 'k' not in st:
                 counts['k_not_our_starter'] += 1; continue      # Kalshi settles at a fair price when he does not start
-            ours = over(pmf(st['k']), k - 0.5)
+            ours = over(k_shape(st['k']) if a.as_shown else pmf(st['k']), k - 0.5)
             band = 'low' if k <= 4 else ('mid' if k <= 6 else 'high')
             pairs[f'starter_k{band}'].append((r['date'], ours, r['price'], r['y']))
             pairs['starter_k_all'].append((r['date'], ours, r['price'], r['y']))
