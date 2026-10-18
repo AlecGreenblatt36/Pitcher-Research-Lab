@@ -1,0 +1,425 @@
+{
+ "schema": "brl.leg-vs-kalshi.v1",
+ "experiment": "LEG-01",
+ "kalshi_rows_priced": 86200,
+ "unmatched": {
+  "hits_no_replay_row": 1245,
+  "hr_no_replay_row": 10
+ },
+ "kinds": {
+  "hits1+": {
+   "n": 34080,
+   "dates": 184,
+   "brier_ours": 0.23376,
+   "brier_kalshi": 0.23368,
+   "difference": 7.9e-05,
+   "ci": [
+    -0.000382,
+    0.000509
+   ],
+   "calibration": [
+    {
+     "bin": "0.0-0.1",
+     "ours_n": 0,
+     "ours_stated": null,
+     "ours_hit": null,
+     "kalshi_n": 8,
+     "kalshi_stated": 0.0263,
+     "kalshi_hit": 0.5
+    },
+    {
+     "bin": "0.1-0.2",
+     "ours_n": 0,
+     "ours_stated": null,
+     "ours_hit": null,
+     "kalshi_n": 2,
+     "kalshi_stated": 0.165,
+     "kalshi_hit": 1.0
+    },
+    {
+     "bin": "0.2-0.3",
+     "ours_n": 0,
+     "ours_stated": null,
+     "ours_hit": null,
+     "kalshi_n": 1,
+     "kalshi_stated": 0.2542,
+     "kalshi_hit": 1.0
+    },
+    {
+     "bin": "0.3-0.4",
+     "ours_n": 19,
+     "ours_stated": 0.3865,
+     "ours_hit": 0.2632,
+     "kalshi_n": 26,
+     "kalshi_stated": 0.3747,
+     "kalshi_hit": 0.3846
+    },
+    {
+     "bin": "0.4-0.5",
+     "ours_n": 1530,
+     "ours_stated": 0.4748,
+     "ours_hit": 0.4601,
+     "kalshi_n": 1653,
+     "kalshi_stated": 0.4709,
+     "kalshi_hit": 0.4616
+    },
+    {
+     "bin": "0.5-0.6",
+     "ours_n": 10970,
+     "ours_stated": 0.5597,
+     "ours_hit": 0.5579,
+     "kalshi_n": 11886,
+     "kalshi_stated": 0.5564,
+     "kalshi_hit": 0.5585
+    },
+    {
+     "bin": "0.6-0.7",
+     "ours_n": 17451,
+     "ours_stated": 0.6482,
+     "ours_hit": 0.6368,
+     "kalshi_n": 17535,
+     "kalshi_stated": 0.644,
+     "kalshi_hit": 0.6433
+    },
+    {
+     "bin": "0.7-0.8",
+     "ours_n": 4064,
+     "ours_stated": 0.7258,
+     "ours_hit": 0.6971,
+     "kalshi_n": 2926,
+     "kalshi_stated": 0.7226,
+     "kalshi_hit": 0.7095
+    },
+    {
+     "bin": "0.8-0.9",
+     "ours_n": 46,
+     "ours_stated": 0.8154,
+     "ours_hit": 0.8043,
+     "kalshi_n": 40,
+     "kalshi_stated": 0.8127,
+     "kalshi_hit": 0.875
+    },
+    {
+     "bin": "0.9-1.0",
+     "ours_n": 0,
+     "ours_stated": null,
+     "ours_hit": null,
+     "kalshi_n": 3,
+     "kalshi_stated": 0.9833,
+     "kalshi_hit": 0.3333
+    }
+   ],
+   "disagree": {
+    "3pts": {
+     "n": 13540,
+     "our_side_right": 0.5399,
+     "price_paid_mean": 0.5192,
+     "return_per_dollar": 0.0082,
+     "return_ci": [
+      -0.009,
+      0.0251
+     ],
+     "return_per_dollar_half_fee": 0.024
+    },
+    "5pts": {
+     "n": 5695,
+     "our_side_right": 0.5521,
+     "price_paid_mean": 0.5218,
+     "return_per_dollar": 0.0263,
+     "return_ci": [
+      0.0014,
+      0.0519
+     ],
+     "return_per_dollar_half_fee": 0.0421
+    },
+    "10pts": {
+     "n": 465,
+     "our_side_right": 0.5935,
+     "price_paid_mean": 0.5016,
+     "return_per_dollar": 0.1507,
+     "return_ci": [
+      0.059,
+      0.2382
+     ],
+     "return_per_dollar_half_fee": 0.167
+    }
+   }
+  },
+  "hits2+": {
+   "n": 26654,
+   "dates": 184,
+   "brier_ours": 0.17343,
+   "brier_kalshi": 0.17346,
+   "difference": -2.7e-05,
+   "ci": [
+    -0.000391,
+    0.000328
+   ],
+   "calibration": [
+    {
+     "bin": "0.0-0.1",
+     "ours_n": 124,
+     "ours_stated": 0.0893,
+     "ours_hit": 0.0806,
+     "kalshi_n": 138,
+     "kalshi_stated": 0.0782,
+     "kalshi_hit": 0.087
+    },
+    {
+     "bin": "0.1-0.2",
+     "ours_n": 8215,
+     "ours_stated": 0.165,
+     "ours_hit": 0.159,
+     "kalshi_n": 8414,
+     "kalshi_stated": 0.161,
+     "kalshi_hit": 0.1594
+    },
+    {
+     "bin": "0.2-0.3",
+     "ours_n": 14593,
+     "ours_stated": 0.2474,
+     "ours_hit": 0.2486,
+     "kalshi_n": 14117,
+     "kalshi_stated": 0.2429,
+     "kalshi_hit": 0.2508
+    },
+    {
+     "bin": "0.3-0.4",
+     "ours_n": 3553,
+     "ours_stated": 0.3294,
+     "ours_hit": 0.311,
+     "kalshi_n": 3819,
+     "kalshi_stated": 0.3268,
+     "kalshi_hit": 0.3022
+    },
+    {
+     "bin": "0.4-0.5",
+     "ours_n": 168,
+     "ours_stated": 0.4251,
+     "ours_hit": 0.3393,
+     "kalshi_n": 165,
+     "kalshi_stated": 0.4271,
+     "kalshi_hit": 0.3576
+    },
+    {
+     "bin": "0.5-0.6",
+     "ours_n": 1,
+     "ours_stated": 0.5148,
+     "ours_hit": 1.0,
+     "kalshi_n": 1,
+     "kalshi_stated": 0.521,
+     "kalshi_hit": 0.0
+    },
+    {
+     "bin": "0.6-0.7",
+     "ours_n": 0,
+     "ours_stated": null,
+     "ours_hit": null,
+     "kalshi_n": 0,
+     "kalshi_stated": null,
+     "kalshi_hit": null
+    },
+    {
+     "bin": "0.7-0.8",
+     "ours_n": 0,
+     "ours_stated": null,
+     "ours_hit": null,
+     "kalshi_n": 0,
+     "kalshi_stated": null,
+     "kalshi_hit": null
+    },
+    {
+     "bin": "0.8-0.9",
+     "ours_n": 0,
+     "ours_stated": null,
+     "ours_hit": null,
+     "kalshi_n": 0,
+     "kalshi_stated": null,
+     "kalshi_hit": null
+    },
+    {
+     "bin": "0.9-1.0",
+     "ours_n": 0,
+     "ours_stated": null,
+     "ours_hit": null,
+     "kalshi_n": 0,
+     "kalshi_stated": null,
+     "kalshi_hit": null
+    }
+   ],
+   "disagree": {
+    "3pts": {
+     "n": 9359,
+     "our_side_right": 0.4498,
+     "price_paid_mean": 0.4248,
+     "return_per_dollar": 0.03,
+     "return_ci": [
+      0.0094,
+      0.0525
+     ],
+     "return_per_dollar_half_fee": 0.0444
+    },
+    "5pts": {
+     "n": 3506,
+     "our_side_right": 0.4321,
+     "price_paid_mean": 0.4028,
+     "return_per_dollar": 0.0421,
+     "return_ci": [
+      0.0091,
+      0.0784
+     ],
+     "return_per_dollar_half_fee": 0.0575
+    },
+    "10pts": {
+     "n": 227,
+     "our_side_right": 0.467,
+     "price_paid_mean": 0.3745,
+     "return_per_dollar": 0.2137,
+     "return_ci": [
+      0.0634,
+      0.3698
+     ],
+     "return_per_dollar_half_fee": 0.2302
+    }
+   }
+  },
+  "hr1+": {
+   "n": 24211,
+   "dates": 110,
+   "brier_ours": 0.10305,
+   "brier_kalshi": 0.10255,
+   "difference": 0.000496,
+   "ci": [
+    0.000225,
+    0.000787
+   ],
+   "calibration": [
+    {
+     "bin": "0.0-0.1",
+     "ours_n": 9452,
+     "ours_stated": 0.073,
+     "ours_hit": 0.0772,
+     "kalshi_n": 8220,
+     "kalshi_stated": 0.0744,
+     "kalshi_hit": 0.0674
+    },
+    {
+     "bin": "0.1-0.2",
+     "ours_n": 12659,
+     "ours_stated": 0.1397,
+     "ours_hit": 0.1341,
+     "kalshi_n": 14023,
+     "kalshi_stated": 0.1392,
+     "kalshi_hit": 0.1343
+    },
+    {
+     "bin": "0.2-0.3",
+     "ours_n": 1917,
+     "ours_stated": 0.2328,
+     "ours_hit": 0.2134,
+     "kalshi_n": 1860,
+     "kalshi_stated": 0.2292,
+     "kalshi_hit": 0.2253
+    },
+    {
+     "bin": "0.3-0.4",
+     "ours_n": 157,
+     "ours_stated": 0.3332,
+     "ours_hit": 0.2611,
+     "kalshi_n": 108,
+     "kalshi_stated": 0.3208,
+     "kalshi_hit": 0.2963
+    },
+    {
+     "bin": "0.4-0.5",
+     "ours_n": 24,
+     "ours_stated": 0.4276,
+     "ours_hit": 0.375,
+     "kalshi_n": 0,
+     "kalshi_stated": null,
+     "kalshi_hit": null
+    },
+    {
+     "bin": "0.5-0.6",
+     "ours_n": 2,
+     "ours_stated": 0.5162,
+     "ours_hit": 0.5,
+     "kalshi_n": 0,
+     "kalshi_stated": null,
+     "kalshi_hit": null
+    },
+    {
+     "bin": "0.6-0.7",
+     "ours_n": 0,
+     "ours_stated": null,
+     "ours_hit": null,
+     "kalshi_n": 0,
+     "kalshi_stated": null,
+     "kalshi_hit": null
+    },
+    {
+     "bin": "0.7-0.8",
+     "ours_n": 0,
+     "ours_stated": null,
+     "ours_hit": null,
+     "kalshi_n": 0,
+     "kalshi_stated": null,
+     "kalshi_hit": null
+    },
+    {
+     "bin": "0.8-0.9",
+     "ours_n": 0,
+     "ours_stated": null,
+     "ours_hit": null,
+     "kalshi_n": 0,
+     "kalshi_stated": null,
+     "kalshi_hit": null
+    },
+    {
+     "bin": "0.9-1.0",
+     "ours_n": 0,
+     "ours_stated": null,
+     "ours_hit": null,
+     "kalshi_n": 0,
+     "kalshi_stated": null,
+     "kalshi_hit": null
+    }
+   ],
+   "disagree": {
+    "3pts": {
+     "n": 5715,
+     "our_side_right": 0.536,
+     "price_paid_mean": 0.5313,
+     "return_per_dollar": -0.0078,
+     "return_ci": [
+      -0.0264,
+      0.0105
+     ],
+     "return_per_dollar_half_fee": 0.0005
+    },
+    "5pts": {
+     "n": 1694,
+     "our_side_right": 0.474,
+     "price_paid_mean": 0.4688,
+     "return_per_dollar": -0.0099,
+     "return_ci": [
+      -0.0495,
+      0.0244
+     ],
+     "return_per_dollar_half_fee": 0.0006
+    },
+    "10pts": {
+     "n": 169,
+     "our_side_right": 0.3254,
+     "price_paid_mean": 0.2978,
+     "return_per_dollar": 0.0565,
+     "return_ci": [
+      -0.1835,
+      0.3139
+     ],
+     "return_per_dollar_half_fee": 0.0747
+    }
+   }
+  }
+ }
+}
