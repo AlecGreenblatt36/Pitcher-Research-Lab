@@ -63,6 +63,26 @@ Model Plan doc). Built the same afternoon:
   models/), brl_engine/model.json, brl_live/context_offsets.json = the chain's pooled table (staged copies in the
   scratch folder adopt/); How it works already carries the chain paragraph, shown when the live model is a chain model.
 
+## October 18: ten agent-skill repos from Instagram, applied as checklists (page only, no model change)
+
+Alec asked to put ten trending GitHub repos for Claude to work on the project and measure how much they help. Their code was
+not run (running downloaded code is blocked in the sandbox); their rule lists were read and applied by hand, and the site was
+measured before and after with our own Playwright script (12 routes at 390 and 1280 px; the rules are Impeccable's 61-rule
+detector list, Hallmark's audit tells and Humanizer's writing patterns).
+
+- Writing (Humanizer): the page had no AI-writing tells in 5,076 words (two en-dash table placeholders); METHODS, HANDOFF,
+  LEDGER and the nightly sheet are at 0.0 to 0.4 tells per 1,000 words, mostly dashes in old ChatGPT-era text. Nothing to fix.
+- Design (Impeccable, Hallmark), unique findings at phone and desktop width, before then after this commit: thick side stripes
+  on rounded cards 9 then 3 (the 3 left are the lineup header's team-color underline, kept); running text wider than about 80
+  characters 23 then 0 (72ch caps); one-word last lines 17/9 then 7/3 (text-wrap: pretty); a slider under 44 px 1 then 0;
+  tight line height 2/1 then 0; a percentile pill under 4.5:1 contrast 1 then 0 (pctColor darkens the pill in the band where
+  neither white nor ink text reaches 4.5:1). Kept on purpose: the game header's team-color radial wash (it carries both
+  teams' colors), and Hallmark's minor rules for curly quotes and em dashes (Alec's no-dash rule wins).
+- Not used: REA (binary reverse engineering), Last 30 Days (social-media research, wants API keys), Scrapling (web scraping;
+  the model's data comes from official feeds), Onyx/taste-skill (design extraction from other sites), UI/UX Pro Max (design
+  system generator for new apps). None of the ten touches forecast accuracy; the model is measured only by replays.
+- Ponytail's audit checklist was run over the forecast path by a separate reviewer; its findings are recorded below once read.
+
 ## October 17, overnight (Alec, 11:32 pm: no yes or no needed for anything that improves the model; Game 4 moved to October 17)
 
 - RETRAIN-04 passed and is live as retrain04-rt from 12:41 a.m. Eastern: the chain67 settings refit on 2023-2025 with
