@@ -40,6 +40,38 @@ H_LINES = (3.5, 4.5, 5.5, 6.5)
 BB_LINES = (0.5, 1.5, 2.5)
 
 
+RUN_SPREAD, RUN_MAX, K_SPREAD = 1.0954, 40, 1.0693      # the page's constants (brl_live/page/template.html)
+
+
+def nb_runs(h):
+    """The page's nbRuns: a team's runs as a negative binomial with the simulated mean and RUN_SPREAD times its variance."""
+    h = np.asarray(h, float); t = h.sum(); k = np.arange(len(h))
+    m = float((k * h).sum() / t); var = float(((k - m) ** 2 * h).sum() / t)
+    sd = math.sqrt(var) or 1.0
+    m = max(m, 0.05); v = sd * sd * RUN_SPREAD
+    ks = np.arange(RUN_MAX)
+    if v <= m * 1.0001:
+        lp = ks * math.log(m) - m - np.array([math.lgamma(x + 1) for x in ks])
+    else:
+        r = m * m / (v - m); q = r / (r + m)
+        lp = np.array([math.lgamma(x + r) - math.lgamma(r) - math.lgamma(x + 1) + r * math.log(q) + x * math.log(1 - q) for x in ks])
+    e = np.exp(lp - lp.max())
+    return e / e.sum()
+
+
+def k_shape(h):
+    """The page's kShape: a starter's strikeouts spread by K_SPREAD (one step each way with weight w, the mass below zero
+    folded onto zero)."""
+    h = np.asarray(h, float); nz = np.nonzero(h)[0]
+    n = int(nz.max()) + 2 if len(nz) else len(h) + 1
+    p = np.zeros(n); p[:len(h)] = h[:n] / h.sum()
+    k = np.arange(n); m = float((k * p).sum()); v = float(((k - m) ** 2 * p).sum())
+    w = min(0.25, (K_SPREAD - 1) * v / 2)
+    q = (1 - 2 * w) * p
+    q[1:] += w * p[:-1]; q[:-1] += w * p[1:]; q[0] += w * p[0]
+    return q
+
+
 def pmf(h):
     h = np.asarray(h, float)
     return h / h.sum() if h.sum() else h
@@ -74,7 +106,9 @@ def cumulative_at(scores, inning):
     return best
 
 
-def game_legs(g):
+def game_legs(g, as_shown=False):
+    """Every leg of one replayed game. as_shown: team runs and totals through the page's negative binomial (nbRuns) and the
+    starter's strikeouts through its spread (kShape), so the chances are the ones the page states."""
     n = g.get('n') or 1
     base = {'date': g['date'], 'game_pk': int(g['game_pk'])}
     hr, ar = int(g['home_runs']), int(g['away_runs'])
@@ -82,7 +116,7 @@ def game_legs(g):
     ties = g.get('ties') or 0
     p_home = g['home_wins'] / max(n - ties, 1)
     legs += two_sided('win:home', p_home, hr > ar, base)
-    hp, ap = pmf(g['home_hist']), pmf(g['away_hist'])
+    hp, ap = (nb_runs(g['home_hist']), nb_runs(g['away_hist'])) if as_shown else (pmf(g['home_hist']), pmf(g['away_hist']))
     if 'margin_hist' in g:
         mh = pmf(g['margin_hist']); idx = np.arange(-MAXM, MAXM + 1)
         legs += two_sided('runline:home-1.5', float(mh[idx >= 2].sum()), hr - ar >= 2, base)
@@ -127,7 +161,7 @@ def game_legs(g):
         b = dict(base, player=int(s.get('pitcher') or 0))
         for field, lines, af in (('k', K_LINES, 'k'), ('outs', OUTS_LINES, 'outs'), ('h', H_LINES, 'h'), ('bb', BB_LINES, 'bb')):
             if field in s and af in act:
-                p_ = pmf(s[field])
+                p_ = k_shape(s[field]) if (as_shown and field == 'k') else pmf(s[field])
                 for L in lines:
                     legs += two_sided(f'starter:{field}:over{L}', over(p_, L), act[af] > L, b)
     return legs
@@ -321,7 +355,34 @@ def versus_market(rows, market, draws=2000, seed=3):
         right = ((po > pm) == (y > 0.5))[agree]
         out[name] = {'games': int(len(y)), 'ours': round(float(((po - y) ** 2).mean()), 5), 'market': round(float(((pm - y) ** 2).mean()), 5),
                      'difference': round(float(diff.mean()), 6), 'ci': [round(float(np.quantile(boot, .025)), 6), round(float(np.quantile(boot, .975)), 6)],
-                     'disagree_5pts': int(agree.sum()), 'ours_side_right_when_disagree': round(float(right.mean()), 4) if agree.any() else None}
+                     'disagree_5pts': int(agree.sum()), 'ours_side_right_when_disagree': round(float(right.mean()), 4) if agree.any() else None,
+                     'edge': edge_returns(d, po, pm, y, rng)}
+    return out
+
+
+HOLD = 0.045        # a typical two-way market's overround: each side costs about 2.25% more than its fair chance
+
+
+def edge_returns(d, po, pm, y, rng, gaps=(0.03, 0.05, 0.08), draws=2000):
+    """Where our chance and the market's differ by at least each gap: buy our side at the market's fair (no-vig) price,
+    and at that price plus a typical hold. Return per dollar staked, with a date bootstrap of the fair-price return. This
+    is the test of knowing something the price does not: a side that wins more often than its price says."""
+    out = {}
+    for gap in gaps:
+        m = np.abs(po - pm) >= gap
+        if m.sum() < 30:
+            continue
+        yes = po > pm
+        cost = np.where(yes, pm, 1 - pm)[m]; win = np.where(yes, y, 1 - y)[m]; dd = d[m]
+        cost_h = np.minimum(cost * (1 + HOLD / 2), 0.99)
+        keys, inv = np.unique(dd, return_inverse=True)
+        pr = np.bincount(inv, weights=win - cost, minlength=len(keys)); st = np.bincount(inv, weights=cost, minlength=len(keys))
+        idx = rng.integers(0, len(keys), size=(draws, len(keys)))
+        boot = pr[idx].sum(1) / st[idx].sum(1)
+        out[f'{int(round(gap * 100))}pts'] = {'bets': int(m.sum()), 'our_side_won': round(float(win.mean()), 4), 'price_mean': round(float(cost.mean()), 4),
+                                               'return_fair': round(float((win - cost).sum() / cost.sum()), 4),
+                                               'return_fair_ci': [round(float(np.quantile(boot, .025)), 4), round(float(np.quantile(boot, .975)), 4)],
+                                               'return_with_hold': round(float((win - cost_h).sum() / cost_h.sum()), 4)}
     return out
 
 
@@ -330,13 +391,14 @@ def main():
     ap.add_argument('--season', action='append', required=True, help='YEAR=glob of replay rows')
     ap.add_argument('--market-books'); ap.add_argument('--market-sbr')
     ap.add_argument('--out', required=True)
+    ap.add_argument('--as-shown', action='store_true', help='runs and strikeouts reshaped as the page states them')
     a = ap.parse_args()
     seasons = {}
     for s in a.season:
         y, pat = s.split('=', 1)
         seasons[int(y)] = load([pat])
-    legs = {y: [l for g in rows for l in game_legs(g)] for y, rows in seasons.items()}
-    out = {'schema': 'brl.leg-book.v1', 'experiment': 'LEG-01', 'seasons': {}}
+    legs = {y: [l for g in rows for l in game_legs(g, a.as_shown)] for y, rows in seasons.items()}
+    out = {'schema': 'brl.leg-book.v1', 'experiment': 'LEG-01', 'variant': 'as shown on the page' if a.as_shown else 'simulator as run', 'seasons': {}}
     for y in seasons:
         out['seasons'][y] = {'games': len(seasons[y]), 'legs': len(legs[y]), 'bins': bin_table(legs[y]), 'brier': brier(legs[y])}
     ys = sorted(seasons)
