@@ -1,10 +1,10 @@
 {
- "created_at": "2026-10-18T07:25:41.783487+00:00",
+ "created_at": "2026-10-18T07:41:08.789440+00:00",
  "status": "iteration_completed",
  "runtime": "brl_engine (public code, sealed data)",
  "ledger_branch": "brl-live-data",
  "shadow": false,
- "live_forecasts_created": 0,
+ "live_forecasts_created": 1,
  "raw_data_published": false,
  "stage": "complete",
  "secret_present": true,
@@ -24,16 +24,16 @@
   "fitted_at": "2026-10-17T04:14:31.818883+00:00",
   "physics_features": 30
  },
- "forecasts": 86,
- "box_forecasts_created": 0,
- "box_forecasts": 81,
+ "forecasts": 87,
+ "box_forecasts_created": 1,
+ "box_forecasts": 82,
  "player_scored_games": 15,
  "scored_games": 15,
  "skill_scored_games": 14,
- "skill_baseline_prior_games": 46,
- "history_coverage_through": "2026-10-16",
- "history_added_PA": 2323,
- "history_refresh_note": "Statcast empty on a date with completed games",
+ "skill_baseline_prior_games": 47,
+ "history_coverage_through": "2026-10-17",
+ "history_added_PA": 2398,
+ "history_refresh_note": null,
  "history_day_notes": {},
  "pa_model": {
   "name": "retrain04-rt",
@@ -49,8 +49,10 @@
      "through": "2026-10-15"
     }
    },
-   "day_cache_days": 1,
+   "day_cache_days": 2,
    "day_cache_rows": 0,
+   "day_cache_errors": 1,
+   "day_cache_error": "KeyError: 'body'",
    "rows": 372734,
    "through": "2026-10-15",
    "seasons_mode": "live",
@@ -107,14 +109,16 @@
       "through": "2026-03-24"
      }
     },
-    "day_cache_days": 1,
+    "day_cache_days": 2,
     "day_cache_rows": 0,
+    "day_cache_errors": 1,
+    "day_cache_error": "KeyError: 'body'",
     "rows": 4740826,
     "through": "2026-10-15"
    }
   }
  },
- "pitch_bookkeeping_prior_PA": 205980,
+ "pitch_bookkeeping_prior_PA": 206055,
  "pitch_bookkeeping_season_games": 4938,
  "engine_rules_changed": false,
  "model_parameters_changed": false,
@@ -264,10 +268,10 @@
   "skipped": 0
  },
  "storage_read_audit": {
-  "contents_verified": 47,
+  "contents_verified": 51,
   "blob_fallbacks": 36,
-  "bytes_verified": 199389755,
-  "requests": 151,
-  "rate_limit_remaining": 4893
+  "bytes_verified": 200853158,
+  "requests": 168,
+  "rate_limit_remaining": 4976
  }
 }
