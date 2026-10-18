@@ -16,6 +16,13 @@ def test_event_start_reads_eastern_time_and_teams():
     assert kh.event_start('not-a-ticker') == (None, None)
 
 
+def test_doubleheader_tickers_keep_their_time_and_teams():
+    start, teams = kh.event_start('KXMLBGAME-26AUG171840STLCING2')       # game 2 of a doubleheader
+    assert start == datetime(2026, 8, 17, 22, 40, tzinfo=timezone.utc) and teams == 'STLCIN'
+    _, teams = kh.event_start('KXMLBGAME-26SEP221305TBNYYG1')
+    assert teams == 'TBNYY'
+
+
 def test_describe_reads_props_and_keeps_game_markets_as_given():
     d = kh.describe({'title': 'Victor Mesa Jr.: 2+ hits?'})
     assert d == {'kind': 'prop', 'name': 'Victor Mesa Jr.', 'at_least': 2, 'stat': 'hits'}

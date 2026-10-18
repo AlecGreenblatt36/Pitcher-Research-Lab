@@ -1,6 +1,11 @@
 name: BRL Kalshi history
 on:
   workflow_dispatch:
+    inputs:
+      series:
+        description: 'Series to fetch, space-separated (blank: every series in tools/kalshi_series.txt)'
+        required: false
+        default: ''
   push:
     branches: [diag/kalshi]
 permissions:
@@ -18,8 +23,17 @@ jobs:
         with:
           persist-credentials: false
       - id: plan
-        name: Series from tools/kalshi_series.txt (one job per series)
-        run: python -c "import json; s=open('tools/kalshi_series.txt').read().replace(',', ' ').split(); print('series=' + json.dumps(s))" >> "$GITHUB_OUTPUT"
+        name: Series from the dispatch input, else tools/kalshi_series.txt (one job per series)
+        env:
+          ONLY: ${{ github.event.inputs.series }}
+        # the input reaches Python only as an environment variable, and each name must look like a series ticker
+        run: |
+          python - >> "$GITHUB_OUTPUT" <<'PY'
+          import json, os, re
+          s = (os.environ.get('ONLY') or open('tools/kalshi_series.txt').read()).replace(',', ' ').split()
+          assert all(re.fullmatch(r'[A-Z0-9]+(@\d{4}-\d\d-\d\d:\d{4}-\d\d-\d\d)?', x) for x in s), 'series names: capitals and digits only'
+          print('series=' + json.dumps(s))
+          PY
   kalshi:
     needs: plan
     runs-on: ubuntu-24.04

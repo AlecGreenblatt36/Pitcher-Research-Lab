@@ -32,7 +32,9 @@ sys.path.insert(0, str(ROOT / 'tools'))
 API = 'https://api.elections.kalshi.com/trade-api/v2'
 ET = ZoneInfo('America/New_York')
 MONTHS = {m: i for i, m in enumerate(['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'], 1)}
-EVENT_RE = re.compile(r'^(?P<series>[A-Z0-9]+)-(?P<yy>\d\d)(?P<mon>[A-Z]{3})(?P<dd>\d\d)(?P<hhmm>\d{4})(?P<teams>[A-Z]+)$')
+# a doubleheader's tickers end in G1 or G2 after the team codes (KXMLBGAME-26AUG171840STLCING2); before October 18 those
+# were left unparsed
+EVENT_RE = re.compile(r'^(?P<series>[A-Z0-9]+)-(?P<yy>\d\d)(?P<mon>[A-Z]{3})(?P<dd>\d\d)(?P<hhmm>\d{4})(?P<teams>[A-Z]+?)(?:G(?P<game>\d))?$')
 PROP_RE = re.compile(r'^(?P<name>.+?):\s*(?P<k>\d+)\+\s*(?P<what>.+?)\?*$')
 RATE = float(os.environ.get('BRL_KALSHI_RATE', '6'))     # requests per second, well under the public limit
 _last = [0.0]
@@ -171,6 +173,7 @@ def main():
     print(json.dumps({'series': series, 'markets': len(markets), 'seconds': round(time.time() - t0)}), flush=True)
     mlb = MLB(get_json)
     rows, counts = [], {'listed': len(markets), 'priced': 0, 'no_trade': 0, 'no_game': 0, 'no_player': 0, 'skipped_line': 0, 'unparsed': 0, 'stopped_at_budget': False}
+    unparsed = {}                                                # a few event tickers of each unparsed shape, for the receipt
     markets.sort(key=lambda m: m.get('close_time') or '')
     for i, mk in enumerate(markets):
         if time.time() - t0 > budget:
@@ -178,7 +181,11 @@ def main():
             break
         start, teams = event_start(mk.get('event_ticker'))
         if start is None:
-            counts['unparsed'] += 1; continue
+            counts['unparsed'] += 1
+            shape = re.sub(r'[A-Z]', 'A', re.sub(r'\d', '9', str(mk.get('event_ticker') or '').partition('-')[2]))
+            if len(unparsed.setdefault(shape, [])) < 3:
+                unparsed[shape].append(mk.get('event_ticker'))
+            continue
         day = start.astimezone(ET).date().isoformat()
         if (lo and day < lo) or (hi and day > hi):
             continue
@@ -218,6 +225,7 @@ def main():
     for r in rows:
         receipt['by_month'][r['date'][:7]] = receipt['by_month'].get(r['date'][:7], 0) + 1
     receipt['window'] = [lo or None, hi or None]
+    receipt['unparsed_examples'] = dict(sorted(unparsed.items(), key=lambda kv: -len(kv[1]))[:12])
     put(repo, token, f'research/kalshi-{tag}-{run}.json', json.dumps(receipt, indent=1).encode(), branch, f'BRL: Kalshi {series} receipt')
     print(json.dumps({k: receipt[k] for k in ('series', 'rows', 'counts', 'dates', 'seconds')}), flush=True)
 
