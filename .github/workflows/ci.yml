@@ -69,9 +69,12 @@ jobs:
 
   model:
     # The model's own tests (brl_engine/tests, brl_live_tests) on every push; the public check runs them again after
-    # each live run. No secrets and no data files: the tests use made-up inputs.
+    # each live run. No secrets and no data files: the tests use made-up inputs. A failure's output is saved on the
+    # ledger branch (workflow logs cannot be read from the sandbox that develops this project).
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    permissions:
+      contents: write
     steps:
       - name: Check out repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, verified from the action repository on October 9, 2026
@@ -84,4 +87,10 @@ jobs:
       - name: Install the model's dependencies
         run: python -m pip install --disable-pip-version-check "numpy>=2,<3" "pandas>=2,<4" "scikit-learn>=1.5,<2" "scipy>=1.12,<2" joblib requests cryptography==46.0.4 pytest==9.0.2
       - name: Run the model's tests
-        run: cd /tmp && PYTHONPATH="$GITHUB_WORKSPACE/brl_engine/runtime:$GITHUB_WORKSPACE" python -m pytest -c /dev/null --rootdir="$GITHUB_WORKSPACE" --import-mode=importlib "$GITHUB_WORKSPACE/brl_engine/tests" "$GITHUB_WORKSPACE/brl_live_tests" -q -p no:cacheprovider
+        shell: bash
+        run: cd /tmp && PYTHONPATH="$GITHUB_WORKSPACE/brl_engine/runtime:$GITHUB_WORKSPACE" python -m pytest -c /dev/null --rootdir="$GITHUB_WORKSPACE" --import-mode=importlib "$GITHUB_WORKSPACE/brl_engine/tests" "$GITHUB_WORKSPACE/brl_live_tests" -q -p no:cacheprovider -rf 2>&1 | tee "$RUNNER_TEMP/pytest.txt"; test "${PIPESTATUS[0]}" -eq 0
+      - name: Save the failing output on the ledger branch
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/brl_record_diagnostic.py "diagnostics/ci_tests_${GITHUB_RUN_ID}.txt" "$RUNNER_TEMP/pytest.txt"
