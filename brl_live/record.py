@@ -150,19 +150,25 @@ def build_record(ledger: dict) -> dict:
                          'coin': math.log(2), 'home': _logloss(HOME_RATE_PRIOR, y)},
         })
 
-    def mean(key, metric):
-        vals = [g[metric][key] for g in games if g[metric].get(key) is not None]
-        return (sum(vals) / len(vals)) if vals else None
-
     rows = [('coin', 'Coin flip'), ('home', 'Always pick the home team'), ('market', 'Vegas'), ('team', 'Team ratings alone'),
             ('sim', 'Simulator alone'), ('ours', 'Our model alone'), ('blend', 'Our pick (with the line)')]
+    # Every row is scored on the same games: those where every row that has any score has one (DQ-01: the market row
+    # had 13 games and the others 15, so the rows were not comparable). The all-games score of each row is kept beside it.
+    present = [k for k, _ in rows if any(g['brier'].get(k) is not None for g in games)]
+    common = [g for g in games if all(g['brier'].get(k) is not None for k in present)]
+
+    def mean(key, metric, pool):
+        vals = [g[metric][key] for g in pool if g[metric].get(key) is not None]
+        return (sum(vals) / len(vals)) if vals else None
+
     ladder = []
     for key, name in rows:
-        b = mean(key, 'brier')
-        ladder.append({'key': key, 'name': name, 'n': sum(1 for g in games if g['brier'].get(key) is not None),
+        b = mean(key, 'brier', common); ll = mean(key, 'log_loss', common); b_all = mean(key, 'brier', games)
+        ladder.append({'key': key, 'name': name, 'n': sum(1 for g in common if g['brier'].get(key) is not None),
                        'brier': None if b is None else round(b, 5),
-                       'log_loss': None if mean(key, 'log_loss') is None else round(mean(key, 'log_loss'), 5),
-                       'better_than_coin_pct': None if b is None else round((0.25 - b) / 0.25 * 100, 2)})
+                       'log_loss': None if ll is None else round(ll, 5),
+                       'better_than_coin_pct': None if b is None else round((0.25 - b) / 0.25 * 100, 2),
+                       'n_all': sum(1 for g in games if g['brier'].get(key) is not None), 'brier_all': None if b_all is None else round(b_all, 5)})
     # Where our independent model and the market disagreed by five points or more: who was closer.
     split = [g for g in games if g.get('p_market') is not None and abs(g['p_ours'] - g['p_market']) >= 0.05]
     disagree = {'threshold': 0.05, 'n': len(split),

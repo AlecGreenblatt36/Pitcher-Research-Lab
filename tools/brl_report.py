@@ -73,12 +73,23 @@ def record_from(days: dict) -> dict:
            'outside_pitches': 0, 'in_recommended': 0, 'usual_expected': 0.0, 'chases': 0, 'chases_expected_league': 0.0, 'chases_expected_map': 0.0,
            'scored': {'decisions': 0, 'log_loss_map': 0.0, 'log_loss_league': 0.0, 'games': 0},
            'bins': {k: {'pairs': 0, 'outside': 0, 'chases': 0, 'league': 0.0, 'map': 0.0} for k in BINS}, 'by_month': {}, 'by_pricing': {}}
+    # A game graded on more than one date (postponed, then played; suspended, then finished) counts once, on the last date
+    # it was graded (DQ-02)
+    last_graded = {}
+    for day in sorted(days):
+        for pk, g in ((days[day] or {}).get('games') or {}).items():
+            if (g.get('grade') or {}).get('pairs'):
+                last_graded[str(g.get('game_pk') or pk)] = day
+    rec['duplicates_dropped'] = 0
     for day in sorted(days):
         doc = days[day]; used = False
         pricing = doc.get('pricing') or 'regression'      # how the day's aim plans were chosen (VALUE-18: structural from October 9, 2026)
-        for g in (doc.get('games') or {}).values():
+        for pk, g in (doc.get('games') or {}).items():
             gr = g.get('grade')
             if not gr or not gr.get('pairs'):
+                continue
+            if last_graded.get(str(g.get('game_pk') or pk)) != day:
+                rec['duplicates_dropped'] += 1
                 continue
             used = True; rec['games'] += 1
             for k in ('outside_pitches', 'in_recommended', 'usual_expected', 'chases', 'chases_expected_league', 'chases_expected_map'):
@@ -1200,7 +1211,11 @@ def schedule(day: str) -> list:
         for g in d.get('games', []):
             st = g.get('status') or {}
             teams = g.get('teams') or {}
-            row = {'game_pk': int(g['gamePk']), 'game_type': g.get('gameType'), 'status': st.get('detailedState'), 'final': st.get('abstractGameState') == 'Final',
+            # MLB's abstract state is Final for postponed, cancelled and suspended games too; only a game played to an end is final
+            # (DQ-02: 63 games were graded twice, on their postponed date and on the date they were played)
+            played_out = not (str(st.get('detailedState') or '') in ('Postponed', 'Cancelled') or str(st.get('detailedState') or '').startswith('Suspended')
+                              or st.get('codedGameState') in ('D', 'C'))
+            row = {'game_pk': int(g['gamePk']), 'game_type': g.get('gameType'), 'status': st.get('detailedState'), 'final': st.get('abstractGameState') == 'Final' and played_out,
                    'start': g.get('gameDate'), 'teams': {}, 'lineups': {}}
             for side in ('away', 'home'):
                 t = teams.get(side, {}); team = t.get('team') or {}

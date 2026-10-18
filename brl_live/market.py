@@ -193,6 +193,9 @@ def capture(fetch_json, date_ymd: str, ledger: dict, now_iso: str, books_fetch=N
                       'first_p_home': prev.get('first_p_home', prev.get('p_home', line['p_home'])),
                       'first_captured_at': prev.get('first_captured_at', prev.get('captured_at', now_iso)),
                       'source': 'ESPN public scoreboard'}
+        if prev.get('first_p_home_cons') is not None:
+            # the first consensus line too (DQ-01: rebuilding the row dropped it, so every capture reset it to the current line)
+            market[pk]['first_p_home_cons'] = prev['first_p_home_cons']
         captured += 1
     books_note = None
     if books_fetch is not None:

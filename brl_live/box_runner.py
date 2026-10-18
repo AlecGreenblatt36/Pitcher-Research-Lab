@@ -113,17 +113,57 @@ LIVE_STATES=('In Progress','Manager challenge','Umpire review','Delayed')
 EARLY_BUDGET_SECONDS=1200
 EARLY_RUN_LIMIT_SECONDS=2700
 EARLY_SCHEDULE='https://statsapi.mlb.com/api/v1/schedule?sportId=1&date={date}&hydrate=probablePitcher'
+# Games of an earlier date the ledger still holds as not final, at most this many per run (DQ-01: a game that ends after
+# midnight Eastern was never fetched again once the run moved to the next day's schedule, so it stayed 'In Progress' and
+# out of the record).
+STRAGGLER_LIMIT=8
+NOT_PLAYED=('Postponed','Cancelled')
+
+def not_played(status):
+    """A game the official feed calls Final without it having been played to an end: postponed, cancelled or suspended.
+    MLB's abstract state is Final for these; scoring one would grade a forecast on a partial or empty score (DQ-01)."""
+    detailed=str((status or {}).get('detailedState') or '')
+    return detailed in NOT_PLAYED or detailed.startswith('Suspended') or (status or {}).get('codedGameState') in ('D','C')
 
 class BoxRunner(original.Runner):
     def iteration(self):
         import time
         started=time.monotonic()
         super().iteration()
+        try:self.straggler_iteration()
+        except Exception as exc:
+            self.store.ledger['straggler_receipt']={'error':type(exc).__name__+': '+str(exc)[:200],'at':self.clock().isoformat()}
+            self.store.persist()
         budget=min(EARLY_BUDGET_SECONDS,max(0.0,EARLY_RUN_LIMIT_SECONDS-(time.monotonic()-started)))
         try:self.early_iteration(budget=budget)
         except Exception as exc:
             self.store.ledger['early_receipt']={'error':type(exc).__name__+': '+str(exc)[:200],'at':self.clock().isoformat()}
             self.store.persist()
+    def straggler_iteration(self,limit=None):
+        """Games from an earlier date that the ledger still holds as not final (most often one that ended after midnight
+        Eastern): each is fetched again with its own date's schedule entry until it is final, postponed or cancelled.
+        A game that is back in Preview (moved to a later date) is left to that date's run."""
+        today=self.today();status=self.store.ledger.get('status') or {}
+        done_states=('final',)+NOT_PLAYED
+        pending=sorted(pk for pk,st in status.items() if (st or {}).get('state') not in done_states and str((st or {}).get('date') or today)<today)
+        limit=STRAGGLER_LIMIT if limit is None else limit
+        by_date={}
+        for pk in pending[:limit]:by_date.setdefault(str(status[pk]['date']),[]).append(pk)
+        done,skipped={},{}
+        for day,pks in sorted(by_date.items()):
+            try:items={str(i['game_pk']):i for i in self.schedule(day)}
+            except Exception as exc:
+                for pk in pks:skipped[pk]='schedule: '+type(exc).__name__
+                continue
+            for pk in pks:
+                item=items.get(pk)
+                if item is None:skipped[pk]='not on its date\'s schedule';continue
+                if item.get('state')=='Preview':skipped[pk]='moved to a later date';continue
+                try:
+                    self.process(int(pk),item);done[pk]=(self.store.ledger['status'].get(pk) or {}).get('state')
+                except Exception as exc:skipped[pk]=type(exc).__name__+': '+str(exc)[:160]
+        self.store.ledger['straggler_receipt']={'pending':len(pending),'processed':done,'skipped':skipped,'at':self.clock().isoformat()}
+        self.store.persist()
     def early_iteration(self,budget=EARLY_BUDGET_SECONDS):
         """Tomorrow's games with both probable starters announced: forecast now, the same way as on game day."""
         import time
@@ -169,6 +209,10 @@ class BoxRunner(original.Runner):
         feed,receipt=self.net.json(url);gd=feed['gameData']
         if feed.get('gamePk')!=pk:raise Blocked('Wrong official game identity')
         self.store.ledger['context'][str(pk)]=game_context(item,gd,self.clock().isoformat())
+        if gd['status']['abstractGameState']=='Final' and not_played(gd['status']):
+            # Postponed, cancelled or suspended: not a final score. The make-up keeps the same game id and comes back as Preview.
+            self.store.ledger['status'][str(pk)]={'state':str(gd['status'].get('detailedState')),'date':gd['datetime']['officialDate'],'checked_at':self.clock().isoformat()}
+            self.store.persist();return
         if gd['status']['abstractGameState']=='Final':
             result=original.parse_final(feed,pk,receipt['finished_at'])
             self.store.private('results',content_hash(result),{'result':result,'source':feed,'receipt':receipt})

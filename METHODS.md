@@ -13,8 +13,9 @@ and pitch data stay sealed on the runner.
 
 ## The forecast and its three streams
 
-- The simulator: a seven-outcome plate-appearance model (logistic, with pitch-physics features; fitted on 2023-2024,
-  tuned on 2025, tested on 2026 before use) played 10,000 times per game with fitted layers (context offsets, run
+- The simulator: a seven-outcome plate-appearance model (logistic, with pitch-physics and pitch-chain features; since
+  October 17, 2026 fitted on 2023-2025 and tuned, calibrated and blended on 2026, so neither replay season is untouched
+  for it; the earlier models were fitted on 2023-2024, tuned on 2025 and tested on 2026) played 10,000 times per game with fitted layers (context offsets, run
   environment, team offsets, base running, reliever choice, relief exits with team hooks, starter leash). It is
   trained on results only and never sees a betting line.
 - Our model: a fixed combination of the simulator's and a team model's log-odds. Its weights were taught by the
@@ -40,7 +41,11 @@ changes the early versions and the plans built before lineups come out.
 ## What the replays say, and what they do not
 
 Full replays of the 2025 and 2026 regular seasons (1,000 worlds per game, each season with tables fitted on the
-other season) are development evidence: the settings were chosen on them. On those replays our model's Brier score
+other season) are development evidence: the settings were chosen on them, the headline's weights were chosen looking at
+both seasons, and from October 17 the at-bat model has seen both (an outside review on October 18 also found that the
+BULLPEN-10 and BULLPEN-11 replays used the replayed season's own starter-leash table). LEG-01 re-scores every leg on
+replays where no part saw the replayed season; a re-run of 2022, fitted only on data through 2021, is the planned
+untouched test. On those replays our model's Brier score
 is about level with the closing line (pooled 0.24245 against 0.24289, paired difference -0.00044 with an interval
 from -0.00165 to +0.00072). That interval includes zero; it supports similar development-replay performance, not
 equivalence and not prospective parity. The forward record from October 9, 2026 (FWD-02 in the ledger) is what will
@@ -54,7 +59,9 @@ October 2026 the record keeps actual opening snapshots as captured, with the ful
 Totals: the simulator's total-run distributions are close to calibrated (middle-half coverage 0.48), but its
 over/under chances are no better than a coin and the market's are only slightly better. From October 10, 2026 the
 page's expected total is a taught combination (0.32 x simulator mean + 0.78 x market line - 0.543), which beat the
-line on squared error in 2026 replays (-0.27, interval excluding zero) and was within noise in 2025 (-0.12). No over
+line on squared error in 2026 replays (-0.27, interval excluding zero) and was within noise in 2025 (-0.12); its two
+weights came from both seasons' regressions (only the intercept was fitted on the other season), so those are
+development numbers. No over
 chance of our own is stated. The totals error is being diagnosed as a distribution problem (first five innings
 against full games, team runs against combined runs, tails, extras, park and weather subsets) before any feature is
 added.

@@ -53,3 +53,17 @@ def test_ladder_and_blend_cover_every_forecast():
 def test_empty_ledger_has_empty_record():
     rec=build_record({'forecasts':{},'publications':{},'actuals':{}})
     assert rec['n_scored']==0 and rec['games']==[] and all(r['brier'] is None for r in rec['ladder'])
+
+
+def test_every_ladder_row_is_scored_on_the_same_games():
+    """DQ-01: a row with fewer games (the market on a day with no line) no longer gets its own denominator."""
+    led=ledger()
+    led['forecasts'].update(dict([forecast('g3',3,1,'2026-10-06T18:00:00Z',0.70,0.60)]))
+    led['publications']['g3']={'commit':'e'*40,'published_at':'2026-10-06T18:05:00Z'}
+    led['actuals']['3']={'away':1,'home':4,'first_pitch_observed_at':'2026-10-06T23:10:00Z'}
+    led['market']={'3':{'game_pk':3,'p_home':0.55,'captured_at':'2026-10-06T20:00:00Z','first_p_home':0.55,'first_captured_at':'2026-10-06T19:00:00Z'}}
+    rec=build_record(led)
+    ladder={r['key']:r for r in rec['ladder']}
+    assert rec['n_scored']==2 and ladder['market']['n_all']==1
+    assert all(r['n']==1 for r in rec['ladder'] if r['brier'] is not None)
+    assert ladder['sim']['n_all']==2 and ladder['sim']['brier']==pytest.approx((0.70-1)**2,abs=1e-5)

@@ -51,7 +51,7 @@ comparison, timing). Per-game model outputs and final scores are not private dat
 appearances never leave the runner.
 """
 from __future__ import annotations
-import base64, gzip, hashlib, importlib.util, io, json, os, sys, time, traceback
+import base64, gzip, hashlib, importlib.util, io, json, os, re, sys, time, traceback
 from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
@@ -161,6 +161,54 @@ def paired(a: pd.DataFrame, b: pd.DataFrame, column: str, replicates: int = 4000
             'brier_candidate': float(da.mean()), 'brier_reference': float(db.mean())}
 
 
+TABLE_PARAMS = ('offsets', 'environment', 'transitions', 'reliever_choice', 'relief_exit', 'relief_correction', 'leash', 'hazard_correction',
+                'running_events', 'base_state')
+YEAR_RE = re.compile(r'(?<!\d)(20[12]\d)(?!\d)')
+
+
+def fit_seasons(doc: dict) -> set:
+    """The seasons a fitted table or model manifest learned from, read from the fields the fitting tools write
+    (fitted_on, train, train_years, validation_years, seasons, replays, estimated_through). Empty when none says."""
+    out = set()
+    cfg = doc.get('config') if isinstance(doc.get('config'), dict) else {}
+    for key in ('fitted_on', 'train', 'train_years', 'seasons'):
+        v = doc.get(key, cfg.get(key))
+        if isinstance(v, (list, tuple)):
+            out |= {int(x) for x in v if str(x).isdigit()}
+        elif isinstance(v, str):
+            out |= {int(y) for y in YEAR_RE.findall(v)}
+    v = cfg.get('validation_years')                     # a model is tuned, calibrated and blended on its validation years
+    if isinstance(v, (list, tuple)):
+        out |= {int(x) for x in v}
+    for key in ('replays', 'estimated_through'):
+        v = doc.get(key)
+        if v:
+            out |= {int(y) for y in YEAR_RE.findall(str(v))}
+    return out
+
+
+def in_sample_inputs(params: dict, season: int, manifest: dict | None = None) -> list:
+    """Every replay input fitted on the season being replayed (LEDGER LEG-01: the leash table of BULLPEN-10 and -11 was).
+    A replay with params strict_forward refuses to run with any; otherwise the receipt lists them."""
+    found = []
+    for key in TABLE_PARAMS:
+        path = params.get(key)
+        if not isinstance(path, str) or not path.endswith('.json'):
+            continue
+        try:
+            doc = json.loads((ROOT / path).read_text())
+        except (OSError, ValueError):
+            continue
+        yrs = fit_seasons(doc)
+        if season in yrs:
+            found.append({'input': key, 'path': path, 'fit_seasons': sorted(yrs)})
+    if manifest:
+        yrs = fit_seasons(manifest)
+        if season in yrs:
+            found.append({'input': 'model', 'path': str(manifest.get('name')), 'fit_seasons': sorted(yrs)})
+    return found
+
+
 def main():
     repo = os.environ['GITHUB_REPOSITORY']; token = os.environ['GH_TOKEN']; key_hex = os.environ['BRL_PA_PACKAGE_KEY']
     branch = os.environ.get('BRL_LEDGER_BRANCH', 'brl-live-data'); run_id = os.environ.get('GITHUB_RUN_ID', 'local')
@@ -179,6 +227,10 @@ def main():
     receipt = {'schema': 'brl.replay-receipt.v1', 'tag': tag, 'model': model, 'season': season, 'n_sims': n_sims, 'date_from': date_from, 'step': step,
                'offsets': use_offsets, 'rest': use_rest, 'workers': workers, 'run_id': run_id, 'shard': [shard, n_shards],
                'started_at': datetime.now(timezone.utc).isoformat(), 'stages': []}
+    _manifest_path = ROOT / 'brl_engine' / 'models' / f'{model}.json'
+    receipt['in_sample_inputs'] = in_sample_inputs(params, season, json.loads(_manifest_path.read_text()) if _manifest_path.exists() else None)
+    if params.get('strict_forward') and receipt['in_sample_inputs']:
+        raise SystemExit('strict_forward: inputs fitted on the replayed season: ' + json.dumps(receipt['in_sample_inputs']))
     t0 = time.time()
     def stage(label):
         receipt['stages'].append({'stage': label, 'at_seconds': round(time.time() - t0, 1)}); print(label, round(time.time() - t0), 's', flush=True)

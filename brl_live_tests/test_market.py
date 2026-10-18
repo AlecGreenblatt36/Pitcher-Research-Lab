@@ -118,6 +118,13 @@ def test_capture_adds_the_several_books_consensus():
     assert m['first_p_home_cons'] == m['p_home_cons'] and r['books']['games_with_consensus'] == 1
     r = capture(fetch, '2026-10-07', ledger, '2026-10-07T20:15:00+00:00', books_fetch=lambda url: (_ for _ in ()).throw(OSError('down')))
     assert 'error' in r['books'] and ledger['market']['1']['p_home'] > 0
+    first = m['first_p_home_cons']
+    # DQ-01: a later capture with a moved line keeps the first consensus line
+    rows[0]['oddsViews'][0]['currentLine'] = {'homeOdds': 150, 'awayOdds': -180}
+    html2 = '<script id="__NEXT_DATA__" type="application/json">' + _json.dumps({'props': {'pageProps': {'oddsTables': [{'oddsTableModel': {'gameRows': rows}}]}}}) + '</script>'
+    capture(fetch, '2026-10-07', ledger, '2026-10-07T21:00:00+00:00', books_fetch=lambda url: html2)
+    m2 = ledger['market']['1']
+    assert m2['first_p_home_cons'] == first and m2['p_home_cons'] != first
 
 
 def test_record_uses_the_several_books_average_when_read():
