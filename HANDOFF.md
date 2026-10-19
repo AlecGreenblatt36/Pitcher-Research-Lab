@@ -78,8 +78,10 @@ Model Plan doc). Built the same afternoon:
 - Security: every workflow is read-only by default with writes per job; no checkout keeps git credentials; brl-live's wait
   input is digits only; the data package unpacks through cloud.security.extract_verified; public receipts mask quoted values.
   The live lane ran clean on all of it (receipt data_source brl-data-202610070629).
-- Still open from the code-health review: normalize_probabilities should refuse unknown keys (check every provider first; do
-  not change it in the hour before a game), the forecast fingerprint should hash table contents, pinned dependencies.
+- Done late October 18 (pushed after Game 5 ended; the next live run was clean): normalize_probabilities refuses unknown
+  labels, the forecast fingerprint hashes brl_live/*.json contents. Still open: pinned, hash-locked dependencies.
+- The board, scored with tools/brl_leg_board_score.py on the published data: ALCS Game 4, 58 of 71 legs hit (59.5
+  expected); Game 5, 68 of 81 (66.6 expected). Run it after each day's games to keep the live count.
 
 ## October 18: ten agent-skill repos from Instagram, applied as checklists (page only, no model change)
 
