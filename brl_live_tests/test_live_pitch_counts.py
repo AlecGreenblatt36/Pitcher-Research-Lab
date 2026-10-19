@@ -53,3 +53,17 @@ def test_settings_change_is_a_new_forecast():
     assert settings_fingerprint(changed) != a
     src = (Path(__file__).parents[1] / 'brl_live' / 'box_runner.py').read_text()
     assert "'settings':settings_fingerprint(ADJUST)" in src
+
+
+def test_refitted_table_is_a_new_forecast(tmp_path):
+    """A table refitted under the same file name changes the fingerprint (REVIEW-01 follow-up); the same tables do not."""
+    from brl_live.boxscore import ADJUST, settings_fingerprint, table_hashes
+    (tmp_path / 'leash.json').write_text('{"base": 0.6}')
+    (tmp_path / 'notes.txt').write_text('ignored')
+    t1 = table_hashes(tmp_path)
+    assert list(t1) == ['leash.json']
+    (tmp_path / 'leash.json').write_text('{"base": 0.61}')
+    t2 = table_hashes(tmp_path)
+    assert settings_fingerprint(ADJUST, t1) != settings_fingerprint(ADJUST, t2)
+    assert settings_fingerprint(ADJUST, t1) == settings_fingerprint(ADJUST, dict(t1))
+    assert 'reliever_choice10.json' in table_hashes() and 'transitions.json' in table_hashes()

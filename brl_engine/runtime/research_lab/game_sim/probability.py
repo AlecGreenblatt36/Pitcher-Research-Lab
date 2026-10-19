@@ -18,6 +18,11 @@ class PAProbabilityProvider(Protocol):
 
 def normalize_probabilities(values: Mapping[str, float] | Sequence[float] | np.ndarray) -> dict[str, float]:
     if isinstance(values, Mapping):
+        unknown = set(values) - set(OUTCOME_LABELS)
+        if unknown:
+            # a provider returning the model's labels (K, BB_HBP, ...) or a misspelt one would otherwise lose that mass
+            # silently and renormalize the rest (REVIEW-01 follow-up, October 18)
+            raise ValueError(f"unknown outcome labels: {sorted(unknown)}")
         vector = np.asarray([float(values.get(label, 0.0)) for label in OUTCOME_LABELS])
     else:
         vector = np.asarray(values, dtype=float)

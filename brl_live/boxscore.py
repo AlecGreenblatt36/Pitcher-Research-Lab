@@ -634,12 +634,20 @@ def steal_model_for(settings,matchup,date):
         if not fetched or fetched>=str(date)[:10]:through=season-1
     return steal_model(through)
 
-def settings_fingerprint(settings=ADJUST):
-    """A hash of the simulator settings (ADJUST) for the forecast fingerprint: a settings change is a different forecast,
-    so every pending game gets a new saved version at the next run and earlier versions stand (October 17, 2026; before
-    this a settings change reached a pending game only when its lineups or the history changed)."""
+def table_hashes(folder=None):
+    """sha256 of every fitted table in brl_live/ (the top-level .json files the simulator reads by name). They change only
+    in commits, so a refitted table is a new forecast exactly as a settings change is (REVIEW-01 follow-up, October 18)."""
+    import hashlib
+    folder=Path(folder or Path(__file__).resolve().parent)
+    return {p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(folder.glob('*.json'))}
+
+def settings_fingerprint(settings=ADJUST,tables=None):
+    """A hash of the simulator settings (ADJUST) and the fitted tables' contents for the forecast fingerprint: a settings or
+    table change is a different forecast, so every pending game gets a new saved version at the next run and earlier
+    versions stand (settings from October 17, 2026; table contents from October 18: before, a refitted table under the same
+    file name reached a pending game only when its lineups or the history changed)."""
     from app.common import content_hash
-    return content_hash({'adjust':settings})
+    return content_hash({'adjust':settings,'tables':table_hashes() if tables is None else tables})
 
 def adjusted_provider(provider,full_history,date,settings=ADJUST,environment=None,teams=None):
     """Wrap the engine's provider with the enabled adjustments. Returns (provider, world_hook, label).

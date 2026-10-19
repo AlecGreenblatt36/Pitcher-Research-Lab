@@ -1992,8 +1992,8 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var add = function (fam, p, yes, no, o) {
       if (p == null || !isFinite(p)) return;
       o = o || {};
-      out.push({ fam: fam + ":yes", p: p, text: yes, who: o.who || "", kind: o.kind || "game", mk: o.mk != null ? o.mk : null, pk: f.game_pk });
-      if (no) out.push({ fam: fam + ":no", p: 1 - p, text: no, who: o.who || "", kind: o.kind || "game", mk: o.mk != null ? 1 - o.mk : null, pk: f.game_pk });
+      out.push({ fam: fam + ":yes", p: p, text: yes, who: o.who || "", pid: o.pid || "", kind: o.kind || "game", mk: o.mk != null ? o.mk : null, pk: f.game_pk });
+      if (no) out.push({ fam: fam + ":no", p: 1 - p, text: no, who: o.who || "", pid: o.pid || "", kind: o.kind || "game", mk: o.mk != null ? 1 - o.mk : null, pk: f.game_pk });
     };
     var mk = D.market && D.market[f.game_pk], mh = marketProb(mk);
     add("win:home", f.home_win_probability, H + " win", A + " win", { mk: mh });
@@ -2019,7 +2019,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     ["away", "home"].forEach(function (side) {
       var bat = (box.teams[side] || {}).batting || [], nm = shortNames(bat);
       bat.forEach(function (b) {
-        var d = b.distributions || {}, n = nm[String(b.player_id)], o = { who: n, kind: "hitter" };
+        var d = b.distributions || {}, n = nm[String(b.player_id)], o = { who: n, pid: String(b.player_id), kind: "hitter" };
         if (d.H) { add("hitter:hits1+", ownAtLeast(d.H, 1, b.spot), n + " 1+ hit", n + " no hit", o); add("hitter:hits2+", ownAtLeast(d.H, 2, b.spot), n + " 2+ hits", n + " under 2 hits", o); }
         if (d.HR) add("hitter:hr", ownAtLeast(d.HR, 1, b.spot), n + " homers", n + " no home run", o);
         if (d.K) add("hitter:k1+", ownAtLeast(d.K, 1, b.spot), n + " strikes out", n + " no strikeout", o);
@@ -2028,7 +2028,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       });
       var sp = ((box.teams[side] || {}).pitching || [])[0];
       if (sp && sp.distributions) {
-        var sd_ = sp.distributions, sn = lastName(sp.name), so = { who: sn, kind: "pitcher" };
+        var sd_ = sp.distributions, sn = lastName(sp.name), so = { who: sn, pid: String(sp.player_id), kind: "pitcher" };
         [["k", sd_.K && pmfOf(kShape(sd_.K)), "strikeouts"], ["outs", sd_.outs && pmfOf(sd_.outs), "outs"], ["h", sd_.H && pmfOf(sd_.H), "hits allowed"], ["bb", sd_.BB && pmfOf(sd_.BB), "walks"]].forEach(function (x) {
           if (!x[1]) return;
           LEG_LINES[x[0]].forEach(function (L) { add("starter:" + x[0] + ":over" + L, overArr(x[1], L), sn + " over " + L + " " + x[2], sn + " under " + L + " " + x[2], so); });
@@ -2054,7 +2054,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
   }
   /* the rows the board leads with: per player or team and stat, only its likeliest line; then at most two rows of any one
      kind of leg (two "no home run" rows, not twelve), so the list shows the range of strong legs; the rest fold below */
-  function legKey(l) { return l.pk + "|" + l.fam + "|" + l.who; }
+  function legKey(l) { return l.pk + "|" + l.fam + "|" + (l.pid || l.who); }
   function legKind(fam) { return fam.replace(/over[\d.]+/, "").replace(/-1\.5/, ""); }
   function leadLegs(rows, max) {
     var seen = {}, kinds = {}, lead = [], rest = [];

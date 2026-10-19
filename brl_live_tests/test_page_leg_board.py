@@ -61,7 +61,7 @@ def _game():
 
 def test_page_legs_match_the_leg_book():
     s = _script()
-    consts = ''.join(re.search(r'\n  var ' + v + r' = .*?;\n', s, re.S).group(0) for v in ('RUN_SPREAD', 'LANCZOS', 'K_SPREAD', 'SLOT_SHARE', 'LEG_LINES'))
+    consts = ''.join(re.search(r'\n  var ' + v + r' = .*?;\n', s, re.S).group(0) for v in ('RUN_SPREAD', 'LANCZOS', 'K_SPREAD', 'SLOT_SHARE', 'SUFFIX', 'LEG_LINES'))
     names = ('dist', 'total', 'mean', 'sd', 'lgam', 'nbRuns', 'kShape', 'ownAtLeast', 'mmShare', 'lastName', 'shortNames', 'marketProb',
              'pmfOf', 'overArr', 'convArr', 'legBin', 'gameLegs')
     g, box = _game()
