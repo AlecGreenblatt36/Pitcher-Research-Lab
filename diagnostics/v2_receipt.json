@@ -1,5 +1,5 @@
 {
- "created_at": "2026-10-20T07:23:41.122808+00:00",
+ "created_at": "2026-10-20T07:38:47.370935+00:00",
  "status": "iteration_completed",
  "runtime": "brl_engine (public code, sealed data)",
  "ledger_branch": "brl-live-data",
@@ -23,10 +23,10 @@
  "player_scored_games": 18,
  "scored_games": 18,
  "skill_scored_games": 17,
- "skill_baseline_prior_games": 48,
- "history_coverage_through": "2026-10-18",
- "history_added_PA": 2470,
- "history_refresh_note": "Statcast empty on a date with completed games",
+ "skill_baseline_prior_games": 49,
+ "history_coverage_through": "2026-10-19",
+ "history_added_PA": 2548,
+ "history_refresh_note": null,
  "history_day_notes": {},
  "pa_model": {
   "name": "retrain04-rt",
@@ -42,8 +42,10 @@
      "through": "2026-10-18"
     }
    },
-   "day_cache_days": 0,
+   "day_cache_days": 1,
    "day_cache_rows": 0,
+   "day_cache_errors": 1,
+   "day_cache_error": "KeyError: 'body'",
    "rows": 372881,
    "through": "2026-10-18",
    "seasons_mode": "live",
@@ -100,14 +102,16 @@
       "through": "2026-03-24"
      }
     },
-    "day_cache_days": 0,
+    "day_cache_days": 1,
     "day_cache_rows": 0,
+    "day_cache_errors": 1,
+    "day_cache_error": "KeyError: 'body'",
     "rows": 4741397,
     "through": "2026-10-18"
    }
   }
  },
- "pitch_bookkeeping_prior_PA": 203814,
+ "pitch_bookkeeping_prior_PA": 203892,
  "pitch_bookkeeping_season_games": 4940,
  "engine_rules_changed": false,
  "model_parameters_changed": false,
@@ -145,10 +149,10 @@
   "skipped": 0
  },
  "storage_read_audit": {
-  "contents_verified": 51,
+  "contents_verified": 55,
   "blob_fallbacks": 36,
-  "bytes_verified": 198821885,
-  "requests": 156,
-  "rate_limit_remaining": 4516
+  "bytes_verified": 200153071,
+  "requests": 167,
+  "rate_limit_remaining": 4908
  }
 }
