@@ -249,9 +249,72 @@ def _distribution(counter,n):
 # the hit chance's mean 0.633 to 0.617 against 0.607 actual, Brier -0.00064; home runs -0.00010.
 STARTER_SHARE=(0.974,0.976,0.976,0.977,0.969,0.962,0.953,0.942,0.927)
 
-class BoxAccumulator:
+# LEG-02 (October 23, 2026): every world's leg outcomes, kept together so a same-game slip's chance comes from the worlds
+# where all its legs hit, not from multiplying. Per world: each lineup slot's H, extra-base hits, HR, K, BB; each starter's
+# K, outs, H, BB; the score, the first inning's runs and each team's runs through five. The page's leg families and lines
+# (template.html LEG_LINES; tools/brl_leg_book.py) get one bit row each over the worlds.
+WORLD_BAT=('H','XBH','HR','K','BB');WORLD_SP=('K','outs','H','BB')
+WORLD_LINES={'total':(6.5,7.5,8.5,9.5,10.5,11.5),'team':(0.5,1.5,2.5,3.5,4.5,5.5),'k':(2.5,3.5,4.5,5.5,6.5,7.5),
+             'outs':(11.5,12.5,13.5,14.5,15.5,16.5,17.5,18.5),'h':(3.5,4.5,5.5,6.5),'bb':(0.5,1.5,2.5),'f5':(3.5,4.5,5.5)}
+
+class WorldLog:
+    """The per-world record behind the leg bits: a small integer row per world."""
     def __init__(self,matchup):
-        self.matchup=matchup;self.n=0;self.hist={s:{'batting':{},'pitching':{}} for s in SIDE};self.early=[]
+        self.slots={s:[str(p.player_id) for p in getattr(matchup,s).lineup] for s in SIDE}
+        self.starters={s:str(getattr(matchup,s).starter.player_id) for s in SIDE}
+        self.rows=[]
+    def add(self,box,early):
+        row=[]
+        for s in SIDE:
+            index={str(r['player_id']):r for r in box['batting'][s]}
+            for pid in self.slots[s]:
+                r=index.get(pid) or {}
+                h=int(r.get('H') or 0);xbh=int(r.get('2B') or 0)+int(r.get('3B') or 0)+int(r.get('HR') or 0)
+                row+=[h,xbh,int(r.get('HR') or 0),int(r.get('K') or 0),int(r.get('BB') or 0)]
+        for s in SIDE:
+            sp=next((r for r in box['pitching'][s] if str(r['player_id'])==self.starters[s]),{})
+            row+=[int(sp.get(k) or 0) for k in WORLD_SP]
+        a1,h1,a5,h5=early
+        row+=[int(box['score']['away']),int(box['score']['home']),int(a1)+int(h1),int(a5),int(h5)]
+        self.rows.append(row)
+    def legs(self):
+        """[(family, player_id, yes bits over the worlds)] for every leg the page can list."""
+        import numpy as np
+        m=np.asarray(self.rows,dtype=np.int16);out=[]
+        nb=len(WORLD_BAT);base_sp=2*9*nb;base_g=base_sp+2*len(WORLD_SP)
+        away,home=m[:,base_g],m[:,base_g+1];first=m[:,base_g+2];a5,h5=m[:,base_g+3],m[:,base_g+4]
+        out.append(('win:home','',home>away))
+        out.append(('runline:home-1.5','',home-away>=2));out.append(('runline:away-1.5','',away-home>=2))
+        for L in WORLD_LINES['total']:out.append((f'total:over{L}','',away+home>L))
+        for s,runs in (('away',away),('home',home)):
+            for L in WORLD_LINES['team']:out.append((f'team_total:{s}:over{L}','',runs>L))
+        out.append(('first_inning:run_scored','',first>0))
+        for L in WORLD_LINES['f5']:out.append((f'f5_total:over{L}','',a5+h5>L))
+        for si,s in enumerate(SIDE):
+            for k,pid in enumerate(self.slots[s]):
+                b=(si*9+k)*nb;h,xbh,hr,kk,bb=(m[:,b+i] for i in range(nb))
+                out+=[('hitter:hits1+',pid,h>=1),('hitter:hits2+',pid,h>=2),('hitter:hr',pid,hr>=1),('hitter:k1+',pid,kk>=1),
+                      ('hitter:bb1+',pid,bb>=1),('hitter:tb2+',pid,(h>=2)|(xbh>=1))]
+        for si,s in enumerate(SIDE):
+            b=base_sp+si*len(WORLD_SP);kk,outs,h,bb=(m[:,b+i] for i in range(len(WORLD_SP)));pid=self.starters[s]
+            for name,v,key in (('k',kk,'k'),('outs',outs,'outs'),('h',h,'h'),('bb',bb,'bb')):
+                for L in WORLD_LINES[key]:out.append((f'starter:{name}:over{L}',pid,v>L))
+        return out
+    def payload(self):
+        """{'n', 'legs': [[family, player_id, worlds hit]], 'bits': [base64 of the packed yes bits, world 0 first]}."""
+        import base64,numpy as np
+        legs=self.legs()
+        return {'schema':'brl.world-legs.v1','n':len(self.rows),'legs':[[f,pid,int(v.sum())] for f,pid,v in legs],
+                'bits':[base64.b64encode(np.packbits(v.astype(np.uint8))).decode() for _,_,v in legs]}
+
+def unpack_bits(text,n):
+    """The yes bits of one leg back from the payload's base64."""
+    import base64,numpy as np
+    return np.unpackbits(np.frombuffer(base64.b64decode(text),dtype=np.uint8))[:n].astype(bool)
+
+class BoxAccumulator:
+    def __init__(self,matchup,world_legs=True):
+        self.matchup=matchup;self.n=0;self.hist={s:{'batting':{},'pitching':{}} for s in SIDE};self.early=[];self.worlds=WorldLog(matchup) if world_legs else None
         self.innings={s:defaultdict(lambda:Counter()) for s in SIDE};self.score_pairs=[];self.seeds=[];self.features=[];self.win=WinTable()
         # What decides the game (KEYS-01): for each condition, the worlds where it happened and those the team then won
         self.keys=Counter()
@@ -276,6 +339,7 @@ class BoxAccumulator:
         # each world's first inning and first five innings, road and home runs (NRFI-01, FIRST5-01)
         inn={s:{int(k):int(v.get('R',0)) for k,v in box['innings'][s].items()} for s in SIDE}
         self.early.append((inn['away'].get(1,0),inn['home'].get(1,0),sum(v for k,v in inn['away'].items() if k<=5),sum(v for k,v in inn['home'].items() if k<=5)))
+        if self.worlds is not None:self.worlds.add(box,self.early[-1])
     def _keys(self,box):
         """KEYS-01: count, per team, the worlds where each condition held and where it held and the team won: scoring first,
         leading after five innings, its starter getting 18 or more outs, and each of its hitters homering or getting two or
@@ -356,6 +420,7 @@ class BoxAccumulator:
             result['f5_total_distribution']=_distribution(Counter(a5+h5 for _,_,a5,h5 in self.early),self.n)
         result['sample_indices']=selected
         result['typical_score_frequency']=counts[modal]/self.n
+        if self.worlds is not None and len(self.worlds.rows)==self.n:result['world_legs']=self.worlds.payload()
         if self.win.games:result['win_table']=self.win.finish()
         result['keys']=self.keys_summary()
         return result
@@ -461,7 +526,10 @@ ADJUST={'context_offsets':True,'talent_noise_c':0.0,'player_prior_pa':180.0,
         # relief-exit hazard, regular season only (brl_live/relief_correction.json); with it the team hooks come from
         # brl_live/relief_hooks_corrected.json, measured against the corrected hazard. The postseason keeps the plain
         # hazard, its hooks and its measured exit offset
-        'relief_correction':True}
+        'relief_correction':True,
+        # LEG-02 (October 23, 2026): every world's leg outcomes kept as bits in the box (WorldLog), so a same-game slip's
+        # chance is counted in the worlds where all its legs hit; in the fingerprint, so pending games get a box with them
+        'world_legs':True}
 
 TRANSITIONS_PATH=Path(__file__).resolve().parent/'transitions.json'
 RUNNING_EVENTS_PATH=Path(__file__).resolve().parent/'running_events.json'
@@ -729,7 +797,7 @@ def run_box_worlds(engine,matchup,history,date,seeds,full_history=None,settings=
     pitches=pitch_counts_for(settings,provider)
     if pitches is not None:adjust_label=list(adjust_label)+[pitches.name]
     sim=ObservedSimulator(provider,config=engine.config,manager_policy=manager,steals=steals,transitions=kernel,running_events=running,pitch_counts=pitches)
-    accumulator=BoxAccumulator(matchup);results=[]
+    accumulator=BoxAccumulator(matchup,world_legs=bool(settings.get('world_legs',True)));results=[]
     for seed in seeds:
         if world_hook:world_hook(int(seed))
         result=sim.simulate(matchup,int(seed),record_events=True)

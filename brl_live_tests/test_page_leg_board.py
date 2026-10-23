@@ -87,3 +87,27 @@ def test_bins_match_the_leg_book():
     out = json.loads(subprocess.run(['node', '-e', js], capture_output=True, text=True, check=True).stdout)
     py = [f"{[lo for lo, hi in lb.BINS if lo <= p < hi][0]:.1f}" for p in (0.7, 0.6999999, 0.75, 0.8, 0.89999, 0.9, 0.99, 1.0)]
     assert out == py
+
+
+def test_slip_chance_counts_the_worlds_where_every_leg_hit():
+    """LEG-02: the page's same-game slip chance is the share of simulated worlds where all the legs hit, scaled to the stated chances."""
+    import base64
+    import numpy as np
+    s = _script()
+    consts = re.search(r'\n  var B64 = .*?\n  var legBitsCache = \{\};\n', s, re.S).group(0)
+    rng = np.random.default_rng(1); n = 10000
+    a = rng.random(n) < 0.9; b = rng.random(n) < 0.8; c = rng.random(n) < 0.7
+    enc = lambda v: base64.b64encode(np.packbits(v.astype(np.uint8))).decode()
+    box = {'forecast_id': 'f', 'world_legs': {'n': n, 'legs': [['hitter:hr', '1', int(a.sum())], ['starter:k:over4.5', '9', int(b.sum())], ['win:home', '', int(c.sum())]], 'bits': [enc(a), enc(b), enc(c)]}}
+    legs = [{'fam': 'hitter:hr:no', 'pid': '1', 'p': float((~a).mean())}, {'fam': 'starter:k:over4.5:yes', 'pid': '9', 'p': float(b.mean())}, {'fam': 'win:home:no', 'pid': '', 'p': float((~c).mean())}]
+    js = consts + _fn(s, 'unb64') + _fn(s, 'worldBits') + _fn(s, 'slipChance') + 'var box=' + json.dumps(box) + ';var legs=' + json.dumps(legs) + \
+        ';console.log(JSON.stringify([slipChance(box, legs), slipChance(box, legs.slice(0, 2)), slipChance({}, legs)]))'
+    three, two, none = json.loads(subprocess.run(['node'], input=js, capture_output=True, text=True, check=True).stdout)
+    assert abs(three['raw'] - float(((~a) & b & (~c)).mean())) < 1e-12 and abs(two['raw'] - float(((~a) & b).mean())) < 1e-12
+    assert abs(three['p'] - three['raw']) < 1e-9                             # stated chances equal the worlds' shares here: no scaling
+    assert none is None                                                      # a box without bits: the page multiplies instead
+    # scaling: a stated chance 10% above the worlds' share scales the joint by the same factor, never above the smallest leg
+    legs[1]['p'] = float(b.mean()) * 1.1
+    js2 = consts + _fn(s, 'unb64') + _fn(s, 'worldBits') + _fn(s, 'slipChance') + 'var box=' + json.dumps(box) + ';var legs=' + json.dumps(legs) + ';console.log(JSON.stringify(slipChance(box, legs.slice(0, 2))))'
+    sc = json.loads(subprocess.run(['node'], input=js2, capture_output=True, text=True, check=True).stdout)
+    assert abs(sc['p'] - min(two['raw'] * 1.1, legs[0]['p'])) < 1e-9

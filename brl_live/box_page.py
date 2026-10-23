@@ -78,12 +78,36 @@ def trim_boxes(public: dict) -> dict:
             recent[k] = early
         else:
             recent[k] = {name: value for name, value in v.items() if name not in PAGE_BOX_DROP}
+    # LEG-02: the per-world leg bits ride only with the slate date's games (a page of 15 games would otherwise grow by
+    # 4 MB), every fourth world when the slate has more than four games
+    today = str(public.get('date'))
+    games_today = sum(1 for v in recent.values() if str(v.get('date')) == today and v.get('world_legs'))
+    for v in recent.values():
+        if 'world_legs' not in v:
+            continue
+        if str(v.get('date')) != today:
+            v.pop('world_legs', None)
+        elif games_today > 4:
+            v['world_legs'] = thin_world_legs(v['world_legs'], 4)
     public['box_scores'] = recent
     public['live'] = {k: v for k, v in (public.get('live') or {}).items() if str(v.get('date')) in keep}
     public['box_publications'] = {k: v for k, v in (public.get('box_publications') or {}).items() if k in recent}
     pks = {str(v.get('game_pk')) for v in recent.values()}
     public['actual_boxes'] = {k: v for k, v in (public.get('actual_boxes') or {}).items() if str(k) in pks}
     return public
+
+
+def thin_world_legs(wl: dict, stride: int) -> dict:
+    """Every stride-th world of a world_legs payload (the same worlds for every leg, so joint counts stay joint)."""
+    import base64
+    import numpy as np
+    from .boxscore import unpack_bits
+    n = int(wl['n']); keep = np.arange(0, n, stride)
+    legs, bits = [], []
+    for (fam, pid, _), text in zip(wl['legs'], wl['bits']):
+        v = unpack_bits(text, n)[keep]
+        legs.append([fam, pid, int(v.sum())]); bits.append(base64.b64encode(np.packbits(v.astype(np.uint8))).decode())
+    return {**wl, 'n': int(len(keep)), 'legs': legs, 'bits': bits, 'stride': stride}
 
 
 def font_css() -> str:

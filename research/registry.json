@@ -1,8 +1,8 @@
 {
  "schema": "brl.registry.v1",
  "source": "LEDGER.md",
- "experiments": 376,
- "rows": 381,
+ "experiments": 377,
+ "rows": 382,
  "records": {
   "ACC-01": [
    {
@@ -6255,6 +6255,22 @@
     "runs": [],
     "frozen_commits": [],
     "status": "Not run / not run"
+   }
+  ],
+  "LEG-02": [
+   {
+    "id": "LEG-02",
+    "columns": {
+     "ID": "LEG-02",
+     "Attempt": "Same-game slips from the worlds. The box keeps, for every leg the board can list, one bit per simulated world (brl_live.boxscore.WorldLog, 10,000 worlds, packed; on the page for the slate date's games only, every fourth world when the slate has more than four games), so a slip's chance is the share of worlds where all its legs hit, with each leg scaled to its stated chance (the page spreads totals and strikeouts and thins a hitter's slot to his share). The page's slip line and tools/brl_sgp_scan.py (2- and 3-leg slips from the board's verified legs and three correlation templates; a book's quote gives the edge and a quarter-Kelly stake) use it. Alec's October 23 specification: a scanner that counts joint outcomes in the simulation paths rather than multiplying. Prior evidence: on the clean replays the product of a game's top 2, 3, 5 and 8 verified legs ran 0 to 2 points above the hit rate (LEG-01), so dependence among the board's legs is small on average; the worlds decide where it is not",
+     "Disposition and evidence": "**Registered in the commit that added this row, before any game it scores.** Gates for the forward check, scored by tools/brl_leg_board_score.py on the published boxes: after 60 or more games, the slip chances from the worlds for the day's top 2- and 3-leg same-game slips (one per player) within 2 points or 1.96 standard errors of the hit rate, and not worse than the multiplied chance by Brier. Prediction: the worlds and the product agree within a point on most slips; the templates (a starter going deep with the bottom of the order quiet; strikeouts stacked) show the worlds above the product by 2 to 6 points. A replay-lane version (bits recorded in brl_replay/harness.py) is the stronger test and is queued. No book lists same-game parlay prices publicly, so the market side of the scanner takes the quote as typed; a claim of an edge needs EDGE-01's and EDGE-02's kind of forward record, not a backtest",
+     "Delta corrected Brier, 2026": "registered"
+    },
+    "registered_before_run": true,
+    "diagnostic": false,
+    "runs": [],
+    "frozen_commits": [],
+    "status": "registered"
    }
   ],
   "DQ-01": [

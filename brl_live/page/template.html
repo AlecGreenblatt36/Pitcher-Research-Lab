@@ -2074,6 +2074,52 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       '<span class="lg-rec">Legs like it, which we put at ' + said + "% on average, hit " + pct(c[2]) + " in " + S[0] + " and " + pct(c[5]) + " in " + S[1] + " (" + (c[0] + c[3]).toLocaleString() + " legs)</span>" +
       (l.mk != null ? '<span class="lg-mk">Vegas ' + pct(l.mk) + (Math.abs(gap) >= 2 ? ", we are " + Math.abs(gap) + (gap > 0 ? " points higher" : " points lower") : ", the same as ours") + "</span>" : "") + "</button></li>";
   }
+  /* LEG-02: a same-game slip's chance from the simulation's own worlds. A box can carry, for every leg the board can list,
+     one bit per world (1 = the leg hit), packed and base64; the slip's chance is the share of worlds where every leg hit.
+     Each leg's share of worlds is then scaled to the chance the page states for it (the page spreads totals and strikeouts
+     and thins a hitter's slot to his own share), so the worlds give the dependence and the stated chances the level. */
+  var B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/", B64I = {};
+  for (var bi = 0; bi < 64; bi++) B64I[B64.charAt(bi)] = bi;
+  function unb64(t) {
+    var out = [], acc = 0, nb = 0;
+    for (var i = 0; i < t.length; i++) { var c = t.charAt(i); if (c === "=") break; acc = (acc << 6) | B64I[c]; nb += 6; if (nb >= 8) { nb -= 8; out.push((acc >> nb) & 255); acc &= (1 << nb) - 1; } }
+    return out;
+  }
+  var POP8 = []; for (var pi = 0; pi < 256; pi++) { var x = pi, c8 = 0; while (x) { c8 += x & 1; x >>= 1; } POP8.push(c8); }
+  var legBitsCache = {};
+  function worldBits(box, l) {
+    var wl = box && box.world_legs;
+    if (!wl || !wl.legs) return null;
+    var base = l.fam.replace(/:(yes|no)$/, ""), key = wl.n + "|" + base + "|" + (l.pid || ""), ck = (box.forecast_id || "") + "|" + key;
+    if (legBitsCache[ck] === undefined) {
+      var row = null;
+      for (var i = 0; i < wl.legs.length; i++) if (wl.legs[i][0] === base && String(wl.legs[i][1] || "") === String(l.pid || "")) { row = i; break; }
+      legBitsCache[ck] = row === null ? null : { bytes: unb64(wl.bits[row]), hits: wl.legs[row][2] };
+    }
+    var r = legBitsCache[ck];
+    if (!r) return null;
+    return { bytes: r.bytes, yes: /:yes$/.test(l.fam), share: (/:yes$/.test(l.fam) ? r.hits : wl.n - r.hits) / wl.n, n: wl.n };
+  }
+  function slipChance(box, legs) {
+    /* {p: chance from the worlds scaled to the stated chances, raw: the worlds' own share, product: multiplied} or null */
+    var product = 1, rows = [];
+    for (var i = 0; i < legs.length; i++) {
+      product *= legs[i].p;
+      var b = worldBits(box, legs[i]);
+      if (!b) return null;
+      rows.push(b);
+    }
+    var n = rows[0].n, nbytes = rows[0].bytes.length, count = 0, pad = n % 8 ? (8 - n % 8) : 0;
+    for (var j = 0; j < nbytes; j++) {
+      var v = 255;
+      for (var k = 0; k < rows.length; k++) { var byte = rows[k].bytes[j]; v &= rows[k].yes ? byte : (~byte & 255); }
+      if (j === nbytes - 1 && pad) v &= (255 << pad) & 255;
+      count += POP8[v];
+    }
+    var raw = count / n, scale = 1, minp = 1;
+    for (var m = 0; m < legs.length; m++) { scale *= rows[m].share > 0 ? legs[m].p / rows[m].share : 1; minp = Math.min(minp, legs[m].p); }
+    return { p: Math.min(raw * scale, minp), raw: raw, product: product, n: n };
+  }
   function legBoard(games) {
     var rows = boardLegs(games);
     if (!rows.length) return "";
@@ -2087,8 +2133,18 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
       var prod = inSlip.reduce(function (a, l) { return a * l.p; }, 1), games_ = {};
       inSlip.forEach(function (l) { games_[l.pk] = (games_[l.pk] || 0) + 1; });
       var same = Object.keys(games_).some(function (k) { return games_[k] > 1; });
-      h += '<p class="slip"><b>' + inSlip.length + (inSlip.length === 1 ? " leg" : " legs") + " together: " + pct(prod) + "</b> " + (same ? "Two of these are from the same game, so they move together; multiplying them is only a rough guide." : "Chances multiply: each leg you add makes the whole slip less likely.") + "</p>";
-    } else h += '<p class="note">Tap legs to see their chance together. Chances multiply: five 80% legs all land about 1 time in 3.</p>';
+      var pks = Object.keys(games_), joint = null;
+      if (pks.length === 1) {
+        var sc = slipChance(boxFor(pks[0]), inSlip);
+        if (sc && inSlip.length > 1) joint = sc;
+      }
+      if (joint) {
+        var lift = Math.round((joint.p - joint.product) * 100);
+        h += '<p class="slip"><b>' + inSlip.length + " legs together: " + pct(joint.p) + "</b> in the " + joint.n.toLocaleString() + " games we simulated, all " + inSlip.length + " landed together " + pct(joint.p) + " of the time" +
+          (Math.abs(lift) >= 1 ? " (multiplying the legs would say " + pct(joint.product) + ": these legs " + (lift > 0 ? "tend to happen together" : "tend to get in each other's way") + ")" : " (about what multiplying the legs gives)") + ".</p>";
+      } else
+        h += '<p class="slip"><b>' + inSlip.length + (inSlip.length === 1 ? " leg" : " legs") + " together: " + pct(prod) + "</b> " + (same ? "Two of these are from the same game, so they move together; multiplying them is only a rough guide." : "Chances multiply: each leg you add makes the whole slip less likely.") + "</p>";
+    } else h += '<p class="note">Tap legs to see their chance together. Legs from one game are counted in the simulated games where all of them happen; legs from different games multiply. Five 80% legs all land about 1 time in 3.</p>';
     h += '<p class="note">Likely is not the same as underpriced: the market usually prices legs like these about as high as we do. Over two seasons re-run our win chances were level with the closing line, not better.</p>';
     return h + "</section>";
   }
