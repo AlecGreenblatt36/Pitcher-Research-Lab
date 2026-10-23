@@ -290,6 +290,16 @@ def _market(runner,ledger):
     except Exception as exc:
         ledger['market_receipt']={'error':type(exc).__name__+': '+str(exc)[:200],'at':now.isoformat()}
 
+def _kalshi(runner,ledger):
+    # Kalshi's prices beside the board's legs (EDGE-02's capture); failures are recorded, never raised.
+    now=runner.clock()
+    try:
+        from .kalshi_props import capture as capture_kalshi
+        day=now.astimezone(ZoneInfo('America/New_York')).date().isoformat()
+        ledger['kalshi_receipt']=capture_kalshi(runner.net.json,ledger,day,now.isoformat())
+    except Exception as exc:
+        ledger['kalshi_receipt']={'error':type(exc).__name__+': '+str(exc)[:200],'at':now.isoformat()}
+
 def _prune_live(ledger):
     """Drop live snapshots of games that are final; the record scores forecasts, not snapshots."""
     for pk in list(ledger.get('live',{})):
@@ -398,6 +408,7 @@ def main(public_dir):
             physics_receipt['team_defense']={t:round(sim.defense_state.value(t),4) for t in sorted(sim.defense_state.entries)}
     runner=BoxRunner(original.Network(),store,sim,run_id=os.environ.get('GITHUB_RUN_ID','local'))
     _market(runner,store.ledger)
+    _kalshi(runner,store.ledger)
     try:runner.iteration()
     finally:
         ledger=store.ledger;_prune_live(ledger)

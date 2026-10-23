@@ -111,3 +111,26 @@ def test_slip_chance_counts_the_worlds_where_every_leg_hit():
     js2 = consts + _fn(s, 'unb64') + _fn(s, 'worldBits') + _fn(s, 'slipChance') + 'var box=' + json.dumps(box) + ';var legs=' + json.dumps(legs) + ';console.log(JSON.stringify(slipChance(box, legs.slice(0, 2))))'
     sc = json.loads(subprocess.run(['node'], input=js2, capture_output=True, text=True, check=True).stdout)
     assert abs(sc['p'] - min(two['raw'] * 1.1, legs[0]['p'])) < 1e-9
+
+
+def test_kalshi_price_found_for_each_kind_of_leg():
+    """EDGE-02's capture on the board: the asking price of the leg's own side, matched by player and line, team, total line
+    or first inning; nothing for a leg Kalshi does not list."""
+    s = _script()
+    D = {'kalshi': {'1': {'captured_at': 't', 'markets': [
+        {'k': 'prop', 'stat': 'hits', 'n': 2, 'pid': '10', 'yb': 0.21, 'ya': 0.23, 'last': 0.22, 'vol': 800},
+        {'k': 'prop', 'stat': 'k', 'n': 5, 'pid': '99', 'yb': 0.83, 'ya': 0.84, 'last': 0.84, 'vol': 2000},
+        {'k': 'game', 'series': 'KXMLBGAME', 'team': 'MIL', 'yb': 0.62, 'ya': 0.63, 'vol': 5e6},
+        {'k': 'game', 'series': 'KXMLBTOTAL', 'line': 6.5, 'yb': 0.51, 'ya': 0.52, 'vol': 150000},
+        {'k': 'game', 'series': 'KXMLBRFI', 'yb': 0.40, 'ya': 0.42, 'vol': 10}]}}}
+    js = 'var D=' + json.dumps(D) + ';function latestForecasts(){return {"1":{home:{abbr:"MIL"},away:{abbr:"TB"}}};}' + _fn(s, 'kalshiFor') + _fn(s, 'kalshiText') + \
+        'function pct(p){return Math.round(p*100)+"%";}' + \
+        'var legs=[{fam:"hitter:hits2+:no",pid:"10",p:0.80},{fam:"starter:k:over4.5:yes",pid:"99",p:0.86},{fam:"win:home:yes",pid:"",p:0.68},{fam:"win:home:no",pid:"",p:0.32},' + \
+        '{fam:"total:over6.5:no",pid:"",p:0.50},{fam:"first_inning:run_scored:no",pid:"",p:0.575},{fam:"hitter:hr:no",pid:"10",p:0.9}];' + \
+        'console.log(JSON.stringify(legs.map(function(l){l.kalshi=kalshiFor("1",l);return [l.fam, l.kalshi && l.kalshi.ask, l.kalshi && kalshiText(l)];})))'
+    out = dict((a, (b, c)) for a, b, c in json.loads(subprocess.run(['node'], input=js, capture_output=True, text=True, check=True).stdout))
+    assert out['hitter:hits2+:no'][0] == 0.79 and 'about our number' in out['hitter:hits2+:no'][1]
+    assert out['starter:k:over4.5:yes'][0] == 0.84 and '2 points higher' in out['starter:k:over4.5:yes'][1]
+    assert out['win:home:yes'][0] == 0.63 and out['win:home:no'][0] == 0.38
+    assert out['total:over6.5:no'][0] == 0.49 and 'barely traded' in out['first_inning:run_scored:no'][1]
+    assert out['hitter:hr:no'] == (None, None)

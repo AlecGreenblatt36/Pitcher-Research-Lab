@@ -2037,6 +2037,29 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     });
     return out;
   }
+  /* Kalshi's price for a leg's own side (EDGE-02's capture, D.kalshi[game]): {ask, bid, last, vol} or null. The ask is what
+     buying that side costs now: the yes ask for a yes leg, one minus the yes bid for a no leg. */
+  function kalshiFor(pk, l) {
+    var K = D.kalshi && D.kalshi[pk], base = l.fam.replace(/:(yes|no)$/, ""), yes = /:yes$/.test(l.fam);
+    if (!K || !K.markets) return null;
+    var m = null, line = (/over([\d.]+)/.exec(base) || [])[1];
+    K.markets.some(function (x) {
+      if (x.k === "prop") {
+        if (String(x.pid || "") !== String(l.pid || "")) return false;
+        var want = { "hitter:hits1+": ["hits", 1], "hitter:hits2+": ["hits", 2], "hitter:hr": ["hr", 1], "hitter:tb2+": ["tb", 2] }[base];
+        if (!want && /^starter:k:over/.test(base)) want = ["k", Math.ceil(Number(line))];
+        if (want && x.stat === want[0] && x.n === want[1]) { m = x; return true; }
+      } else if (x.series === "KXMLBGAME" && base === "win:home") {
+        var f = latestForecasts()[pk]; if (f && x.team === f.home.abbr) { m = x; return true; }
+      } else if (x.series === "KXMLBTOTAL" && /^total:over/.test(base) && Number(x.line) === Number(line)) { m = x; return true; }
+      else if (x.series === "KXMLBRFI" && base === "first_inning:run_scored") { m = x; return true; }
+      return false;
+    });
+    if (!m) return null;
+    var ask = yes ? m.ya : (m.yb == null ? null : 1 - m.yb), bid = yes ? m.yb : (m.ya == null ? null : 1 - m.ya);
+    if (ask == null) return null;
+    return { ask: ask, bid: bid, last: m.last, vol: m.vol, at: K.captured_at };
+  }
   /* the listed legs: our chance LEG_MIN or more and the cell verified; each with its two seasons' record */
   function boardLegs(games) {
     if (!LEG_TABLE) return [];
@@ -2047,7 +2070,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
         if (l.p < LEG_MIN) return;
         var c = LEG_TABLE.cells[l.fam + "|" + legBin(l.p)];
         if (!c || !c[6]) return;
-        l.rec = c; l.f = f; rows.push(l);
+        l.rec = c; l.f = f; l.kalshi = kalshiFor(f.game_pk, l); rows.push(l);
       });
     });
     return rows.sort(function (a, b) { return b.p - a.p; });
@@ -2072,7 +2095,12 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     return '<li><button type="button" class="leg' + (on ? " on" : "") + '" data-leg="' + esc(key) + '" aria-pressed="' + on + '"><span class="lg-text"><b>' + esc(l.text) + "</b><small>" + esc(l.f.away.abbr + " at " + l.f.home.abbr) + (l.kind === "hitter" ? ", if he bats" : "") + "</small></span>" +
       '<span class="lg-p num">' + pct(l.p) + "</span>" +
       '<span class="lg-rec">Legs like it, which we put at ' + said + "% on average, hit " + pct(c[2]) + " in " + S[0] + " and " + pct(c[5]) + " in " + S[1] + " (" + (c[0] + c[3]).toLocaleString() + " legs)</span>" +
-      (l.mk != null ? '<span class="lg-mk">Vegas ' + pct(l.mk) + (Math.abs(gap) >= 2 ? ", we are " + Math.abs(gap) + (gap > 0 ? " points higher" : " points lower") : ", the same as ours") + "</span>" : "") + "</button></li>";
+      (l.mk != null ? '<span class="lg-mk">Vegas ' + pct(l.mk) + (Math.abs(gap) >= 2 ? ", we are " + Math.abs(gap) + (gap > 0 ? " points higher" : " points lower") : ", the same as ours") + "</span>" : "") +
+      (l.kalshi ? '<span class="lg-mk">' + kalshiText(l) + "</span>" : "") + "</button></li>";
+  }
+  function kalshiText(l) {
+    var k = l.kalshi, cents = Math.round(k.ask * 100), gap = Math.round((l.p - k.ask) * 100);
+    return "Kalshi asks " + cents + "\u00a2 for this side" + (k.vol < 50 ? " (barely traded)" : "") + (gap >= 2 ? ": we are " + gap + " points higher" : gap <= -2 ? ": we are " + (-gap) + " points lower" : ": about our number");
   }
   /* LEG-02: a same-game slip's chance from the simulation's own worlds. A box can carry, for every leg the board can list,
      one bit per world (1 = the leg hit), packed and base64; the slip's chance is the share of worlds where every leg hit.
@@ -2124,7 +2152,7 @@ footer { color: var(--muted); font-size: 14px; padding: 12px 0 28px; border-top:
     var rows = boardLegs(games);
     if (!rows.length) return "";
     var S = LEG_TABLE.seasons, slip = state.slip || {}, inSlip = rows.filter(function (l) { return slip[legKey(l)]; }), split = leadLegs(rows, 10);
-    var h = '<section class="sec legs"><h2>Strongest legs</h2><p class="lede">Legs we give ' + Math.round(LEG_MIN * 100) + "% or more today, kept only where legs like it, at the same chance, hit as often as we said in both seasons we re-ran with a model that never saw " + S[1] + '. A 90% leg still misses 1 time in 10.</p><ul class="leg-list">';
+    var h = '<section class="sec legs"><h2>Strongest legs</h2><p class="lede">Legs we give ' + Math.round(LEG_MIN * 100) + "% or more today, kept only where legs like it, at the same chance, hit as often as we said in both seasons we re-ran with a model that never saw " + S[1] + ". A 90% leg still misses 1 time in 10." + (games.some(function (f) { return D.kalshi && D.kalshi[f.game_pk]; }) ? " Where Kalshi lists the same leg, its asking price is shown: that is what buying our side costs, not a chance." : "") + '</p><ul class="leg-list">';
     split.lead.forEach(function (l) { h += legRow(l, S, slip); });
     h += "</ul>";
     if (split.rest.length) h += '<details class="more" data-keep="legs-rest"' + (state.rpOpen["legs-rest"] ? " open" : "") + "><summary>" + split.rest.length + " more legs that pass the same check</summary>" +

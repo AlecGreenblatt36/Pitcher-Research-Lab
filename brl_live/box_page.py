@@ -25,7 +25,7 @@ FONTS = (
     ('Barlow', 700, 'barlow-latin-700-normal.woff2'),
 )
 PUBLIC_KEYS = ('date', 'forecasts', 'publications', 'actuals', 'status', 'box_scores',
-               'box_publications', 'actual_boxes', 'player_scores', 'skill_scores', 'live', 'market', 'context')
+               'box_publications', 'actual_boxes', 'player_scores', 'skill_scores', 'live', 'market', 'context', 'kalshi')
 BOX_DAYS = 2  # full simulated games stay on the page for the slate date and the day before
 
 
@@ -90,6 +90,9 @@ def trim_boxes(public: dict) -> dict:
         elif games_today > 4:
             v['world_legs'] = thin_world_legs(v['world_legs'], 4)
     public['box_scores'] = recent
+    # Kalshi's prices (EDGE-02's capture) ride only with the slate date's pending games; the pre-game snapshot stays in the ledger
+    public['kalshi'] = {k: {kk: vv for kk, vv in v.items() if kk != 'pre'} for k, v in (public.get('kalshi') or {}).items()
+                        if str(v.get('captured_at') or '')[:10] == today and k not in (public.get('actuals') or {})}
     public['live'] = {k: v for k, v in (public.get('live') or {}).items() if str(v.get('date')) in keep}
     public['box_publications'] = {k: v for k, v in (public.get('box_publications') or {}).items() if k in recent}
     pks = {str(v.get('game_pk')) for v in recent.values()}
