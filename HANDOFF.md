@@ -63,6 +63,27 @@ Model Plan doc). Built the same afternoon:
   models/), brl_engine/model.json, brl_live/context_offsets.json = the chain's pooled table (staged copies in the
   scratch folder adopt/); How it works already carries the chain paragraph, shown when the live model is a chain model.
 
+## October 23: same-game slips from the worlds, Kalshi prices on the board (World Series Game 1 day)
+
+- LEG-02: brl_live/boxscore.py WorldLog keeps one bit per world for every leg the board can list; the box carries them
+  as `world_legs` (10,000 worlds packed, base64, 292 KB a game; on the page for the slate date only, every fourth world
+  when the slate has more than four games, box_page.trim_boxes). The page's slip line counts the worlds where every
+  selected leg hit, scaled to the stated chances (slipChance). tools/brl_sgp_scan.py lists 2- and 3-leg slips (board legs
+  only) and three correlation templates; a book's quote ("leg + leg = +450") gives the gap, EV and quarter Kelly. No book
+  publishes same-game parlay prices, so the market side is typed in. `world_legs` is in ADJUST (fingerprint), so every
+  pending game was re-forecast with the bits.
+- EDGE-02's capture: brl_live/kalshi_props.py fetches Kalshi's open markets (8 series, by event ticker) for today's
+  pending games before each iteration (box_runner._kalshi), matches props to box players by name, and keeps `pre`, the
+  last snapshot taken 30+ minutes before first pitch, in ledger['kalshi'] (the page gets the current capture without
+  `pre`). The board shows "Kalshi asks N cents for this side" per leg (kalshiFor). EDGE-02 scoring is not written yet:
+  it should read ledger['kalshi'][pk]['pre'] against the final box (tools/brl_leg_board_score.py has the grading).
+- Same-game slips on the clean replays (scratch same_game.py, numbers in LEDGER LEG-02): the product of a game's top 2,
+  3, 5, 8 verified legs ran 0 to 2 points above the hit rate, so multiplying is nearly honest on average.
+- A known inconsistency to fix: the page's "no walk" leg uses BB only while the leg book's hitter:bb1+ cell counts walks
+  and hit-by-pitches (replay bb_hist). Small; note it when refitting the board.
+- Tonight's read before lineups: simulator MIL 68%, team ratings 57%, Kalshi 63 cents; Misiorowski's strikeout gap to
+  Kalshi (62 vs 53 for 7+) is explained by batters faced (his last two starts 4.1 and 5 innings; manager says tired).
+
 ## October 18, afternoon: the leg book, Kalshi, security (read this first)
 
 - LEG-01 is scored (LEDGER row; aggregates in research/leg01/). 57 verified cells at 70%+; a hitter's 1+ hit at 70%+ is
