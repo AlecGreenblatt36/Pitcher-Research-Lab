@@ -74,6 +74,33 @@ def slip_chance(box: dict, legs: list[dict]):
     return min(raw * scale, min(l['p'] for l in legs)), raw, product
 
 
+def kalshi_for(data: dict, pk: str, leg: dict, f: dict):
+    """Kalshi's asking price for the leg's own side (the page's kalshiFor), or None."""
+    K = (data.get('kalshi') or {}).get(str(pk))
+    if not K:
+        return None
+    base = re.sub(r':(yes|no)$', '', leg['fam']); yes = leg['fam'].endswith(':yes')
+    m_line = re.search(r'over([\d.]+)', base); line = float(m_line.group(1)) if m_line else None
+    want = {'hitter:hits1+': ('hits', 1), 'hitter:hits2+': ('hits', 2), 'hitter:hr': ('hr', 1), 'hitter:tb2+': ('tb', 2)}.get(base)
+    if not want and base.startswith('starter:k:over'):
+        want = ('k', int(line + 0.5))
+    mk = None
+    for x in K.get('markets') or []:
+        if x.get('k') == 'prop':
+            if want and str(x.get('pid') or '') == str(leg.get('pid') or '') and x.get('stat') == want[0] and x.get('n') == want[1]:
+                mk = x; break
+        elif x.get('series') == 'KXMLBGAME' and base == 'win:home' and x.get('team') == f['home']['abbr']:
+            mk = x; break
+        elif x.get('series') == 'KXMLBTOTAL' and base.startswith('total:over') and x.get('line') is not None and float(x['line']) == line:
+            mk = x; break
+        elif x.get('series') == 'KXMLBRFI' and base == 'first_inning:run_scored':
+            mk = x; break
+    if not mk:
+        return None
+    ask = mk.get('ya') if yes else (None if mk.get('yb') is None else 1 - mk['yb'])
+    return None if ask is None else {'ask': ask, 'vol': mk.get('vol') or 0, 'at': K.get('captured_at')}
+
+
 def kind(fam: str) -> str:
     return re.sub(r'over[\d.]+', '', fam).replace('-1.5', '')
 
@@ -141,6 +168,19 @@ def main():
         for l in legs:
             l['text'] = l['text']
         print(f"\n{f['away']['abbr']} at {f['home']['abbr']}, forecast v{f['version']} ({box['world_legs']['n']:,} worlds; lineups {f['lineup_status']['away']}/{f['lineup_status']['home']})")
+        priced = []
+        for l in legs:
+            q = kalshi_for(data, pk, l, f)
+            if q:
+                l['kalshi'] = q; priced.append(l)
+        if priced:
+            print(f"Kalshi prices {len(priced)} of the board's {len(legs)} legs (captured {priced[0]['kalshi']['at'][11:16]} UTC). Where we sit 5+ points above the ask:")
+            gaps = sorted([l for l in priced if l['p'] - l['kalshi']['ask'] >= 0.05], key=lambda l: -(l['p'] - l['kalshi']['ask']))
+            for l in gaps[:12]:
+                q = l['kalshi']; ev = l['p'] * (1 - q['ask']) / q['ask'] - (1 - l['p'])
+                print(f"   {l['text']:40s} ours {l['p']*100:5.1f}%  ask {q['ask']*100:4.0f} cents  gap {100*(l['p']-q['ask']):+.0f}  EV {ev*100:+.1f} cents a dollar{'  (barely traded)' if q['vol'] < 50 else ''}")
+            if not gaps:
+                print('   none')
         rows = []
         for name, combo in templates(legs, f, box):
             sc = slip_chance(box, combo)
