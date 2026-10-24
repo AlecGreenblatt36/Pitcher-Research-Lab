@@ -1,10 +1,10 @@
 {
- "created_at": "2026-10-24T07:04:30.081721+00:00",
+ "created_at": "2026-10-24T07:19:42.409699+00:00",
  "status": "iteration_completed",
  "runtime": "brl_engine (public code, sealed data)",
  "ledger_branch": "brl-live-data",
  "shadow": false,
- "live_forecasts_created": 0,
+ "live_forecasts_created": 1,
  "raw_data_published": false,
  "stage": "complete",
  "secret_present": true,
@@ -24,17 +24,21 @@
   "fitted_at": "2026-10-17T04:14:31.818883+00:00",
   "physics_features": 30
  },
- "forecasts": 101,
- "box_forecasts_created": 0,
- "box_forecasts": 96,
+ "forecasts": 102,
+ "box_forecasts_created": 1,
+ "box_forecasts": 97,
  "player_scored_games": 19,
  "scored_games": 19,
  "skill_scored_games": 18,
- "skill_baseline_prior_games": 49,
- "history_coverage_through": "2026-10-22",
- "history_added_PA": 2548,
- "history_refresh_note": "Statcast empty on a date with completed games",
- "history_day_notes": {},
+ "skill_baseline_prior_games": 50,
+ "history_coverage_through": "2026-10-23",
+ "history_added_PA": 2616,
+ "history_refresh_note": null,
+ "history_day_notes": {
+  "2026-10-23": {
+   "excluded_non_PA_events": 1
+  }
+ },
  "pa_model": {
   "name": "retrain04-rt",
   "sha256": "ed25de37b326c3938b151abe785a57d566de176a7a38b04d1efd81cdcb11fd75",
@@ -49,8 +53,10 @@
      "through": "2026-10-19"
     }
    },
-   "day_cache_days": 3,
+   "day_cache_days": 4,
    "day_cache_rows": 0,
+   "day_cache_errors": 1,
+   "day_cache_error": "KeyError: 'body'",
    "rows": 372959,
    "through": "2026-10-19",
    "seasons_mode": "live",
@@ -107,14 +113,16 @@
       "through": "2026-03-24"
      }
     },
-    "day_cache_days": 3,
+    "day_cache_days": 4,
     "day_cache_rows": 0,
+    "day_cache_errors": 1,
+    "day_cache_error": "KeyError: 'body'",
     "rows": 4741657,
     "through": "2026-10-19"
    }
   }
  },
- "pitch_bookkeeping_prior_PA": 200124,
+ "pitch_bookkeeping_prior_PA": 200192,
  "pitch_bookkeeping_season_games": 4941,
  "engine_rules_changed": false,
  "model_parameters_changed": false,
@@ -264,10 +272,10 @@
   "skipped": 0
  },
  "storage_read_audit": {
-  "contents_verified": 69,
+  "contents_verified": 73,
   "blob_fallbacks": 36,
-  "bytes_verified": 202210492,
-  "requests": 177,
-  "rate_limit_remaining": 4830
+  "bytes_verified": 203536614,
+  "requests": 194,
+  "rate_limit_remaining": 4953
  }
 }
