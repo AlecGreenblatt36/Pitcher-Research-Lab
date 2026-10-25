@@ -1,21 +1,14 @@
 {
- "created_at": "2026-10-25T03:52:44.175810+00:00",
+ "created_at": "2026-10-25T04:08:01.847603+00:00",
  "status": "iteration_completed",
  "runtime": "brl_engine (public code, sealed data)",
  "ledger_branch": "brl-live-data",
  "shadow": false,
- "live_forecasts_created": 0,
+ "live_forecasts_created": 1,
  "raw_data_published": false,
  "stage": "complete",
  "secret_present": true,
- "scheduled_games": [
-  {
-   "game_pk": 849802,
-   "scheduled_start": "2026-10-25T00:00:00Z",
-   "away": "Tampa Bay Rays",
-   "home": "Milwaukee Brewers"
-  }
- ],
+ "scheduled_games": [],
  "data_source": "brl-data-202610070629",
  "pa_model_selected": {
   "name": "retrain04-rt",
@@ -24,16 +17,16 @@
   "fitted_at": "2026-10-17T04:14:31.818883+00:00",
   "physics_features": 30
  },
- "forecasts": 104,
- "box_forecasts_created": 0,
- "box_forecasts": 99,
+ "forecasts": 105,
+ "box_forecasts_created": 1,
+ "box_forecasts": 100,
  "player_scored_games": 20,
  "scored_games": 20,
  "skill_scored_games": 19,
  "skill_baseline_prior_games": 50,
  "history_coverage_through": "2026-10-23",
  "history_added_PA": 2616,
- "history_refresh_note": null,
+ "history_refresh_note": "Statcast empty on a date with completed games",
  "history_day_notes": {
   "2026-10-23": {
    "excluded_non_PA_events": 1
@@ -118,7 +111,7 @@
    }
   }
  },
- "pitch_bookkeeping_prior_PA": 200192,
+ "pitch_bookkeeping_prior_PA": 199042,
  "pitch_bookkeeping_season_games": 4942,
  "engine_rules_changed": false,
  "model_parameters_changed": false,
@@ -126,8 +119,8 @@
  "live_updates": 0,
  "live_update_errors": 0,
  "market_receipt": {
-  "date": "2026-10-24",
-  "schedule_games": 1,
+  "date": "2026-10-25",
+  "schedule_games": 0,
   "lines_seen": 0,
   "matched": 0,
   "captured_pregame": 0,
@@ -135,32 +128,8 @@
    "games_with_consensus": 0,
    "mean_books": 0
   },
-  "events": 1,
-  "competition_keys": [
-   "attendance",
-   "broadcast",
-   "broadcasts",
-   "competitors",
-   "conferenceCompetition",
-   "date",
-   "format",
-   "geoBroadcasts",
-   "highlights",
-   "id",
-   "leaders",
-   "neutralSite",
-   "notes",
-   "playByPlayAvailable",
-   "recent",
-   "series",
-   "startDate",
-   "status",
-   "timeValid",
-   "type",
-   "uid",
-   "venue",
-   "wasSuspended"
-  ],
+  "events": 0,
+  "competition_keys": [],
   "odds_keys": [],
   "odds_subkeys": {},
   "moneyline_shape": null,
@@ -180,10 +149,10 @@
   "skipped": 0
  },
  "storage_read_audit": {
-  "contents_verified": 65,
+  "contents_verified": 66,
   "blob_fallbacks": 36,
-  "bytes_verified": 205070533,
-  "requests": 174,
-  "rate_limit_remaining": 4978
+  "bytes_verified": 205364127,
+  "requests": 185,
+  "rate_limit_remaining": 4930
  }
 }
