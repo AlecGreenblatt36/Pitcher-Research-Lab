@@ -1,10 +1,10 @@
 {
- "created_at": "2026-10-27T20:24:16.078290+00:00",
+ "created_at": "2026-10-27T20:39:30.898560+00:00",
  "status": "iteration_completed",
  "runtime": "brl_engine (public code, sealed data)",
  "ledger_branch": "brl-live-data",
  "shadow": false,
- "live_forecasts_created": 0,
+ "live_forecasts_created": 1,
  "raw_data_published": false,
  "stage": "complete",
  "secret_present": true,
@@ -24,9 +24,9 @@
   "fitted_at": "2026-10-17T04:14:31.818883+00:00",
   "physics_features": 30
  },
- "forecasts": 111,
- "box_forecasts_created": 0,
- "box_forecasts": 106,
+ "forecasts": 112,
+ "box_forecasts_created": 1,
+ "box_forecasts": 107,
  "player_scored_games": 21,
  "scored_games": 21,
  "skill_scored_games": 20,
@@ -270,8 +270,13 @@
  "storage_read_audit": {
   "contents_verified": 74,
   "blob_fallbacks": 36,
-  "bytes_verified": 208141466,
-  "requests": 178,
-  "rate_limit_remaining": 3839
+  "bytes_verified": 208143664,
+  "requests": 189,
+  "rate_limit_remaining": 4822,
+  "failures": {
+   "502": 1
+  },
+  "retries": 1,
+  "waited_seconds": 2.0
  }
 }
