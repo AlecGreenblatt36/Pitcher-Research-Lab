@@ -1,5 +1,5 @@
 {
- "created_at": "2026-10-29T07:07:57.256308+00:00",
+ "created_at": "2026-10-29T07:22:47.475547+00:00",
  "status": "iteration_completed",
  "runtime": "brl_engine (public code, sealed data)",
  "ledger_branch": "brl-live-data",
@@ -23,16 +23,19 @@
  "player_scored_games": 23,
  "scored_games": 23,
  "skill_scored_games": 22,
- "skill_baseline_prior_games": 53,
- "history_coverage_through": "2026-10-27",
- "history_added_PA": 2858,
- "history_refresh_note": "Statcast empty on a date with completed games",
+ "skill_baseline_prior_games": 54,
+ "history_coverage_through": "2026-10-28",
+ "history_added_PA": 2928,
+ "history_refresh_note": null,
  "history_day_notes": {
   "2026-10-26": {
    "excluded_non_PA_events": 2
   },
   "2026-10-27": {
    "excluded_non_PA_events": 1
+  },
+  "2026-10-28": {
+   "mid_pa_substitutions": 1
   }
  },
  "pa_model": {
@@ -49,8 +52,10 @@
      "through": "2026-10-27"
     }
    },
-   "day_cache_days": 0,
+   "day_cache_days": 1,
    "day_cache_rows": 0,
+   "day_cache_errors": 1,
+   "day_cache_error": "KeyError: 'body'",
    "rows": 373269,
    "through": "2026-10-27",
    "seasons_mode": "live",
@@ -107,14 +112,16 @@
       "through": "2026-03-24"
      }
     },
-    "day_cache_days": 0,
+    "day_cache_days": 1,
     "day_cache_rows": 0,
+    "day_cache_errors": 1,
+    "day_cache_error": "KeyError: 'body'",
     "rows": 4742907,
     "through": "2026-10-27"
    }
   }
  },
- "pitch_bookkeeping_prior_PA": 195612,
+ "pitch_bookkeeping_prior_PA": 195682,
  "pitch_bookkeeping_season_games": 4945,
  "engine_rules_changed": false,
  "model_parameters_changed": false,
@@ -152,10 +159,10 @@
   "skipped": 0
  },
  "storage_read_audit": {
-  "contents_verified": 78,
+  "contents_verified": 82,
   "blob_fallbacks": 36,
-  "bytes_verified": 210228479,
-  "requests": 188,
-  "rate_limit_remaining": 4638
+  "bytes_verified": 211518913,
+  "requests": 197,
+  "rate_limit_remaining": 4445
  }
 }
