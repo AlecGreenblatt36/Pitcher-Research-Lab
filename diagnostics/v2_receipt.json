@@ -1,5 +1,5 @@
 {
- "created_at": "2026-10-31T03:45:46.449241+00:00",
+ "created_at": "2026-10-31T04:00:23.837094+00:00",
  "status": "iteration_completed",
  "runtime": "brl_engine (public code, sealed data)",
  "ledger_branch": "brl-live-data",
@@ -24,13 +24,10 @@
  "scored_games": 23,
  "skill_scored_games": 22,
  "skill_baseline_prior_games": 54,
- "history_coverage_through": "2026-10-29",
+ "history_coverage_through": "2026-10-30",
  "history_added_PA": 2928,
  "history_refresh_note": null,
  "history_day_notes": {
-  "2026-10-27": {
-   "excluded_non_PA_events": 1
-  },
   "2026-10-28": {
    "mid_pa_substitutions": 1
   }
@@ -49,7 +46,7 @@
      "through": "2026-10-28"
     }
    },
-   "day_cache_days": 1,
+   "day_cache_days": 2,
    "day_cache_rows": 0,
    "rows": 373339,
    "through": "2026-10-28",
@@ -107,14 +104,14 @@
       "through": "2026-03-24"
      }
     },
-    "day_cache_days": 1,
+    "day_cache_days": 2,
     "day_cache_rows": 0,
     "rows": 4743162,
     "through": "2026-10-28"
    }
   }
  },
- "pitch_bookkeeping_prior_PA": 194588,
+ "pitch_bookkeeping_prior_PA": 193698,
  "pitch_bookkeeping_season_games": 4946,
  "engine_rules_changed": false,
  "model_parameters_changed": false,
@@ -122,7 +119,7 @@
  "live_updates": 0,
  "live_update_errors": 0,
  "market_receipt": {
-  "date": "2026-10-30",
+  "date": "2026-10-31",
   "schedule_games": 0,
   "lines_seen": 0,
   "matched": 0,
@@ -152,10 +149,15 @@
   "skipped": 0
  },
  "storage_read_audit": {
-  "contents_verified": 85,
+  "contents_verified": 90,
   "blob_fallbacks": 36,
-  "bytes_verified": 207779168,
-  "requests": 189,
-  "rate_limit_remaining": 4479
+  "bytes_verified": 207785212,
+  "requests": 206,
+  "rate_limit_remaining": 4294,
+  "failures": {
+   "504": 1
+  },
+  "retries": 1,
+  "waited_seconds": 2.0
  }
 }
