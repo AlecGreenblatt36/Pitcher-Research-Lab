@@ -103,6 +103,16 @@
    "stage": "report 2026-11-04",
    "at_seconds": 312.6,
    "peak_rss_mb": 9520
+  },
+  {
+   "stage": "player cards 616 hitters, 880 pitchers",
+   "at_seconds": 331.8,
+   "peak_rss_mb": 9520
+  },
+  {
+   "stage": "index",
+   "at_seconds": 364.3,
+   "peak_rss_mb": 9520
   }
  ],
  "reports": {
@@ -134,5 +144,15 @@
   "pandas": "3.1.0",
   "cryptography": "46.0.4"
  },
- "status": "in progress"
+ "status": "failed",
+ "players": {
+  "hitters": 616,
+  "pitchers": 880,
+  "asof": "2026-11-03",
+  "shards": 32
+ },
+ "error": "HTTPError: HTTP Error 502: Bad Gateway",
+ "trace": "Traceback (most recent call last):\n  File \"/home/runner/work/Pitcher-Research-Lab/Pitcher-Research-Lab/tools/brl_report.py\", line 3465, in main\n    idx, days = rebuild_index(repo, token, branch)\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/runner/work/Pitcher-Research-Lab/Pitcher-Research-Lab/tools/brl_report.py\", line 507, in rebuild_index\n    raw = D.read_blob(repo, token, f\"public/reports/{item['name']}/index.json\", branch)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/runner/work/Pitcher-Research-Lab/Pitcher-Research-Lab/tools/brl_discovery.py\", line 49, in read_blob\n    value = api(f'https://api.github.com/repos/{repo}/contents/{path}?ref={branch}', token)\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/runner/work/Pitcher-Research-Lab/Pitcher-Research-Lab/tools/brl_discovery.py\", line 42, in api\n    with urlopen(Request(url, headers=headers, data=body, method=method), timeout=120) as r:\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/hostedtoolcache/Python/3.12.15/x64/lib/python3.12/urllib/request.py\", line 215, in urlopen\n    return opener.open(url, data, timeout)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/hostedtoolcache/Python/3.12.15/x64/lib/python3.12/urllib/request.py\", line 521, in open\n    response = meth(req, response)\n               ^^^^^^^^^^^^^^^^^^^\n  File \"/opt/hostedtoolcache/Python/3.12.15/x64/lib/python3.12/urllib/request.py\", line 630, in http_response\n    response = self.parent.error(\n               ^^^^^^^^^^^^^^^^^^\n  File \"/opt/hostedtoolcache/Python/3.12.15/x64/lib/python3.12/urllib/request.py\", line 559, in error\n    return self._call_chain(*args)\n           ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/hostedtoolcache/Python/3.12.15/x64/lib/python3.12/urllib/request.py\", line 492, in _call_chain\n    result = func(*args)\n             ^^^^^^^^^^^\n  File \"/opt/hostedtoolcache/Python/3.12.15/x64/lib/python3.12/urllib/request.py\", line 639, in http_error_default\n    raise HTTPError(req.full_url, code, msg, hdrs, fp)\nurllib.error.HTTPError: HTTP Error 502: Bad Gateway\n",
+ "finished_at": "2026-11-03T13:30:24.179845+00:00",
+ "seconds": 368.5
 }
